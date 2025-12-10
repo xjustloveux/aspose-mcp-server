@@ -58,7 +58,15 @@ jobs:
       run: |
         echo "Platform: ${{ matrix.platform }}"
         echo "OS: ${{ matrix.os }}"
-        ls -lh publish/${{ matrix.platform }} || dir publish\${{ matrix.platform }}
+    
+    - name: Display build info (Windows)
+      if: runner.os == 'Windows'
+      run: dir publish\${{ matrix.platform }}
+      shell: cmd
+    
+    - name: Display build info (Unix)
+      if: runner.os != 'Windows'
+      run: ls -lh publish/${{ matrix.platform }}
 
   create-release:
     name: Create Release
