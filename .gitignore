@@ -1,0 +1,115 @@
+# Build results
+[Bb]in/
+[Oo]bj/
+publish/
+
+# User-specific files
+*.user
+*.suo
+*.userosettings
+*.userosscache
+*.sln.docstates
+
+# License files (don't commit to public repos - contains sensitive licensing information)
+# Covers all license files: Aspose.Total.lic, Aspose.Words.lic, Aspose.Cells.lic, etc.
+*.lic
+
+# Sensitive configuration files
+*.key
+*.pem
+*.pfx
+*.p12
+*.jks
+*.keystore
+*.env
+.env.*.local
+secrets.json
+appsettings.Production.json
+appsettings.*.json
+!appsettings.Example.json
+!appsettings.Template.json
+
+# User-specific configuration (may contain paths or personal settings)
+claude_desktop_config.json
+!claude_desktop_config_example.json
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# Logs and temporary files
+*.log
+*.log.*
+logs/
+*.tmp
+*.temp
+*.cache
+.nuget/
+packages/
+*.nupkg
+
+# Test files and output
+test*.docx
+test*.xlsx
+test*.pptx
+test*.pdf
+test*.doc
+test*.xls
+test*.ppt
+output/
+temp/
+tmp/
+*.test.*
+
+# Coverage reports
+coverage/
+*.coverage
+*.coverage.xml
+
+# Backup files
+*.bak
+*.backup
+*~
+*.orig
+
+# ReSharper
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+*.sln.iml
+
+# Visual Studio Code (allow some shared settings)
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# OS-specific files
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+desktop.ini
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+
+# Linux
+*~
+.directory
+.Trash-*

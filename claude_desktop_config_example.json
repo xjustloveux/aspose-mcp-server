@@ -1,0 +1,159 @@
+{
+  "_comment": "========================================",
+  "_comment2": "Aspose MCP Server - Claude Desktop 配置範例",
+  "_comment3": "從 GitHub Releases 下載預編譯版本後使用",
+  "_comment4": "========================================",
+  "_comment5": "將以下任一 mcpServers_exampleX 改名為 mcpServers 即可使用",
+  "_comment6": "Windows 路徑可使用正斜線 (/) 或雙反斜線 (\\\\)",
+  "_comment7": "請將路徑替換為解壓後的實際路徑",
+  "_comment8": "授權文件支援：Aspose.Total.lic 或單一組件授權（如 Aspose.Words.lic）",
+  "_comment9": "授權文件配置：自動搜尋、環境變數 ASPOSE_LICENSE_PATH 或 --license:路徑 參數",
+  "_comment10": "下載地址：https://github.com/your-repo/aspose-mcp-server/releases",
+
+  "_範例1": "========================================",
+  "_範例1說明": "✨推薦：從 GitHub Releases 下載後使用（Windows）",
+  "_範例1適用": "所有用戶（無需編譯，開箱即用）",
+  "mcpServers_example1_windows": {
+    "aspose-word": {
+      "command": "C:/Tools/aspose-mcp-server/AsposeMcpServer.exe",
+      "args": ["--word"]
+    },
+    "aspose-excel": {
+      "command": "C:/Tools/aspose-mcp-server/AsposeMcpServer.exe",
+      "args": ["--excel"]
+    }
+  },
+
+  "_範例2": "========================================",
+  "_範例2說明": "使用自訂授權文件路徑",
+  "_範例2適用": "授權文件不在可執行檔目錄時",
+  "mcpServers_example2_custom_license": {
+    "aspose-word": {
+      "command": "C:/Tools/aspose-mcp-server/AsposeMcpServer.exe",
+      "args": ["--word", "--license:C:/Licenses/Aspose.Words.lic"]
+    }
+  },
+
+  "_範例3": "========================================",
+  "_範例3說明": "啟用多個工具類型（單一服務）",
+  "_範例3適用": "需要同時使用多種文件格式時",
+  "mcpServers_example3_multi": {
+    "aspose-documents": {
+      "command": "C:/Tools/aspose-mcp-server/AsposeMcpServer.exe",
+      "args": ["--word", "--excel", "--pdf"]
+    }
+  },
+
+  "_範例4": "========================================",
+  "_範例4說明": "啟用所有工具（包含所有轉換功能）",
+  "_範例4適用": "需要完整功能時",
+  "mcpServers_example4_all": {
+    "aspose-all": {
+      "command": "C:/Tools/aspose-mcp-server/AsposeMcpServer.exe",
+      "args": ["--all"]
+    }
+  },
+
+  "_範例5": "========================================",
+  "_範例5說明": "macOS ARM (Apple Silicon) 配置",
+  "_範例5適用": "M1/M2/M3 Mac 用戶（從 Releases 下載 macos-arm64.zip）",
+  "mcpServers_example5_macos_arm": {
+    "aspose-word": {
+      "command": "/Users/username/tools/aspose-mcp-server/AsposeMcpServer",
+      "args": ["--word"]
+    },
+    "aspose-excel": {
+      "command": "/Users/username/tools/aspose-mcp-server/AsposeMcpServer",
+      "args": ["--excel"]
+    }
+  },
+
+  "_範例6": "========================================",
+  "_範例6說明": "macOS Intel 配置",
+  "_範例6適用": "Intel Mac 用戶（從 Releases 下載 macos-x64.zip）",
+  "mcpServers_example6_macos_intel": {
+    "aspose-word": {
+      "command": "/Users/username/tools/aspose-mcp-server/AsposeMcpServer",
+      "args": ["--word"]
+    },
+    "aspose-excel": {
+      "command": "/Users/username/tools/aspose-mcp-server/AsposeMcpServer",
+      "args": ["--excel"]
+    }
+  },
+
+  "_範例7": "========================================",
+  "_範例7說明": "Linux 配置",
+  "_範例7適用": "Linux 用戶（從 Releases 下載 linux-x64.zip）",
+  "mcpServers_example7_linux": {
+    "aspose-word": {
+      "command": "/home/username/tools/aspose-mcp-server/AsposeMcpServer",
+      "args": ["--word"]
+    },
+    "aspose-excel": {
+      "command": "/home/username/tools/aspose-mcp-server/AsposeMcpServer",
+      "args": ["--excel"]
+    }
+  },
+
+  "_範例8": "========================================",
+  "_範例8說明": "開發者模式：本地編譯版本",
+  "_範例8適用": "開發者（克隆倉庫後執行 pwsh build.ps1 編譯）",
+  "_範例8注意": "僅用於開發測試，一般用戶請使用範例1",
+  "mcpServers_example8_dev": {
+    "aspose-word": {
+      "command": "C:/your-repo-path/aspose-mcp-server/bin/Release/net8.0/AsposeMcpServer.exe",
+      "args": ["--word"]
+    }
+  },
+
+  "_範例9": "========================================",
+  "_範例9說明": "使用 dotnet 運行 DLL（需安裝 .NET Runtime）",
+  "_範例9適用": "已安裝 .NET Runtime 的環境",
+  "mcpServers_example9_dotnet": {
+    "aspose-word": {
+      "command": "dotnet",
+      "args": [
+        "C:/path/to/aspose-mcp-server/bin/Release/net8.0/AsposeMcpServer.dll",
+        "--word"
+      ]
+    }
+  },
+
+  "_範例10": "========================================",
+  "_範例10說明": "macOS/Linux 使用自訂授權文件",
+  "_範例10適用": "授權文件不在可執行檔目錄時",
+  "mcpServers_example10_unix_license": {
+    "aspose-word": {
+      "command": "/Users/username/tools/aspose-mcp-server/AsposeMcpServer",
+      "args": ["--word", "--license:/Users/username/licenses/Aspose.Words.lic"]
+    }
+  },
+
+  "_參數說明": "========================================",
+  "_參數列表": {
+    "--word": "啟用 Word 工具（自動包含轉換功能）",
+    "--excel": "啟用 Excel 工具（自動包含轉換功能）",
+    "--powerpoint 或 --ppt": "啟用 PowerPoint 工具（自動包含轉換功能）",
+    "--pdf": "啟用 PDF 工具",
+    "--all": "啟用所有工具",
+    "--license:路徑 或 --license=路徑": "指定授權文件路徑（可選）",
+    "多個參數": "可組合使用，如 [\"--word\", \"--excel\"]",
+    "轉換功能": "轉換工具已自動集成，無需額外參數"
+  },
+
+  "_路徑說明": "========================================",
+  "_Windows路徑範例": [
+    "C:/Tools/aspose-mcp-server/AsposeMcpServer.exe （推薦，正斜線）",
+    "C:\\\\Tools\\\\aspose-mcp-server\\\\AsposeMcpServer.exe （雙反斜線）"
+  ],
+  "_macOS路徑範例": "/Users/username/tools/aspose-mcp-server/AsposeMcpServer",
+  "_Linux路徑範例": "/home/username/tools/aspose-mcp-server/AsposeMcpServer",
+
+  "_使用建議": "========================================",
+  "_一般用戶": "從 GitHub Releases 下載預編譯版本（範例1-7、10）",
+  "_開發者": "克隆倉庫並本地編譯（範例8-9）",
+  "_授權配置": "優先使用自動搜尋，或使用 --license:路徑 參數（範例2、10）",
+  "_多服務": "可同時配置多個服務實例（範例1、5-7）",
+  "_下載地址": "https://github.com/your-repo/aspose-mcp-server/releases"
+}

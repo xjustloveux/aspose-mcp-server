@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PublishAot>false</PublishAot>
+    <!-- Enable UTF-8 encoding for better Chinese character support -->
+    <UseUTF8Encoding>true</UseUTF8Encoding>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- License supports versions until 22 Nov 2023 -->
+    <!-- Using latest compatible versions from Oct 2023 -->
+    <PackageReference Include="Aspose.Words" Version="23.10.0" />
+    <PackageReference Include="Aspose.Cells" Version="23.10.0" />
+    <PackageReference Include="Aspose.Slides.NET" Version="23.10.0" />
+    <PackageReference Include="Aspose.Pdf" Version="23.10.0" />
+    <PackageReference Include="Aspose.Email" Version="23.10.0" />
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Aspose.Total.lic">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>
+

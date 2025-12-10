@@ -1,0 +1,117 @@
+name: Build Multi-Platform
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows-x64
+            script: pwsh publish.ps1 -Windows
+          - os: ubuntu-latest
+            platform: linux-x64
+            script: ./publish.sh linux-x64
+          - os: macos-latest
+            platform: macos-x64
+            script: ./publish.sh macos-x64
+          - os: macos-latest
+            platform: macos-arm64
+            script: ./publish.sh macos-arm64
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+    
+    - name: Restore dependencies
+      run: dotnet restore
+    
+    - name: Make publish script executable (Unix)
+      if: runner.os != 'Windows'
+      run: chmod +x publish.sh
+    
+    - name: Build and publish
+      run: ${{ matrix.script }}
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.platform }}
+        path: publish/${{ matrix.platform }}/
+        retention-days: 30
+    
+    - name: Display build info
+      run: |
+        echo "Platform: ${{ matrix.platform }}"
+        echo "OS: ${{ matrix.os }}"
+        ls -lh publish/${{ matrix.platform }} || dir publish\${{ matrix.platform }}
+
+  create-release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+    
+    - name: Display structure
+      run: ls -R artifacts
+    
+    - name: Create ZIP archives
+      run: |
+        cd artifacts
+        for dir in */; do
+          platform=${dir%/}
+          zip -r "../aspose-mcp-server-${platform}.zip" "$dir"
+        done
+        cd ..
+        ls -lh *.zip
+    
+    - name: Generate release notes
+      id: release_notes
+      run: |
+        {
+          echo "notes<<EOF"
+          echo "Automated build from commit ${{ github.sha }}"
+          echo ""
+          echo "Includes binaries for:"
+          echo "- Windows (x64)"
+          echo "- Linux (x64)"
+          echo "- macOS (x64 + ARM64)"
+          echo "EOF"
+        } >> $GITHUB_OUTPUT
+    
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: build-${{ github.run_number }}
+        name: Build ${{ github.run_number }}
+        body: ${{ steps.release_notes.outputs.notes }}
+        files: |
+          aspose-mcp-server-*.zip
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

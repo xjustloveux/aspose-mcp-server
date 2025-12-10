@@ -19,3 +19,36 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---
+
+## Third-Party Dependencies
+
+This software uses the following third-party libraries:
+
+### Aspose Libraries (Commercial License Required)
+- Aspose.Words (Version 23.10.0)
+- Aspose.Cells (Version 23.10.0)
+- Aspose.Slides.NET (Version 23.10.0)
+- Aspose.Pdf (Version 23.10.0)
+- Aspose.Email (Version 23.10.0)
+
+**Important:** The MIT License above applies only to the source code of this project. 
+The Aspose libraries are commercial software and require a separate license from Aspose.
+Users must obtain a valid Aspose license to use this software in production.
+
+- Aspose licenses: https://purchase.aspose.com/
+- Aspose documentation: https://docs.aspose.com/
+
+### Other Dependencies
+- System.Text.Json (Version 8.0.5) - MIT License (Microsoft)
+  - https://github.com/dotnet/runtime/blob/main/LICENSE.TXT
+
+---
+
+## License Notice
+
+This project's source code is licensed under the MIT License. However, to use 
+this software, you must have a valid Aspose license. Without a valid Aspose 
+license, the software will run in evaluation mode with watermarks and 
+limitations.
