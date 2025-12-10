@@ -79,6 +79,29 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Get latest version tag
+      id: get_version
+      run: |
+        latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v1.0.0")
+        echo "latest_tag=$latest_tag" >> $GITHUB_OUTPUT
+        echo "Latest tag: $latest_tag"
+    
+    - name: Calculate next version
+      id: next_version
+      run: |
+        latest_tag="${{ steps.get_version.outputs.latest_tag }}"
+        # 移除 v 前綴
+        version=${latest_tag#v}
+        # 分割版本號
+        IFS='.' read -r major minor patch <<< "$version"
+        # 遞增補丁版本號
+        patch=$((patch + 1))
+        next_version="v${major}.${minor}.${patch}"
+        echo "next_version=$next_version" >> $GITHUB_OUTPUT
+        echo "Next version: $next_version"
     
     - name: Download all artifacts
       uses: actions/download-artifact@v4
@@ -109,14 +132,17 @@ jobs:
           echo "- Windows (x64)"
           echo "- Linux (x64)"
           echo "- macOS (x64 + ARM64)"
+          echo ""
+          echo "**Build Number:** ${{ github.run_number }}"
+          echo "**Commit:** ${{ github.sha }}"
           echo "EOF"
         } >> $GITHUB_OUTPUT
     
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
-        tag_name: build-${{ github.run_number }}
-        name: Build ${{ github.run_number }}
+        tag_name: ${{ steps.next_version.outputs.next_version }}
+        name: Release ${{ steps.next_version.outputs.next_version }}
         body: ${{ steps.release_notes.outputs.notes }}
         files: |
           aspose-mcp-server-*.zip
