@@ -49,17 +49,36 @@ public class ExcelGetFormulaResultTool : IAsposeTool
             throw new ArgumentException($"sheetIndex must be between 0 and {workbook.Worksheets.Count - 1}");
         }
 
-        if (calculateBeforeRead)
-        {
-            workbook.CalculateFormula();
-        }
-
         var worksheet = workbook.Worksheets[sheetIndex];
         var cellObj = worksheet.Cells[cell];
 
+        if (calculateBeforeRead)
+        {
+            // Calculate formulas before reading
+            workbook.CalculateFormula();
+        }
+
         var result = $"Cell: {cell}\n";
         result += $"Formula: {cellObj.Formula ?? "(none)"}\n";
-        result += $"Calculated Value: {cellObj.Value ?? "(empty)"}\n";
+        
+        // Get the calculated value - for formula cells, Value should contain the calculated result
+        object? calculatedValue = cellObj.Value;
+        
+        // If cell has formula but value is empty or null, try to get the display value
+        if (!string.IsNullOrEmpty(cellObj.Formula))
+        {
+            if (calculatedValue == null || (calculatedValue is string str && string.IsNullOrEmpty(str)))
+            {
+                // Formula exists but not calculated - try to get display value
+                calculatedValue = cellObj.DisplayStringValue;
+                if (string.IsNullOrEmpty(calculatedValue?.ToString()))
+                {
+                    calculatedValue = cellObj.Formula; // Fallback to formula text
+                }
+            }
+        }
+        
+        result += $"Calculated Value: {calculatedValue ?? "(empty)"}\n";
         result += $"Value Type: {cellObj.Type}";
 
         return await Task.FromResult(result);

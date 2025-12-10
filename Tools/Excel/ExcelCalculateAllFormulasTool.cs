@@ -33,9 +33,24 @@ public class ExcelCalculateAllFormulasTool : IAsposeTool
 
         using var workbook = new Workbook(path);
 
-        // Aspose.Cells only has workbook-level CalculateFormula
-        workbook.CalculateFormula();
-
+        // Calculate formulas for specific sheet or all sheets
+        if (sheetIndex.HasValue)
+        {
+            var worksheet = workbook.Worksheets[sheetIndex.Value];
+            if (worksheet != null)
+            {
+                // Force calculation for the worksheet - CalculateFormula doesn't take parameters
+                // Instead, we calculate all formulas in workbook which will include this sheet
+                workbook.CalculateFormula();
+            }
+        }
+        else
+        {
+            // Calculate all formulas in workbook
+            workbook.CalculateFormula();
+        }
+        
+        // Save the workbook to persist calculated values
         workbook.Save(path);
         return await Task.FromResult(sheetIndex.HasValue
             ? $"Formulas calculated for sheet {sheetIndex.Value}: {path}"

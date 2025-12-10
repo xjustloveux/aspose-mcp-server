@@ -17,7 +17,7 @@ public class McpServer
         _config = config;
         _jsonOptions = new JsonSerializerOptions
         {
-            PropertyNamingPolicy = null, // Don't use camelCase, use exact property names
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase, // Use camelCase for JSON property names (MCP protocol standard)
             WriteIndented = false,
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
             Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping // Support Unicode characters (Chinese, Japanese, etc.)
@@ -33,29 +33,29 @@ public class McpServer
     public async Task RunAsync()
     {
         Console.Error.WriteLine("[INFO] Aspose MCP Server started");
+        // Flush stderr to ensure startup message is sent immediately
+        await Console.Error.FlushAsync();
         
         while (true)
         {
             try
             {
                 var line = await Console.In.ReadLineAsync();
+                
                 if (string.IsNullOrEmpty(line))
                 {
                     break;
                 }
 
                 var request = JsonSerializer.Deserialize<JsonObject>(line, _jsonOptions);
-                if (request == null) continue;
-
-                var response = await HandleRequestAsync(request);
-                
-                // Only send response if not a notification
-                if (response != null)
+                if (request == null)
                 {
-                    var responseJson = JsonSerializer.Serialize(response, _jsonOptions);
-                    await Console.Out.WriteLineAsync(responseJson);
-                    await Console.Out.FlushAsync();
+                    Console.Error.WriteLine("[WARN] Failed to parse JSON request, skipping");
+                    continue;
                 }
+
+                // Handle request and send response immediately
+                await HandleRequestAndSendResponseAsync(request);
             }
             catch (Exception ex)
             {
@@ -76,34 +76,97 @@ public class McpServer
         }
     }
 
-    private async Task<McpResponse?> HandleRequestAsync(JsonObject request)
+    private async Task HandleRequestAndSendResponseAsync(JsonObject request)
     {
-        var method = request["method"]?.GetValue<string>();
-        var id = request["id"];
-        
-        // Handle notifications (no id, no response needed)
-        // MCP notifications include: initialized, and methods starting with "notifications/"
-        if (id == null || (method == "initialized") || (method?.StartsWith("notifications/") == true))
-        {
-            Console.Error.WriteLine($"[DEBUG] Received notification: {method}");
-            return null; // Notifications don't get a response
-        }
-        
-        var response = new McpResponse
-        {
-            Jsonrpc = "2.0",
-            Id = id
-        };
-
         try
         {
-            switch (method)
+            var method = request["method"]?.GetValue<string>();
+            var id = request["id"];
+            
+            // Handle notifications (no id, no response needed)
+            // MCP notifications include: initialized, and methods starting with "notifications/"
+            if (id == null || (method == "initialized") || (method?.StartsWith("notifications/") == true))
+            {
+                return; // Notifications don't get a response
+            }
+            
+            var response = new McpResponse
+            {
+                Jsonrpc = "2.0",
+                Id = id
+            };
+
+            // Special handling for initialize - send response immediately without async overhead
+            if (method == "initialize")
+            {
+                // Extract client's requested protocol version from params
+                var paramsObj = request["params"] as JsonObject;
+                var clientProtocolVersion = paramsObj?["protocolVersion"]?.GetValue<string>();
+                
+                // Use client's protocol version if it's supported, otherwise use our supported version
+                // MCP protocol: server should return the protocol version it will use
+                // We support both 2025-06-18 and 2025-11-25, so we can use client's version for compatibility
+                var protocolVersion = clientProtocolVersion == "2025-06-18" ? "2025-06-18" : "2025-11-25";
+                
+                response.Result = new
+                {
+                    protocolVersion = protocolVersion,
+                    serverInfo = new
+                    {
+                        name = "aspose-mcp-server",
+                        version = "1.0.0"
+                    },
+                    capabilities = new
+                    {
+                        tools = new { }
+                    }
+                };
+                
+                // Send response IMMEDIATELY - no logging, no async operations before send
+                var responseJson = JsonSerializer.Serialize(response, _jsonOptions);
+                await Console.Out.WriteLineAsync(responseJson);
+                await Console.Out.FlushAsync();
+                return;
+            }
+
+            try
+            {
+                await ProcessRequestAsync(request, response, method);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[ERROR] Error handling method '{method}': {ex.Message}");
+                
+                // Only set error if not already set
+                if (response.Error == null)
+                {
+                    response.Result = null;
+                    response.Error = McpErrorHandler.HandleException(ex);
+                }
+            }
+
+            // Send response immediately after processing
+            var responseJson2 = JsonSerializer.Serialize(response, _jsonOptions);
+            await Console.Out.WriteLineAsync(responseJson2);
+            await Console.Out.FlushAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[ERROR] Fatal error in HandleRequestAndSendResponseAsync: {ex.Message}");
+            Console.Error.WriteLine($"[ERROR] Stack trace: {ex.StackTrace}");
+        }
+    }
+
+    private async Task ProcessRequestAsync(JsonObject request, McpResponse response, string? method)
+    {
+        switch (method)
             {
                 case "initialize":
                     // MCP protocolVersion uses YYYY-MM-DD format indicating the date of the last
                     // backward-incompatible change. This version should match the MCP specification.
                     // See: https://modelcontextprotocol.io/specification/2025-11-25
                     // 2025-11-25 version supports: tool annotations, pagination, tasks, cancellation
+                    // Build response immediately to avoid any delays
                     response.Result = new
                     {
                         protocolVersion = "2025-11-25",
@@ -235,25 +298,31 @@ public class McpServer
                     }
                     break;
 
+                case "ListOfferings":
+                case "listOfferings":
+                    // Some MCP clients use ListOfferings to get server information
+                    // Return server info similar to initialize response
+                    response.Result = new
+                    {
+                        serverInfo = new
+                        {
+                            name = "aspose-mcp-server",
+                            version = "1.0.0"
+                        },
+                        protocolVersion = "2025-11-25",
+                        capabilities = new
+                        {
+                            tools = new { }
+                        },
+                        tools = _tools.Keys.ToArray()
+                    };
+                    break;
+
                 default:
                     response.Result = null;
                     response.Error = McpErrorHandler.MethodNotFound(method ?? "null");
                     break;
-            }
         }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine($"[ERROR] Error handling method '{method}': {ex.Message}");
-            
-            // Only set error if not already set (e.g., from tools/call or default case)
-            if (response.Error == null)
-            {
-                response.Result = null;
-                response.Error = McpErrorHandler.HandleException(ex);
-            }
-        }
-
-        return response;
     }
 }
 

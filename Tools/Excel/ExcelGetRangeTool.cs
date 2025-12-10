@@ -56,6 +56,9 @@ public class ExcelGetRangeTool : IAsposeTool
             throw new ArgumentException($"sheetIndex must be between 0 and {workbook.Worksheets.Count - 1}");
         }
 
+        // Calculate formulas before reading to ensure values are up-to-date
+        workbook.CalculateFormula();
+
         var worksheet = workbook.Worksheets[sheetIndex];
         var cells = worksheet.Cells;
         var cellRange = cells.CreateRange(range);
@@ -78,7 +81,38 @@ public class ExcelGetRangeTool : IAsposeTool
                 }
                 else
                 {
-                    sb.Append($"{cellRef}: {cell.Value ?? "(empty)"}");
+                    // If cell has a formula, get the calculated value
+                    // Otherwise, get the cell value directly
+                    object? displayValue;
+                    if (!string.IsNullOrEmpty(cell.Formula))
+                    {
+                        // For formula cells, get the calculated value
+                        displayValue = cell.Value;
+                        
+                        // Check if value is an error (like #DIV/0!, #VALUE!, etc.)
+                        if (displayValue is Aspose.Cells.CellValueType cellType && cellType == Aspose.Cells.CellValueType.IsError)
+                        {
+                            // Try to get display string value instead
+                            displayValue = cell.DisplayStringValue;
+                        }
+                        
+                        // If value is null or empty, try display string value
+                        if (displayValue == null || (displayValue is string str && string.IsNullOrEmpty(str)))
+                        {
+                            displayValue = cell.DisplayStringValue;
+                            // If still empty, show formula as fallback
+                            if (string.IsNullOrEmpty(displayValue?.ToString()))
+                            {
+                                displayValue = cell.Formula;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        displayValue = cell.Value ?? cell.DisplayStringValue;
+                    }
+                    
+                    sb.Append($"{cellRef}: {displayValue ?? "(empty)"}");
                 }
 
                 if (includeFormat)

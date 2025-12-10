@@ -109,9 +109,21 @@ public class ExcelFormatCellsTool : IAsposeTool
         {
             try
             {
-                var color = fontColor.StartsWith("#")
-                    ? System.Drawing.ColorTranslator.FromHtml(fontColor)
-                    : System.Drawing.Color.FromName(fontColor);
+                System.Drawing.Color color;
+                if (fontColor.StartsWith("#"))
+                {
+                    color = System.Drawing.ColorTranslator.FromHtml(fontColor);
+                }
+                else if (fontColor.Length == 6 && System.Text.RegularExpressions.Regex.IsMatch(fontColor, "^[0-9A-Fa-f]{6}$"))
+                {
+                    // Hex color without # prefix (e.g., "4472C4")
+                    color = System.Drawing.ColorTranslator.FromHtml("#" + fontColor);
+                }
+                else
+                {
+                    // Try as color name
+                    color = System.Drawing.Color.FromName(fontColor);
+                }
                 style.Font.Color = color;
             }
             catch
@@ -124,9 +136,21 @@ public class ExcelFormatCellsTool : IAsposeTool
         {
             try
             {
-                var color = backgroundColor.StartsWith("#")
-                    ? System.Drawing.ColorTranslator.FromHtml(backgroundColor)
-                    : System.Drawing.Color.FromName(backgroundColor);
+                System.Drawing.Color color;
+                if (backgroundColor.StartsWith("#"))
+                {
+                    color = System.Drawing.ColorTranslator.FromHtml(backgroundColor);
+                }
+                else if (backgroundColor.Length == 6 && System.Text.RegularExpressions.Regex.IsMatch(backgroundColor, "^[0-9A-Fa-f]{6}$"))
+                {
+                    // Hex color without # prefix (e.g., "4472C4")
+                    color = System.Drawing.ColorTranslator.FromHtml("#" + backgroundColor);
+                }
+                else
+                {
+                    // Try as color name
+                    color = System.Drawing.Color.FromName(backgroundColor);
+                }
                 style.ForegroundColor = color;
                 style.Pattern = BackgroundType.Solid;
             }

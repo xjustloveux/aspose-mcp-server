@@ -41,7 +41,12 @@ public class ExcelEditChartTool : IAsposeTool
             dataRange = new
             {
                 type = "string",
-                description = "New data range for chart (e.g., 'A1:B10', optional)"
+                description = "New data range for chart Y-axis (values, e.g., 'E2:E40', optional)"
+            },
+            categoryAxisDataRange = new
+            {
+                type = "string",
+                description = "Category axis (X-axis) data range (optional, e.g., 'A2:A40' for dates/labels)"
             },
             chartType = new
             {
@@ -70,6 +75,7 @@ public class ExcelEditChartTool : IAsposeTool
         var chartIndex = arguments?["chartIndex"]?.GetValue<int>() ?? throw new ArgumentException("chartIndex is required");
         var title = arguments?["title"]?.GetValue<string>();
         var dataRange = arguments?["dataRange"]?.GetValue<string>();
+        var categoryAxisDataRange = arguments?["categoryAxisDataRange"]?.GetValue<string>();
         var chartTypeStr = arguments?["chartType"]?.GetValue<string>();
         var showLegend = arguments?["showLegend"]?.GetValue<bool?>();
         var legendPosition = arguments?["legendPosition"]?.GetValue<string>();
@@ -102,8 +108,38 @@ public class ExcelEditChartTool : IAsposeTool
         // Update data range
         if (!string.IsNullOrEmpty(dataRange))
         {
-            chart.SetChartDataRange(dataRange, true);
-            changes.Add($"數據範圍: {dataRange}");
+            // Clear existing series
+            chart.NSeries.Clear();
+            
+            // If category axis data is provided, combine it with data range
+            string finalDataRange = dataRange;
+            if (!string.IsNullOrEmpty(categoryAxisDataRange))
+            {
+                // Combine category axis and data range
+                // SetChartDataRange will use first range as category axis, second as values
+                finalDataRange = $"{categoryAxisDataRange},{dataRange}";
+            }
+            
+            // Use SetChartDataRange with combined range
+            chart.SetChartDataRange(finalDataRange, true);
+            
+            // Ensure series have correct data ranges set explicitly
+            if (chart.NSeries.Count > 0)
+            {
+                var ranges = dataRange.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                for (int i = 0; i < chart.NSeries.Count && i < ranges.Length; i++)
+                {
+                    var series = chart.NSeries[i];
+                    series.Values = ranges[i];
+                }
+            }
+            
+            var rangeInfo = dataRange;
+            if (!string.IsNullOrEmpty(categoryAxisDataRange))
+            {
+                rangeInfo += $", X軸: {categoryAxisDataRange}";
+            }
+            changes.Add($"數據範圍: {rangeInfo}");
         }
 
         // Update chart type

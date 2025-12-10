@@ -66,7 +66,27 @@ public class ExcelUpdateChartDataTool : IAsposeTool
         }
 
         var chart = charts[chartIndex];
-        chart.SetChartDataRange(dataRange, true);
+        
+        // Clear existing series
+        chart.NSeries.Clear();
+        
+        // Parse data range - support multiple ranges separated by comma (e.g., "E2:E40,G2:G40")
+        var ranges = dataRange.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        
+        foreach (var range in ranges)
+        {
+            // Add series with the data range - Add returns the index
+            int seriesIndex = chart.NSeries.Add(range, true);
+            // Get the series object and set the values range explicitly
+            var series = chart.NSeries[seriesIndex];
+            series.Values = range;
+        }
+        
+        // If no series were added, use SetChartDataRange as fallback
+        if (chart.NSeries.Count == 0)
+        {
+            chart.SetChartDataRange(dataRange, true);
+        }
 
         workbook.Save(outputPath);
 

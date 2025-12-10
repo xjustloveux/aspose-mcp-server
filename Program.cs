@@ -23,6 +23,7 @@ try
     }
     
     Console.Error.WriteLine($"[INFO] Aspose MCP Server - Enabled tools: {config.GetEnabledToolsInfo()}");
+    await Console.Error.FlushAsync();
     
     // Initialize Aspose License (with stdout suppression)
     LicenseManager.SetLicense(config);
