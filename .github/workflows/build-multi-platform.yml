@@ -158,6 +158,12 @@ jobs:
         EOF
         )
         
+        # 檢查 release 是否已存在
+        if gh release view "$tag_name" >/dev/null 2>&1; then
+          echo "Release $tag_name already exists, skipping creation"
+          exit 0
+        fi
+        
         # 使用 GitHub CLI 創建 release（會自動創建 lightweight tag 如果不存在）
         # tag 格式：v1.0.4（符合語義化版本規則，與之前的 tag 格式一致）
         # --target 指定 tag 指向觸發 workflow 的 commit
