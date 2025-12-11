@@ -52,7 +52,8 @@ jobs:
       with:
         name: ${{ matrix.platform }}
         path: publish/${{ matrix.platform }}/
-        retention-days: 30
+        # 不設定 retention-days，使用預設值（通常1天）
+        # Artifact 僅用於在 jobs 之間傳遞檔案，release 建立完成後即可刪除
     
     - name: Display build info
       run: |
