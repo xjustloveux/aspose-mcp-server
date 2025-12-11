@@ -35,11 +35,30 @@ function Build-Platform {
     
     $outputPath = "publish/$Platform"
     
+    # Get version from Git tag if available, otherwise use default
+    $version = if ($env:VERSION) { 
+        $env:VERSION 
+    } else {
+        try {
+            $gitTag = git describe --tags --abbrev=0 2>&1 | Select-Object -First 1
+            if ($gitTag -and -not ($gitTag -is [System.Management.Automation.ErrorRecord])) {
+                $gitTag.ToString().TrimStart('v')
+            } else {
+                "1.0.0"
+            }
+        } catch {
+            "1.0.0"
+        }
+    }
+    
+    Write-Host "  Using version: $version" -ForegroundColor Gray
+    
     dotnet publish `
         --configuration Release `
         --runtime $Runtime `
         --self-contained true `
         --output $outputPath `
+        -p:Version=$version `
         -p:PublishSingleFile=true `
         -p:PublishTrimmed=false `
         -p:IncludeNativeLibrariesForSelfExtract=true `

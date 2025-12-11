@@ -114,7 +114,7 @@ public class McpServer
                     serverInfo = new
                     {
                         name = "aspose-mcp-server",
-                        version = "1.0.0"
+                        version = VersionHelper.GetVersion()
                     },
                     capabilities = new
                     {
@@ -173,7 +173,7 @@ public class McpServer
                         serverInfo = new
                         {
                             name = "aspose-mcp-server",
-                            version = "1.0.0"
+                            version = VersionHelper.GetVersion()
                         },
                         capabilities = new
                         {
@@ -307,7 +307,7 @@ public class McpServer
                         serverInfo = new
                         {
                             name = "aspose-mcp-server",
-                            version = "1.0.0"
+                            version = VersionHelper.GetVersion()
                         },
                         protocolVersion = "2025-11-25",
                         capabilities = new

@@ -31,6 +31,16 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Get version from Git tag
+      id: get_version
+      run: |
+        latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v1.0.0")
+        version=${latest_tag#v}
+        echo "version=$version" >> $GITHUB_OUTPUT
+        echo "Detected version: $version"
     
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
@@ -46,6 +56,8 @@ jobs:
     
     - name: Build and publish
       run: ${{ matrix.script }}
+      env:
+        VERSION: ${{ steps.get_version.outputs.version }}
     
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
@@ -122,33 +134,25 @@ jobs:
         cd ..
         ls -lh *.zip
     
-    - name: Generate release notes
-      id: release_notes
+    - name: Create Release with GitHub CLI
       run: |
-        {
-          echo "notes<<EOF"
-          echo "Automated build from commit ${{ github.sha }}"
-          echo ""
-          echo "Includes binaries for:"
-          echo "- Windows (x64)"
-          echo "- Linux (x64)"
-          echo "- macOS (x64 + ARM64)"
-          echo ""
-          echo "**Build Number:** ${{ github.run_number }}"
-          echo "**Commit:** ${{ github.sha }}"
-          echo "EOF"
-        } >> $GITHUB_OUTPUT
-    
-    - name: Create Release
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: ${{ steps.next_version.outputs.next_version }}
-        name: Release ${{ steps.next_version.outputs.next_version }}
-        body: ${{ steps.release_notes.outputs.notes }}
-        files: |
+        tag_name="${{ steps.next_version.outputs.next_version }}"
+        release_notes="Automated build from commit ${{ github.sha }}
+
+Includes binaries for:
+- Windows (x64)
+- Linux (x64)
+- macOS (x64 + ARM64)
+
+**Build Number:** ${{ github.run_number }}
+**Commit:** ${{ github.sha }}"
+        
+        # 使用 GitHub CLI 創建 release（會自動創建 lightweight tag 如果不存在）
+        # tag 格式：v1.0.4（符合語義化版本規則，與之前的 tag 格式一致）
+        # --target 指定 tag 指向觸發 workflow 的 commit
+        gh release create "$tag_name" \
+          --title "Release $tag_name" \
+          --notes "$release_notes" \
+          --target "${{ github.sha }}" \
           aspose-mcp-server-*.zip
-        draft: false
-        prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

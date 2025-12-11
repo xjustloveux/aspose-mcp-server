@@ -8,7 +8,45 @@
     <PublishAot>false</PublishAot>
     <!-- Enable UTF-8 encoding for better Chinese character support -->
     <UseUTF8Encoding>true</UseUTF8Encoding>
+    <!-- Version will be set by GetGitVersion target if not explicitly provided -->
+    <!-- Default fallback version (used only if Git tag cannot be retrieved) -->
+    <VersionPrefix Condition="'$(VersionPrefix)' == ''">1.0.0</VersionPrefix>
+    <VersionSuffix Condition="'$(VersionSuffix)' == ''"></VersionSuffix>
+    <!-- Flag to track if version was explicitly set -->
+    <VersionExplicitlySet Condition="'$(Version)' != ''">true</VersionExplicitlySet>
   </PropertyGroup>
+  
+  <!-- Get version from Git tag if available -->
+  <!-- This target runs before build and sets Version property from Git tag -->
+  <!-- If Version is already explicitly set (e.g., from command line or publish script), skip this -->
+  <Target Name="GetGitVersion" BeforeTargets="BeforeBuild" Condition="'$(VersionExplicitlySet)' != 'true'">
+    <!-- Try to get version from Git tag -->
+    <!-- Use different commands for Windows (cmd) vs Unix (sh) -->
+    <Exec Command="cmd /c &quot;git describe --tags --abbrev=0 2&gt;nul || echo v1.0.0&quot;" 
+          ConsoleToMSBuild="true" 
+          IgnoreExitCode="true"
+          Condition="'$(OS)' == 'Windows_NT'">
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitTagRaw" />
+    </Exec>
+    <Exec Command="sh -c 'git describe --tags --abbrev=0 2&gt;/dev/null || echo v1.0.0'" 
+          ConsoleToMSBuild="true" 
+          IgnoreExitCode="true"
+          Condition="'$(OS)' != 'Windows_NT'">
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitTagRaw" />
+    </Exec>
+    <PropertyGroup>
+      <!-- Trim whitespace and remove 'v' prefix -->
+      <GitTag Condition="'$(GitTagRaw)' != ''">$([System.Text.RegularExpressions.Regex]::Replace($([System.String]::Copy($(GitTagRaw)).Trim()), '^v', ''))</GitTag>
+      <!-- Use Git tag version if available, otherwise use default -->
+      <!-- Note: We check VersionExplicitlySet to avoid overriding user-provided version -->
+      <Version Condition="'$(VersionExplicitlySet)' != 'true' AND '$(GitTag)' != ''">$(GitTag)</Version>
+      <Version Condition="'$(VersionExplicitlySet)' != 'true' AND '$(GitTag)' == ''">$(VersionPrefix)</Version>
+      <AssemblyVersion Condition="'$(Version)' != ''">$(Version).0</AssemblyVersion>
+      <FileVersion Condition="'$(Version)' != ''">$(Version).0</FileVersion>
+    </PropertyGroup>
+    <Message Text="Detected Git tag: $(GitTagRaw), Using version: $(Version)" Importance="high" Condition="'$(GitTagRaw)' != ''" />
+    <Message Text="No Git tag found, using default version: $(Version)" Importance="normal" Condition="'$(GitTagRaw)' == ''" />
+  </Target>
 
   <ItemGroup>
     <!-- License supports versions until 22 Nov 2023 -->

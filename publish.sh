@@ -87,11 +87,20 @@ build_platform() {
     
     local output_path="publish/$platform"
     
+    # Get version from Git tag if available, otherwise use default
+    if [ -n "$VERSION" ]; then
+        version="$VERSION"
+    else
+        git_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v1.0.0")
+        version=$(echo "$git_tag" | sed 's/^v//')
+    fi
+    
     dotnet publish \
         --configuration Release \
         --runtime "$runtime" \
         --self-contained true \
         --output "$output_path" \
+        -p:Version="$version" \
         -p:PublishSingleFile=true \
         -p:PublishTrimmed=false \
         -p:IncludeNativeLibrariesForSelfExtract=true \

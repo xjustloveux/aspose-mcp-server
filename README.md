@@ -11,7 +11,7 @@
 - **完整讀寫** - 支援從A文檔讀取格式應用到B文檔
 - **安全加固** - 全面的路徑驗證、輸入驗證和錯誤處理
 
-## 🚀 快速开始
+## 🚀 快速開始
 
 ### 1. 下載預編譯版本
 
@@ -405,7 +405,7 @@ word_style(path="B.docx", operation="copy_styles", sourceDocument="A.docx")
 
 如果找不到授權檔案，系統會以試用模式運行（會有試用版標記）。
 
-## 🔗 相关资源
+## 🔗 相關資源
 
 - [Aspose.Total for .NET](https://products.aspose.com/total/net/)
 - [Model Context Protocol](https://modelcontextprotocol.io/)
