@@ -137,15 +137,18 @@ jobs:
     - name: Create Release with GitHub CLI
       run: |
         tag_name="${{ steps.next_version.outputs.next_version }}"
-        release_notes="Automated build from commit ${{ github.sha }}
-
-Includes binaries for:
-- Windows (x64)
-- Linux (x64)
-- macOS (x64 + ARM64)
-
-**Build Number:** ${{ github.run_number }}
-**Commit:** ${{ github.sha }}"
+        release_notes=$(cat <<EOF
+        Automated build from commit ${{ github.sha }}
+        
+        Includes binaries for:
+        - Windows (x64)
+        - Linux (x64)
+        - macOS (x64 + ARM64)
+        
+        **Build Number:** ${{ github.run_number }}
+        **Commit:** ${{ github.sha }}
+        EOF
+        )
         
         # 使用 GitHub CLI 創建 release（會自動創建 lightweight tag 如果不存在）
         # tag 格式：v1.0.4（符合語義化版本規則，與之前的 tag 格式一致）
