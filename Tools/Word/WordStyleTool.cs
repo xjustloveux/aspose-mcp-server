@@ -1,0 +1,532 @@
+using System.Text;
+using System.Text.Json.Nodes;
+using Aspose.Words;
+using AsposeMcpServer.Core;
+
+namespace AsposeMcpServer.Tools;
+
+public class WordStyleTool : IAsposeTool
+{
+    public string Description => "Manage styles in Word documents (get, create, apply, copy from another document)";
+
+    public object InputSchema => new
+    {
+        type = "object",
+        properties = new
+        {
+            operation = new
+            {
+                type = "string",
+                description = "Operation: get_styles, create_style, apply_style, copy_styles",
+                @enum = new[] { "get_styles", "create_style", "apply_style", "copy_styles" }
+            },
+            path = new
+            {
+                type = "string",
+                description = "Document file path"
+            },
+            outputPath = new
+            {
+                type = "string",
+                description = "Output file path (optional, defaults to overwrite input)"
+            },
+            includeBuiltIn = new
+            {
+                type = "boolean",
+                description = "Include built-in styles (for get_styles, default: false)"
+            },
+            styleName = new
+            {
+                type = "string",
+                description = "Style name (required for create_style, apply_style)"
+            },
+            styleType = new
+            {
+                type = "string",
+                description = "Style type: paragraph, character, table, list (for create_style, default: paragraph)",
+                @enum = new[] { "paragraph", "character", "table", "list" }
+            },
+            baseStyle = new
+            {
+                type = "string",
+                description = "Base style to inherit from (for create_style)"
+            },
+            fontName = new
+            {
+                type = "string",
+                description = "Font name (for create_style)"
+            },
+            fontNameAscii = new
+            {
+                type = "string",
+                description = "Font name for ASCII characters (for create_style)"
+            },
+            fontNameFarEast = new
+            {
+                type = "string",
+                description = "Font name for Far East characters (for create_style)"
+            },
+            fontSize = new
+            {
+                type = "number",
+                description = "Font size in points (for create_style)"
+            },
+            bold = new
+            {
+                type = "boolean",
+                description = "Bold text (for create_style)"
+            },
+            italic = new
+            {
+                type = "boolean",
+                description = "Italic text (for create_style)"
+            },
+            underline = new
+            {
+                type = "boolean",
+                description = "Underline text (for create_style)"
+            },
+            color = new
+            {
+                type = "string",
+                description = "Text color hex (for create_style)"
+            },
+            alignment = new
+            {
+                type = "string",
+                description = "Paragraph alignment: left, center, right, justify (for create_style)",
+                @enum = new[] { "left", "center", "right", "justify" }
+            },
+            spaceBefore = new
+            {
+                type = "number",
+                description = "Space before paragraph in points (for create_style)"
+            },
+            spaceAfter = new
+            {
+                type = "number",
+                description = "Space after paragraph in points (for create_style)"
+            },
+            lineSpacing = new
+            {
+                type = "number",
+                description = "Line spacing multiplier (for create_style)"
+            },
+            paragraphIndex = new
+            {
+                type = "number",
+                description = "Paragraph index (0-based, for apply_style)"
+            },
+            paragraphIndices = new
+            {
+                type = "array",
+                description = "Array of paragraph indices (for apply_style)",
+                items = new { type = "number" }
+            },
+            sectionIndex = new
+            {
+                type = "number",
+                description = "Section index (0-based, for apply_style, default: 0)"
+            },
+            tableIndex = new
+            {
+                type = "number",
+                description = "Table index (0-based, for apply_style)"
+            },
+            applyToAllParagraphs = new
+            {
+                type = "boolean",
+                description = "Apply to all paragraphs (for apply_style, default: false)"
+            },
+            sourceDocument = new
+            {
+                type = "string",
+                description = "Source document path to copy styles from (for copy_styles)"
+            },
+            styleNames = new
+            {
+                type = "array",
+                description = "Array of style names to copy (for copy_styles, if not provided copies all)",
+                items = new { type = "string" }
+            },
+            overwriteExisting = new
+            {
+                type = "boolean",
+                description = "Overwrite existing styles (for copy_styles, default: false)"
+            }
+        },
+        required = new[] { "operation", "path" }
+    };
+
+    public async Task<string> ExecuteAsync(JsonObject? arguments)
+    {
+        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
+
+        return operation.ToLower() switch
+        {
+            "get_styles" => await GetStyles(arguments),
+            "create_style" => await CreateStyle(arguments),
+            "apply_style" => await ApplyStyle(arguments),
+            "copy_styles" => await CopyStyles(arguments),
+            _ => throw new ArgumentException($"Unknown operation: {operation}")
+        };
+    }
+
+    private async Task<string> GetStyles(JsonObject? arguments)
+    {
+        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        SecurityHelper.ValidateFilePath(path, "path");
+        var includeBuiltIn = arguments?["includeBuiltIn"]?.GetValue<bool>() ?? false;
+
+        var doc = new Document(path);
+        var result = new StringBuilder();
+        
+        result.AppendLine("=== Document Styles ===\n");
+
+        var paraStyles = doc.Styles.Cast<Style>()
+            .Where(s => s.Type == StyleType.Paragraph && (includeBuiltIn || !s.BuiltIn))
+            .OrderBy(s => s.Name)
+            .ToList();
+
+        result.AppendLine("【Paragraph Styles】");
+        foreach (var style in paraStyles)
+        {
+            result.AppendLine($"\nStyle Name: {style.Name}");
+            if (!string.IsNullOrEmpty(style.BaseStyleName))
+                result.AppendLine($"  Based on: {style.BaseStyleName}");
+            
+            var font = style.Font;
+            if (font.NameAscii != font.NameFarEast)
+            {
+                result.AppendLine($"  Font (ASCII): {font.NameAscii}");
+                result.AppendLine($"  Font (Far East): {font.NameFarEast}");
+            }
+            else
+                result.AppendLine($"  Font: {font.Name}");
+            
+            result.AppendLine($"  Size: {font.Size} pt");
+            if (font.Bold) result.AppendLine("  Bold: Yes");
+            if (font.Italic) result.AppendLine("  Italic: Yes");
+            
+            var paraFormat = style.ParagraphFormat;
+            result.AppendLine($"  Alignment: {paraFormat.Alignment}");
+            if (paraFormat.SpaceBefore != 0)
+                result.AppendLine($"  Space Before: {paraFormat.SpaceBefore} pt");
+            if (paraFormat.SpaceAfter != 0)
+                result.AppendLine($"  Space After: {paraFormat.SpaceAfter} pt");
+        }
+
+        result.AppendLine($"\n\nTotal Paragraph Styles: {paraStyles.Count}");
+
+        return await Task.FromResult(result.ToString());
+    }
+
+    private async Task<string> CreateStyle(JsonObject? arguments)
+    {
+        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        SecurityHelper.ValidateFilePath(path, "path");
+        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+        var styleName = arguments?["styleName"]?.GetValue<string>() ?? throw new ArgumentException("styleName is required");
+        var styleTypeStr = arguments?["styleType"]?.GetValue<string>() ?? "paragraph";
+        var baseStyle = arguments?["baseStyle"]?.GetValue<string>();
+        var fontName = arguments?["fontName"]?.GetValue<string>();
+        var fontNameAscii = arguments?["fontNameAscii"]?.GetValue<string>();
+        var fontNameFarEast = arguments?["fontNameFarEast"]?.GetValue<string>();
+        var fontSize = arguments?["fontSize"]?.GetValue<double?>();
+        var bold = arguments?["bold"]?.GetValue<bool?>();
+        var italic = arguments?["italic"]?.GetValue<bool?>();
+        var underline = arguments?["underline"]?.GetValue<bool?>();
+        var color = arguments?["color"]?.GetValue<string>();
+        var alignment = arguments?["alignment"]?.GetValue<string>();
+        var spaceBefore = arguments?["spaceBefore"]?.GetValue<double?>();
+        var spaceAfter = arguments?["spaceAfter"]?.GetValue<double?>();
+        var lineSpacing = arguments?["lineSpacing"]?.GetValue<double?>();
+
+        var doc = new Document(path);
+
+        if (doc.Styles[styleName] != null)
+            throw new InvalidOperationException($"Style '{styleName}' already exists");
+
+        var styleType = styleTypeStr.ToLower() switch
+        {
+            "character" => StyleType.Character,
+            "table" => StyleType.Table,
+            "list" => StyleType.List,
+            _ => StyleType.Paragraph
+        };
+
+        var style = doc.Styles.Add(styleType, styleName);
+
+        if (!string.IsNullOrEmpty(baseStyle))
+        {
+            var baseStyleObj = doc.Styles[baseStyle];
+            if (baseStyleObj != null)
+                style.BaseStyleName = baseStyle;
+        }
+
+        if (!string.IsNullOrEmpty(fontNameAscii))
+            style.Font.NameAscii = fontNameAscii;
+        
+        if (!string.IsNullOrEmpty(fontNameFarEast))
+            style.Font.NameFarEast = fontNameFarEast;
+        
+        if (!string.IsNullOrEmpty(fontName))
+        {
+            if (string.IsNullOrEmpty(fontNameAscii) && string.IsNullOrEmpty(fontNameFarEast))
+                style.Font.Name = fontName;
+            else
+            {
+                if (string.IsNullOrEmpty(fontNameAscii))
+                    style.Font.NameAscii = fontName;
+                if (string.IsNullOrEmpty(fontNameFarEast))
+                    style.Font.NameFarEast = fontName;
+            }
+        }
+
+        if (fontSize.HasValue)
+            style.Font.Size = fontSize.Value;
+
+        if (bold.HasValue)
+            style.Font.Bold = bold.Value;
+
+        if (italic.HasValue)
+            style.Font.Italic = italic.Value;
+
+        if (underline.HasValue)
+            style.Font.Underline = underline.Value ? Underline.Single : Underline.None;
+
+        if (!string.IsNullOrEmpty(color))
+        {
+            try
+            {
+                style.Font.Color = ParseColor(color);
+            }
+            catch { }
+        }
+
+        if (styleType == StyleType.Paragraph || styleType == StyleType.List)
+        {
+            if (!string.IsNullOrEmpty(alignment))
+            {
+                style.ParagraphFormat.Alignment = alignment.ToLower() switch
+                {
+                    "center" => ParagraphAlignment.Center,
+                    "right" => ParagraphAlignment.Right,
+                    "justify" => ParagraphAlignment.Justify,
+                    _ => ParagraphAlignment.Left
+                };
+            }
+
+            if (spaceBefore.HasValue)
+                style.ParagraphFormat.SpaceBefore = spaceBefore.Value;
+
+            if (spaceAfter.HasValue)
+                style.ParagraphFormat.SpaceAfter = spaceAfter.Value;
+
+            if (lineSpacing.HasValue)
+            {
+                style.ParagraphFormat.LineSpacingRule = LineSpacingRule.Multiple;
+                style.ParagraphFormat.LineSpacing = lineSpacing.Value * 12;
+            }
+        }
+
+        doc.Save(outputPath);
+        return await Task.FromResult($"Style '{styleName}' created successfully: {outputPath}");
+    }
+
+    private async Task<string> ApplyStyle(JsonObject? arguments)
+    {
+        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        SecurityHelper.ValidateFilePath(path, "path");
+        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+        var styleName = arguments?["styleName"]?.GetValue<string>() ?? throw new ArgumentException("styleName is required");
+        var paragraphIndex = arguments?["paragraphIndex"]?.GetValue<int?>();
+        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>();
+        var paragraphIndicesArray = arguments?["paragraphIndices"]?.AsArray();
+        var tableIndex = arguments?["tableIndex"]?.GetValue<int?>();
+        var applyToAllParagraphs = arguments?["applyToAllParagraphs"]?.GetValue<bool?>() ?? false;
+
+        var doc = new Document(path);
+        var style = doc.Styles[styleName];
+        if (style == null)
+            throw new ArgumentException($"Style '{styleName}' not found");
+
+        int appliedCount = 0;
+
+        if (tableIndex.HasValue)
+        {
+            var tables = doc.GetChildNodes(NodeType.Table, true).Cast<Aspose.Words.Tables.Table>().ToList();
+            if (tableIndex.Value < 0 || tableIndex.Value >= tables.Count)
+                throw new ArgumentException($"tableIndex must be between 0 and {tables.Count - 1}");
+            tables[tableIndex.Value].Style = style;
+            appliedCount = 1;
+        }
+        else if (applyToAllParagraphs)
+        {
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
+            foreach (var para in paragraphs)
+            {
+                para.ParagraphFormat.Style = style;
+                appliedCount++;
+            }
+        }
+        else if (paragraphIndicesArray != null && paragraphIndicesArray.Count > 0)
+        {
+            var sectionIdx = sectionIndex.HasValue ? sectionIndex.Value : 0;
+            if (sectionIdx < 0 || sectionIdx >= doc.Sections.Count)
+                throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
+
+            var section = doc.Sections[sectionIdx];
+            var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
+            
+            foreach (var idxObj in paragraphIndicesArray)
+            {
+                var idx = idxObj?.GetValue<int>();
+                if (idx.HasValue && idx.Value >= 0 && idx.Value < paragraphs.Count)
+                {
+                    paragraphs[idx.Value].ParagraphFormat.Style = style;
+                    appliedCount++;
+                }
+            }
+        }
+        else if (paragraphIndex.HasValue)
+        {
+            var sectionIdx = sectionIndex.HasValue ? sectionIndex.Value : 0;
+            if (sectionIdx < 0 || sectionIdx >= doc.Sections.Count)
+                throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
+
+            var section = doc.Sections[sectionIdx];
+            var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
+            
+            if (paragraphIndex.Value < 0 || paragraphIndex.Value >= paragraphs.Count)
+                throw new ArgumentException($"paragraphIndex must be between 0 and {paragraphs.Count - 1}");
+
+            paragraphs[paragraphIndex.Value].ParagraphFormat.Style = style;
+            appliedCount = 1;
+        }
+        else
+        {
+            throw new ArgumentException("Either paragraphIndex, paragraphIndices, tableIndex, or applyToAllParagraphs must be provided");
+        }
+
+        doc.Save(outputPath);
+        return await Task.FromResult($"Applied style '{styleName}' to {appliedCount} element(s): {outputPath}");
+    }
+
+    private async Task<string> CopyStyles(JsonObject? arguments)
+    {
+        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        SecurityHelper.ValidateFilePath(path, "path");
+        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+        var sourceDocument = arguments?["sourceDocument"]?.GetValue<string>() ?? throw new ArgumentException("sourceDocument is required");
+        SecurityHelper.ValidateFilePath(sourceDocument, "sourceDocument");
+        var overwriteExisting = arguments?["overwriteExisting"]?.GetValue<bool>() ?? false;
+
+        if (!File.Exists(sourceDocument))
+            throw new FileNotFoundException($"Source document not found: {sourceDocument}");
+
+        var targetDoc = new Document(path);
+        var sourceDoc = new Document(sourceDocument);
+
+        var styleNames = new List<string>();
+        if (arguments?.ContainsKey("styleNames") == true)
+        {
+            var stylesArray = arguments["styleNames"]?.AsArray();
+            if (stylesArray != null)
+            {
+                foreach (var item in stylesArray)
+                {
+                    var name = item?.GetValue<string>();
+                    if (!string.IsNullOrEmpty(name))
+                        styleNames.Add(name);
+                }
+            }
+        }
+
+        bool copyAll = styleNames.Count == 0;
+        var copiedCount = 0;
+        var skippedCount = 0;
+
+        foreach (Style sourceStyle in sourceDoc.Styles)
+        {
+            if (!copyAll && !styleNames.Contains(sourceStyle.Name))
+                continue;
+
+            var existingStyle = targetDoc.Styles[sourceStyle.Name];
+            
+            if (existingStyle != null && !overwriteExisting)
+            {
+                skippedCount++;
+                continue;
+            }
+
+            try
+            {
+                if (existingStyle != null && overwriteExisting)
+                {
+                    CopyStyleProperties(sourceStyle, existingStyle);
+                }
+                else
+                {
+                    var newStyle = targetDoc.Styles.Add(sourceStyle.Type, sourceStyle.Name);
+                    CopyStyleProperties(sourceStyle, newStyle);
+                }
+
+                copiedCount++;
+            }
+            catch
+            {
+                skippedCount++;
+            }
+        }
+
+        targetDoc.Save(outputPath);
+        return await Task.FromResult($"Copied {copiedCount} style(s) from {Path.GetFileName(sourceDocument)}. Skipped: {skippedCount}. Output: {outputPath}");
+    }
+
+    private void CopyStyleProperties(Style sourceStyle, Style targetStyle)
+    {
+        targetStyle.Font.Name = sourceStyle.Font.Name;
+        targetStyle.Font.NameAscii = sourceStyle.Font.NameAscii;
+        targetStyle.Font.NameFarEast = sourceStyle.Font.NameFarEast;
+        targetStyle.Font.Size = sourceStyle.Font.Size;
+        targetStyle.Font.Bold = sourceStyle.Font.Bold;
+        targetStyle.Font.Italic = sourceStyle.Font.Italic;
+        targetStyle.Font.Color = sourceStyle.Font.Color;
+        targetStyle.Font.Underline = sourceStyle.Font.Underline;
+        
+        if (sourceStyle.Type == StyleType.Paragraph)
+        {
+            targetStyle.ParagraphFormat.Alignment = sourceStyle.ParagraphFormat.Alignment;
+            targetStyle.ParagraphFormat.SpaceBefore = sourceStyle.ParagraphFormat.SpaceBefore;
+            targetStyle.ParagraphFormat.SpaceAfter = sourceStyle.ParagraphFormat.SpaceAfter;
+            targetStyle.ParagraphFormat.LineSpacing = sourceStyle.ParagraphFormat.LineSpacing;
+            targetStyle.ParagraphFormat.LineSpacingRule = sourceStyle.ParagraphFormat.LineSpacingRule;
+            targetStyle.ParagraphFormat.LeftIndent = sourceStyle.ParagraphFormat.LeftIndent;
+            targetStyle.ParagraphFormat.RightIndent = sourceStyle.ParagraphFormat.RightIndent;
+            targetStyle.ParagraphFormat.FirstLineIndent = sourceStyle.ParagraphFormat.FirstLineIndent;
+        }
+    }
+
+    private System.Drawing.Color ParseColor(string color)
+    {
+        if (color.StartsWith("#"))
+            color = color.Substring(1);
+
+        if (color.Length == 6)
+        {
+            int r = Convert.ToInt32(color.Substring(0, 2), 16);
+            int g = Convert.ToInt32(color.Substring(2, 2), 16);
+            int b = Convert.ToInt32(color.Substring(4, 2), 16);
+            return System.Drawing.Color.FromArgb(r, g, b);
+        }
+        else
+        {
+            return System.Drawing.Color.FromName(color);
+        }
+    }
+}
+

@@ -1,5 +1,3 @@
-using System.Text.Json;
-
 namespace AsposeMcpServer.Core;
 
 public class ServerConfig
@@ -22,13 +20,13 @@ public class ServerConfig
         // Check for license path from environment variable
         config.LicensePath = Environment.GetEnvironmentVariable("ASPOSE_LICENSE_PATH");
         
-        // 如果没有指定任何参数，默认启用所有工具
+        // 如果沒有指定任何參數，預設啟用所有工具
         if (args.Length == 0)
         {
             return config;
         }
 
-        // 如果指定了参数，则默认禁用所有，只启用指定的
+        // 如果指定了參數，則預設禁用所有，只啟用指定的
         config.EnableWord = false;
         config.EnableExcel = false;
         config.EnablePowerPoint = false;

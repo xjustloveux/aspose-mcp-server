@@ -1,0 +1,1653 @@
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using Aspose.Words;
+using Aspose.Words.Tables;
+using AsposeMcpServer.Core;
+
+namespace AsposeMcpServer.Tools;
+
+public class WordTableTool : IAsposeTool
+{
+    public string Description => "Manage tables in Word documents (add, edit, delete, get, insert/delete rows/columns, merge/split cells, set borders, get structure)";
+
+    public object InputSchema => new
+    {
+        type = "object",
+        properties = new
+        {
+            operation = new
+            {
+                type = "string",
+                description = "Operation: add_table, edit_table_format, delete_table, get_tables, insert_row, delete_row, insert_column, delete_column, merge_cells, split_cell, edit_cell_format, move_table, copy_table, get_table_structure, set_table_border, set_column_width, set_row_height",
+                @enum = new[] { "add_table", "edit_table_format", "delete_table", "get_tables", "insert_row", "delete_row", "insert_column", "delete_column", "merge_cells", "split_cell", "edit_cell_format", "move_table", "copy_table", "get_table_structure", "set_table_border", "set_column_width", "set_row_height" }
+            },
+            path = new
+            {
+                type = "string",
+                description = "Document file path"
+            },
+            outputPath = new
+            {
+                type = "string",
+                description = "Output file path (optional, defaults to overwrite input)"
+            },
+            tableIndex = new
+            {
+                type = "number",
+                description = "Table index (0-based, for most operations)"
+            },
+            sectionIndex = new
+            {
+                type = "number",
+                description = "Section index (0-based, default: 0)"
+            },
+            rows = new
+            {
+                type = "number",
+                description = "Number of rows (for add_table)"
+            },
+            columns = new
+            {
+                type = "number",
+                description = "Number of columns (for add_table)"
+            },
+            data = new
+            {
+                type = "array",
+                description = "Table data (array of arrays, for add_table)",
+                items = new
+                {
+                    type = "array",
+                    items = new { type = "string" }
+                }
+            },
+            headerRow = new
+            {
+                type = "boolean",
+                description = "First row is header (for add_table, default: false)"
+            },
+            headerBackgroundColor = new
+            {
+                type = "string",
+                description = "Header row background color hex (for add_table)"
+            },
+            rowBackgroundColors = new
+            {
+                type = "object",
+                description = "Background colors for specific rows (for add_table)"
+            },
+            columnBackgroundColors = new
+            {
+                type = "object",
+                description = "Background colors for specific columns (for add_table)"
+            },
+            cellBackgroundColors = new
+            {
+                type = "array",
+                description = "Background colors for specific cells [row, col, color] (for add_table)",
+                items = new
+                {
+                    type = "array",
+                    items = new { type = "string" }
+                }
+            },
+            mergeCells = new
+            {
+                type = "array",
+                description = "Cells to merge (for add_table)",
+                items = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        startRow = new { type = "number" },
+                        endRow = new { type = "number" },
+                        startCol = new { type = "number" },
+                        endCol = new { type = "number" }
+                    }
+                }
+            },
+            borderStyle = new
+            {
+                type = "string",
+                description = "Border style: none, single, double, dotted (for add_table, default: single)",
+                @enum = new[] { "none", "single", "double", "dotted" }
+            },
+            alignment = new
+            {
+                type = "string",
+                description = "Table alignment: left, center, right (for add_table, edit_table_format, default: left)",
+                @enum = new[] { "left", "center", "right" }
+            },
+            verticalAlignment = new
+            {
+                type = "string",
+                description = "Cell vertical alignment: top, center, bottom (for add_table, default: center)",
+                @enum = new[] { "top", "center", "bottom" }
+            },
+            cellPadding = new
+            {
+                type = "number",
+                description = "Cell padding in points (for add_table, default: 5)"
+            },
+            tableFontName = new
+            {
+                type = "string",
+                description = "Font name for all table cells (for add_table)"
+            },
+            tableFontSize = new
+            {
+                type = "number",
+                description = "Font size for all table cells in points (for add_table)"
+            },
+            tableFontNameAscii = new
+            {
+                type = "string",
+                description = "Font name for English text in table cells (for add_table)"
+            },
+            tableFontNameFarEast = new
+            {
+                type = "string",
+                description = "Font name for Chinese/Japanese/Korean text in table cells (for add_table)"
+            },
+            width = new
+            {
+                type = "number",
+                description = "Table width in points (for edit_table_format)"
+            },
+            widthType = new
+            {
+                type = "string",
+                description = "Width type: auto, points, percent (for edit_table_format)",
+                @enum = new[] { "auto", "points", "percent" }
+            },
+            styleName = new
+            {
+                type = "string",
+                description = "Table style name (for edit_table_format)"
+            },
+            includeContent = new
+            {
+                type = "boolean",
+                description = "Include table content (for get_tables, get_table_structure, default: false)"
+            },
+            includeCellFormatting = new
+            {
+                type = "boolean",
+                description = "Include cell-level formatting details (for get_table_structure, default: true)"
+            },
+            rowIndex = new
+            {
+                type = "number",
+                description = "Row index (0-based, for insert_row, delete_row, merge_cells, split_cell, edit_cell_format, set_row_height)"
+            },
+            colIndex = new
+            {
+                type = "number",
+                description = "Column index (0-based, for insert_column, delete_column, merge_cells, split_cell, edit_cell_format, set_column_width)"
+            },
+            insertBefore = new
+            {
+                type = "boolean",
+                description = "Insert before specified index (for insert_row, insert_column, default: false)"
+            },
+            rowData = new
+            {
+                type = "array",
+                description = "Array of cell data for new row (for insert_row)",
+                items = new { type = "string" }
+            },
+            columnData = new
+            {
+                type = "array",
+                description = "Array of cell data for new column (for insert_column)",
+                items = new { type = "string" }
+            },
+            startRow = new
+            {
+                type = "number",
+                description = "Start row index for merge (for merge_cells)"
+            },
+            startCol = new
+            {
+                type = "number",
+                description = "Start column index for merge (for merge_cells)"
+            },
+            endRow = new
+            {
+                type = "number",
+                description = "End row index for merge (for merge_cells)"
+            },
+            endCol = new
+            {
+                type = "number",
+                description = "End column index for merge (for merge_cells)"
+            },
+            splitRows = new
+            {
+                type = "number",
+                description = "Number of rows to split into (for split_cell, default: 2)"
+            },
+            splitCols = new
+            {
+                type = "number",
+                description = "Number of columns to split into (for split_cell, default: 2)"
+            },
+            backgroundColor = new
+            {
+                type = "string",
+                description = "Cell background color hex (for edit_cell_format)"
+            },
+            paddingTop = new
+            {
+                type = "number",
+                description = "Top padding in points (for edit_cell_format)"
+            },
+            paddingBottom = new
+            {
+                type = "number",
+                description = "Bottom padding in points (for edit_cell_format)"
+            },
+            paddingLeft = new
+            {
+                type = "number",
+                description = "Left padding in points (for edit_cell_format)"
+            },
+            paddingRight = new
+            {
+                type = "number",
+                description = "Right padding in points (for edit_cell_format)"
+            },
+            fontName = new
+            {
+                type = "string",
+                description = "Font name (for edit_cell_format)"
+            },
+            fontNameAscii = new
+            {
+                type = "string",
+                description = "Font name for ASCII characters (for edit_cell_format)"
+            },
+            fontNameFarEast = new
+            {
+                type = "string",
+                description = "Font name for Far East characters (for edit_cell_format)"
+            },
+            fontSize = new
+            {
+                type = "number",
+                description = "Font size in points (for edit_cell_format)"
+            },
+            bold = new
+            {
+                type = "boolean",
+                description = "Bold text (for edit_cell_format)"
+            },
+            italic = new
+            {
+                type = "boolean",
+                description = "Italic text (for edit_cell_format)"
+            },
+            color = new
+            {
+                type = "string",
+                description = "Text color hex (for edit_cell_format)"
+            },
+            targetParagraphIndex = new
+            {
+                type = "number",
+                description = "Target paragraph index to move/copy after (for move_table, copy_table)"
+            },
+            sourceTableIndex = new
+            {
+                type = "number",
+                description = "Source table index (for copy_table)"
+            },
+            sourceSectionIndex = new
+            {
+                type = "number",
+                description = "Source section index (for copy_table)"
+            },
+            targetSectionIndex = new
+            {
+                type = "number",
+                description = "Target section index (for copy_table)"
+            },
+            borderTop = new
+            {
+                type = "boolean",
+                description = "Show top border (for set_table_border, default: false)"
+            },
+            borderBottom = new
+            {
+                type = "boolean",
+                description = "Show bottom border (for set_table_border, default: false)"
+            },
+            borderLeft = new
+            {
+                type = "boolean",
+                description = "Show left border (for set_table_border, default: false)"
+            },
+            borderRight = new
+            {
+                type = "boolean",
+                description = "Show right border (for set_table_border, default: false)"
+            },
+            lineStyle = new
+            {
+                type = "string",
+                description = "Border line style: none, single, double, dotted, dashed, thick (for set_table_border)",
+                @enum = new[] { "none", "single", "double", "dotted", "dashed", "thick" }
+            },
+            lineWidth = new
+            {
+                type = "number",
+                description = "Border line width in points (for set_table_border, default: 0.5)"
+            },
+            lineColor = new
+            {
+                type = "string",
+                description = "Border line color hex (for set_table_border, default: 000000)"
+            },
+            columnWidth = new
+            {
+                type = "number",
+                description = "Column width in points (for set_column_width)"
+            },
+            rowHeight = new
+            {
+                type = "number",
+                description = "Row height in points (for set_row_height)"
+            },
+            heightRule = new
+            {
+                type = "string",
+                description = "Height rule: auto, atLeast, exactly (for set_row_height, default: atLeast)",
+                @enum = new[] { "auto", "atLeast", "exactly" }
+            }
+        },
+        required = new[] { "operation", "path" }
+    };
+
+    public async Task<string> ExecuteAsync(JsonObject? arguments)
+    {
+        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
+
+        return operation.ToLower() switch
+        {
+            "add_table" => await AddTable(arguments),
+            "edit_table_format" => await EditTableFormat(arguments),
+            "delete_table" => await DeleteTable(arguments),
+            "get_tables" => await GetTables(arguments),
+            "insert_row" => await InsertRow(arguments),
+            "delete_row" => await DeleteRow(arguments),
+            "insert_column" => await InsertColumn(arguments),
+            "delete_column" => await DeleteColumn(arguments),
+            "merge_cells" => await MergeCells(arguments),
+            "split_cell" => await SplitCell(arguments),
+            "edit_cell_format" => await EditCellFormat(arguments),
+            "move_table" => await MoveTable(arguments),
+            "copy_table" => await CopyTable(arguments),
+            "get_table_structure" => await GetTableStructure(arguments),
+            "set_table_border" => await SetTableBorder(arguments),
+            "set_column_width" => await SetColumnWidth(arguments),
+            "set_row_height" => await SetRowHeight(arguments),
+            _ => throw new ArgumentException($"Unknown operation: {operation}")
+        };
+    }
+
+    private async Task<string> AddTable(JsonObject? arguments)
+    {
+        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        SecurityHelper.ValidateFilePath(path, "path");
+        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+        var rows = arguments?["rows"]?.GetValue<int>() ?? throw new ArgumentException("rows is required");
+        var columns = arguments?["columns"]?.GetValue<int>() ?? throw new ArgumentException("columns is required");
+        var headerRow = arguments?["headerRow"]?.GetValue<bool>() ?? false;
+        var headerBgColor = arguments?["headerBackgroundColor"]?.GetValue<string>();
+        var borderStyle = arguments?["borderStyle"]?.GetValue<string>() ?? "single";
+        var alignment = arguments?["alignment"]?.GetValue<string>() ?? "left";
+        var verticalAlignment = arguments?["verticalAlignment"]?.GetValue<string>() ?? "center";
+        var cellPadding = arguments?["cellPadding"]?.GetValue<double>() ?? 5.0;
+        var tableFontName = arguments?["tableFontName"]?.GetValue<string>();
+        var tableFontSize = arguments?["tableFontSize"]?.GetValue<double?>();
+        var tableFontNameAscii = arguments?["tableFontNameAscii"]?.GetValue<string>();
+        var tableFontNameFarEast = arguments?["tableFontNameFarEast"]?.GetValue<string>();
+
+        var doc = new Document(path);
+        var builder = new DocumentBuilder(doc);
+        builder.MoveToDocumentEnd();
+        builder.InsertParagraph();
+        builder.CurrentParagraph.ParagraphFormat.LeftIndent = 0;
+        builder.CurrentParagraph.ParagraphFormat.RightIndent = 0;
+        builder.CurrentParagraph.ParagraphFormat.FirstLineIndent = 0;
+
+        string[][]? data = null;
+        if (arguments?.ContainsKey("data") == true)
+        {
+            try
+            {
+                var dataJson = arguments["data"]?.ToJsonString();
+                if (!string.IsNullOrEmpty(dataJson))
+                    data = JsonSerializer.Deserialize<string[][]>(dataJson);
+            }
+            catch { }
+        }
+
+        var rowBgColors = ParseColorDictionary(arguments?["rowBackgroundColors"]);
+        var columnBgColors = ParseColorDictionary(arguments?["columnBackgroundColors"]);
+        var cellColors = ParseCellColors(arguments?["cellBackgroundColors"]);
+        var mergeCells = ParseMergeCells(arguments?["mergeCells"]);
+
+        var table = builder.StartTable();
+        var cells = new Dictionary<(int row, int col), Cell>();
+
+        for (int i = 0; i < rows; i++)
+        {
+            for (int j = 0; j < columns; j++)
+            {
+                var cell = builder.InsertCell();
+                cells[(i, j)] = cell;
+
+                string cellText = "";
+                if (data != null && i < data.Length && j < data[i].Length)
+                    cellText = data[i][j];
+                else
+                    cellText = $"Cell {i + 1},{j + 1}";
+
+                bool isHeaderRow = headerRow && i == 0;
+                if (isHeaderRow)
+                {
+                    if (!string.IsNullOrEmpty(tableFontNameAscii))
+                        builder.Font.NameAscii = tableFontNameAscii;
+                    if (!string.IsNullOrEmpty(tableFontNameFarEast))
+                        builder.Font.NameFarEast = tableFontNameFarEast;
+                    if (!string.IsNullOrEmpty(tableFontName) && string.IsNullOrEmpty(tableFontNameAscii) && string.IsNullOrEmpty(tableFontNameFarEast))
+                        builder.Font.Name = tableFontName;
+                }
+                else
+                {
+                    if (!string.IsNullOrEmpty(tableFontNameAscii))
+                        builder.Font.NameAscii = tableFontNameAscii;
+                    if (!string.IsNullOrEmpty(tableFontNameFarEast))
+                        builder.Font.NameFarEast = tableFontNameFarEast;
+                    if (!string.IsNullOrEmpty(tableFontName) && string.IsNullOrEmpty(tableFontNameAscii) && string.IsNullOrEmpty(tableFontNameFarEast))
+                        builder.Font.Name = tableFontName;
+                }
+
+                if (isHeaderRow && tableFontSize.HasValue)
+                    builder.Font.Size = tableFontSize.Value;
+                else if (tableFontSize.HasValue)
+                    builder.Font.Size = tableFontSize.Value;
+
+                builder.Write(cellText);
+                builder.Font.Bold = false;
+                builder.Font.Italic = false;
+                builder.Font.Color = System.Drawing.Color.Black;
+                builder.Font.Name = "Calibri";
+                builder.Font.Size = 11;
+
+                cell.CellFormat.SetPaddings(cellPadding, cellPadding, cellPadding, cellPadding);
+                cell.CellFormat.Shading.BackgroundPatternColor = System.Drawing.Color.Empty;
+                cell.CellFormat.VerticalAlignment = GetVerticalAlignment(verticalAlignment);
+
+                bool hasColor = false;
+                var cellColorMatch = cellColors.FirstOrDefault(c => c.row == i && c.col == j);
+                if (cellColorMatch != default)
+                {
+                    cell.CellFormat.Shading.BackgroundPatternColor = ParseColor(cellColorMatch.color);
+                    hasColor = true;
+                }
+                if (!hasColor && columnBgColors.ContainsKey(j))
+                {
+                    cell.CellFormat.Shading.BackgroundPatternColor = ParseColor(columnBgColors[j]);
+                    hasColor = true;
+                }
+                if (!hasColor && rowBgColors.ContainsKey(i))
+                {
+                    cell.CellFormat.Shading.BackgroundPatternColor = ParseColor(rowBgColors[i]);
+                    hasColor = true;
+                }
+                if (!hasColor && headerRow && i == 0 && !string.IsNullOrEmpty(headerBgColor))
+                {
+                    cell.CellFormat.Shading.BackgroundPatternColor = ParseColor(headerBgColor);
+                }
+
+                if (borderStyle != "none")
+                {
+                    var lineStyle = borderStyle switch
+                    {
+                        "double" => LineStyle.Double,
+                        "dotted" => LineStyle.Dot,
+                        _ => LineStyle.Single
+                    };
+                    cell.CellFormat.Borders.LineStyle = lineStyle;
+                    cell.CellFormat.Borders.Color = System.Drawing.Color.Black;
+                }
+                else
+                    cell.CellFormat.Borders.LineStyle = LineStyle.None;
+            }
+            builder.EndRow();
+        }
+
+        builder.EndTable();
+
+        foreach (var merge in mergeCells)
+        {
+            try
+            {
+                var startCell = cells[(merge.startRow, merge.startCol)];
+                if (merge.startRow == merge.endRow && merge.startCol != merge.endCol)
+                {
+                    startCell.CellFormat.HorizontalMerge = CellMerge.First;
+                    for (int col = merge.startCol + 1; col <= merge.endCol; col++)
+                    {
+                        if (cells.ContainsKey((merge.startRow, col)))
+                            cells[(merge.startRow, col)].CellFormat.HorizontalMerge = CellMerge.Previous;
+                    }
+                }
+                else if (merge.startCol == merge.endCol && merge.startRow != merge.endRow)
+                {
+                    startCell.CellFormat.VerticalMerge = CellMerge.First;
+                    for (int row = merge.startRow + 1; row <= merge.endRow; row++)
+                    {
+                        if (cells.ContainsKey((row, merge.startCol)))
+                            cells[(row, merge.startCol)].CellFormat.VerticalMerge = CellMerge.Previous;
+                    }
+                }
+            }
+            catch { }
+        }
+
+        table.Alignment = alignment.ToLower() switch
+        {
+            "center" => TableAlignment.Center,
+            "right" => TableAlignment.Right,
+            _ => TableAlignment.Left
+        };
+
+        doc.Save(outputPath);
+        return await Task.FromResult($"Successfully added table ({rows} rows x {columns} columns). Output: {outputPath}");
+    }
+
+    private async Task<string> EditTableFormat(JsonObject? arguments)
+    {
+        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        SecurityHelper.ValidateFilePath(path, "path");
+        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+        var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
+        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
+
+        var doc = new Document(path);
+        if (sectionIndex >= doc.Sections.Count)
+            throw new ArgumentException($"Section index {sectionIndex} out of range");
+
+        var section = doc.Sections[sectionIndex];
+        var tables = section.Body.GetChildNodes(NodeType.Table, true).Cast<Table>().ToList();
+        if (tableIndex >= tables.Count)
+            throw new ArgumentException($"Table index {tableIndex} out of range");
+
+        var table = tables[tableIndex];
+
+        if (arguments?["alignment"] != null)
+        {
+            var alignment = arguments["alignment"]?.GetValue<string>() ?? "left";
+            table.Alignment = alignment.ToLower() switch
+            {
+                "center" => TableAlignment.Center,
+                "right" => TableAlignment.Right,
+                _ => TableAlignment.Left
+            };
+        }
+
+        if (arguments?["width"] != null && arguments?["widthType"]?.GetValue<string>() == "points")
+        {
+            var width = arguments["width"]?.GetValue<double>();
+            if (width.HasValue)
+                table.PreferredWidth = PreferredWidth.FromPoints(width.Value);
+        }
+        else if (arguments?["widthType"]?.GetValue<string>() == "auto")
+            table.PreferredWidth = PreferredWidth.Auto;
+
+        if (arguments?["styleName"] != null)
+        {
+            var styleName = arguments["styleName"]?.GetValue<string>();
+            if (!string.IsNullOrEmpty(styleName))
+            {
+                try { table.Style = doc.Styles[styleName]; } catch { }
+            }
+        }
+
+        doc.Save(outputPath);
+        return await Task.FromResult($"Successfully edited table {tableIndex} format. Output: {outputPath}");
+    }
+
+    private async Task<string> DeleteTable(JsonObject? arguments)
+    {
+        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        SecurityHelper.ValidateFilePath(path, "path");
+        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+        var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
+        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
+
+        var doc = new Document(path);
+        if (sectionIndex >= doc.Sections.Count)
+            throw new ArgumentException($"Section index {sectionIndex} out of range");
+
+        var section = doc.Sections[sectionIndex];
+        var tables = section.Body.GetChildNodes(NodeType.Table, true).Cast<Table>().ToList();
+        if (tableIndex >= tables.Count)
+            throw new ArgumentException($"Table index {tableIndex} out of range");
+
+        var table = tables[tableIndex];
+        int rowCount = table.Rows.Count;
+        int colCount = table.Rows.Count > 0 ? table.Rows[0].Cells.Count : 0;
+        table.Remove();
+
+        doc.Save(outputPath);
+        return await Task.FromResult($"Successfully deleted table #{tableIndex} ({rowCount} rows x {colCount} columns). Output: {outputPath}");
+    }
+
+    private async Task<string> GetTables(JsonObject? arguments)
+    {
+        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        SecurityHelper.ValidateFilePath(path, "path");
+        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>();
+        var includeContent = arguments?["includeContent"]?.GetValue<bool>() ?? false;
+
+        var doc = new Document(path);
+        List<Table> tables;
+        if (sectionIndex.HasValue)
+        {
+            if (sectionIndex.Value < 0 || sectionIndex.Value >= doc.Sections.Count)
+                throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
+            tables = doc.Sections[sectionIndex.Value].Body.GetChildNodes(NodeType.Table, true).Cast<Table>().ToList();
+        }
+        else
+            tables = doc.GetChildNodes(NodeType.Table, true).Cast<Table>().ToList();
+
+        var sb = new StringBuilder();
+        sb.AppendLine($"=== Tables ({tables.Count}) ===");
+        sb.AppendLine();
+
+        for (int i = 0; i < tables.Count; i++)
+        {
+            var table = tables[i];
+            sb.AppendLine($"[{i}] Rows: {table.Rows.Count}, Columns: {table.FirstRow?.Cells?.Count ?? 0}");
+            sb.AppendLine($"    Style: {table.Style?.Name ?? "(none)"}");
+            if (includeContent)
+            {
+                sb.AppendLine("    Content:");
+                for (int row = 0; row < Math.Min(3, table.Rows.Count); row++)
+                {
+                    var rowText = string.Join(" | ", table.Rows[row].Cells.Cast<Cell>().Select(c => c.GetText().Trim().Substring(0, Math.Min(20, c.GetText().Trim().Length))));
+                    sb.AppendLine($"      {rowText}");
+                }
+                if (table.Rows.Count > 3)
+                    sb.AppendLine($"      ... ({table.Rows.Count - 3} more rows)");
+            }
+            sb.AppendLine();
+        }
+
+        return await Task.FromResult(sb.ToString());
+    }
+
+    private async Task<string> InsertRow(JsonObject? arguments)
+    {
+        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        SecurityHelper.ValidateFilePath(path, "path");
+        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+        var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
+        var rowIndex = arguments?["rowIndex"]?.GetValue<int>() ?? throw new ArgumentException("rowIndex is required");
+        var insertBefore = arguments?["insertBefore"]?.GetValue<bool>() ?? false;
+        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
+        var dataArray = arguments?["rowData"]?.AsArray();
+
+        var doc = new Document(path);
+        if (sectionIndex >= doc.Sections.Count)
+            throw new ArgumentException($"Section index {sectionIndex} out of range");
+
+        var section = doc.Sections[sectionIndex];
+        var tables = section.Body.GetChildNodes(NodeType.Table, true).Cast<Table>().ToList();
+        if (tableIndex < 0 || tableIndex >= tables.Count)
+            throw new ArgumentException($"Table index {tableIndex} out of range");
+
+        var table = tables[tableIndex];
+        if (rowIndex < 0 || rowIndex >= table.Rows.Count)
+            throw new ArgumentException($"Row index {rowIndex} out of range");
+
+        var targetRow = table.Rows[rowIndex];
+        int columnCount = targetRow.Cells.Count;
+        Row newRow = new Row(doc);
+
+        for (int i = 0; i < columnCount; i++)
+        {
+            Cell newCell = new Cell(doc);
+            newRow.AppendChild(newCell);
+            if (dataArray != null && i < dataArray.Count)
+            {
+                var cellText = dataArray[i]?.GetValue<string>() ?? "";
+                if (!string.IsNullOrEmpty(cellText))
+                {
+                    Paragraph para = new Paragraph(doc);
+                    Run run = new Run(doc, cellText);
+                    para.AppendChild(run);
+                    newCell.AppendChild(para);
+                }
+            }
+        }
+
+        if (insertBefore)
+            table.InsertBefore(newRow, targetRow);
+        else
+            table.InsertAfter(newRow, targetRow);
+
+        doc.Save(outputPath);
+        return await Task.FromResult($"Successfully inserted row at index {(insertBefore ? rowIndex : rowIndex + 1)}. Output: {outputPath}");
+    }
+
+    private async Task<string> DeleteRow(JsonObject? arguments)
+    {
+        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        SecurityHelper.ValidateFilePath(path, "path");
+        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+        var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
+        var rowIndex = arguments?["rowIndex"]?.GetValue<int>() ?? throw new ArgumentException("rowIndex is required");
+        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
+
+        var doc = new Document(path);
+        if (sectionIndex >= doc.Sections.Count)
+            throw new ArgumentException($"Section index {sectionIndex} out of range");
+
+        var section = doc.Sections[sectionIndex];
+        var tables = section.Body.GetChildNodes(NodeType.Table, true).Cast<Table>().ToList();
+        if (tableIndex < 0 || tableIndex >= tables.Count)
+            throw new ArgumentException($"Table index {tableIndex} out of range");
+
+        var table = tables[tableIndex];
+        if (rowIndex < 0 || rowIndex >= table.Rows.Count)
+            throw new ArgumentException($"Row index {rowIndex} out of range");
+
+        var rowToDelete = table.Rows[rowIndex];
+        rowToDelete.Remove();
+
+        doc.Save(outputPath);
+        return await Task.FromResult($"Successfully deleted row #{rowIndex}. Remaining rows: {table.Rows.Count}. Output: {outputPath}");
+    }
+
+    private async Task<string> InsertColumn(JsonObject? arguments)
+    {
+        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        SecurityHelper.ValidateFilePath(path, "path");
+        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+        var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
+        var columnIndex = arguments?["columnIndex"]?.GetValue<int>() ?? throw new ArgumentException("columnIndex is required");
+        var insertBefore = arguments?["insertBefore"]?.GetValue<bool>() ?? false;
+        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
+        var dataArray = arguments?["columnData"]?.AsArray();
+
+        var doc = new Document(path);
+        if (sectionIndex >= doc.Sections.Count)
+            throw new ArgumentException($"Section index {sectionIndex} out of range");
+
+        var section = doc.Sections[sectionIndex];
+        var tables = section.Body.GetChildNodes(NodeType.Table, true).Cast<Table>().ToList();
+        if (tableIndex < 0 || tableIndex >= tables.Count)
+            throw new ArgumentException($"Table index {tableIndex} out of range");
+
+        var table = tables[tableIndex];
+        if (table.Rows.Count == 0)
+            throw new InvalidOperationException($"Table {tableIndex} has no rows");
+
+        var firstRow = table.Rows[0];
+        if (columnIndex < 0 || columnIndex >= firstRow.Cells.Count)
+            throw new ArgumentException($"Column index {columnIndex} out of range");
+
+        int insertPosition = insertBefore ? columnIndex : columnIndex + 1;
+
+        for (int rowIdx = 0; rowIdx < table.Rows.Count; rowIdx++)
+        {
+            var row = table.Rows[rowIdx];
+            Cell newCell = new Cell(doc);
+            if (columnIndex < row.Cells.Count)
+            {
+                var sourceCell = row.Cells[columnIndex];
+                newCell.CellFormat.Width = sourceCell.CellFormat.Width;
+                newCell.CellFormat.VerticalAlignment = sourceCell.CellFormat.VerticalAlignment;
+                newCell.CellFormat.SetPaddings(
+                    sourceCell.CellFormat.TopPadding,
+                    sourceCell.CellFormat.BottomPadding,
+                    sourceCell.CellFormat.LeftPadding,
+                    sourceCell.CellFormat.RightPadding
+                );
+            }
+            if (dataArray != null && rowIdx < dataArray.Count)
+            {
+                var cellText = dataArray[rowIdx]?.GetValue<string>() ?? "";
+                if (!string.IsNullOrEmpty(cellText))
+                {
+                    Paragraph para = new Paragraph(doc);
+                    Run run = new Run(doc, cellText);
+                    para.AppendChild(run);
+                    newCell.AppendChild(para);
+                }
+            }
+            else
+            {
+                Paragraph para = new Paragraph(doc);
+                newCell.AppendChild(para);
+            }
+            if (insertPosition <= row.Cells.Count)
+                row.Cells.Insert(insertPosition, newCell);
+            else
+                row.AppendChild(newCell);
+        }
+
+        doc.Save(outputPath);
+        return await Task.FromResult($"Successfully inserted column at index {(insertBefore ? columnIndex : columnIndex + 1)}. Output: {outputPath}");
+    }
+
+    private async Task<string> DeleteColumn(JsonObject? arguments)
+    {
+        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        SecurityHelper.ValidateFilePath(path, "path");
+        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+        var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
+        var columnIndex = arguments?["columnIndex"]?.GetValue<int>() ?? throw new ArgumentException("columnIndex is required");
+        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
+
+        var doc = new Document(path);
+        if (sectionIndex >= doc.Sections.Count)
+            throw new ArgumentException($"Section index {sectionIndex} out of range");
+
+        var section = doc.Sections[sectionIndex];
+        var tables = section.Body.GetChildNodes(NodeType.Table, true).Cast<Table>().ToList();
+        if (tableIndex < 0 || tableIndex >= tables.Count)
+            throw new ArgumentException($"Table index {tableIndex} out of range");
+
+        var table = tables[tableIndex];
+        if (table.Rows.Count == 0)
+            throw new InvalidOperationException($"Table {tableIndex} has no rows");
+
+        var firstRow = table.Rows[0];
+        if (columnIndex < 0 || columnIndex >= firstRow.Cells.Count)
+            throw new ArgumentException($"Column index {columnIndex} out of range");
+
+        int deletedCount = 0;
+        foreach (Row row in table.Rows)
+        {
+            if (columnIndex < row.Cells.Count)
+            {
+                row.Cells[columnIndex].Remove();
+                deletedCount++;
+            }
+        }
+
+        doc.Save(outputPath);
+        return await Task.FromResult($"Successfully deleted column #{columnIndex} ({deletedCount} cells removed). Output: {outputPath}");
+    }
+
+    private async Task<string> MergeCells(JsonObject? arguments)
+    {
+        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        SecurityHelper.ValidateFilePath(path, "path");
+        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+        var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
+        var startRow = arguments?["startRow"]?.GetValue<int>() ?? throw new ArgumentException("startRow is required");
+        var startCol = arguments?["startCol"]?.GetValue<int>() ?? throw new ArgumentException("startCol is required");
+        var endRow = arguments?["endRow"]?.GetValue<int>() ?? throw new ArgumentException("endRow is required");
+        var endCol = arguments?["endCol"]?.GetValue<int>() ?? throw new ArgumentException("endCol is required");
+        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
+
+        var doc = new Document(path);
+        if (sectionIndex >= doc.Sections.Count)
+            throw new ArgumentException($"Section index {sectionIndex} out of range");
+
+        var section = doc.Sections[sectionIndex];
+        var tables = section.Body.GetChildNodes(NodeType.Table, true).Cast<Table>().ToList();
+        if (tableIndex < 0 || tableIndex >= tables.Count)
+            throw new ArgumentException($"Table index {tableIndex} out of range");
+
+        var table = tables[tableIndex];
+        if (startRow < 0 || startRow >= table.Rows.Count || endRow < 0 || endRow >= table.Rows.Count)
+            throw new ArgumentException($"Row indices out of range");
+        if (startRow > endRow)
+            throw new ArgumentException($"Start row {startRow} cannot be greater than end row {endRow}");
+
+        var firstRow = table.Rows[startRow];
+        if (startCol < 0 || startCol >= firstRow.Cells.Count || endCol < 0 || endCol >= firstRow.Cells.Count)
+            throw new ArgumentException($"Column indices out of range");
+        if (startCol > endCol)
+            throw new ArgumentException($"Start column {startCol} cannot be greater than end column {endCol}");
+
+        var startCell = table.Rows[startRow].Cells[startCol];
+
+        for (int row = startRow; row <= endRow; row++)
+        {
+            var currentRow = table.Rows[row];
+            for (int col = startCol; col <= endCol; col++)
+            {
+                var cell = currentRow.Cells[col];
+                if (row == startRow && col == startCol)
+                {
+                    if (startRow != endRow)
+                        cell.CellFormat.VerticalMerge = CellMerge.First;
+                    if (startCol != endCol)
+                        cell.CellFormat.HorizontalMerge = CellMerge.First;
+                }
+                else
+                {
+                    if (row == startRow)
+                        cell.CellFormat.HorizontalMerge = CellMerge.Previous;
+                    else if (col == startCol)
+                        cell.CellFormat.VerticalMerge = CellMerge.Previous;
+                    else
+                    {
+                        cell.CellFormat.HorizontalMerge = CellMerge.Previous;
+                        cell.CellFormat.VerticalMerge = CellMerge.Previous;
+                    }
+                }
+            }
+        }
+
+        doc.Save(outputPath);
+        return await Task.FromResult($"Successfully merged cells from [{startRow}, {startCol}] to [{endRow}, {endCol}]. Output: {outputPath}");
+    }
+
+    private async Task<string> SplitCell(JsonObject? arguments)
+    {
+        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        SecurityHelper.ValidateFilePath(path, "path");
+        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+        var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
+        var rowIndex = arguments?["rowIndex"]?.GetValue<int>() ?? throw new ArgumentException("rowIndex is required");
+        var colIndex = arguments?["colIndex"]?.GetValue<int>() ?? throw new ArgumentException("colIndex is required");
+        var splitRows = arguments?["splitRows"]?.GetValue<int>() ?? 2;
+        var splitCols = arguments?["splitCols"]?.GetValue<int>() ?? 2;
+        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
+
+        var doc = new Document(path);
+        if (sectionIndex >= doc.Sections.Count)
+            throw new ArgumentException($"Section index {sectionIndex} out of range");
+
+        var section = doc.Sections[sectionIndex];
+        var tables = section.Body.GetChildNodes(NodeType.Table, true).Cast<Table>().ToList();
+        if (tableIndex < 0 || tableIndex >= tables.Count)
+            throw new ArgumentException($"Table index {tableIndex} out of range");
+
+        var table = tables[tableIndex];
+        if (rowIndex < 0 || rowIndex >= table.Rows.Count)
+            throw new ArgumentException($"Row index {rowIndex} out of range");
+
+        var row = table.Rows[rowIndex];
+        if (colIndex < 0 || colIndex >= row.Cells.Count)
+            throw new ArgumentException($"Column index {colIndex} out of range");
+
+        var cell = row.Cells[colIndex];
+        bool isMerged = cell.CellFormat.HorizontalMerge != CellMerge.None || cell.CellFormat.VerticalMerge != CellMerge.None;
+        if (isMerged)
+            throw new InvalidOperationException("Cannot split merged cell. Please unmerge first or edit directly.");
+
+        try
+        {
+            string cellText = cell.GetText();
+            var parentRow = cell.ParentRow;
+            var cellIndex = parentRow.Cells.IndexOf(cell);
+
+            for (int c = 0; c < splitCols; c++)
+            {
+                Cell newCell = new Cell(doc);
+                newCell.CellFormat.Width = cell.CellFormat.Width / splitCols;
+                newCell.CellFormat.VerticalAlignment = cell.CellFormat.VerticalAlignment;
+                newCell.CellFormat.SetPaddings(
+                    cell.CellFormat.TopPadding,
+                    cell.CellFormat.BottomPadding,
+                    cell.CellFormat.LeftPadding,
+                    cell.CellFormat.RightPadding
+                );
+
+                Paragraph para = new Paragraph(doc);
+                if (splitCols == 1 || (c == 0 && !string.IsNullOrEmpty(cellText)))
+                {
+                    Run run = new Run(doc, cellText);
+                    para.AppendChild(run);
+                }
+                newCell.AppendChild(para);
+
+                if (c == 0)
+                {
+                    parentRow.Cells[cellIndex].Remove();
+                    parentRow.Cells.Insert(cellIndex, newCell);
+                }
+                else
+                    parentRow.Cells.Insert(cellIndex + c, newCell);
+            }
+
+            if (splitRows > 1)
+            {
+                for (int r = 1; r < splitRows; r++)
+                {
+                    int insertAfterRowIndex = rowIndex + r - 1;
+                    if (insertAfterRowIndex < table.Rows.Count)
+                    {
+                        Row newRow = new Row(doc);
+                        var sourceRow = table.Rows[rowIndex];
+                        for (int c = 0; c < sourceRow.Cells.Count; c++)
+                        {
+                            Cell newCell = new Cell(doc);
+                            var sourceCell = sourceRow.Cells[c];
+                            newCell.CellFormat.Width = sourceCell.CellFormat.Width;
+                            newCell.CellFormat.VerticalAlignment = sourceCell.CellFormat.VerticalAlignment;
+                            newCell.CellFormat.SetPaddings(
+                                sourceCell.CellFormat.TopPadding,
+                                sourceCell.CellFormat.BottomPadding,
+                                sourceCell.CellFormat.LeftPadding,
+                                sourceCell.CellFormat.RightPadding
+                            );
+                            Paragraph para = new Paragraph(doc);
+                            newCell.AppendChild(para);
+                            newRow.AppendChild(newCell);
+                        }
+                        table.InsertAfter(newRow, table.Rows[insertAfterRowIndex]);
+                    }
+                }
+            }
+
+            doc.Save(outputPath);
+            return await Task.FromResult($"Successfully split cell [{rowIndex}, {colIndex}] into {splitRows} rows x {splitCols} columns. Output: {outputPath}");
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Error splitting cell: {ex.Message}", ex);
+        }
+    }
+
+    private async Task<string> EditCellFormat(JsonObject? arguments)
+    {
+        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        SecurityHelper.ValidateFilePath(path, "path");
+        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+        var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
+        var rowIndex = arguments?["rowIndex"]?.GetValue<int>() ?? throw new ArgumentException("rowIndex is required");
+        var colIndex = arguments?["colIndex"]?.GetValue<int>() ?? throw new ArgumentException("colIndex is required");
+        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
+
+        var doc = new Document(path);
+        if (sectionIndex >= doc.Sections.Count)
+            throw new ArgumentException($"Section index {sectionIndex} out of range");
+
+        var section = doc.Sections[sectionIndex];
+        var tables = section.Body.GetChildNodes(NodeType.Table, true).Cast<Table>().ToList();
+        if (tableIndex < 0 || tableIndex >= tables.Count)
+            throw new ArgumentException($"Table index {tableIndex} out of range");
+
+        var table = tables[tableIndex];
+        if (rowIndex < 0 || rowIndex >= table.Rows.Count)
+            throw new ArgumentException($"Row index {rowIndex} out of range");
+
+        var row = table.Rows[rowIndex];
+        if (colIndex < 0 || colIndex >= row.Cells.Count)
+            throw new ArgumentException($"Column index {colIndex} out of range");
+
+        var cell = row.Cells[colIndex];
+        var cellFormat = cell.CellFormat;
+
+        if (arguments?["backgroundColor"] != null)
+        {
+            var backgroundColor = arguments["backgroundColor"]?.GetValue<string>();
+            if (!string.IsNullOrEmpty(backgroundColor))
+            {
+                try { cellFormat.Shading.BackgroundPatternColor = ParseColor(backgroundColor); } catch { }
+            }
+        }
+
+        if (arguments?["alignment"] != null)
+        {
+            var alignment = arguments["alignment"]?.GetValue<string>() ?? "left";
+            var paragraphs = cell.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
+            foreach (var para in paragraphs)
+            {
+                para.ParagraphFormat.Alignment = alignment.ToLower() switch
+                {
+                    "center" => ParagraphAlignment.Center,
+                    "right" => ParagraphAlignment.Right,
+                    _ => ParagraphAlignment.Left
+                };
+            }
+        }
+
+        if (arguments?["verticalAlignment"] != null)
+        {
+            var verticalAlignment = arguments["verticalAlignment"]?.GetValue<string>() ?? "top";
+            cellFormat.VerticalAlignment = verticalAlignment.ToLower() switch
+            {
+                "center" => CellVerticalAlignment.Center,
+                "bottom" => CellVerticalAlignment.Bottom,
+                _ => CellVerticalAlignment.Top
+            };
+        }
+
+        if (arguments?["paddingTop"] != null)
+            cellFormat.TopPadding = arguments["paddingTop"]?.GetValue<double>() ?? cellFormat.TopPadding;
+        if (arguments?["paddingBottom"] != null)
+            cellFormat.BottomPadding = arguments["paddingBottom"]?.GetValue<double>() ?? cellFormat.BottomPadding;
+        if (arguments?["paddingLeft"] != null)
+            cellFormat.LeftPadding = arguments["paddingLeft"]?.GetValue<double>() ?? cellFormat.LeftPadding;
+        if (arguments?["paddingRight"] != null)
+            cellFormat.RightPadding = arguments["paddingRight"]?.GetValue<double>() ?? cellFormat.RightPadding;
+
+        var fontName = arguments?["fontName"]?.GetValue<string>();
+        var fontNameAscii = arguments?["fontNameAscii"]?.GetValue<string>();
+        var fontNameFarEast = arguments?["fontNameFarEast"]?.GetValue<string>();
+        var fontSize = arguments?["fontSize"]?.GetValue<double?>();
+        var bold = arguments?["bold"]?.GetValue<bool?>();
+        var italic = arguments?["italic"]?.GetValue<bool?>();
+        var color = arguments?["color"]?.GetValue<string>();
+
+        bool hasTextFormatting = !string.IsNullOrEmpty(fontName) || !string.IsNullOrEmpty(fontNameAscii) || 
+                                 !string.IsNullOrEmpty(fontNameFarEast) || fontSize.HasValue || 
+                                 bold.HasValue || italic.HasValue || !string.IsNullOrEmpty(color);
+
+        if (hasTextFormatting)
+        {
+            var runs = cell.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+            foreach (var run in runs)
+            {
+                if (!string.IsNullOrEmpty(fontNameAscii))
+                    run.Font.NameAscii = fontNameAscii;
+                if (!string.IsNullOrEmpty(fontNameFarEast))
+                    run.Font.NameFarEast = fontNameFarEast;
+                if (!string.IsNullOrEmpty(fontName))
+                {
+                    if (string.IsNullOrEmpty(fontNameAscii) && string.IsNullOrEmpty(fontNameFarEast))
+                        run.Font.Name = fontName;
+                    else
+                    {
+                        if (string.IsNullOrEmpty(fontNameAscii))
+                            run.Font.NameAscii = fontName;
+                        if (string.IsNullOrEmpty(fontNameFarEast))
+                            run.Font.NameFarEast = fontName;
+                    }
+                }
+                if (fontSize.HasValue)
+                    run.Font.Size = fontSize.Value;
+                if (bold.HasValue)
+                    run.Font.Bold = bold.Value;
+                if (italic.HasValue)
+                    run.Font.Italic = italic.Value;
+                if (!string.IsNullOrEmpty(color))
+                {
+                    try { run.Font.Color = ParseColor(color); } catch { }
+                }
+            }
+        }
+
+        doc.Save(outputPath);
+        return await Task.FromResult($"Successfully edited cell [{rowIndex}, {colIndex}] format. Output: {outputPath}");
+    }
+
+    private async Task<string> MoveTable(JsonObject? arguments)
+    {
+        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        SecurityHelper.ValidateFilePath(path, "path");
+        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+        var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
+        var targetParagraphIndex = arguments?["targetParagraphIndex"]?.GetValue<int>() ?? throw new ArgumentException("targetParagraphIndex is required");
+        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>();
+
+        var doc = new Document(path);
+        var sectionIdx = sectionIndex ?? 0;
+        if (sectionIdx < 0 || sectionIdx >= doc.Sections.Count)
+            throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
+
+        var section = doc.Sections[sectionIdx];
+        var tables = section.Body.GetChildNodes(NodeType.Table, true).Cast<Table>().ToList();
+        var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
+
+        if (tableIndex < 0 || tableIndex >= tables.Count)
+            throw new ArgumentException($"tableIndex must be between 0 and {tables.Count - 1}");
+        if (targetParagraphIndex < 0 || targetParagraphIndex >= paragraphs.Count)
+            throw new ArgumentException($"targetParagraphIndex must be between 0 and {paragraphs.Count - 1}");
+
+        var table = tables[tableIndex];
+        var targetPara = paragraphs[targetParagraphIndex];
+        section.Body.InsertAfter(table, targetPara);
+
+        doc.Save(outputPath);
+        return await Task.FromResult($"Successfully moved table {tableIndex}. Output: {outputPath}");
+    }
+
+    private async Task<string> CopyTable(JsonObject? arguments)
+    {
+        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        SecurityHelper.ValidateFilePath(path, "path");
+        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+        var sourceTableIndex = arguments?["sourceTableIndex"]?.GetValue<int>() ?? throw new ArgumentException("sourceTableIndex is required");
+        var targetParagraphIndex = arguments?["targetParagraphIndex"]?.GetValue<int>() ?? throw new ArgumentException("targetParagraphIndex is required");
+        var sourceSectionIndex = arguments?["sourceSectionIndex"]?.GetValue<int?>();
+        var targetSectionIndex = arguments?["targetSectionIndex"]?.GetValue<int?>();
+
+        var doc = new Document(path);
+        var sourceSectionIdx = sourceSectionIndex ?? 0;
+        var targetSectionIdx = targetSectionIndex ?? 0;
+
+        if (sourceSectionIdx < 0 || sourceSectionIdx >= doc.Sections.Count)
+            throw new ArgumentException($"sourceSectionIndex must be between 0 and {doc.Sections.Count - 1}");
+        if (targetSectionIdx < 0 || targetSectionIdx >= doc.Sections.Count)
+            throw new ArgumentException($"targetSectionIndex must be between 0 and {doc.Sections.Count - 1}");
+
+        var sourceSection = doc.Sections[sourceSectionIdx];
+        var sourceTables = sourceSection.Body.GetChildNodes(NodeType.Table, true).Cast<Table>().ToList();
+        if (sourceTableIndex < 0 || sourceTableIndex >= sourceTables.Count)
+            throw new ArgumentException($"sourceTableIndex must be between 0 and {sourceTables.Count - 1}");
+
+        var sourceTable = sourceTables[sourceTableIndex];
+        var targetSection = doc.Sections[targetSectionIdx];
+        var targetParagraphs = targetSection.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
+        if (targetParagraphIndex < 0 || targetParagraphIndex >= targetParagraphs.Count)
+            throw new ArgumentException($"targetParagraphIndex must be between 0 and {targetParagraphs.Count - 1}");
+
+        var targetPara = targetParagraphs[targetParagraphIndex];
+        var clonedTable = (Table)sourceTable.Clone(true);
+        targetSection.Body.InsertAfter(clonedTable, targetPara);
+
+        doc.Save(outputPath);
+        return await Task.FromResult($"Successfully copied table {sourceTableIndex} to paragraph {targetParagraphIndex}. Output: {outputPath}");
+    }
+
+    private async Task<string> GetTableStructure(JsonObject? arguments)
+    {
+        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        SecurityHelper.ValidateFilePath(path, "path");
+        var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
+        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
+        var includeContent = arguments?["includeContent"]?.GetValue<bool>() ?? true;
+        var includeCellFormatting = arguments?["includeCellFormatting"]?.GetValue<bool>() ?? true;
+
+        var doc = new Document(path);
+        if (sectionIndex >= doc.Sections.Count)
+            throw new ArgumentException($"Section index {sectionIndex} out of range");
+
+        var section = doc.Sections[sectionIndex];
+        var tables = section.Body.GetChildNodes(NodeType.Table, true).Cast<Table>().ToList();
+        if (tableIndex < 0 || tableIndex >= tables.Count)
+            throw new ArgumentException($"Table index {tableIndex} out of range");
+
+        var table = tables[tableIndex];
+        var result = new StringBuilder();
+
+        result.AppendLine($"=== Table #{tableIndex} Structure ===\n");
+        result.AppendLine("【Basic Info】");
+        result.AppendLine($"Rows: {table.Rows.Count}");
+        if (table.Rows.Count > 0)
+            result.AppendLine($"Columns: {table.Rows[0].Cells.Count}");
+        result.AppendLine();
+
+        result.AppendLine("【Table Format】");
+        result.AppendLine($"Alignment: {table.Alignment}");
+        result.AppendLine($"Style: {table.Style?.Name ?? "None"}");
+        result.AppendLine($"Left Indent: {table.LeftIndent:F2} pt");
+        if (table.PreferredWidth.Type != PreferredWidthType.Auto)
+            result.AppendLine($"Width: {table.PreferredWidth.Value} ({table.PreferredWidth.Type})");
+        result.AppendLine($"Allow Auto Fit: {table.AllowAutoFit}");
+        result.AppendLine();
+
+        if (includeContent)
+        {
+            result.AppendLine("【Content Preview】");
+            for (int i = 0; i < Math.Min(table.Rows.Count, 5); i++)
+            {
+                var row = table.Rows[i];
+                result.Append($"  Row {i}: | ");
+                for (int j = 0; j < row.Cells.Count; j++)
+                {
+                    var cell = row.Cells[j];
+                    var cellText = cell.GetText().Trim().Replace("\r", "").Replace("\n", " ");
+                    if (cellText.Length > 30)
+                        cellText = cellText.Substring(0, 27) + "...";
+                    result.Append($"{cellText} | ");
+                }
+                result.AppendLine();
+            }
+            if (table.Rows.Count > 5)
+                result.AppendLine($"  ... ({table.Rows.Count - 5} more rows)");
+            result.AppendLine();
+        }
+
+        if (includeCellFormatting && table.Rows.Count > 0 && table.Rows[0].Cells.Count > 0)
+        {
+            result.AppendLine("【First Cell Formatting】");
+            var cell = table.Rows[0].Cells[0];
+            result.AppendLine($"Top Padding: {cell.CellFormat.TopPadding:F2} pt");
+            result.AppendLine($"Bottom Padding: {cell.CellFormat.BottomPadding:F2} pt");
+            result.AppendLine($"Left Padding: {cell.CellFormat.LeftPadding:F2} pt");
+            result.AppendLine($"Right Padding: {cell.CellFormat.RightPadding:F2} pt");
+            result.AppendLine($"Vertical Alignment: {cell.CellFormat.VerticalAlignment}");
+            result.AppendLine();
+        }
+
+        return await Task.FromResult(result.ToString());
+    }
+
+    private async Task<string> SetTableBorder(JsonObject? arguments)
+    {
+        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        SecurityHelper.ValidateFilePath(path, "path");
+        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+        var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
+        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
+        var rowIndex = arguments?["rowIndex"]?.GetValue<int?>();
+        var columnIndex = arguments?["columnIndex"]?.GetValue<int?>();
+
+        var doc = new Document(path);
+        if (sectionIndex >= doc.Sections.Count)
+            throw new ArgumentException($"Section index {sectionIndex} out of range");
+
+        var section = doc.Sections[sectionIndex];
+        var tables = section.Body.GetChildNodes(NodeType.Table, true).Cast<Table>().ToList();
+        if (tableIndex >= tables.Count)
+            throw new ArgumentException($"Table index {tableIndex} out of range");
+
+        var table = tables[tableIndex];
+        var defaultLineStyle = arguments?["lineStyle"]?.GetValue<string>() ?? "single";
+        var defaultLineWidth = arguments?["lineWidth"]?.GetValue<double>() ?? 0.5;
+        var defaultLineColor = arguments?["lineColor"]?.GetValue<string>() ?? "000000";
+
+        var lineStyle = GetLineStyle(defaultLineStyle);
+        var lineWidth = defaultLineWidth;
+        var lineColor = ParseColor(defaultLineColor);
+
+        List<Cell> targetCells = new List<Cell>();
+        if (rowIndex.HasValue && columnIndex.HasValue)
+        {
+            if (rowIndex.Value < table.Rows.Count && columnIndex.Value < table.Rows[rowIndex.Value].Cells.Count)
+                targetCells.Add(table.Rows[rowIndex.Value].Cells[columnIndex.Value]);
+            else
+                throw new ArgumentException($"Row {rowIndex.Value} or column {columnIndex.Value} out of range");
+        }
+        else if (rowIndex.HasValue)
+        {
+            if (rowIndex.Value < table.Rows.Count)
+                targetCells.AddRange(table.Rows[rowIndex.Value].Cells.Cast<Cell>());
+            else
+                throw new ArgumentException($"Row {rowIndex.Value} out of range");
+        }
+        else if (columnIndex.HasValue)
+        {
+            foreach (Row row in table.Rows)
+            {
+                if (columnIndex.Value < row.Cells.Count)
+                    targetCells.Add(row.Cells[columnIndex.Value]);
+            }
+        }
+        else
+        {
+            foreach (Row row in table.Rows)
+                targetCells.AddRange(row.Cells.Cast<Cell>());
+        }
+
+        foreach (var cell in targetCells)
+        {
+            var borders = cell.CellFormat.Borders;
+            if (arguments?["borderTop"]?.GetValue<bool>() == true)
+            {
+                borders.Top.LineStyle = lineStyle;
+                borders.Top.LineWidth = lineWidth;
+                borders.Top.Color = lineColor;
+            }
+            else if (arguments?["borderTop"] != null)
+                borders.Top.LineStyle = LineStyle.None;
+
+            if (arguments?["borderBottom"]?.GetValue<bool>() == true)
+            {
+                borders.Bottom.LineStyle = lineStyle;
+                borders.Bottom.LineWidth = lineWidth;
+                borders.Bottom.Color = lineColor;
+            }
+            else if (arguments?["borderBottom"] != null)
+                borders.Bottom.LineStyle = LineStyle.None;
+
+            if (arguments?["borderLeft"]?.GetValue<bool>() == true)
+            {
+                borders.Left.LineStyle = lineStyle;
+                borders.Left.LineWidth = lineWidth;
+                borders.Left.Color = lineColor;
+            }
+            else if (arguments?["borderLeft"] != null)
+                borders.Left.LineStyle = LineStyle.None;
+
+            if (arguments?["borderRight"]?.GetValue<bool>() == true)
+            {
+                borders.Right.LineStyle = lineStyle;
+                borders.Right.LineWidth = lineWidth;
+                borders.Right.Color = lineColor;
+            }
+            else if (arguments?["borderRight"] != null)
+                borders.Right.LineStyle = LineStyle.None;
+        }
+
+        doc.Save(outputPath);
+        return await Task.FromResult($"Successfully set table {tableIndex} borders. Output: {outputPath}");
+    }
+
+    private async Task<string> SetColumnWidth(JsonObject? arguments)
+    {
+        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        SecurityHelper.ValidateFilePath(path, "path");
+        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+        var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
+        var columnIndex = arguments?["columnIndex"]?.GetValue<int>() ?? throw new ArgumentException("columnIndex is required");
+        var columnWidth = arguments?["columnWidth"]?.GetValue<double>() ?? throw new ArgumentException("columnWidth is required");
+        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
+
+        if (columnWidth <= 0)
+            throw new ArgumentException($"Column width {columnWidth} must be greater than 0");
+
+        var doc = new Document(path);
+        if (sectionIndex >= doc.Sections.Count)
+            throw new ArgumentException($"Section index {sectionIndex} out of range");
+
+        var section = doc.Sections[sectionIndex];
+        var tables = section.Body.GetChildNodes(NodeType.Table, true).Cast<Table>().ToList();
+        if (tableIndex < 0 || tableIndex >= tables.Count)
+            throw new ArgumentException($"Table index {tableIndex} out of range");
+
+        var table = tables[tableIndex];
+        if (table.Rows.Count == 0)
+            throw new InvalidOperationException($"Table {tableIndex} has no rows");
+
+        var firstRow = table.Rows[0];
+        if (columnIndex < 0 || columnIndex >= firstRow.Cells.Count)
+            throw new ArgumentException($"Column index {columnIndex} out of range");
+
+        int cellsUpdated = 0;
+        foreach (Row row in table.Rows)
+        {
+            if (columnIndex < row.Cells.Count)
+            {
+                row.Cells[columnIndex].CellFormat.PreferredWidth = PreferredWidth.FromPoints(columnWidth);
+                cellsUpdated++;
+            }
+        }
+
+        doc.Save(outputPath);
+        return await Task.FromResult($"Successfully set column {columnIndex} width to {columnWidth} pt ({cellsUpdated} cells updated). Output: {outputPath}");
+    }
+
+    private async Task<string> SetRowHeight(JsonObject? arguments)
+    {
+        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        SecurityHelper.ValidateFilePath(path, "path");
+        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+        var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
+        var rowIndex = arguments?["rowIndex"]?.GetValue<int>() ?? throw new ArgumentException("rowIndex is required");
+        var rowHeight = arguments?["rowHeight"]?.GetValue<double>() ?? throw new ArgumentException("rowHeight is required");
+        var heightRule = arguments?["heightRule"]?.GetValue<string>() ?? "atLeast";
+        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
+
+        if (rowHeight <= 0)
+            throw new ArgumentException($"Row height {rowHeight} must be greater than 0");
+
+        var doc = new Document(path);
+        if (sectionIndex >= doc.Sections.Count)
+            throw new ArgumentException($"Section index {sectionIndex} out of range");
+
+        var section = doc.Sections[sectionIndex];
+        var tables = section.Body.GetChildNodes(NodeType.Table, true).Cast<Table>().ToList();
+        if (tableIndex < 0 || tableIndex >= tables.Count)
+            throw new ArgumentException($"Table index {tableIndex} out of range");
+
+        var table = tables[tableIndex];
+        if (rowIndex < 0 || rowIndex >= table.Rows.Count)
+            throw new ArgumentException($"Row index {rowIndex} out of range");
+
+        var row = table.Rows[rowIndex];
+        row.RowFormat.HeightRule = heightRule.ToLower() switch
+        {
+            "auto" => HeightRule.Auto,
+            "atLeast" => HeightRule.AtLeast,
+            "exactly" => HeightRule.Exactly,
+            _ => HeightRule.AtLeast
+        };
+        row.RowFormat.Height = rowHeight;
+
+        doc.Save(outputPath);
+        return await Task.FromResult($"Successfully set row {rowIndex} height to {rowHeight} pt ({heightRule}). Output: {outputPath}");
+    }
+
+    private Dictionary<int, string> ParseColorDictionary(JsonNode? node)
+    {
+        var result = new Dictionary<int, string>();
+        if (node == null) return result;
+        try
+        {
+            var jsonObj = node.AsObject();
+            foreach (var kvp in jsonObj)
+            {
+                if (int.TryParse(kvp.Key, out int key))
+                    result[key] = kvp.Value?.GetValue<string>() ?? "";
+            }
+        }
+        catch { }
+        return result;
+    }
+
+    private List<(int row, int col, string color)> ParseCellColors(JsonNode? node)
+    {
+        var result = new List<(int row, int col, string color)>();
+        if (node == null) return result;
+        try
+        {
+            var jsonStr = node.ToJsonString();
+            var arr = JsonSerializer.Deserialize<JsonElement[][]>(jsonStr);
+            if (arr != null)
+            {
+                foreach (var item in arr)
+                {
+                    if (item.Length >= 3)
+                        result.Add((item[0].GetInt32(), item[1].GetInt32(), item[2].GetString() ?? ""));
+                }
+            }
+        }
+        catch { }
+        return result;
+    }
+
+    private List<(int startRow, int endRow, int startCol, int endCol)> ParseMergeCells(JsonNode? node)
+    {
+        var result = new List<(int startRow, int endRow, int startCol, int endCol)>();
+        if (node == null) return result;
+        try
+        {
+            var jsonStr = node.ToJsonString();
+            var arr = JsonSerializer.Deserialize<JsonElement[]>(jsonStr);
+            if (arr != null)
+            {
+                foreach (var item in arr)
+                {
+                    if (item.TryGetProperty("startRow", out var sr) &&
+                        item.TryGetProperty("endRow", out var er) &&
+                        item.TryGetProperty("startCol", out var sc) &&
+                        item.TryGetProperty("endCol", out var ec))
+                    {
+                        result.Add((sr.GetInt32(), er.GetInt32(), sc.GetInt32(), ec.GetInt32()));
+                    }
+                }
+            }
+        }
+        catch { }
+        return result;
+    }
+
+    private CellVerticalAlignment GetVerticalAlignment(string alignment)
+    {
+        return alignment.ToLower() switch
+        {
+            "top" => CellVerticalAlignment.Top,
+            "bottom" => CellVerticalAlignment.Bottom,
+            _ => CellVerticalAlignment.Center
+        };
+    }
+
+    private LineStyle GetLineStyle(string style)
+    {
+        return style.ToLower() switch
+        {
+            "none" => LineStyle.None,
+            "single" => LineStyle.Single,
+            "double" => LineStyle.Double,
+            "dotted" => LineStyle.Dot,
+            "dashed" => LineStyle.Single,
+            "thick" => LineStyle.Thick,
+            _ => LineStyle.Single
+        };
+    }
+
+    private System.Drawing.Color ParseColor(string color)
+    {
+        try
+        {
+            if (color.StartsWith("#"))
+                color = color.Substring(1);
+
+            if (color.Length == 8)
+            {
+                int a = Convert.ToInt32(color.Substring(0, 2), 16);
+                int r = Convert.ToInt32(color.Substring(2, 2), 16);
+                int g = Convert.ToInt32(color.Substring(4, 2), 16);
+                int b = Convert.ToInt32(color.Substring(6, 2), 16);
+                return System.Drawing.Color.FromArgb(a, r, g, b);
+            }
+            else if (color.Length == 6)
+            {
+                int r = Convert.ToInt32(color.Substring(0, 2), 16);
+                int g = Convert.ToInt32(color.Substring(2, 2), 16);
+                int b = Convert.ToInt32(color.Substring(4, 2), 16);
+                return System.Drawing.Color.FromArgb(r, g, b);
+            }
+            else
+                return System.Drawing.Color.FromName(color);
+        }
+        catch
+        {
+            return System.Drawing.Color.White;
+        }
+    }
+}
+

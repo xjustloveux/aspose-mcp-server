@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using Aspose.Words;
 using Aspose.Cells;
 using Aspose.Slides;
+using AsposeMcpServer.Core;
 
 namespace AsposeMcpServer.Tools;
 
@@ -32,6 +33,9 @@ public class ConvertToPdfTool : IAsposeTool
     {
         var inputPath = arguments?["inputPath"]?.GetValue<string>() ?? throw new ArgumentException("inputPath is required");
         var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? throw new ArgumentException("outputPath is required");
+
+        SecurityHelper.ValidateFilePath(inputPath, "inputPath");
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         var extension = Path.GetExtension(inputPath).ToLower();
 
