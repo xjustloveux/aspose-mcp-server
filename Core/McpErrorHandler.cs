@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using AsposeMcpServer.Models;
 
 namespace AsposeMcpServer.Core;
@@ -27,7 +28,8 @@ public static class McpErrorHandler
             ArgumentException argEx => new McpError
             {
                 Code = -32602, // Invalid params
-                Message = argEx.Message
+                // Sanitize error messages to prevent information leakage
+                Message = SanitizeErrorMessage(argEx.Message)
             },
             
             FileNotFoundException => new McpError
@@ -51,13 +53,15 @@ public static class McpErrorHandler
             IOException ioEx => new McpError
             {
                 Code = -32603, // Internal error
-                Message = $"I/O error: {ioEx.Message}"
+                // Don't expose internal I/O error details to prevent information leakage
+                Message = "I/O error occurred while processing the request"
             },
             
             InvalidOperationException opEx => new McpError
             {
                 Code = -32603, // Internal error
-                Message = opEx.Message
+                // Only expose user-friendly messages, sanitize internal details
+                Message = SanitizeErrorMessage(opEx.Message)
             },
             
             NotSupportedException => new McpError
@@ -69,7 +73,8 @@ public static class McpErrorHandler
             _ => new McpError
             {
                 Code = -32603, // Internal error
-                Message = includeStackTrace ? ex.ToString() : "Internal server error occurred"
+                // Never expose stack traces or internal error details in production
+                Message = includeStackTrace ? SanitizeErrorMessage(ex.Message) : "Internal server error occurred"
             }
         };
     }
@@ -118,8 +123,40 @@ public static class McpErrorHandler
         return new McpError
         {
             Code = -32602, // Invalid params
-            Message = message
+            Message = SanitizeErrorMessage(message)
         };
+    }
+
+    /// <summary>
+    /// Sanitizes error messages to prevent information leakage
+    /// Removes file paths, stack traces, and other sensitive information
+    /// </summary>
+    private static string SanitizeErrorMessage(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return "An error occurred";
+        }
+
+        // Remove file paths (basic pattern matching)
+        var sanitized = Regex.Replace(message, @"[A-Za-z]:\\[^\s]+", "[path removed]");
+        sanitized = Regex.Replace(sanitized, @"/[^\s]+", "[path removed]");
+        
+        // Remove stack trace indicators
+        sanitized = Regex.Replace(sanitized, @"at\s+[^\r\n]+", "");
+        sanitized = Regex.Replace(sanitized, @"in\s+[^\r\n]+", "");
+        sanitized = Regex.Replace(sanitized, @"line\s+\d+", "");
+        
+        // Remove exception type names that might leak implementation details
+        sanitized = Regex.Replace(sanitized, @"\w+\.\w+Exception", "Error");
+        
+        // Limit message length
+        if (sanitized.Length > 500)
+        {
+            sanitized = sanitized.Substring(0, 497) + "...";
+        }
+
+        return sanitized.Trim();
     }
 }
 

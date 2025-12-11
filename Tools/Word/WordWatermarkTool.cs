@@ -1,0 +1,101 @@
+using System.Text.Json.Nodes;
+using Aspose.Words;
+using AsposeMcpServer.Core;
+
+namespace AsposeMcpServer.Tools;
+
+public class WordWatermarkTool : IAsposeTool
+{
+    public string Description => "Manage watermarks in Word documents (add text watermark)";
+
+    public object InputSchema => new
+    {
+        type = "object",
+        properties = new
+        {
+            operation = new
+            {
+                type = "string",
+                description = "Operation: add",
+                @enum = new[] { "add" }
+            },
+            path = new
+            {
+                type = "string",
+                description = "Document file path"
+            },
+            outputPath = new
+            {
+                type = "string",
+                description = "Output file path (optional, defaults to overwrite input)"
+            },
+            text = new
+            {
+                type = "string",
+                description = "Watermark text (required for add)"
+            },
+            fontFamily = new
+            {
+                type = "string",
+                description = "Font family (optional, default: 'Arial')"
+            },
+            fontSize = new
+            {
+                type = "number",
+                description = "Font size (optional, default: 72)"
+            },
+            isSemitransparent = new
+            {
+                type = "boolean",
+                description = "Is semitransparent (optional, default: true)"
+            },
+            layout = new
+            {
+                type = "string",
+                description = "Layout: Diagonal, Horizontal (optional, default: Diagonal)",
+                @enum = new[] { "Diagonal", "Horizontal" }
+            }
+        },
+        required = new[] { "operation", "path", "text" }
+    };
+
+    public async Task<string> ExecuteAsync(JsonObject? arguments)
+    {
+        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
+
+        return operation.ToLower() switch
+        {
+            "add" => await AddWatermark(arguments),
+            _ => throw new ArgumentException($"Unknown operation: {operation}")
+        };
+    }
+
+    private async Task<string> AddWatermark(JsonObject? arguments)
+    {
+        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        SecurityHelper.ValidateFilePath(path, "path");
+        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+        var text = arguments?["text"]?.GetValue<string>() ?? throw new ArgumentException("text is required");
+        var fontFamily = arguments?["fontFamily"]?.GetValue<string>() ?? "Arial";
+        var fontSize = arguments?["fontSize"]?.GetValue<double>() ?? 72;
+        var isSemitransparent = arguments?["isSemitransparent"]?.GetValue<bool?>() ?? true;
+        var layout = arguments?["layout"]?.GetValue<string>() ?? "Diagonal";
+
+        var doc = new Document(path);
+        
+        var watermarkOptions = new TextWatermarkOptions
+        {
+            FontFamily = fontFamily,
+            FontSize = (float)fontSize,
+            IsSemitrasparent = isSemitransparent,
+            Layout = layout.ToLower() == "horizontal" ? WatermarkLayout.Horizontal : WatermarkLayout.Diagonal
+        };
+
+        doc.Watermark.SetText(text, watermarkOptions);
+        doc.Save(outputPath);
+
+        return await Task.FromResult($"Watermark added to document. Output: {outputPath}");
+    }
+}
+

@@ -1,4 +1,5 @@
 using System.IO;
+using System.Text.RegularExpressions;
 
 namespace AsposeMcpServer.Core;
 
@@ -7,6 +8,18 @@ namespace AsposeMcpServer.Core;
 /// </summary>
 public static class SecurityHelper
 {
+    // Maximum allowed path length (Windows MAX_PATH is 260, but we use a safer limit)
+    private const int MaxPathLength = 260;
+    
+    // Maximum allowed file name length
+    private const int MaxFileNameLength = 255;
+    
+    // Maximum allowed array size for input validation
+    private const int MaxArraySize = 1000;
+    
+    // Maximum allowed string length for input parameters
+    private const int MaxStringLength = 10000;
+
     /// <summary>
     /// Sanitizes a file name to prevent path traversal attacks
     /// </summary>
@@ -19,14 +32,22 @@ public static class SecurityHelper
             return "file";
         }
 
+        // Limit length first
+        if (fileName.Length > MaxFileNameLength)
+        {
+            fileName = fileName.Substring(0, MaxFileNameLength);
+        }
+
         // Remove path separators and other dangerous characters
         var invalidChars = Path.GetInvalidFileNameChars();
         var sanitized = string.Join("_", fileName.Split(invalidChars, StringSplitOptions.RemoveEmptyEntries));
 
-        // Remove path traversal attempts
+        // Remove path traversal attempts (more comprehensive)
         sanitized = sanitized.Replace("..", "");
         sanitized = sanitized.Replace("\\", "_");
         sanitized = sanitized.Replace("/", "_");
+        sanitized = sanitized.Replace(":", "_"); // Remove drive letters
+        sanitized = Regex.Replace(sanitized, @"^\s+|\s+$", ""); // Remove leading/trailing whitespace
 
         // Remove leading/trailing dots and spaces
         sanitized = sanitized.Trim('.', ' ');
@@ -37,10 +58,10 @@ public static class SecurityHelper
             sanitized = "file";
         }
 
-        // Limit length to prevent issues
-        if (sanitized.Length > 255)
+        // Final length check
+        if (sanitized.Length > MaxFileNameLength)
         {
-            sanitized = sanitized.Substring(0, 255);
+            sanitized = sanitized.Substring(0, MaxFileNameLength);
         }
 
         return sanitized;
@@ -50,10 +71,17 @@ public static class SecurityHelper
     /// Validates that a file path is safe and doesn't contain path traversal attempts
     /// </summary>
     /// <param name="filePath">File path to validate</param>
+    /// <param name="allowAbsolutePaths">Whether to allow absolute paths (default: false for security)</param>
     /// <returns>True if path is safe, false otherwise</returns>
-    public static bool IsSafeFilePath(string filePath)
+    public static bool IsSafeFilePath(string filePath, bool allowAbsolutePaths = false)
     {
         if (string.IsNullOrWhiteSpace(filePath))
+        {
+            return false;
+        }
+
+        // Check path length
+        if (filePath.Length > MaxPathLength)
         {
             return false;
         }
@@ -64,14 +92,66 @@ public static class SecurityHelper
             return false;
         }
 
-        // Check for absolute paths that might be dangerous
+        // Check for dangerous patterns
+        if (filePath.Contains("//") || filePath.Contains("\\\\"))
+        {
+            return false;
+        }
+
+        // Check for absolute paths
         if (Path.IsPathRooted(filePath))
         {
-            // Allow absolute paths but log them (could be restricted further if needed)
-            return true;
+            if (!allowAbsolutePaths)
+            {
+                return false;
+            }
+            
+            // Additional validation for absolute paths
+            try
+            {
+                var fullPath = Path.GetFullPath(filePath);
+                // Reject if normalized path contains traversal
+                if (fullPath.Contains(".."))
+                {
+                    return false;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        // Check for invalid characters
+        if (filePath.IndexOfAny(Path.GetInvalidPathChars()) >= 0)
+        {
+            return false;
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// Validates and sanitizes a file path, throwing exception if invalid
+    /// </summary>
+    /// <param name="filePath">File path to validate</param>
+    /// <param name="paramName">Parameter name for error message</param>
+    /// <param name="allowAbsolutePaths">Whether to allow absolute paths</param>
+    /// <returns>Validated file path</returns>
+    /// <exception cref="ArgumentException">Thrown if path is invalid</exception>
+    public static string ValidateFilePath(string filePath, string paramName = "path", bool allowAbsolutePaths = false)
+    {
+        if (string.IsNullOrWhiteSpace(filePath))
+        {
+            throw new ArgumentException($"{paramName} cannot be null or empty");
+        }
+
+        if (!IsSafeFilePath(filePath, allowAbsolutePaths))
+        {
+            throw new ArgumentException($"{paramName} contains invalid characters or path traversal attempts");
+        }
+
+        return filePath;
     }
 
     /// <summary>
@@ -86,11 +166,18 @@ public static class SecurityHelper
             return "file_{index}";
         }
 
+        // Limit length
+        if (pattern.Length > MaxFileNameLength)
+        {
+            pattern = pattern.Substring(0, MaxFileNameLength);
+        }
+
         // Remove path separators
         var sanitized = pattern.Replace("\\", "_").Replace("/", "_");
         
         // Remove path traversal attempts
         sanitized = sanitized.Replace("..", "");
+        sanitized = sanitized.Replace(":", "_");
         
         // Remove leading/trailing dots and spaces
         sanitized = sanitized.Trim('.', ' ');
@@ -102,6 +189,51 @@ public static class SecurityHelper
         }
 
         return sanitized;
+    }
+
+    /// <summary>
+    /// Validates array size to prevent resource exhaustion
+    /// </summary>
+    /// <param name="array">Array to validate</param>
+    /// <param name="paramName">Parameter name for error message</param>
+    /// <param name="maxSize">Maximum allowed size (default: MaxArraySize)</param>
+    /// <exception cref="ArgumentException">Thrown if array is too large</exception>
+    public static void ValidateArraySize<T>(IEnumerable<T> array, string paramName = "array", int? maxSize = null)
+    {
+        if (array == null)
+        {
+            return;
+        }
+
+        var count = array.Count();
+        var limit = maxSize ?? MaxArraySize;
+        
+        if (count > limit)
+        {
+            throw new ArgumentException($"{paramName} exceeds maximum allowed size of {limit}");
+        }
+    }
+
+    /// <summary>
+    /// Validates string length to prevent resource exhaustion
+    /// </summary>
+    /// <param name="value">String to validate</param>
+    /// <param name="paramName">Parameter name for error message</param>
+    /// <param name="maxLength">Maximum allowed length (default: MaxStringLength)</param>
+    /// <exception cref="ArgumentException">Thrown if string is too long</exception>
+    public static void ValidateStringLength(string value, string paramName = "value", int? maxLength = null)
+    {
+        if (value == null)
+        {
+            return;
+        }
+
+        var limit = maxLength ?? MaxStringLength;
+        
+        if (value.Length > limit)
+        {
+            throw new ArgumentException($"{paramName} exceeds maximum allowed length of {limit}");
+        }
     }
 }
 

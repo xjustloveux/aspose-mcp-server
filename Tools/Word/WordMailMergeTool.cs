@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using Aspose.Words.MailMerging;
+using AsposeMcpServer.Core;
 
 namespace AsposeMcpServer.Tools;
 
@@ -37,6 +38,9 @@ public class WordMailMergeTool : IAsposeTool
         var templatePath = arguments?["templatePath"]?.GetValue<string>() ?? throw new ArgumentException("templatePath is required");
         var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? throw new ArgumentException("outputPath is required");
         var data = arguments?["data"]?.AsObject() ?? throw new ArgumentException("data is required");
+
+        SecurityHelper.ValidateFilePath(templatePath, "templatePath");
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         var doc = new Document(templatePath);
 

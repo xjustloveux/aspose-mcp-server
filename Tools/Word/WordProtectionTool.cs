@@ -1,0 +1,123 @@
+using System.Text.Json.Nodes;
+using Aspose.Words;
+using AsposeMcpServer.Core;
+
+namespace AsposeMcpServer.Tools;
+
+/// <summary>
+/// Unified tool for managing Word document protection (protect, unprotect)
+/// Merges: WordProtectTool, WordUnprotectTool
+/// </summary>
+public class WordProtectionTool : IAsposeTool
+{
+    public string Description => "Protect or unprotect a Word document";
+
+    public object InputSchema => new
+    {
+        type = "object",
+        properties = new
+        {
+            operation = new
+            {
+                type = "string",
+                description = "Operation to perform: 'protect', 'unprotect'",
+                @enum = new[] { "protect", "unprotect" }
+            },
+            path = new
+            {
+                type = "string",
+                description = "Document file path"
+            },
+            outputPath = new
+            {
+                type = "string",
+                description = "Output file path (if not provided, overwrites input)"
+            },
+            password = new
+            {
+                type = "string",
+                description = "Protection password (required for protect operation, optional for unprotect)"
+            },
+            protectionType = new
+            {
+                type = "string",
+                description = "Protection type: 'ReadOnly', 'AllowOnlyComments', 'AllowOnlyFormFields', 'AllowOnlyRevisions' (required for protect operation)",
+                @enum = new[] { "ReadOnly", "AllowOnlyComments", "AllowOnlyFormFields", "AllowOnlyRevisions" }
+            }
+        },
+        required = new[] { "operation", "path" }
+    };
+
+    public async Task<string> ExecuteAsync(JsonObject? arguments)
+    {
+        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
+        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+
+        SecurityHelper.ValidateFilePath(path, "path");
+
+        return operation.ToLower() switch
+        {
+            "protect" => await ProtectAsync(arguments, path),
+            "unprotect" => await UnprotectAsync(arguments, path),
+            _ => throw new ArgumentException($"Unknown operation: {operation}")
+        };
+    }
+
+    private async Task<string> ProtectAsync(JsonObject? arguments, string path)
+    {
+        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        var password = arguments?["password"]?.GetValue<string>() ?? throw new ArgumentException("password is required for protect operation");
+        var protectionTypeStr = arguments?["protectionType"]?.GetValue<string>() ?? "ReadOnly";
+
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+
+        var doc = new Document(path);
+
+        var protectionType = protectionTypeStr switch
+        {
+            "ReadOnly" => ProtectionType.ReadOnly,
+            "AllowOnlyComments" => ProtectionType.AllowOnlyComments,
+            "AllowOnlyFormFields" => ProtectionType.AllowOnlyFormFields,
+            "AllowOnlyRevisions" => ProtectionType.AllowOnlyRevisions,
+            _ => ProtectionType.ReadOnly
+        };
+
+        doc.Protect(protectionType, password);
+        doc.Save(outputPath);
+
+        return await Task.FromResult($"Document protected with {protectionType}: {outputPath}");
+    }
+
+    private async Task<string> UnprotectAsync(JsonObject? arguments, string path)
+    {
+        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        var password = arguments?["password"]?.GetValue<string>();
+
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+
+        var doc = new Document(path);
+        var wasProtected = doc.ProtectionType != ProtectionType.NoProtection;
+
+        if (!wasProtected)
+        {
+            if (!string.Equals(path, outputPath, StringComparison.OrdinalIgnoreCase))
+            {
+                doc.Save(outputPath);
+                return await Task.FromResult($"文檔未受保護，已另存到: {outputPath}");
+            }
+
+            return await Task.FromResult("文檔未受保護，無需解除");
+        }
+
+        doc.Unprotect(password);
+
+        if (doc.ProtectionType != ProtectionType.NoProtection)
+        {
+            throw new InvalidOperationException("解除保護失敗，可能是密碼錯誤或文檔被限制");
+        }
+
+        doc.Save(outputPath);
+        return await Task.FromResult($"解除保護完成\n輸出: {outputPath}");
+    }
+}
+
