@@ -100,6 +100,8 @@ jobs:
       id: get_version
       shell: bash
       run: |
+        # 確保獲取最新的 tag（包括遠程）
+        git fetch --tags --force
         latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v1.0.0")
         echo "latest_tag=$latest_tag" >> $GITHUB_OUTPUT
         echo "Latest tag: $latest_tag"
@@ -113,9 +115,17 @@ jobs:
         version=${latest_tag#v}
         # 分割版本號
         IFS='.' read -r major minor patch <<< "$version"
-        # 遞增補丁版本號
-        patch=$((patch + 1))
-        next_version="v${major}.${minor}.${patch}"
+        # 遞增補丁版本號，直到找到不存在的版本號
+        while true; do
+          patch=$((patch + 1))
+          candidate_version="v${major}.${minor}.${patch}"
+          # 檢查 tag 是否已存在
+          if ! git rev-parse "$candidate_version" >/dev/null 2>&1; then
+            next_version="$candidate_version"
+            break
+          fi
+          echo "Version $candidate_version already exists, trying next..."
+        done
         echo "next_version=$next_version" >> $GITHUB_OUTPUT
         echo "Next version: $next_version"
     
@@ -158,10 +168,15 @@ jobs:
         EOF
         )
         
-        # 檢查 release 是否已存在
-        if gh release view "$tag_name" >/dev/null 2>&1; then
-          echo "Release $tag_name already exists, skipping creation"
-          exit 0
+        # 檢查 tag 和 release 是否已存在
+        if git rev-parse "$tag_name" >/dev/null 2>&1; then
+          echo "Tag $tag_name already exists"
+          if gh release view "$tag_name" >/dev/null 2>&1; then
+            echo "Release $tag_name already exists, skipping creation"
+            exit 0
+          else
+            echo "Tag exists but release doesn't, creating release for existing tag"
+          fi
         fi
         
         # 使用 GitHub CLI 創建 release（會自動創建 lightweight tag 如果不存在）
