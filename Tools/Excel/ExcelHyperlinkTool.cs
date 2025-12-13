@@ -11,7 +11,13 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class ExcelHyperlinkTool : IAsposeTool
 {
-    public string Description => "Manage Excel hyperlinks: add, edit, delete, or get hyperlinks from cells";
+    public string Description => @"Manage Excel hyperlinks. Supports 4 operations: add, edit, delete, get.
+
+Usage examples:
+- Add hyperlink: excel_hyperlink(operation='add', path='book.xlsx', cell='A1', url='https://example.com', displayText='Link')
+- Edit hyperlink: excel_hyperlink(operation='edit', path='book.xlsx', cell='A1', url='https://newurl.com')
+- Delete hyperlink: excel_hyperlink(operation='delete', path='book.xlsx', cell='A1')
+- Get hyperlinks: excel_hyperlink(operation='get', path='book.xlsx')";
 
     public object InputSchema => new
     {
@@ -21,13 +27,17 @@ public class ExcelHyperlinkTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'add', 'edit', 'delete', 'get'",
+                description = @"Operation to perform.
+- 'add': Add a hyperlink (required params: path, cell, url)
+- 'edit': Edit a hyperlink (required params: path, cell, url)
+- 'delete': Delete a hyperlink (required params: path, cell)
+- 'get': Get all hyperlinks (required params: path)",
                 @enum = new[] { "add", "edit", "delete", "get" }
             },
             path = new
             {
                 type = "string",
-                description = "Excel file path"
+                description = "Excel file path (required for all operations)"
             },
             sheetIndex = new
             {

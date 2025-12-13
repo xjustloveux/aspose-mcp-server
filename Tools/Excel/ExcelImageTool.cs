@@ -12,7 +12,12 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class ExcelImageTool : IAsposeTool
 {
-    public string Description => "Manage Excel images: add, delete, or get images from worksheets";
+    public string Description => @"Manage Excel images. Supports 3 operations: add, delete, get.
+
+Usage examples:
+- Add image: excel_image(operation='add', path='book.xlsx', imagePath='image.png', cell='A1', width=200, height=150)
+- Delete image: excel_image(operation='delete', path='book.xlsx', imageIndex=0)
+- Get images: excel_image(operation='get', path='book.xlsx')";
 
     public object InputSchema => new
     {
@@ -22,13 +27,16 @@ public class ExcelImageTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'add', 'delete', 'get'",
+                description = @"Operation to perform.
+- 'add': Add an image (required params: path, imagePath, cell)
+- 'delete': Delete an image (required params: path, imageIndex)
+- 'get': Get all images (required params: path)",
                 @enum = new[] { "add", "delete", "get" }
             },
             path = new
             {
                 type = "string",
-                description = "Excel file path"
+                description = "Excel file path (required for all operations)"
             },
             sheetIndex = new
             {

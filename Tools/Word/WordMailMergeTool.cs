@@ -7,7 +7,10 @@ namespace AsposeMcpServer.Tools;
 
 public class WordMailMergeTool : IAsposeTool
 {
-    public string Description => "Perform mail merge on a Word document template";
+    public string Description => @"Perform mail merge on a Word document template.
+
+Usage examples:
+- Mail merge: word_mail_merge(templatePath='template.docx', outputPath='output.docx', data={'name':'John','address':'123 Main St'})";
 
     public object InputSchema => new
     {
@@ -17,12 +20,12 @@ public class WordMailMergeTool : IAsposeTool
             templatePath = new
             {
                 type = "string",
-                description = "Template file path"
+                description = "Template file path (required)"
             },
             outputPath = new
             {
                 type = "string",
-                description = "Output file path"
+                description = "Output file path (required)"
             },
             data = new
             {

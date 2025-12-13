@@ -10,7 +10,13 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class ExcelGroupTool : IAsposeTool
 {
-    public string Description => "Manage Excel groups: group or ungroup rows and columns";
+    public string Description => @"Manage Excel groups. Supports 4 operations: group_rows, ungroup_rows, group_columns, ungroup_columns.
+
+Usage examples:
+- Group rows: excel_group(operation='group_rows', path='book.xlsx', startRow=1, endRow=5)
+- Ungroup rows: excel_group(operation='ungroup_rows', path='book.xlsx', startRow=1, endRow=5)
+- Group columns: excel_group(operation='group_columns', path='book.xlsx', startColumn=1, endColumn=3)
+- Ungroup columns: excel_group(operation='ungroup_columns', path='book.xlsx', startColumn=1, endColumn=3)";
 
     public object InputSchema => new
     {
@@ -20,13 +26,17 @@ public class ExcelGroupTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'group_rows', 'ungroup_rows', 'group_columns', 'ungroup_columns'",
+                description = @"Operation to perform.
+- 'group_rows': Group rows (required params: path, startRow, endRow)
+- 'ungroup_rows': Ungroup rows (required params: path, startRow, endRow)
+- 'group_columns': Group columns (required params: path, startColumn, endColumn)
+- 'ungroup_columns': Ungroup columns (required params: path, startColumn, endColumn)",
                 @enum = new[] { "group_rows", "ungroup_rows", "group_columns", "ungroup_columns" }
             },
             path = new
             {
                 type = "string",
-                description = "Excel file path"
+                description = "Excel file path (required for all operations)"
             },
             sheetIndex = new
             {

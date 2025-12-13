@@ -14,7 +14,15 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class PptLayoutTool : IAsposeTool
 {
-    public string Description => "Manage PowerPoint layouts: set, get layouts/masters, apply master/layout/theme";
+    public string Description => @"Manage PowerPoint layouts. Supports 6 operations: set, get_layouts, get_masters, apply_master, apply_layout_range, apply_theme.
+
+Usage examples:
+- Set layout: ppt_layout(operation='set', path='presentation.pptx', slideIndex=0, layout='Title')
+- Get layouts: ppt_layout(operation='get_layouts', path='presentation.pptx', masterIndex=0)
+- Get masters: ppt_layout(operation='get_masters', path='presentation.pptx')
+- Apply master: ppt_layout(operation='apply_master', path='presentation.pptx', slideIndex=0, masterIndex=0, layoutIndex=0)
+- Apply layout range: ppt_layout(operation='apply_layout_range', path='presentation.pptx', slideIndices=[0,1,2], layout='Title')
+- Apply theme: ppt_layout(operation='apply_theme', path='presentation.pptx', themePath='theme.potx')";
 
     public object InputSchema => new
     {
@@ -24,13 +32,19 @@ public class PptLayoutTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'set', 'get_layouts', 'get_masters', 'apply_master', 'apply_layout_range', 'apply_theme'",
+                description = @"Operation to perform.
+- 'set': Set slide layout (required params: path, slideIndex, layout)
+- 'get_layouts': Get available layouts (required params: path)
+- 'get_masters': Get master slides (required params: path)
+- 'apply_master': Apply master to slide (required params: path, slideIndex, masterIndex, layoutIndex)
+- 'apply_layout_range': Apply layout to multiple slides (required params: path, slideIndices, layout)
+- 'apply_theme': Apply theme template (required params: path, themePath)",
                 @enum = new[] { "set", "get_layouts", "get_masters", "apply_master", "apply_layout_range", "apply_theme" }
             },
             path = new
             {
                 type = "string",
-                description = "Presentation file path"
+                description = "Presentation file path (required for all operations)"
             },
             slideIndex = new
             {

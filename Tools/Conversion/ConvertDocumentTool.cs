@@ -8,7 +8,13 @@ namespace AsposeMcpServer.Tools;
 
 public class ConvertDocumentTool : IAsposeTool
 {
-    public string Description => "Convert documents between various formats (auto-detect source type)";
+    public string Description => @"Convert documents between various formats (auto-detect source type).
+
+Usage examples:
+- Convert Word to HTML: convert_document(inputPath='doc.docx', outputPath='doc.html')
+- Convert Excel to CSV: convert_document(inputPath='book.xlsx', outputPath='book.csv')
+- Convert PowerPoint to PDF: convert_document(inputPath='presentation.pptx', outputPath='presentation.pdf')
+- Convert PDF to Word: convert_document(inputPath='doc.pdf', outputPath='doc.docx')";
 
     public object InputSchema => new
     {
@@ -18,12 +24,12 @@ public class ConvertDocumentTool : IAsposeTool
             inputPath = new
             {
                 type = "string",
-                description = "Input file path"
+                description = "Input file path (required, auto-detects format from extension)"
             },
             outputPath = new
             {
                 type = "string",
-                description = "Output file path (extension determines output format)"
+                description = "Output file path (required, format determined by extension)"
             }
         },
         required = new[] { "inputPath", "outputPath" }

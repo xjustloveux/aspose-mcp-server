@@ -12,7 +12,11 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class WordPropertiesTool : IAsposeTool
 {
-    public string Description => "Get or set Word document properties (metadata)";
+    public string Description => @"Get or set Word document properties (metadata). Supports 2 operations: get, set.
+
+Usage examples:
+- Get properties: word_properties(operation='get', path='doc.docx')
+- Set properties: word_properties(operation='set', path='doc.docx', title='Title', author='Author', subject='Subject')";
 
     public object InputSchema => new
     {
@@ -22,13 +26,15 @@ public class WordPropertiesTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'get', 'set'",
+                description = @"Operation to perform.
+- 'get': Get document properties (required params: path)
+- 'set': Set document properties (required params: path)",
                 @enum = new[] { "get", "set" }
             },
             path = new
             {
                 type = "string",
-                description = "Document file path"
+                description = "Document file path (required for all operations)"
             },
             outputPath = new
             {

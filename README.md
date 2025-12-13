@@ -359,6 +359,35 @@ pwsh publish.ps1 -All
 - 自動搜尋、環境變數或命令列參數配置
 - 試用模式降級（找不到授權時）
 
+## ⚠️ 重要說明
+
+### 索引行為說明
+
+**索引在刪除操作後會變化：**
+- 當執行刪除操作（如刪除段落、表格、圖片等）後，後續元素的索引會自動調整
+- 這是正常行為，因為索引是基於當前文檔狀態的
+- **建議**：在執行刪除操作後，重新使用 `get` 操作獲取最新的索引列表
+
+**範例：**
+```
+1. word_image(operation='get', path='doc.docx')  # 返回圖片索引: 0, 1, 2
+2. word_image(operation='delete', path='doc.docx', imageIndex=1)  # 刪除索引1的圖片
+3. word_image(operation='get', path='doc.docx')  # 現在返回: 0, 1 (原索引2變成1)
+```
+
+**paragraphIndex 參數說明：**
+- 有效範圍：`0` 到 `段落總數-1`，或使用 `-1` 表示最後一個段落
+- 使用 `get` 操作可以獲取當前文檔的段落總數
+- 某些操作（如 `word_hyperlink` 的 `add`）會在指定段落**之後**創建新段落，而不是插入到段落內部
+- 刪除段落後，後續段落的索引會自動調整
+
+**參數命名一致性：**
+- 為了向後兼容，某些參數支援多種命名方式：
+  - `startColumn` / `startCol`
+  - `columnIndex` / `colIndex`
+  - `tableIndex` / `sourceTableIndex`
+  - `text` / `replyText` (用於評論回覆)
+
 ## 📝 使用範例
 
 ### 從A文檔複製格式到B文檔

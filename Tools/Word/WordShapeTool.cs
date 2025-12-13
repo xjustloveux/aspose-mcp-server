@@ -11,7 +11,15 @@ namespace AsposeMcpServer.Tools;
 
 public class WordShapeTool : IAsposeTool
 {
-    public string Description => "Manage shapes in Word documents (add line, add/edit/get textbox, set textbox border, add chart)";
+    public string Description => @"Manage shapes in Word documents. Supports 6 operations: add_line, add_textbox, get_textboxes, edit_textbox_content, set_textbox_border, add_chart.
+
+Usage examples:
+- Add line: word_shape(operation='add_line', path='doc.docx', x1=100, y1=100, x2=200, y2=200)
+- Add textbox: word_shape(operation='add_textbox', path='doc.docx', text='Textbox content', x=100, y=100, width=200, height=100)
+- Get textboxes: word_shape(operation='get_textboxes', path='doc.docx')
+- Edit textbox: word_shape(operation='edit_textbox_content', path='doc.docx', shapeIndex=0, text='Updated content')
+- Set border: word_shape(operation='set_textbox_border', path='doc.docx', shapeIndex=0, color='#FF0000', width=2)
+- Add chart: word_shape(operation='add_chart', path='doc.docx', chartType='Column', data=[['A','B'],['1','2']], x=100, y=100)";
 
     public object InputSchema => new
     {
@@ -21,13 +29,19 @@ public class WordShapeTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation: add_line, add_textbox, get_textboxes, edit_textbox_content, set_textbox_border, add_chart",
+                description = @"Operation to perform.
+- 'add_line': Add a line shape (required params: path, x1, y1, x2, y2)
+- 'add_textbox': Add a textbox (required params: path, text, x, y, width, height)
+- 'get_textboxes': Get all textboxes (required params: path)
+- 'edit_textbox_content': Edit textbox content (required params: path, shapeIndex, text)
+- 'set_textbox_border': Set textbox border (required params: path, shapeIndex)
+- 'add_chart': Add a chart (required params: path, chartType, data)",
                 @enum = new[] { "add_line", "add_textbox", "get_textboxes", "edit_textbox_content", "set_textbox_border", "add_chart" }
             },
             path = new
             {
                 type = "string",
-                description = "Document file path"
+                description = "Document file path (required for all operations)"
             },
             outputPath = new
             {
@@ -152,11 +166,6 @@ public class WordShapeTool : IAsposeTool
             {
                 type = "number",
                 description = "Textbox index (0-based, for edit_textbox_content, set_textbox_border)"
-            },
-            sectionIndex = new
-            {
-                type = "number",
-                description = "Section index (0-based, for set_textbox_border, default: 0, use -1 for all sections)"
             },
             appendText = new
             {
@@ -312,7 +321,7 @@ public class WordShapeTool : IAsposeTool
             shape.Width = calculatedWidth;
             shape.Height = 0;
             shape.StrokeWeight = lineWidth;
-            shape.StrokeColor = ParseColor(lineColor);
+            shape.StrokeColor = ColorHelper.ParseColor(lineColor);
             shape.WrapType = WrapType.Inline;
             
             linePara.AppendChild(shape);
@@ -337,7 +346,7 @@ public class WordShapeTool : IAsposeTool
             var linePara = new Paragraph(doc);
             linePara.ParagraphFormat.Borders.Bottom.LineStyle = LineStyle.Single;
             linePara.ParagraphFormat.Borders.Bottom.LineWidth = lineWidth;
-            linePara.ParagraphFormat.Borders.Bottom.Color = ParseColor(lineColor);
+            linePara.ParagraphFormat.Borders.Bottom.Color = ColorHelper.ParseColor(lineColor);
 
             if (position == "start")
             {
@@ -395,13 +404,13 @@ public class WordShapeTool : IAsposeTool
 
         if (!string.IsNullOrEmpty(backgroundColor))
         {
-            textBox.Fill.Color = ParseColor(backgroundColor);
+            textBox.Fill.Color = ColorHelper.ParseColor(backgroundColor);
             textBox.Fill.Visible = true;
         }
 
         if (!string.IsNullOrEmpty(borderColor))
         {
-            textBox.Stroke.Color = ParseColor(borderColor);
+            textBox.Stroke.Color = ColorHelper.ParseColor(borderColor);
             textBox.Stroke.Weight = borderWidth;
             textBox.Stroke.Visible = true;
         }
@@ -456,9 +465,7 @@ public class WordShapeTool : IAsposeTool
         var includeContent = arguments?["includeContent"]?.GetValue<bool>() ?? true;
 
         var doc = new Document(path);
-        var shapes = doc.GetChildNodes(NodeType.Shape, true).Cast<Shape>()
-            .Where(s => s.ShapeType == ShapeType.TextBox)
-            .ToList();
+        var shapes = FindAllTextboxes(doc);
         
         var result = new StringBuilder();
         result.AppendLine("=== Document Textboxes ===\n");
@@ -516,41 +523,54 @@ public class WordShapeTool : IAsposeTool
         var clearFormatting = arguments?["clearFormatting"]?.GetValue<bool>() ?? false;
 
         var doc = new Document(path);
-        
-        var shapes = doc.GetChildNodes(NodeType.Shape, true);
-        var textboxes = shapes.Cast<Shape>().Where(s => s.ShapeType == ShapeType.TextBox).ToList();
+        var textboxes = FindAllTextboxes(doc);
         
         if (textboxIndex < 0 || textboxIndex >= textboxes.Count)
             throw new ArgumentException($"Textbox index {textboxIndex} out of range (total textboxes: {textboxes.Count})");
         
         var textbox = textboxes[textboxIndex];
-        var paragraphs = textbox.GetChildNodes(NodeType.Paragraph, true);
+        
+        // IMPORTANT: Use false to get only direct child paragraphs of the textbox
+        // Using true would recursively search and might include paragraphs outside the textbox
+        var paragraphs = textbox.GetChildNodes(NodeType.Paragraph, false);
         Paragraph para;
         
         if (paragraphs.Count == 0)
         {
+            // Create a new paragraph inside the textbox
             para = new Paragraph(doc);
             textbox.AppendChild(para);
         }
         else
+        {
+            // Use the first paragraph that is a direct child of the textbox
             para = paragraphs[0] as Paragraph ?? throw new Exception("Cannot get textbox paragraph");
+        }
+        
+        // Ensure we're working only with content inside the textbox
+        // Get runs that are direct children of the paragraph (which is inside the textbox)
+        var runs = para.GetChildNodes(NodeType.Run, false);
         
         if (text != null)
         {
-            if (appendText && para.Runs.Count > 0)
+            if (appendText && runs.Count > 0)
             {
+                // Append new run to existing content
                 var newRun = new Run(doc, text);
                 para.AppendChild(newRun);
             }
             else
             {
+                // Clear existing content and set new text
+                // Only remove direct children of the paragraph (runs inside textbox)
                 para.RemoveAllChildren();
                 var newRun = new Run(doc, text);
                 para.AppendChild(newRun);
             }
+            
+            // Refresh runs list after modification
+            runs = para.GetChildNodes(NodeType.Run, false);
         }
-        
-        var runs = para.GetChildNodes(NodeType.Run, false);
         
         if (clearFormatting)
         {
@@ -623,35 +643,14 @@ public class WordShapeTool : IAsposeTool
         var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
         var textboxIndex = arguments?["textboxIndex"]?.GetValue<int>() ?? throw new ArgumentException("textboxIndex is required");
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
         var borderVisible = arguments?["borderVisible"]?.GetValue<bool>() ?? true;
         var borderColor = arguments?["borderColor"]?.GetValue<string>() ?? "000000";
         var borderWidth = arguments?["borderWidth"]?.GetValue<double>() ?? 1.0;
 
         var doc = new Document(path);
+        var allTextboxes = FindAllTextboxes(doc);
         
-        List<Shape> allTextboxes = new List<Shape>();
-        
-        if (sectionIndex == -1)
-        {
-            foreach (Section section in doc.Sections)
-            {
-                var shapes = section.GetChildNodes(NodeType.Shape, true).Cast<Shape>()
-                    .Where(s => s.ShapeType == ShapeType.TextBox).ToList();
-                allTextboxes.AddRange(shapes);
-            }
-        }
-        else
-        {
-            if (sectionIndex >= doc.Sections.Count)
-                throw new ArgumentException($"Section index {sectionIndex} out of range (total sections: {doc.Sections.Count})");
-            
-            var section = doc.Sections[sectionIndex];
-            allTextboxes = section.GetChildNodes(NodeType.Shape, true).Cast<Shape>()
-                .Where(s => s.ShapeType == ShapeType.TextBox).ToList();
-        }
-        
-        if (textboxIndex >= allTextboxes.Count)
+        if (textboxIndex < 0 || textboxIndex >= allTextboxes.Count)
             throw new ArgumentException($"Textbox index {textboxIndex} out of range (total textboxes: {allTextboxes.Count})");
         
         var textBox = allTextboxes[textboxIndex];
@@ -661,7 +660,7 @@ public class WordShapeTool : IAsposeTool
         
         if (borderVisible)
         {
-            stroke.Color = ParseColor(borderColor);
+            stroke.Color = ColorHelper.ParseColor(borderColor);
             stroke.Weight = borderWidth;
         }
         
@@ -813,17 +812,30 @@ public class WordShapeTool : IAsposeTool
         }
     }
 
-    private System.Drawing.Color ParseColor(string hexColor)
+    /// <summary>
+    /// Find all textboxes in the document, searching in all sections' Body and HeaderFooter.
+    /// This ensures consistent textbox indexing across all operations.
+    /// </summary>
+    private List<Shape> FindAllTextboxes(Document doc)
     {
-        hexColor = hexColor.TrimStart('#');
-        if (hexColor.Length == 6)
+        var textboxes = new List<Shape>();
+        foreach (Section section in doc.Sections)
         {
-            var r = Convert.ToByte(hexColor.Substring(0, 2), 16);
-            var g = Convert.ToByte(hexColor.Substring(2, 2), 16);
-            var b = Convert.ToByte(hexColor.Substring(4, 2), 16);
-            return System.Drawing.Color.FromArgb(r, g, b);
+            // Search in main body
+            var bodyShapes = section.Body.GetChildNodes(NodeType.Shape, true).Cast<Shape>()
+                .Where(s => s.ShapeType == ShapeType.TextBox);
+            textboxes.AddRange(bodyShapes);
+            
+            // Search in headers and footers
+            foreach (HeaderFooter header in section.HeadersFooters)
+            {
+                var headerShapes = header.GetChildNodes(NodeType.Shape, true).Cast<Shape>()
+                    .Where(s => s.ShapeType == ShapeType.TextBox);
+                textboxes.AddRange(headerShapes);
+            }
         }
-        return System.Drawing.Color.Black;
+        return textboxes;
     }
+
 }
 

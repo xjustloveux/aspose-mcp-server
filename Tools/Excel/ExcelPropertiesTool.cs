@@ -12,7 +12,14 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class ExcelPropertiesTool : IAsposeTool
 {
-    public string Description => "Manage Excel properties: get/set workbook properties, get/edit sheet properties, get sheet info";
+    public string Description => @"Manage Excel properties. Supports 5 operations: get_workbook_properties, set_workbook_properties, get_sheet_properties, edit_sheet_properties, get_sheet_info.
+
+Usage examples:
+- Get workbook properties: excel_properties(operation='get_workbook_properties', path='book.xlsx')
+- Set workbook properties: excel_properties(operation='set_workbook_properties', path='book.xlsx', title='Title', author='Author')
+- Get sheet properties: excel_properties(operation='get_sheet_properties', path='book.xlsx', sheetIndex=0)
+- Edit sheet properties: excel_properties(operation='edit_sheet_properties', path='book.xlsx', sheetIndex=0, name='New Name')
+- Get sheet info: excel_properties(operation='get_sheet_info', path='book.xlsx')";
 
     public object InputSchema => new
     {
@@ -22,13 +29,18 @@ public class ExcelPropertiesTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'get_workbook_properties', 'set_workbook_properties', 'get_sheet_properties', 'edit_sheet_properties', 'get_sheet_info'",
+                description = @"Operation to perform.
+- 'get_workbook_properties': Get workbook properties (required params: path)
+- 'set_workbook_properties': Set workbook properties (required params: path)
+- 'get_sheet_properties': Get sheet properties (required params: path, sheetIndex)
+- 'edit_sheet_properties': Edit sheet properties (required params: path, sheetIndex)
+- 'get_sheet_info': Get sheet info (required params: path)",
                 @enum = new[] { "get_workbook_properties", "set_workbook_properties", "edit_sheet_properties", "get_sheet_properties", "get_sheet_info" }
             },
             path = new
             {
                 type = "string",
-                description = "Excel file path"
+                description = "Excel file path (required for all operations)"
             },
             sheetIndex = new
             {

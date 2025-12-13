@@ -8,7 +8,13 @@ namespace AsposeMcpServer.Tools;
 
 public class PdfImageTool : IAsposeTool
 {
-    public string Description => "Manage images in PDF documents (add, delete, edit, extract)";
+    public string Description => @"Manage images in PDF documents. Supports 4 operations: add, delete, edit, extract.
+
+Usage examples:
+- Add image: pdf_image(operation='add', path='doc.pdf', pageIndex=1, imagePath='image.png', x=100, y=100)
+- Delete image: pdf_image(operation='delete', path='doc.pdf', pageIndex=1, imageIndex=0)
+- Edit image: pdf_image(operation='edit', path='doc.pdf', pageIndex=1, imageIndex=0, x=200, y=200)
+- Extract image: pdf_image(operation='extract', path='doc.pdf', pageIndex=1, imageIndex=0, outputPath='image.png')";
 
     public object InputSchema => new
     {
@@ -18,13 +24,17 @@ public class PdfImageTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation: add, delete, edit, extract",
+                description = @"Operation to perform.
+- 'add': Add an image (required params: path, pageIndex, imagePath)
+- 'delete': Delete an image (required params: path, pageIndex, imageIndex)
+- 'edit': Edit image position/size (required params: path, pageIndex, imageIndex)
+- 'extract': Extract an image (required params: path, pageIndex, imageIndex, outputPath)",
                 @enum = new[] { "add", "delete", "edit", "extract" }
             },
             path = new
             {
                 type = "string",
-                description = "PDF file path"
+                description = "PDF file path (required for all operations)"
             },
             outputPath = new
             {

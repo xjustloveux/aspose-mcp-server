@@ -11,7 +11,16 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class WordPageTool : IAsposeTool
 {
-    public string Description => "Manage page settings in Word documents: set margins, orientation, size, page number, delete page, insert blank page, add page break";
+    public string Description => @"Manage page settings in Word documents. Supports 8 operations: set_margins, set_orientation, set_size, set_page_number, set_page_setup, delete_page, insert_blank_page, add_page_break.
+
+Usage examples:
+- Set margins: word_page(operation='set_margins', path='doc.docx', top=72, bottom=72, left=72, right=72)
+- Set orientation: word_page(operation='set_orientation', path='doc.docx', orientation='landscape')
+- Set page size: word_page(operation='set_size', path='doc.docx', width=792, height=612)
+- Set page number: word_page(operation='set_page_number', path='doc.docx', startNumber=1)
+- Delete page: word_page(operation='delete_page', path='doc.docx', pageIndex=1)
+- Insert blank page: word_page(operation='insert_blank_page', path='doc.docx', insertAtParagraphIndex=5)
+- Add page break: word_page(operation='add_page_break', path='doc.docx', paragraphIndex=10)";
 
     public object InputSchema => new
     {
@@ -21,13 +30,21 @@ public class WordPageTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'set_margins', 'set_orientation', 'set_size', 'set_page_number', 'set_page_setup', 'delete_page', 'insert_blank_page', 'add_page_break'",
+                description = @"Operation to perform.
+- 'set_margins': Set page margins (required params: path)
+- 'set_orientation': Set page orientation (required params: path, orientation)
+- 'set_size': Set page size (required params: path, width, height)
+- 'set_page_number': Set page number format (required params: path, startNumber)
+- 'set_page_setup': Set page setup (required params: path)
+- 'delete_page': Delete a page (required params: path, pageIndex)
+- 'insert_blank_page': Insert blank page (required params: path, insertAtParagraphIndex)
+- 'add_page_break': Add page break (required params: path, paragraphIndex)",
                 @enum = new[] { "set_margins", "set_orientation", "set_size", "set_page_number", "set_page_setup", "delete_page", "insert_blank_page", "add_page_break" }
             },
             path = new
             {
                 type = "string",
-                description = "Document file path"
+                description = "Document file path (required for all operations)"
             },
             outputPath = new
             {
@@ -399,7 +416,6 @@ public class WordPageTool : IAsposeTool
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
         
         // Find page breaks and count pages
-        // Note: Aspose.Words doesn't have direct page deletion, so we need to find content on that page
         // This is a simplified implementation
         var pageBreaks = paragraphs.Cast<Paragraph>()
             .Where(p => p.ParagraphFormat.PageBreakBefore || 

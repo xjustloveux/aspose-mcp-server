@@ -7,7 +7,11 @@ namespace AsposeMcpServer.Tools;
 
 public class PdfTableTool : IAsposeTool
 {
-    public string Description => "Manage tables in PDF documents (add, edit)";
+    public string Description => @"Manage tables in PDF documents. Supports 2 operations: add, edit.
+
+Usage examples:
+- Add table: pdf_table(operation='add', path='doc.pdf', pageIndex=1, rows=3, columns=3, data=[['A','B','C'],['1','2','3']], x=100, y=100)
+- Edit table: pdf_table(operation='edit', path='doc.pdf', pageIndex=1, tableIndex=0, data=[['X','Y','Z']])";
 
     public object InputSchema => new
     {
@@ -17,13 +21,15 @@ public class PdfTableTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation: add, edit",
+                description = @"Operation to perform.
+- 'add': Add a table (required params: path, pageIndex, rows, columns, data)
+- 'edit': Edit table data (required params: path, pageIndex, tableIndex, data)",
                 @enum = new[] { "add", "edit" }
             },
             path = new
             {
                 type = "string",
-                description = "PDF file path"
+                description = "PDF file path (required for all operations)"
             },
             outputPath = new
             {

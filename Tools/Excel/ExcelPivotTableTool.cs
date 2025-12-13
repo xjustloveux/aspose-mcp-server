@@ -13,7 +13,16 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class ExcelPivotTableTool : IAsposeTool
 {
-    public string Description => "Manage Excel pivot tables: add, edit, delete, get, add/delete fields, or refresh data";
+    public string Description => @"Manage Excel pivot tables. Supports 7 operations: add, edit, delete, get, add_field, delete_field, refresh.
+
+Usage examples:
+- Add pivot table: excel_pivot_table(operation='add', path='book.xlsx', sourceRange='A1:D10', destCell='F1')
+- Edit pivot table: excel_pivot_table(operation='edit', path='book.xlsx', pivotTableIndex=0)
+- Delete pivot table: excel_pivot_table(operation='delete', path='book.xlsx', pivotTableIndex=0)
+- Get pivot tables: excel_pivot_table(operation='get', path='book.xlsx')
+- Add field: excel_pivot_table(operation='add_field', path='book.xlsx', pivotTableIndex=0, fieldName='Column1', area='Row')
+- Delete field: excel_pivot_table(operation='delete_field', path='book.xlsx', pivotTableIndex=0, fieldName='Column1')
+- Refresh: excel_pivot_table(operation='refresh', path='book.xlsx', pivotTableIndex=0)";
 
     public object InputSchema => new
     {
@@ -23,13 +32,20 @@ public class ExcelPivotTableTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'add', 'edit', 'delete', 'get', 'add_field', 'delete_field', 'refresh'",
+                description = @"Operation to perform.
+- 'add': Add a pivot table (required params: path, sourceRange, destCell)
+- 'edit': Edit pivot table (required params: path, pivotTableIndex)
+- 'delete': Delete a pivot table (required params: path, pivotTableIndex)
+- 'get': Get all pivot tables (required params: path)
+- 'add_field': Add field to pivot table (required params: path, pivotTableIndex, fieldName, area)
+- 'delete_field': Delete field from pivot table (required params: path, pivotTableIndex, fieldName)
+- 'refresh': Refresh pivot table data (required params: path, pivotTableIndex)",
                 @enum = new[] { "add", "edit", "delete", "get", "add_field", "delete_field", "refresh" }
             },
             path = new
             {
                 type = "string",
-                description = "Excel file path"
+                description = "Excel file path (required for all operations)"
             },
             outputPath = new
             {

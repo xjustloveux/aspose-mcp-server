@@ -7,7 +7,14 @@ namespace AsposeMcpServer.Tools;
 
 public class PdfPageTool : IAsposeTool
 {
-    public string Description => "Manage pages in PDF documents (add, delete, rotate, get details, get info)";
+    public string Description => @"Manage pages in PDF documents. Supports 5 operations: add, delete, rotate, get_details, get_info.
+
+Usage examples:
+- Add page: pdf_page(operation='add', path='doc.pdf', count=1)
+- Delete page: pdf_page(operation='delete', path='doc.pdf', pageIndex=1)
+- Rotate page: pdf_page(operation='rotate', path='doc.pdf', pageIndex=1, angle=90)
+- Get page details: pdf_page(operation='get_details', path='doc.pdf', pageIndex=1)
+- Get page info: pdf_page(operation='get_info', path='doc.pdf')";
 
     public object InputSchema => new
     {
@@ -17,13 +24,18 @@ public class PdfPageTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation: add, delete, rotate, get_details, get_info",
+                description = @"Operation to perform.
+- 'add': Add page(s) (required params: path)
+- 'delete': Delete a page (required params: path, pageIndex)
+- 'rotate': Rotate a page (required params: path, pageIndex, angle)
+- 'get_details': Get page details (required params: path, pageIndex)
+- 'get_info': Get all pages info (required params: path)",
                 @enum = new[] { "add", "delete", "rotate", "get_details", "get_info" }
             },
             path = new
             {
                 type = "string",
-                description = "PDF file path"
+                description = "PDF file path (required for all operations)"
             },
             outputPath = new
             {

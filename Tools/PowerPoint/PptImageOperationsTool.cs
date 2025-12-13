@@ -13,7 +13,12 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class PptImageOperationsTool : IAsposeTool
 {
-    public string Description => "PowerPoint image operations: export slides as images, extract images, or replace image with compression";
+    public string Description => @"PowerPoint image operations. Supports 3 operations: export_slides, extract_images, replace_with_compression.
+
+Usage examples:
+- Export slides as images: ppt_image_operations(operation='export_slides', path='presentation.pptx', outputDir='images/', format='png')
+- Extract images: ppt_image_operations(operation='extract_images', path='presentation.pptx', outputDir='images/')
+- Replace with compression: ppt_image_operations(operation='replace_with_compression', path='presentation.pptx', slideIndex=0, shapeIndex=0, imagePath='new_image.png')";
 
     public object InputSchema => new
     {
@@ -23,13 +28,16 @@ public class PptImageOperationsTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'export_slides', 'extract_images', 'replace_with_compression'",
+                description = @"Operation to perform.
+- 'export_slides': Export slides as images (required params: path, outputDir)
+- 'extract_images': Extract images from presentation (required params: path, outputDir)
+- 'replace_with_compression': Replace image with compression (required params: path, slideIndex, shapeIndex, imagePath)",
                 @enum = new[] { "export_slides", "extract_images", "replace_with_compression" }
             },
             path = new
             {
                 type = "string",
-                description = "Presentation file path"
+                description = "Presentation file path (required for all operations)"
             },
             outputDir = new
             {

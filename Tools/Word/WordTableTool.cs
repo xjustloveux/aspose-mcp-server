@@ -9,7 +9,14 @@ namespace AsposeMcpServer.Tools;
 
 public class WordTableTool : IAsposeTool
 {
-    public string Description => "Manage tables in Word documents (add, edit, delete, get, insert/delete rows/columns, merge/split cells, set borders, get structure)";
+    public string Description => @"Manage tables in Word documents. Supports 17 operations: add_table, edit_table_format, delete_table, get_tables, insert_row, delete_row, insert_column, delete_column, merge_cells, split_cell, edit_cell_format, move_table, copy_table, get_table_structure, set_table_border, set_column_width, set_row_height.
+
+Usage examples:
+- Add table: word_table(operation='add_table', path='doc.docx', rows=3, columns=3, data=[['A1','B1','C1'],['A2','B2','C2']])
+- Get tables: word_table(operation='get_tables', path='doc.docx')
+- Insert row: word_table(operation='insert_row', path='doc.docx', tableIndex=0, rowIndex=1)
+- Merge cells: word_table(operation='merge_cells', path='doc.docx', tableIndex=0, startRow=0, startColumn=0, endRow=0, endColumn=1)
+- Set border: word_table(operation='set_table_border', path='doc.docx', tableIndex=0, borderType='all', style='single', width=1.0)";
 
     public object InputSchema => new
     {
@@ -19,13 +26,30 @@ public class WordTableTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation: add_table, edit_table_format, delete_table, get_tables, insert_row, delete_row, insert_column, delete_column, merge_cells, split_cell, edit_cell_format, move_table, copy_table, get_table_structure, set_table_border, set_column_width, set_row_height",
+                description = @"Operation to perform.
+- 'add_table': Add a new table (required params: path, rows, columns)
+- 'edit_table_format': Edit table format (required params: path, tableIndex)
+- 'delete_table': Delete a table (required params: path, tableIndex)
+- 'get_tables': Get all tables info (required params: path)
+- 'insert_row': Insert a row (required params: path, tableIndex, rowIndex)
+- 'delete_row': Delete a row (required params: path, tableIndex, rowIndex)
+- 'insert_column': Insert a column (required params: path, tableIndex, columnIndex)
+- 'delete_column': Delete a column (required params: path, tableIndex, columnIndex)
+- 'merge_cells': Merge cells (required params: path, tableIndex, startRow, startColumn, endRow, endColumn)
+- 'split_cell': Split a cell (required params: path, tableIndex, rowIndex, columnIndex)
+- 'edit_cell_format': Edit cell format (required params: path, tableIndex, rowIndex, columnIndex)
+- 'move_table': Move table position (required params: path, tableIndex)
+- 'copy_table': Copy table (required params: path, tableIndex)
+- 'get_table_structure': Get table structure (required params: path, tableIndex)
+- 'set_table_border': Set table border (required params: path, tableIndex)
+- 'set_column_width': Set column width (required params: path, tableIndex, columnIndex, width)
+- 'set_row_height': Set row height (required params: path, tableIndex, rowIndex, height)",
                 @enum = new[] { "add_table", "edit_table_format", "delete_table", "get_tables", "insert_row", "delete_row", "insert_column", "delete_column", "merge_cells", "split_cell", "edit_cell_format", "move_table", "copy_table", "get_table_structure", "set_table_border", "set_column_width", "set_row_height" }
             },
             path = new
             {
                 type = "string",
-                description = "Document file path"
+                description = "Document file path (required for all operations)"
             },
             outputPath = new
             {
@@ -35,7 +59,7 @@ public class WordTableTool : IAsposeTool
             tableIndex = new
             {
                 type = "number",
-                description = "Table index (0-based, for most operations)"
+                description = "Table index (0-based, for most operations). Also accepts 'sourceTableIndex' for copy_table operation. Note: After delete operations, subsequent table indices will shift automatically. Use 'get_tables' operation to refresh indices."
             },
             sectionIndex = new
             {
@@ -399,10 +423,8 @@ public class WordTableTool : IAsposeTool
 
     private async Task<string> AddTable(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var rows = arguments?["rows"]?.GetValue<int>() ?? throw new ArgumentException("rows is required");
         var columns = arguments?["columns"]?.GetValue<int>() ?? throw new ArgumentException("columns is required");
         var headerRow = arguments?["headerRow"]?.GetValue<bool>() ?? false;
@@ -497,22 +519,22 @@ public class WordTableTool : IAsposeTool
                 var cellColorMatch = cellColors.FirstOrDefault(c => c.row == i && c.col == j);
                 if (cellColorMatch != default)
                 {
-                    cell.CellFormat.Shading.BackgroundPatternColor = ParseColor(cellColorMatch.color);
+                    cell.CellFormat.Shading.BackgroundPatternColor = ColorHelper.ParseColor(cellColorMatch.color);
                     hasColor = true;
                 }
                 if (!hasColor && columnBgColors.ContainsKey(j))
                 {
-                    cell.CellFormat.Shading.BackgroundPatternColor = ParseColor(columnBgColors[j]);
+                    cell.CellFormat.Shading.BackgroundPatternColor = ColorHelper.ParseColor(columnBgColors[j]);
                     hasColor = true;
                 }
                 if (!hasColor && rowBgColors.ContainsKey(i))
                 {
-                    cell.CellFormat.Shading.BackgroundPatternColor = ParseColor(rowBgColors[i]);
+                    cell.CellFormat.Shading.BackgroundPatternColor = ColorHelper.ParseColor(rowBgColors[i]);
                     hasColor = true;
                 }
                 if (!hasColor && headerRow && i == 0 && !string.IsNullOrEmpty(headerBgColor))
                 {
-                    cell.CellFormat.Shading.BackgroundPatternColor = ParseColor(headerBgColor);
+                    cell.CellFormat.Shading.BackgroundPatternColor = ColorHelper.ParseColor(headerBgColor);
                 }
 
                 if (borderStyle != "none")
@@ -574,10 +596,8 @@ public class WordTableTool : IAsposeTool
 
     private async Task<string> EditTableFormat(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
 
@@ -627,10 +647,8 @@ public class WordTableTool : IAsposeTool
 
     private async Task<string> DeleteTable(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
 
@@ -654,8 +672,7 @@ public class WordTableTool : IAsposeTool
 
     private async Task<string> GetTables(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>();
         var includeContent = arguments?["includeContent"]?.GetValue<bool>() ?? false;
 
@@ -698,10 +715,8 @@ public class WordTableTool : IAsposeTool
 
     private async Task<string> InsertRow(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
         var rowIndex = arguments?["rowIndex"]?.GetValue<int>() ?? throw new ArgumentException("rowIndex is required");
         var insertBefore = arguments?["insertBefore"]?.GetValue<bool>() ?? false;
@@ -753,10 +768,8 @@ public class WordTableTool : IAsposeTool
 
     private async Task<string> DeleteRow(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
         var rowIndex = arguments?["rowIndex"]?.GetValue<int>() ?? throw new ArgumentException("rowIndex is required");
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
@@ -783,12 +796,32 @@ public class WordTableTool : IAsposeTool
 
     private async Task<string> InsertColumn(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
-        var columnIndex = arguments?["columnIndex"]?.GetValue<int>() ?? throw new ArgumentException("columnIndex is required");
+        int columnIndex;
+        var columnIndexNode = arguments?["columnIndex"];
+        if (columnIndexNode != null)
+        {
+            if (columnIndexNode.GetValueKind() == System.Text.Json.JsonValueKind.String)
+            {
+                var columnIndexStr = columnIndexNode.GetValue<string>();
+                if (string.IsNullOrEmpty(columnIndexStr) || !int.TryParse(columnIndexStr, out columnIndex))
+                    throw new ArgumentException("columnIndex must be a valid integer");
+            }
+            else if (columnIndexNode.GetValueKind() == System.Text.Json.JsonValueKind.Number)
+            {
+                columnIndex = columnIndexNode.GetValue<int>();
+            }
+            else
+            {
+                throw new ArgumentException("columnIndex is required and must be an integer");
+            }
+        }
+        else
+        {
+            throw new ArgumentException("columnIndex is required");
+        }
         var insertBefore = arguments?["insertBefore"]?.GetValue<bool>() ?? false;
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
         var dataArray = arguments?["columnData"]?.AsArray();
@@ -828,9 +861,24 @@ public class WordTableTool : IAsposeTool
                     sourceCell.CellFormat.RightPadding
                 );
             }
+            
             if (dataArray != null && rowIdx < dataArray.Count)
             {
-                var cellText = dataArray[rowIdx]?.GetValue<string>() ?? "";
+                var cellDataNode = dataArray[rowIdx];
+                string cellText = "";
+                
+                if (cellDataNode != null)
+                {
+                    if (cellDataNode.GetValueKind() == System.Text.Json.JsonValueKind.String)
+                    {
+                        cellText = cellDataNode.GetValue<string>() ?? "";
+                    }
+                    else
+                    {
+                        cellText = cellDataNode.ToString() ?? "";
+                    }
+                }
+                
                 if (!string.IsNullOrEmpty(cellText))
                 {
                     Paragraph para = new Paragraph(doc);
@@ -844,10 +892,16 @@ public class WordTableTool : IAsposeTool
                 Paragraph para = new Paragraph(doc);
                 newCell.AppendChild(para);
             }
-            if (insertPosition <= row.Cells.Count)
-                row.Cells.Insert(insertPosition, newCell);
+            
+            if (insertPosition < row.Cells.Count)
+            {
+                var targetCell = row.Cells[insertPosition];
+                row.InsertBefore(newCell, targetCell);
+            }
             else
+            {
                 row.AppendChild(newCell);
+            }
         }
 
         doc.Save(outputPath);
@@ -856,20 +910,49 @@ public class WordTableTool : IAsposeTool
 
     private async Task<string> DeleteColumn(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
-        var columnIndex = arguments?["columnIndex"]?.GetValue<int>() ?? throw new ArgumentException("columnIndex is required");
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
+        int columnIndex;
+        var columnIndexNode = arguments?["columnIndex"];
+        if (columnIndexNode != null)
+        {
+            if (columnIndexNode.GetValueKind() == System.Text.Json.JsonValueKind.String)
+            {
+                var columnIndexStr = columnIndexNode.GetValue<string>();
+                if (string.IsNullOrEmpty(columnIndexStr) || !int.TryParse(columnIndexStr, out columnIndex))
+                    throw new ArgumentException("columnIndex must be a valid integer");
+            }
+            else if (columnIndexNode.GetValueKind() == System.Text.Json.JsonValueKind.Number)
+            {
+                columnIndex = columnIndexNode.GetValue<int>();
+            }
+            else
+            {
+                throw new ArgumentException("columnIndex is required and must be an integer");
+            }
+        }
+        else
+        {
+            throw new ArgumentException("columnIndex is required");
+        }
+        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>();
 
         var doc = new Document(path);
-        if (sectionIndex >= doc.Sections.Count)
-            throw new ArgumentException($"Section index {sectionIndex} out of range");
-
-        var section = doc.Sections[sectionIndex];
-        var tables = section.Body.GetChildNodes(NodeType.Table, true).Cast<Table>().ToList();
+        List<Table> tables;
+        if (sectionIndex.HasValue)
+        {
+            if (sectionIndex.Value < 0 || sectionIndex.Value >= doc.Sections.Count)
+                throw new ArgumentException($"Section index {sectionIndex.Value} out of range");
+            var section = doc.Sections[sectionIndex.Value];
+            tables = section.Body.GetChildNodes(NodeType.Table, true).Cast<Table>().ToList();
+        }
+        else
+        {
+            // If sectionIndex is not specified, search in entire document (consistent with get_tables)
+            tables = doc.GetChildNodes(NodeType.Table, true).Cast<Table>().ToList();
+        }
+        
         if (tableIndex < 0 || tableIndex >= tables.Count)
             throw new ArgumentException($"Table index {tableIndex} out of range");
 
@@ -902,10 +985,11 @@ public class WordTableTool : IAsposeTool
         var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
         var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
-        var startRow = arguments?["startRow"]?.GetValue<int>() ?? throw new ArgumentException("startRow is required");
-        var startCol = arguments?["startCol"]?.GetValue<int>() ?? throw new ArgumentException("startCol is required");
-        var endRow = arguments?["endRow"]?.GetValue<int>() ?? throw new ArgumentException("endRow is required");
-        var endCol = arguments?["endCol"]?.GetValue<int>() ?? throw new ArgumentException("endCol is required");
+        var startRow = ArgumentHelper.GetInt(arguments?["startRow"], "startRow", true);
+        var startCol = ArgumentHelper.GetInt(arguments, "startCol", "startColumn", "startCol or startColumn", true);
+        var endRow = ArgumentHelper.GetInt(arguments?["endRow"], "endRow", true);
+        var endCol = ArgumentHelper.GetInt(arguments, "endCol", "endColumn", "endCol or endColumn", true);
+        
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
 
         var doc = new Document(path);
@@ -931,6 +1015,9 @@ public class WordTableTool : IAsposeTool
 
         var startCell = table.Rows[startRow].Cells[startCol];
 
+        // Merge cells: Set merge flags for all cells in the range
+        // The first cell (startRow, startCol) is marked as First for both horizontal and vertical merge
+        // Other cells are marked as Previous to merge with the first cell
         for (int row = startRow; row <= endRow; row++)
         {
             var currentRow = table.Rows[row];
@@ -939,6 +1026,7 @@ public class WordTableTool : IAsposeTool
                 var cell = currentRow.Cells[col];
                 if (row == startRow && col == startCol)
                 {
+                    // First cell: Set as merge origin
                     if (startRow != endRow)
                         cell.CellFormat.VerticalMerge = CellMerge.First;
                     if (startCol != endCol)
@@ -946,12 +1034,20 @@ public class WordTableTool : IAsposeTool
                 }
                 else
                 {
+                    // Other cells: Merge with the first cell
                     if (row == startRow)
+                    {
+                        // Same row as first cell: only horizontal merge
                         cell.CellFormat.HorizontalMerge = CellMerge.Previous;
+                    }
                     else if (col == startCol)
+                    {
+                        // Same column as first cell: only vertical merge
                         cell.CellFormat.VerticalMerge = CellMerge.Previous;
+                    }
                     else
                     {
+                        // Both row and column differ: merge both horizontally and vertically
                         cell.CellFormat.HorizontalMerge = CellMerge.Previous;
                         cell.CellFormat.VerticalMerge = CellMerge.Previous;
                     }
@@ -965,15 +1061,14 @@ public class WordTableTool : IAsposeTool
 
     private async Task<string> SplitCell(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
-        var rowIndex = arguments?["rowIndex"]?.GetValue<int>() ?? throw new ArgumentException("rowIndex is required");
-        var colIndex = arguments?["colIndex"]?.GetValue<int>() ?? throw new ArgumentException("colIndex is required");
-        var splitRows = arguments?["splitRows"]?.GetValue<int>() ?? 2;
-        var splitCols = arguments?["splitCols"]?.GetValue<int>() ?? 2;
+        
+        var rowIndex = ArgumentHelper.GetInt(arguments?["rowIndex"], "rowIndex", true);
+        var colIndex = ArgumentHelper.GetInt(arguments, "colIndex", "columnIndex", "colIndex or columnIndex", true);
+        var splitRows = ArgumentHelper.GetIntNullable(arguments?["splitRows"], "splitRows") ?? 2;
+        var splitCols = ArgumentHelper.GetIntNullable(arguments?["splitCols"], "splitCols") ?? 2;
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
 
         var doc = new Document(path);
@@ -1074,13 +1169,12 @@ public class WordTableTool : IAsposeTool
 
     private async Task<string> EditCellFormat(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
-        var rowIndex = arguments?["rowIndex"]?.GetValue<int>() ?? throw new ArgumentException("rowIndex is required");
-        var colIndex = arguments?["colIndex"]?.GetValue<int>() ?? throw new ArgumentException("colIndex is required");
+        var rowIndex = ArgumentHelper.GetInt(arguments?["rowIndex"], "rowIndex", true);
+        var colIndex = ArgumentHelper.GetInt(arguments, "colIndex", "columnIndex", "colIndex or columnIndex", true);
+        
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
 
         var doc = new Document(path);
@@ -1108,7 +1202,7 @@ public class WordTableTool : IAsposeTool
             var backgroundColor = arguments["backgroundColor"]?.GetValue<string>();
             if (!string.IsNullOrEmpty(backgroundColor))
             {
-                try { cellFormat.Shading.BackgroundPatternColor = ParseColor(backgroundColor); } catch { }
+                try { cellFormat.Shading.BackgroundPatternColor = ColorHelper.ParseColor(backgroundColor); } catch { }
             }
         }
 
@@ -1150,7 +1244,7 @@ public class WordTableTool : IAsposeTool
         var fontName = arguments?["fontName"]?.GetValue<string>();
         var fontNameAscii = arguments?["fontNameAscii"]?.GetValue<string>();
         var fontNameFarEast = arguments?["fontNameFarEast"]?.GetValue<string>();
-        var fontSize = arguments?["fontSize"]?.GetValue<double?>();
+        var fontSize = ArgumentHelper.GetDoubleNullable(arguments?["fontSize"], "fontSize");
         var bold = arguments?["bold"]?.GetValue<bool?>();
         var italic = arguments?["italic"]?.GetValue<bool?>();
         var color = arguments?["color"]?.GetValue<string>();
@@ -1188,7 +1282,7 @@ public class WordTableTool : IAsposeTool
                     run.Font.Italic = italic.Value;
                 if (!string.IsNullOrEmpty(color))
                 {
-                    try { run.Font.Color = ParseColor(color); } catch { }
+                    try { run.Font.Color = ColorHelper.ParseColor(color); } catch { }
                 }
             }
         }
@@ -1199,10 +1293,8 @@ public class WordTableTool : IAsposeTool
 
     private async Task<string> MoveTable(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
         var targetParagraphIndex = arguments?["targetParagraphIndex"]?.GetValue<int>() ?? throw new ArgumentException("targetParagraphIndex is required");
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>();
@@ -1214,15 +1306,41 @@ public class WordTableTool : IAsposeTool
 
         var section = doc.Sections[sectionIdx];
         var tables = section.Body.GetChildNodes(NodeType.Table, true).Cast<Table>().ToList();
-        var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
+        // Use false to get only direct child paragraphs of Body (exclude paragraphs inside tables/shapes)
+        var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, false).Cast<Paragraph>().ToList();
 
         if (tableIndex < 0 || tableIndex >= tables.Count)
             throw new ArgumentException($"tableIndex must be between 0 and {tables.Count - 1}");
-        if (targetParagraphIndex < 0 || targetParagraphIndex >= paragraphs.Count)
-            throw new ArgumentException($"targetParagraphIndex must be between 0 and {paragraphs.Count - 1}");
-
+        
         var table = tables[tableIndex];
-        var targetPara = paragraphs[targetParagraphIndex];
+        Paragraph? targetPara = null;
+        
+        if (targetParagraphIndex == -1)
+        {
+            // targetParagraphIndex=-1 means document end - use last paragraph in Body
+            if (paragraphs.Count > 0)
+            {
+                targetPara = paragraphs[paragraphs.Count - 1];
+            }
+            else
+            {
+                throw new ArgumentException("Cannot move table: section has no paragraphs. Use a valid paragraph index.");
+            }
+        }
+        else if (targetParagraphIndex < 0 || targetParagraphIndex >= paragraphs.Count)
+        {
+            throw new ArgumentException($"targetParagraphIndex must be between 0 and {paragraphs.Count - 1}, or use -1 for document end");
+        }
+        else
+        {
+            targetPara = paragraphs[targetParagraphIndex];
+        }
+        
+        if (targetPara == null)
+        {
+            throw new ArgumentException("Cannot find target paragraph");
+        }
+        
         section.Body.InsertAfter(table, targetPara);
 
         doc.Save(outputPath);
@@ -1231,11 +1349,12 @@ public class WordTableTool : IAsposeTool
 
     private async Task<string> CopyTable(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var sourceTableIndex = arguments?["sourceTableIndex"]?.GetValue<int>() ?? throw new ArgumentException("sourceTableIndex is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        // Accept both sourceTableIndex and tableIndex for compatibility
+        var sourceTableIndex = arguments?["sourceTableIndex"]?.GetValue<int>() ?? 
+                               arguments?["tableIndex"]?.GetValue<int>() ?? 
+                               throw new ArgumentException("sourceTableIndex or tableIndex is required");
         var targetParagraphIndex = arguments?["targetParagraphIndex"]?.GetValue<int>() ?? throw new ArgumentException("targetParagraphIndex is required");
         var sourceSectionIndex = arguments?["sourceSectionIndex"]?.GetValue<int?>();
         var targetSectionIndex = arguments?["targetSectionIndex"]?.GetValue<int?>();
@@ -1257,12 +1376,75 @@ public class WordTableTool : IAsposeTool
         var sourceTable = sourceTables[sourceTableIndex];
         var targetSection = doc.Sections[targetSectionIdx];
         var targetParagraphs = targetSection.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
-        if (targetParagraphIndex < 0 || targetParagraphIndex >= targetParagraphs.Count)
-            throw new ArgumentException($"targetParagraphIndex must be between 0 and {targetParagraphs.Count - 1}");
-
-        var targetPara = targetParagraphs[targetParagraphIndex];
+        
+        Paragraph? targetPara = null;
+        if (targetParagraphIndex == -1)
+        {
+            // targetParagraphIndex=-1 means document end - use last paragraph
+            if (targetParagraphs.Count > 0)
+            {
+                targetPara = targetParagraphs[targetParagraphs.Count - 1];
+            }
+            else
+            {
+                throw new ArgumentException("Cannot copy table: target section has no paragraphs. Use a valid paragraph index.");
+            }
+        }
+        else if (targetParagraphIndex < 0 || targetParagraphIndex >= targetParagraphs.Count)
+        {
+            throw new ArgumentException($"targetParagraphIndex must be between 0 and {targetParagraphs.Count - 1}, or use -1 for document end");
+        }
+        else
+        {
+            targetPara = targetParagraphs[targetParagraphIndex];
+        }
+        
+        if (targetPara == null)
+        {
+            throw new ArgumentException("Cannot find target paragraph");
+        }
+        
+        // Ensure targetPara is a direct child of Body or find the correct insertion point
+        // InsertAfter requires the reference node to be a direct child of the parent
+        Node? insertionPoint = null;
+        
+        // Check if targetPara is a direct child of Body
+        if (targetPara.ParentNode == targetSection.Body)
+        {
+            insertionPoint = targetPara;
+        }
+        else
+        {
+            // Find the direct child paragraph in Body that contains or is after targetPara
+            var bodyParagraphs = targetSection.Body.GetChildNodes(NodeType.Paragraph, false);
+            Paragraph? directPara = null;
+            
+            // Try to find targetPara in direct children
+            foreach (Paragraph para in bodyParagraphs)
+            {
+                if (para == targetPara)
+                {
+                    directPara = para;
+                    break;
+                }
+            }
+            
+            // If not found, use the last direct child paragraph as insertion point
+            if (directPara == null && bodyParagraphs.Count > 0)
+            {
+                directPara = bodyParagraphs[bodyParagraphs.Count - 1] as Paragraph;
+            }
+            
+            insertionPoint = directPara ?? targetSection.Body.LastChild;
+        }
+        
+        if (insertionPoint == null)
+        {
+            throw new ArgumentException($"無法找到有效的插入位置 (targetParagraphIndex: {targetParagraphIndex})");
+        }
+        
         var clonedTable = (Table)sourceTable.Clone(true);
-        targetSection.Body.InsertAfter(clonedTable, targetPara);
+        targetSection.Body.InsertAfter(clonedTable, insertionPoint);
 
         doc.Save(outputPath);
         return await Task.FromResult($"Successfully copied table {sourceTableIndex} to paragraph {targetParagraphIndex}. Output: {outputPath}");
@@ -1270,8 +1452,7 @@ public class WordTableTool : IAsposeTool
 
     private async Task<string> GetTableStructure(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
         var includeContent = arguments?["includeContent"]?.GetValue<bool>() ?? true;
@@ -1344,10 +1525,8 @@ public class WordTableTool : IAsposeTool
 
     private async Task<string> SetTableBorder(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
         var rowIndex = arguments?["rowIndex"]?.GetValue<int?>();
@@ -1369,7 +1548,7 @@ public class WordTableTool : IAsposeTool
 
         var lineStyle = GetLineStyle(defaultLineStyle);
         var lineWidth = defaultLineWidth;
-        var lineColor = ParseColor(defaultLineColor);
+        var lineColor = ColorHelper.ParseColor(defaultLineColor);
 
         List<Cell> targetCells = new List<Cell>();
         if (rowIndex.HasValue && columnIndex.HasValue)
@@ -1446,13 +1625,12 @@ public class WordTableTool : IAsposeTool
 
     private async Task<string> SetColumnWidth(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
-        var columnIndex = arguments?["columnIndex"]?.GetValue<int>() ?? throw new ArgumentException("columnIndex is required");
-        var columnWidth = arguments?["columnWidth"]?.GetValue<double>() ?? throw new ArgumentException("columnWidth is required");
+        var columnIndex = ArgumentHelper.GetInt(arguments?["columnIndex"], "columnIndex", true);
+        var columnWidth = ArgumentHelper.GetDouble(arguments?["columnWidth"], "columnWidth", true);
+        
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
 
         if (columnWidth <= 0)
@@ -1491,13 +1669,12 @@ public class WordTableTool : IAsposeTool
 
     private async Task<string> SetRowHeight(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
         var rowIndex = arguments?["rowIndex"]?.GetValue<int>() ?? throw new ArgumentException("rowIndex is required");
-        var rowHeight = arguments?["rowHeight"]?.GetValue<double>() ?? throw new ArgumentException("rowHeight is required");
+        var rowHeight = ArgumentHelper.GetDouble(arguments?["rowHeight"], "rowHeight", true);
+        
         var heightRule = arguments?["heightRule"]?.GetValue<string>() ?? "atLeast";
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
 
@@ -1619,35 +1796,5 @@ public class WordTableTool : IAsposeTool
         };
     }
 
-    private System.Drawing.Color ParseColor(string color)
-    {
-        try
-        {
-            if (color.StartsWith("#"))
-                color = color.Substring(1);
-
-            if (color.Length == 8)
-            {
-                int a = Convert.ToInt32(color.Substring(0, 2), 16);
-                int r = Convert.ToInt32(color.Substring(2, 2), 16);
-                int g = Convert.ToInt32(color.Substring(4, 2), 16);
-                int b = Convert.ToInt32(color.Substring(6, 2), 16);
-                return System.Drawing.Color.FromArgb(a, r, g, b);
-            }
-            else if (color.Length == 6)
-            {
-                int r = Convert.ToInt32(color.Substring(0, 2), 16);
-                int g = Convert.ToInt32(color.Substring(2, 2), 16);
-                int b = Convert.ToInt32(color.Substring(4, 2), 16);
-                return System.Drawing.Color.FromArgb(r, g, b);
-            }
-            else
-                return System.Drawing.Color.FromName(color);
-        }
-        catch
-        {
-            return System.Drawing.Color.White;
-        }
-    }
 }
 

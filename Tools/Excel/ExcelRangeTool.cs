@@ -12,7 +12,16 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class ExcelRangeTool : IAsposeTool
 {
-    public string Description => "Manage Excel ranges: write, edit, get, clear, copy, move, or copy format";
+    public string Description => @"Manage Excel ranges. Supports 7 operations: write, edit, get, clear, copy, move, copy_format.
+
+Usage examples:
+- Write range: excel_range(operation='write', path='book.xlsx', startCell='A1', data=[['A','B'],['C','D']])
+- Edit range: excel_range(operation='edit', path='book.xlsx', range='A1:B2', data=[['X','Y']])
+- Get range: excel_range(operation='get', path='book.xlsx', range='A1:B2')
+- Clear range: excel_range(operation='clear', path='book.xlsx', range='A1:B2')
+- Copy range: excel_range(operation='copy', path='book.xlsx', sourceRange='A1:B2', destCell='C1')
+- Move range: excel_range(operation='move', path='book.xlsx', sourceRange='A1:B2', destCell='C1')
+- Copy format: excel_range(operation='copy_format', path='book.xlsx', sourceRange='A1:B2', destCell='C1')";
 
     public object InputSchema => new
     {
@@ -22,13 +31,20 @@ public class ExcelRangeTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'write', 'edit', 'get', 'clear', 'copy', 'move', 'copy_format'",
+                description = @"Operation to perform.
+- 'write': Write data to range (required params: path, startCell, data)
+- 'edit': Edit range data (required params: path, range, data)
+- 'get': Get range data (required params: path, range)
+- 'clear': Clear range (required params: path, range)
+- 'copy': Copy range (required params: path, sourceRange, destCell)
+- 'move': Move range (required params: path, sourceRange, destCell)
+- 'copy_format': Copy format only (required params: path, sourceRange, destCell)",
                 @enum = new[] { "write", "edit", "get", "clear", "copy", "move", "copy_format" }
             },
             path = new
             {
                 type = "string",
-                description = "Excel file path"
+                description = "Excel file path (required for all operations)"
             },
             sheetIndex = new
             {

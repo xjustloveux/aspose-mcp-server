@@ -8,7 +8,12 @@ namespace AsposeMcpServer.Tools;
 
 public class PdfAttachmentTool : IAsposeTool
 {
-    public string Description => "Manage attachments in PDF documents (add, delete, get)";
+    public string Description => @"Manage attachments in PDF documents. Supports 3 operations: add, delete, get.
+
+Usage examples:
+- Add attachment: pdf_attachment(operation='add', path='doc.pdf', attachmentPath='file.pdf', attachmentName='attachment.pdf')
+- Delete attachment: pdf_attachment(operation='delete', path='doc.pdf', attachmentName='attachment.pdf')
+- Get attachments: pdf_attachment(operation='get', path='doc.pdf')";
 
     public object InputSchema => new
     {
@@ -18,13 +23,16 @@ public class PdfAttachmentTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation: add, delete, get",
+                description = @"Operation to perform.
+- 'add': Add an attachment (required params: path, attachmentPath, attachmentName)
+- 'delete': Delete an attachment (required params: path, attachmentName)
+- 'get': Get all attachments (required params: path)",
                 @enum = new[] { "add", "delete", "get" }
             },
             path = new
             {
                 type = "string",
-                description = "PDF file path"
+                description = "PDF file path (required for all operations)"
             },
             outputPath = new
             {

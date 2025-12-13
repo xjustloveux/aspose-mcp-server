@@ -6,7 +6,11 @@ namespace AsposeMcpServer.Tools;
 
 public class ExcelGetCellAddressTool : IAsposeTool
 {
-    public string Description => "Convert between cell address formats (A1 notation and row/column index)";
+    public string Description => @"Convert between cell address formats (A1 notation and row/column index).
+
+Usage examples:
+- Convert A1 to index: excel_get_cell_address(cellAddress='A1', convertToIndex=true)
+- Convert index to A1: excel_get_cell_address(row=0, column=0, convertToIndex=false)";
 
     public object InputSchema => new
     {
@@ -16,7 +20,7 @@ public class ExcelGetCellAddressTool : IAsposeTool
             cellAddress = new
             {
                 type = "string",
-                description = "Cell address in A1 notation (e.g., 'A1') or row/column format (e.g., '0,0')"
+                description = "Cell address in A1 notation (e.g., 'A1') or row/column format (e.g., '0,0') (required)"
             },
             convertToIndex = new
             {

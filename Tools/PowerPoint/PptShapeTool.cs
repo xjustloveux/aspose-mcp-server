@@ -14,7 +14,13 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class PptShapeTool : IAsposeTool
 {
-    public string Description => "Manage PowerPoint shapes: edit, delete, get list, or get details";
+    public string Description => @"Manage PowerPoint shapes. Supports 4 operations: edit, delete, get, get_details.
+
+Usage examples:
+- Edit shape: ppt_shape(operation='edit', path='presentation.pptx', slideIndex=0, shapeIndex=0, x=200, y=200)
+- Delete shape: ppt_shape(operation='delete', path='presentation.pptx', slideIndex=0, shapeIndex=0)
+- Get shapes: ppt_shape(operation='get', path='presentation.pptx', slideIndex=0)
+- Get details: ppt_shape(operation='get_details', path='presentation.pptx', slideIndex=0, shapeIndex=0)";
 
     public object InputSchema => new
     {
@@ -24,13 +30,17 @@ public class PptShapeTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'edit', 'delete', 'get', 'get_details'",
+                description = @"Operation to perform.
+- 'edit': Edit shape properties (required params: path, slideIndex, shapeIndex)
+- 'delete': Delete a shape (required params: path, slideIndex, shapeIndex)
+- 'get': Get all shapes (required params: path, slideIndex)
+- 'get_details': Get shape details (required params: path, slideIndex, shapeIndex)",
                 @enum = new[] { "edit", "delete", "get", "get_details" }
             },
             path = new
             {
                 type = "string",
-                description = "Presentation file path"
+                description = "Presentation file path (required for all operations)"
             },
             slideIndex = new
             {

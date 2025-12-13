@@ -15,7 +15,14 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class WordNoteTool : IAsposeTool
 {
-    public string Description => "Manage footnotes and endnotes in Word documents: add, edit, delete, get info";
+    public string Description => @"Manage footnotes and endnotes in Word documents. Supports 8 operations: add_footnote, add_endnote, delete_footnote, delete_endnote, edit_footnote, edit_endnote, get_footnotes, get_endnotes.
+
+Usage examples:
+- Add footnote: word_note(operation='add_footnote', path='doc.docx', noteText='Footnote text', paragraphIndex=0, runIndex=0)
+- Add endnote: word_note(operation='add_endnote', path='doc.docx', noteText='Endnote text', paragraphIndex=0)
+- Delete footnote: word_note(operation='delete_footnote', path='doc.docx', noteIndex=0)
+- Edit footnote: word_note(operation='edit_footnote', path='doc.docx', noteIndex=0, newText='Updated footnote')
+- Get footnotes: word_note(operation='get_footnotes', path='doc.docx')";
 
     public object InputSchema => new
     {
@@ -25,13 +32,21 @@ public class WordNoteTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'add_footnote', 'add_endnote', 'delete_footnote', 'delete_endnote', 'edit_footnote', 'edit_endnote', 'get_footnotes', 'get_endnotes'",
+                description = @"Operation to perform.
+- 'add_footnote': Add a footnote (required params: path, noteText, paragraphIndex)
+- 'add_endnote': Add an endnote (required params: path, noteText, paragraphIndex)
+- 'delete_footnote': Delete a footnote (required params: path, noteIndex)
+- 'delete_endnote': Delete an endnote (required params: path, noteIndex)
+- 'edit_footnote': Edit a footnote (required params: path, noteIndex, newText)
+- 'edit_endnote': Edit an endnote (required params: path, noteIndex, newText)
+- 'get_footnotes': Get all footnotes (required params: path)
+- 'get_endnotes': Get all endnotes (required params: path)",
                 @enum = new[] { "add_footnote", "add_endnote", "delete_footnote", "delete_endnote", "edit_footnote", "edit_endnote", "get_footnotes", "get_endnotes" }
             },
             path = new
             {
                 type = "string",
-                description = "Document file path"
+                description = "Document file path (required for all operations)"
             },
             outputPath = new
             {
@@ -141,19 +156,43 @@ public class WordNoteTool : IAsposeTool
         }
         else if (paragraphIndex.HasValue)
         {
-            var section = doc.Sections[sectionIndex];
-            var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
-            if (paragraphIndex.Value < 0 || paragraphIndex.Value >= paragraphs.Count)
+            if (paragraphIndex.Value == -1)
             {
-                throw new ArgumentException($"paragraphIndex must be between 0 and {paragraphs.Count - 1}");
+                // paragraphIndex=-1 means document end - move to last paragraph in Body
+                var section = doc.Sections[sectionIndex];
+                var bodyParagraphs = section.Body.GetChildNodes(NodeType.Paragraph, false).Cast<Paragraph>().ToList();
+                if (bodyParagraphs.Count > 0)
+                {
+                    var lastPara = bodyParagraphs[bodyParagraphs.Count - 1];
+                    builder.MoveTo(lastPara);
+                }
+                else
+                {
+                    // No paragraphs in body, move to document end
+                    builder.MoveToDocumentEnd();
+                }
+                var footnote = builder.InsertFootnote(FootnoteType.Footnote, footnoteText);
+                if (!string.IsNullOrEmpty(customMark))
+                {
+                    footnote.ReferenceMark = customMark;
+                }
             }
-
-            var para = paragraphs[paragraphIndex.Value];
-            builder.MoveTo(para);
-            var footnote = builder.InsertFootnote(FootnoteType.Footnote, footnoteText);
-            if (!string.IsNullOrEmpty(customMark))
+            else
             {
-                footnote.ReferenceMark = customMark;
+                var section = doc.Sections[sectionIndex];
+                var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
+                if (paragraphIndex.Value < 0 || paragraphIndex.Value >= paragraphs.Count)
+                {
+                    throw new ArgumentException($"paragraphIndex must be between 0 and {paragraphs.Count - 1}, or use -1 for document end");
+                }
+
+                var para = paragraphs[paragraphIndex.Value];
+                builder.MoveTo(para);
+                var footnote = builder.InsertFootnote(FootnoteType.Footnote, footnoteText);
+                if (!string.IsNullOrEmpty(customMark))
+                {
+                    footnote.ReferenceMark = customMark;
+                }
             }
         }
         else
@@ -206,19 +245,65 @@ public class WordNoteTool : IAsposeTool
         }
         else if (paragraphIndex.HasValue)
         {
-            var section = doc.Sections[sectionIndex];
-            var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
-            if (paragraphIndex.Value < 0 || paragraphIndex.Value >= paragraphs.Count)
+            if (paragraphIndex.Value == -1)
             {
-                throw new ArgumentException($"paragraphIndex must be between 0 and {paragraphs.Count - 1}");
+                // paragraphIndex=-1 means document end - move to last paragraph in Body
+                var section = doc.Sections[sectionIndex];
+                var bodyParagraphs = section.Body.GetChildNodes(NodeType.Paragraph, false).Cast<Paragraph>().ToList();
+                if (bodyParagraphs.Count > 0)
+                {
+                    var lastPara = bodyParagraphs[bodyParagraphs.Count - 1];
+                    builder.MoveTo(lastPara);
+                }
+                else
+                {
+                    // No paragraphs in body, move to document end
+                    builder.MoveToDocumentEnd();
+                }
+                var endnote = builder.InsertFootnote(FootnoteType.Endnote, endnoteText);
+                if (!string.IsNullOrEmpty(customMark))
+                {
+                    endnote.ReferenceMark = customMark;
+                }
             }
-
-            var para = paragraphs[paragraphIndex.Value];
-            builder.MoveTo(para);
-            var endnote = builder.InsertFootnote(FootnoteType.Endnote, endnoteText);
-            if (!string.IsNullOrEmpty(customMark))
+            else
             {
-                endnote.ReferenceMark = customMark;
+                var section = doc.Sections[sectionIndex];
+                var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
+                if (paragraphIndex.Value < 0 || paragraphIndex.Value >= paragraphs.Count)
+                {
+                    throw new ArgumentException($"paragraphIndex must be between 0 and {paragraphs.Count - 1}, or use -1 for document end");
+                }
+
+                var para = paragraphs[paragraphIndex.Value];
+                
+                var parentNode = para.ParentNode;
+                while (parentNode != null)
+                {
+                    if (parentNode is HeaderFooter)
+                    {
+                        throw new InvalidOperationException($"Endnotes are only allowed inside the main document body. The paragraph at index {paragraphIndex.Value} is located in a header or footer. Please use a paragraph index that refers to a paragraph in the main document body.");
+                    }
+                    if (parentNode is Section || parentNode is Body)
+                    {
+                        break; // We're in the main body
+                    }
+                    parentNode = parentNode.ParentNode;
+                }
+                
+                builder.MoveTo(para);
+                try
+                {
+                    var endnote = builder.InsertFootnote(FootnoteType.Endnote, endnoteText);
+                    if (!string.IsNullOrEmpty(customMark))
+                    {
+                        endnote.ReferenceMark = customMark;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException($"Failed to insert endnote: {ex.Message}. Endnotes can only be inserted in the main document body, not in headers, footers, or other special sections.", ex);
+                }
             }
         }
         else
@@ -350,7 +435,16 @@ public class WordNoteTool : IAsposeTool
 
         if (footnote == null)
         {
-            throw new ArgumentException("Footnote not found");
+            var availableInfo = "";
+            if (footnotes.Count > 0)
+            {
+                availableInfo = $" (文檔共有 {footnotes.Count} 個腳注，有效索引: 0-{footnotes.Count - 1})";
+            }
+            else
+            {
+                availableInfo = " (文檔中沒有腳注)";
+            }
+            throw new ArgumentException($"找不到指定的腳注{availableInfo}。請使用 get_footnotes 操作查看可用的腳注");
         }
 
         footnote.RemoveAllChildren();
@@ -393,7 +487,16 @@ public class WordNoteTool : IAsposeTool
 
         if (endnote == null)
         {
-            throw new ArgumentException("Endnote not found");
+            var availableInfo = "";
+            if (endnotes.Count > 0)
+            {
+                availableInfo = $" (文檔共有 {endnotes.Count} 個尾注，有效索引: 0-{endnotes.Count - 1})";
+            }
+            else
+            {
+                availableInfo = " (文檔中沒有尾注)";
+            }
+            throw new ArgumentException($"找不到指定的尾注{availableInfo}。請使用 get_endnotes 操作查看可用的尾注");
         }
 
         endnote.RemoveAllChildren();

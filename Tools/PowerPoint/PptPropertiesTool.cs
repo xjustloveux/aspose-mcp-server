@@ -12,7 +12,11 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class PptPropertiesTool : IAsposeTool
 {
-    public string Description => "Manage PowerPoint document properties: get or set";
+    public string Description => @"Manage PowerPoint document properties. Supports 2 operations: get, set.
+
+Usage examples:
+- Get properties: ppt_properties(operation='get', path='presentation.pptx')
+- Set properties: ppt_properties(operation='set', path='presentation.pptx', title='Title', author='Author', subject='Subject')";
 
     public object InputSchema => new
     {
@@ -22,13 +26,15 @@ public class PptPropertiesTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'get', 'set'",
+                description = @"Operation to perform.
+- 'get': Get document properties (required params: path)
+- 'set': Set document properties (required params: path)",
                 @enum = new[] { "get", "set" }
             },
             path = new
             {
                 type = "string",
-                description = "Presentation file path"
+                description = "Presentation file path (required for all operations)"
             },
             title = new
             {

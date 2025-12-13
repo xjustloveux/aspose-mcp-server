@@ -12,7 +12,12 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class PptTextTool : IAsposeTool
 {
-    public string Description => "Manage PowerPoint text: add, edit, or replace";
+    public string Description => @"Manage PowerPoint text. Supports 3 operations: add, edit, replace.
+
+Usage examples:
+- Add text: ppt_text(operation='add', path='presentation.pptx', slideIndex=0, text='Hello World', x=100, y=100)
+- Edit text: ppt_text(operation='edit', path='presentation.pptx', slideIndex=0, shapeIndex=0, text='Updated Text')
+- Replace text: ppt_text(operation='replace', path='presentation.pptx', findText='old', replaceText='new')";
 
     public object InputSchema => new
     {
@@ -22,13 +27,16 @@ public class PptTextTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'add', 'edit', 'replace'",
+                description = @"Operation to perform.
+- 'add': Add text to slide (required params: path, slideIndex, text)
+- 'edit': Edit text in shape (required params: path, slideIndex, shapeIndex, text)
+- 'replace': Replace text in presentation (required params: path, findText, replaceText)",
                 @enum = new[] { "add", "edit", "replace" }
             },
             path = new
             {
                 type = "string",
-                description = "Presentation file path"
+                description = "Presentation file path (required for all operations)"
             },
             slideIndex = new
             {
@@ -86,9 +94,8 @@ public class PptTextTool : IAsposeTool
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         return operation.ToLower() switch
         {
@@ -102,7 +109,7 @@ public class PptTextTool : IAsposeTool
     private async Task<string> AddTextAsync(JsonObject? arguments, string path)
     {
         var slideIndex = arguments?["slideIndex"]?.GetValue<int>() ?? throw new ArgumentException("slideIndex is required for add operation");
-        var text = arguments?["text"]?.GetValue<string>() ?? throw new ArgumentException("text is required for add operation");
+        var text = ArgumentHelper.GetString(arguments, "text", "text");
         var x = arguments?["x"]?.GetValue<float>() ?? 50;
         var y = arguments?["y"]?.GetValue<float>() ?? 50;
         var width = arguments?["width"]?.GetValue<float>() ?? 400;
@@ -127,7 +134,7 @@ public class PptTextTool : IAsposeTool
     {
         var slideIndex = arguments?["slideIndex"]?.GetValue<int>() ?? throw new ArgumentException("slideIndex is required for edit operation");
         var shapeIndex = arguments?["shapeIndex"]?.GetValue<int>() ?? throw new ArgumentException("shapeIndex is required for edit operation");
-        var text = arguments?["text"]?.GetValue<string>() ?? throw new ArgumentException("text is required for edit operation");
+        var text = ArgumentHelper.GetString(arguments, "text", "text");
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
@@ -147,8 +154,8 @@ public class PptTextTool : IAsposeTool
 
     private async Task<string> ReplaceTextAsync(JsonObject? arguments, string path)
     {
-        var findText = arguments?["findText"]?.GetValue<string>() ?? throw new ArgumentException("findText is required for replace operation");
-        var replaceText = arguments?["replaceText"]?.GetValue<string>() ?? throw new ArgumentException("replaceText is required for replace operation");
+        var findText = ArgumentHelper.GetString(arguments, "findText", "findText");
+        var replaceText = ArgumentHelper.GetString(arguments, "replaceText", "replaceText");
         var matchCase = arguments?["matchCase"]?.GetValue<bool>() ?? false;
 
         using var presentation = new Presentation(path);

@@ -14,7 +14,12 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class PptDataOperationsTool : IAsposeTool
 {
-    public string Description => "PowerPoint data operations: get statistics, get content, or get slide details";
+    public string Description => @"PowerPoint data operations. Supports 3 operations: get_statistics, get_content, get_slide_details.
+
+Usage examples:
+- Get statistics: ppt_data_operations(operation='get_statistics', path='presentation.pptx')
+- Get content: ppt_data_operations(operation='get_content', path='presentation.pptx')
+- Get slide details: ppt_data_operations(operation='get_slide_details', path='presentation.pptx', slideIndex=0)";
 
     public object InputSchema => new
     {
@@ -24,13 +29,16 @@ public class PptDataOperationsTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'get_statistics', 'get_content', 'get_slide_details'",
+                description = @"Operation to perform.
+- 'get_statistics': Get presentation statistics (required params: path)
+- 'get_content': Get presentation content (required params: path)
+- 'get_slide_details': Get slide details (required params: path, slideIndex)",
                 @enum = new[] { "get_statistics", "get_content", "get_slide_details" }
             },
             path = new
             {
                 type = "string",
-                description = "Presentation file path"
+                description = "Presentation file path (required for all operations)"
             },
             slideIndex = new
             {
@@ -202,8 +210,6 @@ public class PptDataOperationsTool : IAsposeTool
             sb.AppendLine($"\nBackground:");
             sb.AppendLine($"  FillType: {background.FillFormat.FillType}");
         }
-
-        // Notes
         var notesSlide = slide.NotesSlideManager.NotesSlide;
         if (notesSlide != null)
         {

@@ -12,7 +12,14 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class ExcelDataValidationTool : IAsposeTool
 {
-    public string Description => "Manage Excel data validation: add, edit, delete, get, or set error/input messages";
+    public string Description => @"Manage Excel data validation. Supports 5 operations: add, edit, delete, get, set_messages.
+
+Usage examples:
+- Add validation: excel_data_validation(operation='add', path='book.xlsx', range='A1:A10', validationType='List', formula1='1,2,3')
+- Edit validation: excel_data_validation(operation='edit', path='book.xlsx', validationIndex=0, validationType='WholeNumber', formula1='0', formula2='100')
+- Delete validation: excel_data_validation(operation='delete', path='book.xlsx', validationIndex=0)
+- Get validation: excel_data_validation(operation='get', path='book.xlsx', validationIndex=0)
+- Set messages: excel_data_validation(operation='set_messages', path='book.xlsx', validationIndex=0, inputMessage='Enter value', errorMessage='Invalid value')";
 
     public object InputSchema => new
     {
@@ -22,13 +29,18 @@ public class ExcelDataValidationTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'add', 'edit', 'delete', 'get', 'set_messages'",
+                description = @"Operation to perform.
+- 'add': Add data validation (required params: path, range, validationType, formula1)
+- 'edit': Edit data validation (required params: path, validationIndex)
+- 'delete': Delete data validation (required params: path, validationIndex)
+- 'get': Get data validation info (required params: path, validationIndex)
+- 'set_messages': Set input/error messages (required params: path, validationIndex)",
                 @enum = new[] { "add", "edit", "delete", "get", "set_messages" }
             },
             path = new
             {
                 type = "string",
-                description = "Excel file path"
+                description = "Excel file path (required for all operations)"
             },
             outputPath = new
             {
@@ -43,12 +55,12 @@ public class ExcelDataValidationTool : IAsposeTool
             range = new
             {
                 type = "string",
-                description = "Cell range to apply validation (e.g., 'A1:A10', required for add)"
+                description = "Cell range to apply validation (e.g., 'A1:A10', required for add operation)"
             },
             validationIndex = new
             {
                 type = "number",
-                description = "Data validation index (0-based, required for edit/delete/set_messages)"
+                description = "Data validation index (0-based, required for edit, delete, get, and set_messages operations)"
             },
             validationType = new
             {

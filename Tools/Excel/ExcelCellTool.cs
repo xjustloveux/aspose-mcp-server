@@ -11,7 +11,13 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class ExcelCellTool : IAsposeTool
 {
-    public string Description => "Manage Excel cells: write, edit, get, or clear cell values";
+    public string Description => @"Manage Excel cells. Supports 4 operations: write, edit, get, clear.
+
+Usage examples:
+- Write cell: excel_cell(operation='write', path='book.xlsx', cell='A1', value='Hello')
+- Edit cell: excel_cell(operation='edit', path='book.xlsx', cell='A1', value='Updated')
+- Get cell: excel_cell(operation='get', path='book.xlsx', cell='A1')
+- Clear cell: excel_cell(operation='clear', path='book.xlsx', cell='A1')";
 
     public object InputSchema => new
     {
@@ -21,13 +27,17 @@ public class ExcelCellTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'write', 'edit', 'get', 'clear'",
+                description = @"Operation to perform.
+- 'write': Write value to cell (required params: path, cell, value)
+- 'edit': Edit cell value (required params: path, cell, value)
+- 'get': Get cell value (required params: path, cell)
+- 'clear': Clear cell (required params: path, cell)",
                 @enum = new[] { "write", "edit", "get", "clear" }
             },
             path = new
             {
                 type = "string",
-                description = "Excel file path"
+                description = "Excel file path (required for all operations)"
             },
             sheetIndex = new
             {
@@ -80,9 +90,8 @@ public class ExcelCellTool : IAsposeTool
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         var sheetIndex = arguments?["sheetIndex"]?.GetValue<int>() ?? 0;
 
         return operation.ToLower() switch
@@ -97,8 +106,8 @@ public class ExcelCellTool : IAsposeTool
 
     private async Task<string> WriteCellAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var cell = arguments?["cell"]?.GetValue<string>() ?? throw new ArgumentException("cell is required");
-        var value = arguments?["value"]?.GetValue<string>() ?? throw new ArgumentException("value is required for write operation");
+        var cell = ArgumentHelper.GetString(arguments, "cell", "cell");
+        var value = ArgumentHelper.GetString(arguments, "value", "value");
 
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
@@ -126,7 +135,7 @@ public class ExcelCellTool : IAsposeTool
 
     private async Task<string> EditCellAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var cell = arguments?["cell"]?.GetValue<string>() ?? throw new ArgumentException("cell is required");
+        var cell = ArgumentHelper.GetString(arguments, "cell", "cell");
         var value = arguments?["value"]?.GetValue<string>();
         var formula = arguments?["formula"]?.GetValue<string>();
         var clearValue = arguments?["clearValue"]?.GetValue<bool?>() ?? false;
@@ -171,7 +180,7 @@ public class ExcelCellTool : IAsposeTool
 
     private async Task<string> GetCellAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var cell = arguments?["cell"]?.GetValue<string>() ?? throw new ArgumentException("cell is required");
+        var cell = ArgumentHelper.GetString(arguments, "cell", "cell");
         var includeFormula = arguments?["includeFormula"]?.GetValue<bool?>() ?? true;
         var includeFormat = arguments?["includeFormat"]?.GetValue<bool?>() ?? false;
 
@@ -204,7 +213,7 @@ public class ExcelCellTool : IAsposeTool
 
     private async Task<string> ClearCellAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var cell = arguments?["cell"]?.GetValue<string>() ?? throw new ArgumentException("cell is required");
+        var cell = ArgumentHelper.GetString(arguments, "cell", "cell");
         var clearContent = arguments?["clearContent"]?.GetValue<bool?>() ?? true;
         var clearFormat = arguments?["clearFormat"]?.GetValue<bool?>() ?? false;
 

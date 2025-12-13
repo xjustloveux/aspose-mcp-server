@@ -8,7 +8,13 @@ namespace AsposeMcpServer.Tools;
 
 public class WordContentTool : IAsposeTool
 {
-    public string Description => "Get content and information from Word documents (content, detailed content, statistics, document info)";
+    public string Description => @"Get content and information from Word documents. Supports 4 operations: get_content, get_content_detailed, get_statistics, get_document_info.
+
+Usage examples:
+- Get content: word_content(operation='get_content', path='doc.docx')
+- Get detailed content: word_content(operation='get_content_detailed', path='doc.docx', includeHeaders=true, includeFooters=true)
+- Get statistics: word_content(operation='get_statistics', path='doc.docx')
+- Get document info: word_content(operation='get_document_info', path='doc.docx')";
 
     public object InputSchema => new
     {
@@ -18,13 +24,17 @@ public class WordContentTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation: get_content, get_content_detailed, get_statistics, get_document_info",
+                description = @"Operation to perform.
+- 'get_content': Get document content (required params: path)
+- 'get_content_detailed': Get detailed content with structure (required params: path)
+- 'get_statistics': Get document statistics (required params: path)
+- 'get_document_info': Get document information (required params: path)",
                 @enum = new[] { "get_content", "get_content_detailed", "get_statistics", "get_document_info" }
             },
             path = new
             {
                 type = "string",
-                description = "Document file path"
+                description = "Document file path (required for all operations)"
             },
             includeHeaders = new
             {
@@ -89,6 +99,9 @@ public class WordContentTool : IAsposeTool
         var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
         SecurityHelper.ValidateFilePath(path, "path");
         var doc = new Document(path);
+        doc.UpdateFields();
+        
+        // Get text content - this will show field results (like hyperlink display text) instead of field codes
         var text = doc.Range.Text;
         return await Task.FromResult(text);
     }

@@ -11,7 +11,11 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class PptImageTool : IAsposeTool
 {
-    public string Description => "Manage PowerPoint images: add or edit";
+    public string Description => @"Manage PowerPoint images. Supports 2 operations: add, edit.
+
+Usage examples:
+- Add image: ppt_image(operation='add', path='presentation.pptx', slideIndex=0, imagePath='image.png', x=100, y=100, width=200, height=150)
+- Edit image: ppt_image(operation='edit', path='presentation.pptx', slideIndex=0, shapeIndex=0, width=300, height=200)";
 
     public object InputSchema => new
     {
@@ -21,13 +25,15 @@ public class PptImageTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'add', 'edit'",
+                description = @"Operation to perform.
+- 'add': Add an image (required params: path, slideIndex, imagePath)
+- 'edit': Edit an image (required params: path, slideIndex, shapeIndex)",
                 @enum = new[] { "add", "edit" }
             },
             path = new
             {
                 type = "string",
-                description = "Presentation file path"
+                description = "Presentation file path (required for all operations)"
             },
             slideIndex = new
             {

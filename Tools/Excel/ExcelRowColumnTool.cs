@@ -11,7 +11,15 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class ExcelRowColumnTool : IAsposeTool
 {
-    public string Description => "Manage Excel rows and columns: insert or delete rows, columns, or cells";
+    public string Description => @"Manage Excel rows and columns. Supports 6 operations: insert_row, delete_row, insert_column, delete_column, insert_cells, delete_cells.
+
+Usage examples:
+- Insert row: excel_row_column(operation='insert_row', path='book.xlsx', rowIndex=2, count=1)
+- Delete row: excel_row_column(operation='delete_row', path='book.xlsx', rowIndex=2)
+- Insert column: excel_row_column(operation='insert_column', path='book.xlsx', columnIndex=2, count=1)
+- Delete column: excel_row_column(operation='delete_column', path='book.xlsx', columnIndex=2)
+- Insert cells: excel_row_column(operation='insert_cells', path='book.xlsx', range='A1:C5', shiftDirection='Down')
+- Delete cells: excel_row_column(operation='delete_cells', path='book.xlsx', range='A1:C5', shiftDirection='Up')";
 
     public object InputSchema => new
     {
@@ -21,13 +29,19 @@ public class ExcelRowColumnTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'insert_row', 'delete_row', 'insert_column', 'delete_column', 'insert_cells', 'delete_cells'",
+                description = @"Operation to perform.
+- 'insert_row': Insert row(s) (required params: path, rowIndex)
+- 'delete_row': Delete row(s) (required params: path, rowIndex)
+- 'insert_column': Insert column(s) (required params: path, columnIndex)
+- 'delete_column': Delete column(s) (required params: path, columnIndex)
+- 'insert_cells': Insert cells (required params: path, range, shiftDirection)
+- 'delete_cells': Delete cells (required params: path, range, shiftDirection)",
                 @enum = new[] { "insert_row", "delete_row", "insert_column", "delete_column", "insert_cells", "delete_cells" }
             },
             path = new
             {
                 type = "string",
-                description = "Excel file path"
+                description = "Excel file path (required for all operations)"
             },
             sheetIndex = new
             {

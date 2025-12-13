@@ -12,7 +12,15 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class ExcelFormulaTool : IAsposeTool
 {
-    public string Description => "Manage Excel formulas: add, get, get result, calculate, or set/get array formulas";
+    public string Description => @"Manage Excel formulas. Supports 6 operations: add, get, get_result, calculate, set_array, get_array.
+
+Usage examples:
+- Add formula: excel_formula(operation='add', path='book.xlsx', cell='A1', formula='=SUM(B1:B10)')
+- Get formula: excel_formula(operation='get', path='book.xlsx', cell='A1')
+- Get result: excel_formula(operation='get_result', path='book.xlsx', cell='A1')
+- Calculate: excel_formula(operation='calculate', path='book.xlsx')
+- Set array formula: excel_formula(operation='set_array', path='book.xlsx', range='A1:A10', formula='=B1:B10*2')
+- Get array formula: excel_formula(operation='get_array', path='book.xlsx', cell='A1')";
 
     public object InputSchema => new
     {
@@ -22,13 +30,19 @@ public class ExcelFormulaTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'add', 'get', 'get_result', 'calculate', 'set_array', 'get_array'",
+                description = @"Operation to perform.
+- 'add': Add a formula to a cell (required params: path, cell, formula)
+- 'get': Get formula from a cell (required params: path, cell)
+- 'get_result': Get formula result (required params: path, cell)
+- 'calculate': Calculate all formulas (required params: path)
+- 'set_array': Set array formula (required params: path, range, formula)
+- 'get_array': Get array formula (required params: path, cell)",
                 @enum = new[] { "add", "get", "get_result", "calculate", "set_array", "get_array" }
             },
             path = new
             {
                 type = "string",
-                description = "Excel file path"
+                description = "Excel file path (required for all operations)"
             },
             outputPath = new
             {
@@ -66,9 +80,8 @@ public class ExcelFormulaTool : IAsposeTool
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         var sheetIndex = arguments?["sheetIndex"]?.GetValue<int>() ?? 0;
 
         return operation.ToLower() switch
@@ -173,7 +186,7 @@ public class ExcelFormulaTool : IAsposeTool
 
     private async Task<string> GetFormulaResultAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var cell = arguments?["cell"]?.GetValue<string>() ?? throw new ArgumentException("cell is required for get_result operation");
+        var cell = ArgumentHelper.GetString(arguments, "cell", "cell");
         var calculateBeforeRead = arguments?["calculateBeforeRead"]?.GetValue<bool?>() ?? true;
 
         using var workbook = new Workbook(path);
@@ -247,8 +260,8 @@ public class ExcelFormulaTool : IAsposeTool
 
     private async Task<string> SetArrayFormulaAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var range = arguments?["range"]?.GetValue<string>() ?? throw new ArgumentException("range is required for set_array operation");
-        var formula = arguments?["formula"]?.GetValue<string>() ?? throw new ArgumentException("formula is required for set_array operation");
+        var range = ArgumentHelper.GetString(arguments, "range", "range");
+        var formula = ArgumentHelper.GetString(arguments, "formula", "formula");
 
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
@@ -269,8 +282,6 @@ public class ExcelFormulaTool : IAsposeTool
             throw new ArgumentException($"無效的範圍位置：起始行={rangeObj.FirstRow}，起始列={rangeObj.FirstColumn}");
         }
         
-        // Use Cell.SetArrayFormula to properly set array formula
-        // Note: This method is deprecated but still functional
         // The new API (FormulaParseOptions) is not available in this version of Aspose.Cells
         var firstCell = worksheet.Cells[rangeObj.FirstRow, rangeObj.FirstColumn];
         
@@ -398,7 +409,7 @@ public class ExcelFormulaTool : IAsposeTool
 
     private async Task<string> GetArrayFormulaAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var cell = arguments?["cell"]?.GetValue<string>() ?? throw new ArgumentException("cell is required for get_array operation");
+        var cell = ArgumentHelper.GetString(arguments, "cell", "cell");
 
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);

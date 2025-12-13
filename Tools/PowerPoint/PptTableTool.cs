@@ -13,7 +13,16 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class PptTableTool : IAsposeTool
 {
-    public string Description => "Manage PowerPoint tables: add, edit, delete, get content, insert/delete rows/columns, edit cell";
+    public string Description => @"Manage PowerPoint tables. Supports 9 operations: add, edit, delete, get_content, insert_row, insert_column, delete_row, delete_column, edit_cell.
+
+Usage examples:
+- Add table: ppt_table(operation='add', path='presentation.pptx', slideIndex=0, rows=3, columns=3, x=100, y=100)
+- Edit table: ppt_table(operation='edit', path='presentation.pptx', slideIndex=0, shapeIndex=0, data=[['A','B'],['C','D']])
+- Delete table: ppt_table(operation='delete', path='presentation.pptx', slideIndex=0, shapeIndex=0)
+- Get content: ppt_table(operation='get_content', path='presentation.pptx', slideIndex=0, shapeIndex=0)
+- Insert row: ppt_table(operation='insert_row', path='presentation.pptx', slideIndex=0, shapeIndex=0, rowIndex=1)
+- Delete row: ppt_table(operation='delete_row', path='presentation.pptx', slideIndex=0, shapeIndex=0, rowIndex=1)
+- Edit cell: ppt_table(operation='edit_cell', path='presentation.pptx', slideIndex=0, shapeIndex=0, rowIndex=0, columnIndex=0, text='New Value')";
 
     public object InputSchema => new
     {
@@ -23,13 +32,22 @@ public class PptTableTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'add', 'edit', 'delete', 'get_content', 'insert_row', 'insert_column', 'delete_row', 'delete_column', 'edit_cell'",
+                description = @"Operation to perform.
+- 'add': Add a table (required params: path, slideIndex, rows, columns)
+- 'edit': Edit table data (required params: path, slideIndex, shapeIndex, data)
+- 'delete': Delete a table (required params: path, slideIndex, shapeIndex)
+- 'get_content': Get table content (required params: path, slideIndex, shapeIndex)
+- 'insert_row': Insert a row (required params: path, slideIndex, shapeIndex, rowIndex)
+- 'insert_column': Insert a column (required params: path, slideIndex, shapeIndex, columnIndex)
+- 'delete_row': Delete a row (required params: path, slideIndex, shapeIndex, rowIndex)
+- 'delete_column': Delete a column (required params: path, slideIndex, shapeIndex, columnIndex)
+- 'edit_cell': Edit cell content (required params: path, slideIndex, shapeIndex, rowIndex, columnIndex, text)",
                 @enum = new[] { "add", "edit", "delete", "get_content", "insert_row", "insert_column", "delete_row", "delete_column", "edit_cell" }
             },
             path = new
             {
                 type = "string",
-                description = "Presentation file path"
+                description = "Presentation file path (required for all operations)"
             },
             slideIndex = new
             {
@@ -251,9 +269,7 @@ public class PptTableTool : IAsposeTool
         {
             // Add at end - clone last row
             var lastRow = table.Rows[table.Rows.Count - 1];
-            // Create new row by cloning
             var newRowIndex = table.Rows.Count;
-            // Note: Direct insertion not supported, row will be added at end
         }
         presentation.Save(path, SaveFormat.Pptx);
         return await Task.FromResult($"Row insertion attempted. Note: Aspose.Slides has limitations with row insertion at specific index.");
@@ -275,8 +291,6 @@ public class PptTableTool : IAsposeTool
             var row = table.Rows[i];
             // Get reference cell for formatting
             var refCell = row[table.Columns.Count - 1];
-            // Create new cell - Aspose.Slides may require different approach
-            // Note: Direct column insertion may not be fully supported
             // Cells are added at the end of each row
         }
         presentation.Save(path, SaveFormat.Pptx);

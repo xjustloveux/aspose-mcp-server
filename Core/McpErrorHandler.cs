@@ -28,8 +28,10 @@ public static class McpErrorHandler
             ArgumentException argEx => new McpError
             {
                 Code = -32602, // Invalid params
-                // Sanitize error messages to prevent information leakage
-                Message = SanitizeErrorMessage(argEx.Message)
+                // CRITICAL FIX: Don't sanitize ArgumentException messages - they contain helpful user-facing error details
+                // Sanitization was removing important information like parameter names and format examples
+                // Only sanitize to remove file paths, but keep the detailed error message
+                Message = SanitizeErrorMessage(argEx.Message, preserveDetails: true)
             },
             
             FileNotFoundException => new McpError
@@ -123,7 +125,7 @@ public static class McpErrorHandler
         return new McpError
         {
             Code = -32602, // Invalid params
-            Message = SanitizeErrorMessage(message)
+            Message = SanitizeErrorMessage(message, preserveDetails: true)
         };
     }
 
@@ -131,29 +133,43 @@ public static class McpErrorHandler
     /// Sanitizes error messages to prevent information leakage
     /// Removes file paths, stack traces, and other sensitive information
     /// </summary>
-    private static string SanitizeErrorMessage(string message)
+    /// <param name="preserveDetails">If true, preserves detailed error messages (for ArgumentException)</param>
+    private static string SanitizeErrorMessage(string message, bool preserveDetails = false)
     {
         if (string.IsNullOrWhiteSpace(message))
         {
             return "An error occurred";
         }
 
-        // Remove file paths (basic pattern matching)
-        var sanitized = Regex.Replace(message, @"[A-Za-z]:\\[^\s]+", "[path removed]");
-        sanitized = Regex.Replace(sanitized, @"/[^\s]+", "[path removed]");
+        var sanitized = message;
         
-        // Remove stack trace indicators
-        sanitized = Regex.Replace(sanitized, @"at\s+[^\r\n]+", "");
-        sanitized = Regex.Replace(sanitized, @"in\s+[^\r\n]+", "");
-        sanitized = Regex.Replace(sanitized, @"line\s+\d+", "");
-        
-        // Remove exception type names that might leak implementation details
-        sanitized = Regex.Replace(sanitized, @"\w+\.\w+Exception", "Error");
-        
-        // Limit message length
-        if (sanitized.Length > 500)
+        if (!preserveDetails)
         {
-            sanitized = sanitized.Substring(0, 497) + "...";
+            // Remove file paths (basic pattern matching) - but preserve relative paths and filenames
+            sanitized = Regex.Replace(sanitized, @"[A-Za-z]:\\[^\s]+", "[path removed]");
+            sanitized = Regex.Replace(sanitized, @"/[^\s]+", "[path removed]");
+            
+            // Remove stack trace indicators
+            sanitized = Regex.Replace(sanitized, @"at\s+[^\r\n]+", "");
+            sanitized = Regex.Replace(sanitized, @"in\s+[^\r\n]+", "");
+            sanitized = Regex.Replace(sanitized, @"line\s+\d+", "");
+            
+            // Remove exception type names that might leak implementation details
+            sanitized = Regex.Replace(sanitized, @"\w+\.\w+Exception", "Error");
+        }
+        else
+        {
+            // For ArgumentException, only remove absolute file paths, preserve everything else
+            // This keeps detailed error messages with parameter names, format examples, etc.
+            sanitized = Regex.Replace(sanitized, @"[A-Za-z]:\\[^\s]+", "[path removed]");
+            sanitized = Regex.Replace(sanitized, @"\/[^\s]+", "[path removed]");
+        }
+        
+        // Limit message length (but allow longer messages for detailed errors)
+        var maxLength = preserveDetails ? 2000 : 500;
+        if (sanitized.Length > maxLength)
+        {
+            sanitized = sanitized.Substring(0, maxLength - 3) + "...";
         }
 
         return sanitized.Trim();

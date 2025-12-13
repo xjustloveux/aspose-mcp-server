@@ -12,7 +12,13 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class PptSectionTool : IAsposeTool
 {
-    public string Description => "Manage PowerPoint sections: add, rename, delete, or get";
+    public string Description => @"Manage PowerPoint sections. Supports 4 operations: add, rename, delete, get.
+
+Usage examples:
+- Add section: ppt_section(operation='add', path='presentation.pptx', name='Section 1', slideIndex=0)
+- Rename section: ppt_section(operation='rename', path='presentation.pptx', sectionIndex=0, newName='New Section')
+- Delete section: ppt_section(operation='delete', path='presentation.pptx', sectionIndex=0)
+- Get sections: ppt_section(operation='get', path='presentation.pptx')";
 
     public object InputSchema => new
     {
@@ -22,13 +28,17 @@ public class PptSectionTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'add', 'rename', 'delete', 'get'",
+                description = @"Operation to perform.
+- 'add': Add a new section (required params: path, name, slideIndex)
+- 'rename': Rename a section (required params: path, sectionIndex, newName)
+- 'delete': Delete a section (required params: path, sectionIndex)
+- 'get': Get all sections (required params: path)",
                 @enum = new[] { "add", "rename", "delete", "get" }
             },
             path = new
             {
                 type = "string",
-                description = "Presentation file path"
+                description = "Presentation file path (required for all operations)"
             },
             name = new
             {

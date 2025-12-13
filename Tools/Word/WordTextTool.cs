@@ -14,7 +14,17 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class WordTextTool : IAsposeTool
 {
-    public string Description => "Perform text operations in Word documents: add, delete, replace, search, format, insert at position";
+    public string Description => @"Perform text operations in Word documents. Supports 8 operations: add, delete, replace, search, format, insert_at_position, delete_range, add_with_style.
+
+Usage examples:
+- Add text: word_text(operation='add', path='doc.docx', text='Hello World')
+- Add formatted text: word_text(operation='add', path='doc.docx', text='Bold text', bold=true)
+- Replace text: word_text(operation='replace', path='doc.docx', searchText='old', replaceText='new')
+- Search text: word_text(operation='search', path='doc.docx', searchText='keyword')
+- Format text: word_text(operation='format', path='doc.docx', paragraphIndex=0, runIndex=0, bold=true)
+- Insert at position: word_text(operation='insert_at_position', path='doc.docx', paragraphIndex=0, runIndex=0, text='Inserted')
+- Delete text: word_text(operation='delete', path='doc.docx', searchText='text to delete')
+- Delete range: word_text(operation='delete_range', path='doc.docx', startParagraphIndex=0, startRunIndex=0, endParagraphIndex=0, endRunIndex=5)";
 
     public object InputSchema => new
     {
@@ -24,13 +34,21 @@ public class WordTextTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'add', 'delete', 'replace', 'search', 'format', 'insert_at_position', 'delete_range', 'add_with_style'",
+                description = @"Operation to perform.
+- 'add': Add text at document end (required params: path, text)
+- 'delete': Delete text matching searchText (required params: path, searchText)
+- 'replace': Replace text (required params: path, searchText, replaceText)
+- 'search': Search for text (required params: path, searchText)
+- 'format': Format existing text (required params: path, paragraphIndex, runIndex)
+- 'insert_at_position': Insert text at specific position (required params: path, paragraphIndex, runIndex, text)
+- 'delete_range': Delete text range (required params: path, startParagraphIndex, startRunIndex, endParagraphIndex, endRunIndex)
+- 'add_with_style': Add text with style (required params: path, text, styleName)",
                 @enum = new[] { "add", "delete", "replace", "search", "format", "insert_at_position", "delete_range", "add_with_style" }
             },
             path = new
             {
                 type = "string",
-                description = "Document file path"
+                description = "Document file path (required for all operations)"
             },
             outputPath = new
             {
@@ -77,7 +95,7 @@ public class WordTextTool : IAsposeTool
             underline = new
             {
                 type = "string",
-                description = "Underline style: none, single, double, dotted, dash (optional, for format operation)",
+                description = "Underline style: none, single, double, dotted, dash (optional, for add/format operations)",
                 @enum = new[] { "none", "single", "double", "dotted", "dash" }
             },
             color = new
@@ -88,17 +106,17 @@ public class WordTextTool : IAsposeTool
             strikethrough = new
             {
                 type = "boolean",
-                description = "Strikethrough (optional, for format operation)"
+                description = "Strikethrough (optional, for add/format operations)"
             },
             superscript = new
             {
                 type = "boolean",
-                description = "Superscript (optional, for format operation)"
+                description = "Superscript (optional, for add/format operations)"
             },
             subscript = new
             {
                 type = "boolean",
-                description = "Subscript (optional, for format operation)"
+                description = "Subscript (optional, for add/format operations)"
             },
             // Replace parameters
             find = new
@@ -115,6 +133,11 @@ public class WordTextTool : IAsposeTool
             {
                 type = "boolean",
                 description = "Use regex matching (optional, for replace/search operations)"
+            },
+            replaceInFields = new
+            {
+                type = "boolean",
+                description = "Replace text inside fields (optional, default: false). If false, fields like hyperlinks will be excluded from replacement to preserve their functionality"
             },
             // Search parameters
             searchText = new
@@ -183,7 +206,7 @@ public class WordTextTool : IAsposeTool
             sectionIndex = new
             {
                 type = "number",
-                description = "Section index (0-based, optional, default: 0, for insert_at_position/delete_range operations)"
+                description = "Section index (0-based, optional, default: 0, for format/insert_at_position/delete_range operations)"
             },
             insertBefore = new
             {
@@ -281,69 +304,373 @@ public class WordTextTool : IAsposeTool
         var fontSize = arguments?["fontSize"]?.GetValue<double>();
         var bold = arguments?["bold"]?.GetValue<bool>() ?? false;
         var italic = arguments?["italic"]?.GetValue<bool>() ?? false;
+        var underline = arguments?["underline"]?.GetValue<string>();
         var color = arguments?["color"]?.GetValue<string>();
+        var strikethrough = arguments?["strikethrough"]?.GetValue<bool>() ?? false;
+        var superscript = arguments?["superscript"]?.GetValue<bool>() ?? false;
+        var subscript = arguments?["subscript"]?.GetValue<bool>() ?? false;
 
         var doc = new Document(path);
-        var builder = new DocumentBuilder(doc);
-        builder.MoveToDocumentEnd();
-
-        if (!string.IsNullOrEmpty(fontName))
-            builder.Font.Name = fontName;
-        if (fontSize.HasValue)
-            builder.Font.Size = fontSize.Value;
-        builder.Font.Bold = bold;
-        builder.Font.Italic = italic;
         
-        if (!string.IsNullOrEmpty(color))
+        // Get the last section's body to append the new paragraph
+        doc.EnsureMinimum();
+        var lastSection = doc.LastSection;
+        var body = lastSection.Body;
+        
+        // Only split text if it actually contains newlines
+        // If text doesn't contain newlines, treat it as a single paragraph
+        // This prevents creating unnecessary paragraphs that cause format misapplication
+        var lines = text.Contains('\n') || text.Contains('\r') 
+            ? text.Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.None)
+            : new[] { text };
+        
+        var builder = new DocumentBuilder(doc);
+        
+        // IMPORTANT: Move to the last paragraph in the document body, not inside any Shape/TextBox
+        // MoveToDocumentEnd() might move inside a textbox if cursor is already there
+        // So we explicitly move to the last paragraph in the body
+        var bodyParagraphs = body.GetChildNodes(NodeType.Paragraph, false);
+        if (bodyParagraphs.Count > 0)
         {
-            try
+            // Move to the last paragraph in the body (not inside any shape)
+            var lastBodyPara = bodyParagraphs[bodyParagraphs.Count - 1] as Paragraph;
+            if (lastBodyPara != null)
             {
-                if (color.StartsWith("#"))
-                    color = color.TrimStart('#');
-                
-                if (color.Length == 6)
+                builder.MoveTo(lastBodyPara);
+            }
+            else
+            {
+                // Fallback: move to document end
+                builder.MoveToDocumentEnd();
+            }
+        }
+        else
+        {
+            // No paragraphs in body, move to document end
+            builder.MoveToDocumentEnd();
+        }
+        
+        // Ensure we're in the document body, not inside a Shape/TextBox
+        // Check if current node is inside a Shape
+        var currentNode = builder.CurrentNode;
+        if (currentNode != null)
+        {
+            var shapeAncestor = currentNode.GetAncestor(NodeType.Shape);
+            if (shapeAncestor != null)
+            {
+                // We're inside a Shape (possibly TextBox), move to body instead
+                bodyParagraphs = body.GetChildNodes(NodeType.Paragraph, false);
+                if (bodyParagraphs.Count > 0)
                 {
-                    var r = Convert.ToInt32(color.Substring(0, 2), 16);
-                    var g = Convert.ToInt32(color.Substring(2, 2), 16);
-                    var b = Convert.ToInt32(color.Substring(4, 2), 16);
-                    builder.Font.Color = System.Drawing.Color.FromArgb(r, g, b);
+                    var lastBodyPara = bodyParagraphs[bodyParagraphs.Count - 1] as Paragraph;
+                    if (lastBodyPara != null)
+                    {
+                        builder.MoveTo(lastBodyPara);
+                    }
                 }
                 else
                 {
-                    builder.Font.Color = System.Drawing.Color.FromName(color);
+                    // No paragraphs, append to body directly
+                    builder.MoveTo(body);
                 }
             }
-            catch
+        }
+        
+        var createdRuns = new List<Run>();
+        
+        for (int i = 0; i < lines.Length; i++)
+        {
+            var line = lines[i];
+            
+            var currentParaBefore = builder.CurrentParagraph;
+            bool needsNewParagraph = false;
+            if (currentParaBefore != null)
             {
-                // Ignore invalid color
+                var existingRuns = currentParaBefore.GetChildNodes(NodeType.Run, false);
+                var existingText = currentParaBefore.GetText().Trim();
+                needsNewParagraph = existingRuns.Count > 0 || !string.IsNullOrEmpty(existingText);
+            }
+            
+            if (needsNewParagraph || i == 0)
+            {
+                builder.Writeln();
+                builder.MoveTo(builder.CurrentParagraph);
+            }
+            
+            builder.Font.ClearFormatting();
+            builder.Font.Bold = false;
+            builder.Font.Italic = false;
+            builder.Font.Underline = Underline.None;
+            builder.Font.StrikeThrough = false;
+            builder.Font.Superscript = false;
+            builder.Font.Subscript = false;
+            builder.ParagraphFormat.ClearFormatting();
+            
+            if (!string.IsNullOrEmpty(fontName))
+                builder.Font.Name = fontName;
+            
+            if (fontSize.HasValue)
+                builder.Font.Size = fontSize.Value;
+            
+            if (arguments?["bold"] != null)
+                builder.Font.Bold = bold;
+            
+            if (arguments?["italic"] != null)
+                builder.Font.Italic = italic;
+            
+            if (!string.IsNullOrEmpty(underline))
+            {
+                var underlineValue = underline.ToLower() switch
+                {
+                    "single" => Underline.Single,
+                    "double" => Underline.Double,
+                    "dotted" => Underline.Dotted,
+                    "dash" => Underline.Dash,
+                    "none" => Underline.None,
+                    _ => Underline.None
+                };
+                builder.Font.Underline = underlineValue;
+            }
+            
+            if (arguments?["strikethrough"] != null)
+                builder.Font.StrikeThrough = strikethrough;
+            
+            if (arguments?["superscript"] != null)
+            {
+                builder.Font.Subscript = false;
+                builder.Font.Superscript = superscript;
+            }
+            else if (arguments?["subscript"] != null)
+            {
+                builder.Font.Superscript = false;
+                builder.Font.Subscript = subscript;
+            }
+            
+            if (!string.IsNullOrEmpty(color))
+            {
+                try
+                {
+                    var colorValue = color;
+                    if (colorValue.StartsWith("#"))
+                        colorValue = colorValue.TrimStart('#');
+                    
+                    if (colorValue.Length == 6)
+                    {
+                        var r = Convert.ToInt32(colorValue.Substring(0, 2), 16);
+                        var g = Convert.ToInt32(colorValue.Substring(2, 2), 16);
+                        var b = Convert.ToInt32(colorValue.Substring(4, 2), 16);
+                        builder.Font.Color = System.Drawing.Color.FromArgb(r, g, b);
+                    }
+                    else
+                    {
+                        builder.Font.Color = System.Drawing.Color.FromName(colorValue);
+                    }
+                }
+                catch
+                {
+                    // Ignore invalid color
+                }
+            }
+            
+            // Get the current paragraph and its runs before writing
+            var currentPara = builder.CurrentParagraph;
+            int runsBefore = 0;
+            if (currentPara != null)
+            {
+                runsBefore = currentPara.GetChildNodes(NodeType.Run, false).Count;
+            }
+            
+            // Write text using DocumentBuilder - this ensures format is applied correctly
+            builder.Write(line);
+            
+            // Get ALL runs in the paragraph and ensure format is applied to ALL of them
+            // This includes any runs that might have been created by DocumentBuilder internally
+            if (currentPara != null)
+            {
+                var runs = currentPara.GetChildNodes(NodeType.Run, false);
+                int runsAfter = runs.Count;
+                
+                for (int r = runsBefore; r < runsAfter; r++)
+                {
+                    var run = runs[r] as Run;
+                    if (run != null)
+                    {
+                        bool isNewRun = r >= runsBefore;
+                        bool textMatches = run.Text == line;
+                        
+                        if (isNewRun && textMatches)
+                        {
+                            run.Font.Subscript = false;
+                            run.Font.Superscript = false;
+                            run.Font.StrikeThrough = false;
+                            run.Font.Bold = false;
+                            run.Font.Italic = false;
+                            run.Font.Underline = Underline.None;
+                            
+                            // Re-apply format to ensure it's applied correctly
+                            if (arguments?["bold"] != null)
+                                run.Font.Bold = bold;
+                            
+                            if (arguments?["italic"] != null)
+                                run.Font.Italic = italic;
+                            
+                            if (!string.IsNullOrEmpty(underline))
+                            {
+                                var underlineValue = underline.ToLower() switch
+                                {
+                                    "single" => Underline.Single,
+                                    "double" => Underline.Double,
+                                    "dotted" => Underline.Dotted,
+                                    "dash" => Underline.Dash,
+                                    "none" => Underline.None,
+                                    _ => Underline.None
+                                };
+                                run.Font.Underline = underlineValue;
+                            }
+                            
+                            if (arguments?["strikethrough"] != null)
+                                run.Font.StrikeThrough = strikethrough;
+                            
+                            if (arguments?["superscript"] != null)
+                            {
+                                run.Font.Subscript = false;
+                                run.Font.Superscript = superscript;
+                            }
+                            else if (arguments?["subscript"] != null)
+                            {
+                                run.Font.Superscript = false;
+                                run.Font.Subscript = subscript;
+                            }
+                            
+                            createdRuns.Add(run);
+                        }
+                    }
+                }
             }
         }
-
-        builder.Writeln(text);
+        
+        // Save document
         doc.Save(outputPath);
 
-        return await Task.FromResult($"Text added to document: {outputPath}");
+        var formatInfo = new List<string>();
+        if (bold) formatInfo.Add("粗體");
+        if (italic) formatInfo.Add("斜體");
+        if (!string.IsNullOrEmpty(underline) && underline != "none") formatInfo.Add($"底線({underline})");
+        if (strikethrough) formatInfo.Add("刪除線");
+        if (superscript) formatInfo.Add("上標");
+        if (subscript) formatInfo.Add("下標");
+        
+        var result = $"成功添加文字到文檔\n";
+        if (formatInfo.Count > 0)
+        {
+            result += $"應用格式: {string.Join(", ", formatInfo)}\n";
+        }
+        result += $"輸出: {outputPath}";
+
+        return await Task.FromResult(result);
     }
 
     private async Task<string> DeleteTextAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var startParagraphIndex = arguments?["startParagraphIndex"]?.GetValue<int>() ?? throw new ArgumentException("startParagraphIndex is required");
+        var searchText = arguments?["searchText"]?.GetValue<string>();
+        var startParagraphIndex = arguments?["startParagraphIndex"]?.GetValue<int?>();
         var startRunIndex = arguments?["startRunIndex"]?.GetValue<int>() ?? 0;
-        var endParagraphIndex = arguments?["endParagraphIndex"]?.GetValue<int>() ?? throw new ArgumentException("endParagraphIndex is required");
+        var endParagraphIndex = arguments?["endParagraphIndex"]?.GetValue<int?>();
         var endRunIndex = arguments?["endRunIndex"]?.GetValue<int?>();
 
         var doc = new Document(path);
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
         
-        if (startParagraphIndex < 0 || startParagraphIndex >= paragraphs.Count ||
-            endParagraphIndex < 0 || endParagraphIndex >= paragraphs.Count ||
-            startParagraphIndex > endParagraphIndex)
+        // If searchText is provided, find the text and determine paragraph/run indices
+        if (!string.IsNullOrEmpty(searchText))
+        {
+            // Search for the text in the document
+            bool found = false;
+            for (int p = 0; p < paragraphs.Count; p++)
+            {
+                var para = paragraphs[p] as Paragraph;
+                if (para == null) continue;
+                
+                var paraText = para.GetText();
+                int textIndex = paraText.IndexOf(searchText, StringComparison.OrdinalIgnoreCase);
+                
+                if (textIndex >= 0)
+                {
+                    // Found the text, determine run indices
+                    var runs = para.GetChildNodes(NodeType.Run, false);
+                    int charCount = 0;
+                    int startRunIdx = 0;
+                    int endRunIdx = runs.Count - 1;
+                    
+                    // Find the run containing the start of searchText
+                    for (int r = 0; r < runs.Count; r++)
+                    {
+                        var run = runs[r] as Run;
+                        if (run == null) continue;
+                        
+                        int runLength = run.Text.Length;
+                        if (charCount + runLength > textIndex)
+                        {
+                            startRunIdx = r;
+                            break;
+                        }
+                        charCount += runLength;
+                    }
+                    
+                    // Find the run containing the end of searchText
+                    charCount = 0;
+                    int endTextIndex = textIndex + searchText.Length;
+                    for (int r = 0; r < runs.Count; r++)
+                    {
+                        var run = runs[r] as Run;
+                        if (run == null) continue;
+                        
+                        int runLength = run.Text.Length;
+                        if (charCount + runLength >= endTextIndex)
+                        {
+                            endRunIdx = r;
+                            break;
+                        }
+                        charCount += runLength;
+                    }
+                    
+                    startParagraphIndex = p;
+                    endParagraphIndex = p;
+                    startRunIndex = startRunIdx;
+                    endRunIndex = endRunIdx;
+                    found = true;
+                    break;
+                }
+            }
+            
+            if (!found)
+            {
+                throw new ArgumentException($"未找到文字 '{searchText}'。請使用 search 操作先確認文字位置。");
+            }
+        }
+        else
+        {
+            // Require paragraph indices if searchText is not provided
+            if (!startParagraphIndex.HasValue)
+                throw new ArgumentException("startParagraphIndex is required when searchText is not provided");
+            if (!endParagraphIndex.HasValue)
+                throw new ArgumentException("endParagraphIndex is required when searchText is not provided");
+        }
+        
+        if (!startParagraphIndex.HasValue || !endParagraphIndex.HasValue)
+        {
+            throw new ArgumentException("無法確定段落索引");
+        }
+        
+        if (startParagraphIndex.Value < 0 || startParagraphIndex.Value >= paragraphs.Count ||
+            endParagraphIndex.Value < 0 || endParagraphIndex.Value >= paragraphs.Count ||
+            startParagraphIndex.Value > endParagraphIndex.Value)
         {
             throw new ArgumentException($"段落索引超出範圍 (文檔共有 {paragraphs.Count} 個段落)");
         }
         
-        var startPara = paragraphs[startParagraphIndex] as Paragraph;
-        var endPara = paragraphs[endParagraphIndex] as Paragraph;
+        var startPara = paragraphs[startParagraphIndex.Value] as Paragraph;
+        var endPara = paragraphs[endParagraphIndex.Value] as Paragraph;
         
         if (startPara == null || endPara == null)
         {
@@ -357,7 +684,7 @@ public class WordTextTool : IAsposeTool
             var startRuns = startPara.GetChildNodes(NodeType.Run, false);
             var endRuns = endPara.GetChildNodes(NodeType.Run, false);
             
-            if (startParagraphIndex == endParagraphIndex)
+            if (startParagraphIndex.Value == endParagraphIndex.Value)
             {
                 if (startRuns != null && startRuns.Count > 0)
                 {
@@ -389,7 +716,7 @@ public class WordTextTool : IAsposeTool
                     }
                 }
                 
-                for (int p = startParagraphIndex + 1; p < endParagraphIndex; p++)
+                for (int p = startParagraphIndex.Value + 1; p < endParagraphIndex.Value; p++)
                 {
                     var para = paragraphs[p] as Paragraph;
                     if (para != null)
@@ -417,7 +744,7 @@ public class WordTextTool : IAsposeTool
         }
         
         // Delete text
-        if (startParagraphIndex == endParagraphIndex)
+        if (startParagraphIndex.Value == endParagraphIndex.Value)
         {
             var runs = startPara.GetChildNodes(NodeType.Run, false);
             if (runs != null && runs.Count > 0)
@@ -445,7 +772,7 @@ public class WordTextTool : IAsposeTool
                 }
             }
             
-            for (int p = endParagraphIndex - 1; p > startParagraphIndex; p--)
+            for (int p = endParagraphIndex.Value - 1; p > startParagraphIndex.Value; p--)
             {
                 paragraphs[p]?.Remove();
             }
@@ -469,7 +796,11 @@ public class WordTextTool : IAsposeTool
         string preview = deletedText.Length > 50 ? deletedText.Substring(0, 50) + "..." : deletedText;
         
         var result = $"成功刪除文字\n";
-        result += $"範圍: 段落 {startParagraphIndex} Run {startRunIndex} 到 段落 {endParagraphIndex} Run {endRunIndex ?? -1}\n";
+        if (!string.IsNullOrEmpty(searchText))
+        {
+            result += $"刪除文字: {searchText}\n";
+        }
+        result += $"範圍: 段落 {startParagraphIndex.Value} Run {startRunIndex} 到 段落 {endParagraphIndex.Value} Run {endRunIndex ?? -1}\n";
         if (!string.IsNullOrEmpty(preview))
         {
             result += $"刪除內容預覽: {preview}\n";
@@ -484,10 +815,18 @@ public class WordTextTool : IAsposeTool
         var find = arguments?["find"]?.GetValue<string>() ?? throw new ArgumentException("find is required");
         var replace = arguments?["replace"]?.GetValue<string>() ?? throw new ArgumentException("replace is required");
         var useRegex = arguments?["useRegex"]?.GetValue<bool>() ?? false;
+        var replaceInFields = arguments?["replaceInFields"]?.GetValue<bool>() ?? false;
 
         var doc = new Document(path);
         
         var options = new FindReplaceOptions();
+        
+        // Fields (like hyperlinks) should not be replaced unless explicitly requested
+        if (!replaceInFields)
+        {
+            options.ReplacingCallback = new FieldSkipReplacingCallback();
+        }
+        
         if (useRegex)
         {
             doc.Range.Replace(new Regex(find), replace, options);
@@ -499,7 +838,12 @@ public class WordTextTool : IAsposeTool
 
         doc.Save(outputPath);
 
-        return await Task.FromResult($"Text replaced in document: {outputPath}");
+        var result = $"Text replaced in document: {outputPath}";
+        if (!replaceInFields)
+        {
+            result += "\nNote: Fields (such as hyperlinks) were excluded from replacement to preserve their functionality.";
+        }
+        return await Task.FromResult(result);
     }
 
     private async Task<string> SearchTextAsync(JsonObject? arguments, string path)
@@ -605,6 +949,7 @@ public class WordTextTool : IAsposeTool
     {
         var paragraphIndex = arguments?["paragraphIndex"]?.GetValue<int>() ?? throw new ArgumentException("paragraphIndex is required");
         var runIndex = arguments?["runIndex"]?.GetValue<int?>();
+        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>() ?? 0;
         var fontName = arguments?["fontName"]?.GetValue<string>();
         var fontNameAscii = arguments?["fontNameAscii"]?.GetValue<string>();
         var fontNameFarEast = arguments?["fontNameFarEast"]?.GetValue<string>();
@@ -618,23 +963,34 @@ public class WordTextTool : IAsposeTool
         var subscript = arguments?["subscript"]?.GetValue<bool?>();
 
         var doc = new Document(path);
-        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
+        
+        // Use section-based paragraph indexing to match GetRunFormat behavior
+        // This ensures consistent indexing between format and get operations
+        if (sectionIndex < 0 || sectionIndex >= doc.Sections.Count)
+        {
+            throw new ArgumentException($"sectionIndex {sectionIndex} 超出範圍 (文檔共有 {doc.Sections.Count} 個節)");
+        }
+        
+        var section = doc.Sections[sectionIndex];
+        var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
         
         if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
         {
-            throw new ArgumentException($"段落索引 {paragraphIndex} 超出範圍 (文檔共有 {paragraphs.Count} 個段落)");
+            throw new ArgumentException($"段落索引 {paragraphIndex} 超出範圍 (節 {sectionIndex} 的正文共有 {paragraphs.Count} 個段落)");
         }
         
-        var para = paragraphs[paragraphIndex] as Paragraph;
-        if (para == null)
-        {
-            throw new InvalidOperationException($"無法找到索引 {paragraphIndex} 的段落");
-        }
+        var para = paragraphs[paragraphIndex];
         
         var runs = para.GetChildNodes(NodeType.Run, false);
         if (runs == null || runs.Count == 0)
         {
-            throw new InvalidOperationException($"段落 #{paragraphIndex} 中沒有 Run 節點");
+            var newRun = new Run(doc, "");
+            para.AppendChild(newRun);
+            runs = para.GetChildNodes(NodeType.Run, false);
+            if (runs == null || runs.Count == 0)
+            {
+                throw new InvalidOperationException($"段落 #{paragraphIndex} 中沒有 Run 節點，且無法創建新的 Run 節點");
+            }
         }
         
         var changes = new List<string>();
@@ -665,6 +1021,41 @@ public class WordTextTool : IAsposeTool
         
         foreach (var run in runsToFormat)
         {
+            // Clear conflicting formats before applying new ones to prevent accumulation
+            // This ensures formats are applied correctly without interference from previous formats
+            
+            // Clear superscript/subscript if either is being set (they are mutually exclusive)
+            if (superscript.HasValue || subscript.HasValue)
+            {
+                if (superscript.HasValue && superscript.Value)
+                {
+                    run.Font.Subscript = false; // Clear subscript when setting superscript
+                }
+                else if (subscript.HasValue && subscript.Value)
+                {
+                    run.Font.Superscript = false; // Clear superscript when setting subscript
+                }
+                else
+                {
+                    // If setting to false, clear both
+                    if (superscript.HasValue && !superscript.Value)
+                    {
+                        run.Font.Superscript = false;
+                    }
+                    if (subscript.HasValue && !subscript.Value)
+                    {
+                        run.Font.Subscript = false;
+                    }
+                }
+            }
+            
+            // Clear underline if it's being set (to avoid conflicts)
+            if (!string.IsNullOrEmpty(underline))
+            {
+                // Will be set below, but ensure no other underline styles interfere
+            }
+            
+            // Apply font names
             if (!string.IsNullOrEmpty(fontNameAscii))
             {
                 run.Font.NameAscii = fontNameAscii;
@@ -699,6 +1090,7 @@ public class WordTextTool : IAsposeTool
                 changes.Add($"字型大小: {fontSize.Value} 點");
             }
             
+            // Apply bold/italic - ensure they are set correctly
             if (bold.HasValue)
             {
                 run.Font.Bold = bold.Value;
@@ -711,6 +1103,7 @@ public class WordTextTool : IAsposeTool
                 changes.Add($"斜體: {(italic.Value ? "是" : "否")}");
             }
             
+            // Apply underline - ensure it's set correctly
             if (!string.IsNullOrEmpty(underline))
             {
                 run.Font.Underline = underline.ToLower() switch
@@ -729,21 +1122,22 @@ public class WordTextTool : IAsposeTool
             {
                 try
                 {
-                    if (color.StartsWith("#"))
-                        color = color.Substring(1);
+                    var colorValue = color;
+                    if (colorValue.StartsWith("#"))
+                        colorValue = colorValue.Substring(1);
                     
-                    if (color.Length == 6)
+                    if (colorValue.Length == 6)
                     {
-                        int r = Convert.ToInt32(color.Substring(0, 2), 16);
-                        int g = Convert.ToInt32(color.Substring(2, 2), 16);
-                        int b = Convert.ToInt32(color.Substring(4, 2), 16);
+                        int r = Convert.ToInt32(colorValue.Substring(0, 2), 16);
+                        int g = Convert.ToInt32(colorValue.Substring(2, 2), 16);
+                        int b = Convert.ToInt32(colorValue.Substring(4, 2), 16);
                         run.Font.Color = System.Drawing.Color.FromArgb(r, g, b);
-                        changes.Add($"顏色: #{color}");
+                        changes.Add($"顏色: #{colorValue}");
                     }
                     else
                     {
-                        run.Font.Color = System.Drawing.Color.FromName(color);
-                        changes.Add($"顏色: {color}");
+                        run.Font.Color = System.Drawing.Color.FromName(colorValue);
+                        changes.Add($"顏色: {colorValue}");
                     }
                 }
                 catch
@@ -752,22 +1146,24 @@ public class WordTextTool : IAsposeTool
                 }
             }
             
+            // Apply strikethrough
             if (strikethrough.HasValue)
             {
                 run.Font.StrikeThrough = strikethrough.Value;
                 changes.Add($"刪除線: {(strikethrough.Value ? "是" : "否")}");
             }
             
-            if (superscript.HasValue && superscript.Value)
+            // Apply superscript/subscript (already cleared conflicting ones above)
+            if (superscript.HasValue)
             {
-                run.Font.Position = 6;
-                changes.Add("上標: 是");
+                run.Font.Superscript = superscript.Value;
+                changes.Add($"上標: {(superscript.Value ? "是" : "否")}");
             }
             
-            if (subscript.HasValue && subscript.Value)
+            if (subscript.HasValue)
             {
-                run.Font.Position = -6;
-                changes.Add("下標: 是");
+                run.Font.Subscript = subscript.Value;
+                changes.Add($"下標: {(subscript.Value ? "是" : "否")}");
             }
         }
         
@@ -1235,6 +1631,22 @@ public class WordTextTool : IAsposeTool
         result += warningMessage;
 
         return await Task.FromResult(result);
+    }
+}
+
+// Helper class to skip field replacement
+internal class FieldSkipReplacingCallback : IReplacingCallback
+{
+    public ReplaceAction Replacing(ReplacingArgs args)
+    {
+        // Skip replacement if we're inside a field
+        if (args.MatchNode.GetAncestor(NodeType.FieldStart) != null ||
+            args.MatchNode.GetAncestor(NodeType.FieldSeparator) != null ||
+            args.MatchNode.GetAncestor(NodeType.FieldEnd) != null)
+        {
+            return ReplaceAction.Skip;
+        }
+        return ReplaceAction.Replace;
     }
 }
 

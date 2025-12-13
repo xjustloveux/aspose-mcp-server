@@ -7,7 +7,13 @@ namespace AsposeMcpServer.Tools;
 
 public class WordReferenceTool : IAsposeTool
 {
-    public string Description => "Manage references in Word documents (table of contents, index, cross-reference)";
+    public string Description => @"Manage references in Word documents. Supports 4 operations: add_table_of_contents, update_table_of_contents, add_index, add_cross_reference.
+
+Usage examples:
+- Add table of contents: word_reference(operation='add_table_of_contents', path='doc.docx', title='目錄', maxLevel=3)
+- Update table of contents: word_reference(operation='update_table_of_contents', path='doc.docx')
+- Add index: word_reference(operation='add_index', path='doc.docx', entries=[{'text':'Index term','page':1}])
+- Add cross-reference: word_reference(operation='add_cross_reference', path='doc.docx', referenceType='Heading', targetText='Chapter 1', displayText='See Chapter 1')";
 
     public object InputSchema => new
     {
@@ -17,13 +23,17 @@ public class WordReferenceTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation: add_table_of_contents, update_table_of_contents, add_index, add_cross_reference",
+                description = @"Operation to perform.
+- 'add_table_of_contents': Add table of contents (required params: path)
+- 'update_table_of_contents': Update table of contents (required params: path)
+- 'add_index': Add index (required params: path, entries)
+- 'add_cross_reference': Add cross-reference (required params: path, referenceType, targetText, displayText)",
                 @enum = new[] { "add_table_of_contents", "update_table_of_contents", "add_index", "add_cross_reference" }
             },
             path = new
             {
                 type = "string",
-                description = "Document file path"
+                description = "Document file path (required for all operations)"
             },
             outputPath = new
             {
@@ -192,13 +202,25 @@ public class WordReferenceTool : IAsposeTool
         var tocIndex = arguments?["tocIndex"]?.GetValue<int?>();
 
         var doc = new Document(path);
+        // Search for TOC fields in the entire document (including headers/footers)
         var tocFields = doc.Range.Fields
             .Cast<Field>()
             .Where(f => f.Type == FieldType.FieldTOC)
             .ToList();
 
         if (tocFields.Count == 0)
-            return await Task.FromResult("No table of contents fields found in document");
+        {
+            // Provide more helpful error message
+            var allFields = doc.Range.Fields.Cast<Field>().ToList();
+            var fieldTypes = allFields.Select(f => f.Type.ToString()).Distinct().ToList();
+            var message = "No table of contents fields found in document.";
+            if (allFields.Count > 0)
+            {
+                message += $" Found {allFields.Count} field(s) of other types: {string.Join(", ", fieldTypes)}.";
+            }
+            message += " Use 'add_table_of_contents' operation to add a table of contents first.";
+            return await Task.FromResult(message);
+        }
 
         if (tocIndex.HasValue)
         {

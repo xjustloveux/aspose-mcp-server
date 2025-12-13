@@ -12,7 +12,15 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class WordImageTool : IAsposeTool
 {
-    public string Description => "Manage Word document images: add, edit, delete, get all, replace, or extract";
+    public string Description => @"Manage Word document images. Supports 6 operations: add, edit, delete, get, replace, extract.
+
+Usage examples:
+- Add image: word_image(operation='add', path='doc.docx', imagePath='image.png', width=200)
+- Edit image: word_image(operation='edit', path='doc.docx', imageIndex=0, width=300, height=200)
+- Delete image: word_image(operation='delete', path='doc.docx', imageIndex=0)
+- Get all images: word_image(operation='get', path='doc.docx')
+- Replace image: word_image(operation='replace', path='doc.docx', imageIndex=0, imagePath='new_image.png')
+- Extract images: word_image(operation='extract', path='doc.docx', outputDir='images/')";
 
     public object InputSchema => new
     {
@@ -22,13 +30,19 @@ public class WordImageTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'add', 'edit', 'delete', 'get', 'replace', 'extract'",
+                description = @"Operation to perform.
+- 'add': Add a new image (required params: path, imagePath)
+- 'edit': Edit existing image (required params: path, imageIndex)
+- 'delete': Delete an image (required params: path, imageIndex)
+- 'get': Get all images info (required params: path)
+- 'replace': Replace an image (required params: path, imageIndex, imagePath)
+- 'extract': Extract all images (required params: path, outputDir)",
                 @enum = new[] { "add", "edit", "delete", "get", "replace", "extract" }
             },
             path = new
             {
                 type = "string",
-                description = "Document file path"
+                description = "Document file path (required for all operations)"
             },
             outputPath = new
             {
@@ -43,12 +57,12 @@ public class WordImageTool : IAsposeTool
             imagePath = new
             {
                 type = "string",
-                description = "Image file path (required for add/replace operations)"
+                description = "Image file path (required for add and replace operations)"
             },
             imageIndex = new
             {
                 type = "number",
-                description = "Image index (0-based, required for edit/delete/replace operations)"
+                description = "Image index (0-based, required for edit, delete, and replace operations). Note: After delete operations, subsequent image indices will shift automatically. Use 'get' operation to refresh indices."
             },
             sectionIndex = new
             {
@@ -188,20 +202,48 @@ public class WordImageTool : IAsposeTool
             builder.ParagraphFormat.Alignment = ParagraphAlignment.Left;
         }
 
-        // Set paragraph alignment for image
-        builder.ParagraphFormat.Alignment = GetAlignment(alignment);
-
         // Insert image
         Shape shape;
         if (textWrapping == "inline")
         {
+            // For inline images, alignment is controlled by paragraph alignment
+            // Set paragraph alignment before inserting image
+            var paraAlignment = GetAlignment(alignment);
+            builder.ParagraphFormat.Alignment = paraAlignment;
             shape = builder.InsertImage(imagePath);
+            
+            // Set size if specified
+            if (width.HasValue)
+                shape.Width = width.Value;
+            
+            if (height.HasValue)
+                shape.Height = height.Value;
+            
+            var currentPara = builder.CurrentParagraph;
+            if (currentPara != null)
+            {
+                currentPara.ParagraphFormat.Alignment = paraAlignment;
+                currentPara.ParagraphFormat.ClearFormatting();
+                currentPara.ParagraphFormat.Alignment = paraAlignment;
+            }
+            
+            // Keep paragraph alignment for inline images
+            builder.ParagraphFormat.Alignment = paraAlignment;
         }
         else
         {
+            // For floating images, use shape positioning
             shape = builder.InsertImage(imagePath);
             shape.WrapType = GetWrapType(textWrapping);
             
+            // Set size if specified
+            if (width.HasValue)
+                shape.Width = width.Value;
+            
+            if (height.HasValue)
+                shape.Height = height.Value;
+            
+            // Set horizontal alignment for floating images
             if (alignment == "center")
             {
                 shape.RelativeHorizontalPosition = RelativeHorizontalPosition.Page;
@@ -212,26 +254,41 @@ public class WordImageTool : IAsposeTool
                 shape.RelativeHorizontalPosition = RelativeHorizontalPosition.Page;
                 shape.HorizontalAlignment = HorizontalAlignment.Right;
             }
+            else
+            {
+                shape.RelativeHorizontalPosition = RelativeHorizontalPosition.Page;
+                shape.HorizontalAlignment = HorizontalAlignment.Left;
+            }
         }
-
-        // Set size if specified
-        if (width.HasValue)
-            shape.Width = width.Value;
         
-        if (height.HasValue)
-            shape.Height = height.Value;
-
-        // Reset paragraph alignment
-        builder.ParagraphFormat.Alignment = ParagraphAlignment.Left;
+        // Reset paragraph alignment only after caption (if any) is added
 
         // Add caption below if specified
         if (!string.IsNullOrEmpty(caption) && captionPosition == "below")
         {
-            builder.ParagraphFormat.Alignment = GetAlignment(alignment);
+            if (textWrapping == "inline")
+            {
+                // For inline images, caption should be in a new paragraph with same alignment
+                builder.ParagraphFormat.Alignment = GetAlignment(alignment);
+            }
             builder.Font.Italic = true;
             builder.Writeln(caption);
             builder.Font.Italic = false;
+        }
+        
+        if (textWrapping != "inline")
+        {
             builder.ParagraphFormat.Alignment = ParagraphAlignment.Left;
+        }
+        else
+        {
+            // For inline images, ensure the paragraph alignment is preserved
+            var currentPara = builder.CurrentParagraph;
+            if (currentPara != null)
+            {
+                var paraAlignment = GetAlignment(alignment);
+                currentPara.ParagraphFormat.Alignment = paraAlignment;
+            }
         }
 
         doc.Save(outputPath);
@@ -415,18 +472,29 @@ public class WordImageTool : IAsposeTool
     private async Task<string> GetImagesAsync(JsonObject? arguments, string path)
     {
         var doc = new Document(path);
-        var shapes = doc.GetChildNodes(NodeType.Shape, true).Cast<Shape>()
-            .Where(s => s.HasImage)
-            .ToList();
+        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? -1;
+        
+        var shapes = GetAllImages(doc, sectionIndex);
         
         var result = new StringBuilder();
 
         result.AppendLine("=== 文檔圖片資訊 ===\n");
-        result.AppendLine($"總圖片數: {shapes.Count}\n");
+        if (sectionIndex == -1)
+        {
+            result.AppendLine($"總圖片數: {shapes.Count}\n");
+        }
+        else
+        {
+            result.AppendLine($"節 {sectionIndex} 的圖片數: {shapes.Count}\n");
+        }
 
         if (shapes.Count == 0)
         {
             result.AppendLine("未找到圖片");
+            if (sectionIndex != -1)
+            {
+                result.AppendLine($"(在節 {sectionIndex} 中未找到圖片，使用 sectionIndex=-1 可搜索所有節)");
+            }
             return await Task.FromResult(result.ToString());
         }
 
@@ -437,7 +505,29 @@ public class WordImageTool : IAsposeTool
             result.AppendLine($"名稱: {shape.Name ?? "(無名稱)"}");
             result.AppendLine($"寬度: {shape.Width} 點");
             result.AppendLine($"高度: {shape.Height} 點");
-            result.AppendLine($"位置: X={shape.Left}, Y={shape.Top}");
+            
+            if (shape.IsInline)
+            {
+                // For inline images, show paragraph alignment instead of position
+                var parentPara = shape.ParentNode as Paragraph;
+                if (parentPara != null)
+                {
+                    result.AppendLine($"對齊方式: {parentPara.ParagraphFormat.Alignment} (段落對齊)");
+                    result.AppendLine($"位置: 內嵌於段落中 (X/Y 位置不適用於內嵌圖片)");
+                }
+                else
+                {
+                    result.AppendLine($"位置: X={shape.Left}, Y={shape.Top}");
+                }
+            }
+            else
+            {
+                // For floating images, show position and alignment
+                result.AppendLine($"位置: X={shape.Left}, Y={shape.Top}");
+                result.AppendLine($"水平對齊: {shape.HorizontalAlignment}");
+                result.AppendLine($"垂直對齊: {shape.VerticalAlignment}");
+                result.AppendLine($"文字環繞: {shape.WrapType}");
+            }
             
             if (shape.ImageData != null)
             {

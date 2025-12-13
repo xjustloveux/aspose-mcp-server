@@ -13,7 +13,11 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class PptShapeFormatTool : IAsposeTool
 {
-    public string Description => "Manage PowerPoint shape format: set or get";
+    public string Description => @"Manage PowerPoint shape format. Supports 2 operations: set, get.
+
+Usage examples:
+- Set format: ppt_shape_format(operation='set', path='presentation.pptx', slideIndex=0, shapeIndex=0, fillColor='#FF0000', lineColor='#0000FF')
+- Get format: ppt_shape_format(operation='get', path='presentation.pptx', slideIndex=0, shapeIndex=0)";
 
     public object InputSchema => new
     {
@@ -23,13 +27,15 @@ public class PptShapeFormatTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'set', 'get'",
+                description = @"Operation to perform.
+- 'set': Set shape format (required params: path, slideIndex, shapeIndex)
+- 'get': Get shape format (required params: path, slideIndex, shapeIndex)",
                 @enum = new[] { "set", "get" }
             },
             path = new
             {
                 type = "string",
-                description = "Presentation file path"
+                description = "Presentation file path (required for all operations)"
             },
             slideIndex = new
             {

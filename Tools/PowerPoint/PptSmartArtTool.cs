@@ -12,7 +12,11 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class PptSmartArtTool : IAsposeTool
 {
-    public string Description => "Manage PowerPoint SmartArt: add or manage nodes";
+    public string Description => @"Manage PowerPoint SmartArt. Supports 2 operations: add, manage_nodes.
+
+Usage examples:
+- Add SmartArt: ppt_smart_art(operation='add', path='presentation.pptx', slideIndex=0, layout='BasicProcess', x=100, y=100, width=400, height=300)
+- Manage nodes: ppt_smart_art(operation='manage_nodes', path='presentation.pptx', slideIndex=0, shapeIndex=0, action='add', targetPath=[0], text='New Node')";
 
     public object InputSchema => new
     {
@@ -22,13 +26,15 @@ public class PptSmartArtTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'add', 'manage_nodes'",
+                description = @"Operation to perform.
+- 'add': Add SmartArt shape (required params: path, slideIndex, layout, x, y, width, height)
+- 'manage_nodes': Manage SmartArt nodes (required params: path, slideIndex, shapeIndex, action, targetPath)",
                 @enum = new[] { "add", "manage_nodes" }
             },
             path = new
             {
                 type = "string",
-                description = "Presentation file path"
+                description = "Presentation file path (required for all operations)"
             },
             slideIndex = new
             {

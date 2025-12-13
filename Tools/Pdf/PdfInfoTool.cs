@@ -7,7 +7,11 @@ namespace AsposeMcpServer.Tools;
 
 public class PdfInfoTool : IAsposeTool
 {
-    public string Description => "Get content and statistics from PDF documents";
+    public string Description => @"Get content and statistics from PDF documents. Supports 2 operations: get_content, get_statistics.
+
+Usage examples:
+- Get content: pdf_info(operation='get_content', path='doc.pdf', pageIndex=1)
+- Get statistics: pdf_info(operation='get_statistics', path='doc.pdf')";
 
     public object InputSchema => new
     {
@@ -17,13 +21,15 @@ public class PdfInfoTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation: get_content, get_statistics",
+                description = @"Operation to perform.
+- 'get_content': Get text content from page(s) (required params: path)
+- 'get_statistics': Get document statistics (required params: path)",
                 @enum = new[] { "get_content", "get_statistics" }
             },
             path = new
             {
                 type = "string",
-                description = "PDF file path"
+                description = "PDF file path (required for all operations)"
             },
             pageIndex = new
             {

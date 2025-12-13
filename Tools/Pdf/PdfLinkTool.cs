@@ -8,7 +8,13 @@ namespace AsposeMcpServer.Tools;
 
 public class PdfLinkTool : IAsposeTool
 {
-    public string Description => "Manage links in PDF documents (add, delete, edit, get)";
+    public string Description => @"Manage links in PDF documents. Supports 4 operations: add, delete, edit, get.
+
+Usage examples:
+- Add link: pdf_link(operation='add', path='doc.pdf', pageIndex=1, x=100, y=100, width=200, height=30, url='https://example.com')
+- Delete link: pdf_link(operation='delete', path='doc.pdf', pageIndex=1, linkIndex=0)
+- Edit link: pdf_link(operation='edit', path='doc.pdf', pageIndex=1, linkIndex=0, url='https://newurl.com')
+- Get links: pdf_link(operation='get', path='doc.pdf', pageIndex=1)";
 
     public object InputSchema => new
     {
@@ -18,13 +24,17 @@ public class PdfLinkTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation: add, delete, edit, get",
+                description = @"Operation to perform.
+- 'add': Add a link (required params: path, pageIndex, x, y, width, height, url)
+- 'delete': Delete a link (required params: path, pageIndex, linkIndex)
+- 'edit': Edit a link (required params: path, pageIndex, linkIndex, url)
+- 'get': Get all links (required params: path, pageIndex)",
                 @enum = new[] { "add", "delete", "edit", "get" }
             },
             path = new
             {
                 type = "string",
-                description = "PDF file path"
+                description = "PDF file path (required for all operations)"
             },
             outputPath = new
             {

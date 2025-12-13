@@ -8,7 +8,12 @@ namespace AsposeMcpServer.Tools;
 
 public class PdfTextTool : IAsposeTool
 {
-    public string Description => "Manage text in PDF documents (add, edit, extract)";
+    public string Description => @"Manage text in PDF documents. Supports 3 operations: add, edit, extract.
+
+Usage examples:
+- Add text: pdf_text(operation='add', path='doc.pdf', pageIndex=1, text='Hello World', x=100, y=100)
+- Edit text: pdf_text(operation='edit', path='doc.pdf', pageIndex=1, text='Updated Text')
+- Extract text: pdf_text(operation='extract', path='doc.pdf', pageIndex=1, outputPath='output.txt')";
 
     public object InputSchema => new
     {
@@ -18,13 +23,16 @@ public class PdfTextTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation: add, edit, extract",
+                description = @"Operation to perform.
+- 'add': Add text to page (required params: path, pageIndex, text)
+- 'edit': Edit text on page (required params: path, pageIndex, text)
+- 'extract': Extract text from page (required params: path, pageIndex, outputPath)",
                 @enum = new[] { "add", "edit", "extract" }
             },
             path = new
             {
                 type = "string",
-                description = "PDF file path"
+                description = "PDF file path (required for all operations)"
             },
             outputPath = new
             {

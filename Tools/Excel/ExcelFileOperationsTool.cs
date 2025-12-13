@@ -11,7 +11,13 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class ExcelFileOperationsTool : IAsposeTool
 {
-    public string Description => "Excel file operations: create, convert, merge workbooks, or split workbook";
+    public string Description => @"Excel file operations. Supports 4 operations: create, convert, merge, split.
+
+Usage examples:
+- Create workbook: excel_file_operations(operation='create', path='new.xlsx')
+- Convert format: excel_file_operations(operation='convert', inputPath='book.xlsx', outputPath='book.pdf', format='pdf')
+- Merge workbooks: excel_file_operations(operation='merge', inputPath='book1.xlsx', outputPath='merged.xlsx', inputPaths=['book2.xlsx'])
+- Split workbook: excel_file_operations(operation='split', inputPath='book.xlsx', outputDirectory='output/')";
 
     public object InputSchema => new
     {
@@ -21,13 +27,17 @@ public class ExcelFileOperationsTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'create', 'convert', 'merge', 'split'",
+                description = @"Operation to perform.
+- 'create': Create a new workbook (required params: path)
+- 'convert': Convert workbook format (required params: inputPath, outputPath, format)
+- 'merge': Merge workbooks (required params: inputPath, outputPath, inputPaths)
+- 'split': Split workbook (required params: inputPath, outputDirectory)",
                 @enum = new[] { "create", "convert", "merge", "split" }
             },
             path = new
             {
                 type = "string",
-                description = "File path (output path for create, input path for convert/split)"
+                description = "File path (output path for create operation, input path for convert/split operations)"
             },
             outputPath = new
             {

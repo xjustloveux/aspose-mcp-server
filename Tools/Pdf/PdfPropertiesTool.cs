@@ -7,7 +7,11 @@ namespace AsposeMcpServer.Tools;
 
 public class PdfPropertiesTool : IAsposeTool
 {
-    public string Description => "Manage document properties in PDF files (get, set)";
+    public string Description => @"Manage document properties in PDF files. Supports 2 operations: get, set.
+
+Usage examples:
+- Get properties: pdf_properties(operation='get', path='doc.pdf')
+- Set properties: pdf_properties(operation='set', path='doc.pdf', title='Title', author='Author', subject='Subject')";
 
     public object InputSchema => new
     {
@@ -17,13 +21,15 @@ public class PdfPropertiesTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation: get, set",
+                description = @"Operation to perform.
+- 'get': Get document properties (required params: path)
+- 'set': Set document properties (required params: path)",
                 @enum = new[] { "get", "set" }
             },
             path = new
             {
                 type = "string",
-                description = "PDF file path"
+                description = "PDF file path (required for all operations)"
             },
             outputPath = new
             {

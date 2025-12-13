@@ -11,7 +11,13 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class PptFileOperationsTool : IAsposeTool
 {
-    public string Description => "PowerPoint file operations: create, convert, merge, or split";
+    public string Description => @"PowerPoint file operations. Supports 4 operations: create, convert, merge, split.
+
+Usage examples:
+- Create presentation: ppt_file_operations(operation='create', path='new.pptx')
+- Convert format: ppt_file_operations(operation='convert', inputPath='presentation.pptx', outputPath='presentation.pdf', format='pdf')
+- Merge presentations: ppt_file_operations(operation='merge', inputPath='presentation1.pptx', outputPath='merged.pptx', inputPaths=['presentation2.pptx'])
+- Split presentation: ppt_file_operations(operation='split', inputPath='presentation.pptx', outputDirectory='output/')";
 
     public object InputSchema => new
     {
@@ -21,13 +27,17 @@ public class PptFileOperationsTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'create', 'convert', 'merge', 'split'",
+                description = @"Operation to perform.
+- 'create': Create a new presentation (required params: path)
+- 'convert': Convert presentation format (required params: inputPath, outputPath, format)
+- 'merge': Merge presentations (required params: inputPath, outputPath, inputPaths)
+- 'split': Split presentation (required params: inputPath, outputDirectory)",
                 @enum = new[] { "create", "convert", "merge", "split" }
             },
             path = new
             {
                 type = "string",
-                description = "File path (output path for create, input path for convert/split)"
+                description = "File path (output path for create operation, input path for convert/split operations)"
             },
             outputPath = new
             {

@@ -8,7 +8,14 @@ namespace AsposeMcpServer.Tools;
 
 public class WordRevisionTool : IAsposeTool
 {
-    public string Description => "Manage revisions in Word documents (get, accept all, reject all, manage, compare documents)";
+    public string Description => @"Manage revisions in Word documents. Supports 5 operations: get_revisions, accept_all, reject_all, manage, compare.
+
+Usage examples:
+- Get revisions: word_revision(operation='get_revisions', path='doc.docx')
+- Accept all: word_revision(operation='accept_all', path='doc.docx')
+- Reject all: word_revision(operation='reject_all', path='doc.docx')
+- Manage revision: word_revision(operation='manage', path='doc.docx', revisionIndex=0, action='accept')
+- Compare documents: word_revision(operation='compare', path='output.docx', originalPath='original.docx', revisedPath='revised.docx')";
 
     public object InputSchema => new
     {
@@ -18,13 +25,18 @@ public class WordRevisionTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation: get_revisions, accept_all, reject_all, manage, compare",
+                description = @"Operation to perform.
+- 'get_revisions': Get all revisions (required params: path)
+- 'accept_all': Accept all revisions (required params: path)
+- 'reject_all': Reject all revisions (required params: path)
+- 'manage': Manage a specific revision (required params: path, revisionIndex, action)
+- 'compare': Compare two documents (required params: path, originalPath, revisedPath)",
                 @enum = new[] { "get_revisions", "accept_all", "reject_all", "manage", "compare" }
             },
             path = new
             {
                 type = "string",
-                description = "Document file path"
+                description = "Document file path (required for all operations)"
             },
             outputPath = new
             {

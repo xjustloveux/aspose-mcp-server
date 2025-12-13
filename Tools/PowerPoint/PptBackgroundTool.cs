@@ -13,7 +13,12 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class PptBackgroundTool : IAsposeTool
 {
-    public string Description => "Manage PowerPoint backgrounds: set or get";
+    public string Description => @"Manage PowerPoint backgrounds. Supports 2 operations: set, get.
+
+Usage examples:
+- Set background color: ppt_background(operation='set', path='presentation.pptx', slideIndex=0, color='#FFFFFF')
+- Set background image: ppt_background(operation='set', path='presentation.pptx', slideIndex=0, imagePath='bg.png')
+- Get background: ppt_background(operation='get', path='presentation.pptx', slideIndex=0)";
 
     public object InputSchema => new
     {
@@ -23,13 +28,15 @@ public class PptBackgroundTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'set', 'get'",
+                description = @"Operation to perform.
+- 'set': Set slide background (required params: path, slideIndex)
+- 'get': Get slide background (required params: path, slideIndex)",
                 @enum = new[] { "set", "get" }
             },
             path = new
             {
                 type = "string",
-                description = "Presentation file path"
+                description = "Presentation file path (required for all operations)"
             },
             slideIndex = new
             {

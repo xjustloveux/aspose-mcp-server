@@ -13,7 +13,14 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class PptChartTool : IAsposeTool
 {
-    public string Description => "Manage PowerPoint charts: add, edit, delete, get data, or update data";
+    public string Description => @"Manage PowerPoint charts. Supports 5 operations: add, edit, delete, get_data, update_data.
+
+Usage examples:
+- Add chart: ppt_chart(operation='add', path='presentation.pptx', slideIndex=0, chartType='Column', x=100, y=100, width=400, height=300)
+- Edit chart: ppt_chart(operation='edit', path='presentation.pptx', slideIndex=0, shapeIndex=0, title='New Title')
+- Delete chart: ppt_chart(operation='delete', path='presentation.pptx', slideIndex=0, shapeIndex=0)
+- Get data: ppt_chart(operation='get_data', path='presentation.pptx', slideIndex=0, shapeIndex=0)
+- Update data: ppt_chart(operation='update_data', path='presentation.pptx', slideIndex=0, shapeIndex=0, data=[['A','B'],['1','2']])";
 
     public object InputSchema => new
     {
@@ -23,13 +30,18 @@ public class PptChartTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'add', 'edit', 'delete', 'get_data', 'update_data'",
+                description = @"Operation to perform.
+- 'add': Add a chart (required params: path, slideIndex, chartType)
+- 'edit': Edit chart properties (required params: path, slideIndex, shapeIndex)
+- 'delete': Delete a chart (required params: path, slideIndex, shapeIndex)
+- 'get_data': Get chart data (required params: path, slideIndex, shapeIndex)
+- 'update_data': Update chart data (required params: path, slideIndex, shapeIndex, data)",
                 @enum = new[] { "add", "edit", "delete", "get_data", "update_data" }
             },
             path = new
             {
                 type = "string",
-                description = "Presentation file path"
+                description = "Presentation file path (required for all operations)"
             },
             slideIndex = new
             {
@@ -286,8 +298,6 @@ public class PptChartTool : IAsposeTool
             chartData.Series.Clear();
             chartData.Categories.Clear();
         }
-
-        // Note: Chart data update requires proper workbook cell setup
         // This is a simplified implementation - for production use, proper cell references are needed
         if (categoriesArray != null && categoriesArray.Count > 0)
         {

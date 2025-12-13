@@ -12,7 +12,14 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class ExcelViewSettingsTool : IAsposeTool
 {
-    public string Description => "Manage Excel view settings: zoom, gridlines, headers, zero values, column width, row height, background, tab color";
+    public string Description => @"Manage Excel view settings. Supports 10 operations: set_zoom, set_gridlines, set_headers, set_zero_values, set_column_width, set_row_height, set_background, set_tab_color, set_all, split_window.
+
+Usage examples:
+- Set zoom: excel_view_settings(operation='set_zoom', path='book.xlsx', zoom=150)
+- Set gridlines: excel_view_settings(operation='set_gridlines', path='book.xlsx', visible=false)
+- Set column width: excel_view_settings(operation='set_column_width', path='book.xlsx', columnIndex=0, width=20)
+- Set row height: excel_view_settings(operation='set_row_height', path='book.xlsx', rowIndex=0, height=30)
+- Set all: excel_view_settings(operation='set_all', path='book.xlsx', zoom=150, gridlinesVisible=true)";
 
     public object InputSchema => new
     {
@@ -22,13 +29,23 @@ public class ExcelViewSettingsTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'set_zoom', 'set_gridlines', 'set_headers', 'set_zero_values', 'set_column_width', 'set_row_height', 'set_background', 'set_tab_color', 'set_all', 'split_window'",
+                description = @"Operation to perform.
+- 'set_zoom': Set zoom level (required params: path, zoom)
+- 'set_gridlines': Set gridlines visibility (required params: path, visible)
+- 'set_headers': Set headers visibility (required params: path, visible)
+- 'set_zero_values': Set zero values visibility (required params: path, visible)
+- 'set_column_width': Set column width (required params: path, columnIndex, width)
+- 'set_row_height': Set row height (required params: path, rowIndex, height)
+- 'set_background': Set sheet background (required params: path, imagePath)
+- 'set_tab_color': Set tab color (required params: path, sheetIndex, color)
+- 'set_all': Set multiple settings (required params: path)
+- 'split_window': Split window (required params: path, rowIndex, columnIndex)",
                 @enum = new[] { "set_zoom", "set_gridlines", "set_headers", "set_zero_values", "set_column_width", "set_row_height", "set_background", "set_tab_color", "set_all", "split_window" }
             },
             path = new
             {
                 type = "string",
-                description = "Excel file path"
+                description = "Excel file path (required for all operations)"
             },
             sheetIndex = new
             {

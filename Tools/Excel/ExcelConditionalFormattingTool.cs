@@ -12,7 +12,13 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class ExcelConditionalFormattingTool : IAsposeTool
 {
-    public string Description => "Manage Excel conditional formatting: add, edit, delete, or get conditional formatting rules";
+    public string Description => @"Manage Excel conditional formatting. Supports 4 operations: add, edit, delete, get.
+
+Usage examples:
+- Add conditional formatting: excel_conditional_formatting(operation='add', path='book.xlsx', range='A1:A10', type='CellValue', operator='Between', formula1='10', formula2='100')
+- Edit conditional formatting: excel_conditional_formatting(operation='edit', path='book.xlsx', conditionalFormattingIndex=0, type='CellValue')
+- Delete conditional formatting: excel_conditional_formatting(operation='delete', path='book.xlsx', conditionalFormattingIndex=0)
+- Get conditional formatting: excel_conditional_formatting(operation='get', path='book.xlsx', range='A1:A10')";
 
     public object InputSchema => new
     {
@@ -22,13 +28,17 @@ public class ExcelConditionalFormattingTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'add', 'edit', 'delete', 'get'",
+                description = @"Operation to perform.
+- 'add': Add conditional formatting (required params: path, range, type)
+- 'edit': Edit conditional formatting (required params: path, conditionalFormattingIndex)
+- 'delete': Delete conditional formatting (required params: path, conditionalFormattingIndex)
+- 'get': Get conditional formatting (required params: path, range)",
                 @enum = new[] { "add", "edit", "delete", "get" }
             },
             path = new
             {
                 type = "string",
-                description = "Excel file path"
+                description = "Excel file path (required for all operations)"
             },
             outputPath = new
             {

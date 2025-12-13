@@ -7,7 +7,10 @@ namespace AsposeMcpServer.Tools;
 
 public class PdfWatermarkTool : IAsposeTool
 {
-    public string Description => "Manage watermarks in PDF documents (add text watermark)";
+    public string Description => @"Manage watermarks in PDF documents. Supports 1 operation: add.
+
+Usage examples:
+- Add watermark: pdf_watermark(operation='add', path='doc.pdf', text='CONFIDENTIAL', fontSize=72, opacity=0.3)";
 
     public object InputSchema => new
     {
@@ -17,13 +20,14 @@ public class PdfWatermarkTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation: add",
+                description = @"Operation to perform.
+- 'add': Add text watermark (required params: path, text)",
                 @enum = new[] { "add" }
             },
             path = new
             {
                 type = "string",
-                description = "PDF file path"
+                description = "PDF file path (required for all operations)"
             },
             outputPath = new
             {

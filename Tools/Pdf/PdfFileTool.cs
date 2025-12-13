@@ -7,7 +7,14 @@ namespace AsposeMcpServer.Tools;
 
 public class PdfFileTool : IAsposeTool
 {
-    public string Description => "Perform file operations on PDF documents (create, merge, split, compress, encrypt)";
+    public string Description => @"Perform file operations on PDF documents. Supports 5 operations: create, merge, split, compress, encrypt.
+
+Usage examples:
+- Create PDF: pdf_file(operation='create', outputPath='new.pdf')
+- Merge PDFs: pdf_file(operation='merge', inputPaths=['doc1.pdf','doc2.pdf'], outputPath='merged.pdf')
+- Split PDF: pdf_file(operation='split', path='doc.pdf', outputDir='output/', pagesPerFile=1)
+- Compress PDF: pdf_file(operation='compress', path='doc.pdf', outputPath='compressed.pdf', compressImages=true)
+- Encrypt PDF: pdf_file(operation='encrypt', path='doc.pdf', outputPath='encrypted.pdf', password='password')";
 
     public object InputSchema => new
     {
@@ -17,18 +24,23 @@ public class PdfFileTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation: create, merge, split, compress, encrypt",
+                description = @"Operation to perform.
+- 'create': Create a new PDF (required params: outputPath)
+- 'merge': Merge multiple PDFs (required params: inputPaths, outputPath)
+- 'split': Split PDF into multiple files (required params: path, outputDir)
+- 'compress': Compress PDF file (required params: path, outputPath)
+- 'encrypt': Encrypt PDF file (required params: path, outputPath, password)",
                 @enum = new[] { "create", "merge", "split", "compress", "encrypt" }
             },
             path = new
             {
                 type = "string",
-                description = "Input file path (required for merge, split, compress, encrypt)"
+                description = "Input file path (required for split, compress, and encrypt operations)"
             },
             outputPath = new
             {
                 type = "string",
-                description = "Output file path (required for create, merge, compress, encrypt)"
+                description = "Output file path (required for create, merge, compress, and encrypt operations)"
             },
             inputPaths = new
             {

@@ -8,7 +8,13 @@ namespace AsposeMcpServer.Tools;
 
 public class PdfBookmarkTool : IAsposeTool
 {
-    public string Description => "Manage bookmarks in PDF documents (add, delete, edit, get)";
+    public string Description => @"Manage bookmarks in PDF documents. Supports 4 operations: add, delete, edit, get.
+
+Usage examples:
+- Add bookmark: pdf_bookmark(operation='add', path='doc.pdf', title='Chapter 1', pageIndex=1)
+- Delete bookmark: pdf_bookmark(operation='delete', path='doc.pdf', bookmarkIndex=0)
+- Edit bookmark: pdf_bookmark(operation='edit', path='doc.pdf', bookmarkIndex=0, title='Updated Title', pageIndex=2)
+- Get bookmarks: pdf_bookmark(operation='get', path='doc.pdf')";
 
     public object InputSchema => new
     {
@@ -18,13 +24,17 @@ public class PdfBookmarkTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation: add, delete, edit, get",
+                description = @"Operation to perform.
+- 'add': Add a bookmark (required params: path, title, pageIndex)
+- 'delete': Delete a bookmark (required params: path, bookmarkIndex)
+- 'edit': Edit a bookmark (required params: path, bookmarkIndex, title, pageIndex)
+- 'get': Get all bookmarks (required params: path)",
                 @enum = new[] { "add", "delete", "edit", "get" }
             },
             path = new
             {
                 type = "string",
-                description = "PDF file path"
+                description = "PDF file path (required for all operations)"
             },
             outputPath = new
             {

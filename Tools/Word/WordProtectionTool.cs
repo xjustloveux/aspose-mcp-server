@@ -10,7 +10,11 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class WordProtectionTool : IAsposeTool
 {
-    public string Description => "Protect or unprotect a Word document";
+    public string Description => @"Protect or unprotect a Word document. Supports 2 operations: protect, unprotect.
+
+Usage examples:
+- Protect document: word_protection(operation='protect', path='doc.docx', password='password', protectionType='ReadOnly')
+- Unprotect document: word_protection(operation='unprotect', path='doc.docx', password='password')";
 
     public object InputSchema => new
     {
@@ -20,13 +24,15 @@ public class WordProtectionTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'protect', 'unprotect'",
+                description = @"Operation to perform.
+- 'protect': Protect document (required params: path, password, protectionType)
+- 'unprotect': Unprotect document (required params: path, password)",
                 @enum = new[] { "protect", "unprotect" }
             },
             path = new
             {
                 type = "string",
-                description = "Document file path"
+                description = "Document file path (required for all operations)"
             },
             outputPath = new
             {

@@ -13,7 +13,13 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class PptNotesTool : IAsposeTool
 {
-    public string Description => "Manage PowerPoint notes: add, edit, get, or clear";
+    public string Description => @"Manage PowerPoint notes. Supports 4 operations: add, edit, get, clear.
+
+Usage examples:
+- Add notes: ppt_notes(operation='add', path='presentation.pptx', slideIndex=0, notes='Speaker notes')
+- Edit notes: ppt_notes(operation='edit', path='presentation.pptx', slideIndex=0, notes='Updated notes')
+- Get notes: ppt_notes(operation='get', path='presentation.pptx', slideIndex=0)
+- Clear notes: ppt_notes(operation='clear', path='presentation.pptx', slideIndices=[0,1,2])";
 
     public object InputSchema => new
     {
@@ -23,13 +29,17 @@ public class PptNotesTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'add', 'edit', 'get', 'clear'",
+                description = @"Operation to perform.
+- 'add': Add notes to slide (required params: path, slideIndex, notes)
+- 'edit': Edit slide notes (required params: path, slideIndex, notes)
+- 'get': Get slide notes (required params: path, slideIndex)
+- 'clear': Clear notes (required params: path)",
                 @enum = new[] { "add", "edit", "get", "clear" }
             },
             path = new
             {
                 type = "string",
-                description = "Presentation file path"
+                description = "Presentation file path (required for all operations)"
             },
             slideIndex = new
             {

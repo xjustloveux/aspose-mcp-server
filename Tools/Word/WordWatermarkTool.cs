@@ -6,7 +6,10 @@ namespace AsposeMcpServer.Tools;
 
 public class WordWatermarkTool : IAsposeTool
 {
-    public string Description => "Manage watermarks in Word documents (add text watermark)";
+    public string Description => @"Manage watermarks in Word documents. Supports 1 operation: add.
+
+Usage examples:
+- Add watermark: word_watermark(operation='add', path='doc.docx', text='CONFIDENTIAL', fontSize=72, isSemitransparent=true)";
 
     public object InputSchema => new
     {
@@ -16,13 +19,14 @@ public class WordWatermarkTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation: add",
+                description = @"Operation to perform.
+- 'add': Add text watermark (required params: path, text)",
                 @enum = new[] { "add" }
             },
             path = new
             {
                 type = "string",
-                description = "Document file path"
+                description = "Document file path (required for all operations)"
             },
             outputPath = new
             {

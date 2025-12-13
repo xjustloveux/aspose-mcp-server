@@ -8,7 +8,13 @@ namespace AsposeMcpServer.Tools;
 
 public class WordFormatTool : IAsposeTool
 {
-    public string Description => "Manage formatting in Word documents (get/set run format, get tab stops, set paragraph border)";
+    public string Description => @"Manage formatting in Word documents. Supports 4 operations: get_run_format, set_run_format, get_tab_stops, set_paragraph_border.
+
+Usage examples:
+- Get run format: word_format(operation='get_run_format', path='doc.docx', paragraphIndex=0, runIndex=0)
+- Set run format: word_format(operation='set_run_format', path='doc.docx', paragraphIndex=0, runIndex=0, bold=true, fontSize=14)
+- Get tab stops: word_format(operation='get_tab_stops', path='doc.docx', paragraphIndex=0)
+- Set paragraph border: word_format(operation='set_paragraph_border', path='doc.docx', paragraphIndex=0, borderType='all', style='single', width=1.0)";
 
     public object InputSchema => new
     {
@@ -18,13 +24,17 @@ public class WordFormatTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation: get_run_format, set_run_format, get_tab_stops, set_paragraph_border",
+                description = @"Operation to perform.
+- 'get_run_format': Get run formatting (required params: path, paragraphIndex, runIndex)
+- 'set_run_format': Set run formatting (required params: path, paragraphIndex, runIndex)
+- 'get_tab_stops': Get tab stops (required params: path, paragraphIndex)
+- 'set_paragraph_border': Set paragraph border (required params: path, paragraphIndex)",
                 @enum = new[] { "get_run_format", "set_run_format", "get_tab_stops", "set_paragraph_border" }
             },
             path = new
             {
                 type = "string",
-                description = "Document file path"
+                description = "Document file path (required for all operations)"
             },
             outputPath = new
             {
@@ -165,6 +175,23 @@ public class WordFormatTool : IAsposeTool
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>();
 
         var doc = new Document(path);
+        
+        // Handle paragraphIndex=-1 (document end)
+        if (paragraphIndex == -1)
+        {
+            var lastSection = doc.LastSection;
+            var bodyParagraphs = lastSection.Body.GetChildNodes(NodeType.Paragraph, false);
+            if (bodyParagraphs.Count > 0)
+            {
+                paragraphIndex = bodyParagraphs.Count - 1;
+                sectionIndex = doc.Sections.Count - 1;
+            }
+            else
+            {
+                throw new ArgumentException("Cannot get run format: document has no paragraphs.");
+            }
+        }
+        
         var sectionIdx = sectionIndex ?? 0;
         if (sectionIdx < 0 || sectionIdx >= doc.Sections.Count)
             throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
@@ -173,7 +200,7 @@ public class WordFormatTool : IAsposeTool
         var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
 
         if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
-            throw new ArgumentException($"paragraphIndex must be between 0 and {paragraphs.Count - 1}");
+            throw new ArgumentException($"paragraphIndex must be between 0 and {paragraphs.Count - 1}, or use -1 for document end");
 
         var para = paragraphs[paragraphIndex];
         var runs = para.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
@@ -182,7 +209,7 @@ public class WordFormatTool : IAsposeTool
         if (runIndex.HasValue)
         {
             if (runIndex.Value < 0 || runIndex.Value >= runs.Count)
-                throw new ArgumentException($"runIndex must be between 0 and {runs.Count - 1}");
+                throw new ArgumentException($"runIndex {runIndex.Value} 超出範圍 (段落 #{paragraphIndex} 共有 {runs.Count} 個 Run，有效範圍: 0-{runs.Count - 1})");
 
             var run = runs[runIndex.Value];
             sb.AppendLine($"=== Run {runIndex.Value} Format ===");
@@ -194,6 +221,9 @@ public class WordFormatTool : IAsposeTool
             sb.AppendLine($"  Bold: {run.Font.Bold}");
             sb.AppendLine($"  Italic: {run.Font.Italic}");
             sb.AppendLine($"  Underline: {run.Font.Underline}");
+            sb.AppendLine($"  StrikeThrough: {run.Font.StrikeThrough}");
+            sb.AppendLine($"  Superscript: {run.Font.Superscript}");
+            sb.AppendLine($"  Subscript: {run.Font.Subscript}");
             sb.AppendLine($"  Color: #{run.Font.Color.R:X2}{run.Font.Color.G:X2}{run.Font.Color.B:X2}");
         }
         else
@@ -205,6 +235,10 @@ public class WordFormatTool : IAsposeTool
                 sb.AppendLine($"\n[{i}] Text: {run.Text}");
                 sb.AppendLine($"    Font: {run.Font.NameAscii}/{run.Font.NameFarEast}, Size: {run.Font.Size}pt");
                 sb.AppendLine($"    Bold: {run.Font.Bold}, Italic: {run.Font.Italic}");
+                sb.AppendLine($"    Underline: {run.Font.Underline}");
+                if (run.Font.StrikeThrough) sb.AppendLine($"    StrikeThrough: True");
+                if (run.Font.Superscript) sb.AppendLine($"    Superscript: True");
+                if (run.Font.Subscript) sb.AppendLine($"    Subscript: True");
             }
         }
 
@@ -230,6 +264,23 @@ public class WordFormatTool : IAsposeTool
         var color = arguments?["color"]?.GetValue<string>();
 
         var doc = new Document(path);
+        
+        // Handle paragraphIndex=-1 (document end)
+        if (paragraphIndex == -1)
+        {
+            var lastSection = doc.LastSection;
+            var bodyParagraphs = lastSection.Body.GetChildNodes(NodeType.Paragraph, false);
+            if (bodyParagraphs.Count > 0)
+            {
+                paragraphIndex = bodyParagraphs.Count - 1;
+                sectionIndex = doc.Sections.Count - 1;
+            }
+            else
+            {
+                throw new ArgumentException("Cannot get run format: document has no paragraphs.");
+            }
+        }
+        
         var sectionIdx = sectionIndex ?? 0;
         if (sectionIdx < 0 || sectionIdx >= doc.Sections.Count)
             throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
@@ -238,16 +289,36 @@ public class WordFormatTool : IAsposeTool
         var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
 
         if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
-            throw new ArgumentException($"paragraphIndex must be between 0 and {paragraphs.Count - 1}");
+            throw new ArgumentException($"paragraphIndex must be between 0 and {paragraphs.Count - 1}, or use -1 for document end");
 
         var para = paragraphs[paragraphIndex];
         var runs = para.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+
+        // If paragraph has no runs and runIndex is specified, create a run
+        if (runs.Count == 0 && runIndex.HasValue)
+        {
+            if (runIndex.Value != 0)
+            {
+                throw new ArgumentException($"段落沒有 Run 節點，runIndex 必須為 0 才能創建新的 Run");
+            }
+            // Create a new run with empty text
+            var newRun = new Run(doc);
+            para.AppendChild(newRun);
+            runs = para.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+        }
+        // If paragraph has no runs and no runIndex specified, create a run
+        else if (runs.Count == 0)
+        {
+            var newRun = new Run(doc);
+            para.AppendChild(newRun);
+            runs = para.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+        }
 
         List<Run> runsToFormat;
         if (runIndex.HasValue)
         {
             if (runIndex.Value < 0 || runIndex.Value >= runs.Count)
-                throw new ArgumentException($"runIndex must be between 0 and {runs.Count - 1}");
+                throw new ArgumentException($"runIndex must be between 0 and {runs.Count - 1} (段落共有 {runs.Count} 個 Run)");
             runsToFormat = new List<Run> { runs[runIndex.Value] };
         }
         else
@@ -485,7 +556,7 @@ public class WordFormatTool : IAsposeTool
         {
             borders.Top.LineStyle = GetLineStyle(defaultLineStyle);
             borders.Top.LineWidth = defaultLineWidth;
-            borders.Top.Color = ParseColor(defaultLineColor);
+            borders.Top.Color = ColorHelper.ParseColor(defaultLineColor);
         }
         else
             borders.Top.LineStyle = LineStyle.None;
@@ -494,7 +565,7 @@ public class WordFormatTool : IAsposeTool
         {
             borders.Bottom.LineStyle = GetLineStyle(defaultLineStyle);
             borders.Bottom.LineWidth = defaultLineWidth;
-            borders.Bottom.Color = ParseColor(defaultLineColor);
+            borders.Bottom.Color = ColorHelper.ParseColor(defaultLineColor);
         }
         else
             borders.Bottom.LineStyle = LineStyle.None;
@@ -503,7 +574,7 @@ public class WordFormatTool : IAsposeTool
         {
             borders.Left.LineStyle = GetLineStyle(defaultLineStyle);
             borders.Left.LineWidth = defaultLineWidth;
-            borders.Left.Color = ParseColor(defaultLineColor);
+            borders.Left.Color = ColorHelper.ParseColor(defaultLineColor);
         }
         else
             borders.Left.LineStyle = LineStyle.None;
@@ -512,7 +583,7 @@ public class WordFormatTool : IAsposeTool
         {
             borders.Right.LineStyle = GetLineStyle(defaultLineStyle);
             borders.Right.LineWidth = defaultLineWidth;
-            borders.Right.Color = ParseColor(defaultLineColor);
+            borders.Right.Color = ColorHelper.ParseColor(defaultLineColor);
         }
         else
             borders.Right.LineStyle = LineStyle.None;
@@ -544,22 +615,5 @@ public class WordFormatTool : IAsposeTool
         };
     }
 
-    private System.Drawing.Color ParseColor(string colorStr)
-    {
-        if (string.IsNullOrEmpty(colorStr))
-            return System.Drawing.Color.Black;
-        
-        colorStr = colorStr.TrimStart('#');
-        
-        if (colorStr.Length == 6)
-        {
-            var r = Convert.ToInt32(colorStr.Substring(0, 2), 16);
-            var g = Convert.ToInt32(colorStr.Substring(2, 2), 16);
-            var b = Convert.ToInt32(colorStr.Substring(4, 2), 16);
-            return System.Drawing.Color.FromArgb(r, g, b);
-        }
-        
-        return System.Drawing.Color.Black;
-    }
 }
 

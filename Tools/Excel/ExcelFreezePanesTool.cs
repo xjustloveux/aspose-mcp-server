@@ -11,7 +11,12 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class ExcelFreezePanesTool : IAsposeTool
 {
-    public string Description => "Manage Excel freeze panes: freeze, unfreeze, or get freeze panes status";
+    public string Description => @"Manage Excel freeze panes. Supports 3 operations: freeze, unfreeze, get.
+
+Usage examples:
+- Freeze panes: excel_freeze_panes(operation='freeze', path='book.xlsx', row=1, column=1)
+- Unfreeze panes: excel_freeze_panes(operation='unfreeze', path='book.xlsx')
+- Get freeze status: excel_freeze_panes(operation='get', path='book.xlsx')";
 
     public object InputSchema => new
     {
@@ -21,13 +26,16 @@ public class ExcelFreezePanesTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'freeze', 'unfreeze', 'get'",
+                description = @"Operation to perform.
+- 'freeze': Freeze panes (required params: path, row, column)
+- 'unfreeze': Unfreeze panes (required params: path)
+- 'get': Get freeze panes status (required params: path)",
                 @enum = new[] { "freeze", "unfreeze", "get" }
             },
             path = new
             {
                 type = "string",
-                description = "Excel file path"
+                description = "Excel file path (required for all operations)"
             },
             sheetIndex = new
             {

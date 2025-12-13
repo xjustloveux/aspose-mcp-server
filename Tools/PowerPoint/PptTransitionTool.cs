@@ -13,7 +13,12 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class PptTransitionTool : IAsposeTool
 {
-    public string Description => "Manage PowerPoint transitions: set, get, or delete";
+    public string Description => @"Manage PowerPoint transitions. Supports 3 operations: set, get, delete.
+
+Usage examples:
+- Set transition: ppt_transition(operation='set', path='presentation.pptx', slideIndex=0, transitionType='Fade', durationSeconds=1.5)
+- Get transition: ppt_transition(operation='get', path='presentation.pptx', slideIndex=0)
+- Delete transition: ppt_transition(operation='delete', path='presentation.pptx', slideIndex=0)";
 
     public object InputSchema => new
     {
@@ -23,13 +28,16 @@ public class PptTransitionTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'set', 'get', 'delete'",
+                description = @"Operation to perform.
+- 'set': Set slide transition (required params: path, slideIndex, transitionType)
+- 'get': Get slide transition (required params: path, slideIndex)
+- 'delete': Delete slide transition (required params: path, slideIndex)",
                 @enum = new[] { "set", "get", "delete" }
             },
             path = new
             {
                 type = "string",
-                description = "Presentation file path"
+                description = "Presentation file path (required for all operations)"
             },
             slideIndex = new
             {

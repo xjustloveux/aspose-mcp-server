@@ -12,7 +12,13 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class PptHyperlinkTool : IAsposeTool
 {
-    public string Description => "Manage PowerPoint hyperlinks: add, edit, delete, or get";
+    public string Description => @"Manage PowerPoint hyperlinks. Supports 4 operations: add, edit, delete, get.
+
+Usage examples:
+- Add hyperlink: ppt_hyperlink(operation='add', path='presentation.pptx', slideIndex=0, text='Link', url='https://example.com')
+- Edit hyperlink: ppt_hyperlink(operation='edit', path='presentation.pptx', slideIndex=0, shapeIndex=0, url='https://newurl.com')
+- Delete hyperlink: ppt_hyperlink(operation='delete', path='presentation.pptx', slideIndex=0, shapeIndex=0)
+- Get hyperlinks: ppt_hyperlink(operation='get', path='presentation.pptx', slideIndex=0)";
 
     public object InputSchema => new
     {
@@ -22,13 +28,17 @@ public class PptHyperlinkTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'add', 'edit', 'delete', 'get'",
+                description = @"Operation to perform.
+- 'add': Add hyperlink to shape (required params: path, slideIndex, text, url)
+- 'edit': Edit hyperlink (required params: path, slideIndex, shapeIndex, url)
+- 'delete': Delete hyperlink (required params: path, slideIndex, shapeIndex)
+- 'get': Get all hyperlinks (required params: path, slideIndex)",
                 @enum = new[] { "add", "edit", "delete", "get" }
             },
             path = new
             {
                 type = "string",
-                description = "Presentation file path"
+                description = "Presentation file path (required for all operations)"
             },
             slideIndex = new
             {

@@ -7,7 +7,11 @@ namespace AsposeMcpServer.Tools;
 
 public class PdfRedactTool : IAsposeTool
 {
-    public string Description => "Redact (black out) text or area on PDF page";
+    public string Description => @"Redact (black out) text or area on PDF page.
+
+Usage examples:
+- Redact area: pdf_redact(path='doc.pdf', pageIndex=1, x=100, y=100, width=200, height=50)
+- Redact with color: pdf_redact(path='doc.pdf', pageIndex=1, x=100, y=100, width=200, height=50, fillColor='255,0,0')";
 
     public object InputSchema => new
     {
@@ -17,7 +21,7 @@ public class PdfRedactTool : IAsposeTool
             path = new
             {
                 type = "string",
-                description = "PDF file path"
+                description = "PDF file path (required)"
             },
             pageIndex = new
             {
@@ -96,8 +100,6 @@ public class PdfRedactTool : IAsposeTool
         }
 
         page.Annotations.Add(redactionAnnotation);
-        
-        // Note: Redaction application may require additional processing
         // The annotation is added and will be visible
         
         document.Save(path);

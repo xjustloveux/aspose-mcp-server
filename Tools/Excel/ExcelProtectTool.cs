@@ -11,7 +11,13 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class ExcelProtectTool : IAsposeTool
 {
-    public string Description => "Manage Excel protection: protect, unprotect, or get protection settings for workbook or worksheet";
+    public string Description => @"Manage Excel protection. Supports 4 operations: protect, unprotect, get, set_cell_locked.
+
+Usage examples:
+- Protect sheet: excel_protect(operation='protect', path='book.xlsx', sheetIndex=0, password='password')
+- Unprotect sheet: excel_protect(operation='unprotect', path='book.xlsx', sheetIndex=0, password='password')
+- Get protection: excel_protect(operation='get', path='book.xlsx', sheetIndex=0)
+- Set cell locked: excel_protect(operation='set_cell_locked', path='book.xlsx', range='A1:B10', locked=true)";
 
     public object InputSchema => new
     {
@@ -21,13 +27,17 @@ public class ExcelProtectTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'protect', 'unprotect', 'get', 'set_cell_locked'",
+                description = @"Operation to perform.
+- 'protect': Protect workbook or sheet (required params: path, password)
+- 'unprotect': Unprotect workbook or sheet (required params: path, password)
+- 'get': Get protection settings (required params: path)
+- 'set_cell_locked': Set cell locked status (required params: path, range, locked)",
                 @enum = new[] { "protect", "unprotect", "get", "set_cell_locked" }
             },
             path = new
             {
                 type = "string",
-                description = "Excel file path"
+                description = "Excel file path (required for all operations)"
             },
             sheetIndex = new
             {

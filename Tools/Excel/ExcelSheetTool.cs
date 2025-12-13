@@ -13,7 +13,16 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class ExcelSheetTool : IAsposeTool
 {
-    public string Description => "Manage Excel sheets: add, delete, get, rename, move, copy, or hide worksheets";
+    public string Description => @"Manage Excel sheets. Supports 7 operations: add, delete, get, rename, move, copy, hide.
+
+Usage examples:
+- Add sheet: excel_sheet(operation='add', path='book.xlsx', sheetName='New Sheet')
+- Delete sheet: excel_sheet(operation='delete', path='book.xlsx', sheetIndex=1)
+- Get sheets: excel_sheet(operation='get', path='book.xlsx')
+- Rename sheet: excel_sheet(operation='rename', path='book.xlsx', sheetIndex=0, newName='Renamed')
+- Move sheet: excel_sheet(operation='move', path='book.xlsx', sheetIndex=0, insertAt=2)
+- Copy sheet: excel_sheet(operation='copy', path='book.xlsx', sheetIndex=0, newName='Copy')
+- Hide sheet: excel_sheet(operation='hide', path='book.xlsx', sheetIndex=1)";
 
     public object InputSchema => new
     {
@@ -23,13 +32,20 @@ public class ExcelSheetTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'add', 'delete', 'get', 'rename', 'move', 'copy', 'hide'",
+                description = @"Operation to perform.
+- 'add': Add a new sheet (required params: path, sheetName)
+- 'delete': Delete a sheet (required params: path, sheetIndex)
+- 'get': Get all sheets (required params: path)
+- 'rename': Rename a sheet (required params: path, sheetIndex, newName)
+- 'move': Move a sheet (required params: path, sheetIndex, insertAt)
+- 'copy': Copy a sheet (required params: path, sheetIndex, newName)
+- 'hide': Hide a sheet (required params: path, sheetIndex)",
                 @enum = new[] { "add", "delete", "get", "rename", "move", "copy", "hide" }
             },
             path = new
             {
                 type = "string",
-                description = "Excel file path"
+                description = "Excel file path (required for all operations)"
             },
             sheetIndex = new
             {
@@ -282,7 +298,6 @@ public class ExcelSheetTool : IAsposeTool
             }
 
             var newSheetIndex = workbook.Worksheets.AddCopy(sheetIndex);
-            // Note: MoveSheet may not be available, sheets are added at the end
             // If specific position is needed, would need to copy and reorder manually
             workbook.Save(path);
             return await Task.FromResult($"工作表 '{sheetName}' 已複製到位置 {targetIndex.Value}: {path}");

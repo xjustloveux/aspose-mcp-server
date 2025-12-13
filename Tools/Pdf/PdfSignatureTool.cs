@@ -9,7 +9,12 @@ namespace AsposeMcpServer.Tools;
 
 public class PdfSignatureTool : IAsposeTool
 {
-    public string Description => "Manage digital signatures in PDF documents (sign, delete, get)";
+    public string Description => @"Manage digital signatures in PDF documents. Supports 3 operations: sign, delete, get.
+
+Usage examples:
+- Sign PDF: pdf_signature(operation='sign', path='doc.pdf', certificatePath='cert.pfx', certificatePassword='password')
+- Delete signature: pdf_signature(operation='delete', path='doc.pdf', signatureIndex=0)
+- Get signatures: pdf_signature(operation='get', path='doc.pdf')";
 
     public object InputSchema => new
     {
@@ -19,13 +24,16 @@ public class PdfSignatureTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation: sign, delete, get",
+                description = @"Operation to perform.
+- 'sign': Sign PDF with certificate (required params: path, certificatePath, certificatePassword)
+- 'delete': Delete a signature (required params: path, signatureIndex)
+- 'get': Get all signatures (required params: path)",
                 @enum = new[] { "sign", "delete", "get" }
             },
             path = new
             {
                 type = "string",
-                description = "PDF file path"
+                description = "PDF file path (required for all operations)"
             },
             outputPath = new
             {

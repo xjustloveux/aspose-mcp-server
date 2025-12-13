@@ -13,7 +13,12 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class PptAnimationTool : IAsposeTool
 {
-    public string Description => "Manage PowerPoint animations: add, edit, or delete";
+    public string Description => @"Manage PowerPoint animations. Supports 3 operations: add, edit, delete.
+
+Usage examples:
+- Add animation: ppt_animation(operation='add', path='presentation.pptx', slideIndex=0, shapeIndex=0, effectType='Fade')
+- Edit animation: ppt_animation(operation='edit', path='presentation.pptx', slideIndex=0, shapeIndex=0, effectType='Fly')
+- Delete animation: ppt_animation(operation='delete', path='presentation.pptx', slideIndex=0, shapeIndex=0)";
 
     public object InputSchema => new
     {
@@ -23,13 +28,16 @@ public class PptAnimationTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'add', 'edit', 'delete'",
+                description = @"Operation to perform.
+- 'add': Add animation to shape (required params: path, slideIndex, shapeIndex, effectType)
+- 'edit': Edit animation (required params: path, slideIndex, shapeIndex)
+- 'delete': Delete animation (required params: path, slideIndex, shapeIndex)",
                 @enum = new[] { "add", "edit", "delete" }
             },
             path = new
             {
                 type = "string",
-                description = "Presentation file path"
+                description = "Presentation file path (required for all operations)"
             },
             slideIndex = new
             {

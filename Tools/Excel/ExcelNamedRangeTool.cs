@@ -11,7 +11,12 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class ExcelNamedRangeTool : IAsposeTool
 {
-    public string Description => "Manage Excel named ranges: add, delete, or get named ranges from workbook";
+    public string Description => @"Manage Excel named ranges. Supports 3 operations: add, delete, get.
+
+Usage examples:
+- Add named range: excel_named_range(operation='add', path='book.xlsx', name='MyRange', range='A1:C10')
+- Delete named range: excel_named_range(operation='delete', path='book.xlsx', name='MyRange')
+- Get named ranges: excel_named_range(operation='get', path='book.xlsx')";
 
     public object InputSchema => new
     {
@@ -21,13 +26,16 @@ public class ExcelNamedRangeTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'add', 'delete', 'get'",
+                description = @"Operation to perform.
+- 'add': Add a named range (required params: path, name, range)
+- 'delete': Delete a named range (required params: path, name)
+- 'get': Get all named ranges (required params: path)",
                 @enum = new[] { "add", "delete", "get" }
             },
             path = new
             {
                 type = "string",
-                description = "Excel file path"
+                description = "Excel file path (required for all operations)"
             },
             name = new
             {

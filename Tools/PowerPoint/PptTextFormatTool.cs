@@ -13,7 +13,11 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class PptTextFormatTool : IAsposeTool
 {
-    public string Description => "Batch format PowerPoint text (font, size, bold, italic, color)";
+    public string Description => @"Batch format PowerPoint text. Formats font, size, bold, italic, color across slides.
+
+Usage examples:
+- Format all slides: ppt_text_format(path='presentation.pptx', fontName='Arial', fontSize=14, bold=true)
+- Format specific slides: ppt_text_format(path='presentation.pptx', slideIndices=[0,1,2], fontName='Times New Roman', fontSize=12)";
 
     public object InputSchema => new
     {
@@ -23,7 +27,7 @@ public class PptTextFormatTool : IAsposeTool
             path = new
             {
                 type = "string",
-                description = "Presentation file path"
+                description = "Presentation file path (required)"
             },
             slideIndices = new
             {

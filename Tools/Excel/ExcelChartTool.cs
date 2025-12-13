@@ -13,7 +13,15 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class ExcelChartTool : IAsposeTool
 {
-    public string Description => "Manage Excel charts: add, edit, delete, get, update data, or set properties (title, legend)";
+    public string Description => @"Manage Excel charts. Supports 6 operations: add, edit, delete, get, update_data, set_properties.
+
+Usage examples:
+- Add chart: excel_chart(operation='add', path='book.xlsx', chartType='Column', dataRange='A1:B10', position='A12')
+- Edit chart: excel_chart(operation='edit', path='book.xlsx', chartIndex=0, chartType='Line')
+- Delete chart: excel_chart(operation='delete', path='book.xlsx', chartIndex=0)
+- Get charts: excel_chart(operation='get', path='book.xlsx')
+- Update data: excel_chart(operation='update_data', path='book.xlsx', chartIndex=0, dataRange='A1:C10')
+- Set properties: excel_chart(operation='set_properties', path='book.xlsx', chartIndex=0, title='Chart Title')";
 
     public object InputSchema => new
     {
@@ -23,13 +31,19 @@ public class ExcelChartTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'add', 'edit', 'delete', 'get', 'update_data', 'set_properties'",
+                description = @"Operation to perform.
+- 'add': Add a chart (required params: path, chartType, dataRange, position)
+- 'edit': Edit chart properties (required params: path, chartIndex)
+- 'delete': Delete a chart (required params: path, chartIndex)
+- 'get': Get all charts (required params: path)
+- 'update_data': Update chart data (required params: path, chartIndex, dataRange)
+- 'set_properties': Set chart properties (required params: path, chartIndex)",
                 @enum = new[] { "add", "edit", "delete", "get", "update_data", "set_properties" }
             },
             path = new
             {
                 type = "string",
-                description = "Excel file path"
+                description = "Excel file path (required for all operations)"
             },
             outputPath = new
             {

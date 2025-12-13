@@ -14,7 +14,17 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class PptSlideTool : IAsposeTool
 {
-    public string Description => "Manage PowerPoint slides: add, delete, get info, move, duplicate, hide, clear, or edit";
+    public string Description => @"Manage PowerPoint slides. Supports 8 operations: add, delete, get_info, move, duplicate, hide, clear, edit.
+
+Usage examples:
+- Add slide: ppt_slide(operation='add', path='presentation.pptx', layoutType='Blank')
+- Delete slide: ppt_slide(operation='delete', path='presentation.pptx', slideIndex=0)
+- Get info: ppt_slide(operation='get_info', path='presentation.pptx')
+- Move slide: ppt_slide(operation='move', path='presentation.pptx', fromIndex=0, toIndex=2)
+- Duplicate slide: ppt_slide(operation='duplicate', path='presentation.pptx', slideIndex=0)
+- Hide slide: ppt_slide(operation='hide', path='presentation.pptx', slideIndex=0, hidden=true)
+- Clear slide: ppt_slide(operation='clear', path='presentation.pptx', slideIndex=0)
+- Edit slide: ppt_slide(operation='edit', path='presentation.pptx', slideIndex=0)";
 
     public object InputSchema => new
     {
@@ -24,13 +34,21 @@ public class PptSlideTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'add', 'delete', 'get_info', 'move', 'duplicate', 'hide', 'clear', 'edit'",
+                description = @"Operation to perform.
+- 'add': Add a new slide (required params: path)
+- 'delete': Delete a slide (required params: path, slideIndex)
+- 'get_info': Get slides info (required params: path)
+- 'move': Move a slide (required params: path, fromIndex, toIndex)
+- 'duplicate': Duplicate a slide (required params: path, slideIndex)
+- 'hide': Hide/show a slide (required params: path, slideIndex, hidden)
+- 'clear': Clear slide content (required params: path, slideIndex)
+- 'edit': Edit slide properties (required params: path, slideIndex)",
                 @enum = new[] { "add", "delete", "get_info", "move", "duplicate", "hide", "clear", "edit" }
             },
             path = new
             {
                 type = "string",
-                description = "Presentation file path"
+                description = "Presentation file path (required for all operations)"
             },
             slideIndex = new
             {

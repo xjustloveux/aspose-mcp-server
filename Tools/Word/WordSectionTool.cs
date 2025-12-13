@@ -11,7 +11,12 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class WordSectionTool : IAsposeTool
 {
-    public string Description => "Manage Word document sections: insert, delete, or get information";
+    public string Description => @"Manage Word document sections. Supports 3 operations: insert, delete, get.
+
+Usage examples:
+- Insert section: word_section(operation='insert', path='doc.docx', sectionBreakType='NextPage', insertAtParagraphIndex=5)
+- Delete section: word_section(operation='delete', path='doc.docx', sectionIndex=1)
+- Get sections: word_section(operation='get', path='doc.docx')";
 
     public object InputSchema => new
     {
@@ -21,13 +26,16 @@ public class WordSectionTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'insert', 'delete', 'get'",
+                description = @"Operation to perform.
+- 'insert': Insert a section break (required params: path, sectionBreakType)
+- 'delete': Delete a section (required params: path, sectionIndex)
+- 'get': Get all sections info (required params: path)",
                 @enum = new[] { "insert", "delete", "get" }
             },
             path = new
             {
                 type = "string",
-                description = "Document file path"
+                description = "Document file path (required for all operations)"
             },
             outputPath = new
             {
@@ -99,24 +107,34 @@ public class WordSectionTool : IAsposeTool
 
         if (insertAtParagraphIndex.HasValue)
         {
-            var actualSectionIndex = sectionIndex ?? 0;
-            if (actualSectionIndex < 0 || actualSectionIndex >= doc.Sections.Count)
+            if (insertAtParagraphIndex.Value == -1)
             {
-                actualSectionIndex = 0;
+                // insertAtParagraphIndex=-1 means document end
+                builder.MoveToDocumentEnd();
+                builder.InsertBreak(BreakType.SectionBreakContinuous);
+                builder.CurrentSection.PageSetup.SectionStart = breakType;
             }
-
-            var section = doc.Sections[actualSectionIndex];
-            var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
-            
-            if (insertAtParagraphIndex.Value < 0 || insertAtParagraphIndex.Value >= paragraphs.Count)
+            else
             {
-                throw new ArgumentException($"insertAtParagraphIndex must be between 0 and {paragraphs.Count - 1}");
-            }
+                var actualSectionIndex = sectionIndex ?? 0;
+                if (actualSectionIndex < 0 || actualSectionIndex >= doc.Sections.Count)
+                {
+                    actualSectionIndex = 0;
+                }
 
-            var para = paragraphs[insertAtParagraphIndex.Value];
-            builder.MoveTo(para);
-            builder.InsertBreak(BreakType.SectionBreakContinuous);
-            builder.CurrentSection.PageSetup.SectionStart = breakType;
+                var section = doc.Sections[actualSectionIndex];
+                var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
+                
+                if (insertAtParagraphIndex.Value < 0 || insertAtParagraphIndex.Value >= paragraphs.Count)
+                {
+                    throw new ArgumentException($"insertAtParagraphIndex must be between 0 and {paragraphs.Count - 1}, or use -1 for document end");
+                }
+
+                var para = paragraphs[insertAtParagraphIndex.Value];
+                builder.MoveTo(para);
+                builder.InsertBreak(BreakType.SectionBreakContinuous);
+                builder.CurrentSection.PageSetup.SectionStart = breakType;
+            }
         }
         else
         {

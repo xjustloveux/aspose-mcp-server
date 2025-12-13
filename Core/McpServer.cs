@@ -191,6 +191,7 @@ public class McpServer
                         {
                             var tool = kvp.Value;
                             var toolName = kvp.Key;
+                            
                             var toolObj = new Dictionary<string, object?>
                             {
                                 ["name"] = toolName,

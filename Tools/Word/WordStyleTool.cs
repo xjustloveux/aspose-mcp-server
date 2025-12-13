@@ -7,7 +7,13 @@ namespace AsposeMcpServer.Tools;
 
 public class WordStyleTool : IAsposeTool
 {
-    public string Description => "Manage styles in Word documents (get, create, apply, copy from another document)";
+    public string Description => @"Manage styles in Word documents. Supports 4 operations: get_styles, create_style, apply_style, copy_styles.
+
+Usage examples:
+- Get styles: word_style(operation='get_styles', path='doc.docx', includeBuiltIn=true)
+- Create style: word_style(operation='create_style', path='doc.docx', styleName='CustomStyle', styleType='paragraph', fontSize=14, bold=true)
+- Apply style: word_style(operation='apply_style', path='doc.docx', styleName='Heading 1', paragraphIndex=0)
+- Copy styles: word_style(operation='copy_styles', path='doc.docx', sourcePath='template.docx')";
 
     public object InputSchema => new
     {
@@ -17,13 +23,17 @@ public class WordStyleTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation: get_styles, create_style, apply_style, copy_styles",
+                description = @"Operation to perform.
+- 'get_styles': Get all styles (required params: path)
+- 'create_style': Create a new style (required params: path, styleName, styleType)
+- 'apply_style': Apply style to paragraph (required params: path, styleName, paragraphIndex)
+- 'copy_styles': Copy styles from another document (required params: path, sourcePath)",
                 @enum = new[] { "get_styles", "create_style", "apply_style", "copy_styles" }
             },
             path = new
             {
                 type = "string",
-                description = "Document file path"
+                description = "Document file path (required for all operations)"
             },
             outputPath = new
             {
@@ -183,40 +193,76 @@ public class WordStyleTool : IAsposeTool
         
         result.AppendLine("=== Document Styles ===\n");
 
-        var paraStyles = doc.Styles.Cast<Style>()
-            .Where(s => s.Type == StyleType.Paragraph && (includeBuiltIn || !s.BuiltIn))
-            .OrderBy(s => s.Name)
-            .ToList();
+        List<Style> paraStyles;
+        
+        if (includeBuiltIn)
+        {
+            // Include all styles (built-in and custom)
+            paraStyles = doc.Styles.Cast<Style>()
+                .Where(s => s.Type == StyleType.Paragraph)
+                .OrderBy(s => s.Name)
+                .ToList();
+        }
+        else
+        {
+            var usedStyleNames = new HashSet<string>();
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>();
+            foreach (var para in paragraphs)
+            {
+                if (para.ParagraphFormat.Style != null && !string.IsNullOrEmpty(para.ParagraphFormat.Style.Name))
+                {
+                    usedStyleNames.Add(para.ParagraphFormat.Style.Name);
+                }
+            }
+            
+            // Return styles that are either custom (not built-in) OR are built-in but actually used in the document
+            paraStyles = doc.Styles.Cast<Style>()
+                .Where(s => s.Type == StyleType.Paragraph && (!s.BuiltIn || usedStyleNames.Contains(s.Name)))
+                .OrderBy(s => s.Name)
+                .ToList();
+        }
 
         result.AppendLine("【Paragraph Styles】");
-        foreach (var style in paraStyles)
+        if (paraStyles.Count == 0)
         {
-            result.AppendLine($"\nStyle Name: {style.Name}");
-            if (!string.IsNullOrEmpty(style.BaseStyleName))
-                result.AppendLine($"  Based on: {style.BaseStyleName}");
-            
-            var font = style.Font;
-            if (font.NameAscii != font.NameFarEast)
+            result.AppendLine("(No paragraph styles found)");
+        }
+        else
+        {
+            foreach (var style in paraStyles)
             {
-                result.AppendLine($"  Font (ASCII): {font.NameAscii}");
-                result.AppendLine($"  Font (Far East): {font.NameFarEast}");
+                result.AppendLine($"\nStyle Name: {style.Name}");
+                result.AppendLine($"  Built-in: {(style.BuiltIn ? "Yes" : "No")}");
+                if (!string.IsNullOrEmpty(style.BaseStyleName))
+                    result.AppendLine($"  Based on: {style.BaseStyleName}");
+                
+                var font = style.Font;
+                if (font.NameAscii != font.NameFarEast)
+                {
+                    result.AppendLine($"  Font (ASCII): {font.NameAscii}");
+                    result.AppendLine($"  Font (Far East): {font.NameFarEast}");
+                }
+                else
+                    result.AppendLine($"  Font: {font.Name}");
+                
+                result.AppendLine($"  Size: {font.Size} pt");
+                if (font.Bold) result.AppendLine("  Bold: Yes");
+                if (font.Italic) result.AppendLine("  Italic: Yes");
+                
+                var paraFormat = style.ParagraphFormat;
+                result.AppendLine($"  Alignment: {paraFormat.Alignment}");
+                if (paraFormat.SpaceBefore != 0)
+                    result.AppendLine($"  Space Before: {paraFormat.SpaceBefore} pt");
+                if (paraFormat.SpaceAfter != 0)
+                    result.AppendLine($"  Space After: {paraFormat.SpaceAfter} pt");
             }
-            else
-                result.AppendLine($"  Font: {font.Name}");
-            
-            result.AppendLine($"  Size: {font.Size} pt");
-            if (font.Bold) result.AppendLine("  Bold: Yes");
-            if (font.Italic) result.AppendLine("  Italic: Yes");
-            
-            var paraFormat = style.ParagraphFormat;
-            result.AppendLine($"  Alignment: {paraFormat.Alignment}");
-            if (paraFormat.SpaceBefore != 0)
-                result.AppendLine($"  Space Before: {paraFormat.SpaceBefore} pt");
-            if (paraFormat.SpaceAfter != 0)
-                result.AppendLine($"  Space After: {paraFormat.SpaceAfter} pt");
         }
 
         result.AppendLine($"\n\nTotal Paragraph Styles: {paraStyles.Count}");
+        if (!includeBuiltIn)
+        {
+            result.AppendLine("(Showing custom styles and built-in styles actually used in the document)");
+        }
 
         return await Task.FromResult(result.ToString());
     }
@@ -300,7 +346,7 @@ public class WordStyleTool : IAsposeTool
         {
             try
             {
-                style.Font.Color = ParseColor(color);
+                style.Font.Color = ColorHelper.ParseColor(color);
             }
             catch { }
         }
@@ -401,7 +447,7 @@ public class WordStyleTool : IAsposeTool
             var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
             
             if (paragraphIndex.Value < 0 || paragraphIndex.Value >= paragraphs.Count)
-                throw new ArgumentException($"paragraphIndex must be between 0 and {paragraphs.Count - 1}");
+                throw new ArgumentException($"paragraphIndex must be between 0 and {paragraphs.Count - 1} (節 {sectionIdx} 共有 {paragraphs.Count} 個段落，總文檔段落數: {doc.GetChildNodes(NodeType.Paragraph, true).Count})");
 
             paragraphs[paragraphIndex.Value].ParagraphFormat.Style = style;
             appliedCount = 1;
@@ -511,22 +557,5 @@ public class WordStyleTool : IAsposeTool
         }
     }
 
-    private System.Drawing.Color ParseColor(string color)
-    {
-        if (color.StartsWith("#"))
-            color = color.Substring(1);
-
-        if (color.Length == 6)
-        {
-            int r = Convert.ToInt32(color.Substring(0, 2), 16);
-            int g = Convert.ToInt32(color.Substring(2, 2), 16);
-            int b = Convert.ToInt32(color.Substring(4, 2), 16);
-            return System.Drawing.Color.FromArgb(r, g, b);
-        }
-        else
-        {
-            return System.Drawing.Color.FromName(color);
-        }
-    }
 }
 

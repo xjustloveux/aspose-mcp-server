@@ -11,7 +11,12 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class PptSlideSettingsTool : IAsposeTool
 {
-    public string Description => "Manage PowerPoint slide settings: set slide size or orientation";
+    public string Description => @"Manage PowerPoint slide settings. Supports 2 operations: set_size, set_orientation.
+
+Usage examples:
+- Set slide size: ppt_slide_settings(operation='set_size', path='presentation.pptx', preset='OnScreen16x9')
+- Set custom size: ppt_slide_settings(operation='set_size', path='presentation.pptx', preset='Custom', width=960, height=720)
+- Set orientation: ppt_slide_settings(operation='set_orientation', path='presentation.pptx', orientation='Portrait')";
 
     public object InputSchema => new
     {
@@ -21,13 +26,15 @@ public class PptSlideSettingsTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'set_size', 'set_orientation'",
+                description = @"Operation to perform.
+- 'set_size': Set slide size (required params: path, preset)
+- 'set_orientation': Set slide orientation (required params: path, orientation)",
                 @enum = new[] { "set_size", "set_orientation" }
             },
             path = new
             {
                 type = "string",
-                description = "Presentation file path"
+                description = "Presentation file path (required for all operations)"
             },
             preset = new
             {

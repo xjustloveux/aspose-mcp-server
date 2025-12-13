@@ -12,7 +12,15 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class ExcelDataOperationsTool : IAsposeTool
 {
-    public string Description => "Excel data operations: sort, find/replace, batch write, get content, get statistics, get used range";
+    public string Description => @"Excel data operations. Supports 6 operations: sort, find_replace, batch_write, get_content, get_statistics, get_used_range.
+
+Usage examples:
+- Sort data: excel_data_operations(operation='sort', path='book.xlsx', range='A1:C10', sortColumn=0)
+- Find and replace: excel_data_operations(operation='find_replace', path='book.xlsx', searchText='old', replaceText='new')
+- Batch write: excel_data_operations(operation='batch_write', path='book.xlsx', data={'A1':'Value1','B1':'Value2'})
+- Get content: excel_data_operations(operation='get_content', path='book.xlsx', range='A1:C10')
+- Get statistics: excel_data_operations(operation='get_statistics', path='book.xlsx', range='A1:A10')
+- Get used range: excel_data_operations(operation='get_used_range', path='book.xlsx')";
 
     public object InputSchema => new
     {
@@ -22,13 +30,19 @@ public class ExcelDataOperationsTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'sort', 'find_replace', 'batch_write', 'get_content', 'get_statistics', 'get_used_range'",
+                description = @"Operation to perform.
+- 'sort': Sort data in range (required params: path, range, sortColumn)
+- 'find_replace': Find and replace text (required params: path, searchText, replaceText)
+- 'batch_write': Write multiple values at once (required params: path, data)
+- 'get_content': Get cell content (required params: path)
+- 'get_statistics': Get statistics for range (required params: path, range)
+- 'get_used_range': Get used range info (required params: path)",
                 @enum = new[] { "sort", "find_replace", "batch_write", "get_content", "get_statistics", "get_used_range" }
             },
             path = new
             {
                 type = "string",
-                description = "Excel file path"
+                description = "Excel file path (required for all operations)"
             },
             outputPath = new
             {

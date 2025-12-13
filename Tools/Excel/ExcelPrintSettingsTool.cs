@@ -10,7 +10,13 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class ExcelPrintSettingsTool : IAsposeTool
 {
-    public string Description => "Manage Excel print settings: set print area, titles, page setup, or print settings";
+    public string Description => @"Manage Excel print settings. Supports 4 operations: set_print_area, set_print_titles, set_page_setup, set_all.
+
+Usage examples:
+- Set print area: excel_print_settings(operation='set_print_area', path='book.xlsx', range='A1:D10')
+- Set print titles: excel_print_settings(operation='set_print_titles', path='book.xlsx', rows='1:1', columns='A:A')
+- Set page setup: excel_print_settings(operation='set_page_setup', path='book.xlsx', orientation='landscape', paperSize='A4')
+- Set all: excel_print_settings(operation='set_all', path='book.xlsx', range='A1:D10', orientation='portrait')";
 
     public object InputSchema => new
     {
@@ -20,13 +26,17 @@ public class ExcelPrintSettingsTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'set_print_area', 'set_print_titles', 'set_page_setup', 'set_all'",
+                description = @"Operation to perform.
+- 'set_print_area': Set print area (required params: path, range)
+- 'set_print_titles': Set print titles (required params: path)
+- 'set_page_setup': Set page setup (required params: path)
+- 'set_all': Set all print settings (required params: path)",
                 @enum = new[] { "set_print_area", "set_print_titles", "set_page_setup", "set_all" }
             },
             path = new
             {
                 type = "string",
-                description = "Excel file path"
+                description = "Excel file path (required for all operations)"
             },
             sheetIndex = new
             {

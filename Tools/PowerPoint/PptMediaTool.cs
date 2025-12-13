@@ -11,7 +11,14 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class PptMediaTool : IAsposeTool
 {
-    public string Description => "Manage PowerPoint media: add audio/video, delete, or set playback options";
+    public string Description => @"Manage PowerPoint media. Supports 5 operations: add_audio, delete_audio, add_video, delete_video, set_playback.
+
+Usage examples:
+- Add audio: ppt_media(operation='add_audio', path='presentation.pptx', slideIndex=0, audioPath='audio.mp3', x=100, y=100)
+- Delete audio: ppt_media(operation='delete_audio', path='presentation.pptx', slideIndex=0, shapeIndex=0)
+- Add video: ppt_media(operation='add_video', path='presentation.pptx', slideIndex=0, videoPath='video.mp4', x=100, y=100)
+- Delete video: ppt_media(operation='delete_video', path='presentation.pptx', slideIndex=0, shapeIndex=0)
+- Set playback: ppt_media(operation='set_playback', path='presentation.pptx', slideIndex=0, shapeIndex=0, playOnClick=true)";
 
     public object InputSchema => new
     {
@@ -21,13 +28,18 @@ public class PptMediaTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'add_audio', 'delete_audio', 'add_video', 'delete_video', 'set_playback'",
+                description = @"Operation to perform.
+- 'add_audio': Add audio to slide (required params: path, slideIndex, audioPath)
+- 'delete_audio': Delete audio (required params: path, slideIndex, shapeIndex)
+- 'add_video': Add video to slide (required params: path, slideIndex, videoPath)
+- 'delete_video': Delete video (required params: path, slideIndex, shapeIndex)
+- 'set_playback': Set playback options (required params: path, slideIndex, shapeIndex)",
                 @enum = new[] { "add_audio", "delete_audio", "add_video", "delete_video", "set_playback" }
             },
             path = new
             {
                 type = "string",
-                description = "Presentation file path"
+                description = "Presentation file path (required for all operations)"
             },
             slideIndex = new
             {

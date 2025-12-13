@@ -11,7 +11,12 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class ExcelMergeCellsTool : IAsposeTool
 {
-    public string Description => "Manage Excel merged cells: merge, unmerge, or get merged cells information";
+    public string Description => @"Manage Excel merged cells. Supports 3 operations: merge, unmerge, get.
+
+Usage examples:
+- Merge cells: excel_merge_cells(operation='merge', path='book.xlsx', range='A1:C1')
+- Unmerge cells: excel_merge_cells(operation='unmerge', path='book.xlsx', range='A1:C1')
+- Get merged cells: excel_merge_cells(operation='get', path='book.xlsx')";
 
     public object InputSchema => new
     {
@@ -21,13 +26,16 @@ public class ExcelMergeCellsTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'merge', 'unmerge', 'get'",
+                description = @"Operation to perform.
+- 'merge': Merge cells (required params: path, range)
+- 'unmerge': Unmerge cells (required params: path, range)
+- 'get': Get merged cells info (required params: path)",
                 @enum = new[] { "merge", "unmerge", "get" }
             },
             path = new
             {
                 type = "string",
-                description = "Excel file path"
+                description = "Excel file path (required for all operations)"
             },
             sheetIndex = new
             {

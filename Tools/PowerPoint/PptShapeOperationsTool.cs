@@ -13,7 +13,15 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class PptShapeOperationsTool : IAsposeTool
 {
-    public string Description => "PowerPoint shape operations: group, ungroup, copy, reorder, align, or flip";
+    public string Description => @"PowerPoint shape operations. Supports 6 operations: group, ungroup, copy, reorder, align, flip.
+
+Usage examples:
+- Group shapes: ppt_shape_operations(operation='group', path='presentation.pptx', slideIndex=0, shapeIndices=[0,1,2])
+- Ungroup shape: ppt_shape_operations(operation='ungroup', path='presentation.pptx', slideIndex=0, shapeIndex=0)
+- Copy shape: ppt_shape_operations(operation='copy', path='presentation.pptx', slideIndex=0, shapeIndex=0, fromSlide=0, toSlide=1)
+- Reorder shape: ppt_shape_operations(operation='reorder', path='presentation.pptx', slideIndex=0, shapeIndex=0, newIndex=2)
+- Align shapes: ppt_shape_operations(operation='align', path='presentation.pptx', slideIndex=0, shapeIndices=[0,1,2], alignment='left')
+- Flip shape: ppt_shape_operations(operation='flip', path='presentation.pptx', slideIndex=0, shapeIndex=0, flipType='horizontal')";
 
     public object InputSchema => new
     {
@@ -23,13 +31,19 @@ public class PptShapeOperationsTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'group', 'ungroup', 'copy', 'reorder', 'align', 'flip'",
+                description = @"Operation to perform.
+- 'group': Group multiple shapes (required params: path, slideIndex, shapeIndices)
+- 'ungroup': Ungroup a shape (required params: path, slideIndex, shapeIndex)
+- 'copy': Copy shape to another slide (required params: path, slideIndex, shapeIndex, fromSlide, toSlide)
+- 'reorder': Reorder shape position (required params: path, slideIndex, shapeIndex, newIndex)
+- 'align': Align multiple shapes (required params: path, slideIndex, shapeIndices, alignment)
+- 'flip': Flip a shape (required params: path, slideIndex, shapeIndex, flipType)",
                 @enum = new[] { "group", "ungroup", "copy", "reorder", "align", "flip" }
             },
             path = new
             {
                 type = "string",
-                description = "Presentation file path"
+                description = "Presentation file path (required for all operations)"
             },
             slideIndex = new
             {
@@ -300,8 +314,6 @@ public class PptShapeOperationsTool : IAsposeTool
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
         var shape = PowerPointHelper.GetShape(slide, shapeIndex);
-
-        // Note: Flip operations may not be directly available on IShape
         // This functionality may require shape-specific implementations
         if (flipHorizontal.HasValue && shape is IAutoShape autoShapeH)
         {

@@ -8,7 +8,13 @@ namespace AsposeMcpServer.Tools;
 
 public class PdfFormFieldTool : IAsposeTool
 {
-    public string Description => "Manage form fields in PDF documents (add, delete, edit, get)";
+    public string Description => @"Manage form fields in PDF documents. Supports 4 operations: add, delete, edit, get.
+
+Usage examples:
+- Add form field: pdf_form_field(operation='add', path='doc.pdf', pageIndex=1, fieldType='TextBox', fieldName='name', x=100, y=100, width=200, height=20)
+- Delete form field: pdf_form_field(operation='delete', path='doc.pdf', fieldName='name')
+- Edit form field: pdf_form_field(operation='edit', path='doc.pdf', fieldName='name', value='New Value')
+- Get form field: pdf_form_field(operation='get', path='doc.pdf', fieldName='name')";
 
     public object InputSchema => new
     {
@@ -18,13 +24,17 @@ public class PdfFormFieldTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation: add, delete, edit, get",
+                description = @"Operation to perform.
+- 'add': Add a form field (required params: path, pageIndex, fieldType, fieldName, x, y, width, height)
+- 'delete': Delete a form field (required params: path, fieldName)
+- 'edit': Edit form field value (required params: path, fieldName)
+- 'get': Get form field info (required params: path, fieldName)",
                 @enum = new[] { "add", "delete", "edit", "get" }
             },
             path = new
             {
                 type = "string",
-                description = "PDF file path"
+                description = "PDF file path (required for all operations)"
             },
             outputPath = new
             {

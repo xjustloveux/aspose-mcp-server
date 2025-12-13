@@ -6,7 +6,14 @@ namespace AsposeMcpServer.Tools;
 
 public class WordFileTool : IAsposeTool
 {
-    public string Description => "Perform file operations on Word documents (create, create from template, convert, merge, split)";
+    public string Description => @"Perform file operations on Word documents. Supports 5 operations: create, create_from_template, convert, merge, split.
+
+Usage examples:
+- Create document: word_file(operation='create', outputPath='new.docx')
+- Create from template: word_file(operation='create_from_template', templatePath='template.docx', outputPath='output.docx', replacements={'name':'John'})
+- Convert format: word_file(operation='convert', path='doc.docx', outputPath='doc.pdf', format='pdf')
+- Merge documents: word_file(operation='merge', inputPaths=['doc1.docx','doc2.docx'], outputPath='merged.docx')
+- Split document: word_file(operation='split', path='doc.docx', outputDir='output/', splitBy='page')";
 
     public object InputSchema => new
     {
@@ -16,18 +23,23 @@ public class WordFileTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation: create, create_from_template, convert, merge, split",
+                description = @"Operation to perform.
+- 'create': Create a new document (required params: outputPath)
+- 'create_from_template': Create from template (required params: templatePath, outputPath)
+- 'convert': Convert document format (required params: path, outputPath, format)
+- 'merge': Merge multiple documents (required params: inputPaths, outputPath)
+- 'split': Split document (required params: path, outputDir)",
                 @enum = new[] { "create", "create_from_template", "convert", "merge", "split" }
             },
             path = new
             {
                 type = "string",
-                description = "Input file path (required for most operations)"
+                description = "Input file path (required for convert and split operations)"
             },
             outputPath = new
             {
                 type = "string",
-                description = "Output file path (required for create, create_from_template, convert, merge)"
+                description = "Output file path (required for create, create_from_template, convert, and merge operations)"
             },
             templatePath = new
             {

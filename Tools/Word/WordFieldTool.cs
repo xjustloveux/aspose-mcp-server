@@ -14,7 +14,16 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class WordFieldTool : IAsposeTool
 {
-    public string Description => "Manage fields and form fields in Word documents: insert, edit, delete, update, get info";
+    public string Description => @"Manage fields and form fields in Word documents. Supports 10 operations: insert_field, edit_field, delete_field, update_field (or update_all), get_fields, get_field_detail, add_form_field, edit_form_field, delete_form_field, get_form_fields.
+
+Usage examples:
+- Insert field: word_field(operation='insert_field', path='doc.docx', fieldType='DATE', paragraphIndex=0)
+- Edit field: word_field(operation='edit_field', path='doc.docx', fieldIndex=0, fieldArgument='yyyy-MM-dd')
+- Delete field: word_field(operation='delete_field', path='doc.docx', fieldIndex=0)
+- Update field: word_field(operation='update_field', path='doc.docx', fieldIndex=0)
+- Update all fields: word_field(operation='update_all', path='doc.docx') or word_field(operation='update_field', path='doc.docx', updateAll=true)
+- Get fields: word_field(operation='get_fields', path='doc.docx')
+- Add form field: word_field(operation='add_form_field', path='doc.docx', formFieldType='TextInput', fieldName='name', paragraphIndex=0)";
 
     public object InputSchema => new
     {
@@ -24,13 +33,24 @@ public class WordFieldTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'insert_field', 'edit_field', 'delete_field', 'update_field', 'get_fields', 'get_field_detail', 'add_form_field', 'edit_form_field', 'delete_form_field', 'get_form_fields'",
+                description = @"Operation to perform.
+- 'insert_field': Insert a field (required params: path, fieldType)
+- 'edit_field': Edit a field (required params: path, fieldIndex)
+- 'delete_field': Delete a field (required params: path, fieldIndex)
+- 'update_field': Update a field (required params: path, fieldIndex optional if updateAll=true)
+- 'update_all': Alias for update_field with updateAll=true (required params: path)
+- 'get_fields': Get all fields (required params: path)
+- 'get_field_detail': Get field details (required params: path, fieldIndex)
+- 'add_form_field': Add a form field (required params: path, formFieldType, fieldName)
+- 'edit_form_field': Edit a form field (required params: path, fieldName)
+- 'delete_form_field': Delete a form field (required params: path, fieldName)
+- 'get_form_fields': Get all form fields (required params: path)",
                 @enum = new[] { "insert_field", "edit_field", "delete_field", "update_field", "get_fields", "get_field_detail", "add_form_field", "edit_form_field", "delete_form_field", "get_form_fields" }
             },
             path = new
             {
                 type = "string",
-                description = "Document file path"
+                description = "Document file path (required for all operations)"
             },
             outputPath = new
             {
@@ -54,7 +74,7 @@ public class WordFieldTool : IAsposeTool
             paragraphIndex = new
             {
                 type = "number",
-                description = "Paragraph index to insert into (0-based, optional, for insert_field operation)"
+                description = "Paragraph index to insert into (0-based, optional, for insert_field operation). Valid range: 0 to (total paragraphs - 1), or -1 for document start. When not specified, inserts at document end."
             },
             insertAtStart = new
             {
@@ -162,6 +182,17 @@ public class WordFieldTool : IAsposeTool
         var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
+        // Normalize operation name: update_all is an alias for update_field with updateAll=true
+        if (operation == "update_all")
+        {
+            operation = "update_field";
+            // Ensure updateAll is set to true if not already specified
+            if (arguments != null && !arguments.ContainsKey("updateAll"))
+            {
+                arguments["updateAll"] = true;
+            }
+        }
+        
         return operation switch
         {
             "insert_field" => await InsertFieldAsync(arguments, path, outputPath),
@@ -193,17 +224,42 @@ public class WordFieldTool : IAsposeTool
             var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
             if (paragraphIndex.Value == -1)
             {
-                if (paragraphs.Count > 0)
+                // paragraphIndex=-1 means document end, not document start
+                // Move to the last paragraph in the document body
+                var lastSection = doc.LastSection;
+                var bodyParagraphs = lastSection.Body.GetChildNodes(NodeType.Paragraph, false);
+                if (bodyParagraphs.Count > 0)
                 {
-                    var firstPara = paragraphs[0] as Paragraph;
-                    if (firstPara != null)
+                    var lastPara = bodyParagraphs[bodyParagraphs.Count - 1] as Paragraph;
+                    if (lastPara != null)
                     {
-                        builder.MoveTo(firstPara);
+                        builder.MoveTo(lastPara);
                         if (insertAtStart)
-                            builder.MoveToParagraph(0, 0);
+                        {
+                            // Move to start of last paragraph
+                            if (lastPara.Runs.Count > 0)
+                            {
+                                builder.MoveTo(lastPara.Runs[0]);
+                            }
+                        }
                         else
-                            builder.MoveToParagraph(0, firstPara.GetText().Length);
+                        {
+                            // Move to end of last paragraph
+                            if (lastPara.Runs.Count > 0)
+                            {
+                                var lastRun = lastPara.Runs[lastPara.Runs.Count - 1];
+                                builder.MoveTo(lastRun);
+                            }
+                        }
                     }
+                    else
+                    {
+                        builder.MoveToDocumentEnd();
+                    }
+                }
+                else
+                {
+                    builder.MoveToDocumentEnd();
                 }
             }
             else if (paragraphIndex.Value >= 0 && paragraphIndex.Value < paragraphs.Count)
@@ -211,10 +267,43 @@ public class WordFieldTool : IAsposeTool
                 var targetPara = paragraphs[paragraphIndex.Value] as Paragraph;
                 if (targetPara != null)
                 {
-                    builder.MoveTo(targetPara);
-                    if (!insertAtStart)
+                    if (insertAtStart)
                     {
-                        builder.MoveToParagraph(paragraphIndex.Value, targetPara.GetText().Length);
+                        builder.MoveTo(targetPara);
+                        if (targetPara.Runs.Count > 0)
+                        {
+                            builder.MoveTo(targetPara.Runs[0]);
+                        }
+                        else
+                        {
+                            // Empty paragraph - just move to paragraph
+                            builder.MoveTo(targetPara);
+                        }
+                    }
+                    else
+                    {
+                        builder.MoveTo(targetPara);
+                        
+                        if (targetPara.Runs.Count > 0)
+                        {
+                            var lastRun = targetPara.Runs[targetPara.Runs.Count - 1];
+                            builder.MoveTo(lastRun);
+                            // Move to end of the last run
+                            try
+                            {
+                                builder.MoveToParagraph(paragraphIndex.Value, lastRun.Text.Length);
+                            }
+                            catch
+                            {
+                                // If that fails, just stay at the run position
+                                // The field will be inserted after the run
+                            }
+                        }
+                        else
+                        {
+                            // Empty paragraph - just move to paragraph
+                            builder.MoveTo(targetPara);
+                        }
                     }
                 }
                 else

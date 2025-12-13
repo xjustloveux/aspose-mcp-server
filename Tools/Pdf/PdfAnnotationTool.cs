@@ -8,7 +8,13 @@ namespace AsposeMcpServer.Tools;
 
 public class PdfAnnotationTool : IAsposeTool
 {
-    public string Description => "Manage annotations in PDF documents (add, delete, edit, get)";
+    public string Description => @"Manage annotations in PDF documents. Supports 4 operations: add, delete, edit, get.
+
+Usage examples:
+- Add annotation: pdf_annotation(operation='add', path='doc.pdf', pageIndex=1, text='Note', x=100, y=100)
+- Delete annotation: pdf_annotation(operation='delete', path='doc.pdf', pageIndex=1, annotationIndex=0)
+- Edit annotation: pdf_annotation(operation='edit', path='doc.pdf', pageIndex=1, annotationIndex=0, text='Updated Note')
+- Get annotations: pdf_annotation(operation='get', path='doc.pdf', pageIndex=1)";
 
     public object InputSchema => new
     {
@@ -18,13 +24,17 @@ public class PdfAnnotationTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation: add, delete, edit, get",
+                description = @"Operation to perform.
+- 'add': Add an annotation (required params: path, pageIndex, text, x, y)
+- 'delete': Delete an annotation (required params: path, pageIndex, annotationIndex)
+- 'edit': Edit an annotation (required params: path, pageIndex, annotationIndex, text)
+- 'get': Get all annotations (required params: path, pageIndex)",
                 @enum = new[] { "add", "delete", "edit", "get" }
             },
             path = new
             {
                 type = "string",
-                description = "PDF file path"
+                description = "PDF file path (required for all operations)"
             },
             outputPath = new
             {

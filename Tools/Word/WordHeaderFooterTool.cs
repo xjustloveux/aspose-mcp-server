@@ -1,6 +1,8 @@
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using Aspose.Words;
 using Aspose.Words.Drawing;
+using Aspose.Words.Fields;
 using AsposeMcpServer.Core;
 
 namespace AsposeMcpServer.Tools;
@@ -13,7 +15,13 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class WordHeaderFooterTool : IAsposeTool
 {
-    public string Description => "Manage headers and footers in Word documents: set text, set image, set line, set tab stops, get info";
+    public string Description => @"Manage headers and footers in Word documents. Supports 10 operations: set_header_text, set_footer_text, set_header_image, set_footer_image, set_header_line, set_footer_line, set_header_tabs, set_footer_tabs, set_header_footer, get.
+
+Usage examples:
+- Set header text: word_header_footer(operation='set_header_text', path='doc.docx', headerLeft='Left', headerCenter='Center', headerRight='Right')
+- Set footer text: word_header_footer(operation='set_footer_text', path='doc.docx', footerLeft='Page', footerCenter='', footerRight='{PAGE}')
+- Set header image: word_header_footer(operation='set_header_image', path='doc.docx', imagePath='logo.png')
+- Get headers/footers: word_header_footer(operation='get', path='doc.docx')";
 
     public object InputSchema => new
     {
@@ -23,13 +31,23 @@ public class WordHeaderFooterTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'set_header_text', 'set_footer_text', 'set_header_image', 'set_footer_image', 'set_header_line', 'set_footer_line', 'set_header_tabs', 'set_footer_tabs', 'set_header_footer', 'get'",
+                description = @"Operation to perform.
+- 'set_header_text': Set header text (required params: path)
+- 'set_footer_text': Set footer text (required params: path)
+- 'set_header_image': Set header image (required params: path, imagePath)
+- 'set_footer_image': Set footer image (required params: path, imagePath)
+- 'set_header_line': Set header line (required params: path)
+- 'set_footer_line': Set footer line (required params: path)
+- 'set_header_tabs': Set header tab stops (required params: path)
+- 'set_footer_tabs': Set footer tab stops (required params: path)
+- 'set_header_footer': Set header and footer together (required params: path)
+- 'get': Get headers and footers info (required params: path)",
                 @enum = new[] { "set_header_text", "set_footer_text", "set_header_image", "set_footer_image", "set_header_line", "set_footer_line", "set_header_tabs", "set_footer_tabs", "set_header_footer", "get" }
             },
             path = new
             {
                 type = "string",
-                description = "Document file path"
+                description = "Document file path (required for all operations)"
             },
             outputPath = new
             {
@@ -217,32 +235,29 @@ public class WordHeaderFooterTool : IAsposeTool
 
             if (hasContent)
             {
-                var headerPara = new Paragraph(doc);
+                header.RemoveAllChildren();
+                Paragraph headerPara = new Paragraph(doc);
+                header.AppendChild(headerPara);
+                
+                var builder = new DocumentBuilder(doc);
+                builder.MoveTo(headerPara);
                 
                 if (!string.IsNullOrEmpty(headerLeft))
                 {
-                    var leftRun = new Run(doc, headerLeft);
-                    ApplyFontSettings(leftRun, fontName, fontNameAscii, fontNameFarEast, fontSize);
-                    headerPara.AppendChild(leftRun);
+                    InsertTextOrField(builder, headerLeft, fontName, fontNameAscii, fontNameFarEast, fontSize);
                 }
                 
                 if (!string.IsNullOrEmpty(headerCenter))
                 {
-                    headerPara.AppendChild(new Run(doc, "\t"));
-                    var centerRun = new Run(doc, headerCenter);
-                    ApplyFontSettings(centerRun, fontName, fontNameAscii, fontNameFarEast, fontSize);
-                    headerPara.AppendChild(centerRun);
+                    builder.Write("\t");
+                    InsertTextOrField(builder, headerCenter, fontName, fontNameAscii, fontNameFarEast, fontSize);
                 }
                 
                 if (!string.IsNullOrEmpty(headerRight))
                 {
-                    headerPara.AppendChild(new Run(doc, "\t"));
-                    var rightRun = new Run(doc, headerRight);
-                    ApplyFontSettings(rightRun, fontName, fontNameAscii, fontNameFarEast, fontSize);
-                    headerPara.AppendChild(rightRun);
+                    builder.Write("\t");
+                    InsertTextOrField(builder, headerRight, fontName, fontNameAscii, fontNameFarEast, fontSize);
                 }
-                
-                header.AppendChild(headerPara);
             }
         }
 
@@ -294,32 +309,29 @@ public class WordHeaderFooterTool : IAsposeTool
 
             if (hasContent)
             {
-                var footerPara = new Paragraph(doc);
+                footer.RemoveAllChildren();
+                Paragraph footerPara = new Paragraph(doc);
+                footer.AppendChild(footerPara);
+                
+                var builder = new DocumentBuilder(doc);
+                builder.MoveTo(footerPara);
                 
                 if (!string.IsNullOrEmpty(footerLeft))
                 {
-                    var leftRun = new Run(doc, footerLeft);
-                    ApplyFontSettings(leftRun, fontName, fontNameAscii, fontNameFarEast, fontSize);
-                    footerPara.AppendChild(leftRun);
+                    InsertTextOrField(builder, footerLeft, fontName, fontNameAscii, fontNameFarEast, fontSize);
                 }
                 
                 if (!string.IsNullOrEmpty(footerCenter))
                 {
-                    footerPara.AppendChild(new Run(doc, "\t"));
-                    var centerRun = new Run(doc, footerCenter);
-                    ApplyFontSettings(centerRun, fontName, fontNameAscii, fontNameFarEast, fontSize);
-                    footerPara.AppendChild(centerRun);
+                    builder.Write("\t");
+                    InsertTextOrField(builder, footerCenter, fontName, fontNameAscii, fontNameFarEast, fontSize);
                 }
                 
                 if (!string.IsNullOrEmpty(footerRight))
                 {
-                    footerPara.AppendChild(new Run(doc, "\t"));
-                    var rightRun = new Run(doc, footerRight);
-                    ApplyFontSettings(rightRun, fontName, fontNameAscii, fontNameFarEast, fontSize);
-                    footerPara.AppendChild(rightRun);
+                    builder.Write("\t");
+                    InsertTextOrField(builder, footerRight, fontName, fontNameAscii, fontNameFarEast, fontSize);
                 }
-                
-                footer.AppendChild(footerPara);
             }
         }
 
@@ -371,23 +383,29 @@ public class WordHeaderFooterTool : IAsposeTool
                 }
             }
 
-            var imagePara = new Paragraph(doc);
+            // Create a new paragraph for the image (similar to SetHeaderTextAsync)
+            Paragraph headerPara = new Paragraph(doc);
+            header.AppendChild(headerPara);
+            
             var builder = new DocumentBuilder(doc);
-            builder.MoveTo(header);
+            builder.MoveTo(headerPara);
             
-            var shape = builder.InsertImage(imagePath);
-            if (imageWidth.HasValue) shape.Width = imageWidth.Value;
-            if (imageHeight.HasValue) shape.Height = imageHeight.Value;
-            
-            shape.WrapType = WrapType.Inline;
-            
+            // Set paragraph alignment before inserting image (for inline images)
             var paraAlignment = alignment.ToLower() switch
             {
                 "center" => ParagraphAlignment.Center,
                 "right" => ParagraphAlignment.Right,
                 _ => ParagraphAlignment.Left
             };
-            imagePara.ParagraphFormat.Alignment = paraAlignment;
+            builder.ParagraphFormat.Alignment = paraAlignment;
+            
+            // Insert image (InsertImage creates inline image by default)
+            var shape = builder.InsertImage(imagePath);
+            if (imageWidth.HasValue) shape.Width = imageWidth.Value;
+            if (imageHeight.HasValue) shape.Height = imageHeight.Value;
+            
+            // Ensure the paragraph containing the shape has correct alignment
+            headerPara.ParagraphFormat.Alignment = paraAlignment;
         }
 
         doc.Save(outputPath);
@@ -429,15 +447,14 @@ public class WordHeaderFooterTool : IAsposeTool
                 }
             }
 
+            // Create a new paragraph for the image (similar to SetFooterTextAsync)
+            Paragraph footerPara = new Paragraph(doc);
+            footer.AppendChild(footerPara);
+            
             var builder = new DocumentBuilder(doc);
-            builder.MoveTo(footer);
+            builder.MoveTo(footerPara);
             
-            var shape = builder.InsertImage(imagePath);
-            if (imageWidth.HasValue) shape.Width = imageWidth.Value;
-            if (imageHeight.HasValue) shape.Height = imageHeight.Value;
-            
-            shape.WrapType = WrapType.Inline;
-            
+            // Set paragraph alignment before inserting image (for inline images)
             var paraAlignment = alignment.ToLower() switch
             {
                 "center" => ParagraphAlignment.Center,
@@ -445,6 +462,14 @@ public class WordHeaderFooterTool : IAsposeTool
                 _ => ParagraphAlignment.Left
             };
             builder.ParagraphFormat.Alignment = paraAlignment;
+            
+            // Insert image (InsertImage creates inline image by default)
+            var shape = builder.InsertImage(imagePath);
+            if (imageWidth.HasValue) shape.Width = imageWidth.Value;
+            if (imageHeight.HasValue) shape.Height = imageHeight.Value;
+            
+            // Ensure the paragraph containing the shape has correct alignment
+            footerPara.ParagraphFormat.Alignment = paraAlignment;
         }
 
         doc.Save(outputPath);
@@ -658,6 +683,8 @@ public class WordHeaderFooterTool : IAsposeTool
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>();
 
         var doc = new Document(path);
+        doc.UpdateFields();
+        
         var result = new System.Text.StringBuilder();
 
         result.AppendLine("=== 文檔頁眉頁腳資訊 ===\n");
@@ -693,7 +720,7 @@ public class WordHeaderFooterTool : IAsposeTool
                 var header = section.HeadersFooters[type];
                 if (header != null)
                 {
-                    var headerText = header.GetText().Trim();
+                    var headerText = header.ToString(SaveFormat.Text).Trim();
                     if (!string.IsNullOrEmpty(headerText))
                     {
                         result.AppendLine($"  {name}:");
@@ -724,7 +751,7 @@ public class WordHeaderFooterTool : IAsposeTool
                 var footer = section.HeadersFooters[type];
                 if (footer != null)
                 {
-                    var footerText = footer.GetText().Trim();
+                    var footerText = footer.ToString(SaveFormat.Text).Trim();
                     if (!string.IsNullOrEmpty(footerText))
                     {
                         result.AppendLine($"  {name}:");
@@ -773,6 +800,153 @@ public class WordHeaderFooterTool : IAsposeTool
         
         if (fontSize.HasValue)
             run.Font.Size = fontSize.Value;
+    }
+
+    /// <summary>
+    /// Inserts text or field code. If text contains field codes like {PAGE}, {DATE}, {NUMPAGES}, etc.,
+    /// they will be inserted as actual fields instead of plain text.
+    /// </summary>
+    private void InsertTextOrField(DocumentBuilder builder, string text, string? fontName, string? fontNameAscii, string? fontNameFarEast, double? fontSize)
+    {
+        // Common field codes that should be converted to fields
+        var fieldCodes = new HashSet<string> { "PAGE", "NUMPAGES", "DATE", "TIME", "AUTHOR", "FILENAME", "TITLE", "CREATEDATE", "SAVEDATE", "PRINTDATE" };
+        
+        // Pattern to match field codes like {PAGE}, {DATE}, etc.
+        var fieldPattern = new Regex(@"\{([A-Z]+)\}", RegexOptions.IgnoreCase);
+        var matches = fieldPattern.Matches(text);
+        
+        if (matches.Count == 0)
+        {
+            if (fontName != null || fontSize.HasValue)
+            {
+                builder.Font.Name = fontName ?? builder.Font.Name;
+                builder.Font.NameAscii = fontNameAscii ?? builder.Font.NameAscii;
+                builder.Font.NameFarEast = fontNameFarEast ?? builder.Font.NameFarEast;
+                if (fontSize.HasValue)
+                    builder.Font.Size = fontSize.Value;
+                builder.Write(text);
+                if (fontName != null || fontSize.HasValue)
+                {
+                    builder.Font.Name = builder.Document.Styles[StyleIdentifier.Normal].Font.Name;
+                    builder.Font.Size = builder.Document.Styles[StyleIdentifier.Normal].Font.Size;
+                }
+            }
+            else
+            {
+                builder.Write(text);
+            }
+            return;
+        }
+        
+        int lastIndex = 0;
+        foreach (Match match in matches)
+        {
+            if (match.Index > lastIndex)
+            {
+                var textBefore = text.Substring(lastIndex, match.Index - lastIndex);
+                if (!string.IsNullOrEmpty(textBefore))
+                {
+                    if (fontName != null || fontSize.HasValue)
+                    {
+                        builder.Font.Name = fontName ?? builder.Font.Name;
+                        builder.Font.NameAscii = fontNameAscii ?? builder.Font.NameAscii;
+                        builder.Font.NameFarEast = fontNameFarEast ?? builder.Font.NameFarEast;
+                        if (fontSize.HasValue)
+                            builder.Font.Size = fontSize.Value;
+                    }
+                    builder.Write(textBefore);
+                    if (fontName != null || fontSize.HasValue)
+                    {
+                        builder.Font.Name = builder.Document.Styles[StyleIdentifier.Normal].Font.Name;
+                        builder.Font.Size = builder.Document.Styles[StyleIdentifier.Normal].Font.Size;
+                    }
+                }
+            }
+            
+            var fieldCode = match.Groups[1].Value.ToUpper();
+            if (fieldCodes.Contains(fieldCode))
+            {
+                try
+                {
+                    FieldType fieldType = fieldCode switch
+                    {
+                        "PAGE" => FieldType.FieldPage,
+                        "NUMPAGES" => FieldType.FieldNumPages,
+                        "DATE" => FieldType.FieldDate,
+                        "TIME" => FieldType.FieldTime,
+                        "AUTHOR" => FieldType.FieldAuthor,
+                        "FILENAME" => FieldType.FieldFileName,
+                        "TITLE" => FieldType.FieldTitle,
+                        "CREATEDATE" => FieldType.FieldCreateDate,
+                        "SAVEDATE" => FieldType.FieldSaveDate,
+                        "PRINTDATE" => FieldType.FieldPrintDate,
+                        _ => throw new ArgumentException($"Unknown field code: {fieldCode}")
+                    };
+                    
+                    var field = builder.InsertField(fieldType, false);
+                    field.Update();
+                }
+                catch
+                {
+                    // Field insertion failed, restore font settings if they were modified
+                    if (fontName != null || fontSize.HasValue)
+                    {
+                        builder.Font.Name = fontName ?? builder.Font.Name;
+                        builder.Font.NameAscii = fontNameAscii ?? builder.Font.NameAscii;
+                        builder.Font.NameFarEast = fontNameFarEast ?? builder.Font.NameFarEast;
+                        if (fontSize.HasValue)
+                            builder.Font.Size = fontSize.Value;
+                    }
+                    builder.Write(match.Value);
+                    if (fontName != null || fontSize.HasValue)
+                    {
+                        builder.Font.Name = builder.Document.Styles[StyleIdentifier.Normal].Font.Name;
+                        builder.Font.Size = builder.Document.Styles[StyleIdentifier.Normal].Font.Size;
+                    }
+                }
+            }
+            else
+            {
+                if (fontName != null || fontSize.HasValue)
+                {
+                    builder.Font.Name = fontName ?? builder.Font.Name;
+                    builder.Font.NameAscii = fontNameAscii ?? builder.Font.NameAscii;
+                    builder.Font.NameFarEast = fontNameFarEast ?? builder.Font.NameFarEast;
+                    if (fontSize.HasValue)
+                        builder.Font.Size = fontSize.Value;
+                }
+                builder.Write(match.Value);
+                if (fontName != null || fontSize.HasValue)
+                {
+                    builder.Font.Name = builder.Document.Styles[StyleIdentifier.Normal].Font.Name;
+                    builder.Font.Size = builder.Document.Styles[StyleIdentifier.Normal].Font.Size;
+                }
+            }
+            
+            lastIndex = match.Index + match.Length;
+        }
+        
+        if (lastIndex < text.Length)
+        {
+            var textAfter = text.Substring(lastIndex);
+            if (!string.IsNullOrEmpty(textAfter))
+            {
+                if (fontName != null || fontSize.HasValue)
+                {
+                    builder.Font.Name = fontName ?? builder.Font.Name;
+                    builder.Font.NameAscii = fontNameAscii ?? builder.Font.NameAscii;
+                    builder.Font.NameFarEast = fontNameFarEast ?? builder.Font.NameFarEast;
+                    if (fontSize.HasValue)
+                        builder.Font.Size = fontSize.Value;
+                }
+                builder.Write(textAfter);
+                if (fontName != null || fontSize.HasValue)
+                {
+                    builder.Font.Name = builder.Document.Styles[StyleIdentifier.Normal].Font.Name;
+                    builder.Font.Size = builder.Document.Styles[StyleIdentifier.Normal].Font.Size;
+                }
+            }
+        }
     }
 }
 

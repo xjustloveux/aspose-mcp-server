@@ -12,7 +12,22 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class WordParagraphTool : IAsposeTool
 {
-    public string Description => "Manage paragraphs in Word documents: insert, delete, edit format, get info, copy format, merge";
+    public string Description => @"Manage paragraphs in Word documents. Supports 7 operations: insert, delete, edit, get, get_format, copy_format, merge.
+
+Usage examples:
+- Insert paragraph: word_paragraph(operation='insert', path='doc.docx', paragraphIndex=0, text='New paragraph')
+- Delete paragraph: word_paragraph(operation='delete', path='doc.docx', paragraphIndex=0)
+- Edit format: word_paragraph(operation='edit', path='doc.docx', paragraphIndex=0, alignment='center', fontSize=14)
+- Get paragraph: word_paragraph(operation='get', path='doc.docx', paragraphIndex=0)
+- Get format: word_paragraph(operation='get_format', path='doc.docx', paragraphIndex=0)
+- Copy format: word_paragraph(operation='copy_format', path='doc.docx', sourceIndex=0, targetIndex=1)
+- Merge paragraphs: word_paragraph(operation='merge', path='doc.docx', startIndex=0, endIndex=2)
+
+Important notes for 'get' operation:
+- By default, returns ALL paragraphs in the document structure, including paragraphs inside Comment objects
+- Use includeCommentParagraphs=false to get only Body paragraphs (visible in document body)
+- Each paragraph shows its ParentNode type to help identify its location
+- Paragraphs inside Comment objects are marked with '[Comment]' in the location field";
 
     public object InputSchema => new
     {
@@ -22,13 +37,20 @@ public class WordParagraphTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'insert', 'delete', 'edit', 'get', 'get_format', 'copy_format', 'merge'",
+                description = @"Operation to perform.
+- 'insert': Insert a new paragraph (required params: path, paragraphIndex, text)
+- 'delete': Delete a paragraph (required params: path, paragraphIndex)
+- 'edit': Edit paragraph format (required params: path, paragraphIndex)
+- 'get': Get paragraph content (required params: path, paragraphIndex)
+- 'get_format': Get paragraph format (required params: path, paragraphIndex)
+- 'copy_format': Copy paragraph format (required params: path, sourceIndex, targetIndex)
+- 'merge': Merge paragraphs (required params: path, startIndex, endIndex)",
                 @enum = new[] { "insert", "delete", "edit", "get", "get_format", "copy_format", "merge" }
             },
             path = new
             {
                 type = "string",
-                description = "Document file path"
+                description = "Document file path (required for all operations)"
             },
             outputPath = new
             {
@@ -39,7 +61,7 @@ public class WordParagraphTool : IAsposeTool
             paragraphIndex = new
             {
                 type = "number",
-                description = "Paragraph index (0-based, required for delete, edit, get_format operations, optional for insert/get operations)"
+                description = "Paragraph index (0-based, required for delete, edit, get_format operations, optional for insert/get operations). Valid range: 0 to (total paragraphs - 1), or -1 for last paragraph. Note: After delete operations, subsequent paragraph indices will shift automatically."
             },
             // Insert parameters
             text = new
@@ -73,6 +95,16 @@ public class WordParagraphTool : IAsposeTool
             {
                 type = "string",
                 description = "Filter by style name (optional, for get operation)"
+            },
+            includeCommentParagraphs = new
+            {
+                type = "boolean",
+                description = "Include paragraphs inside Comment objects (optional, default: true, for get operation). Set to false to get only Body paragraphs (visible in document body). Note: This returns the document's underlying structure, including Comment content that is not visible in the body."
+            },
+            includeTextboxParagraphs = new
+            {
+                type = "boolean",
+                description = "Include paragraphs inside TextBox/Shape objects (optional, default: true, for get operation). Set to false to exclude textbox paragraphs. Note: Textbox paragraphs are marked with [TextBox] in the location field."
             },
             // Get format parameters
             includeRunDetails = new
@@ -124,27 +156,27 @@ public class WordParagraphTool : IAsposeTool
             indentLeft = new
             {
                 type = "number",
-                description = "Left indent in points (optional, for edit operation)"
+                description = "Left indent in points (optional, for insert/edit operations)"
             },
             indentRight = new
             {
                 type = "number",
-                description = "Right indent in points (optional, for edit operation)"
+                description = "Right indent in points (optional, for insert/edit operations)"
             },
             firstLineIndent = new
             {
                 type = "number",
-                description = "First line indent in points (positive for indent, negative for hanging, optional, for edit operation)"
+                description = "First line indent in points (positive for indent, negative for hanging, optional, for insert/edit operations)"
             },
             spaceBefore = new
             {
                 type = "number",
-                description = "Space before paragraph in points (optional, for edit operation)"
+                description = "Space before paragraph in points (optional, for insert/edit operations)"
             },
             spaceAfter = new
             {
                 type = "number",
-                description = "Space after paragraph in points (optional, for edit operation)"
+                description = "Space after paragraph in points (optional, for insert/edit operations)"
             },
             lineSpacing = new
             {
@@ -225,6 +257,11 @@ public class WordParagraphTool : IAsposeTool
         var paragraphIndex = arguments?["paragraphIndex"]?.GetValue<int?>();
         var styleName = arguments?["styleName"]?.GetValue<string>();
         var alignment = arguments?["alignment"]?.GetValue<string>();
+        var indentLeft = arguments?["indentLeft"]?.GetValue<double>();
+        var indentRight = arguments?["indentRight"]?.GetValue<double>();
+        var firstLineIndent = arguments?["firstLineIndent"]?.GetValue<double>();
+        var spaceBefore = arguments?["spaceBefore"]?.GetValue<double>();
+        var spaceAfter = arguments?["spaceAfter"]?.GetValue<double>();
 
         var doc = new Document(path);
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
@@ -292,6 +329,32 @@ public class WordParagraphTool : IAsposeTool
                 _ => ParagraphAlignment.Left
             };
         }
+        
+        // Apply indentation and spacing
+        if (indentLeft.HasValue)
+        {
+            para.ParagraphFormat.LeftIndent = indentLeft.Value;
+        }
+        
+        if (indentRight.HasValue)
+        {
+            para.ParagraphFormat.RightIndent = indentRight.Value;
+        }
+        
+        if (firstLineIndent.HasValue)
+        {
+            para.ParagraphFormat.FirstLineIndent = firstLineIndent.Value;
+        }
+        
+        if (spaceBefore.HasValue)
+        {
+            para.ParagraphFormat.SpaceBefore = spaceBefore.Value;
+        }
+        
+        if (spaceAfter.HasValue)
+        {
+            para.ParagraphFormat.SpaceAfter = spaceAfter.Value;
+        }
 
         if (targetPara != null)
         {
@@ -322,6 +385,23 @@ public class WordParagraphTool : IAsposeTool
         {
             result += $"對齊方式: {alignment}\n";
         }
+        if (indentLeft.HasValue || indentRight.HasValue || firstLineIndent.HasValue)
+        {
+            result += $"縮排: ";
+            var indentParts = new List<string>();
+            if (indentLeft.HasValue) indentParts.Add($"左={indentLeft.Value}pt");
+            if (indentRight.HasValue) indentParts.Add($"右={indentRight.Value}pt");
+            if (firstLineIndent.HasValue) indentParts.Add($"首行={firstLineIndent.Value}pt");
+            result += string.Join(", ", indentParts) + "\n";
+        }
+        if (spaceBefore.HasValue || spaceAfter.HasValue)
+        {
+            result += $"間距: ";
+            var spaceParts = new List<string>();
+            if (spaceBefore.HasValue) spaceParts.Add($"段前={spaceBefore.Value}pt");
+            if (spaceAfter.HasValue) spaceParts.Add($"段後={spaceAfter.Value}pt");
+            result += string.Join(", ", spaceParts) + "\n";
+        }
         result += $"文檔段落數: {doc.GetChildNodes(NodeType.Paragraph, true).Count}\n";
         result += $"輸出: {outputPath}";
 
@@ -334,6 +414,16 @@ public class WordParagraphTool : IAsposeTool
 
         var doc = new Document(path);
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
+        
+        // Handle paragraphIndex=-1 (delete last paragraph)
+        if (paragraphIndex == -1)
+        {
+            if (paragraphs.Count == 0)
+            {
+                throw new ArgumentException("無法刪除段落：文檔中沒有段落");
+            }
+            paragraphIndex = paragraphs.Count - 1;
+        }
         
         if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
         {
@@ -374,18 +464,43 @@ public class WordParagraphTool : IAsposeTool
 
         var doc = new Document(path);
         
-        if (sectionIndex >= doc.Sections.Count)
-            throw new ArgumentException($"Section index {sectionIndex} out of range (total sections: {doc.Sections.Count})");
+        // Handle paragraphIndex=-1 (document end)
+        if (paragraphIndex == -1)
+        {
+            var lastSection = doc.LastSection;
+            var bodyParagraphs = lastSection.Body.GetChildNodes(NodeType.Paragraph, false);
+            if (bodyParagraphs.Count > 0)
+            {
+                paragraphIndex = bodyParagraphs.Count - 1;
+                sectionIndex = doc.Sections.Count - 1;
+            }
+            else
+            {
+                throw new ArgumentException("Cannot edit paragraph: document has no paragraphs. Use insert operation to add paragraphs first.");
+            }
+        }
+        
+        if (sectionIndex < 0 || sectionIndex >= doc.Sections.Count)
+            throw new ArgumentException($"Section index {sectionIndex} out of range (total sections: {doc.Sections.Count}, valid range: 0-{doc.Sections.Count - 1})");
         
         var section = doc.Sections[sectionIndex];
         var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
         
-        if (paragraphIndex >= paragraphs.Count)
-            throw new ArgumentException($"Paragraph index {paragraphIndex} out of range (total paragraphs: {paragraphs.Count})");
+        if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
+            throw new ArgumentException($"Paragraph index {paragraphIndex} out of range (total paragraphs: {paragraphs.Count}, valid range: 0-{paragraphs.Count - 1})");
         
         var para = paragraphs[paragraphIndex];
         var builder = new DocumentBuilder(doc);
-        builder.MoveTo(para.FirstChild);
+        
+        if (para.FirstChild != null)
+        {
+            builder.MoveTo(para.FirstChild);
+        }
+        else
+        {
+            // Paragraph is empty, move to the paragraph and we'll add content if text parameter is provided
+            builder.MoveTo(para);
+        }
         
         // Apply font properties
         if (arguments?["fontName"] != null)
@@ -434,7 +549,7 @@ public class WordParagraphTool : IAsposeTool
             var colorStr = arguments["color"]?.GetValue<string>();
             if (!string.IsNullOrEmpty(colorStr))
             {
-                builder.Font.Color = ParseColor(colorStr);
+                builder.Font.Color = ColorHelper.ParseColor(colorStr);
             }
         }
         
@@ -546,63 +661,113 @@ public class WordParagraphTool : IAsposeTool
             }
         }
         
-        // Apply font to all runs in paragraph
-        foreach (Run run in para.GetChildNodes(NodeType.Run, true))
+        var textParam = arguments?["text"]?.GetValue<string>();
+        if (!string.IsNullOrEmpty(textParam))
         {
+            // Clear existing content and add new text
+            para.RemoveAllChildren();
+            var newRun = new Run(doc, textParam);
+            
+            // Apply font settings to the new run
             if (arguments?["fontName"] != null)
-            {
-                var fontName = arguments["fontName"]?.GetValue<string>();
-                run.Font.Name = fontName ?? "";
-            }
-            
+                newRun.Font.Name = arguments["fontName"]?.GetValue<string>() ?? "";
             if (arguments?["fontNameAscii"] != null)
-            {
-                var fontNameAscii = arguments["fontNameAscii"]?.GetValue<string>();
-                run.Font.NameAscii = fontNameAscii ?? "";
-            }
-            
+                newRun.Font.NameAscii = arguments["fontNameAscii"]?.GetValue<string>() ?? "";
             if (arguments?["fontNameFarEast"] != null)
-            {
-                var fontNameFarEast = arguments["fontNameFarEast"]?.GetValue<string>();
-                run.Font.NameFarEast = fontNameFarEast ?? "";
-            }
-            
+                newRun.Font.NameFarEast = arguments["fontNameFarEast"]?.GetValue<string>() ?? "";
             if (arguments?["fontSize"] != null)
             {
-                var fontSize = arguments["fontSize"]?.GetValue<double>();
-                if (fontSize.HasValue)
-                    run.Font.Size = fontSize.Value;
+                var fontSizeValue = arguments["fontSize"]?.GetValue<double?>();
+                if (fontSizeValue.HasValue)
+                    newRun.Font.Size = fontSizeValue.Value;
             }
-            
             if (arguments?["bold"] != null)
-            {
-                run.Font.Bold = arguments["bold"]?.GetValue<bool>() ?? false;
-            }
-            
+                newRun.Font.Bold = arguments["bold"]?.GetValue<bool>() ?? false;
             if (arguments?["italic"] != null)
-            {
-                run.Font.Italic = arguments["italic"]?.GetValue<bool>() ?? false;
-            }
-            
+                newRun.Font.Italic = arguments["italic"]?.GetValue<bool>() ?? false;
             if (arguments?["underline"] != null)
-            {
-                var underline = arguments["underline"]?.GetValue<bool>() ?? false;
-                run.Font.Underline = underline ? Underline.Single : Underline.None;
-            }
-            
+                newRun.Font.Underline = arguments["underline"]?.GetValue<bool>() == true ? Underline.Single : Underline.None;
             if (arguments?["color"] != null)
             {
                 var colorStr = arguments["color"]?.GetValue<string>();
                 if (!string.IsNullOrEmpty(colorStr))
+                    newRun.Font.Color = ColorHelper.ParseColor(colorStr);
+            }
+            
+            para.AppendChild(newRun);
+        }
+        else
+        {
+            // Apply font to all existing runs in paragraph
+            var runs = para.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+            if (runs.Count == 0)
+            {
+                // Paragraph has no runs, but user didn't provide text - this is OK, just apply formatting
+                // Formatting will be applied when text is added later
+            }
+            else
+            {
+                foreach (Run run in runs)
                 {
-                    run.Font.Color = ParseColor(colorStr);
+                    if (arguments?["fontName"] != null)
+                    {
+                        var fontName = arguments["fontName"]?.GetValue<string>();
+                        run.Font.Name = fontName ?? "";
+                    }
+                    
+                    if (arguments?["fontNameAscii"] != null)
+                    {
+                        var fontNameAscii = arguments["fontNameAscii"]?.GetValue<string>();
+                        run.Font.NameAscii = fontNameAscii ?? "";
+                    }
+                    
+                    if (arguments?["fontNameFarEast"] != null)
+                    {
+                        var fontNameFarEast = arguments["fontNameFarEast"]?.GetValue<string>();
+                        run.Font.NameFarEast = fontNameFarEast ?? "";
+                    }
+                    
+                    if (arguments?["fontSize"] != null)
+                    {
+                        var fontSize = arguments["fontSize"]?.GetValue<double>();
+                        if (fontSize.HasValue)
+                            run.Font.Size = fontSize.Value;
+                    }
+                    
+                    if (arguments?["bold"] != null)
+                    {
+                        run.Font.Bold = arguments["bold"]?.GetValue<bool>() ?? false;
+                    }
+                    
+                    if (arguments?["italic"] != null)
+                    {
+                        run.Font.Italic = arguments["italic"]?.GetValue<bool>() ?? false;
+                    }
+                    
+                    if (arguments?["underline"] != null)
+                    {
+                        var underline = arguments["underline"]?.GetValue<bool>() ?? false;
+                        run.Font.Underline = underline ? Underline.Single : Underline.None;
+                    }
+                    
+                    if (arguments?["color"] != null)
+                    {
+                        var colorStr = arguments["color"]?.GetValue<string>();
+                        if (!string.IsNullOrEmpty(colorStr))
+                        {
+                            run.Font.Color = ColorHelper.ParseColor(colorStr);
+                        }
+                    }
                 }
             }
         }
         
         doc.Save(outputPath);
         
-        return await Task.FromResult($"成功編輯段落 {paragraphIndex} 的格式");
+        var resultMsg = $"成功編輯段落 {paragraphIndex} 的格式";
+        if (!string.IsNullOrEmpty(textParam))
+            resultMsg += $"，文字內容已更新";
+        return await Task.FromResult(resultMsg);
     }
 
     private async Task<string> GetParagraphsAsync(JsonObject? arguments, string path)
@@ -610,6 +775,8 @@ public class WordParagraphTool : IAsposeTool
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>();
         var includeEmpty = arguments?["includeEmpty"]?.GetValue<bool?>() ?? true;
         var styleFilter = arguments?["styleFilter"]?.GetValue<string>();
+        var includeCommentParagraphs = arguments?["includeCommentParagraphs"]?.GetValue<bool?>() ?? true;
+        var includeTextboxParagraphs = arguments?["includeTextboxParagraphs"]?.GetValue<bool?>() ?? true;
 
         var doc = new Document(path);
         var sb = new StringBuilder();
@@ -621,11 +788,26 @@ public class WordParagraphTool : IAsposeTool
             {
                 throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
             }
-            paragraphs = doc.Sections[sectionIndex.Value].Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
+            // When sectionIndex is specified, only get paragraphs from that section's Body
+            paragraphs = doc.Sections[sectionIndex.Value].Body.GetChildNodes(NodeType.Paragraph, includeCommentParagraphs).Cast<Paragraph>().ToList();
         }
         else
         {
-            paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
+            if (includeCommentParagraphs)
+            {
+                // Get all paragraphs including those inside Comment objects
+                paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
+            }
+            else
+            {
+                // Get only paragraphs from document Body (visible in document body)
+                paragraphs = new List<Paragraph>();
+                foreach (Section section in doc.Sections)
+                {
+                    var bodyParagraphs = section.Body.GetChildNodes(NodeType.Paragraph, false).Cast<Paragraph>().ToList();
+                    paragraphs.AddRange(bodyParagraphs);
+                }
+            }
         }
 
         if (!includeEmpty)
@@ -637,15 +819,130 @@ public class WordParagraphTool : IAsposeTool
         {
             paragraphs = paragraphs.Where(p => p.ParagraphFormat.Style?.Name == styleFilter).ToList();
         }
+        
+        // Filter out textbox paragraphs if includeTextboxParagraphs is false
+        if (!includeTextboxParagraphs)
+        {
+            paragraphs = paragraphs.Where(p =>
+            {
+                // Check if paragraph is inside a Shape (including nested structures)
+                var shapeAncestor = p.GetAncestor(NodeType.Shape);
+                if (shapeAncestor != null)
+                {
+                    var shape = shapeAncestor as Aspose.Words.Drawing.Shape;
+                    if (shape != null && shape.ShapeType == Aspose.Words.Drawing.ShapeType.TextBox)
+                    {
+                        return false; // Exclude textbox paragraphs
+                    }
+                }
+                
+                // Also check if paragraph's parent node chain contains a Shape
+                // This handles cases where textbox content might be structured differently
+                var currentNode = p.ParentNode;
+                while (currentNode != null)
+                {
+                    if (currentNode.NodeType == NodeType.Shape)
+                    {
+                        var shape = currentNode as Aspose.Words.Drawing.Shape;
+                        if (shape != null && shape.ShapeType == Aspose.Words.Drawing.ShapeType.TextBox)
+                        {
+                            return false; // Exclude textbox paragraphs
+                        }
+                    }
+                    currentNode = currentNode.ParentNode;
+                }
+                
+                return true;
+            }).ToList();
+        }
 
         sb.AppendLine($"=== Paragraphs ({paragraphs.Count}) ===");
+        if (!includeCommentParagraphs && !includeTextboxParagraphs)
+        {
+            sb.AppendLine("(Only Body paragraphs - visible in document body, excluding Comment and TextBox paragraphs)");
+        }
+        else if (!includeCommentParagraphs)
+        {
+            sb.AppendLine("(Only Body paragraphs - visible in document body, excluding Comment paragraphs)");
+        }
+        else if (!includeTextboxParagraphs)
+        {
+            sb.AppendLine("(Includes all paragraphs in document structure, excluding TextBox paragraphs)");
+        }
+        else
+        {
+            sb.AppendLine("(Includes all paragraphs in document structure, including Comment objects and TextBoxes)");
+        }
         sb.AppendLine();
 
         for (int i = 0; i < paragraphs.Count; i++)
         {
             var para = paragraphs[i];
             var text = para.GetText().Trim();
-            sb.AppendLine($"[{i}] Style: {para.ParagraphFormat.Style?.Name ?? "(none)"}");
+            
+            // Determine paragraph location
+            string location = "Body";
+            string parentNodeInfo = "";
+            
+            if (para.ParentNode != null)
+            {
+                var parentNodeType = para.ParentNode.NodeType;
+                parentNodeInfo = $"ParentNode: {parentNodeType}";
+                
+                // Check if paragraph is inside a Comment object
+                var commentAncestor = para.GetAncestor(NodeType.Comment);
+                if (commentAncestor != null)
+                {
+                    location = "[Comment]";
+                    var comment = commentAncestor as Comment;
+                    if (comment != null)
+                    {
+                        parentNodeInfo += $" (Comment ID: {comment.Id}, Author: {comment.Author})";
+                    }
+                }
+                else
+                {
+                    // Check if paragraph is inside a TextBox/Shape
+                    var shapeAncestor = para.GetAncestor(NodeType.Shape);
+                    if (shapeAncestor != null)
+                    {
+                        var shape = shapeAncestor as Aspose.Words.Drawing.Shape;
+                        if (shape != null && shape.ShapeType == Aspose.Words.Drawing.ShapeType.TextBox)
+                        {
+                            location = "[TextBox]";
+                            parentNodeInfo += $" (TextBox)";
+                        }
+                        else
+                        {
+                            location = $"[Shape]";
+                        }
+                    }
+                    else
+                    {
+                        // Check if paragraph is directly in Body
+                        var bodyAncestor = para.GetAncestor(NodeType.Body);
+                        if (bodyAncestor != null && para.ParentNode.NodeType == NodeType.Body)
+                        {
+                            location = "Body";
+                        }
+                        else if (para.ParentNode.NodeType == NodeType.Body)
+                        {
+                            location = "Body";
+                        }
+                        else
+                        {
+                            location = $"[{parentNodeType}]";
+                        }
+                    }
+                }
+            }
+            
+            sb.AppendLine($"[{i}] Location: {location}");
+            sb.AppendLine($"    Style: {para.ParagraphFormat.Style?.Name ?? "(none)"}");
+            if (!string.IsNullOrEmpty(parentNodeInfo))
+            {
+                sb.AppendLine($"    {parentNodeInfo}");
+            }
             sb.AppendLine($"    Text: {text.Substring(0, Math.Min(100, text.Length))}{(text.Length > 100 ? "..." : "")}");
             sb.AppendLine();
         }
@@ -1012,22 +1309,5 @@ public class WordParagraphTool : IAsposeTool
         };
     }
     
-    private System.Drawing.Color ParseColor(string colorStr)
-    {
-        if (string.IsNullOrEmpty(colorStr))
-            return System.Drawing.Color.Black;
-        
-        colorStr = colorStr.TrimStart('#');
-        
-        if (colorStr.Length == 6)
-        {
-            var r = Convert.ToInt32(colorStr.Substring(0, 2), 16);
-            var g = Convert.ToInt32(colorStr.Substring(2, 2), 16);
-            var b = Convert.ToInt32(colorStr.Substring(4, 2), 16);
-            return System.Drawing.Color.FromArgb(r, g, b);
-        }
-        
-        return System.Drawing.Color.Black;
-    }
 }
 

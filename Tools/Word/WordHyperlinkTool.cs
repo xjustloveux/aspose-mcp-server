@@ -11,7 +11,13 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class WordHyperlinkTool : IAsposeTool
 {
-    public string Description => "Manage Word hyperlinks: add, edit, delete, or get all";
+    public string Description => @"Manage Word hyperlinks. Supports 4 operations: add, edit, delete, get.
+
+Usage examples:
+- Add hyperlink: word_hyperlink(operation='add', path='doc.docx', text='Link', url='https://example.com', paragraphIndex=0)
+- Edit hyperlink: word_hyperlink(operation='edit', path='doc.docx', hyperlinkIndex=0, url='https://newurl.com')
+- Delete hyperlink: word_hyperlink(operation='delete', path='doc.docx', hyperlinkIndex=0)
+- Get hyperlinks: word_hyperlink(operation='get', path='doc.docx')";
 
     public object InputSchema => new
     {
@@ -21,13 +27,17 @@ public class WordHyperlinkTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'add', 'edit', 'delete', 'get'",
+                description = @"Operation to perform.
+- 'add': Add a hyperlink (required params: path, text, url)
+- 'edit': Edit a hyperlink (required params: path, hyperlinkIndex, url)
+- 'delete': Delete a hyperlink (required params: path, hyperlinkIndex)
+- 'get': Get all hyperlinks (required params: path)",
                 @enum = new[] { "add", "edit", "delete", "get" }
             },
             path = new
             {
                 type = "string",
-                description = "Document file path"
+                description = "Document file path (required for all operations)"
             },
             outputPath = new
             {
@@ -47,7 +57,7 @@ public class WordHyperlinkTool : IAsposeTool
             paragraphIndex = new
             {
                 type = "number",
-                description = "Paragraph index to insert hyperlink after (0-based, optional, for add operation)"
+                description = "Paragraph index to insert hyperlink after (0-based, optional, for add operation). When specified, creates a NEW paragraph after the specified paragraph (does not insert into existing paragraph). Valid range: 0 to (total paragraphs - 1), or -1 for document start."
             },
             tooltip = new
             {
@@ -102,23 +112,45 @@ public class WordHyperlinkTool : IAsposeTool
             var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
             if (paragraphIndex.Value == -1)
             {
-                // Insert at the beginning
+                // Insert at the beginning - create new paragraph
                 if (paragraphs.Count > 0)
                 {
                     var firstPara = paragraphs[0] as Paragraph;
                     if (firstPara != null)
                     {
-                        builder.MoveTo(firstPara);
+                        // Insert new paragraph before the first paragraph
+                        var newPara = new Paragraph(doc);
+                        doc.FirstSection.Body.InsertBefore(newPara, firstPara);
+                        builder.MoveTo(newPara);
                     }
+                    else
+                    {
+                        builder.MoveToDocumentStart();
+                    }
+                }
+                else
+                {
+                    builder.MoveToDocumentStart();
                 }
             }
             else if (paragraphIndex.Value >= 0 && paragraphIndex.Value < paragraphs.Count)
             {
-                // Insert after the specified paragraph
+                // Insert after the specified paragraph - create new paragraph
                 var targetPara = paragraphs[paragraphIndex.Value] as Paragraph;
                 if (targetPara != null)
                 {
-                    builder.MoveTo(targetPara);
+                    // Insert new paragraph after the target paragraph
+                    var newPara = new Paragraph(doc);
+                    var parentNode = targetPara.ParentNode;
+                    if (parentNode != null)
+                    {
+                        parentNode.InsertAfter(newPara, targetPara);
+                        builder.MoveTo(newPara);
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException($"無法找到索引 {paragraphIndex.Value} 的段落的父節點");
+                    }
                 }
                 else
                 {
@@ -206,7 +238,10 @@ public class WordHyperlinkTool : IAsposeTool
         
         if (hyperlinkIndex < 0 || hyperlinkIndex >= hyperlinkFields.Count)
         {
-            throw new ArgumentException($"超連結索引 {hyperlinkIndex} 超出範圍 (文檔共有 {hyperlinkFields.Count} 個超連結)");
+            var availableInfo = hyperlinkFields.Count > 0 
+                ? $" (有效索引: 0-{hyperlinkFields.Count - 1})"
+                : " (文檔中沒有超連結)";
+            throw new ArgumentException($"超連結索引 {hyperlinkIndex} 超出範圍 (文檔共有 {hyperlinkFields.Count} 個超連結){availableInfo}。請使用 get 操作查看所有可用超連結");
         }
         
         var hyperlinkField = hyperlinkFields[hyperlinkIndex];
@@ -272,7 +307,10 @@ public class WordHyperlinkTool : IAsposeTool
         
         if (hyperlinkIndex < 0 || hyperlinkIndex >= hyperlinkFields.Count)
         {
-            throw new ArgumentException($"超連結索引 {hyperlinkIndex} 超出範圍 (文檔共有 {hyperlinkFields.Count} 個超連結)");
+            var availableInfo = hyperlinkFields.Count > 0 
+                ? $" (有效索引: 0-{hyperlinkFields.Count - 1})"
+                : " (文檔中沒有超連結)";
+            throw new ArgumentException($"超連結索引 {hyperlinkIndex} 超出範圍 (文檔共有 {hyperlinkFields.Count} 個超連結){availableInfo}。請使用 get 操作查看所有可用超連結");
         }
         
         var hyperlinkField = hyperlinkFields[hyperlinkIndex];

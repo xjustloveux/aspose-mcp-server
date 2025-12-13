@@ -12,7 +12,12 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class ExcelStyleTool : IAsposeTool
 {
-    public string Description => "Manage Excel styles: create, apply, get format, or format cells";
+    public string Description => @"Manage Excel styles. Supports 3 operations: format, get_format, copy_sheet_format.
+
+Usage examples:
+- Format cells: excel_style(operation='format', path='book.xlsx', range='A1:B10', fontName='Arial', fontSize=12, bold=true)
+- Get format: excel_style(operation='get_format', path='book.xlsx', range='A1')
+- Copy sheet format: excel_style(operation='copy_sheet_format', path='book.xlsx', sourceSheetIndex=0, targetSheetIndex=1)";
 
     public object InputSchema => new
     {
@@ -22,13 +27,16 @@ public class ExcelStyleTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'format', 'get_format', 'copy_sheet_format'",
+                description = @"Operation to perform.
+- 'format': Format cells (required params: path, range)
+- 'get_format': Get cell format (required params: path, range)
+- 'copy_sheet_format': Copy sheet format (required params: path, sourceSheetIndex, targetSheetIndex)",
                 @enum = new[] { "format", "get_format", "copy_sheet_format" }
             },
             path = new
             {
                 type = "string",
-                description = "Excel file path"
+                description = "Excel file path (required for all operations)"
             },
             sheetIndex = new
             {

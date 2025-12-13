@@ -11,7 +11,13 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class ExcelCommentTool : IAsposeTool
 {
-    public string Description => "Manage Excel comments: add, edit, delete, or get comments from cells";
+    public string Description => @"Manage Excel comments. Supports 4 operations: add, edit, delete, get.
+
+Usage examples:
+- Add comment: excel_comment(operation='add', path='book.xlsx', cell='A1', comment='This is a comment')
+- Edit comment: excel_comment(operation='edit', path='book.xlsx', cell='A1', comment='Updated comment')
+- Delete comment: excel_comment(operation='delete', path='book.xlsx', cell='A1')
+- Get comments: excel_comment(operation='get', path='book.xlsx')";
 
     public object InputSchema => new
     {
@@ -21,13 +27,17 @@ public class ExcelCommentTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'add', 'edit', 'delete', 'get'",
+                description = @"Operation to perform.
+- 'add': Add a comment (required params: path, cell, comment)
+- 'edit': Edit a comment (required params: path, cell, comment)
+- 'delete': Delete a comment (required params: path, cell)
+- 'get': Get all comments (required params: path)",
                 @enum = new[] { "add", "edit", "delete", "get" }
             },
             path = new
             {
                 type = "string",
-                description = "Excel file path"
+                description = "Excel file path (required for all operations)"
             },
             sheetIndex = new
             {

@@ -10,7 +10,14 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class WordBookmarkTool : IAsposeTool
 {
-    public string Description => "Manage Word bookmarks: add, edit, delete, get all, or goto (get location)";
+    public string Description => @"Manage Word bookmarks. Supports 5 operations: add, edit, delete, get, goto.
+
+Usage examples:
+- Add bookmark: word_bookmark(operation='add', path='doc.docx', name='bookmark1', text='Bookmarked text')
+- Edit bookmark: word_bookmark(operation='edit', path='doc.docx', name='bookmark1', text='Updated text')
+- Delete bookmark: word_bookmark(operation='delete', path='doc.docx', name='bookmark1')
+- Get bookmarks: word_bookmark(operation='get', path='doc.docx')
+- Goto bookmark: word_bookmark(operation='goto', path='doc.docx', name='bookmark1')";
 
     public object InputSchema => new
     {
@@ -20,13 +27,18 @@ public class WordBookmarkTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'add', 'edit', 'delete', 'get', 'goto'",
+                description = @"Operation to perform.
+- 'add': Add a bookmark (required params: path, name)
+- 'edit': Edit a bookmark (required params: path, name, text)
+- 'delete': Delete a bookmark (required params: path, name)
+- 'get': Get all bookmarks (required params: path)
+- 'goto': Get bookmark location (required params: path, name)",
                 @enum = new[] { "add", "edit", "delete", "get", "goto" }
             },
             path = new
             {
                 type = "string",
-                description = "Document file path"
+                description = "Document file path (required for all operations)"
             },
             outputPath = new
             {
@@ -187,7 +199,9 @@ public class WordBookmarkTool : IAsposeTool
         var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
         var bookmarkName = arguments?["name"]?.GetValue<string>() ?? throw new ArgumentException("name is required for edit operation");
         var newName = arguments?["newName"]?.GetValue<string>();
-        var newText = arguments?["newText"]?.GetValue<string>();
+        // Accept both text and newText for compatibility
+        var newText = arguments?["newText"]?.GetValue<string>() ?? 
+                     arguments?["text"]?.GetValue<string>();
 
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
@@ -201,12 +215,30 @@ public class WordBookmarkTool : IAsposeTool
         }
         catch
         {
-            throw new ArgumentException($"找不到書籤 '{bookmarkName}'");
+            // Get available bookmarks for better error message
+            var availableBookmarks = new List<string>();
+            foreach (Bookmark bm in bookmarks)
+            {
+                availableBookmarks.Add(bm.Name);
+            }
+            var availableInfo = availableBookmarks.Count > 0 
+                ? $"\n可用書籤: {string.Join(", ", availableBookmarks.Take(10))}{(availableBookmarks.Count > 10 ? "..." : "")}"
+                : "\n文檔中沒有書籤";
+            throw new ArgumentException($"找不到書籤 '{bookmarkName}'{availableInfo}。請使用 get 操作查看所有可用書籤");
         }
         
         if (bookmark == null)
         {
-            throw new ArgumentException($"找不到書籤 '{bookmarkName}'");
+            // Get available bookmarks for better error message
+            var availableBookmarks = new List<string>();
+            foreach (Bookmark bm in bookmarks)
+            {
+                availableBookmarks.Add(bm.Name);
+            }
+            var availableInfo = availableBookmarks.Count > 0 
+                ? $"\n可用書籤: {string.Join(", ", availableBookmarks.Take(10))}{(availableBookmarks.Count > 10 ? "..." : "")}"
+                : "\n文檔中沒有書籤";
+            throw new ArgumentException($"找不到書籤 '{bookmarkName}'{availableInfo}。請使用 get 操作查看所有可用書籤");
         }
         var oldName = bookmark.Name;
         var oldText = bookmark.Text;

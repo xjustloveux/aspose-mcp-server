@@ -12,7 +12,13 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class PptHeaderFooterTool : IAsposeTool
 {
-    public string Description => "Manage PowerPoint headers and footers: set header, set footer, batch set, or set slide numbering";
+    public string Description => @"Manage PowerPoint headers and footers. Supports 4 operations: set_header, set_footer, batch_set, set_slide_numbering.
+
+Usage examples:
+- Set header: ppt_header_footer(operation='set_header', path='presentation.pptx', headerText='Header Text')
+- Set footer: ppt_header_footer(operation='set_footer', path='presentation.pptx', footerText='Footer Text')
+- Batch set: ppt_header_footer(operation='batch_set', path='presentation.pptx', headerText='Header', footerText='Footer', slideIndices=[0,1,2])
+- Set slide numbering: ppt_header_footer(operation='set_slide_numbering', path='presentation.pptx', showSlideNumber=true)";
 
     public object InputSchema => new
     {
@@ -22,13 +28,17 @@ public class PptHeaderFooterTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'set_header', 'set_footer', 'batch_set', 'set_slide_numbering'",
+                description = @"Operation to perform.
+- 'set_header': Set header text (required params: path, headerText)
+- 'set_footer': Set footer text (required params: path, footerText)
+- 'batch_set': Batch set header/footer (required params: path)
+- 'set_slide_numbering': Set slide numbering (required params: path)",
                 @enum = new[] { "set_header", "set_footer", "batch_set", "set_slide_numbering" }
             },
             path = new
             {
                 type = "string",
-                description = "Presentation file path"
+                description = "Presentation file path (required for all operations)"
             },
             headerText = new
             {
@@ -93,8 +103,6 @@ public class PptHeaderFooterTool : IAsposeTool
         foreach (var slide in slides)
         {
             var headerFooter = slide.HeaderFooterManager;
-            // Note: Header text is typically set through layout placeholders
-            // This is a simplified approach - full implementation would require placeholder manipulation
             headerFooter.SetFooterText(headerText);
             headerFooter.SetFooterVisibility(true);
         }

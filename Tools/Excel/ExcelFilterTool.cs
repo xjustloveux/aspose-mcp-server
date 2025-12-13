@@ -11,7 +11,12 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class ExcelFilterTool : IAsposeTool
 {
-    public string Description => "Manage Excel filters: apply/remove auto filter or get filter status";
+    public string Description => @"Manage Excel filters. Supports 3 operations: apply, remove, get_status.
+
+Usage examples:
+- Apply filter: excel_filter(operation='apply', path='book.xlsx', range='A1:C10')
+- Remove filter: excel_filter(operation='remove', path='book.xlsx', range='A1:C10')
+- Get filter status: excel_filter(operation='get_status', path='book.xlsx')";
 
     public object InputSchema => new
     {
@@ -21,13 +26,16 @@ public class ExcelFilterTool : IAsposeTool
             operation = new
             {
                 type = "string",
-                description = "Operation to perform: 'apply', 'remove', 'get_status'",
+                description = @"Operation to perform.
+- 'apply': Apply auto filter (required params: path, range)
+- 'remove': Remove auto filter (required params: path, range)
+- 'get_status': Get filter status (required params: path)",
                 @enum = new[] { "apply", "remove", "get_status" }
             },
             path = new
             {
                 type = "string",
-                description = "Excel file path"
+                description = "Excel file path (required for all operations)"
             },
             sheetIndex = new
             {
