@@ -295,6 +295,13 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
         };
     }
 
+    /// <summary>
+    /// Adds a list to the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing items array, optional listType, listStyle, outputPath</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> AddListAsync(JsonObject? arguments, string path, string outputPath)
     {
         var items = arguments?["items"];
@@ -366,10 +373,17 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
         }
     }
 
+    /// <summary>
+    /// Adds an item to an existing list
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing listIndex, text, optional insertAt, outputPath</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> AddListItemAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var text = arguments?["text"]?.GetValue<string>() ?? throw new ArgumentException("text is required");
-        var styleName = arguments?["styleName"]?.GetValue<string>() ?? throw new ArgumentException("styleName is required");
+        var text = ArgumentHelper.GetString(arguments, "text", "text");
+        var styleName = ArgumentHelper.GetString(arguments, "styleName", "styleName");
         var listLevel = arguments?["listLevel"]?.GetValue<int>() ?? 0;
         var applyStyleIndent = arguments?["applyStyleIndent"]?.GetValue<bool>() ?? true;
 
@@ -415,9 +429,16 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
         return await Task.FromResult(result);
     }
 
+    /// <summary>
+    /// Deletes an item from a list
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing listIndex, itemIndex, optional outputPath</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeleteListItemAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var paragraphIndex = arguments?["paragraphIndex"]?.GetValue<int>() ?? throw new ArgumentException("paragraphIndex is required");
+        var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex", "paragraphIndex");
 
         var doc = new Document(path);
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
@@ -452,10 +473,17 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
         return await Task.FromResult(result);
     }
 
+    /// <summary>
+    /// Edits a list item
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing listIndex, itemIndex, text, optional outputPath</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> EditListItemAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var paragraphIndex = arguments?["paragraphIndex"]?.GetValue<int>() ?? throw new ArgumentException("paragraphIndex is required");
-        var text = arguments?["text"]?.GetValue<string>() ?? throw new ArgumentException("text is required");
+        var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex", "paragraphIndex");
+        var text = ArgumentHelper.GetString(arguments, "text", "text");
         var level = arguments?["level"]?.GetValue<int?>();
 
         var doc = new Document(path);
@@ -495,9 +523,16 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
         return await Task.FromResult(result);
     }
 
+    /// <summary>
+    /// Sets list format properties
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing listIndex, optional listType, listStyle, formatting options</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetListFormatAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var paragraphIndex = arguments?["paragraphIndex"]?.GetValue<int>() ?? throw new ArgumentException("paragraphIndex is required");
+        var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex", "paragraphIndex");
         var numberStyle = arguments?["numberStyle"]?.GetValue<string>();
         var indentLevel = arguments?["indentLevel"]?.GetValue<int?>();
         var leftIndent = arguments?["leftIndent"]?.GetValue<double?>();
@@ -578,6 +613,12 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
     }
 
 
+    /// <summary>
+    /// Gets list format information
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing listIndex</param>
+    /// <param name="path">Word document file path</param>
+    /// <returns>Formatted string with list format details</returns>
     private async Task<string> GetListFormatAsync(JsonObject? arguments, string path)
     {
         var paragraphIndex = arguments?["paragraphIndex"]?.GetValue<int?>();

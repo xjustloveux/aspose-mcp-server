@@ -106,10 +106,9 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
-        var slideIndex = arguments?["slideIndex"]?.GetValue<int>() ?? throw new ArgumentException("slideIndex is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
 
         return operation.ToLower() switch
         {
@@ -122,9 +121,16 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Adds a chart to a slide
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing chartType, optional title, data, x, y, width, height, outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <returns>Success message with chart index</returns>
     private async Task<string> AddChartAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var chartTypeStr = arguments?["chartType"]?.GetValue<string>() ?? throw new ArgumentException("chartType is required for add operation");
+        var chartTypeStr = ArgumentHelper.GetString(arguments, "chartType", "chartType");
         var title = arguments?["title"]?.GetValue<string>();
 
         using var presentation = new Presentation(path);
@@ -159,9 +165,16 @@ Usage examples:
         return await Task.FromResult($"Chart added to slide {slideIndex}: {path}");
     }
 
+    /// <summary>
+    /// Edits chart properties
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing chartIndex, optional title, outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> EditChartAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = arguments?["shapeIndex"]?.GetValue<int>() ?? throw new ArgumentException("shapeIndex is required for edit operation");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
         var title = arguments?["title"]?.GetValue<string>();
         var chartTypeStr = arguments?["chartType"]?.GetValue<string>();
 
@@ -208,9 +221,16 @@ Usage examples:
         return await Task.FromResult($"Chart updated on slide {slideIndex}, shape {shapeIndex}");
     }
 
+    /// <summary>
+    /// Deletes a chart from a slide
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing chartIndex, optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeleteChartAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = arguments?["shapeIndex"]?.GetValue<int>() ?? throw new ArgumentException("shapeIndex is required for delete operation");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
@@ -226,9 +246,16 @@ Usage examples:
         return await Task.FromResult($"Chart deleted from slide {slideIndex}, shape {shapeIndex}");
     }
 
+    /// <summary>
+    /// Gets chart data
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing chartIndex</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <returns>Formatted string with chart data</returns>
     private async Task<string> GetChartDataAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = arguments?["shapeIndex"]?.GetValue<int>() ?? throw new ArgumentException("shapeIndex is required for get_data operation");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
@@ -276,9 +303,16 @@ Usage examples:
         return await Task.FromResult(sb.ToString());
     }
 
+    /// <summary>
+    /// Updates chart data
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing chartIndex, data, optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> UpdateChartDataAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = arguments?["shapeIndex"]?.GetValue<int>() ?? throw new ArgumentException("shapeIndex is required for update_data operation");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
         var categoriesArray = arguments?["categories"]?.AsArray();
         var seriesArray = arguments?["series"]?.AsArray();
         var clearExisting = arguments?["clearExisting"]?.GetValue<bool?>() ?? false;

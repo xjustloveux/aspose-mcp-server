@@ -104,9 +104,9 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var slideIndex = arguments?["slideIndex"]?.GetValue<int>() ?? throw new ArgumentException("slideIndex is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
 
         return operation.ToLower() switch
         {
@@ -116,9 +116,16 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Adds a SmartArt diagram to a slide
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing smartArtType, optional x, y, width, height, outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> AddSmartArtAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var layoutStr = arguments?["layout"]?.GetValue<string>() ?? throw new ArgumentException("layout is required for add operation");
+        var layoutStr = ArgumentHelper.GetString(arguments, "layout", "layout");
         var x = arguments?["x"]?.GetValue<float?>() ?? 50;
         var y = arguments?["y"]?.GetValue<float?>() ?? 50;
         var width = arguments?["width"]?.GetValue<float?>() ?? 400;
@@ -144,9 +151,16 @@ Usage examples:
         return await Task.FromResult($"已新增 SmartArt ({layout}) 至投影片 {slideIndex}");
     }
 
+    /// <summary>
+    /// Manages SmartArt nodes (add, edit, delete)
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing smartArtIndex, action, optional nodeIndex, text, outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> ManageNodesAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = arguments?["shapeIndex"]?.GetValue<int>() ?? throw new ArgumentException("shapeIndex is required for manage_nodes operation");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
         var action = arguments?["action"]?.GetValue<string>()?.ToLower() ?? throw new ArgumentException("action is required for manage_nodes operation");
         var targetPath = arguments?["targetPath"]?.AsArray()?.Select(x => x?.GetValue<int>() ?? -1).ToArray();
         var text = arguments?["text"]?.GetValue<string>();

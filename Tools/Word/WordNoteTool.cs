@@ -100,9 +100,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
@@ -120,9 +119,16 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Adds a footnote to the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing noteText, optional paragraphIndex, sectionIndex</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> AddFootnoteAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var footnoteText = arguments?["noteText"]?.GetValue<string>() ?? throw new ArgumentException("noteText is required");
+        var footnoteText = ArgumentHelper.GetString(arguments, "noteText", "noteText");
         var paragraphIndex = arguments?["paragraphIndex"]?.GetValue<int?>();
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>() ?? 0;
         var referenceText = arguments?["referenceText"]?.GetValue<string>();
@@ -209,9 +215,16 @@ Usage examples:
         return await Task.FromResult($"Footnote added: {outputPath}");
     }
 
+    /// <summary>
+    /// Adds an endnote to the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing noteText, optional paragraphIndex, sectionIndex</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> AddEndnoteAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var endnoteText = arguments?["noteText"]?.GetValue<string>() ?? throw new ArgumentException("noteText is required");
+        var endnoteText = ArgumentHelper.GetString(arguments, "noteText", "noteText");
         var paragraphIndex = arguments?["paragraphIndex"]?.GetValue<int?>();
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>() ?? 0;
         var referenceText = arguments?["referenceText"]?.GetValue<string>();
@@ -320,6 +333,13 @@ Usage examples:
         return await Task.FromResult($"Endnote added: {outputPath}");
     }
 
+    /// <summary>
+    /// Deletes a footnote from the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing noteIndex</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeleteFootnoteAsync(JsonObject? arguments, string path, string outputPath)
     {
         var referenceMark = arguments?["referenceMark"]?.GetValue<string>();
@@ -362,6 +382,13 @@ Usage examples:
         return await Task.FromResult($"Deleted {deletedCount} footnote(s): {outputPath}");
     }
 
+    /// <summary>
+    /// Deletes an endnote from the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing noteIndex</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeleteEndnoteAsync(JsonObject? arguments, string path, string outputPath)
     {
         var referenceMark = arguments?["referenceMark"]?.GetValue<string>();
@@ -404,11 +431,18 @@ Usage examples:
         return await Task.FromResult($"Deleted {deletedCount} endnote(s): {outputPath}");
     }
 
+    /// <summary>
+    /// Edits a footnote
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing noteIndex, noteText</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> EditFootnoteAsync(JsonObject? arguments, string path, string outputPath)
     {
         var referenceMark = arguments?["referenceMark"]?.GetValue<string>();
         var footnoteIndex = arguments?["noteIndex"]?.GetValue<int?>();
-        var newText = arguments?["newText"]?.GetValue<string>() ?? throw new ArgumentException("newText is required");
+        var newText = ArgumentHelper.GetString(arguments, "newText", "newText");
 
         var doc = new Document(path);
         var footnotes = doc.GetChildNodes(NodeType.Footnote, true).Cast<Footnote>()
@@ -456,11 +490,18 @@ Usage examples:
         return await Task.FromResult($"Footnote edited: {outputPath}");
     }
 
+    /// <summary>
+    /// Edits an endnote
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing noteIndex, noteText</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> EditEndnoteAsync(JsonObject? arguments, string path, string outputPath)
     {
         var referenceMark = arguments?["referenceMark"]?.GetValue<string>();
         var endnoteIndex = arguments?["noteIndex"]?.GetValue<int?>();
-        var newText = arguments?["newText"]?.GetValue<string>() ?? throw new ArgumentException("newText is required");
+        var newText = ArgumentHelper.GetString(arguments, "newText", "newText");
 
         var doc = new Document(path);
         var endnotes = doc.GetChildNodes(NodeType.Footnote, true).Cast<Footnote>()
@@ -508,6 +549,12 @@ Usage examples:
         return await Task.FromResult($"Endnote edited: {outputPath}");
     }
 
+    /// <summary>
+    /// Gets all footnotes from the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="path">Word document file path</param>
+    /// <returns>Formatted string with all footnotes</returns>
     private async Task<string> GetFootnotesAsync(JsonObject? arguments, string path)
     {
         var doc = new Document(path);
@@ -534,6 +581,12 @@ Usage examples:
         return await Task.FromResult(sb.ToString());
     }
 
+    /// <summary>
+    /// Gets all endnotes from the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="path">Word document file path</param>
+    /// <returns>Formatted string with all endnotes</returns>
     private async Task<string> GetEndnotesAsync(JsonObject? arguments, string path)
     {
         var doc = new Document(path);

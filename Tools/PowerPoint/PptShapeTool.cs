@@ -93,9 +93,9 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var slideIndex = arguments?["slideIndex"]?.GetValue<int>() ?? throw new ArgumentException("slideIndex is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
 
         return operation.ToLower() switch
         {
@@ -107,9 +107,16 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Edits shape properties
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing shapeIndex, optional x, y, width, height, text, outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> EditShapeAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = arguments?["shapeIndex"]?.GetValue<int>() ?? throw new ArgumentException("shapeIndex is required for edit operation");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
         var x = arguments?["x"]?.GetValue<float?>();
         var y = arguments?["y"]?.GetValue<float?>();
         var width = arguments?["width"]?.GetValue<float?>();
@@ -168,9 +175,16 @@ Usage examples:
         return await Task.FromResult($"Shape {shapeIndex} edited: {string.Join(", ", changes)} - {path}");
     }
 
+    /// <summary>
+    /// Deletes a shape from a slide
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing shapeIndex, optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeleteShapeAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = arguments?["shapeIndex"]?.GetValue<int>() ?? throw new ArgumentException("shapeIndex is required for delete operation");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
 
         using var presentation = new Presentation(path);
         if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
@@ -189,6 +203,13 @@ Usage examples:
         return await Task.FromResult($"已刪除投影片 {slideIndex} 的形狀 {shapeIndex}");
     }
 
+    /// <summary>
+    /// Gets all shapes from a slide
+    /// </summary>
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <returns>Formatted string with all shapes</returns>
     private async Task<string> GetShapesAsync(JsonObject? arguments, string path, int slideIndex)
     {
         using var presentation = new Presentation(path);
@@ -224,9 +245,16 @@ Usage examples:
         return await Task.FromResult(sb.ToString());
     }
 
+    /// <summary>
+    /// Gets detailed information about a specific shape
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing shapeIndex</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <returns>Formatted string with shape details</returns>
     private async Task<string> GetShapeDetailsAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = arguments?["shapeIndex"]?.GetValue<int>() ?? throw new ArgumentException("shapeIndex is required for get_details operation");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);

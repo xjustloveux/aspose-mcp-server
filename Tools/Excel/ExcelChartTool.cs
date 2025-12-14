@@ -129,9 +129,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = arguments?["outputPath"]?.GetValue<string>();
         if (!string.IsNullOrEmpty(outputPath))
         {
@@ -151,10 +150,17 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Adds a chart to the worksheet
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing chartType, dataRange, optional categoryAxisDataRange, title, position</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message with chart index</returns>
     private async Task<string> AddChartAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var chartTypeStr = arguments?["chartType"]?.GetValue<string>() ?? throw new ArgumentException("chartType is required for add operation");
-        var dataRange = arguments?["dataRange"]?.GetValue<string>() ?? throw new ArgumentException("dataRange is required for add operation");
+        var chartTypeStr = ArgumentHelper.GetString(arguments, "chartType", "chartType");
+        var dataRange = ArgumentHelper.GetString(arguments, "dataRange", "dataRange");
         var categoryAxisDataRange = arguments?["categoryAxisDataRange"]?.GetValue<string>();
         var title = arguments?["title"]?.GetValue<string>();
         var topRow = arguments?["topRow"]?.GetValue<int>();
@@ -266,9 +272,17 @@ Usage examples:
         return await Task.FromResult($"Chart added to worksheet with data range: {dataRange}");
     }
 
+    /// <summary>
+    /// Edits chart properties
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing chartIndex and various chart properties</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> EditChartAsync(JsonObject? arguments, string path, string outputPath, int sheetIndex)
     {
-        var chartIndex = arguments?["chartIndex"]?.GetValue<int>() ?? throw new ArgumentException("chartIndex is required for edit operation");
+        var chartIndex = ArgumentHelper.GetInt(arguments, "chartIndex", "chartIndex");
         var title = arguments?["title"]?.GetValue<string>();
         var dataRange = arguments?["dataRange"]?.GetValue<string>();
         var categoryAxisDataRange = arguments?["categoryAxisDataRange"]?.GetValue<string>();
@@ -433,9 +447,16 @@ Usage examples:
         return await Task.FromResult(result);
     }
 
+    /// <summary>
+    /// Deletes a chart from the worksheet
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing chartIndex</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeleteChartAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var chartIndex = arguments?["chartIndex"]?.GetValue<int>() ?? throw new ArgumentException("chartIndex is required for delete operation");
+        var chartIndex = ArgumentHelper.GetInt(arguments, "chartIndex", "chartIndex");
 
         using var workbook = new Workbook(path);
         
@@ -458,6 +479,13 @@ Usage examples:
         return await Task.FromResult($"成功刪除圖表 #{chartIndex} ({chartName})\n工作表剩餘圖表數: {remainingCount}\n輸出: {path}");
     }
 
+    /// <summary>
+    /// Gets all charts from the worksheet
+    /// </summary>
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Formatted string with all charts</returns>
     private async Task<string> GetChartsAsync(JsonObject? arguments, string path, int sheetIndex)
     {
         using var workbook = new Workbook(path);
@@ -571,10 +599,18 @@ Usage examples:
         return await Task.FromResult(result.ToString());
     }
 
+    /// <summary>
+    /// Updates chart data range
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing chartIndex, dataRange, optional categoryAxisDataRange</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> UpdateChartDataAsync(JsonObject? arguments, string path, string outputPath, int sheetIndex)
     {
-        var chartIndex = arguments?["chartIndex"]?.GetValue<int>() ?? throw new ArgumentException("chartIndex is required for update_data operation");
-        var dataRange = arguments?["dataRange"]?.GetValue<string>() ?? throw new ArgumentException("dataRange is required for update_data operation");
+        var chartIndex = ArgumentHelper.GetInt(arguments, "chartIndex", "chartIndex");
+        var dataRange = ArgumentHelper.GetString(arguments, "dataRange", "dataRange");
 
         using var workbook = new Workbook(path);
         
@@ -609,9 +645,17 @@ Usage examples:
         return await Task.FromResult($"成功更新圖表 #{chartIndex} 的數據源\n新數據範圍: {dataRange}\n輸出: {outputPath}");
     }
 
+    /// <summary>
+    /// Sets chart properties
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing chartIndex and various chart properties</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetChartPropertiesAsync(JsonObject? arguments, string path, string outputPath, int sheetIndex)
     {
-        var chartIndex = arguments?["chartIndex"]?.GetValue<int>() ?? throw new ArgumentException("chartIndex is required for set_properties operation");
+        var chartIndex = ArgumentHelper.GetInt(arguments, "chartIndex", "chartIndex");
         var title = arguments?["title"]?.GetValue<string>();
         var removeTitle = arguments?["removeTitle"]?.GetValue<bool?>() ?? false;
         var legendVisible = arguments?["legendVisible"]?.GetValue<bool?>();

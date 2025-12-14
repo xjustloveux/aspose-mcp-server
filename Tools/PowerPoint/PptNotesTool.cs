@@ -63,8 +63,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         return operation.ToLower() switch
         {
@@ -76,10 +76,16 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Adds notes to a slide
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing slideIndex, notesText, optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> AddNotesAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = arguments?["slideIndex"]?.GetValue<int>() ?? throw new ArgumentException("slideIndex is required for add operation");
-        var notes = arguments?["notes"]?.GetValue<string>() ?? throw new ArgumentException("notes is required for add operation");
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
+        var notes = ArgumentHelper.GetString(arguments, "notes", "notes");
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
@@ -98,10 +104,16 @@ Usage examples:
         return await Task.FromResult($"已更新投影片 {slideIndex} 的講者備註: {path}");
     }
 
+    /// <summary>
+    /// Edits slide notes
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing slideIndex, notesText, optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> EditNotesAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = arguments?["slideIndex"]?.GetValue<int>() ?? throw new ArgumentException("slideIndex is required for edit operation");
-        var notes = arguments?["notes"]?.GetValue<string>() ?? throw new ArgumentException("notes is required for edit operation");
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
+        var notes = ArgumentHelper.GetString(arguments, "notes", "notes");
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
@@ -117,6 +129,12 @@ Usage examples:
         return await Task.FromResult($"Notes updated for slide {slideIndex}: {path}");
     }
 
+    /// <summary>
+    /// Gets notes from a slide
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing optional slideIndex (if null, gets all)</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Formatted string with notes</returns>
     private async Task<string> GetNotesAsync(JsonObject? arguments, string path)
     {
         var slideIndex = arguments?["slideIndex"]?.GetValue<int?>();
@@ -161,6 +179,12 @@ Usage examples:
         return await Task.FromResult(sb.ToString());
     }
 
+    /// <summary>
+    /// Clears notes from a slide
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing slideIndex, optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> ClearNotesAsync(JsonObject? arguments, string path)
     {
         var slideIndices = arguments?["slideIndices"]?.AsArray()?.Select(x => x?.GetValue<int>() ?? -1).ToArray();

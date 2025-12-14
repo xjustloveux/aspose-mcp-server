@@ -19,7 +19,7 @@ public static class ExcelHelper
     {
         if (sheetIndex < 0 || sheetIndex >= workbook.Worksheets.Count)
         {
-            throw new ArgumentException($"工作表索引 {sheetIndex} 超出範圍 (共有 {workbook.Worksheets.Count} 個工作表)");
+            throw new ArgumentException($"Sheet index {sheetIndex} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
         }
     }
 
@@ -34,7 +34,7 @@ public static class ExcelHelper
     {
         if (sheetIndex < 0 || sheetIndex >= workbook.Worksheets.Count)
         {
-            throw new ArgumentException($"{customMessage}: 工作表索引 {sheetIndex} 超出範圍 (共有 {workbook.Worksheets.Count} 個工作表)");
+            throw new ArgumentException($"{customMessage}: Sheet index {sheetIndex} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
         }
     }
 
@@ -81,7 +81,7 @@ public static class PowerPointHelper
     {
         if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
         {
-            throw new ArgumentException($"投影片索引 {slideIndex} 超出範圍 (共有 {presentation.Slides.Count} 個投影片)");
+            throw new ArgumentException($"Slide index {slideIndex} is out of range (presentation has {presentation.Slides.Count} slides)");
         }
     }
 
@@ -108,7 +108,7 @@ public static class PowerPointHelper
     {
         if (shapeIndex < 0 || shapeIndex >= slide.Shapes.Count)
         {
-            throw new ArgumentException($"形狀索引 {shapeIndex} 超出範圍 (共有 {slide.Shapes.Count} 個形狀)");
+            throw new ArgumentException($"Shape index {shapeIndex} is out of range (slide has {slide.Shapes.Count} shapes)");
         }
     }
 
@@ -133,11 +133,11 @@ public static class PowerPointHelper
     /// <param name="collection">Collection to check against</param>
     /// <param name="itemName">Name of the item type for error message</param>
     /// <exception cref="ArgumentException">Thrown if index is invalid</exception>
-    public static void ValidateCollectionIndex<T>(int index, ICollection<T> collection, string itemName = "項目")
+    public static void ValidateCollectionIndex<T>(int index, ICollection<T> collection, string itemName = "Item")
     {
         if (index < 0 || index >= collection.Count)
         {
-            throw new ArgumentException($"{itemName}索引 {index} 超出範圍 (共有 {collection.Count} 個{itemName})");
+            throw new ArgumentException($"{itemName} index {index} is out of range (collection has {collection.Count} {itemName.ToLower()}s)");
         }
     }
 
@@ -148,11 +148,11 @@ public static class PowerPointHelper
     /// <param name="count">Collection count</param>
     /// <param name="itemName">Name of the item type for error message</param>
     /// <exception cref="ArgumentException">Thrown if index is invalid</exception>
-    public static void ValidateCollectionIndex(int index, int count, string itemName = "項目")
+    public static void ValidateCollectionIndex(int index, int count, string itemName = "Item")
     {
         if (index < 0 || index >= count)
         {
-            throw new ArgumentException($"{itemName}索引 {index} 超出範圍 (共有 {count} 個{itemName})");
+            throw new ArgumentException($"{itemName} index {index} is out of range (collection has {count} {itemName.ToLower()}s)");
         }
     }
 }
@@ -182,7 +182,7 @@ public static class PdfHelper
     {
         if (pageIndex < 0 || pageIndex >= document.Pages.Count)
         {
-            throw new ArgumentException($"頁面索引 {pageIndex} 超出範圍 (共有 {document.Pages.Count} 個頁面)");
+            throw new ArgumentException($"Page index {pageIndex} is out of range (document has {document.Pages.Count} pages)");
         }
     }
 
@@ -207,11 +207,11 @@ public static class PdfHelper
     /// <param name="collection">Collection to check against</param>
     /// <param name="itemName">Name of the item type for error message</param>
     /// <exception cref="ArgumentException">Thrown if index is invalid</exception>
-    public static void ValidateCollectionIndex<T>(int index, ICollection<T> collection, string itemName = "項目")
+    public static void ValidateCollectionIndex<T>(int index, ICollection<T> collection, string itemName = "Item")
     {
         if (index < 0 || index >= collection.Count)
         {
-            throw new ArgumentException($"{itemName}索引 {index} 超出範圍 (共有 {collection.Count} 個{itemName})");
+            throw new ArgumentException($"{itemName} index {index} is out of range (collection has {collection.Count} {itemName.ToLower()}s)");
         }
     }
 }

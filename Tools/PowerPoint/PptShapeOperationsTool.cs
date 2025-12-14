@@ -102,9 +102,9 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var slideIndex = arguments?["slideIndex"]?.GetValue<int>() ?? throw new ArgumentException("slideIndex is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
 
         return operation.ToLower() switch
         {
@@ -118,6 +118,13 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Groups shapes together
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing shapeIndexes array, optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> GroupShapesAsync(JsonObject? arguments, string path, int slideIndex)
     {
         var shapeIndicesArray = arguments?["shapeIndices"]?.AsArray() ?? throw new ArgumentException("shapeIndices is required for group operation");
@@ -159,9 +166,16 @@ Usage examples:
         return await Task.FromResult($"Grouped {shapeIndices.Count} shapes on slide {slideIndex}");
     }
 
+    /// <summary>
+    /// Ungroups shapes
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing shapeIndex, optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> UngroupShapesAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = arguments?["shapeIndex"]?.GetValue<int>() ?? throw new ArgumentException("shapeIndex is required for ungroup operation");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
@@ -189,11 +203,17 @@ Usage examples:
         return await Task.FromResult($"Ungrouped shape on slide {slideIndex}, shape {shapeIndex}");
     }
 
+    /// <summary>
+    /// Copies a shape to another slide
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing sourceSlideIndex, sourceShapeIndex, targetSlideIndex, optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> CopyShapeAsync(JsonObject? arguments, string path)
     {
-        var fromSlide = arguments?["fromSlide"]?.GetValue<int>() ?? throw new ArgumentException("fromSlide is required for copy operation");
-        var shapeIndex = arguments?["shapeIndex"]?.GetValue<int>() ?? throw new ArgumentException("shapeIndex is required for copy operation");
-        var toSlide = arguments?["toSlide"]?.GetValue<int>() ?? throw new ArgumentException("toSlide is required for copy operation");
+        var fromSlide = ArgumentHelper.GetInt(arguments, "fromSlide", "fromSlide");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
+        var toSlide = ArgumentHelper.GetInt(arguments, "toSlide", "toSlide");
 
         using var presentation = new Presentation(path);
         if (fromSlide < 0 || fromSlide >= presentation.Slides.Count) throw new ArgumentException("fromSlide out of range");
@@ -209,10 +229,17 @@ Usage examples:
         return await Task.FromResult($"已複製形狀 {shapeIndex} 從投影片 {fromSlide} 到 {toSlide}");
     }
 
+    /// <summary>
+    /// Changes the z-order of a shape
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing shapeIndex, newIndex, optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> ReorderShapeAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = arguments?["shapeIndex"]?.GetValue<int>() ?? throw new ArgumentException("shapeIndex is required for reorder operation");
-        var toIndex = arguments?["toIndex"]?.GetValue<int>() ?? throw new ArgumentException("toIndex is required for reorder operation");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
+        var toIndex = ArgumentHelper.GetInt(arguments, "toIndex", "toIndex");
 
         using var presentation = new Presentation(path);
         if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
@@ -234,9 +261,16 @@ Usage examples:
         return await Task.FromResult($"已移動形狀 {shapeIndex} -> {toIndex}");
     }
 
+    /// <summary>
+    /// Aligns shapes
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing shapeIndexes array, alignmentType, optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> AlignShapesAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var alignStr = arguments?["align"]?.GetValue<string>() ?? throw new ArgumentException("align is required for align operation");
+        var alignStr = ArgumentHelper.GetString(arguments, "align", "align");
         var shapeIndices = arguments?["shapeIndices"]?.AsArray()?.Select(x => x?.GetValue<int>() ?? -1).ToArray()
                            ?? throw new ArgumentException("shapeIndices is required for align operation");
         var alignToSlide = arguments?["alignToSlide"]?.GetValue<bool?>() ?? false;
@@ -300,9 +334,16 @@ Usage examples:
         return await Task.FromResult($"已對齊 {shapeIndices.Length} 個形狀：{alignStr}, alignToSlide={alignToSlide}");
     }
 
+    /// <summary>
+    /// Flips a shape horizontally or vertically
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing shapeIndex, flipType (horizontal/vertical), optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> FlipShapeAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = arguments?["shapeIndex"]?.GetValue<int>() ?? throw new ArgumentException("shapeIndex is required for flip operation");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
         var flipHorizontal = arguments?["flipHorizontal"]?.GetValue<bool?>();
         var flipVertical = arguments?["flipVertical"]?.GetValue<bool?>();
 

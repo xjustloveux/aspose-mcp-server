@@ -80,9 +80,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         var sheetIndex = arguments?["sheetIndex"]?.GetValue<int>() ?? 0;
 
         return operation.ToLower() switch
@@ -97,9 +96,16 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Inserts rows into the worksheet
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing rowIndex, optional count</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> InsertRowAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var rowIndex = arguments?["rowIndex"]?.GetValue<int>() ?? throw new ArgumentException("rowIndex is required for insert_row operation");
+        var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex", "rowIndex");
         var count = arguments?["count"]?.GetValue<int>() ?? 1;
 
         using var workbook = new Workbook(path);
@@ -114,9 +120,16 @@ Usage examples:
         return await Task.FromResult($"在第 {rowIndex} 行插入了 {count} 行: {path}");
     }
 
+    /// <summary>
+    /// Deletes rows from the worksheet
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing rowIndex, optional count</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeleteRowAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var rowIndex = arguments?["rowIndex"]?.GetValue<int>() ?? throw new ArgumentException("rowIndex is required for delete_row operation");
+        var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex", "rowIndex");
         var count = arguments?["count"]?.GetValue<int>() ?? 1;
 
         using var workbook = new Workbook(path);
@@ -131,9 +144,16 @@ Usage examples:
         return await Task.FromResult($"已刪除第 {rowIndex} 行起的 {count} 行: {path}");
     }
 
+    /// <summary>
+    /// Inserts columns into the worksheet
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing columnIndex, optional count</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> InsertColumnAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var columnIndex = arguments?["columnIndex"]?.GetValue<int>() ?? throw new ArgumentException("columnIndex is required for insert_column operation");
+        var columnIndex = ArgumentHelper.GetInt(arguments, "columnIndex", "columnIndex");
         var count = arguments?["count"]?.GetValue<int>() ?? 1;
 
         using var workbook = new Workbook(path);
@@ -148,9 +168,16 @@ Usage examples:
         return await Task.FromResult($"在第 {columnIndex} 列插入了 {count} 列: {path}");
     }
 
+    /// <summary>
+    /// Deletes columns from the worksheet
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing columnIndex, optional count</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeleteColumnAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var columnIndex = arguments?["columnIndex"]?.GetValue<int>() ?? throw new ArgumentException("columnIndex is required for delete_column operation");
+        var columnIndex = ArgumentHelper.GetInt(arguments, "columnIndex", "columnIndex");
         var count = arguments?["count"]?.GetValue<int>() ?? 1;
 
         using var workbook = new Workbook(path);
@@ -165,10 +192,17 @@ Usage examples:
         return await Task.FromResult($"已刪除第 {columnIndex} 列起的 {count} 列: {path}");
     }
 
+    /// <summary>
+    /// Inserts cells into the worksheet
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing range, shiftDirection</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> InsertCellsAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var range = arguments?["range"]?.GetValue<string>() ?? throw new ArgumentException("range is required for insert_cells operation");
-        var shiftDirection = arguments?["shiftDirection"]?.GetValue<string>() ?? throw new ArgumentException("shiftDirection is required for insert_cells operation");
+        var range = ArgumentHelper.GetString(arguments, "range", "range");
+        var shiftDirection = ArgumentHelper.GetString(arguments, "shiftDirection", "shiftDirection");
 
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
@@ -195,10 +229,17 @@ Usage examples:
         return await Task.FromResult($"Cells inserted in range {range}, shifted {shiftDirection}: {path}");
     }
 
+    /// <summary>
+    /// Deletes cells from the worksheet
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing range, shiftDirection</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeleteCellsAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var range = arguments?["range"]?.GetValue<string>() ?? throw new ArgumentException("range is required for delete_cells operation");
-        var shiftDirection = arguments?["shiftDirection"]?.GetValue<string>() ?? throw new ArgumentException("shiftDirection is required for delete_cells operation");
+        var range = ArgumentHelper.GetString(arguments, "range", "range");
+        var shiftDirection = ArgumentHelper.GetString(arguments, "shiftDirection", "shiftDirection");
 
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);

@@ -70,8 +70,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         SecurityHelper.ValidateFilePath(path, "path");
 
@@ -84,10 +84,16 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Inserts a section break into the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing sectionBreakType, optional insertAtParagraphIndex, outputPath</param>
+    /// <param name="path">Word document file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> InsertSectionAsync(JsonObject? arguments, string path)
     {
         var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var sectionBreakType = arguments?["sectionBreakType"]?.GetValue<string>() ?? throw new ArgumentException("sectionBreakType is required for insert operation");
+        var sectionBreakType = ArgumentHelper.GetString(arguments, "sectionBreakType", "sectionBreakType");
         var insertAtParagraphIndex = arguments?["insertAtParagraphIndex"]?.GetValue<int?>();
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>();
 
@@ -147,6 +153,12 @@ Usage examples:
         return await Task.FromResult($"Section break inserted ({sectionBreakType}): {outputPath}");
     }
 
+    /// <summary>
+    /// Deletes a section from the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing sectionIndex, optional outputPath</param>
+    /// <param name="path">Word document file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeleteSectionAsync(JsonObject? arguments, string path)
     {
         var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
@@ -192,6 +204,12 @@ Usage examples:
         return await Task.FromResult($"Deleted {sectionsToDelete.Count} section(s). Remaining sections: {doc.Sections.Count}. Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Gets all sections from the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="path">Word document file path</param>
+    /// <returns>Formatted string with all sections</returns>
     private async Task<string> GetSectionsAsync(JsonObject? arguments, string path)
     {
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>();

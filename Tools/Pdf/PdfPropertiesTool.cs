@@ -72,7 +72,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
 
         return operation.ToLower() switch
         {
@@ -82,9 +82,14 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Gets PDF properties
+    /// </summary>
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <returns>Formatted string with properties</returns>
     private async Task<string> GetProperties(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         using var document = new Document(path);
         var metadata = document.Metadata;
@@ -107,10 +112,15 @@ Usage examples:
         return await Task.FromResult(sb.ToString());
     }
 
+    /// <summary>
+    /// Sets PDF properties
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing various property values, optional outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetProperties(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var title = arguments?["title"]?.GetValue<string>();
         var author = arguments?["author"]?.GetValue<string>();
         var subject = arguments?["subject"]?.GetValue<string>();

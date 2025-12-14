@@ -80,9 +80,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         return operation.ToLower() switch
         {
@@ -94,9 +93,15 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Protects workbook or worksheet with password
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing password, optional sheetIndex, protectWorkbook, protectionType</param>
+    /// <param name="path">Excel file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> ProtectAsync(JsonObject? arguments, string path)
     {
-        var password = arguments?["password"]?.GetValue<string>() ?? throw new ArgumentException("password is required for protect operation");
+        var password = ArgumentHelper.GetString(arguments, "password", "password");
         var sheetIndex = arguments?["sheetIndex"]?.GetValue<int?>();
         var protectWorkbook = arguments?["protectWorkbook"]?.GetValue<bool?>() ?? false;
         var protectStructure = arguments?["protectStructure"]?.GetValue<bool?>() ?? true;
@@ -146,6 +151,12 @@ Usage examples:
         return await Task.FromResult(result);
     }
 
+    /// <summary>
+    /// Removes protection from workbook or worksheet
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing password, optional sheetIndex</param>
+    /// <param name="path">Excel file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> UnprotectAsync(JsonObject? arguments, string path)
     {
         var password = arguments?["password"]?.GetValue<string>();
@@ -175,6 +186,12 @@ Usage examples:
         }
     }
 
+    /// <summary>
+    /// Gets protection status for workbook or worksheet
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing optional sheetIndex</param>
+    /// <param name="path">Excel file path</param>
+    /// <returns>Formatted string with protection status</returns>
     private async Task<string> GetProtectionAsync(JsonObject? arguments, string path)
     {
         var sheetIndex = arguments?["sheetIndex"]?.GetValue<int?>();
@@ -230,10 +247,16 @@ Usage examples:
         result.AppendLine($"允許編輯場景: {protection.AllowEditingScenario}");
     }
 
+    /// <summary>
+    /// Sets cell locked status
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing range, isLocked, optional sheetIndex</param>
+    /// <param name="path">Excel file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetCellLockedAsync(JsonObject? arguments, string path)
     {
         var sheetIndex = arguments?["sheetIndex"]?.GetValue<int>() ?? 0;
-        var range = arguments?["range"]?.GetValue<string>() ?? throw new ArgumentException("range is required for set_cell_locked operation");
+        var range = ArgumentHelper.GetString(arguments, "range", "range");
         var locked = arguments?["locked"]?.GetValue<bool>() ?? throw new ArgumentException("locked is required for set_cell_locked operation");
 
         using var workbook = new Workbook(path);

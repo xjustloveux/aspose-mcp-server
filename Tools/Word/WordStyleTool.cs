@@ -170,7 +170,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
 
         return operation.ToLower() switch
         {
@@ -182,9 +182,14 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Gets all styles from the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, optional includeBuiltIn</param>
+    /// <returns>Formatted string with all styles</returns>
     private async Task<string> GetStyles(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         SecurityHelper.ValidateFilePath(path, "path");
         var includeBuiltIn = arguments?["includeBuiltIn"]?.GetValue<bool>() ?? false;
 
@@ -267,13 +272,18 @@ Usage examples:
         return await Task.FromResult(result.ToString());
     }
 
+    /// <summary>
+    /// Creates a new style
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, styleName, styleType, optional baseStyleName, formatting options, outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> CreateStyle(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         SecurityHelper.ValidateFilePath(path, "path");
         var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var styleName = arguments?["styleName"]?.GetValue<string>() ?? throw new ArgumentException("styleName is required");
+        var styleName = ArgumentHelper.GetString(arguments, "styleName", "styleName");
         var styleTypeStr = arguments?["styleType"]?.GetValue<string>() ?? "paragraph";
         var baseStyle = arguments?["baseStyle"]?.GetValue<string>();
         var fontName = arguments?["fontName"]?.GetValue<string>();
@@ -348,7 +358,10 @@ Usage examples:
             {
                 style.Font.Color = ColorHelper.ParseColor(color);
             }
-            catch { }
+            catch (Exception colorEx)
+            {
+                throw new ArgumentException($"無法解析顏色 '{color}': {colorEx.Message}。請使用有效的顏色格式（如 #FF0000 或 red）");
+            }
         }
 
         if (styleType == StyleType.Paragraph || styleType == StyleType.List)
@@ -381,13 +394,18 @@ Usage examples:
         return await Task.FromResult($"Style '{styleName}' created successfully: {outputPath}");
     }
 
+    /// <summary>
+    /// Applies a style to paragraphs or runs
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, styleName, optional paragraphIndex, runIndex, outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> ApplyStyle(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         SecurityHelper.ValidateFilePath(path, "path");
         var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var styleName = arguments?["styleName"]?.GetValue<string>() ?? throw new ArgumentException("styleName is required");
+        var styleName = ArgumentHelper.GetString(arguments, "styleName", "styleName");
         var paragraphIndex = arguments?["paragraphIndex"]?.GetValue<int?>();
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>();
         var paragraphIndicesArray = arguments?["paragraphIndices"]?.AsArray();
@@ -461,13 +479,18 @@ Usage examples:
         return await Task.FromResult($"Applied style '{styleName}' to {appliedCount} element(s): {outputPath}");
     }
 
+    /// <summary>
+    /// Copies styles from source document to destination document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, sourcePath, optional outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> CopyStyles(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         SecurityHelper.ValidateFilePath(path, "path");
         var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var sourceDocument = arguments?["sourceDocument"]?.GetValue<string>() ?? throw new ArgumentException("sourceDocument is required");
+        var sourceDocument = ArgumentHelper.GetString(arguments, "sourceDocument", "sourceDocument");
         SecurityHelper.ValidateFilePath(sourceDocument, "sourceDocument");
         var overwriteExisting = arguments?["overwriteExisting"]?.GetValue<bool>() ?? false;
 

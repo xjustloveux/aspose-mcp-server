@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
 using Aspose.Pdf.Text;
+using AsposeMcpServer.Core;
 
 namespace AsposeMcpServer.Tools;
 
@@ -59,12 +60,12 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var pageIndex = arguments?["pageIndex"]?.GetValue<int>() ?? throw new ArgumentException("pageIndex is required");
-        var x = arguments?["x"]?.GetValue<double>() ?? throw new ArgumentException("x is required");
-        var y = arguments?["y"]?.GetValue<double>() ?? throw new ArgumentException("y is required");
-        var width = arguments?["width"]?.GetValue<double>() ?? throw new ArgumentException("width is required");
-        var height = arguments?["height"]?.GetValue<double>() ?? throw new ArgumentException("height is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex", "pageIndex");
+        var x = ArgumentHelper.GetDouble(arguments, "x", "x");
+        var y = ArgumentHelper.GetDouble(arguments, "y", "y");
+        var width = ArgumentHelper.GetDouble(arguments, "width", "width");
+        var height = ArgumentHelper.GetDouble(arguments, "height", "height");
         var fillColor = arguments?["fillColor"]?.GetValue<string>();
 
         using var document = new Document(path);
@@ -81,16 +82,14 @@ Usage examples:
         // Set fill color
         if (!string.IsNullOrEmpty(fillColor))
         {
-            var colorParts = fillColor.Split(',');
-            if (colorParts.Length == 3 && 
-                double.TryParse(colorParts[0], out double r) &&
-                double.TryParse(colorParts[1], out double g) &&
-                double.TryParse(colorParts[2], out double b))
+            try
             {
-                redactionAnnotation.FillColor = Aspose.Pdf.Color.FromRgb((float)r / 255, (float)g / 255, (float)b / 255);
+                var systemColor = ColorHelper.ParseColor(fillColor);
+                redactionAnnotation.FillColor = ColorHelper.ToPdfColor(systemColor);
             }
-            else if (fillColor.ToLower() == "black")
+            catch
             {
+                // Fallback to black if parsing fails
                 redactionAnnotation.FillColor = Aspose.Pdf.Color.Black;
             }
         }

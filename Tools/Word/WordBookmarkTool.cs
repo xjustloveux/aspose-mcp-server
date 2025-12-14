@@ -81,10 +81,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-
-        SecurityHelper.ValidateFilePath(path, "path");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         return operation.ToLower() switch
         {
@@ -97,10 +95,16 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Adds a bookmark to the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing name, optional text, paragraphIndex, outputPath</param>
+    /// <param name="path">Word document file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> AddBookmarkAsync(JsonObject? arguments, string path)
     {
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var name = arguments?["name"]?.GetValue<string>() ?? throw new ArgumentException("name is required for add operation");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var name = ArgumentHelper.GetString(arguments, "name", "name");
         var text = arguments?["text"]?.GetValue<string>();
         var paragraphIndex = arguments?["paragraphIndex"]?.GetValue<int?>();
 
@@ -194,10 +198,16 @@ Usage examples:
         return await Task.FromResult(result);
     }
 
+    /// <summary>
+    /// Edits a bookmark (renames or changes text)
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing name, optional newName, text or newText, outputPath</param>
+    /// <param name="path">Word document file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> EditBookmarkAsync(JsonObject? arguments, string path)
     {
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var bookmarkName = arguments?["name"]?.GetValue<string>() ?? throw new ArgumentException("name is required for edit operation");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var bookmarkName = ArgumentHelper.GetString(arguments, "name", "name");
         var newName = arguments?["newName"]?.GetValue<string>();
         // Accept both text and newText for compatibility
         var newText = arguments?["newText"]?.GetValue<string>() ?? 
@@ -332,11 +342,17 @@ Usage examples:
         return await Task.FromResult(result);
     }
 
+    /// <summary>
+    /// Deletes a bookmark from the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing name, optional outputPath</param>
+    /// <param name="path">Word document file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeleteBookmarkAsync(JsonObject? arguments, string path)
     {
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var name = arguments?["name"]?.GetValue<string>() ?? throw new ArgumentException("name is required for delete operation");
-        var keepText = arguments?["keepText"]?.GetValue<bool>() ?? true;
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var name = ArgumentHelper.GetString(arguments, "name", "name");
+        var keepText = ArgumentHelper.GetBool(arguments, "keepText", "keepText", true);
 
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
@@ -379,6 +395,12 @@ Usage examples:
         return await Task.FromResult(result);
     }
 
+    /// <summary>
+    /// Gets all bookmarks from the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="path">Word document file path</param>
+    /// <returns>Formatted string with all bookmarks</returns>
     private async Task<string> GetBookmarksAsync(JsonObject? arguments, string path)
     {
         var doc = new Document(path);
@@ -408,9 +430,15 @@ Usage examples:
         return await Task.FromResult(result.ToString().TrimEnd());
     }
 
+    /// <summary>
+    /// Gets bookmark content and position
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing name</param>
+    /// <param name="path">Word document file path</param>
+    /// <returns>Formatted string with bookmark information</returns>
     private async Task<string> GotoBookmarkAsync(JsonObject? arguments, string path)
     {
-        var name = arguments?["name"]?.GetValue<string>() ?? throw new ArgumentException("name is required for goto operation");
+        var name = ArgumentHelper.GetString(arguments, "name", "name");
 
         var doc = new Document(path);
         

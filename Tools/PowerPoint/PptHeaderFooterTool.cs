@@ -77,8 +77,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         return operation.ToLower() switch
         {
@@ -90,9 +90,15 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Sets header text for slides
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing headerText, optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetHeaderAsync(JsonObject? arguments, string path)
     {
-        var headerText = arguments?["headerText"]?.GetValue<string>() ?? throw new ArgumentException("headerText is required for set_header operation");
+        var headerText = ArgumentHelper.GetString(arguments, "headerText", "headerText");
         var slideIndices = arguments?["slideIndices"]?.AsArray()?.Select(x => x?.GetValue<int>()).Where(x => x.HasValue).Select(x => x!.Value).ToArray();
 
         using var presentation = new Presentation(path);
@@ -112,6 +118,12 @@ Usage examples:
         return await Task.FromResult($"Header set for {slides.Count} slide(s): {path}");
     }
 
+    /// <summary>
+    /// Sets footer text for slides
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing footerText, optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetFooterAsync(JsonObject? arguments, string path)
     {
         var footerText = arguments?["footerText"]?.GetValue<string>();
@@ -150,6 +162,12 @@ Usage examples:
         return await Task.FromResult("已更新頁尾/頁碼設定");
     }
 
+    /// <summary>
+    /// Sets header and footer for multiple slides
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing headerText, footerText, optional slideIndexes, outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> BatchSetHeaderFooterAsync(JsonObject? arguments, string path)
     {
         var footerText = arguments?["footerText"]?.GetValue<string>();
@@ -201,6 +219,12 @@ Usage examples:
         return await Task.FromResult($"已批次更新 {targets.Length} 張投影片的頁尾/頁碼/日期");
     }
 
+    /// <summary>
+    /// Sets slide numbering
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing isVisible, optional startNumber, outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetSlideNumberingAsync(JsonObject? arguments, string path)
     {
         var firstNumber = arguments?["firstNumber"]?.GetValue<int?>() ?? 1;

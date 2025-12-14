@@ -92,10 +92,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-
-        SecurityHelper.ValidateFilePath(path, "path");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         return operation.ToLower() switch
         {
@@ -105,6 +103,12 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Gets document properties
+    /// </summary>
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="path">Word document file path</param>
+    /// <returns>Formatted string with document properties</returns>
     private async Task<string> GetPropertiesAsync(JsonObject? arguments, string path)
     {
         var doc = new Document(path);
@@ -144,9 +148,15 @@ Usage examples:
         return await Task.FromResult(sb.ToString());
     }
 
+    /// <summary>
+    /// Sets document properties
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing various property values, optional outputPath</param>
+    /// <param name="path">Word document file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetPropertiesAsync(JsonObject? arguments, string path)
     {
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var title = arguments?["title"]?.GetValue<string>();
         var subject = arguments?["subject"]?.GetValue<string>();
         var author = arguments?["author"]?.GetValue<string>();

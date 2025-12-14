@@ -80,8 +80,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         return operation.ToLower() switch
         {
@@ -92,6 +92,12 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Exports slides as images
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing outputDirectory, optional slideIndexes, format, outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Success message with exported image count</returns>
     private async Task<string> ExportSlidesAsImagesAsync(JsonObject? arguments, string path)
     {
         var outputDir = arguments?["outputDir"]?.GetValue<string>() ?? Path.GetDirectoryName(path) ?? ".";
@@ -122,6 +128,12 @@ Usage examples:
         return await Task.FromResult($"已匯出 {presentation.Slides.Count} 張幻燈片到: {Path.GetFullPath(outputDir)}");
     }
 
+    /// <summary>
+    /// Extracts images from the presentation
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing outputDirectory, optional slideIndex</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Success message with extracted image count</returns>
     private async Task<string> ExtractImagesAsync(JsonObject? arguments, string path)
     {
         var outputDir = arguments?["outputDir"]?.GetValue<string>() ?? Path.GetDirectoryName(path) ?? ".";
@@ -161,11 +173,17 @@ Usage examples:
         return await Task.FromResult($"已匯出圖片 {count} 張到: {Path.GetFullPath(outputDir)}");
     }
 
+    /// <summary>
+    /// Replaces image with compression
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing slideIndex, imageIndex, newImagePath, optional compressionLevel, outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> ReplaceImageWithCompressionAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = arguments?["slideIndex"]?.GetValue<int>() ?? throw new ArgumentException("slideIndex is required for replace_with_compression operation");
-        var shapeIndex = arguments?["shapeIndex"]?.GetValue<int>() ?? throw new ArgumentException("shapeIndex is required for replace_with_compression operation");
-        var imagePath = arguments?["imagePath"]?.GetValue<string>() ?? throw new ArgumentException("imagePath is required for replace_with_compression operation");
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
+        var imagePath = ArgumentHelper.GetString(arguments, "imagePath", "imagePath");
         var jpegQuality = arguments?["jpegQuality"]?.GetValue<int?>();
 
         using var presentation = new Presentation(path);

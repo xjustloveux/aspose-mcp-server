@@ -104,6 +104,13 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Writes a value to a cell
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing cell and value</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message with cell reference</returns>
     private async Task<string> WriteCellAsync(JsonObject? arguments, string path, int sheetIndex)
     {
         var cell = ArgumentHelper.GetString(arguments, "cell", "cell");
@@ -113,8 +120,8 @@ Usage examples:
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
         var cellObj = worksheet.Cells[cell];
         
-        // 嘗試將值解析為數字，如果是數字則設定為數字類型，否則設定為字符串
-        // 這樣可以確保公式計算時能正確識別數字值
+        // Parse value as number, boolean, or string
+        // Ensures formulas can correctly identify numeric values
         if (double.TryParse(value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double numValue))
         {
             cellObj.PutValue(numValue);
@@ -133,6 +140,13 @@ Usage examples:
         return await Task.FromResult($"Cell {cell} updated in sheet {sheetIndex}: {path}");
     }
 
+    /// <summary>
+    /// Edits a cell value
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing cell and value</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message with cell reference</returns>
     private async Task<string> EditCellAsync(JsonObject? arguments, string path, int sheetIndex)
     {
         var cell = ArgumentHelper.GetString(arguments, "cell", "cell");
@@ -154,8 +168,8 @@ Usage examples:
         }
         else if (!string.IsNullOrEmpty(value))
         {
-            // 嘗試將值解析為數字，如果是數字則設定為數字類型，否則設定為字符串
-            // 這樣可以確保公式計算時能正確識別數字值
+            // Parse value as number, boolean, or string
+            // Ensures formulas can correctly identify numeric values
             if (double.TryParse(value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double numValue))
             {
                 cellObj.PutValue(numValue);
@@ -178,6 +192,13 @@ Usage examples:
         return await Task.FromResult($"Cell {cell} edited in sheet {sheetIndex}: {path}");
     }
 
+    /// <summary>
+    /// Gets a cell value
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing cell and optional includeFormat</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Cell value and optional format information</returns>
     private async Task<string> GetCellAsync(JsonObject? arguments, string path, int sheetIndex)
     {
         var cell = ArgumentHelper.GetString(arguments, "cell", "cell");
@@ -211,6 +232,13 @@ Usage examples:
         return await Task.FromResult(result.ToString());
     }
 
+    /// <summary>
+    /// Clears a cell (content and/or format)
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing cell and optional clearContent, clearFormat</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> ClearCellAsync(JsonObject? arguments, string path, int sheetIndex)
     {
         var cell = ArgumentHelper.GetString(arguments, "cell", "cell");

@@ -77,7 +77,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
 
         return operation.ToLower() switch
         {
@@ -86,11 +86,16 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Adds a watermark to the PDF
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, optional text, imagePath, outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> AddWatermark(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var text = arguments?["text"]?.GetValue<string>() ?? throw new ArgumentException("text is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var text = ArgumentHelper.GetString(arguments, "text", "text");
         var opacity = arguments?["opacity"]?.GetValue<double>() ?? 0.3;
         var fontSize = arguments?["fontSize"]?.GetValue<double>() ?? 72;
         var fontName = arguments?["fontName"]?.GetValue<string>() ?? "Arial";

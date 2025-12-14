@@ -56,12 +56,12 @@ Usage examples:
             range = new
             {
                 type = "string",
-                description = "Cell range (e.g., 'A1:C5', required for format/get_format)"
+                description = "Cell range (e.g., 'A1:C5', required for format, optional for get_format as alternative to cell)"
             },
             cell = new
             {
                 type = "string",
-                description = "Cell address or range (required for get_format)"
+                description = "Cell address or range (e.g., 'A1' or 'A1:C5', required for get_format, or use range as alternative)"
             },
             ranges = new
             {
@@ -140,9 +140,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         var sheetIndex = arguments?["sheetIndex"]?.GetValue<int>() ?? 0;
 
         return operation.ToLower() switch
@@ -154,6 +153,13 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Formats cells with specified style properties
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing ranges array and various format properties</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message with formatted range count</returns>
     private async Task<string> FormatCellsAsync(JsonObject? arguments, string path, int sheetIndex)
     {
         var range = arguments?["range"]?.GetValue<string>();
@@ -182,18 +188,27 @@ Usage examples:
         {
             try
             {
-                style.Font.Color = System.Drawing.ColorTranslator.FromHtml(fontColor);
+                style.Font.Color = ColorHelper.ParseColor(fontColor);
             }
-            catch { }
+            catch (Exception colorEx)
+            {
+                // Color parsing failed, but continue with other formatting
+                // The error will be visible in the result message if needed
+                throw new ArgumentException($"無法解析字體顏色 '{fontColor}': {colorEx.Message}。請使用有效的顏色格式（如 #FF0000、255,0,0 或 red）");
+            }
         }
         if (!string.IsNullOrWhiteSpace(backgroundColor))
         {
             try
             {
-                style.ForegroundColor = System.Drawing.ColorTranslator.FromHtml(backgroundColor);
+                style.ForegroundColor = ColorHelper.ParseColor(backgroundColor);
                 style.Pattern = BackgroundType.Solid;
             }
-            catch { }
+            catch (Exception colorEx)
+            {
+                // Color parsing failed, but continue with other formatting
+                throw new ArgumentException($"無法解析背景顏色 '{backgroundColor}': {colorEx.Message}。請使用有效的顏色格式（如 #FF0000 或 red）");
+            }
         }
         if (!string.IsNullOrEmpty(numberFormat))
         {
@@ -248,9 +263,12 @@ Usage examples:
             {
                 try
                 {
-                    borderColorValue = System.Drawing.ColorTranslator.FromHtml(borderColor);
+                    borderColorValue = ColorHelper.ParseColor(borderColor);
                 }
-                catch { }
+                catch (Exception colorEx)
+                {
+                    throw new ArgumentException($"無法解析邊框顏色 '{borderColor}': {colorEx.Message}。請使用有效的顏色格式（如 #FF0000、255,0,0 或 red）");
+                }
             }
             
             // Set borders for all sides
@@ -294,9 +312,24 @@ Usage examples:
         return await Task.FromResult($"Cells formatted in sheet {sheetIndex}: {path}");
     }
 
+    /// <summary>
+    /// Gets format information for a cell
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing cell</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Formatted string with cell format details</returns>
     private async Task<string> GetCellFormatAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var cell = arguments?["cell"]?.GetValue<string>() ?? throw new ArgumentException("cell is required for get_format operation");
+        var cell = arguments?["cell"]?.GetValue<string>();
+        var range = arguments?["range"]?.GetValue<string>();
+        
+        if (string.IsNullOrEmpty(cell) && string.IsNullOrEmpty(range))
+        {
+            throw new ArgumentException("Either cell or range is required for get_format operation");
+        }
+        
+        var cellOrRange = cell ?? range!;
 
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
@@ -307,7 +340,7 @@ Usage examples:
 
         try
         {
-            var cellRange = cells.CreateRange(cell);
+            var cellRange = cells.CreateRange(cellOrRange);
             var startRow = cellRange.FirstRow;
             var endRow = cellRange.FirstRow + cellRange.RowCount - 1;
             var startCol = cellRange.FirstColumn;
@@ -353,16 +386,22 @@ Usage examples:
         }
         catch
         {
-            throw new ArgumentException($"無效的單元格範圍: {cell}");
+            throw new ArgumentException($"無效的單元格範圍: {cellOrRange}");
         }
 
         return await Task.FromResult(result.ToString());
     }
 
+    /// <summary>
+    /// Copies format from source sheet to destination sheet
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing sourceSheetIndex and destSheetIndex</param>
+    /// <param name="path">Excel file path</param>
+    /// <returns>Success message with sheet names</returns>
     private async Task<string> CopySheetFormatAsync(JsonObject? arguments, string path)
     {
-        var sourceSheetIndex = arguments?["sourceSheetIndex"]?.GetValue<int>() ?? throw new ArgumentException("sourceSheetIndex is required for copy_sheet_format operation");
-        var targetSheetIndex = arguments?["targetSheetIndex"]?.GetValue<int>() ?? throw new ArgumentException("targetSheetIndex is required for copy_sheet_format operation");
+        var sourceSheetIndex = ArgumentHelper.GetInt(arguments, "sourceSheetIndex", "sourceSheetIndex");
+        var targetSheetIndex = ArgumentHelper.GetInt(arguments, "targetSheetIndex", "targetSheetIndex");
         var copyColumnWidths = arguments?["copyColumnWidths"]?.GetValue<bool?>() ?? true;
         var copyRowHeights = arguments?["copyRowHeights"]?.GetValue<bool?>() ?? true;
 

@@ -82,7 +82,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
 
         return operation.ToLower() switch
         {
@@ -94,10 +94,14 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Gets document content as plain text
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path</param>
+    /// <returns>Document content as string</returns>
     private async Task<string> GetContent(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         var doc = new Document(path);
         doc.UpdateFields();
         
@@ -106,15 +110,19 @@ Usage examples:
         return await Task.FromResult(text);
     }
 
+    /// <summary>
+    /// Gets detailed document content with structure information
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, optional includeFormatting</param>
+    /// <returns>Formatted string with detailed content</returns>
     private async Task<string> GetContentDetailed(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
-        var includeHeaders = arguments?["includeHeaders"]?.GetValue<bool>() ?? true;
-        var includeFooters = arguments?["includeFooters"]?.GetValue<bool>() ?? true;
-        var includeStyles = arguments?["includeStyles"]?.GetValue<bool>() ?? true;
-        var includeTables = arguments?["includeTables"]?.GetValue<bool>() ?? true;
-        var includeImages = arguments?["includeImages"]?.GetValue<bool>() ?? true;
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var includeHeaders = ArgumentHelper.GetBool(arguments, "includeHeaders", "includeHeaders", true);
+        var includeFooters = ArgumentHelper.GetBool(arguments, "includeFooters", "includeFooters", true);
+        var includeStyles = ArgumentHelper.GetBool(arguments, "includeStyles", "includeStyles", true);
+        var includeTables = ArgumentHelper.GetBool(arguments, "includeTables", "includeTables", true);
+        var includeImages = ArgumentHelper.GetBool(arguments, "includeImages", "includeImages", true);
 
         var doc = new Document(path);
         var result = new StringBuilder();
@@ -191,12 +199,16 @@ Usage examples:
         return await Task.FromResult(result.ToString());
     }
 
+    /// <summary>
+    /// Gets document statistics
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path</param>
+    /// <returns>Formatted string with document statistics</returns>
     private async Task<string> GetStatistics(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
-        var includeFootnotes = arguments?["includeFootnotes"]?.GetValue<bool>() ?? true;
-        var includeTextboxes = arguments?["includeTextboxes"]?.GetValue<bool>() ?? true;
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var includeFootnotes = ArgumentHelper.GetBool(arguments, "includeFootnotes", "includeFootnotes", true);
+        var includeTextboxes = ArgumentHelper.GetBool(arguments, "includeTextboxes", "includeTextboxes", true);
 
         var doc = new Document(path);
         doc.UpdateWordCount(true);
@@ -245,11 +257,15 @@ Usage examples:
         return await Task.FromResult(result.ToString());
     }
 
+    /// <summary>
+    /// Gets document information
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path</param>
+    /// <returns>Formatted string with document information</returns>
     private async Task<string> GetDocumentInfo(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
-        var includeTabStops = arguments?["includeTabStops"]?.GetValue<bool>() ?? true;
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var includeTabStops = ArgumentHelper.GetBool(arguments, "includeTabStops", "includeTabStops", true);
 
         var doc = new Document(path);
         var result = new StringBuilder();

@@ -74,9 +74,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         var sheetIndex = arguments?["sheetIndex"]?.GetValue<int>() ?? 0;
 
         return operation.ToLower() switch
@@ -88,11 +87,18 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Adds an image to the worksheet
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing imagePath, cell, optional width, height</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> AddImageAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var imagePath = arguments?["imagePath"]?.GetValue<string>() ?? throw new ArgumentException("imagePath is required for add operation");
+        var imagePath = ArgumentHelper.GetString(arguments, "imagePath", "imagePath");
         SecurityHelper.ValidateFilePath(imagePath, "imagePath");
-        var cell = arguments?["cell"]?.GetValue<string>() ?? throw new ArgumentException("cell is required for add operation");
+        var cell = ArgumentHelper.GetString(arguments, "cell", "cell");
         var width = arguments?["width"]?.GetValue<int?>();
         var height = arguments?["height"]?.GetValue<int?>();
 
@@ -119,9 +125,16 @@ Usage examples:
         return await Task.FromResult($"圖片已添加到單元格 {cell}: {path}");
     }
 
+    /// <summary>
+    /// Deletes an image from the worksheet
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing imageIndex</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeleteImageAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var imageIndex = arguments?["imageIndex"]?.GetValue<int>() ?? throw new ArgumentException("imageIndex is required for delete operation");
+        var imageIndex = ArgumentHelper.GetInt(arguments, "imageIndex", "imageIndex");
 
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
@@ -140,6 +153,13 @@ Usage examples:
         return await Task.FromResult($"成功刪除圖片 #{imageIndex}\n工作表剩餘圖片數: {remainingCount}\n輸出: {path}");
     }
 
+    /// <summary>
+    /// Gets all images from the worksheet
+    /// </summary>
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Formatted string with all images</returns>
     private async Task<string> GetImagesAsync(JsonObject? arguments, string path, int sheetIndex)
     {
         using var workbook = new Workbook(path);

@@ -97,7 +97,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
 
         return operation.ToLower() switch
         {
@@ -107,13 +107,18 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Adds a table to a PDF page
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, pageIndex, rows, columns, data, x, y, optional outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> AddTable(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var pageIndex = arguments?["pageIndex"]?.GetValue<int>() ?? throw new ArgumentException("pageIndex is required");
-        var rows = arguments?["rows"]?.GetValue<int>() ?? throw new ArgumentException("rows is required");
-        var columns = arguments?["columns"]?.GetValue<int>() ?? throw new ArgumentException("columns is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex", "pageIndex");
+        var rows = ArgumentHelper.GetInt(arguments, "rows", "rows");
+        var columns = ArgumentHelper.GetInt(arguments, "columns", "columns");
         var x = arguments?["x"]?.GetValue<double>() ?? 100;
         var y = arguments?["y"]?.GetValue<double>() ?? 600;
 
@@ -135,7 +140,10 @@ Usage examples:
                 if (!string.IsNullOrEmpty(dataJson))
                     data = System.Text.Json.JsonSerializer.Deserialize<string[][]>(dataJson);
             }
-            catch { }
+            catch (Exception jsonEx)
+            {
+                throw new ArgumentException($"無法解析 data 參數: {jsonEx.Message}。請確保 data 是有效的二維字符串數組格式，例如: [[\"A1\",\"B1\"],[\"A2\",\"B2\"]]");
+            }
         }
 
         for (int i = 0; i < rows; i++)
@@ -158,11 +166,16 @@ Usage examples:
         return await Task.FromResult($"Successfully added table ({rows} rows x {columns} columns) to page {pageIndex}. Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Edits table data in a PDF
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, pageIndex, tableIndex, data, optional outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> EditTable(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex", "tableIndex");
         var cellRow = arguments?["cellRow"]?.GetValue<int>();
         var cellColumn = arguments?["cellColumn"]?.GetValue<int>();
         var cellValue = arguments?["cellValue"]?.GetValue<string>();

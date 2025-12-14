@@ -71,7 +71,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
 
         return operation.ToLower() switch
         {
@@ -82,12 +82,17 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Signs the PDF document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, certificatePath, password, optional reason, location, outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> SignDocument(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var certificatePath = arguments?["certificatePath"]?.GetValue<string>() ?? throw new ArgumentException("certificatePath is required");
-        var certificatePassword = arguments?["certificatePassword"]?.GetValue<string>() ?? throw new ArgumentException("certificatePassword is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var certificatePath = ArgumentHelper.GetString(arguments, "certificatePath", "certificatePath");
+        var certificatePassword = ArgumentHelper.GetString(arguments, "certificatePassword", "certificatePassword");
         var reason = arguments?["reason"]?.GetValue<string>() ?? "Document approval";
         var location = arguments?["location"]?.GetValue<string>() ?? "";
 
@@ -110,11 +115,16 @@ Usage examples:
         return await Task.FromResult($"PDF digitally signed. Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Deletes a signature from the PDF
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, signatureIndex, optional outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeleteSignature(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var signatureIndex = arguments?["signatureIndex"]?.GetValue<int>() ?? throw new ArgumentException("signatureIndex is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var signatureIndex = ArgumentHelper.GetInt(arguments, "signatureIndex", "signatureIndex");
 
         using var document = new Document(path);
         using var pdfSign = new PdfFileSignature(document);
@@ -129,11 +139,14 @@ Usage examples:
         return await Task.FromResult($"Successfully deleted signature '{signatureName}' (index {signatureIndex}). Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Gets all signatures from the PDF
+    /// </summary>
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <returns>Formatted string with all signatures</returns>
     private async Task<string> GetSignatures(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-
-        SecurityHelper.ValidateFilePath(path, "path");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         using var document = new Document(path);
         using var pdfSign = new PdfFileSignature(document);

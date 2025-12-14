@@ -43,7 +43,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var cellAddress = arguments?["cellAddress"]?.GetValue<string>() ?? throw new ArgumentException("cellAddress is required");
+        var cellAddress = ArgumentHelper.GetString(arguments, "cellAddress", "cellAddress");
         var convertToIndex = arguments?["convertToIndex"]?.GetValue<bool?>() ?? false;
         var row = arguments?["row"]?.GetValue<int?>();
         var column = arguments?["column"]?.GetValue<int?>();

@@ -32,8 +32,7 @@ public class McpServer
 
     public async Task RunAsync()
     {
-        Console.Error.WriteLine("[INFO] Aspose MCP Server started");
-        // Flush stderr to ensure startup message is sent immediately
+            Console.Error.WriteLine("[INFO] Aspose MCP Server started");
         await Console.Error.FlushAsync();
         
         while (true)
@@ -54,8 +53,7 @@ public class McpServer
                     continue;
                 }
 
-                // Handle request and send response immediately
-                await HandleRequestAndSendResponseAsync(request);
+            await HandleRequestAndSendResponseAsync(request);
             }
             catch (Exception ex)
             {
@@ -96,16 +94,13 @@ public class McpServer
                 Id = id
             };
 
-            // Special handling for initialize - send response immediately without async overhead
             if (method == "initialize")
             {
-                // Extract client's requested protocol version from params
                 var paramsObj = request["params"] as JsonObject;
                 var clientProtocolVersion = paramsObj?["protocolVersion"]?.GetValue<string>();
                 
-                // Use client's protocol version if it's supported, otherwise use our supported version
                 // MCP protocol: server should return the protocol version it will use
-                // We support both 2025-06-18 and 2025-11-25, so we can use client's version for compatibility
+                // We support both 2025-06-18 and 2025-11-25, use client's version for compatibility
                 var protocolVersion = clientProtocolVersion == "2025-06-18" ? "2025-06-18" : "2025-11-25";
                 
                 response.Result = new
@@ -122,7 +117,6 @@ public class McpServer
                     }
                 };
                 
-                // Send response IMMEDIATELY - no logging, no async operations before send
                 var responseJson = JsonSerializer.Serialize(response, _jsonOptions);
                 await Console.Out.WriteLineAsync(responseJson);
                 await Console.Out.FlushAsync();
@@ -137,7 +131,6 @@ public class McpServer
             {
                 Console.Error.WriteLine($"[ERROR] Error handling method '{method}': {ex.Message}");
                 
-                // Only set error if not already set
                 if (response.Error == null)
                 {
                     response.Result = null;
@@ -145,7 +138,6 @@ public class McpServer
                 }
             }
 
-            // Send response immediately after processing
             var responseJson2 = JsonSerializer.Serialize(response, _jsonOptions);
             await Console.Out.WriteLineAsync(responseJson2);
             await Console.Out.FlushAsync();
@@ -162,11 +154,10 @@ public class McpServer
         switch (method)
             {
                 case "initialize":
-                    // MCP protocolVersion uses YYYY-MM-DD format indicating the date of the last
-                    // backward-incompatible change. This version should match the MCP specification.
+                    // This case is handled earlier in HandleRequestAndSendResponseAsync
+                    // MCP protocolVersion uses YYYY-MM-DD format (date of last backward-incompatible change)
                     // See: https://modelcontextprotocol.io/specification/2025-11-25
                     // 2025-11-25 version supports: tool annotations, pagination, tasks, cancellation
-                    // Build response immediately to avoid any delays
                     response.Result = new
                     {
                         protocolVersion = "2025-11-25",
@@ -184,7 +175,7 @@ public class McpServer
 
                 case "tools/list":
                     // MCP 2025-11-25: tools/list response includes optional annotations
-                    // Annotations provide metadata about tool behavior (e.g., readonly, destructive)
+                    // Annotations provide metadata about tool behavior (readonly, destructive)
                     response.Result = new
                     {
                         tools = _tools.Select(kvp =>
@@ -199,13 +190,11 @@ public class McpServer
                                 ["inputSchema"] = tool.InputSchema
                             };
                             
-                            // Get annotations: first check if tool implements IAnnotatedTool (manual override),
-                            // otherwise infer from tool name pattern
+                            // Get annotations: check IAnnotatedTool interface first, otherwise infer from name pattern
                             var annotations = new Dictionary<string, object?>();
                             
                             if (tool is IAnnotatedTool annotatedTool)
                             {
-                                // Manual annotations take precedence
                                 if (annotatedTool.IsReadOnly.HasValue)
                                     annotations["readonly"] = annotatedTool.IsReadOnly.Value;
                                 if (annotatedTool.IsDestructive.HasValue)
@@ -213,10 +202,9 @@ public class McpServer
                             }
                             else
                             {
-                                // Auto-infer annotations from tool name patterns
                                 var nameLower = toolName.ToLowerInvariant();
                                 
-                                // Read-only tools: get_*, extract_*, read, get_*, list_*
+                                // Read-only tools: get_*, extract_*, read, list_*, *_info, *_properties, etc.
                                 if (nameLower.StartsWith("get_") || 
                                     nameLower.StartsWith("extract_") || 
                                     nameLower.StartsWith("read") ||
@@ -286,7 +274,6 @@ public class McpServer
                         }
                         catch (Exception ex)
                         {
-                            // Tool execution error - use centralized error handler
                             response.Result = null;
                             response.Error = McpErrorHandler.HandleException(ex);
                             Console.Error.WriteLine($"[ERROR] Tool '{toolName}' execution failed: {ex.Message}");
@@ -302,7 +289,6 @@ public class McpServer
                 case "ListOfferings":
                 case "listOfferings":
                     // Some MCP clients use ListOfferings to get server information
-                    // Return server info similar to initialize response
                     response.Result = new
                     {
                         serverInfo = new

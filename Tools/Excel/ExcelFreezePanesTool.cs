@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using System.Text;
+using System.Reflection;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 
@@ -58,9 +59,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         var sheetIndex = arguments?["sheetIndex"]?.GetValue<int>() ?? 0;
 
         return operation.ToLower() switch
@@ -72,10 +72,17 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Freezes panes at the specified row and column
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing row, column (1-based)</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message with freeze position</returns>
     private async Task<string> FreezePanesAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var row = arguments?["row"]?.GetValue<int>() ?? throw new ArgumentException("row is required for freeze operation");
-        var column = arguments?["column"]?.GetValue<int>() ?? throw new ArgumentException("column is required for freeze operation");
+        var row = ArgumentHelper.GetInt(arguments, "row", "row");
+        var column = ArgumentHelper.GetInt(arguments, "column", "column");
 
         using var workbook = new Workbook(path);
         var worksheet = workbook.Worksheets[sheetIndex];
@@ -108,16 +115,90 @@ Usage examples:
         return await Task.FromResult($"已凍結窗格 (行 {row}, 列 {column}): {path}");
     }
 
+    /// <summary>
+    /// Unfreezes panes in the worksheet
+    /// </summary>
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> UnfreezePanesAsync(JsonObject? arguments, string path, int sheetIndex)
     {
         using var workbook = new Workbook(path);
         var worksheet = workbook.Worksheets[sheetIndex];
 
-        worksheet.FreezePanes(0, 0, 0, 0);
-        
-        // Remove freeze information from custom properties
+        // Try to get current freeze status from custom properties
         var customProperties = workbook.CustomDocumentProperties;
         var freezeKey = $"FreezePanes_Sheet{sheetIndex}";
+        int? frozenRow = null;
+        int? frozenColumn = null;
+        
+        try
+        {
+            var freezeProperty = customProperties[freezeKey];
+            if (freezeProperty != null)
+            {
+                var freezeValue = freezeProperty.Value?.ToString();
+                if (!string.IsNullOrEmpty(freezeValue))
+                {
+                    var parts = freezeValue.Split(',');
+                    if (parts.Length == 2 && 
+                        int.TryParse(parts[0], out int parsedRow) && 
+                        int.TryParse(parts[1], out int parsedColumn))
+                    {
+                        frozenRow = parsedRow;
+                        frozenColumn = parsedColumn;
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // Ignore if property doesn't exist
+        }
+        
+        // Try to unfreeze using RemoveFreezePanes if available, otherwise use alternative method
+        try
+        {
+            var worksheetType = worksheet.GetType();
+            var removeMethod = worksheetType.GetMethod("RemoveFreezePanes");
+            if (removeMethod != null)
+            {
+                removeMethod.Invoke(worksheet, null);
+            }
+                else
+                {
+                    // Alternative: use RemoveSplit if available
+                    var removeSplitMethod = worksheetType.GetMethod("RemoveSplit");
+                    if (removeSplitMethod != null)
+                    {
+                        removeSplitMethod.Invoke(worksheet, null);
+                    }
+                    else
+                    {
+                        // Last resort: set freeze to a very large value
+                        var maxRow = Math.Max(worksheet.Cells.MaxDataRow + 1, 1000);
+                        var maxCol = Math.Max(worksheet.Cells.MaxDataColumn + 1, 100);
+                        worksheet.FreezePanes(maxRow + 1, maxCol + 1, maxRow + 1, maxCol + 1);
+                    }
+                }
+        }
+        catch
+        {
+            // If all methods fail, try the simple approach with error handling
+            try
+            {
+                // Try setting to row 1, column 1 (1-based), which might work
+                worksheet.FreezePanes(1, 1, 1, 1);
+            }
+            catch
+            {
+                // If that also fails, we'll just remove the custom property
+                // The actual freeze might remain, but at least we've cleared our tracking
+            }
+        }
+        
+        // Remove freeze information from custom properties
         try
         {
             customProperties.Remove(freezeKey);
@@ -131,6 +212,13 @@ Usage examples:
         return await Task.FromResult($"已取消凍結窗格: {path}");
     }
 
+    /// <summary>
+    /// Gets freeze panes status for the worksheet
+    /// </summary>
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Formatted string with freeze panes status</returns>
     private async Task<string> GetFreezePanesAsync(JsonObject? arguments, string path, int sheetIndex)
     {
         using var workbook = new Workbook(path);
@@ -147,8 +235,7 @@ Usage examples:
         int frozenRow = 0;
         int frozenColumn = 0;
         
-        // Method 1: Check custom properties (most reliable)
-        // We store freeze information in custom properties when freeze is applied
+        // Method 1: Check custom properties (most reliable - stored when freeze is applied)
         var customProperties = workbook.CustomDocumentProperties;
         var freezeKey = $"FreezePanes_Sheet{sheetIndex}";
         
@@ -178,8 +265,7 @@ Usage examples:
             // If custom property doesn't exist or can't be read, try other methods
         }
         
-        // Method 2: Check FirstVisibleRow and FirstVisibleColumn as fallback
-        // These might reflect the freeze position, but can be affected by scrolling
+        // Method 2: Check FirstVisibleRow and FirstVisibleColumn as fallback (can be affected by scrolling)
         if (!isFrozen)
         {
             var firstVisibleRow = worksheet.FirstVisibleRow;

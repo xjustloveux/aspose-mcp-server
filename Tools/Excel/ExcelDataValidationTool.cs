@@ -94,9 +94,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         var sheetIndex = arguments?["sheetIndex"]?.GetValue<int>() ?? 0;
 
         return operation.ToLower() switch
@@ -110,11 +109,18 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Adds data validation to a range
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing range, validationType, formula1, optional formula2, showError, errorTitle, errorMessage</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> AddDataValidationAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var range = arguments?["range"]?.GetValue<string>() ?? throw new ArgumentException("range is required for add operation");
-        var validationType = arguments?["validationType"]?.GetValue<string>() ?? throw new ArgumentException("validationType is required for add operation");
-        var formula1 = arguments?["formula1"]?.GetValue<string>() ?? throw new ArgumentException("formula1 is required for add operation");
+        var range = ArgumentHelper.GetString(arguments, "range", "range");
+        var validationType = ArgumentHelper.GetString(arguments, "validationType", "validationType");
+        var formula1 = ArgumentHelper.GetString(arguments, "formula1", "formula1");
         var formula2 = arguments?["formula2"]?.GetValue<string>();
         var errorMessage = arguments?["errorMessage"]?.GetValue<string>();
         var inputMessage = arguments?["inputMessage"]?.GetValue<string>();
@@ -176,10 +182,17 @@ Usage examples:
         return await Task.FromResult($"範圍 {range} 已添加數據驗證 ({validationType}): {path}");
     }
 
+    /// <summary>
+    /// Edits existing data validation
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing range, optional validationType, formula1, formula2, showError, errorTitle, errorMessage</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> EditDataValidationAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var validationIndex = arguments?["validationIndex"]?.GetValue<int>() ?? throw new ArgumentException("validationIndex is required for edit operation");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var validationIndex = ArgumentHelper.GetInt(arguments, "validationIndex", "validationIndex");
         var validationTypeStr = arguments?["validationType"]?.GetValue<string>();
         var formula1 = arguments?["formula1"]?.GetValue<string>();
         var formula2 = arguments?["formula2"]?.GetValue<string>();
@@ -266,9 +279,16 @@ Usage examples:
         return await Task.FromResult(result);
     }
 
+    /// <summary>
+    /// Deletes data validation from a range
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing range</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeleteDataValidationAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var validationIndex = arguments?["validationIndex"]?.GetValue<int>() ?? throw new ArgumentException("validationIndex is required for delete operation");
+        var validationIndex = ArgumentHelper.GetInt(arguments, "validationIndex", "validationIndex");
 
         using var workbook = new Workbook(path);
         
@@ -285,6 +305,13 @@ Usage examples:
         return await Task.FromResult($"成功刪除數據驗證 #{validationIndex}\n工作表剩餘數據驗證數: {remainingCount}\n輸出: {path}");
     }
 
+    /// <summary>
+    /// Gets data validation information for a range
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing range</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Formatted string with data validation details</returns>
     private async Task<string> GetDataValidationAsync(JsonObject? arguments, string path, int sheetIndex)
     {
         using var workbook = new Workbook(path);
@@ -335,9 +362,16 @@ Usage examples:
         return await Task.FromResult(result.ToString());
     }
 
+    /// <summary>
+    /// Sets input/error messages for data validation
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing range, optional inputTitle, inputMessage, errorTitle, errorMessage</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetMessagesAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var validationIndex = arguments?["validationIndex"]?.GetValue<int>() ?? throw new ArgumentException("validationIndex is required for set_messages operation");
+        var validationIndex = ArgumentHelper.GetInt(arguments, "validationIndex", "validationIndex");
         var errorMessage = arguments?["errorMessage"]?.GetValue<string>();
         var inputMessage = arguments?["inputMessage"]?.GetValue<string>();
 

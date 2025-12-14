@@ -176,8 +176,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         SecurityHelper.ValidateFilePath(path, "path");
         var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
@@ -209,6 +209,13 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Inserts a field into the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing fieldType, optional fieldArgument, paragraphIndex, runIndex</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> InsertFieldAsync(JsonObject? arguments, string path, string outputPath)
     {
         var fieldType = arguments?["fieldType"]?.GetValue<string>()?.ToUpper() ?? throw new ArgumentException("fieldType is required");
@@ -352,7 +359,11 @@ Usage examples:
             if (!string.IsNullOrEmpty(fieldResult))
                 result += $"欄位結果: {fieldResult}\n";
         }
-        catch { }
+        catch
+        {
+            // Field.Result may fail for some field types, but this is not critical
+            // Continue without the result information
+        }
         
         if (paragraphIndex.HasValue)
         {
@@ -371,9 +382,16 @@ Usage examples:
         return await Task.FromResult(result);
     }
 
+    /// <summary>
+    /// Edits an existing field
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing fieldIndex, optional fieldType, fieldArgument</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> EditFieldAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var fieldIndex = arguments?["fieldIndex"]?.GetValue<int>() ?? throw new ArgumentException("fieldIndex is required");
+        var fieldIndex = ArgumentHelper.GetInt(arguments, "fieldIndex", "fieldIndex");
         var fieldCode = arguments?["fieldCode"]?.GetValue<string>();
         var lockField = arguments?["lockField"]?.GetValue<bool?>();
         var unlockField = arguments?["unlockField"]?.GetValue<bool?>();
@@ -465,9 +483,16 @@ Usage examples:
         return await Task.FromResult(result);
     }
 
+    /// <summary>
+    /// Deletes a field from the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing fieldIndex</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeleteFieldAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var fieldIndex = arguments?["fieldIndex"]?.GetValue<int>() ?? throw new ArgumentException("fieldIndex is required");
+        var fieldIndex = ArgumentHelper.GetInt(arguments, "fieldIndex", "fieldIndex");
         var keepResult = arguments?["keepResult"]?.GetValue<bool>() ?? false;
 
         var doc = new Document(path);
@@ -573,6 +598,13 @@ Usage examples:
         }
     }
 
+    /// <summary>
+    /// Updates field values
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing optional fieldIndex (if null, updates all)</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message with update count</returns>
     private async Task<string> UpdateFieldAsync(JsonObject? arguments, string path, string outputPath)
     {
         var fieldIndex = arguments?["fieldIndex"]?.GetValue<int?>();
@@ -663,6 +695,12 @@ Usage examples:
         }
     }
 
+    /// <summary>
+    /// Gets all fields from the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="path">Word document file path</param>
+    /// <returns>Formatted string with all fields</returns>
     private async Task<string> GetFieldsAsync(JsonObject? arguments, string path)
     {
         var fieldTypeFilter = arguments?["fieldType"]?.GetValue<string>();
@@ -754,9 +792,15 @@ Usage examples:
         return await Task.FromResult(result.ToString());
     }
 
+    /// <summary>
+    /// Gets detailed information about a specific field
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing fieldIndex</param>
+    /// <param name="path">Word document file path</param>
+    /// <returns>Formatted string with field details</returns>
     private async Task<string> GetFieldDetailAsync(JsonObject? arguments, string path)
     {
-        var fieldIndex = arguments?["fieldIndex"]?.GetValue<int>() ?? throw new ArgumentException("fieldIndex is required");
+        var fieldIndex = ArgumentHelper.GetInt(arguments, "fieldIndex", "fieldIndex");
 
         var doc = new Document(path);
         var fields = doc.Range.Fields.ToList();
@@ -794,10 +838,17 @@ Usage examples:
         return await Task.FromResult(result.ToString());
     }
 
+    /// <summary>
+    /// Adds a form field to the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing fieldType, name, optional defaultValue, paragraphIndex</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> AddFormFieldAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var fieldType = arguments?["formFieldType"]?.GetValue<string>() ?? throw new ArgumentException("formFieldType is required");
-        var fieldName = arguments?["fieldName"]?.GetValue<string>() ?? throw new ArgumentException("fieldName is required");
+        var fieldType = ArgumentHelper.GetString(arguments, "formFieldType", "formFieldType");
+        var fieldName = ArgumentHelper.GetString(arguments, "fieldName", "fieldName");
         var defaultValue = arguments?["defaultValue"]?.GetValue<string>();
         var optionsArray = arguments?["options"]?.AsArray();
         var checkedValue = arguments?["checkedValue"]?.GetValue<bool?>();
@@ -834,9 +885,16 @@ Usage examples:
         return await Task.FromResult($"{fieldType} field '{fieldName}' added: {outputPath}");
     }
 
+    /// <summary>
+    /// Edits an existing form field
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing fieldIndex, optional name, defaultValue</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> EditFormFieldAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var fieldName = arguments?["fieldName"]?.GetValue<string>() ?? throw new ArgumentException("fieldName is required");
+        var fieldName = ArgumentHelper.GetString(arguments, "fieldName", "fieldName");
         var value = arguments?["value"]?.GetValue<string>();
         var checkedValue = arguments?["checkedValue"]?.GetValue<bool?>();
         var selectedIndex = arguments?["selectedIndex"]?.GetValue<int?>();
@@ -869,6 +927,13 @@ Usage examples:
         return await Task.FromResult($"Form field '{fieldName}' updated: {outputPath}");
     }
 
+    /// <summary>
+    /// Deletes a form field from the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing fieldIndex</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeleteFormFieldAsync(JsonObject? arguments, string path, string outputPath)
     {
         var fieldName = arguments?["fieldName"]?.GetValue<string>();
@@ -906,6 +971,12 @@ Usage examples:
         return await Task.FromResult($"Deleted {deletedCount} form field(s): {outputPath}");
     }
 
+    /// <summary>
+    /// Gets all form fields from the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="path">Word document file path</param>
+    /// <returns>Formatted string with all form fields</returns>
     private async Task<string> GetFormFieldsAsync(JsonObject? arguments, string path)
     {
         var doc = new Document(path);

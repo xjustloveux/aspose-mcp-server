@@ -134,7 +134,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
 
         return operation.ToLower() switch
         {
@@ -146,18 +146,22 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Adds a table of contents to the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, optional outputPath, headingLevels</param>
+    /// <returns>Success message</returns>
     private async Task<string> AddTableOfContents(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
         var position = arguments?["position"]?.GetValue<string>() ?? "start";
         var title = arguments?["title"]?.GetValue<string>() ?? "目錄";
         var maxLevel = arguments?["maxLevel"]?.GetValue<int>() ?? 3;
-        var hyperlinks = arguments?["hyperlinks"]?.GetValue<bool>() ?? true;
-        var pageNumbers = arguments?["pageNumbers"]?.GetValue<bool>() ?? true;
-        var rightAlignPageNumbers = arguments?["rightAlignPageNumbers"]?.GetValue<bool>() ?? true;
+        var hyperlinks = ArgumentHelper.GetBool(arguments, "hyperlinks", "hyperlinks", true);
+        var pageNumbers = ArgumentHelper.GetBool(arguments, "pageNumbers", "pageNumbers", true);
+        var rightAlignPageNumbers = ArgumentHelper.GetBool(arguments, "rightAlignPageNumbers", "rightAlignPageNumbers", true);
 
         var doc = new Document(path);
         var builder = new DocumentBuilder(doc);
@@ -193,11 +197,15 @@ Usage examples:
         return await Task.FromResult($"Table of contents added: {outputPath}");
     }
 
+    /// <summary>
+    /// Updates the table of contents
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, optional outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> UpdateTableOfContents(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
         var tocIndex = arguments?["tocIndex"]?.GetValue<int?>();
 
@@ -240,11 +248,15 @@ Usage examples:
         return await Task.FromResult($"Updated {updatedCount} table of contents field(s): {outputPath}");
     }
 
+    /// <summary>
+    /// Adds an index to the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, optional outputPath, entries</param>
+    /// <returns>Success message</returns>
     private async Task<string> AddIndex(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
         var indexEntriesArray = arguments?["indexEntries"]?.AsArray() ?? throw new ArgumentException("indexEntries is required");
         var insertIndexAtEnd = arguments?["insertIndexAtEnd"]?.GetValue<bool?>() ?? true;
@@ -288,15 +300,18 @@ Usage examples:
         return await Task.FromResult($"Index entries added. Total entries: {indexEntriesArray.Count}. Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Adds a cross-reference to the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, referenceType, target, optional outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> AddCrossReference(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var referenceType = arguments?["referenceType"]?.GetValue<string>() ?? throw new ArgumentException("referenceType is required");
-        var referenceText = arguments?["referenceText"]?.GetValue<string>();
-        var targetName = arguments?["targetName"]?.GetValue<string>() ?? throw new ArgumentException("targetName is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var referenceType = ArgumentHelper.GetString(arguments, "referenceType", "referenceType");
+        var referenceText = ArgumentHelper.GetStringNullable(arguments, "referenceText");
+        var targetName = ArgumentHelper.GetString(arguments, "targetName", "targetName");
         var insertAsHyperlink = arguments?["insertAsHyperlink"]?.GetValue<bool?>() ?? true;
         var includeAboveBelow = arguments?["includeAboveBelow"]?.GetValue<bool?>() ?? false;
 

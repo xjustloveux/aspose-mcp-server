@@ -1,10 +1,28 @@
 namespace AsposeMcpServer.Core;
 
+/// <summary>
+/// Server configuration for enabling/disabling tool categories and license management
+/// </summary>
 public class ServerConfig
 {
+    /// <summary>
+    /// Enable Word document tools
+    /// </summary>
     public bool EnableWord { get; set; } = true;
+    
+    /// <summary>
+    /// Enable Excel spreadsheet tools
+    /// </summary>
     public bool EnableExcel { get; set; } = true;
+    
+    /// <summary>
+    /// Enable PowerPoint presentation tools
+    /// </summary>
     public bool EnablePowerPoint { get; set; } = true;
+    
+    /// <summary>
+    /// Enable PDF document tools
+    /// </summary>
     public bool EnablePdf { get; set; } = true;
     
     /// <summary>
@@ -13,20 +31,24 @@ public class ServerConfig
     /// </summary>
     public string? LicensePath { get; set; }
 
+    /// <summary>
+    /// Loads configuration from command line arguments
+    /// </summary>
+    /// <param name="args">Command line arguments</param>
+    /// <returns>ServerConfig instance</returns>
     public static ServerConfig LoadFromArgs(string[] args)
     {
         var config = new ServerConfig();
         
-        // Check for license path from environment variable
         config.LicensePath = Environment.GetEnvironmentVariable("ASPOSE_LICENSE_PATH");
         
-        // 如果沒有指定任何參數，預設啟用所有工具
+        // If no arguments provided, enable all tools by default
         if (args.Length == 0)
         {
             return config;
         }
 
-        // 如果指定了參數，則預設禁用所有，只啟用指定的
+        // If arguments provided, disable all by default and only enable specified ones
         config.EnableWord = false;
         config.EnableExcel = false;
         config.EnablePowerPoint = false;
@@ -56,7 +78,6 @@ public class ServerConfig
                     config.EnablePdf = true;
                     break;
                 default:
-                    // Check if it's a license path argument (--license:path or --license=path)
                     if (arg.StartsWith("--license:", StringComparison.OrdinalIgnoreCase))
                     {
                         config.LicensePath = arg.Substring("--license:".Length);
@@ -72,6 +93,10 @@ public class ServerConfig
         return config;
     }
 
+    /// <summary>
+    /// Gets a comma-separated string of enabled tool categories
+    /// </summary>
+    /// <returns>String listing enabled tools, or "None" if none are enabled</returns>
     public string GetEnabledToolsInfo()
     {
         var enabled = new List<string>();

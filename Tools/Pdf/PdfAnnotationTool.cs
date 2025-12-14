@@ -72,7 +72,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
 
         return operation.ToLower() switch
         {
@@ -84,12 +84,17 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Adds an annotation to a PDF page
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, pageIndex, annotationType, x, y, width, height, optional text, outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> AddAnnotation(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var pageIndex = arguments?["pageIndex"]?.GetValue<int>() ?? throw new ArgumentException("pageIndex is required");
-        var text = arguments?["text"]?.GetValue<string>() ?? throw new ArgumentException("text is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex", "pageIndex");
+        var text = ArgumentHelper.GetString(arguments, "text", "text");
         var x = arguments?["x"]?.GetValue<double>() ?? 100;
         var y = arguments?["y"]?.GetValue<double>() ?? 700;
 
@@ -112,12 +117,17 @@ Usage examples:
         return await Task.FromResult($"Successfully added annotation to page {pageIndex}. Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Deletes an annotation from a PDF page
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, pageIndex, annotationIndex, optional outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeleteAnnotation(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var pageIndex = arguments?["pageIndex"]?.GetValue<int>() ?? throw new ArgumentException("pageIndex is required");
-        var annotationIndex = arguments?["annotationIndex"]?.GetValue<int>() ?? throw new ArgumentException("annotationIndex is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex", "pageIndex");
+        var annotationIndex = ArgumentHelper.GetInt(arguments, "annotationIndex", "annotationIndex");
 
         SecurityHelper.ValidateFilePath(path, "path");
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
@@ -135,13 +145,18 @@ Usage examples:
         return await Task.FromResult($"Successfully deleted annotation {annotationIndex} from page {pageIndex}. Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Edits an annotation in a PDF
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, pageIndex, annotationIndex, optional text, x, y, width, height, outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> EditAnnotation(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var pageIndex = arguments?["pageIndex"]?.GetValue<int>() ?? throw new ArgumentException("pageIndex is required");
-        var annotationIndex = arguments?["annotationIndex"]?.GetValue<int>() ?? throw new ArgumentException("annotationIndex is required");
-        var text = arguments?["text"]?.GetValue<string>() ?? throw new ArgumentException("text is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex", "pageIndex");
+        var annotationIndex = ArgumentHelper.GetInt(arguments, "annotationIndex", "annotationIndex");
+        var text = ArgumentHelper.GetString(arguments, "text", "text");
         var x = arguments?["x"]?.GetValue<double?>();
         var y = arguments?["y"]?.GetValue<double?>();
 
@@ -170,9 +185,14 @@ Usage examples:
         return await Task.FromResult($"Successfully edited annotation {annotationIndex} on page {pageIndex}. Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Gets all annotations from a PDF page
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, pageIndex</param>
+    /// <returns>Formatted string with all annotations</returns>
     private async Task<string> GetAnnotations(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         var pageIndex = arguments?["pageIndex"]?.GetValue<int?>();
 
         SecurityHelper.ValidateFilePath(path, "path");

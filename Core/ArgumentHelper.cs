@@ -96,7 +96,7 @@ public static class ArgumentHelper
         }
         else if (node.GetValueKind() == System.Text.Json.JsonValueKind.Number)
         {
-            // Try double first, then int (for compatibility)
+            // Try double first, then int (for compatibility with JSON numbers)
             if (node.AsValue().TryGetValue<double>(out var doubleValue))
             {
                 return doubleValue;
@@ -146,6 +146,19 @@ public static class ArgumentHelper
     }
 
     /// <summary>
+    /// Gets an integer from JSON arguments
+    /// </summary>
+    /// <param name="arguments">JSON arguments object</param>
+    /// <param name="key">Parameter key</param>
+    /// <param name="paramName">Parameter name for error messages</param>
+    /// <param name="required">Whether the parameter is required (default: true)</param>
+    /// <returns>Converted integer value</returns>
+    public static int GetInt(JsonObject? arguments, string key, string paramName, bool required = true)
+    {
+        return GetInt(arguments?[key], paramName, required);
+    }
+
+    /// <summary>
     /// Gets an integer from JSON arguments, checking multiple parameter names (for compatibility)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
@@ -165,6 +178,18 @@ public static class ArgumentHelper
     }
 
     /// <summary>
+    /// Gets a nullable integer from JSON arguments
+    /// </summary>
+    /// <param name="arguments">JSON arguments object</param>
+    /// <param name="key">Parameter key</param>
+    /// <param name="paramName">Parameter name for error messages</param>
+    /// <returns>Converted integer value or null if not found</returns>
+    public static int? GetIntNullable(JsonObject? arguments, string key, string paramName)
+    {
+        return GetIntNullable(arguments?[key], paramName);
+    }
+
+    /// <summary>
     /// Gets a nullable integer from JSON arguments, checking multiple parameter names (for compatibility)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
@@ -180,6 +205,31 @@ public static class ArgumentHelper
             node = arguments[primaryName] ?? (alternateName != null ? arguments[alternateName] : null);
         }
         return GetIntNullable(node, paramName);
+    }
+
+    /// <summary>
+    /// Gets a double from JSON arguments
+    /// </summary>
+    /// <param name="arguments">JSON arguments object</param>
+    /// <param name="key">Parameter key</param>
+    /// <param name="paramName">Parameter name for error messages</param>
+    /// <param name="required">Whether the parameter is required (default: true)</param>
+    /// <returns>Converted double value</returns>
+    public static double GetDouble(JsonObject? arguments, string key, string paramName, bool required = true)
+    {
+        return GetDouble(arguments?[key], paramName, required);
+    }
+
+    /// <summary>
+    /// Gets a nullable double from JSON arguments
+    /// </summary>
+    /// <param name="arguments">JSON arguments object</param>
+    /// <param name="key">Parameter key</param>
+    /// <param name="paramName">Parameter name for error messages</param>
+    /// <returns>Converted double value or null if not found</returns>
+    public static double? GetDoubleNullable(JsonObject? arguments, string key, string paramName)
+    {
+        return GetDoubleNullable(arguments?[key], paramName);
     }
 
     /// <summary>
@@ -208,6 +258,78 @@ public static class ArgumentHelper
     public static string? GetStringNullable(JsonObject? arguments, string key)
     {
         return arguments?[key]?.GetValue<string>();
+    }
+
+    /// <summary>
+    /// Gets a boolean value from JSON arguments
+    /// </summary>
+    /// <param name="arguments">JSON arguments object</param>
+    /// <param name="key">Parameter key</param>
+    /// <param name="paramName">Parameter name for error messages</param>
+    /// <param name="defaultValue">Default value if not found (default: false)</param>
+    /// <returns>Boolean value</returns>
+    public static bool GetBool(JsonObject? arguments, string key, string paramName, bool defaultValue = false)
+    {
+        var node = arguments?[key];
+        if (node == null)
+            return defaultValue;
+
+        if (node.GetValueKind() == System.Text.Json.JsonValueKind.True || node.GetValueKind() == System.Text.Json.JsonValueKind.False)
+        {
+            return node.GetValue<bool>();
+        }
+        else if (node.GetValueKind() == System.Text.Json.JsonValueKind.String)
+        {
+            var str = node.GetValue<string>();
+            if (bool.TryParse(str, out bool result))
+                return result;
+            throw new ArgumentException($"{paramName} must be a valid boolean");
+        }
+        else if (node.GetValueKind() == System.Text.Json.JsonValueKind.Number)
+        {
+            // Support 0/1 as boolean
+            var num = node.GetValue<int>();
+            return num != 0;
+        }
+        else
+        {
+            throw new ArgumentException($"{paramName} must be a valid boolean");
+        }
+    }
+
+    /// <summary>
+    /// Gets a nullable boolean value from JSON arguments
+    /// </summary>
+    /// <param name="arguments">JSON arguments object</param>
+    /// <param name="key">Parameter key</param>
+    /// <param name="paramName">Parameter name for error messages</param>
+    /// <returns>Boolean value or null if not found</returns>
+    public static bool? GetBoolNullable(JsonObject? arguments, string key, string paramName)
+    {
+        var node = arguments?[key];
+        if (node == null)
+            return null;
+
+        if (node.GetValueKind() == System.Text.Json.JsonValueKind.True || node.GetValueKind() == System.Text.Json.JsonValueKind.False)
+        {
+            return node.GetValue<bool>();
+        }
+        else if (node.GetValueKind() == System.Text.Json.JsonValueKind.String)
+        {
+            var str = node.GetValue<string>();
+            if (bool.TryParse(str, out bool result))
+                return result;
+            throw new ArgumentException($"{paramName} must be a valid boolean");
+        }
+        else if (node.GetValueKind() == System.Text.Json.JsonValueKind.Number)
+        {
+            var num = node.GetValue<int>();
+            return num != 0;
+        }
+        else
+        {
+            throw new ArgumentException($"{paramName} must be a valid boolean");
+        }
     }
 
     /// <summary>

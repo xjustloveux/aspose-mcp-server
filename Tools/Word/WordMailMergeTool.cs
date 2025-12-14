@@ -38,8 +38,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var templatePath = arguments?["templatePath"]?.GetValue<string>() ?? throw new ArgumentException("templatePath is required");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? throw new ArgumentException("outputPath is required");
+        var templatePath = ArgumentHelper.GetString(arguments, "templatePath", "templatePath");
+        var outputPath = ArgumentHelper.GetString(arguments, "outputPath", "outputPath");
         var data = arguments?["data"]?.AsObject() ?? throw new ArgumentException("data is required");
 
         SecurityHelper.ValidateFilePath(templatePath, "templatePath");

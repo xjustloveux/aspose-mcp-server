@@ -36,8 +36,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var inputPath = arguments?["inputPath"]?.GetValue<string>() ?? throw new ArgumentException("inputPath is required");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? throw new ArgumentException("outputPath is required");
+        var inputPath = ArgumentHelper.GetString(arguments, "inputPath", "inputPath");
+        var outputPath = ArgumentHelper.GetString(arguments, "outputPath", "outputPath");
 
         SecurityHelper.ValidateFilePath(inputPath, "inputPath");
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");

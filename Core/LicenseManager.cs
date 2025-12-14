@@ -5,28 +5,32 @@ using Aspose.Pdf;
 
 namespace AsposeMcpServer.Core;
 
+/// <summary>
+/// Manages Aspose license loading and initialization
+/// </summary>
 public static class LicenseManager
 {
+    /// <summary>
+    /// Sets Aspose licenses based on configuration
+    /// Searches for license files in multiple locations and loads licenses for enabled components
+    /// </summary>
+    /// <param name="config">Server configuration</param>
     public static void SetLicense(ServerConfig config)
     {
-        // Suppress any potential stdout output from Aspose during license loading
+        // Suppress stdout output from Aspose during license loading
         var originalOut = Console.Out;
         try
         {
-            // Temporarily redirect stdout to null during license loading
             Console.SetOut(TextWriter.Null);
             
             var baseDirectory = AppContext.BaseDirectory;
             var currentDirectory = Directory.GetCurrentDirectory();
             
-            // Build list of possible license file names to search
             var licenseFileNames = new List<string>();
             
-            // If license path is explicitly specified, use it first
             if (!string.IsNullOrWhiteSpace(config.LicensePath))
             {
                 licenseFileNames.Add(config.LicensePath);
-                // Also try with base directory and current directory prefixes
                 if (!Path.IsPathRooted(config.LicensePath))
                 {
                     licenseFileNames.Add(Path.Combine(baseDirectory, config.LicensePath));
@@ -68,7 +72,7 @@ public static class LicenseManager
             licenseFileNames.Add(Path.Combine(baseDirectory, "Aspose.Total.lic"));
             licenseFileNames.Add(Path.Combine(currentDirectory, "Aspose.Total.lic"));
             
-            // Also search for any .lic files in the directories
+            // Search for any .lic files in the directories
             var searchDirectories = new[] { baseDirectory, currentDirectory };
             foreach (var dir in searchDirectories)
             {
@@ -90,7 +94,6 @@ public static class LicenseManager
                 }
             }
             
-            // Find the first existing license file
             string? licensePath = null;
             foreach (var path in licenseFileNames)
             {
@@ -105,7 +108,6 @@ public static class LicenseManager
             
             if (licensePath != null)
             {
-                // Try to set license for each enabled component
                 if (config.EnableWord)
                 {
                     try
@@ -116,7 +118,7 @@ public static class LicenseManager
                     }
                     catch
                     {
-                        // License file might not contain Words license, continue
+                        // License file might not contain Words license
                     }
                 }
                 
@@ -130,7 +132,7 @@ public static class LicenseManager
                     }
                     catch
                     {
-                        // License file might not contain Cells license, continue
+                        // License file might not contain Cells license
                     }
                 }
                 
@@ -144,7 +146,7 @@ public static class LicenseManager
                     }
                     catch
                     {
-                        // License file might not contain Slides license, continue
+                        // License file might not contain Slides license
                     }
                 }
                 
@@ -158,11 +160,10 @@ public static class LicenseManager
                     }
                     catch
                     {
-                        // License file might not contain Pdf license, continue
+                        // License file might not contain Pdf license
                     }
                 }
                 
-                // Restore stdout before logging
                 Console.SetOut(originalOut);
                 
                 if (loadedLicenses.Count > 0)

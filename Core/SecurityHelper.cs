@@ -8,16 +8,9 @@ namespace AsposeMcpServer.Core;
 /// </summary>
 public static class SecurityHelper
 {
-    // Maximum allowed path length (Windows MAX_PATH is 260, but we use a safer limit)
-    private const int MaxPathLength = 260;
-    
-    // Maximum allowed file name length
+    private const int MaxPathLength = 260; // Windows MAX_PATH limit
     private const int MaxFileNameLength = 255;
-    
-    // Maximum allowed array size for input validation
     private const int MaxArraySize = 1000;
-    
-    // Maximum allowed string length for input parameters
     private const int MaxStringLength = 10000;
 
     /// <summary>
@@ -32,33 +25,28 @@ public static class SecurityHelper
             return "file";
         }
 
-        // Limit length first
         if (fileName.Length > MaxFileNameLength)
         {
             fileName = fileName.Substring(0, MaxFileNameLength);
         }
 
-        // Remove path separators and other dangerous characters
         var invalidChars = Path.GetInvalidFileNameChars();
         var sanitized = string.Join("_", fileName.Split(invalidChars, StringSplitOptions.RemoveEmptyEntries));
 
-        // Remove path traversal attempts (more comprehensive)
+        // Remove path traversal attempts
         sanitized = sanitized.Replace("..", "");
         sanitized = sanitized.Replace("\\", "_");
         sanitized = sanitized.Replace("/", "_");
-        sanitized = sanitized.Replace(":", "_"); // Remove drive letters
-        sanitized = Regex.Replace(sanitized, @"^\s+|\s+$", ""); // Remove leading/trailing whitespace
+        sanitized = sanitized.Replace(":", "_");
+        sanitized = Regex.Replace(sanitized, @"^\s+|\s+$", "");
 
-        // Remove leading/trailing dots and spaces
         sanitized = sanitized.Trim('.', ' ');
 
-        // Ensure it's not empty
         if (string.IsNullOrWhiteSpace(sanitized))
         {
             sanitized = "file";
         }
 
-        // Final length check
         if (sanitized.Length > MaxFileNameLength)
         {
             sanitized = sanitized.Substring(0, MaxFileNameLength);
@@ -80,25 +68,21 @@ public static class SecurityHelper
             return false;
         }
 
-        // Check path length
         if (filePath.Length > MaxPathLength)
         {
             return false;
         }
 
-        // Check for path traversal patterns
         if (filePath.Contains("..") || filePath.Contains("~"))
         {
             return false;
         }
 
-        // Check for dangerous patterns
         if (filePath.Contains("//") || filePath.Contains("\\\\"))
         {
             return false;
         }
 
-        // Check for absolute paths
         if (Path.IsPathRooted(filePath))
         {
             if (!allowAbsolutePaths)
@@ -106,11 +90,9 @@ public static class SecurityHelper
                 return false;
             }
             
-            // Additional validation for absolute paths
             try
             {
                 var fullPath = Path.GetFullPath(filePath);
-                // Reject if normalized path contains traversal
                 if (fullPath.Contains(".."))
                 {
                     return false;
@@ -122,7 +104,6 @@ public static class SecurityHelper
             }
         }
 
-        // Check for invalid characters
         if (filePath.IndexOfAny(Path.GetInvalidPathChars()) >= 0)
         {
             return false;
@@ -166,23 +147,16 @@ public static class SecurityHelper
             return "file_{index}";
         }
 
-        // Limit length
         if (pattern.Length > MaxFileNameLength)
         {
             pattern = pattern.Substring(0, MaxFileNameLength);
         }
 
-        // Remove path separators
         var sanitized = pattern.Replace("\\", "_").Replace("/", "_");
-        
-        // Remove path traversal attempts
         sanitized = sanitized.Replace("..", "");
         sanitized = sanitized.Replace(":", "_");
-        
-        // Remove leading/trailing dots and spaces
         sanitized = sanitized.Trim('.', ' ');
 
-        // Ensure it's not empty
         if (string.IsNullOrWhiteSpace(sanitized))
         {
             sanitized = "file_{index}";

@@ -277,9 +277,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
@@ -297,9 +296,16 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Adds text to the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing text, optional fontName, fontSize, fontColor, formatting options</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> AddTextAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var text = arguments?["text"]?.GetValue<string>() ?? throw new ArgumentException("text is required");
+        var text = ArgumentHelper.GetString(arguments, "text", "text");
         var fontName = arguments?["fontName"]?.GetValue<string>();
         var fontSize = arguments?["fontSize"]?.GetValue<double>();
         var bold = arguments?["bold"]?.GetValue<bool>() ?? false;
@@ -326,13 +332,11 @@ Usage examples:
         
         var builder = new DocumentBuilder(doc);
         
-        // IMPORTANT: Move to the last paragraph in the document body, not inside any Shape/TextBox
-        // MoveToDocumentEnd() might move inside a textbox if cursor is already there
-        // So we explicitly move to the last paragraph in the body
+        // Move to last paragraph in document body (not inside Shape/TextBox)
+        // MoveToDocumentEnd() might move inside textbox if cursor is already there
         var bodyParagraphs = body.GetChildNodes(NodeType.Paragraph, false);
         if (bodyParagraphs.Count > 0)
         {
-            // Move to the last paragraph in the body (not inside any shape)
             var lastBodyPara = bodyParagraphs[bodyParagraphs.Count - 1] as Paragraph;
             if (lastBodyPara != null)
             {
@@ -340,25 +344,21 @@ Usage examples:
             }
             else
             {
-                // Fallback: move to document end
                 builder.MoveToDocumentEnd();
             }
         }
         else
         {
-            // No paragraphs in body, move to document end
             builder.MoveToDocumentEnd();
         }
         
-        // Ensure we're in the document body, not inside a Shape/TextBox
-        // Check if current node is inside a Shape
+        // Ensure we're in document body, not inside Shape/TextBox
         var currentNode = builder.CurrentNode;
         if (currentNode != null)
         {
             var shapeAncestor = currentNode.GetAncestor(NodeType.Shape);
             if (shapeAncestor != null)
             {
-                // We're inside a Shape (possibly TextBox), move to body instead
                 bodyParagraphs = body.GetChildNodes(NodeType.Paragraph, false);
                 if (bodyParagraphs.Count > 0)
                 {
@@ -450,21 +450,7 @@ Usage examples:
             {
                 try
                 {
-                    var colorValue = color;
-                    if (colorValue.StartsWith("#"))
-                        colorValue = colorValue.TrimStart('#');
-                    
-                    if (colorValue.Length == 6)
-                    {
-                        var r = Convert.ToInt32(colorValue.Substring(0, 2), 16);
-                        var g = Convert.ToInt32(colorValue.Substring(2, 2), 16);
-                        var b = Convert.ToInt32(colorValue.Substring(4, 2), 16);
-                        builder.Font.Color = System.Drawing.Color.FromArgb(r, g, b);
-                    }
-                    else
-                    {
-                        builder.Font.Color = System.Drawing.Color.FromName(colorValue);
-                    }
+                    builder.Font.Color = ColorHelper.ParseColor(color);
                 }
                 catch
                 {
@@ -570,6 +556,13 @@ Usage examples:
         return await Task.FromResult(result);
     }
 
+    /// <summary>
+    /// Deletes text from the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing searchText, optional matchCase, matchWholeWord, outputPath</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message with deletion count</returns>
     private async Task<string> DeleteTextAsync(JsonObject? arguments, string path, string outputPath)
     {
         var searchText = arguments?["searchText"]?.GetValue<string>();
@@ -810,10 +803,17 @@ Usage examples:
         return await Task.FromResult(result);
     }
 
+    /// <summary>
+    /// Replaces text in the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing searchText, replaceText, optional matchCase, matchWholeWord, outputPath</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message with replacement count</returns>
     private async Task<string> ReplaceTextAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var find = arguments?["find"]?.GetValue<string>() ?? throw new ArgumentException("find is required");
-        var replace = arguments?["replace"]?.GetValue<string>() ?? throw new ArgumentException("replace is required");
+        var find = ArgumentHelper.GetString(arguments, "find", "find");
+        var replace = ArgumentHelper.GetString(arguments, "replace", "replace");
         var useRegex = arguments?["useRegex"]?.GetValue<bool>() ?? false;
         var replaceInFields = arguments?["replaceInFields"]?.GetValue<bool>() ?? false;
 
@@ -846,9 +846,15 @@ Usage examples:
         return await Task.FromResult(result);
     }
 
+    /// <summary>
+    /// Searches for text in the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing searchText, optional matchCase, matchWholeWord</param>
+    /// <param name="path">Word document file path</param>
+    /// <returns>Formatted string with search results</returns>
     private async Task<string> SearchTextAsync(JsonObject? arguments, string path)
     {
-        var searchText = arguments?["searchText"]?.GetValue<string>() ?? throw new ArgumentException("searchText is required");
+        var searchText = ArgumentHelper.GetString(arguments, "searchText", "searchText");
         var useRegex = arguments?["useRegex"]?.GetValue<bool>() ?? false;
         var caseSensitive = arguments?["caseSensitive"]?.GetValue<bool>() ?? false;
         var maxResults = arguments?["maxResults"]?.GetValue<int>() ?? 50;
@@ -945,9 +951,16 @@ Usage examples:
         return context;
     }
 
+    /// <summary>
+    /// Formats text in the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing searchText, optional formatting options, matchCase, matchWholeWord</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message with format count</returns>
     private async Task<string> FormatTextAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var paragraphIndex = arguments?["paragraphIndex"]?.GetValue<int>() ?? throw new ArgumentException("paragraphIndex is required");
+        var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex", "paragraphIndex");
         var runIndex = arguments?["runIndex"]?.GetValue<int?>();
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>() ?? 0;
         var fontName = arguments?["fontName"]?.GetValue<string>();
@@ -1122,23 +1135,9 @@ Usage examples:
             {
                 try
                 {
-                    var colorValue = color;
-                    if (colorValue.StartsWith("#"))
-                        colorValue = colorValue.Substring(1);
-                    
-                    if (colorValue.Length == 6)
-                    {
-                        int r = Convert.ToInt32(colorValue.Substring(0, 2), 16);
-                        int g = Convert.ToInt32(colorValue.Substring(2, 2), 16);
-                        int b = Convert.ToInt32(colorValue.Substring(4, 2), 16);
-                        run.Font.Color = System.Drawing.Color.FromArgb(r, g, b);
-                        changes.Add($"顏色: #{colorValue}");
-                    }
-                    else
-                    {
-                        run.Font.Color = System.Drawing.Color.FromName(colorValue);
-                        changes.Add($"顏色: {colorValue}");
-                    }
+                    run.Font.Color = ColorHelper.ParseColor(color);
+                    var colorValue = color.TrimStart('#');
+                    changes.Add($"顏色: {(colorValue.Length == 6 ? "#" : "")}{colorValue}");
                 }
                 catch
                 {
@@ -1192,12 +1191,19 @@ Usage examples:
         return await Task.FromResult(result);
     }
 
+    /// <summary>
+    /// Inserts text at a specific position
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing text, paragraphIndex, runIndex, optional formatting options</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> InsertTextAtPositionAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var paragraphIndex = arguments?["insertParagraphIndex"]?.GetValue<int>() ?? throw new ArgumentException("insertParagraphIndex is required");
-        var charIndex = arguments?["charIndex"]?.GetValue<int>() ?? throw new ArgumentException("charIndex is required");
+        var paragraphIndex = ArgumentHelper.GetInt(arguments, "insertParagraphIndex", "insertParagraphIndex");
+        var charIndex = ArgumentHelper.GetInt(arguments, "charIndex", "charIndex");
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>();
-        var text = arguments?["text"]?.GetValue<string>() ?? throw new ArgumentException("text is required");
+        var text = ArgumentHelper.GetString(arguments, "text", "text");
         var insertBefore = arguments?["insertBefore"]?.GetValue<bool?>() ?? false;
 
         var doc = new Document(path);
@@ -1249,12 +1255,19 @@ Usage examples:
         return await Task.FromResult($"Text inserted at position: {outputPath}");
     }
 
+    /// <summary>
+    /// Deletes text in a range
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing startParagraphIndex, startRunIndex, endParagraphIndex, endRunIndex</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeleteTextRangeAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var startParagraphIndex = arguments?["startParagraphIndex"]?.GetValue<int>() ?? throw new ArgumentException("startParagraphIndex is required");
-        var startCharIndex = arguments?["startCharIndex"]?.GetValue<int>() ?? throw new ArgumentException("startCharIndex is required");
-        var endParagraphIndex = arguments?["endParagraphIndex"]?.GetValue<int>() ?? throw new ArgumentException("endParagraphIndex is required");
-        var endCharIndex = arguments?["endCharIndex"]?.GetValue<int>() ?? throw new ArgumentException("endCharIndex is required");
+        var startParagraphIndex = ArgumentHelper.GetInt(arguments, "startParagraphIndex", "startParagraphIndex");
+        var startCharIndex = ArgumentHelper.GetInt(arguments, "startCharIndex", "startCharIndex");
+        var endParagraphIndex = ArgumentHelper.GetInt(arguments, "endParagraphIndex", "endParagraphIndex");
+        var endCharIndex = ArgumentHelper.GetInt(arguments, "endCharIndex", "endCharIndex");
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>();
 
         var doc = new Document(path);
@@ -1354,9 +1367,16 @@ Usage examples:
         return await Task.FromResult($"Text range deleted: {outputPath}");
     }
 
+    /// <summary>
+    /// Adds text with a specific style
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing text, styleName, optional formatting options</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> AddTextWithStyleAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var text = arguments?["text"]?.GetValue<string>() ?? throw new ArgumentException("text is required");
+        var text = ArgumentHelper.GetString(arguments, "text", "text");
         var styleName = arguments?["styleName"]?.GetValue<string>();
         var fontName = arguments?["fontName"]?.GetValue<string>();
         var fontNameAscii = arguments?["fontNameAscii"]?.GetValue<string>();
@@ -1488,20 +1508,7 @@ Usage examples:
         {
             try
             {
-                if (color.StartsWith("#"))
-                    color = color.Substring(1);
-                
-                if (color.Length == 6)
-                {
-                    int r = Convert.ToInt32(color.Substring(0, 2), 16);
-                    int g = Convert.ToInt32(color.Substring(2, 2), 16);
-                    int b = Convert.ToInt32(color.Substring(4, 2), 16);
-                    run.Font.Color = System.Drawing.Color.FromArgb(r, g, b);
-                }
-                else
-                {
-                    run.Font.Color = System.Drawing.Color.FromName(color);
-                }
+                run.Font.Color = ColorHelper.ParseColor(color);
             }
             catch
             {

@@ -74,9 +74,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         var sheetIndex = arguments?["sheetIndex"]?.GetValue<int>() ?? 0;
 
         return operation.ToLower() switch
@@ -89,10 +88,17 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Groups rows together
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing startRow, endRow, optional isCollapsed</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> GroupRowsAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var startRow = arguments?["startRow"]?.GetValue<int>() ?? throw new ArgumentException("startRow is required for group_rows operation");
-        var endRow = arguments?["endRow"]?.GetValue<int>() ?? throw new ArgumentException("endRow is required for group_rows operation");
+        var startRow = ArgumentHelper.GetInt(arguments, "startRow", "startRow");
+        var endRow = ArgumentHelper.GetInt(arguments, "endRow", "endRow");
         var isCollapsed = arguments?["isCollapsed"]?.GetValue<bool?>() ?? false;
 
         using var workbook = new Workbook(path);
@@ -103,10 +109,17 @@ Usage examples:
         return await Task.FromResult($"Rows {startRow}-{endRow} grouped in sheet {sheetIndex}: {path}");
     }
 
+    /// <summary>
+    /// Ungroups rows
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing startRow, endRow</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> UngroupRowsAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var startRow = arguments?["startRow"]?.GetValue<int>() ?? throw new ArgumentException("startRow is required for ungroup_rows operation");
-        var endRow = arguments?["endRow"]?.GetValue<int>() ?? throw new ArgumentException("endRow is required for ungroup_rows operation");
+        var startRow = ArgumentHelper.GetInt(arguments, "startRow", "startRow");
+        var endRow = ArgumentHelper.GetInt(arguments, "endRow", "endRow");
 
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
@@ -116,10 +129,17 @@ Usage examples:
         return await Task.FromResult($"Rows {startRow}-{endRow} ungrouped in sheet {sheetIndex}: {path}");
     }
 
+    /// <summary>
+    /// Groups columns together
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing startColumn, endColumn, optional isCollapsed</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> GroupColumnsAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var startColumn = arguments?["startColumn"]?.GetValue<int>() ?? throw new ArgumentException("startColumn is required for group_columns operation");
-        var endColumn = arguments?["endColumn"]?.GetValue<int>() ?? throw new ArgumentException("endColumn is required for group_columns operation");
+        var startColumn = ArgumentHelper.GetInt(arguments, "startColumn", "startColumn");
+        var endColumn = ArgumentHelper.GetInt(arguments, "endColumn", "endColumn");
         var isCollapsed = arguments?["isCollapsed"]?.GetValue<bool?>() ?? false;
 
         using var workbook = new Workbook(path);
@@ -130,10 +150,17 @@ Usage examples:
         return await Task.FromResult($"Columns {startColumn}-{endColumn} grouped in sheet {sheetIndex}: {path}");
     }
 
+    /// <summary>
+    /// Ungroups columns
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing startColumn, endColumn</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> UngroupColumnsAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var startColumn = arguments?["startColumn"]?.GetValue<int>() ?? throw new ArgumentException("startColumn is required for ungroup_columns operation");
-        var endColumn = arguments?["endColumn"]?.GetValue<int>() ?? throw new ArgumentException("endColumn is required for ungroup_columns operation");
+        var startColumn = ArgumentHelper.GetInt(arguments, "startColumn", "startColumn");
+        var endColumn = ArgumentHelper.GetInt(arguments, "endColumn", "endColumn");
 
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);

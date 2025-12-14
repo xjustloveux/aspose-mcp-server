@@ -97,9 +97,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         return operation.ToLower() switch
         {
@@ -115,6 +114,12 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Adds a new slide to the presentation
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing optional layoutType, outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Success message with slide index</returns>
     private async Task<string> AddSlideAsync(JsonObject? arguments, string path)
     {
         var layoutType = arguments?["layoutType"]?.GetValue<string>() ?? "Blank";
@@ -134,9 +139,15 @@ Usage examples:
         return await Task.FromResult($"Slide added to presentation: {path} (Total: {presentation.Slides.Count})");
     }
 
+    /// <summary>
+    /// Deletes a slide from the presentation
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing slideIndex, optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeleteSlideAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = arguments?["slideIndex"]?.GetValue<int>() ?? throw new ArgumentException("slideIndex is required for delete operation");
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
 
         using var presentation = new Presentation(path);
         if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
@@ -150,6 +161,12 @@ Usage examples:
         return await Task.FromResult($"已刪除投影片 {slideIndex}，剩餘 {presentation.Slides.Count} 張: {path}");
     }
 
+    /// <summary>
+    /// Gets information about all slides
+    /// </summary>
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Formatted string with slide information</returns>
     private async Task<string> GetSlidesInfoAsync(JsonObject? arguments, string path)
     {
         using var presentation = new Presentation(path);
@@ -174,10 +191,16 @@ Usage examples:
         return await Task.FromResult(sb.ToString());
     }
 
+    /// <summary>
+    /// Moves a slide to a different position
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing slideIndex, targetIndex, optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> MoveSlideAsync(JsonObject? arguments, string path)
     {
-        var fromIndex = arguments?["fromIndex"]?.GetValue<int>() ?? throw new ArgumentException("fromIndex is required for move operation");
-        var toIndex = arguments?["toIndex"]?.GetValue<int>() ?? throw new ArgumentException("toIndex is required for move operation");
+        var fromIndex = ArgumentHelper.GetInt(arguments, "fromIndex", "fromIndex");
+        var toIndex = ArgumentHelper.GetInt(arguments, "toIndex", "toIndex");
 
         using var presentation = new Presentation(path);
         var count = presentation.Slides.Count;
@@ -200,9 +223,15 @@ Usage examples:
         return await Task.FromResult($"投影片已移動: {fromIndex} -> {toIndex} (總數 {count})");
     }
 
+    /// <summary>
+    /// Duplicates a slide
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing slideIndex, optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Success message with new slide index</returns>
     private async Task<string> DuplicateSlideAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = arguments?["slideIndex"]?.GetValue<int>() ?? throw new ArgumentException("slideIndex is required for duplicate operation");
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
         var insertAt = arguments?["insertAt"]?.GetValue<int?>();
 
         using var presentation = new Presentation(path);
@@ -231,6 +260,12 @@ Usage examples:
         return await Task.FromResult($"已複製投影片 {slideIndex}，總數 {presentation.Slides.Count} 張: {path}");
     }
 
+    /// <summary>
+    /// Hides or shows slides
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing slideIndexes array, isHidden, optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> HideSlidesAsync(JsonObject? arguments, string path)
     {
         var hidden = arguments?["hidden"]?.GetValue<bool?>() ?? false;
@@ -258,9 +293,15 @@ Usage examples:
         return await Task.FromResult($"已設定 {targets.Length} 張投影片 Hidden={hidden}");
     }
 
+    /// <summary>
+    /// Clears all content from a slide
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing slideIndex, optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> ClearSlideAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = arguments?["slideIndex"]?.GetValue<int>() ?? throw new ArgumentException("slideIndex is required for clear operation");
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
@@ -273,9 +314,15 @@ Usage examples:
         return await Task.FromResult($"已清除投影片 {slideIndex} 的所有形狀");
     }
 
+    /// <summary>
+    /// Edits slide properties
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing slideIndex, optional layoutType, background, outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> EditSlideAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = arguments?["slideIndex"]?.GetValue<int>() ?? throw new ArgumentException("slideIndex is required for edit operation");
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
         var layoutIndex = arguments?["layoutIndex"]?.GetValue<int?>();
 
         using var presentation = new Presentation(path);

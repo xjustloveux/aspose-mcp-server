@@ -178,8 +178,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         SecurityHelper.ValidateFilePath(path, "path");
         var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
@@ -200,6 +200,13 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Sets header text for the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing optional headerLeft, headerCenter, headerRight, sectionIndex, differentFirstPage, differentOddEven</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetHeaderTextAsync(JsonObject? arguments, string path, string outputPath)
     {
         var headerLeft = arguments?["headerLeft"]?.GetValue<string>();
@@ -274,6 +281,13 @@ Usage examples:
         return await Task.FromResult($"成功設定頁首文字（{contentDesc}）於 {sectionsDesc}");
     }
 
+    /// <summary>
+    /// Sets footer text for the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing optional footerLeft, footerCenter, footerRight, sectionIndex, differentFirstPage, differentOddEven</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetFooterTextAsync(JsonObject? arguments, string path, string outputPath)
     {
         var footerLeft = arguments?["footerLeft"]?.GetValue<string>();
@@ -348,9 +362,16 @@ Usage examples:
         return await Task.FromResult($"成功設定頁尾文字（{contentDesc}）於 {sectionsDesc}");
     }
 
+    /// <summary>
+    /// Sets header image for the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing imagePath, optional sectionIndex, differentFirstPage, differentOddEven</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetHeaderImageAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var imagePath = arguments?["imagePath"]?.GetValue<string>() ?? throw new ArgumentException("imagePath is required");
+        var imagePath = ArgumentHelper.GetString(arguments, "imagePath", "imagePath");
         SecurityHelper.ValidateFilePath(imagePath, "imagePath");
         var alignment = arguments?["alignment"]?.GetValue<string>() ?? "left";
         var imageWidth = arguments?["imageWidth"]?.GetValue<double?>();
@@ -412,9 +433,16 @@ Usage examples:
         return await Task.FromResult($"Header image set: {outputPath}");
     }
 
+    /// <summary>
+    /// Sets footer image for the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing imagePath, optional sectionIndex, differentFirstPage, differentOddEven</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetFooterImageAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var imagePath = arguments?["imagePath"]?.GetValue<string>() ?? throw new ArgumentException("imagePath is required");
+        var imagePath = ArgumentHelper.GetString(arguments, "imagePath", "imagePath");
         SecurityHelper.ValidateFilePath(imagePath, "imagePath");
         var alignment = arguments?["alignment"]?.GetValue<string>() ?? "left";
         var imageWidth = arguments?["imageWidth"]?.GetValue<double?>();
@@ -476,6 +504,13 @@ Usage examples:
         return await Task.FromResult($"Footer image set: {outputPath}");
     }
 
+    /// <summary>
+    /// Sets header line (border) for the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing optional color, width, style, sectionIndex, differentFirstPage, differentOddEven</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetHeaderLineAsync(JsonObject? arguments, string path, string outputPath)
     {
         var lineStyle = arguments?["lineStyle"]?.GetValue<string>() ?? "single";
@@ -514,6 +549,13 @@ Usage examples:
         return await Task.FromResult($"Header line set: {outputPath}");
     }
 
+    /// <summary>
+    /// Sets footer line (border) for the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing optional color, width, style, sectionIndex, differentFirstPage, differentOddEven</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetFooterLineAsync(JsonObject? arguments, string path, string outputPath)
     {
         var lineStyle = arguments?["lineStyle"]?.GetValue<string>() ?? "single";
@@ -552,6 +594,13 @@ Usage examples:
         return await Task.FromResult($"Footer line set: {outputPath}");
     }
 
+    /// <summary>
+    /// Sets header tab stops
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing tabStops array, optional sectionIndex, differentFirstPage, differentOddEven</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetHeaderTabStopsAsync(JsonObject? arguments, string path, string outputPath)
     {
         var tabStops = arguments?["tabStops"]?.AsArray();
@@ -611,6 +660,13 @@ Usage examples:
         return await Task.FromResult($"Header tab stops set: {outputPath}");
     }
 
+    /// <summary>
+    /// Sets footer tab stops
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing tabStops array, optional sectionIndex, differentFirstPage, differentOddEven</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetFooterTabStopsAsync(JsonObject? arguments, string path, string outputPath)
     {
         var tabStops = arguments?["tabStops"]?.AsArray();
@@ -670,6 +726,13 @@ Usage examples:
         return await Task.FromResult($"Footer tab stops set: {outputPath}");
     }
 
+    /// <summary>
+    /// Sets header and footer together
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing header/footer properties</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetHeaderFooterAsync(JsonObject? arguments, string path, string outputPath)
     {
         // Combined operation to set both header and footer
@@ -678,6 +741,12 @@ Usage examples:
         return await Task.FromResult($"Header and footer set: {outputPath}");
     }
 
+    /// <summary>
+    /// Gets all headers and footers from the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="path">Word document file path</param>
+    /// <returns>Formatted string with all headers and footers</returns>
     private async Task<string> GetHeadersFootersAsync(JsonObject? arguments, string path)
     {
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>();

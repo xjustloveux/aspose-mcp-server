@@ -89,7 +89,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
 
         return operation.ToLower() switch
         {
@@ -102,9 +102,14 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Creates a new PDF document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing outputPath, optional content</param>
+    /// <returns>Success message with file path</returns>
     private async Task<string> CreateDocument(JsonObject? arguments)
     {
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("outputPath is required");
+        var outputPath = ArgumentHelper.GetString(arguments, "outputPath", "outputPath", false) ?? ArgumentHelper.GetString(arguments, "path", "path", false) ?? throw new ArgumentException("outputPath is required");
 
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
@@ -114,10 +119,15 @@ Usage examples:
         return await Task.FromResult($"PDF document created successfully at: {outputPath}");
     }
 
+    /// <summary>
+    /// Merges multiple PDF documents into one
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing sourcePaths array, outputPath</param>
+    /// <returns>Success message with merged file path</returns>
     private async Task<string> MergeDocuments(JsonObject? arguments)
     {
         var inputPathsArray = arguments?["inputPaths"]?.AsArray() ?? throw new ArgumentException("inputPaths is required");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? throw new ArgumentException("outputPath is required");
+        var outputPath = ArgumentHelper.GetString(arguments, "outputPath", "outputPath");
 
         // Validate array size
         SecurityHelper.ValidateArraySize(inputPathsArray, "inputPaths");
@@ -146,10 +156,15 @@ Usage examples:
         return await Task.FromResult($"Merged {inputPaths.Count} PDF documents into: {outputPath}");
     }
 
+    /// <summary>
+    /// Splits PDF into multiple files
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, outputPath, splitBy (page or range)</param>
+    /// <returns>Success message with split file count</returns>
     private async Task<string> SplitDocument(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var outputDir = arguments?["outputDir"]?.GetValue<string>() ?? throw new ArgumentException("outputDir is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputDir = ArgumentHelper.GetString(arguments, "outputDir", "outputDir");
         var pagesPerFile = arguments?["pagesPerFile"]?.GetValue<int>() ?? 1;
 
         SecurityHelper.ValidateFilePath(path, "path");
@@ -177,10 +192,15 @@ Usage examples:
         return await Task.FromResult($"PDF split into {fileCount} files in: {outputDir}");
     }
 
+    /// <summary>
+    /// Compresses a PDF document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, optional compressionLevel, outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> CompressDocument(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var compressImages = arguments?["compressImages"]?.GetValue<bool>() ?? true;
         var compressFonts = arguments?["compressFonts"]?.GetValue<bool>() ?? true;
         var removeUnusedObjects = arguments?["removeUnusedObjects"]?.GetValue<bool>() ?? true;
@@ -214,12 +234,17 @@ Usage examples:
         return await Task.FromResult($"PDF compressed. Size reduction: {reduction:F2}% ({originalSize} -> {compressedSize} bytes). Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Encrypts a PDF document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, password, optional userPassword, permissions, outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> EncryptDocument(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var userPassword = arguments?["userPassword"]?.GetValue<string>() ?? throw new ArgumentException("userPassword is required");
-        var ownerPassword = arguments?["ownerPassword"]?.GetValue<string>() ?? throw new ArgumentException("ownerPassword is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var userPassword = ArgumentHelper.GetString(arguments, "userPassword", "userPassword");
+        var ownerPassword = ArgumentHelper.GetString(arguments, "ownerPassword", "ownerPassword");
 
         SecurityHelper.ValidateFilePath(path, "path");
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");

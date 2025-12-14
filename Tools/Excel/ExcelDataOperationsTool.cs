@@ -115,9 +115,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         var sheetIndex = arguments?["sheetIndex"]?.GetValue<int>() ?? 0;
 
         return operation.ToLower() switch
@@ -132,10 +131,17 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Sorts data in a range
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing range, sortColumn, optional ascending, hasHeader</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> SortDataAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var range = arguments?["range"]?.GetValue<string>() ?? throw new ArgumentException("range is required for sort operation");
-        var sortColumn = arguments?["sortColumn"]?.GetValue<int>() ?? throw new ArgumentException("sortColumn is required for sort operation");
+        var range = ArgumentHelper.GetString(arguments, "range", "range");
+        var sortColumn = ArgumentHelper.GetInt(arguments, "sortColumn", "sortColumn");
         var ascending = arguments?["ascending"]?.GetValue<bool?>() ?? true;
         var hasHeader = arguments?["hasHeader"]?.GetValue<bool?>() ?? false;
 
@@ -152,12 +158,18 @@ Usage examples:
         return await Task.FromResult($"Data sorted in range {range} by column {sortColumn} ({ (ascending ? "ascending" : "descending") }): {path}");
     }
 
+    /// <summary>
+    /// Finds and replaces text in the worksheet
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing searchText, replaceText, optional range, outputPath</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message with replacement count</returns>
     private async Task<string> FindReplaceAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var findText = arguments?["findText"]?.GetValue<string>() ?? throw new ArgumentException("findText is required for find_replace operation");
-        var replaceText = arguments?["replaceText"]?.GetValue<string>() ?? throw new ArgumentException("replaceText is required for find_replace operation");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var findText = ArgumentHelper.GetString(arguments, "findText", "findText");
+        var replaceText = ArgumentHelper.GetString(arguments, "replaceText", "replaceText");
         var sheetIndexParam = arguments?["sheetIndex"]?.GetValue<int?>();
         var matchCase = arguments?["matchCase"]?.GetValue<bool?>() ?? false;
         var matchEntireCell = arguments?["matchEntireCell"]?.GetValue<bool?>() ?? false;
@@ -211,10 +223,16 @@ Usage examples:
         return count;
     }
 
+    /// <summary>
+    /// Writes multiple values to cells in batch
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing data array (objects with cell and value)</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message with write count</returns>
     private async Task<string> BatchWriteAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var dataArray = arguments?["data"]?.AsArray() ?? throw new ArgumentException("data is required for batch_write operation");
 
         using var workbook = new Workbook(path);
@@ -231,8 +249,8 @@ Usage examples:
                 {
                     var cellObj = worksheet.Cells[cell];
                     
-                    // 嘗試將值解析為數字，如果是數字則設定為數字類型，否則設定為字符串
-                    // 這樣可以確保條件格式和圖表能正確識別數字值
+                    // Parse value as number, boolean, or string
+                    // Ensures conditional formatting and charts can correctly identify numeric values
                     if (double.TryParse(value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double numValue))
                     {
                         cellObj.PutValue(numValue);
@@ -253,6 +271,13 @@ Usage examples:
         return await Task.FromResult($"Batch write completed: {dataArray.Count} cells written to sheet {sheetIndex}: {outputPath}");
     }
 
+    /// <summary>
+    /// Gets content from a range
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing optional range</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Formatted string with cell content</returns>
     private async Task<string> GetContentAsync(JsonObject? arguments, string path, int sheetIndex)
     {
         var range = arguments?["range"]?.GetValue<string>();
@@ -288,6 +313,12 @@ Usage examples:
         }
     }
 
+    /// <summary>
+    /// Gets statistics for a range (count, sum, average, min, max)
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing range</param>
+    /// <param name="path">Excel file path</param>
+    /// <returns>Formatted string with statistics</returns>
     private async Task<string> GetStatisticsAsync(JsonObject? arguments, string path)
     {
         var sheetIndex = arguments?["sheetIndex"]?.GetValue<int?>();
@@ -333,6 +364,13 @@ Usage examples:
         result.AppendLine($"註釋數: {worksheet.Comments.Count}");
     }
 
+    /// <summary>
+    /// Gets the used range information for the worksheet
+    /// </summary>
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Formatted string with used range details</returns>
     private async Task<string> GetUsedRangeAsync(JsonObject? arguments, string path, int sheetIndex)
     {
         using var workbook = new Workbook(path);

@@ -86,9 +86,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         var sheetIndex = arguments?["sheetIndex"]?.GetValue<int>() ?? 0;
 
         return operation.ToLower() switch
@@ -101,11 +100,18 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Adds conditional formatting to a range
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing range, condition, value, optional style properties</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> AddConditionalFormattingAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var range = arguments?["range"]?.GetValue<string>() ?? throw new ArgumentException("range is required for add operation");
-        var conditionStr = arguments?["condition"]?.GetValue<string>() ?? throw new ArgumentException("condition is required for add operation");
-        var value = arguments?["value"]?.GetValue<string>() ?? throw new ArgumentException("value is required for add operation");
+        var range = ArgumentHelper.GetString(arguments, "range", "range");
+        var conditionStr = ArgumentHelper.GetString(arguments, "condition", "condition");
+        var value = ArgumentHelper.GetString(arguments, "value", "value");
         var backgroundColor = arguments?["backgroundColor"]?.GetValue<string>() ?? "Yellow";
 
         using var workbook = new Workbook(path);
@@ -169,14 +175,7 @@ Usage examples:
         // Use BackgroundColor for conditional formatting background
         try
         {
-            if (backgroundColor.StartsWith("#"))
-            {
-                fc.Style.BackgroundColor = System.Drawing.ColorTranslator.FromHtml(backgroundColor);
-            }
-            else
-            {
-                fc.Style.BackgroundColor = System.Drawing.Color.FromName(backgroundColor);
-            }
+            fc.Style.BackgroundColor = ColorHelper.ParseColor(backgroundColor);
         }
         catch
         {
@@ -191,10 +190,17 @@ Usage examples:
         return await Task.FromResult($"條件格式已添加到範圍 {range} ({conditionStr}): {path}");
     }
 
+    /// <summary>
+    /// Edits existing conditional formatting
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing index, optional condition, value, style properties</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> EditConditionalFormattingAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var conditionalFormattingIndex = arguments?["conditionalFormattingIndex"]?.GetValue<int>() ?? throw new ArgumentException("conditionalFormattingIndex is required for edit operation");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var conditionalFormattingIndex = ArgumentHelper.GetInt(arguments, "conditionalFormattingIndex", "conditionalFormattingIndex");
         var conditionIndex = arguments?["conditionIndex"]?.GetValue<int?>();
         var conditionStr = arguments?["condition"]?.GetValue<string>();
         var value = arguments?["value"]?.GetValue<string>();
@@ -260,14 +266,7 @@ Usage examples:
                 // Handle both color names (e.g., "Red", "Yellow") and hex values (e.g., "#FF0000")
                 try
                 {
-                    if (backgroundColor.StartsWith("#"))
-                    {
-                        style.BackgroundColor = System.Drawing.ColorTranslator.FromHtml(backgroundColor);
-                    }
-                    else
-                    {
-                        style.BackgroundColor = System.Drawing.Color.FromName(backgroundColor);
-                    }
+                    style.BackgroundColor = ColorHelper.ParseColor(backgroundColor);
                 }
                 catch
                 {
@@ -302,9 +301,16 @@ Usage examples:
         return await Task.FromResult(result);
     }
 
+    /// <summary>
+    /// Deletes conditional formatting from a range
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing index</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeleteConditionalFormattingAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var conditionalFormattingIndex = arguments?["conditionalFormattingIndex"]?.GetValue<int>() ?? throw new ArgumentException("conditionalFormattingIndex is required for delete operation");
+        var conditionalFormattingIndex = ArgumentHelper.GetInt(arguments, "conditionalFormattingIndex", "conditionalFormattingIndex");
 
         using var workbook = new Workbook(path);
         
@@ -324,6 +330,13 @@ Usage examples:
         return await Task.FromResult($"成功刪除條件格式 #{conditionalFormattingIndex}\n工作表剩餘條件格式數: {remainingCount}\n輸出: {path}");
     }
 
+    /// <summary>
+    /// Gets all conditional formatting rules from the worksheet
+    /// </summary>
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Formatted string with all conditional formatting rules</returns>
     private async Task<string> GetConditionalFormattingAsync(JsonObject? arguments, string path, int sheetIndex)
     {
         using var workbook = new Workbook(path);

@@ -92,7 +92,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
 
         return operation.ToLower() switch
         {
@@ -104,9 +104,14 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Creates a new workbook
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path or outputPath, optional sheetName</param>
+    /// <returns>Success message with file path</returns>
     private async Task<string> CreateWorkbookAsync(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? arguments?["outputPath"]?.GetValue<string>() ?? throw new ArgumentException("path or outputPath is required for create operation");
+        var path = ArgumentHelper.GetString(arguments, "path", "path", false) ?? ArgumentHelper.GetString(arguments, "outputPath", "outputPath", false) ?? throw new ArgumentException("path or outputPath is required for create operation");
         var sheetName = arguments?["sheetName"]?.GetValue<string>();
 
         using var workbook = new Workbook();
@@ -120,10 +125,15 @@ Usage examples:
         return await Task.FromResult($"Excel workbook created successfully at: {path}");
     }
 
+    /// <summary>
+    /// Converts workbook to another format
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, outputPath, format</param>
+    /// <returns>Success message with output path</returns>
     private async Task<string> ConvertWorkbookAsync(JsonObject? arguments)
     {
-        var inputPath = arguments?["inputPath"]?.GetValue<string>() ?? throw new ArgumentException("inputPath is required for convert operation");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? throw new ArgumentException("outputPath is required for convert operation");
+        var inputPath = ArgumentHelper.GetString(arguments, "inputPath", "inputPath");
+        var outputPath = ArgumentHelper.GetString(arguments, "outputPath", "outputPath");
         var format = arguments?["format"]?.GetValue<string>()?.ToLower() ?? throw new ArgumentException("format is required for convert operation");
 
         using var workbook = new Workbook(inputPath);
@@ -145,9 +155,14 @@ Usage examples:
         return await Task.FromResult($"Workbook converted from {inputPath} to {outputPath} (format: {format})");
     }
 
+    /// <summary>
+    /// Merges multiple workbooks into one
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing sourcePaths array and outputPath</param>
+    /// <returns>Success message with merged file path</returns>
     private async Task<string> MergeWorkbooksAsync(JsonObject? arguments)
     {
-        var outputPath = arguments?["path"]?.GetValue<string>() ?? arguments?["outputPath"]?.GetValue<string>() ?? throw new ArgumentException("path or outputPath is required for merge operation");
+        var outputPath = ArgumentHelper.GetString(arguments, "path", "path", false) ?? ArgumentHelper.GetString(arguments, "outputPath", "outputPath", false) ?? throw new ArgumentException("path or outputPath is required for merge operation");
         var inputPathsArray = arguments?["inputPaths"]?.AsArray() ?? throw new ArgumentException("inputPaths is required for merge operation");
         var mergeSheets = arguments?["mergeSheets"]?.GetValue<bool?>() ?? false;
 
@@ -216,10 +231,15 @@ Usage examples:
         return await Task.FromResult($"Merged {inputPaths.Count} workbooks into {outputPath}");
     }
 
+    /// <summary>
+    /// Splits workbook into multiple files (one file per sheet)
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing inputPath, outputDirectory, optional sheetIndices and outputFileNamePattern</param>
+    /// <returns>Success message with split file count</returns>
     private async Task<string> SplitWorkbookAsync(JsonObject? arguments)
     {
-        var inputPath = arguments?["inputPath"]?.GetValue<string>() ?? arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("inputPath or path is required for split operation");
-        var outputDirectory = arguments?["outputDirectory"]?.GetValue<string>() ?? throw new ArgumentException("outputDirectory is required for split operation");
+        var inputPath = ArgumentHelper.GetString(arguments, "inputPath", "inputPath", false) ?? ArgumentHelper.GetString(arguments, "path", "path", false) ?? throw new ArgumentException("inputPath or path is required for split operation");
+        var outputDirectory = ArgumentHelper.GetString(arguments, "outputDirectory", "outputDirectory");
         var sheetIndicesArray = arguments?["sheetIndices"]?.AsArray();
         var fileNamePattern = arguments?["outputFileNamePattern"]?.GetValue<string>() ?? "sheet_{name}.xlsx";
 

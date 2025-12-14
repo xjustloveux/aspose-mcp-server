@@ -96,7 +96,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
 
         return operation.ToLower() switch
         {
@@ -108,9 +108,14 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Creates a new presentation
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing outputPath, optional templatePath</param>
+    /// <returns>Success message with file path</returns>
     private async Task<string> CreatePresentationAsync(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? arguments?["outputPath"]?.GetValue<string>() ?? throw new ArgumentException("path or outputPath is required for create operation");
+        var path = ArgumentHelper.GetString(arguments, "path", "path", false) ?? ArgumentHelper.GetString(arguments, "outputPath", "outputPath", false) ?? throw new ArgumentException("path or outputPath is required for create operation");
         SecurityHelper.ValidateFilePath(path, "path");
 
         using var presentation = new Presentation();
@@ -119,11 +124,16 @@ Usage examples:
         return await Task.FromResult($"PowerPoint presentation created successfully at: {path}");
     }
 
+    /// <summary>
+    /// Converts presentation to another format
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, outputPath, format</param>
+    /// <returns>Success message with output path</returns>
     private async Task<string> ConvertPresentationAsync(JsonObject? arguments)
     {
-        var inputPath = arguments?["inputPath"]?.GetValue<string>() ?? arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("inputPath or path is required for convert operation");
+        var inputPath = ArgumentHelper.GetString(arguments, "inputPath", "inputPath", false) ?? ArgumentHelper.GetString(arguments, "path", "path", false) ?? throw new ArgumentException("inputPath or path is required for convert operation");
         SecurityHelper.ValidateFilePath(inputPath, "inputPath");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? throw new ArgumentException("outputPath is required for convert operation");
+        var outputPath = ArgumentHelper.GetString(arguments, "outputPath", "outputPath");
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
         var format = arguments?["format"]?.GetValue<string>()?.ToLower() ?? throw new ArgumentException("format is required for convert operation");
 
@@ -166,9 +176,14 @@ Usage examples:
         return await Task.FromResult($"Presentation converted from {inputPath} to {outputPath} ({format})");
     }
 
+    /// <summary>
+    /// Merges multiple presentations into one
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing sourcePaths array, outputPath</param>
+    /// <returns>Success message with merged file path</returns>
     private async Task<string> MergePresentationsAsync(JsonObject? arguments)
     {
-        var outputPath = arguments?["path"]?.GetValue<string>() ?? arguments?["outputPath"]?.GetValue<string>() ?? throw new ArgumentException("path or outputPath is required for merge operation");
+        var outputPath = ArgumentHelper.GetString(arguments, "path", "path", false) ?? ArgumentHelper.GetString(arguments, "outputPath", "outputPath", false) ?? throw new ArgumentException("path or outputPath is required for merge operation");
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
         var inputPathsArray = arguments?["inputPaths"]?.AsArray() ?? throw new ArgumentException("inputPaths is required for merge operation");
         SecurityHelper.ValidateArraySize(inputPathsArray, "inputPaths");
@@ -213,10 +228,15 @@ Usage examples:
         return await Task.FromResult($"Merged {inputPaths.Count} presentations into: {outputPath} (Total slides: {masterPresentation.Slides.Count})");
     }
 
+    /// <summary>
+    /// Splits presentation into multiple files
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, outputPath, splitBy (slide or section)</param>
+    /// <returns>Success message with split file count</returns>
     private async Task<string> SplitPresentationAsync(JsonObject? arguments)
     {
-        var inputPath = arguments?["inputPath"]?.GetValue<string>() ?? arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("inputPath or path is required for split operation");
-        var outputDirectory = arguments?["outputDirectory"]?.GetValue<string>() ?? throw new ArgumentException("outputDirectory is required for split operation");
+        var inputPath = ArgumentHelper.GetString(arguments, "inputPath", "inputPath", false) ?? ArgumentHelper.GetString(arguments, "path", "path", false) ?? throw new ArgumentException("inputPath or path is required for split operation");
+        var outputDirectory = ArgumentHelper.GetString(arguments, "outputDirectory", "outputDirectory");
         var slidesPerFile = arguments?["slidesPerFile"]?.GetValue<int?>() ?? 1;
         var startSlideIndex = arguments?["startSlideIndex"]?.GetValue<int?>();
         var endSlideIndex = arguments?["endSlideIndex"]?.GetValue<int?>();

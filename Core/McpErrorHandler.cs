@@ -28,9 +28,7 @@ public static class McpErrorHandler
             ArgumentException argEx => new McpError
             {
                 Code = -32602, // Invalid params
-                // CRITICAL FIX: Don't sanitize ArgumentException messages - they contain helpful user-facing error details
-                // Sanitization was removing important information like parameter names and format examples
-                // Only sanitize to remove file paths, but keep the detailed error message
+                // Preserve ArgumentException details (parameter names, format examples) but remove file paths
                 Message = SanitizeErrorMessage(argEx.Message, preserveDetails: true)
             },
             
@@ -55,14 +53,12 @@ public static class McpErrorHandler
             IOException ioEx => new McpError
             {
                 Code = -32603, // Internal error
-                // Don't expose internal I/O error details to prevent information leakage
                 Message = "I/O error occurred while processing the request"
             },
             
             InvalidOperationException opEx => new McpError
             {
                 Code = -32603, // Internal error
-                // Only expose user-friendly messages, sanitize internal details
                 Message = SanitizeErrorMessage(opEx.Message)
             },
             
@@ -75,7 +71,6 @@ public static class McpErrorHandler
             _ => new McpError
             {
                 Code = -32603, // Internal error
-                // Never expose stack traces or internal error details in production
                 Message = includeStackTrace ? SanitizeErrorMessage(ex.Message) : "Internal server error occurred"
             }
         };
@@ -133,7 +128,9 @@ public static class McpErrorHandler
     /// Sanitizes error messages to prevent information leakage
     /// Removes file paths, stack traces, and other sensitive information
     /// </summary>
+    /// <param name="message">Error message to sanitize</param>
     /// <param name="preserveDetails">If true, preserves detailed error messages (for ArgumentException)</param>
+    /// <returns>Sanitized error message</returns>
     private static string SanitizeErrorMessage(string message, bool preserveDetails = false)
     {
         if (string.IsNullOrWhiteSpace(message))
@@ -145,7 +142,7 @@ public static class McpErrorHandler
         
         if (!preserveDetails)
         {
-            // Remove file paths (basic pattern matching) - but preserve relative paths and filenames
+            // Remove absolute file paths
             sanitized = Regex.Replace(sanitized, @"[A-Za-z]:\\[^\s]+", "[path removed]");
             sanitized = Regex.Replace(sanitized, @"/[^\s]+", "[path removed]");
             
@@ -159,13 +156,12 @@ public static class McpErrorHandler
         }
         else
         {
-            // For ArgumentException, only remove absolute file paths, preserve everything else
-            // This keeps detailed error messages with parameter names, format examples, etc.
+            // For ArgumentException, only remove absolute file paths, preserve detailed messages
             sanitized = Regex.Replace(sanitized, @"[A-Za-z]:\\[^\s]+", "[path removed]");
             sanitized = Regex.Replace(sanitized, @"\/[^\s]+", "[path removed]");
         }
         
-        // Limit message length (but allow longer messages for detailed errors)
+        // Limit message length (allow longer messages for detailed errors)
         var maxLength = preserveDetails ? 2000 : 500;
         if (sanitized.Length > maxLength)
         {

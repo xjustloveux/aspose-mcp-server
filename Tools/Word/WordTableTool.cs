@@ -396,7 +396,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
 
         return operation.ToLower() switch
         {
@@ -421,12 +421,17 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Adds a new table to the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, rows, columns, optional data, headerRow, formatting options, outputPath</param>
+    /// <returns>Success message with table index</returns>
     private async Task<string> AddTable(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var rows = arguments?["rows"]?.GetValue<int>() ?? throw new ArgumentException("rows is required");
-        var columns = arguments?["columns"]?.GetValue<int>() ?? throw new ArgumentException("columns is required");
+        var rows = ArgumentHelper.GetInt(arguments, "rows", "rows");
+        var columns = ArgumentHelper.GetInt(arguments, "columns", "columns");
         var headerRow = arguments?["headerRow"]?.GetValue<bool>() ?? false;
         var headerBgColor = arguments?["headerBackgroundColor"]?.GetValue<string>();
         var borderStyle = arguments?["borderStyle"]?.GetValue<string>() ?? "single";
@@ -455,7 +460,10 @@ Usage examples:
                 if (!string.IsNullOrEmpty(dataJson))
                     data = JsonSerializer.Deserialize<string[][]>(dataJson);
             }
-            catch { }
+            catch (Exception jsonEx)
+            {
+                throw new ArgumentException($"無法解析 data 參數: {jsonEx.Message}。請確保 data 是有效的二維字符串數組格式，例如: [[\"A1\",\"B1\"],[\"A2\",\"B2\"]]");
+            }
         }
 
         var rowBgColors = ParseColorDictionary(arguments?["rowBackgroundColors"]);
@@ -580,7 +588,12 @@ Usage examples:
                     }
                 }
             }
-            catch { }
+            catch
+            {
+                // Merge operation failed, but continue with table creation
+                // Log warning but don't fail the entire operation
+                // The table will be created without the merge cells
+            }
         }
 
         table.Alignment = alignment.ToLower() switch
@@ -594,11 +607,16 @@ Usage examples:
         return await Task.FromResult($"Successfully added table ({rows} rows x {columns} columns). Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Edits table format properties
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, tableIndex, optional formatting options, outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> EditTableFormat(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
+        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex", "tableIndex");
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
 
         var doc = new Document(path);
@@ -637,7 +655,14 @@ Usage examples:
             var styleName = arguments["styleName"]?.GetValue<string>();
             if (!string.IsNullOrEmpty(styleName))
             {
-                try { table.Style = doc.Styles[styleName]; } catch { }
+                try 
+                { 
+                    table.Style = doc.Styles[styleName]; 
+                } 
+                catch (Exception styleEx)
+                {
+                    throw new ArgumentException($"無法應用表格樣式 '{styleName}': {styleEx.Message}。請使用 word_get_styles 工具查看可用的樣式");
+                }
             }
         }
 
@@ -645,11 +670,16 @@ Usage examples:
         return await Task.FromResult($"Successfully edited table {tableIndex} format. Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Deletes a table from the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, tableIndex, optional outputPath</param>
+    /// <returns>Success message with remaining table count</returns>
     private async Task<string> DeleteTable(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
+        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex", "tableIndex");
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
 
         var doc = new Document(path);
@@ -670,6 +700,11 @@ Usage examples:
         return await Task.FromResult($"Successfully deleted table #{tableIndex} ({rowCount} rows x {colCount} columns). Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Gets all tables from the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, optional sectionIndex</param>
+    /// <returns>Formatted string with all tables</returns>
     private async Task<string> GetTables(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
@@ -713,12 +748,17 @@ Usage examples:
         return await Task.FromResult(sb.ToString());
     }
 
+    /// <summary>
+    /// Inserts a row into a table
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, tableIndex, rowIndex, optional insertBefore, rowData, outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> InsertRow(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
-        var rowIndex = arguments?["rowIndex"]?.GetValue<int>() ?? throw new ArgumentException("rowIndex is required");
+        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex", "tableIndex");
+        var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex", "rowIndex");
         var insertBefore = arguments?["insertBefore"]?.GetValue<bool>() ?? false;
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
         var dataArray = arguments?["rowData"]?.AsArray();
@@ -766,12 +806,17 @@ Usage examples:
         return await Task.FromResult($"Successfully inserted row at index {(insertBefore ? rowIndex : rowIndex + 1)}. Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Deletes a row from a table
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, tableIndex, rowIndex, optional outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeleteRow(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
-        var rowIndex = arguments?["rowIndex"]?.GetValue<int>() ?? throw new ArgumentException("rowIndex is required");
+        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex", "tableIndex");
+        var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex", "rowIndex");
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
 
         var doc = new Document(path);
@@ -794,11 +839,16 @@ Usage examples:
         return await Task.FromResult($"Successfully deleted row #{rowIndex}. Remaining rows: {table.Rows.Count}. Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Inserts a column into a table
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, tableIndex, colIndex, optional insertBefore, columnData, outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> InsertColumn(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
+        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex", "tableIndex");
         int columnIndex;
         var columnIndexNode = arguments?["columnIndex"];
         if (columnIndexNode != null)
@@ -908,11 +958,16 @@ Usage examples:
         return await Task.FromResult($"Successfully inserted column at index {(insertBefore ? columnIndex : columnIndex + 1)}. Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Deletes a column from a table
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, tableIndex, colIndex, optional outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeleteColumn(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
+        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex", "tableIndex");
         int columnIndex;
         var columnIndexNode = arguments?["columnIndex"];
         if (columnIndexNode != null)
@@ -978,13 +1033,17 @@ Usage examples:
         return await Task.FromResult($"Successfully deleted column #{columnIndex} ({deletedCount} cells removed). Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Merges cells in a table
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, tableIndex, startRow, startCol, endRow, endCol, optional outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> MergeCells(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
+        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex", "tableIndex");
         var startRow = ArgumentHelper.GetInt(arguments?["startRow"], "startRow", true);
         var startCol = ArgumentHelper.GetInt(arguments, "startCol", "startColumn", "startCol or startColumn", true);
         var endRow = ArgumentHelper.GetInt(arguments?["endRow"], "endRow", true);
@@ -1059,11 +1118,16 @@ Usage examples:
         return await Task.FromResult($"Successfully merged cells from [{startRow}, {startCol}] to [{endRow}, {endCol}]. Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Splits a cell in a table
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, tableIndex, rowIndex, colIndex, optional outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> SplitCell(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
+        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex", "tableIndex");
         
         var rowIndex = ArgumentHelper.GetInt(arguments?["rowIndex"], "rowIndex", true);
         var colIndex = ArgumentHelper.GetInt(arguments, "colIndex", "columnIndex", "colIndex or columnIndex", true);
@@ -1167,11 +1231,16 @@ Usage examples:
         }
     }
 
+    /// <summary>
+    /// Edits cell format properties
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, tableIndex, rowIndex, colIndex, optional formatting options, outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> EditCellFormat(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
+        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex", "tableIndex");
         var rowIndex = ArgumentHelper.GetInt(arguments?["rowIndex"], "rowIndex", true);
         var colIndex = ArgumentHelper.GetInt(arguments, "colIndex", "columnIndex", "colIndex or columnIndex", true);
         
@@ -1202,7 +1271,14 @@ Usage examples:
             var backgroundColor = arguments["backgroundColor"]?.GetValue<string>();
             if (!string.IsNullOrEmpty(backgroundColor))
             {
-                try { cellFormat.Shading.BackgroundPatternColor = ColorHelper.ParseColor(backgroundColor); } catch { }
+                try 
+                { 
+                    cellFormat.Shading.BackgroundPatternColor = ColorHelper.ParseColor(backgroundColor); 
+                } 
+                catch (Exception colorEx)
+                {
+                    throw new ArgumentException($"無法解析背景顏色 '{backgroundColor}': {colorEx.Message}。請使用有效的顏色格式（如 #FF0000 或 red）");
+                }
             }
         }
 
@@ -1282,7 +1358,14 @@ Usage examples:
                     run.Font.Italic = italic.Value;
                 if (!string.IsNullOrEmpty(color))
                 {
-                    try { run.Font.Color = ColorHelper.ParseColor(color); } catch { }
+                    try 
+                    { 
+                        run.Font.Color = ColorHelper.ParseColor(color); 
+                    } 
+                    catch (Exception colorEx)
+                    {
+                        throw new ArgumentException($"無法解析字體顏色 '{color}': {colorEx.Message}。請使用有效的顏色格式（如 #FF0000 或 red）");
+                    }
                 }
             }
         }
@@ -1291,12 +1374,17 @@ Usage examples:
         return await Task.FromResult($"Successfully edited cell [{rowIndex}, {colIndex}] format. Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Moves a table to a different position
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, tableIndex, optional targetParagraphIndex, sectionIndex, outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> MoveTable(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
-        var targetParagraphIndex = arguments?["targetParagraphIndex"]?.GetValue<int>() ?? throw new ArgumentException("targetParagraphIndex is required");
+        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex", "tableIndex");
+        var targetParagraphIndex = ArgumentHelper.GetInt(arguments, "targetParagraphIndex", "targetParagraphIndex");
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>();
 
         var doc = new Document(path);
@@ -1347,6 +1435,11 @@ Usage examples:
         return await Task.FromResult($"Successfully moved table {tableIndex}. Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Copies a table to another location
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, tableIndex or sourceTableIndex, optional targetParagraphIndex, sectionIndex, outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> CopyTable(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
@@ -1355,7 +1448,7 @@ Usage examples:
         var sourceTableIndex = arguments?["sourceTableIndex"]?.GetValue<int>() ?? 
                                arguments?["tableIndex"]?.GetValue<int>() ?? 
                                throw new ArgumentException("sourceTableIndex or tableIndex is required");
-        var targetParagraphIndex = arguments?["targetParagraphIndex"]?.GetValue<int>() ?? throw new ArgumentException("targetParagraphIndex is required");
+        var targetParagraphIndex = ArgumentHelper.GetInt(arguments, "targetParagraphIndex", "targetParagraphIndex");
         var sourceSectionIndex = arguments?["sourceSectionIndex"]?.GetValue<int?>();
         var targetSectionIndex = arguments?["targetSectionIndex"]?.GetValue<int?>();
 
@@ -1450,10 +1543,15 @@ Usage examples:
         return await Task.FromResult($"Successfully copied table {sourceTableIndex} to paragraph {targetParagraphIndex}. Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Gets detailed table structure information
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, tableIndex, optional includeCellFormatting</param>
+    /// <returns>Formatted string with table structure</returns>
     private async Task<string> GetTableStructure(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
+        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex", "tableIndex");
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
         var includeContent = arguments?["includeContent"]?.GetValue<bool>() ?? true;
         var includeCellFormatting = arguments?["includeCellFormatting"]?.GetValue<bool>() ?? true;
@@ -1523,11 +1621,16 @@ Usage examples:
         return await Task.FromResult(result.ToString());
     }
 
+    /// <summary>
+    /// Sets table border properties
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, tableIndex, optional borderType, style, width, color, outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetTableBorder(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
+        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex", "tableIndex");
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
         var rowIndex = arguments?["rowIndex"]?.GetValue<int?>();
         var columnIndex = arguments?["columnIndex"]?.GetValue<int?>();
@@ -1623,11 +1726,16 @@ Usage examples:
         return await Task.FromResult($"Successfully set table {tableIndex} borders. Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Sets column width for a table
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, tableIndex, colIndex, width, optional outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetColumnWidth(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
+        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex", "tableIndex");
         var columnIndex = ArgumentHelper.GetInt(arguments?["columnIndex"], "columnIndex", true);
         var columnWidth = ArgumentHelper.GetDouble(arguments?["columnWidth"], "columnWidth", true);
         
@@ -1667,12 +1775,17 @@ Usage examples:
         return await Task.FromResult($"Successfully set column {columnIndex} width to {columnWidth} pt ({cellsUpdated} cells updated). Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Sets row height for a table
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, tableIndex, rowIndex, height, optional outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetRowHeight(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var tableIndex = arguments?["tableIndex"]?.GetValue<int>() ?? throw new ArgumentException("tableIndex is required");
-        var rowIndex = arguments?["rowIndex"]?.GetValue<int>() ?? throw new ArgumentException("rowIndex is required");
+        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex", "tableIndex");
+        var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex", "rowIndex");
         var rowHeight = ArgumentHelper.GetDouble(arguments?["rowHeight"], "rowHeight", true);
         
         var heightRule = arguments?["heightRule"]?.GetValue<string>() ?? "atLeast";

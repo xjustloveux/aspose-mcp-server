@@ -88,10 +88,10 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var slideIndex = arguments?["slideIndex"]?.GetValue<int>() ?? throw new ArgumentException("slideIndex is required");
-        var shapeIndex = arguments?["shapeIndex"]?.GetValue<int>() ?? throw new ArgumentException("shapeIndex is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
 
         return operation.ToLower() switch
         {
@@ -101,6 +101,14 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Sets shape format properties
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing optional fillColor, lineColor, lineWidth, outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <param name="shapeIndex">Shape index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetShapeFormatAsync(JsonObject? arguments, string path, int slideIndex, int shapeIndex)
     {
         var x = arguments?["x"]?.GetValue<float?>();
@@ -123,14 +131,14 @@ Usage examples:
 
         if (!string.IsNullOrWhiteSpace(fillColor))
         {
-            var color = ColorTranslator.FromHtml(fillColor);
+            var color = ColorHelper.ParseColor(fillColor);
             shape.FillFormat.FillType = FillType.Solid;
             shape.FillFormat.SolidFillColor.Color = color;
         }
 
         if (!string.IsNullOrWhiteSpace(lineColor))
         {
-            var color = ColorTranslator.FromHtml(lineColor);
+            var color = ColorHelper.ParseColor(lineColor);
             shape.LineFormat.FillFormat.FillType = FillType.Solid;
             shape.LineFormat.FillFormat.SolidFillColor.Color = color;
         }
@@ -139,6 +147,14 @@ Usage examples:
         return await Task.FromResult($"已更新形狀格式：slide {slideIndex}, shape {shapeIndex}");
     }
 
+    /// <summary>
+    /// Gets shape format information
+    /// </summary>
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <param name="shapeIndex">Shape index (0-based)</param>
+    /// <returns>Formatted string with shape format details</returns>
     private async Task<string> GetShapeFormatAsync(JsonObject? arguments, string path, int slideIndex, int shapeIndex)
     {
         using var presentation = new Presentation(path);

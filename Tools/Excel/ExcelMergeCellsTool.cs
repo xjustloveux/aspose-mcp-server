@@ -53,9 +53,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         var sheetIndex = arguments?["sheetIndex"]?.GetValue<int>() ?? 0;
 
         return operation.ToLower() switch
@@ -67,9 +66,16 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Merges cells in a range
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing range</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message with merged range</returns>
     private async Task<string> MergeCellsAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var range = arguments?["range"]?.GetValue<string>() ?? throw new ArgumentException("range is required for merge operation");
+        var range = ArgumentHelper.GetString(arguments, "range", "range");
 
         using var workbook = new Workbook(path);
         var worksheet = workbook.Worksheets[sheetIndex];
@@ -81,9 +87,16 @@ Usage examples:
         return await Task.FromResult($"範圍 {range} 已合併: {path}");
     }
 
+    /// <summary>
+    /// Unmerges cells in a range
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing range</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> UnmergeCellsAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var range = arguments?["range"]?.GetValue<string>() ?? throw new ArgumentException("range is required for unmerge operation");
+        var range = ArgumentHelper.GetString(arguments, "range", "range");
 
         using var workbook = new Workbook(path);
         var worksheet = workbook.Worksheets[sheetIndex];
@@ -95,6 +108,13 @@ Usage examples:
         return await Task.FromResult($"範圍 {range} 已取消合併: {path}");
     }
 
+    /// <summary>
+    /// Gets all merged cell ranges from the worksheet
+    /// </summary>
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Formatted string with all merged ranges</returns>
     private async Task<string> GetMergedCellsAsync(JsonObject? arguments, string path, int sheetIndex)
     {
         using var workbook = new Workbook(path);

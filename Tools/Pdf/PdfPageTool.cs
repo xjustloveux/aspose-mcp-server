@@ -84,7 +84,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
 
         return operation.ToLower() switch
         {
@@ -97,10 +97,15 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Adds a page to the PDF
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, optional pageIndex, outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> AddPage(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var count = arguments?["count"]?.GetValue<int?>() ?? 1;
         var insertAt = arguments?["insertAt"]?.GetValue<int?>();
         var width = arguments?["width"]?.GetValue<double?>();
@@ -139,11 +144,16 @@ Usage examples:
         return await Task.FromResult($"Successfully added {count} page(s). Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Deletes a page from the PDF
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, pageIndex, optional outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeletePage(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var pageIndex = arguments?["pageIndex"]?.GetValue<int>() ?? throw new ArgumentException("pageIndex is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex", "pageIndex");
 
         SecurityHelper.ValidateFilePath(path, "path");
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
@@ -157,11 +167,16 @@ Usage examples:
         return await Task.FromResult($"Successfully deleted page {pageIndex}. Remaining pages: {document.Pages.Count}. Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Rotates a page
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, pageIndex, angle, optional outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> RotatePage(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var rotation = arguments?["rotation"]?.GetValue<int>() ?? throw new ArgumentException("rotation is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var rotation = ArgumentHelper.GetInt(arguments, "rotation", "rotation");
         var pageIndex = arguments?["pageIndex"]?.GetValue<int?>();
         var pageIndicesArray = arguments?["pageIndices"]?.AsArray();
 
@@ -198,10 +213,15 @@ Usage examples:
         return await Task.FromResult($"Rotated {pagesToRotate.Count} page(s) by {rotation} degrees. Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Gets detailed information about a page
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, pageIndex</param>
+    /// <returns>Formatted string with page details</returns>
     private async Task<string> GetPageDetails(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var pageIndex = arguments?["pageIndex"]?.GetValue<int>() ?? throw new ArgumentException("pageIndex is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex", "pageIndex");
 
         SecurityHelper.ValidateFilePath(path, "path");
 
@@ -223,11 +243,14 @@ Usage examples:
         return await Task.FromResult(sb.ToString());
     }
 
+    /// <summary>
+    /// Gets information about all pages
+    /// </summary>
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <returns>Formatted string with page information</returns>
     private async Task<string> GetPageInfo(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-
-        SecurityHelper.ValidateFilePath(path, "path");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         using var document = new Document(path);
         var sb = new StringBuilder();

@@ -118,9 +118,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         var sheetIndex = arguments?["sheetIndex"]?.GetValue<int>() ?? 0;
 
         return operation.ToLower() switch
@@ -134,6 +133,12 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Gets workbook properties
+    /// </summary>
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="path">Excel file path</param>
+    /// <returns>Formatted string with workbook properties</returns>
     private async Task<string> GetWorkbookPropertiesAsync(JsonObject? arguments, string path)
     {
         using var workbook = new Workbook(path);
@@ -170,6 +175,12 @@ Usage examples:
         return await Task.FromResult(sb.ToString());
     }
 
+    /// <summary>
+    /// Sets workbook properties
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing various property values</param>
+    /// <param name="path">Excel file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetWorkbookPropertiesAsync(JsonObject? arguments, string path)
     {
         var title = arguments?["title"]?.GetValue<string>();
@@ -206,6 +217,13 @@ Usage examples:
         return await Task.FromResult($"Workbook properties updated: {path}");
     }
 
+    /// <summary>
+    /// Gets worksheet properties
+    /// </summary>
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Formatted string with worksheet properties</returns>
     private async Task<string> GetSheetPropertiesAsync(JsonObject? arguments, string path, int sheetIndex)
     {
         using var workbook = new Workbook(path);
@@ -239,6 +257,13 @@ Usage examples:
         return await Task.FromResult(sb.ToString());
     }
 
+    /// <summary>
+    /// Edits worksheet properties
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing various property values</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> EditSheetPropertiesAsync(JsonObject? arguments, string path, int sheetIndex)
     {
         var name = arguments?["name"]?.GetValue<string>();
@@ -261,7 +286,7 @@ Usage examples:
 
         if (!string.IsNullOrWhiteSpace(tabColor))
         {
-            var color = System.Drawing.ColorTranslator.FromHtml(tabColor);
+            var color = ColorHelper.ParseColor(tabColor);
             worksheet.TabColor = color;
         }
 
@@ -274,6 +299,12 @@ Usage examples:
         return await Task.FromResult($"Sheet {sheetIndex} properties updated: {path}");
     }
 
+    /// <summary>
+    /// Gets information about all worksheets
+    /// </summary>
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="path">Excel file path</param>
+    /// <returns>Formatted string with sheet information</returns>
     private async Task<string> GetSheetInfoAsync(JsonObject? arguments, string path)
     {
         var sheetIndex = arguments?["sheetIndex"]?.GetValue<int?>();

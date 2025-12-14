@@ -80,10 +80,9 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
-        var slideIndex = arguments?["slideIndex"]?.GetValue<int>() ?? throw new ArgumentException("slideIndex is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
 
         return operation.ToLower() switch
         {
@@ -94,9 +93,16 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Adds animation to a shape
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing shapeIndex, animationType, optional effectType, outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> AddAnimationAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = arguments?["shapeIndex"]?.GetValue<int>() ?? throw new ArgumentException("shapeIndex is required for add operation");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
         var effectTypeStr = arguments?["effectType"]?.GetValue<string>() ?? "Fade";
 
         using var presentation = new Presentation(path);
@@ -120,9 +126,16 @@ Usage examples:
         return await Task.FromResult($"Animation added to shape on slide {slideIndex}: {path}");
     }
 
+    /// <summary>
+    /// Edits animation properties
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing shapeIndex, optional animationType, effectType, outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> EditAnimationAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = arguments?["shapeIndex"]?.GetValue<int>() ?? throw new ArgumentException("shapeIndex is required for edit operation");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
         var effectTypeStr = arguments?["effectType"]?.GetValue<string>();
         var triggerTypeStr = arguments?["triggerType"]?.GetValue<string>();
         var duration = arguments?["duration"]?.GetValue<float?>();
@@ -189,6 +202,13 @@ Usage examples:
         return await Task.FromResult($"Animation updated on slide {slideIndex}, shape {shapeIndex}");
     }
 
+    /// <summary>
+    /// Deletes animation from a shape
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing shapeIndex, optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeleteAnimationAsync(JsonObject? arguments, string path, int slideIndex)
     {
         var shapeIndex = arguments?["shapeIndex"]?.GetValue<int?>();

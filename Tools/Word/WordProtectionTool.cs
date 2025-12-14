@@ -56,10 +56,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-
-        SecurityHelper.ValidateFilePath(path, "path");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         return operation.ToLower() switch
         {
@@ -69,10 +67,16 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Protects the document with password
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing password, optional protectionType, outputPath</param>
+    /// <param name="path">Word document file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> ProtectAsync(JsonObject? arguments, string path)
     {
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var password = arguments?["password"]?.GetValue<string>() ?? throw new ArgumentException("password is required for protect operation");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var password = ArgumentHelper.GetString(arguments, "password", "password");
         var protectionTypeStr = arguments?["protectionType"]?.GetValue<string>() ?? "ReadOnly";
 
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
@@ -94,9 +98,15 @@ Usage examples:
         return await Task.FromResult($"Document protected with {protectionType}: {outputPath}");
     }
 
+    /// <summary>
+    /// Removes protection from the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing password, optional outputPath</param>
+    /// <param name="path">Word document file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> UnprotectAsync(JsonObject? arguments, string path)
     {
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var password = arguments?["password"]?.GetValue<string>();
 
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");

@@ -100,9 +100,9 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var slideIndex = arguments?["slideIndex"]?.GetValue<int>() ?? throw new ArgumentException("slideIndex is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
 
         return operation.ToLower() switch
         {
@@ -119,10 +119,17 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Adds a table to a slide
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing rows, columns, optional data, x, y, width, height, outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <returns>Success message with table index</returns>
     private async Task<string> AddTableAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var rows = arguments?["rows"]?.GetValue<int>() ?? throw new ArgumentException("rows is required for add operation");
-        var columns = arguments?["columns"]?.GetValue<int>() ?? throw new ArgumentException("columns is required for add operation");
+        var rows = ArgumentHelper.GetInt(arguments, "rows", "rows");
+        var columns = ArgumentHelper.GetInt(arguments, "columns", "columns");
         var dataArray = arguments?["data"]?.AsArray();
 
         if (rows <= 0 || rows > 1000)
@@ -172,9 +179,16 @@ Usage examples:
         return await Task.FromResult($"Table ({rows}x{columns}) added to slide {slideIndex}: {path}");
     }
 
+    /// <summary>
+    /// Edits table data
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing tableIndex, optional data, outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> EditTableAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = arguments?["shapeIndex"]?.GetValue<int>() ?? throw new ArgumentException("shapeIndex is required for edit operation");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
         var dataArray = arguments?["data"]?.AsArray();
 
         using var presentation = new Presentation(path);
@@ -204,9 +218,16 @@ Usage examples:
         return await Task.FromResult($"Table updated on slide {slideIndex}, shape {shapeIndex}");
     }
 
+    /// <summary>
+    /// Deletes a table from a slide
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing tableIndex, optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeleteTableAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = arguments?["shapeIndex"]?.GetValue<int>() ?? throw new ArgumentException("shapeIndex is required for delete operation");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
@@ -222,9 +243,16 @@ Usage examples:
         return await Task.FromResult($"Table deleted from slide {slideIndex}, shape {shapeIndex}");
     }
 
+    /// <summary>
+    /// Gets table content
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing tableIndex</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <returns>Formatted string with table content</returns>
     private async Task<string> GetTableContentAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = arguments?["shapeIndex"]?.GetValue<int>() ?? throw new ArgumentException("shapeIndex is required for get_content operation");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
@@ -253,10 +281,17 @@ Usage examples:
         return await Task.FromResult(sb.ToString());
     }
 
+    /// <summary>
+    /// Inserts a row into a table
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing tableIndex, rowIndex, optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> InsertRowAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = arguments?["shapeIndex"]?.GetValue<int>() ?? throw new ArgumentException("shapeIndex is required for insert_row operation");
-        var rowIndex = arguments?["rowIndex"]?.GetValue<int>() ?? throw new ArgumentException("rowIndex is required for insert_row operation");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
+        var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex", "rowIndex");
 
         using var presentation = new Presentation(path);
         var slide = presentation.Slides[slideIndex];
@@ -275,10 +310,17 @@ Usage examples:
         return await Task.FromResult($"Row insertion attempted. Note: Aspose.Slides has limitations with row insertion at specific index.");
     }
 
+    /// <summary>
+    /// Inserts a column into a table
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing tableIndex, columnIndex, optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> InsertColumnAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = arguments?["shapeIndex"]?.GetValue<int>() ?? throw new ArgumentException("shapeIndex is required for insert_column operation");
-        var columnIndex = arguments?["columnIndex"]?.GetValue<int>() ?? throw new ArgumentException("columnIndex is required for insert_column operation");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
+        var columnIndex = ArgumentHelper.GetInt(arguments, "columnIndex", "columnIndex");
 
         using var presentation = new Presentation(path);
         var slide = presentation.Slides[slideIndex];
@@ -297,10 +339,17 @@ Usage examples:
         return await Task.FromResult($"Column insertion attempted. Note: Aspose.Slides has limitations with column insertion at specific index.");
     }
 
+    /// <summary>
+    /// Deletes a row from a table
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing tableIndex, rowIndex, optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeleteRowAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = arguments?["shapeIndex"]?.GetValue<int>() ?? throw new ArgumentException("shapeIndex is required for delete_row operation");
-        var rowIndex = arguments?["rowIndex"]?.GetValue<int>() ?? throw new ArgumentException("rowIndex is required for delete_row operation");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
+        var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex", "rowIndex");
 
         using var presentation = new Presentation(path);
         var slide = presentation.Slides[slideIndex];
@@ -311,10 +360,17 @@ Usage examples:
         return await Task.FromResult($"Row deleted at index {rowIndex}");
     }
 
+    /// <summary>
+    /// Deletes a column from a table
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing tableIndex, columnIndex, optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeleteColumnAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = arguments?["shapeIndex"]?.GetValue<int>() ?? throw new ArgumentException("shapeIndex is required for delete_column operation");
-        var columnIndex = arguments?["columnIndex"]?.GetValue<int>() ?? throw new ArgumentException("columnIndex is required for delete_column operation");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
+        var columnIndex = ArgumentHelper.GetInt(arguments, "columnIndex", "columnIndex");
 
         using var presentation = new Presentation(path);
         var slide = presentation.Slides[slideIndex];
@@ -325,12 +381,19 @@ Usage examples:
         return await Task.FromResult($"Column deleted at index {columnIndex}");
     }
 
+    /// <summary>
+    /// Edits a cell in a table
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing tableIndex, rowIndex, columnIndex, text, optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> EditCellAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = arguments?["shapeIndex"]?.GetValue<int>() ?? throw new ArgumentException("shapeIndex is required for edit_cell operation");
-        var rowIndex = arguments?["rowIndex"]?.GetValue<int>() ?? throw new ArgumentException("rowIndex is required for edit_cell operation");
-        var columnIndex = arguments?["columnIndex"]?.GetValue<int>() ?? throw new ArgumentException("columnIndex is required for edit_cell operation");
-        var cellValue = arguments?["cellValue"]?.GetValue<string>() ?? throw new ArgumentException("cellValue is required for edit_cell operation");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
+        var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex", "rowIndex");
+        var columnIndex = ArgumentHelper.GetInt(arguments, "columnIndex", "columnIndex");
+        var cellValue = ArgumentHelper.GetString(arguments, "cellValue", "cellValue");
 
         using var presentation = new Presentation(path);
         var slide = presentation.Slides[slideIndex];

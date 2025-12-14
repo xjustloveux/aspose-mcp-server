@@ -70,7 +70,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
 
         return operation.ToLower() switch
         {
@@ -83,11 +83,14 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Gets all revisions from the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path</param>
+    /// <returns>Formatted string with all revisions</returns>
     private async Task<string> GetRevisions(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-
-        SecurityHelper.ValidateFilePath(path, "path");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         var doc = new Document(path);
         var sb = new StringBuilder();
@@ -111,10 +114,15 @@ Usage examples:
         return await Task.FromResult(sb.ToString());
     }
 
+    /// <summary>
+    /// Accepts all revisions in the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, optional outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> AcceptAllRevisions(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
 
         SecurityHelper.ValidateFilePath(path, "path");
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
@@ -126,10 +134,15 @@ Usage examples:
         return await Task.FromResult($"All revisions accepted: {outputPath}");
     }
 
+    /// <summary>
+    /// Rejects all revisions in the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, optional outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> RejectAllRevisions(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
 
         SecurityHelper.ValidateFilePath(path, "path");
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
@@ -144,10 +157,15 @@ Usage examples:
         return await Task.FromResult($"All revisions rejected: {outputPath}");
     }
 
+    /// <summary>
+    /// Manages individual revisions (accept/reject specific revisions)
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, revisionIndex, action (accept/reject), optional outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> ManageRevisions(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var action = arguments?["action"]?.GetValue<string>()?.ToLowerInvariant() ?? "accept";
 
         SecurityHelper.ValidateFilePath(path, "path");
@@ -182,11 +200,16 @@ Usage examples:
         return await Task.FromResult($"Processed revisions\nOriginal revisions: {revisionsCount}\nAction: {action}\nOutput: {outputPath}");
     }
 
+    /// <summary>
+    /// Compares two documents and shows differences
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, comparePath, optional outputPath</param>
+    /// <returns>Success message with comparison result</returns>
     private async Task<string> CompareDocuments(JsonObject? arguments)
     {
-        var originalPath = arguments?["originalPath"]?.GetValue<string>() ?? throw new ArgumentException("originalPath is required");
-        var revisedPath = arguments?["revisedPath"]?.GetValue<string>() ?? throw new ArgumentException("revisedPath is required");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? throw new ArgumentException("outputPath is required");
+        var originalPath = ArgumentHelper.GetString(arguments, "originalPath", "originalPath");
+        var revisedPath = ArgumentHelper.GetString(arguments, "revisedPath", "revisedPath");
+        var outputPath = ArgumentHelper.GetString(arguments, "outputPath", "outputPath");
         var authorName = arguments?["authorName"]?.GetValue<string>() ?? "Comparison";
 
         SecurityHelper.ValidateFilePath(originalPath, "originalPath");

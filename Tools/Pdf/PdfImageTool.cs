@@ -87,7 +87,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
 
         return operation.ToLower() switch
         {
@@ -99,12 +99,17 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Adds an image to a PDF page
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, pageIndex, imagePath, x, y, optional width, height, outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> AddImage(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var pageIndex = arguments?["pageIndex"]?.GetValue<int>() ?? throw new ArgumentException("pageIndex is required");
-        var imagePath = arguments?["imagePath"]?.GetValue<string>() ?? throw new ArgumentException("imagePath is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex", "pageIndex");
+        var imagePath = ArgumentHelper.GetString(arguments, "imagePath", "imagePath");
         var x = arguments?["x"]?.GetValue<double>() ?? 100;
         var y = arguments?["y"]?.GetValue<double>() ?? 600;
         var width = arguments?["width"]?.GetValue<double?>();
@@ -127,12 +132,17 @@ Usage examples:
         return await Task.FromResult($"Successfully added image to page {pageIndex}. Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Deletes an image from a PDF page
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, pageIndex, imageIndex, optional outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeleteImage(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var pageIndex = arguments?["pageIndex"]?.GetValue<int>() ?? throw new ArgumentException("pageIndex is required");
-        var imageIndex = arguments?["imageIndex"]?.GetValue<int>() ?? throw new ArgumentException("imageIndex is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex", "pageIndex");
+        var imageIndex = ArgumentHelper.GetInt(arguments, "imageIndex", "imageIndex");
 
         SecurityHelper.ValidateFilePath(path, "path");
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
@@ -151,13 +161,18 @@ Usage examples:
         return await Task.FromResult($"Successfully deleted image {imageIndex} from page {pageIndex}. Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Edits image properties in a PDF
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, pageIndex, imageIndex, optional x, y, width, height, outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> EditImage(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var pageIndex = arguments?["pageIndex"]?.GetValue<int>() ?? throw new ArgumentException("pageIndex is required");
-        var imageIndex = arguments?["imageIndex"]?.GetValue<int>() ?? throw new ArgumentException("imageIndex is required");
-        var imagePath = arguments?["imagePath"]?.GetValue<string>() ?? throw new ArgumentException("imagePath is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex", "pageIndex");
+        var imageIndex = ArgumentHelper.GetInt(arguments, "imageIndex", "imageIndex");
+        var imagePath = ArgumentHelper.GetString(arguments, "imagePath", "imagePath");
         var x = arguments?["x"]?.GetValue<double?>();
         var y = arguments?["y"]?.GetValue<double?>();
         var width = arguments?["width"]?.GetValue<double?>();
@@ -187,12 +202,17 @@ Usage examples:
         return await Task.FromResult($"Successfully edited image {imageIndex} on page {pageIndex}. Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Extracts images from a PDF
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, outputDirectory, optional pageIndex</param>
+    /// <returns>Success message with extracted image count</returns>
     private async Task<string> ExtractImages(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = arguments?["outputPath"]?.GetValue<string>();
         var outputDir = arguments?["outputDir"]?.GetValue<string>();
-        var pageIndex = arguments?["pageIndex"]?.GetValue<int>() ?? throw new ArgumentException("pageIndex is required");
+        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex", "pageIndex");
         var imageIndex = arguments?["imageIndex"]?.GetValue<int?>();
 
         SecurityHelper.ValidateFilePath(path, "path");

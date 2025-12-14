@@ -60,7 +60,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
 
         return operation.ToLower() switch
         {
@@ -71,12 +71,17 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Adds an attachment to the PDF
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, filePath, optional description, outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> AddAttachment(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var attachmentPath = arguments?["attachmentPath"]?.GetValue<string>() ?? throw new ArgumentException("attachmentPath is required");
-        var attachmentName = arguments?["attachmentName"]?.GetValue<string>() ?? throw new ArgumentException("attachmentName is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var attachmentPath = ArgumentHelper.GetString(arguments, "attachmentPath", "attachmentPath");
+        var attachmentName = ArgumentHelper.GetString(arguments, "attachmentName", "attachmentName");
         var description = arguments?["description"]?.GetValue<string>();
 
         // Validate paths
@@ -102,11 +107,16 @@ Usage examples:
         return await Task.FromResult($"Successfully added attachment '{attachmentName}'. Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Deletes an attachment from the PDF
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, attachmentName, optional outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeleteAttachment(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var attachmentName = arguments?["attachmentName"]?.GetValue<string>() ?? throw new ArgumentException("attachmentName is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var attachmentName = ArgumentHelper.GetString(arguments, "attachmentName", "attachmentName");
 
         using var document = new Document(path);
         var embeddedFiles = document.EmbeddedFiles;
@@ -124,9 +134,14 @@ Usage examples:
         throw new ArgumentException($"Attachment '{attachmentName}' not found");
     }
 
+    /// <summary>
+    /// Gets all attachments from the PDF
+    /// </summary>
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <returns>Formatted string with all attachments</returns>
     private async Task<string> GetAttachments(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         using var document = new Document(path);
         var sb = new StringBuilder();

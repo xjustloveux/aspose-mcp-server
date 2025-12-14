@@ -38,7 +38,7 @@ Usage examples:
 - 'clear': Clear range (required params: path, range)
 - 'copy': Copy range (required params: path, sourceRange, destCell)
 - 'move': Move range (required params: path, sourceRange, destCell)
-- 'copy_format': Copy format only (required params: path, sourceRange, destCell)",
+- 'copy_format': Copy format only (required params: path, range, destRange or destCell)",
                 @enum = new[] { "write", "edit", "get", "clear", "copy", "move", "copy_format" }
             },
             path = new
@@ -69,7 +69,7 @@ Usage examples:
             range = new
             {
                 type = "string",
-                description = "Cell range (e.g., 'A1:C5', required for edit/get/clear/copy_format)"
+                description = "Source cell range (e.g., 'A1:C5', required for edit/get/clear/copy_format operations)"
             },
             sourceRange = new
             {
@@ -79,12 +79,12 @@ Usage examples:
             destCell = new
             {
                 type = "string",
-                description = "Destination cell (top-left cell, e.g., 'E1', required for copy/move)"
+                description = "Destination cell (top-left cell, e.g., 'E1', required for copy/move, optional for copy_format as alternative to destRange)"
             },
             destRange = new
             {
                 type = "string",
-                description = "Destination range (required for copy_format)"
+                description = "Destination range (e.g., 'E1:G5', required for copy_format, or use destCell for single cell)"
             },
             data = new
             {
@@ -138,9 +138,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         var sheetIndex = arguments?["sheetIndex"]?.GetValue<int>() ?? 0;
 
         return operation.ToLower() switch
@@ -156,9 +155,16 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Writes data to a range starting at the specified cell
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing startCell and data array</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message with range location</returns>
     private async Task<string> WriteRangeAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var startCell = arguments?["startCell"]?.GetValue<string>() ?? throw new ArgumentException("startCell is required for write operation");
+        var startCell = ArgumentHelper.GetString(arguments, "startCell", "startCell");
         var dataArray = arguments?["data"]?.AsArray() ?? throw new ArgumentException("data is required for write operation");
 
         using var workbook = new Workbook(path);
@@ -177,7 +183,7 @@ Usage examples:
                     var cellValue = rowArray[j]?.GetValue<string>() ?? "";
                     var cellObj = worksheet.Cells[startRow + i, startCol + j];
                     
-                    // 嘗試將值解析為數字，如果是數字則設定為數字類型，否則設定為字符串
+                    // Parse value as number, boolean, or string
                     if (double.TryParse(cellValue, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double numValue))
                     {
                         cellObj.PutValue(numValue);
@@ -198,9 +204,16 @@ Usage examples:
         return await Task.FromResult($"Data written to range starting at {startCell}: {path}");
     }
 
+    /// <summary>
+    /// Edits data in an existing range
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing range, data array, and optional clearRange</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message with range information</returns>
     private async Task<string> EditRangeAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var range = arguments?["range"]?.GetValue<string>() ?? throw new ArgumentException("range is required for edit operation");
+        var range = ArgumentHelper.GetString(arguments, "range", "range");
         var dataArray = arguments?["data"]?.AsArray() ?? throw new ArgumentException("data is required for edit operation");
         var clearRange = arguments?["clearRange"]?.GetValue<bool?>() ?? false;
 
@@ -233,7 +246,7 @@ Usage examples:
                     var value = rowArray[j]?.GetValue<string>() ?? "";
                     var cellObj = cells[startRow + i, startCol + j];
                     
-                    // 嘗試將值解析為數字，如果是數字則設定為數字類型，否則設定為字符串
+                    // Parse value as number, boolean, or string
                     if (double.TryParse(value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double numValue))
                     {
                         cellObj.PutValue(numValue);
@@ -254,9 +267,16 @@ Usage examples:
         return await Task.FromResult($"Range {range} edited in sheet {sheetIndex}: {path}");
     }
 
+    /// <summary>
+    /// Gets data from a range
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing range and optional includeFormulas, includeFormat</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Formatted string with range data</returns>
     private async Task<string> GetRangeAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var range = arguments?["range"]?.GetValue<string>() ?? throw new ArgumentException("range is required for get operation");
+        var range = ArgumentHelper.GetString(arguments, "range", "range");
         var includeFormulas = arguments?["includeFormulas"]?.GetValue<bool?>() ?? false;
         var includeFormat = arguments?["includeFormat"]?.GetValue<bool?>() ?? false;
 
@@ -332,9 +352,16 @@ Usage examples:
         return await Task.FromResult(sb.ToString());
     }
 
+    /// <summary>
+    /// Clears content and/or format from a range
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing range and optional clearContent, clearFormat</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message with cleared range</returns>
     private async Task<string> ClearRangeAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var range = arguments?["range"]?.GetValue<string>() ?? throw new ArgumentException("range is required for clear operation");
+        var range = ArgumentHelper.GetString(arguments, "range", "range");
         var clearContent = arguments?["clearContent"]?.GetValue<bool?>() ?? true;
         var clearFormat = arguments?["clearFormat"]?.GetValue<bool?>() ?? false;
 
@@ -375,12 +402,19 @@ Usage examples:
         return await Task.FromResult($"Range {range} cleared in sheet {sheetIndex}: {path}");
     }
 
+    /// <summary>
+    /// Copies a range to another location
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing sourceRange, destCell, optional sourceSheetIndex, destSheetIndex, copyOptions</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message with copy details</returns>
     private async Task<string> CopyRangeAsync(JsonObject? arguments, string path, int sheetIndex)
     {
         var sourceSheetIndex = arguments?["sourceSheetIndex"]?.GetValue<int?>() ?? sheetIndex;
-        var sourceRange = arguments?["sourceRange"]?.GetValue<string>() ?? throw new ArgumentException("sourceRange is required for copy operation");
+        var sourceRange = ArgumentHelper.GetString(arguments, "sourceRange", "sourceRange");
         var destSheetIndex = arguments?["destSheetIndex"]?.GetValue<int?>();
-        var destCell = arguments?["destCell"]?.GetValue<string>() ?? throw new ArgumentException("destCell is required for copy operation");
+        var destCell = ArgumentHelper.GetString(arguments, "destCell", "destCell");
         var copyOptions = arguments?["copyOptions"]?.GetValue<string>() ?? "All";
 
         using var workbook = new Workbook(path);
@@ -405,12 +439,19 @@ Usage examples:
         return await Task.FromResult($"Range {sourceRange} copied to {destCell} in sheet {destSheetIdx}: {path}");
     }
 
+    /// <summary>
+    /// Moves a range to another location
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing sourceRange, destCell, optional sourceSheetIndex, destSheetIndex</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message with move details</returns>
     private async Task<string> MoveRangeAsync(JsonObject? arguments, string path, int sheetIndex)
     {
         var sourceSheetIndex = arguments?["sourceSheetIndex"]?.GetValue<int?>() ?? sheetIndex;
-        var sourceRange = arguments?["sourceRange"]?.GetValue<string>() ?? throw new ArgumentException("sourceRange is required for move operation");
+        var sourceRange = ArgumentHelper.GetString(arguments, "sourceRange", "sourceRange");
         var destSheetIndex = arguments?["destSheetIndex"]?.GetValue<int?>();
-        var destCell = arguments?["destCell"]?.GetValue<string>() ?? throw new ArgumentException("destCell is required for move operation");
+        var destCell = ArgumentHelper.GetString(arguments, "destCell", "destCell");
 
         using var workbook = new Workbook(path);
         var sourceSheet = ExcelHelper.GetWorksheet(workbook, sourceSheetIndex);
@@ -434,10 +475,29 @@ Usage examples:
         return await Task.FromResult($"Range {sourceRange} moved to {destCell} in sheet {destSheetIdx}: {path}");
     }
 
+    /// <summary>
+    /// Copies format (and optionally values) from source range to destination
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing range, destRange or destCell, optional copyValue</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message with format copy details</returns>
     private async Task<string> CopyFormatAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var range = arguments?["range"]?.GetValue<string>() ?? throw new ArgumentException("range is required for copy_format operation");
-        var destRange = arguments?["destRange"]?.GetValue<string>() ?? throw new ArgumentException("destRange is required for copy_format operation");
+        var range = arguments?["range"]?.GetValue<string>();
+        var destRange = arguments?["destRange"]?.GetValue<string>();
+        var destCell = arguments?["destCell"]?.GetValue<string>();
+        
+        if (string.IsNullOrEmpty(range))
+        {
+            throw new ArgumentException("range (source range) is required for copy_format operation. Example: range='A1:C5', destRange='E1:G5'");
+        }
+        
+        if (string.IsNullOrEmpty(destRange) && string.IsNullOrEmpty(destCell))
+        {
+            throw new ArgumentException("Either destRange or destCell is required for copy_format operation. Example: range='A1:C5', destRange='E1:G5' or destCell='E1'");
+        }
+        
         var copyValue = arguments?["copyValue"]?.GetValue<bool>() ?? false;
 
         using var workbook = new Workbook(path);
@@ -446,7 +506,7 @@ Usage examples:
         var cells = worksheet.Cells;
         
         var sourceCellRange = cells.CreateRange(range);
-        var destCellRange = cells.CreateRange(destRange);
+        var destCellRange = cells.CreateRange(destRange ?? destCell!);
 
         var pasteOptions = new PasteOptions();
         pasteOptions.PasteType = copyValue ? PasteType.All : PasteType.Formats;
@@ -456,12 +516,13 @@ Usage examples:
 
         workbook.Save(path);
 
-        var result = $"成功複製格式";
+        var result = "Format copied";
         if (copyValue)
         {
-            result += "和值";
+            result += " with values";
         }
-        result += $"\n來源範圍: {range}\n目標範圍: {destRange}\n輸出: {path}";
+        var destTarget = destRange ?? destCell!;
+        result += $"\nSource range: {range}\nDestination: {destTarget}\nOutput: {path}";
 
         return await Task.FromResult(result);
     }

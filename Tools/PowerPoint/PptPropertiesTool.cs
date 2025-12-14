@@ -87,9 +87,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         return operation.ToLower() switch
         {
@@ -99,6 +98,12 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Gets presentation properties
+    /// </summary>
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Formatted string with properties</returns>
     private async Task<string> GetPropertiesAsync(JsonObject? arguments, string path)
     {
         using var presentation = new Presentation(path);
@@ -121,6 +126,12 @@ Usage examples:
         return await Task.FromResult(sb.ToString());
     }
 
+    /// <summary>
+    /// Sets presentation properties
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing various property values, optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetPropertiesAsync(JsonObject? arguments, string path)
     {
         var title = arguments?["title"]?.GetValue<string>();

@@ -59,8 +59,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         return operation.ToLower() switch
         {
@@ -70,6 +70,12 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Sets slide background
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing optional slideIndex, imagePath, color, outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetBackgroundAsync(JsonObject? arguments, string path)
     {
         var slideIndex = arguments?["slideIndex"]?.GetValue<int?>() ?? 0;
@@ -89,7 +95,7 @@ Usage examples:
         }
         else if (!string.IsNullOrWhiteSpace(colorHex))
         {
-            var color = ColorTranslator.FromHtml(colorHex);
+            var color = ColorHelper.ParseColor(colorHex);
             fillFormat.FillType = FillType.Solid;
             fillFormat.SolidFillColor.Color = color;
         }
@@ -102,9 +108,15 @@ Usage examples:
         return await Task.FromResult($"已更新投影片 {slideIndex} 背景: {path}");
     }
 
+    /// <summary>
+    /// Gets background information for a slide
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing slideIndex</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Formatted string with background details</returns>
     private async Task<string> GetBackgroundAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = arguments?["slideIndex"]?.GetValue<int>() ?? throw new ArgumentException("slideIndex is required for get operation");
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);

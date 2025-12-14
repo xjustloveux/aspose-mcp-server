@@ -106,9 +106,15 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Adds text to a slide
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing slideIndex, text, optional x, y, width, height, fontSize, fontName, fontColor, outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> AddTextAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = arguments?["slideIndex"]?.GetValue<int>() ?? throw new ArgumentException("slideIndex is required for add operation");
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
         var text = ArgumentHelper.GetString(arguments, "text", "text");
         var x = arguments?["x"]?.GetValue<float>() ?? 50;
         var y = arguments?["y"]?.GetValue<float>() ?? 50;
@@ -130,10 +136,16 @@ Usage examples:
         return await Task.FromResult($"Text added to slide {slideIndex}: {path}");
     }
 
+    /// <summary>
+    /// Edits text on a slide
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing slideIndex, shapeIndex, text, optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> EditTextAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = arguments?["slideIndex"]?.GetValue<int>() ?? throw new ArgumentException("slideIndex is required for edit operation");
-        var shapeIndex = arguments?["shapeIndex"]?.GetValue<int>() ?? throw new ArgumentException("shapeIndex is required for edit operation");
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
         var text = ArgumentHelper.GetString(arguments, "text", "text");
 
         using var presentation = new Presentation(path);
@@ -152,6 +164,12 @@ Usage examples:
         return await Task.FromResult($"Text updated on slide {slideIndex}, shape {shapeIndex}");
     }
 
+    /// <summary>
+    /// Replaces text in the presentation
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing searchText, replaceText, optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Success message with replacement count</returns>
     private async Task<string> ReplaceTextAsync(JsonObject? arguments, string path)
     {
         var findText = ArgumentHelper.GetString(arguments, "findText", "findText");

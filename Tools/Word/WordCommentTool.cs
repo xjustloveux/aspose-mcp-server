@@ -84,8 +84,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         SecurityHelper.ValidateFilePath(path, "path");
 
@@ -99,10 +99,16 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Adds a new comment to the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing text, optional author, paragraphIndex, startRunIndex, endRunIndex, outputPath</param>
+    /// <param name="path">Word document file path</param>
+    /// <returns>Success message with comment details</returns>
     private async Task<string> AddCommentAsync(JsonObject? arguments, string path)
     {
         var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var text = arguments?["text"]?.GetValue<string>() ?? throw new ArgumentException("text is required for add operation");
+        var text = ArgumentHelper.GetString(arguments, "text", "text");
         var author = arguments?["author"]?.GetValue<string>() ?? "Comment Author";
         var paragraphIndex = arguments?["paragraphIndex"]?.GetValue<int?>();
         var startRunIndex = arguments?["startRunIndex"]?.GetValue<int?>();
@@ -111,9 +117,7 @@ Usage examples:
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         var doc = new Document(path);
-        // IMPORTANT: Only get paragraphs from document Body, not from Comment objects
-        // Using GetChildNodes(NodeType.Paragraph, true) would recursively include paragraphs
-        // inside Comment objects, which causes index calculation errors after replies are added
+        // Only get paragraphs from document Body, not from Comment objects (to avoid index errors)
         var paragraphs = new List<Paragraph>();
         foreach (Section section in doc.Sections)
         {
@@ -248,13 +252,9 @@ Usage examples:
             // Get the paragraph containing startRun (use the one we already found)
             var startPara = para; // Use the paragraph we found earlier
             
-            // Insert CommentRangeStart before startRun
-            // CommentRangeStart must be inserted directly into the paragraph, not nested
             // Ensure startRun is a direct child of startPara
             if (startRun.ParentNode != startPara)
             {
-                // If startRun is not a direct child, we need to find its actual parent
-                // and ensure we're inserting into the correct paragraph
                 var actualParent = startRun.ParentNode;
                 if (actualParent != null && actualParent.NodeType == NodeType.Paragraph)
                 {
@@ -266,7 +266,7 @@ Usage examples:
                 }
             }
             
-            // Now insert CommentRangeStart before startRun
+            // Insert CommentRangeStart before startRun
             if (startRun.ParentNode == startPara)
             {
                 startPara.InsertBefore(rangeStart, startRun);
@@ -309,52 +309,34 @@ Usage examples:
             }
             
             // Comment objects are linked to CommentRangeStart/End via Id
-            // Insert Comment object into the paragraph containing the comment range
-            // Note: The Comment object itself needs to be inserted into the paragraph structure,
-            // but its content (comment.Paragraphs) should not appear in the document body
             if (endPara != null)
             {
-                // Find CommentRangeEnd position and insert Comment after it in the paragraph
                 var rangeEndNode = endPara.GetChildNodes(NodeType.CommentRangeEnd, false)
                     .Cast<CommentRangeEnd>()
                     .FirstOrDefault(re => re.Id == comment.Id);
                 
                 if (rangeEndNode != null)
                 {
-                    // Insert Comment after CommentRangeEnd in the paragraph
-                    // Check if comment is already in the document structure
                     if (comment.ParentNode == null)
                     {
                         endPara.InsertAfter(comment, rangeEndNode);
                     }
-                    else
+                    else if (comment.ParentNode != endPara)
                     {
-                        // Comment is already in the document structure, verify it's in the correct location
-                        if (comment.ParentNode != endPara)
-                        {
-                            // Comment is in wrong location, remove and reinsert
-                            comment.Remove();
-                            endPara.InsertAfter(comment, rangeEndNode);
-                        }
+                        comment.Remove();
+                        endPara.InsertAfter(comment, rangeEndNode);
                     }
                 }
                 else
                 {
-                    // Fallback: append to paragraph end
-                    // Check if comment is already in the document structure
                     if (comment.ParentNode == null)
                     {
                         endPara.AppendChild(comment);
                     }
-                    else
+                    else if (comment.ParentNode != endPara)
                     {
-                        // Comment is already in the document structure, verify it's in the correct location
-                        if (comment.ParentNode != endPara)
-                        {
-                            // Comment is in wrong location, remove and reinsert
-                            comment.Remove();
-                            endPara.AppendChild(comment);
-                        }
+                        comment.Remove();
+                        endPara.AppendChild(comment);
                     }
                 }
             }
@@ -412,10 +394,16 @@ Usage examples:
         return await Task.FromResult(result);
     }
 
+    /// <summary>
+    /// Deletes a comment from the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing commentIndex and optional outputPath</param>
+    /// <param name="path">Word document file path</param>
+    /// <returns>Success message with remaining comment count</returns>
     private async Task<string> DeleteCommentAsync(JsonObject? arguments, string path)
     {
         var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var commentIndex = arguments?["commentIndex"]?.GetValue<int>() ?? throw new ArgumentException("commentIndex is required for delete operation");
+        var commentIndex = ArgumentHelper.GetInt(arguments, "commentIndex", "commentIndex");
 
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
@@ -477,12 +465,18 @@ Usage examples:
         return await Task.FromResult(result);
     }
 
+    /// <summary>
+    /// Gets all top-level comments from the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="path">Word document file path</param>
+    /// <returns>Formatted string with all comments and their replies</returns>
     private async Task<string> GetCommentsAsync(JsonObject? arguments, string path)
     {
         var doc = new Document(path);
         var allComments = doc.GetChildNodes(NodeType.Comment, true).Cast<Comment>().ToList();
         
-        // Build a set of all reply comment IDs (comments that are replies to other comments)
+        // Build set of reply comment IDs (comments that are replies to other comments)
         var replyCommentIds = new HashSet<int>();
         foreach (Comment comment in allComments)
         {
@@ -495,15 +489,10 @@ Usage examples:
             }
         }
         
-        // Filter to get only top-level comments:
-        // 1. Comments without an ancestor (Ancestor == null)
-        // 2. Comments that are not in any other comment's Replies collection
+        // Filter to get only top-level comments (no ancestor and not in Replies collection)
         var topLevelComments = new List<Comment>();
         foreach (Comment comment in allComments)
         {
-            // A comment is top-level if:
-            // - It has no ancestor (Ancestor == null)
-            // - It's not in the replyCommentIds set (not a reply to another comment)
             if (comment.Ancestor == null && !replyCommentIds.Contains(comment.Id))
             {
                 if (!topLevelComments.Any(c => c.Id == comment.Id))
@@ -593,10 +582,16 @@ Usage examples:
         result.AppendLine();
     }
 
+    /// <summary>
+    /// Adds a reply to an existing comment
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing commentIndex, replyText or text, optional author, outputPath</param>
+    /// <param name="path">Word document file path</param>
+    /// <returns>Success message with reply details</returns>
     private async Task<string> ReplyCommentAsync(JsonObject? arguments, string path)
     {
         var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var commentIndex = arguments?["commentIndex"]?.GetValue<int>() ?? throw new ArgumentException("commentIndex is required for reply operation");
+        var commentIndex = ArgumentHelper.GetInt(arguments, "commentIndex", "commentIndex");
         // Accept both replyText and text for compatibility
         var replyText = arguments?["replyText"]?.GetValue<string>() ?? 
                         arguments?["text"]?.GetValue<string>() ?? 
@@ -608,10 +603,9 @@ Usage examples:
         var doc = new Document(path);
         
         // Get all comments and filter to top-level comments only (same logic as GetCommentsAsync)
-        // This ensures commentIndex refers to top-level comments, not replies
         var allComments = doc.GetChildNodes(NodeType.Comment, true).Cast<Comment>().ToList();
         
-        // Build a set of all reply comment IDs (comments that are replies to other comments)
+        // Build set of reply comment IDs
         var replyCommentIds = new HashSet<int>();
         foreach (Comment comment in allComments)
         {
@@ -624,9 +618,7 @@ Usage examples:
             }
         }
         
-        // Filter to get only top-level comments:
-        // 1. Comments without an ancestor (Ancestor == null)
-        // 2. Comments that are not in any other comment's Replies collection
+        // Filter to get only top-level comments (no ancestor and not in Replies collection)
         var topLevelComments = new List<Comment>();
         foreach (Comment comment in allComments)
         {
@@ -667,8 +659,7 @@ Usage examples:
             throw new InvalidOperationException($"註解索引 {commentIndex} 指向一個回復，無法對回復添加回復。請使用頂層註解的索引。");
         }
         
-        // Use AddReply() method - the correct Aspose.Words API for adding replies
-        // AddReply() creates the reply comment and adds it to the parent comment's Replies collection
+        // Use AddReply() method to create reply comment
         // It does NOT insert the reply content into the document body
         var initial = author.Length >= 2 ? author.Substring(0, 2).ToUpper() : author.ToUpper();
         Comment replyComment = parentComment.AddReply(author, initial, System.DateTime.Now, replyText);

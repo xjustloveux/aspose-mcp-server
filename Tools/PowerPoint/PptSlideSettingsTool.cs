@@ -63,8 +63,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         return operation.ToLower() switch
         {
@@ -74,6 +74,12 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Sets slide size
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing width, height, optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetSlideSizeAsync(JsonObject? arguments, string path)
     {
         var preset = arguments?["preset"]?.GetValue<string>() ?? "OnScreen16x9";
@@ -108,9 +114,15 @@ Usage examples:
         return await Task.FromResult($"已設定投影片尺寸: {slideSize.Type} {(slideSize.Type == SlideSizeType.Custom ? $"{slideSize.Size.Width}x{slideSize.Size.Height}" : string.Empty)}");
     }
 
+    /// <summary>
+    /// Sets slide orientation
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing orientation (portrait/landscape), optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetSlideOrientationAsync(JsonObject? arguments, string path)
     {
-        var orientation = arguments?["orientation"]?.GetValue<string>() ?? throw new ArgumentException("orientation is required for set_orientation operation");
+        var orientation = ArgumentHelper.GetString(arguments, "orientation", "orientation");
 
         using var presentation = new Presentation(path);
         

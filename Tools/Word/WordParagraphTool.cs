@@ -232,9 +232,8 @@ Important notes for 'get' operation:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
@@ -251,9 +250,16 @@ Important notes for 'get' operation:
         };
     }
 
+    /// <summary>
+    /// Inserts a paragraph into the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing text, optional paragraphIndex, styleName, formatting options</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> InsertParagraphAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var text = arguments?["text"]?.GetValue<string>() ?? throw new ArgumentException("text is required");
+        var text = ArgumentHelper.GetString(arguments, "text", "text");
         var paragraphIndex = arguments?["paragraphIndex"]?.GetValue<int?>();
         var styleName = arguments?["styleName"]?.GetValue<string>();
         var alignment = arguments?["alignment"]?.GetValue<string>();
@@ -408,9 +414,16 @@ Important notes for 'get' operation:
         return await Task.FromResult(result);
     }
 
+    /// <summary>
+    /// Deletes a paragraph from the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing paragraphIndex, optional sectionIndex</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeleteParagraphAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var paragraphIndex = arguments?["paragraphIndex"]?.GetValue<int>() ?? throw new ArgumentException("paragraphIndex is required");
+        var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex", "paragraphIndex");
 
         var doc = new Document(path);
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
@@ -457,9 +470,16 @@ Important notes for 'get' operation:
         return await Task.FromResult(result);
     }
 
+    /// <summary>
+    /// Edits paragraph properties
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing paragraphIndex, optional text, formatting options, sectionIndex</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> EditParagraphAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var paragraphIndex = arguments?["paragraphIndex"]?.GetValue<int>() ?? throw new ArgumentException("paragraphIndex is required");
+        var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex", "paragraphIndex");
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
 
         var doc = new Document(path);
@@ -770,6 +790,12 @@ Important notes for 'get' operation:
         return await Task.FromResult(resultMsg);
     }
 
+    /// <summary>
+    /// Gets all paragraphs from the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing optional sectionIndex, includeCommentParagraphs, includeTextboxParagraphs</param>
+    /// <param name="path">Word document file path</param>
+    /// <returns>Formatted string with all paragraphs</returns>
     private async Task<string> GetParagraphsAsync(JsonObject? arguments, string path)
     {
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>();
@@ -950,9 +976,15 @@ Important notes for 'get' operation:
         return await Task.FromResult(sb.ToString());
     }
 
+    /// <summary>
+    /// Gets format information for a paragraph
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing paragraphIndex, optional sectionIndex</param>
+    /// <param name="path">Word document file path</param>
+    /// <returns>Formatted string with paragraph format details</returns>
     private async Task<string> GetParagraphFormatAsync(JsonObject? arguments, string path)
     {
-        var paragraphIndex = arguments?["paragraphIndex"]?.GetValue<int>() ?? throw new ArgumentException("paragraphIndex is required");
+        var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex", "paragraphIndex");
         var includeRunDetails = arguments?["includeRunDetails"]?.GetValue<bool>() ?? true;
 
         var doc = new Document(path);
@@ -1136,10 +1168,17 @@ Important notes for 'get' operation:
         return await Task.FromResult(result.ToString());
     }
 
+    /// <summary>
+    /// Copies paragraph format from source to target
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing sourceIndex, targetIndex, optional sectionIndex</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> CopyParagraphFormatAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var sourceParagraphIndex = arguments?["sourceParagraphIndex"]?.GetValue<int>() ?? throw new ArgumentException("sourceParagraphIndex is required");
-        var targetParagraphIndex = arguments?["targetParagraphIndex"]?.GetValue<int>() ?? throw new ArgumentException("targetParagraphIndex is required");
+        var sourceParagraphIndex = ArgumentHelper.GetInt(arguments, "sourceParagraphIndex", "sourceParagraphIndex");
+        var targetParagraphIndex = ArgumentHelper.GetInt(arguments, "targetParagraphIndex", "targetParagraphIndex");
 
         var doc = new Document(path);
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
@@ -1189,10 +1228,17 @@ Important notes for 'get' operation:
         return await Task.FromResult(result);
     }
 
+    /// <summary>
+    /// Merges multiple paragraphs into one
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing startIndex, endIndex, optional sectionIndex</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> MergeParagraphsAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var startParagraphIndex = arguments?["startParagraphIndex"]?.GetValue<int>() ?? throw new ArgumentException("startParagraphIndex is required");
-        var endParagraphIndex = arguments?["endParagraphIndex"]?.GetValue<int>() ?? throw new ArgumentException("endParagraphIndex is required");
+        var startParagraphIndex = ArgumentHelper.GetInt(arguments, "startParagraphIndex", "startParagraphIndex");
+        var endParagraphIndex = ArgumentHelper.GetInt(arguments, "endParagraphIndex", "endParagraphIndex");
 
         var doc = new Document(path);
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);

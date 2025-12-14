@@ -65,7 +65,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
 
         return operation.ToLower() switch
         {
@@ -74,13 +74,17 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Adds a watermark to the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, optional text, imagePath, outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> AddWatermark(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var text = arguments?["text"]?.GetValue<string>() ?? throw new ArgumentException("text is required");
+        var text = ArgumentHelper.GetString(arguments, "text", "text");
         var fontFamily = arguments?["fontFamily"]?.GetValue<string>() ?? "Arial";
         var fontSize = arguments?["fontSize"]?.GetValue<double>() ?? 72;
         var isSemitransparent = arguments?["isSemitransparent"]?.GetValue<bool?>() ?? true;

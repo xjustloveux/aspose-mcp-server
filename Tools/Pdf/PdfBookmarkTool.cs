@@ -62,7 +62,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
 
         return operation.ToLower() switch
         {
@@ -74,12 +74,17 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Adds a bookmark to the PDF
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, title, pageIndex, optional parentIndex, outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> AddBookmark(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var title = arguments?["title"]?.GetValue<string>() ?? throw new ArgumentException("title is required");
-        var pageIndex = arguments?["pageIndex"]?.GetValue<int>() ?? throw new ArgumentException("pageIndex is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var title = ArgumentHelper.GetString(arguments, "title", "title");
+        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex", "pageIndex");
 
         SecurityHelper.ValidateFilePath(path, "path");
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
@@ -99,11 +104,16 @@ Usage examples:
         return await Task.FromResult($"Successfully added bookmark '{title}' pointing to page {pageIndex}. Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Deletes a bookmark from the PDF
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, bookmarkIndex, optional outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeleteBookmark(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var bookmarkIndex = arguments?["bookmarkIndex"]?.GetValue<int>() ?? throw new ArgumentException("bookmarkIndex is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var bookmarkIndex = ArgumentHelper.GetInt(arguments, "bookmarkIndex", "bookmarkIndex");
 
         SecurityHelper.ValidateFilePath(path, "path");
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
@@ -119,11 +129,16 @@ Usage examples:
         return await Task.FromResult($"Successfully deleted bookmark '{title}' (index {bookmarkIndex}). Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Edits a bookmark
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, bookmarkIndex, optional title, pageIndex, outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> EditBookmark(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var bookmarkIndex = arguments?["bookmarkIndex"]?.GetValue<int>() ?? throw new ArgumentException("bookmarkIndex is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var bookmarkIndex = ArgumentHelper.GetInt(arguments, "bookmarkIndex", "bookmarkIndex");
         var title = arguments?["title"]?.GetValue<string>();
         var pageIndex = arguments?["pageIndex"]?.GetValue<int?>();
 
@@ -150,11 +165,14 @@ Usage examples:
         return await Task.FromResult($"Successfully edited bookmark (index {bookmarkIndex}). Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Gets all bookmarks from the PDF
+    /// </summary>
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <returns>Formatted string with all bookmarks</returns>
     private async Task<string> GetBookmarks(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-
-        SecurityHelper.ValidateFilePath(path, "path");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         using var document = new Document(path);
         var sb = new StringBuilder();

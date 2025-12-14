@@ -138,10 +138,9 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         return operation switch
@@ -158,6 +157,13 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Sets page margins
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing optional top, bottom, left, right, sectionIndex</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetMarginsAsync(JsonObject? arguments, string path, string outputPath)
     {
         var top = arguments?["top"]?.GetValue<double?>();
@@ -200,9 +206,16 @@ Usage examples:
         return await Task.FromResult($"Page margins updated for {sectionsToUpdate.Count} section(s): {outputPath}");
     }
 
+    /// <summary>
+    /// Sets page orientation
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing orientation, optional sectionIndex</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetOrientationAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var orientation = arguments?["orientation"]?.GetValue<string>() ?? throw new ArgumentException("orientation is required");
+        var orientation = ArgumentHelper.GetString(arguments, "orientation", "orientation");
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>();
         var sectionIndicesArray = arguments?["sectionIndices"]?.AsArray();
 
@@ -235,6 +248,13 @@ Usage examples:
         return await Task.FromResult($"Page orientation set to {orientation} for {sectionsToUpdate.Count} section(s): {outputPath}");
     }
 
+    /// <summary>
+    /// Sets page size
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing optional width, height, paperSize, sectionIndex</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetSizeAsync(JsonObject? arguments, string path, string outputPath)
     {
         var width = arguments?["width"]?.GetValue<double?>();
@@ -289,6 +309,13 @@ Usage examples:
         return await Task.FromResult($"Page size updated for {sectionsToUpdate.Count} section(s): {outputPath}");
     }
 
+    /// <summary>
+    /// Sets page numbering
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing optional startNumber, numberFormat, sectionIndex</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetPageNumberAsync(JsonObject? arguments, string path, string outputPath)
     {
         var pageNumberFormat = arguments?["pageNumberFormat"]?.GetValue<string>();
@@ -337,6 +364,13 @@ Usage examples:
         return await Task.FromResult($"Page number settings updated for {sectionsToUpdate.Count} section(s): {outputPath}");
     }
 
+    /// <summary>
+    /// Sets page setup properties
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing various page setup options, optional sectionIndex</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetPageSetupAsync(JsonObject? arguments, string path, string outputPath)
     {
         // This is a combined operation that can set multiple page setup properties
@@ -406,9 +440,16 @@ Usage examples:
         return await Task.FromResult($"Page setup updated: {string.Join(", ", changes)}");
     }
 
+    /// <summary>
+    /// Deletes a page from the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing pageIndex</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeletePageAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var pageIndex = arguments?["pageIndex"]?.GetValue<int>() ?? throw new ArgumentException("pageIndex is required");
+        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex", "pageIndex");
 
         var doc = new Document(path);
         
@@ -433,6 +474,13 @@ Usage examples:
         return await Task.FromResult($"Page deletion operation completed (simplified implementation): {outputPath}");
     }
 
+    /// <summary>
+    /// Inserts a blank page into the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing pageIndex</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> InsertBlankPageAsync(JsonObject? arguments, string path, string outputPath)
     {
         var insertAtPageIndex = arguments?["insertAtPageIndex"]?.GetValue<int?>();
@@ -459,6 +507,13 @@ Usage examples:
         return await Task.FromResult($"Blank page inserted: {outputPath}");
     }
 
+    /// <summary>
+    /// Adds a page break to the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing optional paragraphIndex, sectionIndex</param>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> AddPageBreakAsync(JsonObject? arguments, string path, string outputPath)
     {
         var doc = new Document(path);

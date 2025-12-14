@@ -138,9 +138,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         var sheetIndex = arguments?["sheetIndex"]?.GetValue<int>() ?? 0;
 
         return operation.ToLower() switch
@@ -159,9 +158,16 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Sets zoom level for the worksheet
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing zoom (10-400)</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetZoomAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var zoom = arguments?["zoom"]?.GetValue<int>() ?? throw new ArgumentException("zoom is required for set_zoom operation");
+        var zoom = ArgumentHelper.GetInt(arguments, "zoom", "zoom");
 
         if (zoom < 10 || zoom > 400)
         {
@@ -176,6 +182,13 @@ Usage examples:
         return await Task.FromResult($"Zoom level set to {zoom}% for sheet {sheetIndex}: {path}");
     }
 
+    /// <summary>
+    /// Sets gridlines visibility
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing isVisible</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetGridlinesAsync(JsonObject? arguments, string path, int sheetIndex)
     {
         var visible = arguments?["visible"]?.GetValue<bool>() ?? throw new ArgumentException("visible is required for set_gridlines operation");
@@ -188,6 +201,13 @@ Usage examples:
         return await Task.FromResult($"Gridlines visibility set to {(visible ? "visible" : "hidden")}: {path}");
     }
 
+    /// <summary>
+    /// Sets row/column headers visibility
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing isVisible</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetHeadersAsync(JsonObject? arguments, string path, int sheetIndex)
     {
         var visible = arguments?["visible"]?.GetValue<bool>() ?? throw new ArgumentException("visible is required for set_headers operation");
@@ -200,6 +220,13 @@ Usage examples:
         return await Task.FromResult($"RowColumnHeaders visibility set to {(visible ? "visible" : "hidden")}: {path}");
     }
 
+    /// <summary>
+    /// Sets zero values visibility
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing isVisible</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetZeroValuesAsync(JsonObject? arguments, string path, int sheetIndex)
     {
         var visible = arguments?["visible"]?.GetValue<bool>() ?? throw new ArgumentException("visible is required for set_zero_values operation");
@@ -212,10 +239,17 @@ Usage examples:
         return await Task.FromResult($"Zero values visibility set to {(visible ? "visible" : "hidden")}: {path}");
     }
 
+    /// <summary>
+    /// Sets column width
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing columnIndex, width</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetColumnWidthAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var columnIndex = arguments?["columnIndex"]?.GetValue<int>() ?? throw new ArgumentException("columnIndex is required for set_column_width operation");
-        var width = arguments?["width"]?.GetValue<double>() ?? throw new ArgumentException("width is required for set_column_width operation");
+        var columnIndex = ArgumentHelper.GetInt(arguments, "columnIndex", "columnIndex");
+        var width = ArgumentHelper.GetDouble(arguments, "width", "width");
 
         using var workbook = new Workbook(path);
         var worksheet = workbook.Worksheets[sheetIndex];
@@ -226,10 +260,17 @@ Usage examples:
         return await Task.FromResult($"第 {columnIndex} 列寬度已設定為 {width} 字元: {path}");
     }
 
+    /// <summary>
+    /// Sets row height
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing rowIndex, height</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetRowHeightAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var rowIndex = arguments?["rowIndex"]?.GetValue<int>() ?? throw new ArgumentException("rowIndex is required for set_row_height operation");
-        var height = arguments?["height"]?.GetValue<double>() ?? throw new ArgumentException("height is required for set_row_height operation");
+        var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex", "rowIndex");
+        var height = ArgumentHelper.GetDouble(arguments, "height", "height");
 
         using var workbook = new Workbook(path);
         var worksheet = workbook.Worksheets[sheetIndex];
@@ -240,6 +281,13 @@ Usage examples:
         return await Task.FromResult($"第 {rowIndex} 行高度已設定為 {height} 點: {path}");
     }
 
+    /// <summary>
+    /// Sets worksheet background
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing imagePath or color</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetBackgroundAsync(JsonObject? arguments, string path, int sheetIndex)
     {
         var imagePath = arguments?["imagePath"]?.GetValue<string>();
@@ -272,30 +320,21 @@ Usage examples:
             : $"Background image set for sheet {sheetIndex}: {path}");
     }
 
+    /// <summary>
+    /// Sets worksheet tab color
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing color</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetTabColorAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var colorStr = arguments?["color"]?.GetValue<string>() ?? throw new ArgumentException("color is required for set_tab_color operation");
+        var colorStr = ArgumentHelper.GetString(arguments, "color", "color");
 
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
 
-        System.Drawing.Color color;
-        if (colorStr.StartsWith("#"))
-        {
-            colorStr = colorStr.Substring(1);
-        }
-
-        if (colorStr.Length == 6)
-        {
-            var r = Convert.ToInt32(colorStr.Substring(0, 2), 16);
-            var g = Convert.ToInt32(colorStr.Substring(2, 2), 16);
-            var b = Convert.ToInt32(colorStr.Substring(4, 2), 16);
-            color = System.Drawing.Color.FromArgb(r, g, b);
-        }
-        else
-        {
-            color = System.Drawing.Color.FromName(colorStr);
-        }
+        var color = ColorHelper.ParseColor(colorStr);
 
         worksheet.TabColor = color;
 
@@ -303,6 +342,13 @@ Usage examples:
         return await Task.FromResult($"Sheet tab color set to {colorStr}: {path}");
     }
 
+    /// <summary>
+    /// Sets all view settings at once
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing all view settings</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetAllAsync(JsonObject? arguments, string path, int sheetIndex)
     {
         var zoom = arguments?["zoom"]?.GetValue<int?>();
@@ -347,6 +393,13 @@ Usage examples:
         return await Task.FromResult($"View settings updated for sheet {sheetIndex}: {path}");
     }
 
+    /// <summary>
+    /// Splits worksheet window
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing splitRow, splitColumn</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> SplitWindowAsync(JsonObject? arguments, string path, int sheetIndex)
     {
         var splitRow = arguments?["splitRow"]?.GetValue<int?>();

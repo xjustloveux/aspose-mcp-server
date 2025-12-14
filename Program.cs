@@ -37,13 +37,12 @@ catch (Exception ex)
     // All errors to stderr, never stdout
     // Don't expose full stack trace in production to prevent information leakage
     Console.Error.WriteLine($"[ERROR] Fatal error: {ex.GetType().Name}");
-    // Only log detailed error to stderr for debugging, not to user-facing output
-    #if DEBUG
+#if DEBUG
     Console.Error.WriteLine($"[ERROR] Details: {ex.Message}");
     Console.Error.WriteLine($"[ERROR] Stack trace: {ex.StackTrace}");
-    #else
+#else
     Console.Error.WriteLine($"[ERROR] An internal error occurred. Check logs for details.");
-    #endif
+#endif
     Environment.Exit(1);
 }
 

@@ -241,7 +241,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
 
         return operation.ToLower() switch
         {
@@ -255,9 +255,14 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Adds a line shape to the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing x1, y1, x2, y2, optional location, position, lineStyle, lineWidth, lineColor, width</param>
+    /// <returns>Success message with line details</returns>
     private async Task<string> AddLine(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         SecurityHelper.ValidateFilePath(path, "path");
         var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
@@ -368,13 +373,18 @@ Usage examples:
         return await Task.FromResult($"Successfully inserted line in {locationDesc} at {position} position. Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Adds a textbox to the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing text, x, y, optional width, height, textboxWidth, textboxHeight, positionX, positionY, outputPath</param>
+    /// <returns>Success message with textbox details</returns>
     private async Task<string> AddTextBox(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         SecurityHelper.ValidateFilePath(path, "path");
         var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var text = arguments?["text"]?.GetValue<string>() ?? throw new ArgumentException("text is required");
+        var text = ArgumentHelper.GetString(arguments, "text", "text");
         var textboxWidth = arguments?["textboxWidth"]?.GetValue<double>() ?? 200;
         var textboxHeight = arguments?["textboxHeight"]?.GetValue<double>() ?? 100;
         var positionX = arguments?["positionX"]?.GetValue<double>() ?? 100;
@@ -458,9 +468,14 @@ Usage examples:
         return await Task.FromResult($"Successfully added textbox. Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Gets all textboxes from the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path</param>
+    /// <returns>Formatted string with all textboxes</returns>
     private async Task<string> GetTextboxes(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         SecurityHelper.ValidateFilePath(path, "path");
         var includeContent = arguments?["includeContent"]?.GetValue<bool>() ?? true;
 
@@ -504,13 +519,18 @@ Usage examples:
         return await Task.FromResult(result.ToString());
     }
 
+    /// <summary>
+    /// Edits the content of a textbox
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, shapeIndex, text, optional outputPath</param>
+    /// <returns>Success message with updated textbox details</returns>
     private async Task<string> EditTextBoxContent(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         SecurityHelper.ValidateFilePath(path, "path");
         var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var textboxIndex = arguments?["textboxIndex"]?.GetValue<int>() ?? throw new ArgumentException("textboxIndex is required");
+        var textboxIndex = ArgumentHelper.GetInt(arguments, "textboxIndex", "textboxIndex");
         var text = arguments?["text"]?.GetValue<string>();
         var appendText = arguments?["appendText"]?.GetValue<bool>() ?? false;
         var fontName = arguments?["fontName"]?.GetValue<string>();
@@ -530,8 +550,7 @@ Usage examples:
         
         var textbox = textboxes[textboxIndex];
         
-        // IMPORTANT: Use false to get only direct child paragraphs of the textbox
-        // Using true would recursively search and might include paragraphs outside the textbox
+        // Use false to get only direct child paragraphs of the textbox (not recursive)
         var paragraphs = textbox.GetChildNodes(NodeType.Paragraph, false);
         Paragraph para;
         
@@ -618,16 +637,12 @@ Usage examples:
                 {
                     try
                     {
-                        var colorStr = color.TrimStart('#');
-                        if (colorStr.Length == 6)
-                        {
-                            int r = Convert.ToInt32(colorStr.Substring(0, 2), 16);
-                            int g = Convert.ToInt32(colorStr.Substring(2, 2), 16);
-                            int b = Convert.ToInt32(colorStr.Substring(4, 2), 16);
-                            run.Font.Color = System.Drawing.Color.FromArgb(r, g, b);
-                        }
+                        run.Font.Color = ColorHelper.ParseColor(color);
                     }
-                    catch { }
+                    catch (Exception colorEx)
+                    {
+                        throw new ArgumentException($"無法解析顏色 '{color}': {colorEx.Message}。請使用有效的顏色格式（如 #FF0000、255,0,0 或 red）");
+                    }
                 }
             }
         }
@@ -636,13 +651,18 @@ Usage examples:
         return await Task.FromResult($"Successfully edited textbox #{textboxIndex}. Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Sets border properties for a textbox
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, shapeIndex, optional color, width, style, outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetTextBoxBorder(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         SecurityHelper.ValidateFilePath(path, "path");
         var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var textboxIndex = arguments?["textboxIndex"]?.GetValue<int>() ?? throw new ArgumentException("textboxIndex is required");
+        var textboxIndex = ArgumentHelper.GetInt(arguments, "textboxIndex", "textboxIndex");
         var borderVisible = arguments?["borderVisible"]?.GetValue<bool>() ?? true;
         var borderColor = arguments?["borderColor"]?.GetValue<string>() ?? "000000";
         var borderWidth = arguments?["borderWidth"]?.GetValue<double>() ?? 1.0;
@@ -673,9 +693,14 @@ Usage examples:
         return await Task.FromResult($"Successfully set textbox {textboxIndex} {borderDesc}. Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Adds a chart to the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, chartType, data, x, y, optional width, height, outputPath</param>
+    /// <returns>Success message with chart details</returns>
     private async Task<string> AddChart(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         SecurityHelper.ValidateFilePath(path, "path");
         var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");

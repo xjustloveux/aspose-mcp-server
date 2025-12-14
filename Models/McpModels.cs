@@ -3,6 +3,9 @@ using System.Text.Json.Serialization;
 
 namespace AsposeMcpServer.Models;
 
+/// <summary>
+/// MCP JSON-RPC response model
+/// </summary>
 public class McpResponse
 {
     [JsonPropertyName("jsonrpc")]
@@ -20,6 +23,9 @@ public class McpResponse
     public McpError? Error { get; set; }
 }
 
+/// <summary>
+/// MCP JSON-RPC error model
+/// </summary>
 public class McpError
 {
     [JsonPropertyName("code")]

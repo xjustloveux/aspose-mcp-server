@@ -1,5 +1,4 @@
 # Aspose MCP Server - Cross-platform Build Script
-# 跨平台构建脚本
 
 param(
     [switch]$Windows,

@@ -66,7 +66,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         var slideIndices = arguments?["slideIndices"]?.AsArray()?.Select(x => x?.GetValue<int>() ?? -1).ToArray();
         var fontName = arguments?["fontName"]?.GetValue<string>();
         var fontSize = arguments?["fontSize"]?.GetValue<double?>();
@@ -90,7 +90,7 @@ Usage examples:
         Color? color = null;
         if (!string.IsNullOrWhiteSpace(colorHex))
         {
-            color = ColorTranslator.FromHtml(colorHex);
+            color = ColorHelper.ParseColor(colorHex);
         }
 
         foreach (var idx in targets)

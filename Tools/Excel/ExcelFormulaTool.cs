@@ -96,10 +96,17 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Adds a formula to a cell
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing cell and formula</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message with cell reference</returns>
     private async Task<string> AddFormulaAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var cell = arguments?["cell"]?.GetValue<string>() ?? throw new ArgumentException("cell is required for add operation");
-        var formula = arguments?["formula"]?.GetValue<string>() ?? throw new ArgumentException("formula is required for add operation");
+        var cell = ArgumentHelper.GetString(arguments, "cell", "cell");
+        var formula = ArgumentHelper.GetString(arguments, "formula", "formula");
 
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
@@ -107,11 +114,11 @@ Usage examples:
         var cellObj = worksheet.Cells[cell];
         cellObj.Formula = formula;
         
-        // 計算公式，確保結果正確
+        // Calculate formula to ensure correct result
         workbook.CalculateFormula();
         
-        // 確保計算結果被保存（通過訪問計算後的值來觸發計算）
-        // 這可以確保當Excel打開文件時，公式已經有正確的計算結果
+        // Ensure calculated result is saved (accessing the value triggers calculation)
+        // This ensures that when Excel opens the file, formulas already have correct calculated results
         var calculatedValue = cellObj.Value;
         
         workbook.Save(path);
@@ -119,6 +126,13 @@ Usage examples:
         return await Task.FromResult($"Formula added to cell {cell}: {formula}");
     }
 
+    /// <summary>
+    /// Gets formula from a cell
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing cell</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Formula string</returns>
     private async Task<string> GetFormulasAsync(JsonObject? arguments, string path, int sheetIndex)
     {
         var range = arguments?["range"]?.GetValue<string>();
@@ -128,7 +142,7 @@ Usage examples:
         var cells = worksheet.Cells;
         var result = new StringBuilder();
 
-        result.AppendLine($"=== 工作表 '{worksheet.Name}' 的公式資訊 ===\n");
+        result.AppendLine($"=== Formula Information for Worksheet '{worksheet.Name}' ===\n");
 
         int startRow, endRow, startCol, endCol;
 
@@ -144,7 +158,7 @@ Usage examples:
             }
             catch (Exception ex)
             {
-                throw new ArgumentException($"無效的範圍格式: {range}", ex);
+                throw new ArgumentException($"Invalid range format: {range}", ex);
             }
         }
         else
@@ -165,8 +179,8 @@ Usage examples:
                 {
                     formulaCount++;
                     result.AppendLine($"【{CellsHelper.CellIndexToName(row, col)}】");
-                    result.AppendLine($"公式: {cell.Formula}");
-                    result.AppendLine($"值: {cell.Value ?? "(計算中)"}");
+                    result.AppendLine($"Formula: {cell.Formula}");
+                    result.AppendLine($"Value: {cell.Value ?? "(calculating)"}");
                     result.AppendLine();
                 }
             }
@@ -174,16 +188,23 @@ Usage examples:
 
         if (formulaCount == 0)
         {
-            result.AppendLine("未找到公式");
+            result.AppendLine("No formulas found");
         }
         else
         {
-            result.Insert(0, $"總公式數: {formulaCount}\n\n");
+            result.Insert(0, $"Total formulas: {formulaCount}\n\n");
         }
 
         return await Task.FromResult(result.ToString());
     }
 
+    /// <summary>
+    /// Gets the calculated result of a formula
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing cell</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Formula result value</returns>
     private async Task<string> GetFormulaResultAsync(JsonObject? arguments, string path, int sheetIndex)
     {
         var cell = ArgumentHelper.GetString(arguments, "cell", "cell");
@@ -221,10 +242,16 @@ Usage examples:
         return await Task.FromResult(result);
     }
 
+    /// <summary>
+    /// Calculates all formulas in the workbook
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing optional outputPath</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based, not used but required for signature)</param>
+    /// <returns>Success message</returns>
     private async Task<string> CalculateFormulasAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var cell = arguments?["cell"]?.GetValue<string>();
 
         using var workbook = new Workbook(path);
@@ -247,17 +274,24 @@ Usage examples:
         
         workbook.Save(outputPath);
         
-        var result = "公式計算完成\n";
-        result += $"工作表: {workbook.Worksheets[sheetIndex].Name}\n";
+        var result = "Formula calculation completed\n";
+        result += $"Worksheet: {workbook.Worksheets[sheetIndex].Name}\n";
         if (!string.IsNullOrEmpty(cell))
         {
-            result += $"單元格: {cell}\n";
+            result += $"Cell: {cell}\n";
         }
-        result += $"輸出: {outputPath}";
+        result += $"Output: {outputPath}";
         
         return await Task.FromResult(result);
     }
 
+    /// <summary>
+    /// Sets an array formula to a range
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing range and formula</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message with range</returns>
     private async Task<string> SetArrayFormulaAsync(JsonObject? arguments, string path, int sheetIndex)
     {
         var range = ArgumentHelper.GetString(arguments, "range", "range");
@@ -273,13 +307,13 @@ Usage examples:
         // Validate range dimensions
         if (rangeObj.RowCount <= 0 || rangeObj.ColumnCount <= 0)
         {
-            throw new ArgumentException($"無效的範圍尺寸：行數={rangeObj.RowCount}，列數={rangeObj.ColumnCount}");
+            throw new ArgumentException($"Invalid range dimensions: rows={rangeObj.RowCount}, columns={rangeObj.ColumnCount}");
         }
         
         // Validate row and column indices
         if (rangeObj.FirstRow < 0 || rangeObj.FirstColumn < 0)
         {
-            throw new ArgumentException($"無效的範圍位置：起始行={rangeObj.FirstRow}，起始列={rangeObj.FirstColumn}");
+            throw new ArgumentException($"Invalid range position: startRow={rangeObj.FirstRow}, startColumn={rangeObj.FirstColumn}");
         }
         
         // The new API (FormulaParseOptions) is not available in this version of Aspose.Cells
@@ -396,17 +430,24 @@ Usage examples:
                     }
                     
                     fallbackWorkbook.Save(path);
-                    return await Task.FromResult($"公式已設置到範圍 {range}（注意：這不是真正的數組公式）: {path}");
+                    return await Task.FromResult($"Formula set to range {range} (Note: This is not a true array formula): {path}");
                 }
                 catch (Exception ex3)
                 {
-                    throw new ArgumentException($"無法設置數組公式。範圍: {range}，公式: {cleanFormula}。\n方法1錯誤: {ex.Message}\n方法2錯誤: {ex2.Message}\n方法3錯誤: {ex3.Message}", ex);
+                    throw new ArgumentException($"Failed to set array formula. Range: {range}, Formula: {cleanFormula}.\nMethod 1 error: {ex.Message}\nMethod 2 error: {ex2.Message}\nMethod 3 error: {ex3.Message}", ex);
                 }
             }
         }
         #pragma warning restore CS0618 // Type or member is obsolete
     }
 
+    /// <summary>
+    /// Gets array formula information from a cell
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing cell</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Array formula information</returns>
     private async Task<string> GetArrayFormulaAsync(JsonObject? arguments, string path, int sheetIndex)
     {
         var cell = ArgumentHelper.GetString(arguments, "cell", "cell");

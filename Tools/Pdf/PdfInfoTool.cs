@@ -42,7 +42,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
 
         return operation.ToLower() switch
         {
@@ -52,9 +52,14 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Gets PDF content as text
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, optional pageIndex</param>
+    /// <returns>PDF content as string</returns>
     private async Task<string> GetContent(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         var pageIndex = arguments?["pageIndex"]?.GetValue<int?>();
 
         SecurityHelper.ValidateFilePath(path, "path");
@@ -83,11 +88,14 @@ Usage examples:
         return await Task.FromResult(sb.ToString());
     }
 
+    /// <summary>
+    /// Gets PDF statistics
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path</param>
+    /// <returns>Formatted string with statistics</returns>
     private async Task<string> GetStatistics(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-
-        SecurityHelper.ValidateFilePath(path, "path");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         using var document = new Document(path);
         var fileInfo = new FileInfo(path);

@@ -4,6 +4,9 @@ using AsposeMcpServer.Core;
 
 namespace AsposeMcpServer.Tools;
 
+/// <summary>
+/// Unified tool for Word file operations (create, create_from_template, convert, merge, split)
+/// </summary>
 public class WordFileTool : IAsposeTool
 {
     public string Description => @"Perform file operations on Word documents. Supports 5 operations: create, create_from_template, convert, merge, split.
@@ -147,7 +150,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
 
         return operation.ToLower() switch
         {
@@ -160,9 +163,14 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Creates a new Word document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing outputPath, optional content</param>
+    /// <returns>Success message with file path</returns>
     private async Task<string> CreateDocument(JsonObject? arguments)
     {
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? throw new ArgumentException("outputPath is required");
+        var outputPath = ArgumentHelper.GetString(arguments, "outputPath", "outputPath");
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
         var content = arguments?["content"]?.GetValue<string>();
         var skipInitialContent = arguments?["skipInitialContent"]?.GetValue<bool>() ?? false;
@@ -271,10 +279,15 @@ Usage examples:
         return await Task.FromResult($"Word document created successfully at: {outputPath}");
     }
 
+    /// <summary>
+    /// Creates a document from a template
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing templatePath, outputPath, optional data</param>
+    /// <returns>Success message with output path</returns>
     private async Task<string> CreateFromTemplate(JsonObject? arguments)
     {
-        var templatePath = arguments?["templatePath"]?.GetValue<string>() ?? throw new ArgumentException("templatePath is required");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? throw new ArgumentException("outputPath is required");
+        var templatePath = ArgumentHelper.GetString(arguments, "templatePath", "templatePath");
+        var outputPath = ArgumentHelper.GetString(arguments, "outputPath", "outputPath");
         var placeholderStyle = arguments?["placeholderStyle"]?.GetValue<string>() ?? "doubleCurly";
 
         SecurityHelper.ValidateFilePath(templatePath, "templatePath");
@@ -314,10 +327,15 @@ Usage examples:
         return await Task.FromResult($"Document created from template: {outputPath} (replaced {replacements.Count} placeholders)");
     }
 
+    /// <summary>
+    /// Converts document to another format
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, outputPath, format</param>
+    /// <returns>Success message with output path</returns>
     private async Task<string> ConvertDocument(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? throw new ArgumentException("outputPath is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidatePath(arguments, "outputPath");
         var format = arguments?["format"]?.GetValue<string>()?.ToLower() ?? throw new ArgumentException("format is required");
 
         SecurityHelper.ValidateFilePath(path, "path");
@@ -343,10 +361,15 @@ Usage examples:
         return await Task.FromResult($"Document converted from {path} to {outputPath} ({format})");
     }
 
+    /// <summary>
+    /// Merges multiple documents into one
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing sourcePaths array, outputPath</param>
+    /// <returns>Success message with merged file path</returns>
     private async Task<string> MergeDocuments(JsonObject? arguments)
     {
         var inputPathsArray = arguments?["inputPaths"]?.AsArray() ?? throw new ArgumentException("inputPaths is required");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? throw new ArgumentException("outputPath is required");
+        var outputPath = ArgumentHelper.GetString(arguments, "outputPath", "outputPath");
 
         SecurityHelper.ValidateArraySize(inputPathsArray, "inputPaths");
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
@@ -373,10 +396,15 @@ Usage examples:
         return await Task.FromResult($"Merged {inputPaths.Count} documents into: {outputPath}");
     }
 
+    /// <summary>
+    /// Splits document into multiple files
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, outputPath, splitBy (page or section)</param>
+    /// <returns>Success message with split file count</returns>
     private async Task<string> SplitDocument(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var outputDir = arguments?["outputDir"]?.GetValue<string>() ?? throw new ArgumentException("outputDir is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputDir = ArgumentHelper.GetString(arguments, "outputDir", "outputDir");
         var splitBy = arguments?["splitBy"]?.GetValue<string>() ?? "section";
 
         SecurityHelper.ValidateFilePath(path, "path");
@@ -416,6 +444,12 @@ Usage examples:
         }
     }
 
+    /// <summary>
+    /// Checks if a placeholder key matches the expected format for the given style
+    /// </summary>
+    /// <param name="key">Placeholder key to validate</param>
+    /// <param name="style">Placeholder style (doubleCurly, singleCurly, square)</param>
+    /// <returns>True if the key matches the expected format</returns>
     private bool IsValidPlaceholder(string key, string style)
     {
         return style.ToLower() switch
@@ -426,6 +460,12 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Formats a placeholder key according to the specified style
+    /// </summary>
+    /// <param name="key">Placeholder key (may already contain brackets)</param>
+    /// <param name="style">Placeholder style (doubleCurly, singleCurly, square)</param>
+    /// <returns>Formatted placeholder string</returns>
     private string FormatPlaceholder(string key, string style)
     {
         key = key.Trim('{', '}', '[', ']');

@@ -130,9 +130,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         var sheetIndex = arguments?["sheetIndex"]?.GetValue<int>() ?? 0;
 
         return operation.ToLower() switch
@@ -145,6 +144,13 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Sets print area for the worksheet
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing optional range, clearPrintArea</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetPrintAreaAsync(JsonObject? arguments, string path, int sheetIndex)
     {
         var range = arguments?["range"]?.GetValue<string>();
@@ -172,6 +178,13 @@ Usage examples:
             : $"Print area set to {range} for sheet {sheetIndex}: {path}");
     }
 
+    /// <summary>
+    /// Sets print titles (rows/columns to repeat on each page)
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing optional rowsToRepeatAtTop, columnsToRepeatAtLeft</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetPrintTitlesAsync(JsonObject? arguments, string path, int sheetIndex)
     {
         var rows = arguments?["rows"]?.GetValue<string>();
@@ -202,6 +215,13 @@ Usage examples:
         return await Task.FromResult($"Print titles updated for sheet {sheetIndex}: {path}");
     }
 
+    /// <summary>
+    /// Sets page setup options
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing various page setup properties</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetPageSetupAsync(JsonObject? arguments, string path, int sheetIndex)
     {
         var orientation = arguments?["orientation"]?.GetValue<string>();
@@ -266,6 +286,13 @@ Usage examples:
         return await Task.FromResult($"頁面設定已更新: {string.Join(", ", changes)}");
     }
 
+    /// <summary>
+    /// Sets all print settings at once
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing all print settings</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetAllAsync(JsonObject? arguments, string path, int sheetIndex)
     {
         var printArea = arguments?["range"]?.GetValue<string>();

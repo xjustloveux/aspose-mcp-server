@@ -107,9 +107,9 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var slideIndex = arguments?["slideIndex"]?.GetValue<int>() ?? throw new ArgumentException("slideIndex is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
 
         return operation.ToLower() switch
         {
@@ -122,9 +122,16 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Adds audio to a slide
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing audioPath, optional x, y, width, height, outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> AddAudioAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var audioPath = arguments?["audioPath"]?.GetValue<string>() ?? throw new ArgumentException("audioPath is required for add_audio operation");
+        var audioPath = ArgumentHelper.GetString(arguments, "audioPath", "audioPath");
         var x = arguments?["x"]?.GetValue<float?>() ?? 50;
         var y = arguments?["y"]?.GetValue<float?>() ?? 50;
         var width = arguments?["width"]?.GetValue<float?>() ?? 80;
@@ -144,9 +151,16 @@ Usage examples:
         return await Task.FromResult($"已在投影片 {slideIndex} 插入音訊: {audioPath}");
     }
 
+    /// <summary>
+    /// Deletes audio from a slide
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing audioIndex, optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeleteAudioAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = arguments?["shapeIndex"]?.GetValue<int>() ?? throw new ArgumentException("shapeIndex is required for delete_audio operation");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
@@ -162,9 +176,16 @@ Usage examples:
         return await Task.FromResult($"Audio deleted from slide {slideIndex}, shape {shapeIndex}");
     }
 
+    /// <summary>
+    /// Adds video to a slide
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing videoPath, optional x, y, width, height, outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> AddVideoAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var videoPath = arguments?["videoPath"]?.GetValue<string>() ?? throw new ArgumentException("videoPath is required for add_video operation");
+        var videoPath = ArgumentHelper.GetString(arguments, "videoPath", "videoPath");
         var x = arguments?["x"]?.GetValue<float?>() ?? 50;
         var y = arguments?["y"]?.GetValue<float?>() ?? 50;
         var width = arguments?["width"]?.GetValue<float?>() ?? 320;
@@ -183,9 +204,16 @@ Usage examples:
         return await Task.FromResult($"已在投影片 {slideIndex} 插入影片: {videoPath}");
     }
 
+    /// <summary>
+    /// Deletes video from a slide
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing videoIndex, optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeleteVideoAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = arguments?["shapeIndex"]?.GetValue<int>() ?? throw new ArgumentException("shapeIndex is required for delete_video operation");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
@@ -201,9 +229,16 @@ Usage examples:
         return await Task.FromResult($"Video deleted from slide {slideIndex}, shape {shapeIndex}");
     }
 
+    /// <summary>
+    /// Sets media playback options
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing mediaIndex, optional playMode, loop, outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetPlaybackAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = arguments?["shapeIndex"]?.GetValue<int>() ?? throw new ArgumentException("shapeIndex is required for set_playback operation");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
         var playModeStr = arguments?["playMode"]?.GetValue<string>() ?? "auto";
         var loop = arguments?["loop"]?.GetValue<bool?>() ?? false;
         var rewind = arguments?["rewind"]?.GetValue<bool?>() ?? false;

@@ -51,8 +51,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         return operation.ToLower() switch
         {
@@ -63,6 +63,12 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Gets presentation statistics
+    /// </summary>
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Formatted string with statistics</returns>
     private async Task<string> GetStatisticsAsync(JsonObject? arguments, string path)
     {
         using var presentation = new Presentation(path);
@@ -146,6 +152,12 @@ Usage examples:
         return await Task.FromResult(sb.ToString());
     }
 
+    /// <summary>
+    /// Gets presentation content
+    /// </summary>
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Formatted string with content</returns>
     private async Task<string> GetContentAsync(JsonObject? arguments, string path)
     {
         using var presentation = new Presentation(path);
@@ -170,9 +182,15 @@ Usage examples:
         return await Task.FromResult(sb.ToString());
     }
 
+    /// <summary>
+    /// Gets detailed information about a slide
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing slideIndex</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Formatted string with slide details</returns>
     private async Task<string> GetSlideDetailsAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = arguments?["slideIndex"]?.GetValue<int>() ?? throw new ArgumentException("slideIndex is required for get_slide_details operation");
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);

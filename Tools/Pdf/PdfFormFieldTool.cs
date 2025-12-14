@@ -98,7 +98,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
 
         return operation.ToLower() switch
         {
@@ -110,17 +110,22 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Adds a form field to a PDF page
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, pageIndex, fieldType, name, x, y, width, height, optional defaultValue, outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> AddFormField(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var pageIndex = arguments?["pageIndex"]?.GetValue<int>() ?? throw new ArgumentException("pageIndex is required");
-        var fieldType = arguments?["fieldType"]?.GetValue<string>() ?? throw new ArgumentException("fieldType is required");
-        var fieldName = arguments?["fieldName"]?.GetValue<string>() ?? throw new ArgumentException("fieldName is required");
-        var x = arguments?["x"]?.GetValue<double>() ?? throw new ArgumentException("x is required");
-        var y = arguments?["y"]?.GetValue<double>() ?? throw new ArgumentException("y is required");
-        var width = arguments?["width"]?.GetValue<double>() ?? throw new ArgumentException("width is required");
-        var height = arguments?["height"]?.GetValue<double>() ?? throw new ArgumentException("height is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex", "pageIndex");
+        var fieldType = ArgumentHelper.GetString(arguments, "fieldType", "fieldType");
+        var fieldName = ArgumentHelper.GetString(arguments, "fieldName", "fieldName");
+        var x = ArgumentHelper.GetDouble(arguments, "x", "x");
+        var y = ArgumentHelper.GetDouble(arguments, "y", "y");
+        var width = ArgumentHelper.GetDouble(arguments, "width", "width");
+        var height = ArgumentHelper.GetDouble(arguments, "height", "height");
         var defaultValue = arguments?["defaultValue"]?.GetValue<string>();
 
         using var document = new Document(path);
@@ -155,11 +160,16 @@ Usage examples:
         return await Task.FromResult($"Successfully added {fieldType} field '{fieldName}'. Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Deletes a form field from a PDF
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, fieldName, optional outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeleteFormField(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var fieldName = arguments?["fieldName"]?.GetValue<string>() ?? throw new ArgumentException("fieldName is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var fieldName = ArgumentHelper.GetString(arguments, "fieldName", "fieldName");
 
         SecurityHelper.ValidateFilePath(path, "path");
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
@@ -170,11 +180,16 @@ Usage examples:
         return await Task.FromResult($"Successfully deleted form field '{fieldName}'. Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Edits a form field in a PDF
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, fieldName, optional value, x, y, width, height, outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> EditFormField(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var fieldName = arguments?["fieldName"]?.GetValue<string>() ?? throw new ArgumentException("fieldName is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var fieldName = ArgumentHelper.GetString(arguments, "fieldName", "fieldName");
         var value = arguments?["value"]?.GetValue<string>();
         var checkedValue = arguments?["checkedValue"]?.GetValue<bool?>();
 
@@ -195,11 +210,14 @@ Usage examples:
         return await Task.FromResult($"Successfully edited form field '{fieldName}'. Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Gets all form fields from the PDF
+    /// </summary>
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <returns>Formatted string with all form fields</returns>
     private async Task<string> GetFormFields(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-
-        SecurityHelper.ValidateFilePath(path, "path");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         using var document = new Document(path);
         var sb = new StringBuilder();

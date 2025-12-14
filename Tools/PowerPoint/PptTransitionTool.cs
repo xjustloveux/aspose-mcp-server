@@ -60,9 +60,9 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var slideIndex = arguments?["slideIndex"]?.GetValue<int>() ?? throw new ArgumentException("slideIndex is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
 
         return operation.ToLower() switch
         {
@@ -73,9 +73,16 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Sets slide transition effect
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing transitionType, optional duration, outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetTransitionAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var transitionTypeStr = arguments?["transitionType"]?.GetValue<string>() ?? throw new ArgumentException("transitionType is required for set operation");
+        var transitionTypeStr = ArgumentHelper.GetString(arguments, "transitionType", "transitionType");
         var duration = arguments?["durationSeconds"]?.GetValue<double?>() ?? 1.0;
 
         using var presentation = new Presentation(path);
@@ -99,6 +106,13 @@ Usage examples:
         return await Task.FromResult($"已設定投影片 {slideIndex} 轉場：{transition.Type}，時間 {duration:0.##}s");
     }
 
+    /// <summary>
+    /// Gets transition information for a slide
+    /// </summary>
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <returns>Formatted string with transition details</returns>
     private async Task<string> GetTransitionAsync(JsonObject? arguments, string path, int slideIndex)
     {
         using var presentation = new Presentation(path);
@@ -127,6 +141,13 @@ Usage examples:
         return await Task.FromResult(sb.ToString());
     }
 
+    /// <summary>
+    /// Removes transition from a slide
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeleteTransitionAsync(JsonObject? arguments, string path, int slideIndex)
     {
         using var presentation = new Presentation(path);

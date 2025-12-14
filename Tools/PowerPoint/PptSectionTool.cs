@@ -71,8 +71,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         return operation.ToLower() switch
         {
@@ -84,10 +84,16 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Adds a section to the presentation
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing sectionName, slideIndex, optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> AddSectionAsync(JsonObject? arguments, string path)
     {
-        var name = arguments?["name"]?.GetValue<string>() ?? throw new ArgumentException("name is required for add operation");
-        var slideIndex = arguments?["slideIndex"]?.GetValue<int>() ?? throw new ArgumentException("slideIndex is required for add operation");
+        var name = ArgumentHelper.GetString(arguments, "name", "name");
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
@@ -96,10 +102,16 @@ Usage examples:
         return await Task.FromResult($"已新增章節 '{name}' 起始於投影片 {slideIndex}");
     }
 
+    /// <summary>
+    /// Renames a section
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing sectionIndex, newName, optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> RenameSectionAsync(JsonObject? arguments, string path)
     {
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? throw new ArgumentException("sectionIndex is required for rename operation");
-        var newName = arguments?["newName"]?.GetValue<string>() ?? throw new ArgumentException("newName is required for rename operation");
+        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", "sectionIndex");
+        var newName = ArgumentHelper.GetString(arguments, "newName", "newName");
 
         using var presentation = new Presentation(path);
         if (sectionIndex < 0 || sectionIndex >= presentation.Sections.Count)
@@ -112,9 +124,15 @@ Usage examples:
         return await Task.FromResult($"已重新命名章節 {sectionIndex} 為 '{newName}'");
     }
 
+    /// <summary>
+    /// Deletes a section from the presentation
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing sectionIndex, optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeleteSectionAsync(JsonObject? arguments, string path)
     {
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? throw new ArgumentException("sectionIndex is required for delete operation");
+        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", "sectionIndex");
         var keepSlides = arguments?["keepSlides"]?.GetValue<bool?>() ?? true;
 
         using var presentation = new Presentation(path);
@@ -132,6 +150,12 @@ Usage examples:
         return await Task.FromResult($"已移除章節 {sectionIndex}，保留投影片: {keepSlides}");
     }
 
+    /// <summary>
+    /// Gets all sections from the presentation
+    /// </summary>
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Formatted string with all sections</returns>
     private async Task<string> GetSectionsAsync(JsonObject? arguments, string path)
     {
         using var presentation = new Presentation(path);

@@ -155,8 +155,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         SecurityHelper.ValidateFilePath(path, "path");
 
@@ -172,10 +172,16 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Adds an image to the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing imagePath, optional width, height, position, outputPath</param>
+    /// <param name="path">Word document file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> AddImageAsync(JsonObject? arguments, string path)
     {
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var imagePath = arguments?["imagePath"]?.GetValue<string>() ?? throw new ArgumentException("imagePath is required for add operation");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var imagePath = ArgumentHelper.GetString(arguments, "imagePath", "imagePath");
         var width = arguments?["width"]?.GetValue<double?>();
         var height = arguments?["height"]?.GetValue<double?>();
         var alignment = arguments?["alignment"]?.GetValue<string>() ?? "left";
@@ -310,10 +316,16 @@ Usage examples:
         return await Task.FromResult(result);
     }
 
+    /// <summary>
+    /// Edits image properties
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing imageIndex, optional width, height, position, outputPath</param>
+    /// <param name="path">Word document file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> EditImageAsync(JsonObject? arguments, string path)
     {
         var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var imageIndex = arguments?["imageIndex"]?.GetValue<int>() ?? throw new ArgumentException("imageIndex is required for edit operation");
+        var imageIndex = ArgumentHelper.GetInt(arguments, "imageIndex", "imageIndex");
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
 
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
@@ -427,10 +439,16 @@ Usage examples:
         return await Task.FromResult($"成功編輯圖片 {imageIndex} 的{changesDesc}。輸出: {outputPath}");
     }
 
+    /// <summary>
+    /// Deletes an image from the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing imageIndex, optional outputPath</param>
+    /// <param name="path">Word document file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeleteImageAsync(JsonObject? arguments, string path)
     {
         var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var imageIndex = arguments?["imageIndex"]?.GetValue<int>() ?? throw new ArgumentException("imageIndex is required for delete operation");
+        var imageIndex = ArgumentHelper.GetInt(arguments, "imageIndex", "imageIndex");
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
 
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
@@ -453,7 +471,11 @@ Usage examples:
             {
                 imageInfo += $" (寬度: {shapeToDelete.Width:F1} pt, 高度: {shapeToDelete.Height:F1} pt)";
             }
-            catch { }
+            catch
+            {
+                // Size information may not be available, but this is not critical
+                // Continue without the size information
+            }
         }
         
         shapeToDelete.Remove();
@@ -469,6 +491,12 @@ Usage examples:
         return await Task.FromResult(result);
     }
 
+    /// <summary>
+    /// Gets all images from the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="path">Word document file path</param>
+    /// <returns>Formatted string with all images</returns>
     private async Task<string> GetImagesAsync(JsonObject? arguments, string path)
     {
         var doc = new Document(path);
@@ -543,11 +571,17 @@ Usage examples:
         return await Task.FromResult(result.ToString());
     }
 
+    /// <summary>
+    /// Replaces an existing image with a new one
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing imageIndex, newImagePath, optional outputPath</param>
+    /// <param name="path">Word document file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> ReplaceImageAsync(JsonObject? arguments, string path)
     {
         var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var imageIndex = arguments?["imageIndex"]?.GetValue<int>() ?? throw new ArgumentException("imageIndex is required for replace operation");
-        var newImagePath = arguments?["newImagePath"]?.GetValue<string>() ?? throw new ArgumentException("newImagePath is required for replace operation");
+        var imageIndex = ArgumentHelper.GetInt(arguments, "imageIndex", "imageIndex");
+        var newImagePath = ArgumentHelper.GetString(arguments, "newImagePath", "newImagePath");
         var preserveSize = arguments?["preserveSize"]?.GetValue<bool>() ?? true;
         var preservePosition = arguments?["preservePosition"]?.GetValue<bool>() ?? true;
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
@@ -640,9 +674,15 @@ Usage examples:
         return await Task.FromResult(result);
     }
 
+    /// <summary>
+    /// Extracts images from the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing outputDirectory, optional imageIndex</param>
+    /// <param name="path">Word document file path</param>
+    /// <returns>Success message with extracted image count</returns>
     private async Task<string> ExtractImagesAsync(JsonObject? arguments, string path)
     {
-        var outputDir = arguments?["outputDir"]?.GetValue<string>() ?? throw new ArgumentException("outputDir is required for extract operation");
+        var outputDir = ArgumentHelper.GetString(arguments, "outputDir", "outputDir");
         var prefix = arguments?["prefix"]?.GetValue<string>() ?? "image";
 
         SecurityHelper.ValidateFilePath(outputDir, "outputDir");

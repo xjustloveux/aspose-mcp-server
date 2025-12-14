@@ -83,8 +83,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         return operation.ToLower() switch
         {
@@ -98,10 +98,16 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Sets layout for a slide
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing slideIndex, layoutType, optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetLayoutAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = arguments?["slideIndex"]?.GetValue<int>() ?? throw new ArgumentException("slideIndex is required for set operation");
-        var layoutStr = arguments?["layout"]?.GetValue<string>() ?? throw new ArgumentException("layout is required for set operation");
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
+        var layoutStr = ArgumentHelper.GetString(arguments, "layout", "layout");
 
         using var presentation = new Presentation(path);
         if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
@@ -126,6 +132,12 @@ Usage examples:
         return await Task.FromResult($"已設定投影片 {slideIndex} 版面：{layoutStr}");
     }
 
+    /// <summary>
+    /// Gets available layouts
+    /// </summary>
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Formatted string with available layouts</returns>
     private async Task<string> GetLayoutsAsync(JsonObject? arguments, string path)
     {
         var masterIndex = arguments?["masterIndex"]?.GetValue<int?>();
@@ -166,6 +178,12 @@ Usage examples:
         return await Task.FromResult(sb.ToString());
     }
 
+    /// <summary>
+    /// Gets master slides information
+    /// </summary>
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Formatted string with master slides</returns>
     private async Task<string> GetMastersAsync(JsonObject? arguments, string path)
     {
         using var presentation = new Presentation(path);
@@ -190,6 +208,12 @@ Usage examples:
         return await Task.FromResult(sb.ToString());
     }
 
+    /// <summary>
+    /// Applies a master slide to slides
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing masterIndex, optional slideIndexes, outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> ApplyMasterAsync(JsonObject? arguments, string path)
     {
         var slideIndices = arguments?["slideIndices"]?.AsArray()?.Select(x => x?.GetValue<int>() ?? -1).ToArray();
@@ -224,9 +248,15 @@ Usage examples:
         return await Task.FromResult($"已套用母片 {masterIndex} / 版面 {layoutIndex} 至 {targets.Length} 張投影片");
     }
 
+    /// <summary>
+    /// Applies layout to a range of slides
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing layoutType, startIndex, endIndex, optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> ApplyLayoutRangeAsync(JsonObject? arguments, string path)
     {
-        var layoutStr = arguments?["layout"]?.GetValue<string>() ?? throw new ArgumentException("layout is required for apply_layout_range operation");
+        var layoutStr = ArgumentHelper.GetString(arguments, "layout", "layout");
         var slideIndices = arguments?["slideIndices"]?.AsArray()?.Select(x => x?.GetValue<int>() ?? -1).ToArray()
                            ?? throw new ArgumentException("slideIndices is required for apply_layout_range operation");
 
@@ -261,9 +291,15 @@ Usage examples:
         return await Task.FromResult($"已套用版面 {layoutStr} 到 {slideIndices.Length} 張投影片");
     }
 
+    /// <summary>
+    /// Applies a theme to the presentation
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing themePath, optional outputPath</param>
+    /// <param name="path">PowerPoint file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> ApplyThemeAsync(JsonObject? arguments, string path)
     {
-        var themePath = arguments?["themePath"]?.GetValue<string>() ?? throw new ArgumentException("themePath is required for apply_theme operation");
+        var themePath = ArgumentHelper.GetString(arguments, "themePath", "themePath");
 
         using var presentation = new Presentation(path);
         using var themePresentation = new Presentation(themePath);

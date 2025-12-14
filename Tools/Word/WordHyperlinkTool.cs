@@ -80,9 +80,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         return operation.ToLower() switch
         {
@@ -94,12 +93,17 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Adds a hyperlink to the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing text, address, optional displayText, outputPath</param>
+    /// <param name="path">Word document file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> AddHyperlinkAsync(JsonObject? arguments, string path)
     {
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var text = arguments?["text"]?.GetValue<string>() ?? throw new ArgumentException("text is required for add operation");
-        var url = arguments?["url"]?.GetValue<string>() ?? throw new ArgumentException("url is required for add operation");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var text = ArgumentHelper.GetString(arguments, "text", "text");
+        var url = ArgumentHelper.GetString(arguments, "url", "url");
         var paragraphIndex = arguments?["paragraphIndex"]?.GetValue<int?>();
         var tooltip = arguments?["tooltip"]?.GetValue<string>();
 
@@ -215,11 +219,16 @@ Usage examples:
         return await Task.FromResult(result);
     }
 
+    /// <summary>
+    /// Edits an existing hyperlink
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing hyperlinkIndex, optional text, address, displayText, outputPath</param>
+    /// <param name="path">Word document file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> EditHyperlinkAsync(JsonObject? arguments, string path)
     {
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var hyperlinkIndex = arguments?["hyperlinkIndex"]?.GetValue<int>() ?? throw new ArgumentException("hyperlinkIndex is required for edit operation");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var hyperlinkIndex = ArgumentHelper.GetInt(arguments, "hyperlinkIndex", "hyperlinkIndex");
         var url = arguments?["url"]?.GetValue<string>();
         var displayText = arguments?["displayText"]?.GetValue<string>();
         var tooltip = arguments?["tooltip"]?.GetValue<string>();
@@ -287,11 +296,16 @@ Usage examples:
         return await Task.FromResult(result);
     }
 
+    /// <summary>
+    /// Deletes a hyperlink from the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing hyperlinkIndex, optional outputPath</param>
+    /// <param name="path">Word document file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeleteHyperlinkAsync(JsonObject? arguments, string path)
     {
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var hyperlinkIndex = arguments?["hyperlinkIndex"]?.GetValue<int>() ?? throw new ArgumentException("hyperlinkIndex is required for delete operation");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var hyperlinkIndex = ArgumentHelper.GetInt(arguments, "hyperlinkIndex", "hyperlinkIndex");
 
         var doc = new Document(path);
         
@@ -364,6 +378,12 @@ Usage examples:
         return await Task.FromResult(result);
     }
 
+    /// <summary>
+    /// Gets all hyperlinks from the document
+    /// </summary>
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="path">Word document file path</param>
+    /// <returns>Formatted string with all hyperlinks</returns>
     private async Task<string> GetHyperlinksAsync(JsonObject? arguments, string path)
     {
         var doc = new Document(path);

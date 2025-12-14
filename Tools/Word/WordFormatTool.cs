@@ -154,7 +154,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
 
         return operation.ToLower() switch
         {
@@ -166,11 +166,15 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Gets run format information
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, paragraphIndex, runIndex, optional sectionIndex</param>
+    /// <returns>Formatted string with run format details</returns>
     private async Task<string> GetRunFormat(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
-        var paragraphIndex = arguments?["paragraphIndex"]?.GetValue<int>() ?? throw new ArgumentException("paragraphIndex is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex", "paragraphIndex");
         var runIndex = arguments?["runIndex"]?.GetValue<int?>();
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>();
 
@@ -245,13 +249,17 @@ Usage examples:
         return await Task.FromResult(sb.ToString());
     }
 
+    /// <summary>
+    /// Sets run format properties
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, paragraphIndex, runIndex, optional formatting options, sectionIndex, outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetRunFormat(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var paragraphIndex = arguments?["paragraphIndex"]?.GetValue<int>() ?? throw new ArgumentException("paragraphIndex is required");
+        var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex", "paragraphIndex");
         var runIndex = arguments?["runIndex"]?.GetValue<int?>();
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>();
         var fontName = arguments?["fontName"]?.GetValue<string>();
@@ -337,13 +345,13 @@ Usage examples:
             if (underline.HasValue) run.Font.Underline = underline.Value ? Underline.Single : Underline.None;
             if (!string.IsNullOrEmpty(color))
             {
-                var colorStr = color.TrimStart('#');
-                if (colorStr.Length == 6)
+                try
                 {
-                    var r = Convert.ToInt32(colorStr.Substring(0, 2), 16);
-                    var g = Convert.ToInt32(colorStr.Substring(2, 2), 16);
-                    var b = Convert.ToInt32(colorStr.Substring(4, 2), 16);
-                    run.Font.Color = System.Drawing.Color.FromArgb(r, g, b);
+                    run.Font.Color = ColorHelper.ParseColor(color);
+                }
+                catch
+                {
+                    // Ignore invalid color
                 }
             }
         }
@@ -352,15 +360,19 @@ Usage examples:
         return await Task.FromResult($"Run format updated: {outputPath}");
     }
 
+    /// <summary>
+    /// Gets tab stops for a paragraph
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, paragraphIndex, optional sectionIndex</param>
+    /// <returns>Formatted string with tab stops</returns>
     private async Task<string> GetTabStops(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
         var location = arguments?["location"]?.GetValue<string>() ?? "body";
         var paragraphIndex = arguments?["paragraphIndex"]?.GetValue<int>() ?? 0;
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
-        var allParagraphs = arguments?["allParagraphs"]?.GetValue<bool>() ?? false;
-        var includeStyle = arguments?["includeStyle"]?.GetValue<bool>() ?? true;
+        var allParagraphs = ArgumentHelper.GetBool(arguments, "allParagraphs", "allParagraphs", false);
+        var includeStyle = ArgumentHelper.GetBool(arguments, "includeStyle", "includeStyle", true);
 
         var doc = new Document(path);
         
@@ -525,13 +537,16 @@ Usage examples:
         return await Task.FromResult(result.ToString());
     }
 
+    /// <summary>
+    /// Sets paragraph border properties
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, paragraphIndex, optional border properties, sectionIndex, outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> SetParagraphBorder(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var paragraphIndex = arguments?["paragraphIndex"]?.GetValue<int>() ?? throw new ArgumentException("paragraphIndex is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex", "paragraphIndex");
         var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
 
         var doc = new Document(path);

@@ -95,7 +95,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
 
         return operation.ToLower() switch
         {
@@ -106,12 +106,17 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Adds text to a PDF page
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, pageIndex, text, x, y, optional fontSize, fontName, fontColor, outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> AddText(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var pageIndex = arguments?["pageIndex"]?.GetValue<int>() ?? throw new ArgumentException("pageIndex is required");
-        var text = arguments?["text"]?.GetValue<string>() ?? throw new ArgumentException("text is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex", "pageIndex");
+        var text = ArgumentHelper.GetString(arguments, "text", "text");
         var x = arguments?["x"]?.GetValue<double>() ?? 100;
         var y = arguments?["y"]?.GetValue<double>() ?? 700;
         var fontName = arguments?["fontName"]?.GetValue<string>() ?? "Arial";
@@ -136,13 +141,18 @@ Usage examples:
         return await Task.FromResult($"Successfully added text to page {pageIndex}. Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Edits text on a PDF page
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, pageIndex, textIndex, text, optional outputPath</param>
+    /// <returns>Success message</returns>
     private async Task<string> EditText(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var pageIndex = arguments?["pageIndex"]?.GetValue<int>() ?? throw new ArgumentException("pageIndex is required");
-        var oldText = arguments?["oldText"]?.GetValue<string>() ?? throw new ArgumentException("oldText is required");
-        var newText = arguments?["newText"]?.GetValue<string>() ?? throw new ArgumentException("newText is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex", "pageIndex");
+        var oldText = ArgumentHelper.GetString(arguments, "oldText", "oldText");
+        var newText = ArgumentHelper.GetString(arguments, "newText", "newText");
         var replaceAll = arguments?["replaceAll"]?.GetValue<bool>() ?? false;
 
         SecurityHelper.ValidateFilePath(path, "path");
@@ -170,10 +180,15 @@ Usage examples:
         return await Task.FromResult($"Replaced {replaceCount} occurrence(s) of '{oldText}' with '{newText}' on page {pageIndex}. Output: {outputPath}");
     }
 
+    /// <summary>
+    /// Extracts text from a PDF
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, optional pageIndex</param>
+    /// <returns>Extracted text as string</returns>
     private async Task<string> ExtractText(JsonObject? arguments)
     {
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        var pageIndex = arguments?["pageIndex"]?.GetValue<int>() ?? throw new ArgumentException("pageIndex is required");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex", "pageIndex");
         var includeFontInfo = arguments?["includeFontInfo"]?.GetValue<bool>() ?? false;
 
         SecurityHelper.ValidateFilePath(path, "path");

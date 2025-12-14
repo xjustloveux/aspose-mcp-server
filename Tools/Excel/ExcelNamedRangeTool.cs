@@ -58,9 +58,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = arguments?["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
-        var path = arguments?["path"]?.GetValue<string>() ?? throw new ArgumentException("path is required");
-        SecurityHelper.ValidateFilePath(path, "path");
+        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         return operation.ToLower() switch
         {
@@ -71,10 +70,16 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    /// Adds a named range to the workbook
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing name and range</param>
+    /// <param name="path">Excel file path</param>
+    /// <returns>Success message with named range details</returns>
     private async Task<string> AddNamedRangeAsync(JsonObject? arguments, string path)
     {
-        var name = arguments?["name"]?.GetValue<string>() ?? throw new ArgumentException("name is required for add operation");
-        var range = arguments?["range"]?.GetValue<string>() ?? throw new ArgumentException("range is required for add operation");
+        var name = ArgumentHelper.GetString(arguments, "name", "name");
+        var range = ArgumentHelper.GetString(arguments, "range", "range");
         var comment = arguments?["comment"]?.GetValue<string>();
 
         using var workbook = new Workbook(path);
@@ -153,9 +158,15 @@ Usage examples:
         }
     }
 
+    /// <summary>
+    /// Deletes a named range from the workbook
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing name</param>
+    /// <param name="path">Excel file path</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeleteNamedRangeAsync(JsonObject? arguments, string path)
     {
-        var name = arguments?["name"]?.GetValue<string>() ?? throw new ArgumentException("name is required for delete operation");
+        var name = ArgumentHelper.GetString(arguments, "name", "name");
 
         using var workbook = new Workbook(path);
         var names = workbook.Worksheets.Names;
@@ -198,6 +209,12 @@ Usage examples:
         return await Task.FromResult($"成功刪除名稱範圍 '{name}'\n原引用: {refersTo}\n工作簿剩餘名稱範圍數: {remainingCount}\n輸出: {path}");
     }
 
+    /// <summary>
+    /// Gets all named ranges from the workbook
+    /// </summary>
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="path">Excel file path</param>
+    /// <returns>Formatted string with all named ranges</returns>
     private async Task<string> GetNamedRangesAsync(JsonObject? arguments, string path)
     {
         using var workbook = new Workbook(path);
