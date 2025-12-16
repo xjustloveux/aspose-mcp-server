@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Linq;
 using Aspose.Slides;
 using Aspose.Slides.Export;
@@ -95,6 +95,11 @@ Usage examples:
             {
                 type = "boolean",
                 description = "Flip vertically (optional, for flip)"
+            },
+            outputPath = new
+            {
+                type = "string",
+                description = "Output file path (optional, for all operations, defaults to input path)"
             }
         },
         required = new[] { "operation", "path", "slideIndex" }
@@ -102,9 +107,9 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
 
         return operation.ToLower() switch
         {
@@ -127,7 +132,7 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> GroupShapesAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndicesArray = arguments?["shapeIndices"]?.AsArray() ?? throw new ArgumentException("shapeIndices is required for group operation");
+        var shapeIndicesArray = ArgumentHelper.GetArray(arguments, "shapeIndices");
 
         var shapeIndices = shapeIndicesArray.Select(s => s?.GetValue<int>()).Where(s => s.HasValue).Select(s => s!.Value).OrderByDescending(s => s).ToList();
 
@@ -162,7 +167,8 @@ Usage examples:
             groupShape.Shapes.AddClone(shape);
         }
 
-        presentation.Save(path, SaveFormat.Pptx);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
         return await Task.FromResult($"Grouped {shapeIndices.Count} shapes on slide {slideIndex}");
     }
 
@@ -175,7 +181,7 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> UngroupShapesAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
@@ -199,7 +205,8 @@ Usage examples:
         
         slide.Shapes.Remove(groupShape);
 
-        presentation.Save(path, SaveFormat.Pptx);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
         return await Task.FromResult($"Ungrouped shape on slide {slideIndex}, shape {shapeIndex}");
     }
 
@@ -211,9 +218,9 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> CopyShapeAsync(JsonObject? arguments, string path)
     {
-        var fromSlide = ArgumentHelper.GetInt(arguments, "fromSlide", "fromSlide");
-        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
-        var toSlide = ArgumentHelper.GetInt(arguments, "toSlide", "toSlide");
+        var fromSlide = ArgumentHelper.GetInt(arguments, "fromSlide");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
+        var toSlide = ArgumentHelper.GetInt(arguments, "toSlide");
 
         using var presentation = new Presentation(path);
         if (fromSlide < 0 || fromSlide >= presentation.Slides.Count) throw new ArgumentException("fromSlide out of range");
@@ -225,8 +232,9 @@ Usage examples:
         var targetSlide = presentation.Slides[toSlide];
         targetSlide.Shapes.AddClone(sourceSlide.Shapes[shapeIndex]);
 
-        presentation.Save(path, SaveFormat.Pptx);
-        return await Task.FromResult($"已複製形狀 {shapeIndex} 從投影片 {fromSlide} 到 {toSlide}");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
+        return await Task.FromResult($"Shape {shapeIndex} copied from slide {fromSlide} to slide {toSlide}");
     }
 
     /// <summary>
@@ -238,8 +246,8 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> ReorderShapeAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
-        var toIndex = ArgumentHelper.GetInt(arguments, "toIndex", "toIndex");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
+        var toIndex = ArgumentHelper.GetInt(arguments, "toIndex");
 
         using var presentation = new Presentation(path);
         if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
@@ -257,8 +265,9 @@ Usage examples:
         var removeIndex = shapeIndex + (shapeIndex < toIndex ? 1 : 0);
         slide.Shapes.RemoveAt(removeIndex);
 
-        presentation.Save(path, SaveFormat.Pptx);
-        return await Task.FromResult($"已移動形狀 {shapeIndex} -> {toIndex}");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
+        return await Task.FromResult($"Shape moved: {shapeIndex} -> {toIndex}");
     }
 
     /// <summary>
@@ -270,10 +279,11 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> AlignShapesAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var alignStr = ArgumentHelper.GetString(arguments, "align", "align");
-        var shapeIndices = arguments?["shapeIndices"]?.AsArray()?.Select(x => x?.GetValue<int>() ?? -1).ToArray()
-                           ?? throw new ArgumentException("shapeIndices is required for align operation");
-        var alignToSlide = arguments?["alignToSlide"]?.GetValue<bool?>() ?? false;
+        var alignStr = ArgumentHelper.GetString(arguments, "align");
+        var shapeIndicesArray = ArgumentHelper.GetArray(arguments, "shapeIndices");
+
+        var shapeIndices = shapeIndicesArray.Select(x => x?.GetValue<int>() ?? -1).ToArray();
+        var alignToSlide = ArgumentHelper.GetBool(arguments, "alignToSlide", false);
 
         if (shapeIndices.Length < 2) throw new ArgumentException("shapeIndices must contain at least 2 items");
 
@@ -330,8 +340,9 @@ Usage examples:
             }
         }
 
-        presentation.Save(path, SaveFormat.Pptx);
-        return await Task.FromResult($"已對齊 {shapeIndices.Length} 個形狀：{alignStr}, alignToSlide={alignToSlide}");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
+        return await Task.FromResult($"Aligned {shapeIndices.Length} shapes: {alignStr}, alignToSlide={alignToSlide}");
     }
 
     /// <summary>
@@ -343,9 +354,9 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> FlipShapeAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
-        var flipHorizontal = arguments?["flipHorizontal"]?.GetValue<bool?>();
-        var flipVertical = arguments?["flipVertical"]?.GetValue<bool?>();
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
+        var flipHorizontal = ArgumentHelper.GetBoolNullable(arguments, "flipHorizontal");
+        var flipVertical = ArgumentHelper.GetBoolNullable(arguments, "flipVertical");
 
         if (!flipHorizontal.HasValue && !flipVertical.HasValue)
         {
@@ -368,7 +379,8 @@ Usage examples:
             // For now, we'll skip this as it requires more complex matrix operations
         }
 
-        presentation.Save(path, SaveFormat.Pptx);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
         return await Task.FromResult($"Shape flipped on slide {slideIndex}, shape {shapeIndex}");
     }
 }

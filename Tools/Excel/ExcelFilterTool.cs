@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Text;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
@@ -46,6 +46,11 @@ Usage examples:
             {
                 type = "string",
                 description = "Cell range to apply filter (e.g., 'A1:C10', required for apply/remove)"
+            },
+            outputPath = new
+            {
+                type = "string",
+                description = "Output file path (optional, for apply/remove operations, defaults to input path)"
             }
         },
         required = new[] { "operation", "path" }
@@ -53,9 +58,9 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var sheetIndex = arguments?["sheetIndex"]?.GetValue<int>() ?? 0;
+        var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
 
         return operation.ToLower() switch
         {
@@ -75,12 +80,14 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> ApplyFilterAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var range = ArgumentHelper.GetString(arguments, "range", "range");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var range = ArgumentHelper.GetString(arguments, "range");
 
         using var workbook = new Workbook(path);
         var worksheet = workbook.Worksheets[sheetIndex];
         var cells = worksheet.Cells;
-        var cellRange = cells.CreateRange(range);
+        
+        var cellRange = ExcelHelper.CreateRange(cells, range);
 
         // Set auto filter range
         // Try multiple methods to ensure filter is applied
@@ -119,9 +126,9 @@ Usage examples:
             }
         }
         
-        workbook.Save(path);
+        workbook.Save(outputPath);
 
-        return await Task.FromResult($"Auto filter applied to range {range} in sheet {sheetIndex}: {path}");
+        return await Task.FromResult($"Auto filter applied to range {range} in sheet {sheetIndex}: {outputPath}");
     }
 
     /// <summary>
@@ -133,7 +140,8 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> RemoveFilterAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var range = arguments?["range"]?.GetValue<string>();
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var range = ArgumentHelper.GetStringNullable(arguments, "range");
 
         using var workbook = new Workbook(path);
         var worksheet = workbook.Worksheets[sheetIndex];
@@ -141,7 +149,7 @@ Usage examples:
         if (!string.IsNullOrEmpty(range))
         {
             var cells = worksheet.Cells;
-            var cellRange = cells.CreateRange(range);
+            var cellRange = ExcelHelper.CreateRange(cells, range);
             worksheet.AutoFilter.Range = "";
         }
         else
@@ -149,8 +157,8 @@ Usage examples:
             worksheet.AutoFilter.Range = "";
         }
 
-        workbook.Save(path);
-        return await Task.FromResult($"Auto filter removed from sheet {sheetIndex}: {path}");
+        workbook.Save(outputPath);
+        return await Task.FromResult($"Auto filter removed from sheet {sheetIndex}: {outputPath}");
     }
 
     /// <summary>
@@ -167,7 +175,7 @@ Usage examples:
         var autoFilter = worksheet.AutoFilter;
         var result = new StringBuilder();
 
-        result.AppendLine($"=== 工作表 '{worksheet.Name}' 的自動篩選狀態 ===\n");
+        result.AppendLine($"=== Auto filter status for worksheet '{worksheet.Name}' ===\n");
 
         // Check if auto filter is enabled
         // Check multiple indicators to determine filter status
@@ -194,7 +202,7 @@ Usage examples:
             if (string.IsNullOrEmpty(filterRange))
             {
                 // Filter columns exist but Range is empty - filter might still be enabled
-                filterRange = "未指定範圍";
+                filterRange = "Range not specified";
             }
         }
         
@@ -204,33 +212,33 @@ Usage examples:
         
         if (!isFilterEnabled)
         {
-            result.AppendLine("狀態: 未啟用自動篩選");
+            result.AppendLine("Status: Auto filter not enabled");
         }
         else
         {
-            result.AppendLine("狀態: 已啟用自動篩選");
-            if (!string.IsNullOrEmpty(filterRange) && filterRange != "未指定範圍")
+            result.AppendLine("Status: Auto filter enabled");
+            if (!string.IsNullOrEmpty(filterRange) && filterRange != "Range not specified")
             {
-                result.AppendLine($"篩選範圍: {filterRange}");
+                result.AppendLine($"Filter range: {filterRange}");
             }
             else if (filterColumns != null && filterColumns.Count > 0)
             {
-                result.AppendLine($"篩選範圍: 未指定（但檢測到 {filterColumns.Count} 個篩選列）");
+                result.AppendLine($"Filter range: Not specified (but detected {filterColumns.Count} filter columns)");
             }
             
             if (filterColumns != null && filterColumns.Count > 0)
             {
-                result.AppendLine($"篩選列數: {filterColumns.Count}");
+                result.AppendLine($"Filter columns count: {filterColumns.Count}");
                 for (int i = 0; i < filterColumns.Count; i++)
                 {
                     try
                     {
                         var filterColumn = filterColumns[i];
-                        result.AppendLine($"  列 {i}: 已應用篩選");
+                        result.AppendLine($"  Column {i}: Filter applied");
                     }
                     catch
                     {
-                        result.AppendLine($"  列 {i}: 無法讀取篩選資訊");
+                        result.AppendLine($"  Column {i}: Unable to read filter information");
                     }
                 }
             }

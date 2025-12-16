@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Text;
 using Aspose.Cells;
 using Aspose.Cells.Charts;
@@ -48,7 +48,7 @@ Usage examples:
             outputPath = new
             {
                 type = "string",
-                description = "Output file path (optional, for edit/update_data operations, defaults to input path)"
+                description = "Output file path (optional, for add/edit/delete/update_data/set_properties operations, defaults to input path)"
             },
             sheetIndex = new
             {
@@ -64,7 +64,8 @@ Usage examples:
             chartType = new
             {
                 type = "string",
-                description = "Chart type (Column, Bar, Line, Pie, etc., required for add)"
+                description = "Chart type: Column, Bar, Line, Pie, Area, Scatter, Doughnut, Radar, Bubble, Cylinder, Cone, Pyramid (required for add)",
+                @enum = new[] { "Column", "Bar", "Line", "Pie", "Area", "Scatter", "Doughnut", "Radar", "Bubble", "Cylinder", "Cone", "Pyramid" }
             },
             dataRange = new
             {
@@ -129,14 +130,14 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = arguments?["outputPath"]?.GetValue<string>();
+        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath");
         if (!string.IsNullOrEmpty(outputPath))
         {
             SecurityHelper.ValidateFilePath(outputPath, "outputPath");
         }
-        var sheetIndex = arguments?["sheetIndex"]?.GetValue<int>() ?? 0;
+        var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
 
         return operation.ToLower() switch
         {
@@ -159,14 +160,14 @@ Usage examples:
     /// <returns>Success message with chart index</returns>
     private async Task<string> AddChartAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var chartTypeStr = ArgumentHelper.GetString(arguments, "chartType", "chartType");
-        var dataRange = ArgumentHelper.GetString(arguments, "dataRange", "dataRange");
-        var categoryAxisDataRange = arguments?["categoryAxisDataRange"]?.GetValue<string>();
-        var title = arguments?["title"]?.GetValue<string>();
-        var topRow = arguments?["topRow"]?.GetValue<int>();
-        var leftColumn = arguments?["leftColumn"]?.GetValue<int>() ?? 0;
-        var width = arguments?["width"]?.GetValue<int>() ?? 10;
-        var height = arguments?["height"]?.GetValue<int>() ?? 15;
+        var chartTypeStr = ArgumentHelper.GetString(arguments, "chartType");
+        var dataRange = ArgumentHelper.GetString(arguments, "dataRange");
+        var categoryAxisDataRange = ArgumentHelper.GetStringNullable(arguments, "categoryAxisDataRange");
+        var title = ArgumentHelper.GetStringNullable(arguments, "title");
+        var topRow = ArgumentHelper.GetIntNullable(arguments, "topRow");
+        var leftColumn = ArgumentHelper.GetInt(arguments, "leftColumn", 0);
+        var width = ArgumentHelper.GetInt(arguments, "width", 10);
+        var height = ArgumentHelper.GetInt(arguments, "height", 15);
 
         using var workbook = new Workbook(path);
         var worksheet = workbook.Worksheets[sheetIndex];
@@ -180,6 +181,11 @@ Usage examples:
             "area" => ChartType.Area,
             "scatter" => ChartType.Scatter,
             "doughnut" => ChartType.Doughnut,
+            "radar" => ChartType.Radar,
+            "bubble" => ChartType.Bubble,
+            "cylinder" => ChartType.Cylinder,
+            "cone" => ChartType.Cone,
+            "pyramid" => ChartType.Pyramid,
             _ => ChartType.Column
         };
 
@@ -190,7 +196,7 @@ Usage examples:
         }
         else
         {
-            var dataRangeObj = worksheet.Cells.CreateRange(dataRange.Split(',')[0].Trim());
+            var dataRangeObj = ExcelHelper.CreateRange(worksheet.Cells, dataRange.Split(',')[0].Trim());
             chartTopRow = dataRangeObj.FirstRow + dataRangeObj.RowCount + 2;
         }
 
@@ -202,6 +208,26 @@ Usage examples:
         
         // Parse data range - support multiple ranges separated by comma (e.g., "E2:E40,G2:G40")
         var ranges = dataRange.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        
+        // Validate data range and category axis data range length match
+        string? warningMessage = null;
+        if (!string.IsNullOrEmpty(categoryAxisDataRange))
+        {
+            try
+            {
+                var dataRangeObj = ExcelHelper.CreateRange(worksheet.Cells, ranges[0]);
+                var categoryRangeObj = ExcelHelper.CreateRange(worksheet.Cells, categoryAxisDataRange);
+                
+                if (dataRangeObj.RowCount != categoryRangeObj.RowCount)
+                {
+                    warningMessage = $"\n⚠️ Warning: Data range length ({dataRangeObj.RowCount} cells) does not match category axis length ({categoryRangeObj.RowCount} cells). Chart may display incorrectly.";
+                }
+            }
+            catch
+            {
+                // Ignore validation errors, will be caught later
+            }
+        }
         
         // Add data series (Y-axis values) first
         foreach (var range in ranges)
@@ -267,9 +293,20 @@ Usage examples:
         }
 
         workbook.CalculateFormula();
-        workbook.Save(path);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        workbook.Save(outputPath);
 
-        return await Task.FromResult($"Chart added to worksheet with data range: {dataRange}");
+        var result = $"Chart added to worksheet with data range: {dataRange}";
+        if (!string.IsNullOrEmpty(categoryAxisDataRange))
+        {
+            result += $", X-axis: {categoryAxisDataRange}";
+        }
+        result += $"\nOutput: {outputPath}";
+        if (!string.IsNullOrEmpty(warningMessage))
+        {
+            result += warningMessage;
+        }
+        return await Task.FromResult(result);
     }
 
     /// <summary>
@@ -282,13 +319,13 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> EditChartAsync(JsonObject? arguments, string path, string outputPath, int sheetIndex)
     {
-        var chartIndex = ArgumentHelper.GetInt(arguments, "chartIndex", "chartIndex");
-        var title = arguments?["title"]?.GetValue<string>();
-        var dataRange = arguments?["dataRange"]?.GetValue<string>();
-        var categoryAxisDataRange = arguments?["categoryAxisDataRange"]?.GetValue<string>();
-        var chartTypeStr = arguments?["chartType"]?.GetValue<string>();
-        var showLegend = arguments?["showLegend"]?.GetValue<bool?>();
-        var legendPosition = arguments?["legendPosition"]?.GetValue<string>();
+        var chartIndex = ArgumentHelper.GetInt(arguments, "chartIndex");
+        var title = ArgumentHelper.GetStringNullable(arguments, "title");
+        var dataRange = ArgumentHelper.GetStringNullable(arguments, "dataRange");
+        var categoryAxisDataRange = ArgumentHelper.GetStringNullable(arguments, "categoryAxisDataRange");
+        var chartTypeStr = ArgumentHelper.GetStringNullable(arguments, "chartType");
+        var showLegend = ArgumentHelper.GetBoolNullable(arguments, "showLegend");
+        var legendPosition = ArgumentHelper.GetStringNullable(arguments, "legendPosition");
 
         using var workbook = new Workbook(path);
         
@@ -297,7 +334,7 @@ Usage examples:
         
         if (chartIndex < 0 || chartIndex >= charts.Count)
         {
-            throw new ArgumentException($"圖表索引 {chartIndex} 超出範圍 (工作表共有 {charts.Count} 個圖表)");
+            throw new ArgumentException($"Chart index {chartIndex} is out of range (worksheet has {charts.Count} charts)");
         }
 
         var chart = charts[chartIndex];
@@ -306,7 +343,7 @@ Usage examples:
         if (!string.IsNullOrEmpty(title))
         {
             chart.Title.Text = title;
-            changes.Add($"標題: {title}");
+            changes.Add($"Title: {title}");
         }
 
         if (!string.IsNullOrEmpty(dataRange))
@@ -378,9 +415,9 @@ Usage examples:
             var rangeInfo = dataRange;
             if (!string.IsNullOrEmpty(categoryAxisDataRange))
             {
-                rangeInfo += $", X軸: {categoryAxisDataRange}";
+                rangeInfo += $", X-axis: {categoryAxisDataRange}";
             }
-            changes.Add($"數據範圍: {rangeInfo}");
+            changes.Add($"Data range: {rangeInfo}");
         }
 
         if (!string.IsNullOrEmpty(chartTypeStr))
@@ -394,10 +431,15 @@ Usage examples:
                 "area" => ChartType.Area,
                 "scatter" => ChartType.Scatter,
                 "doughnut" => ChartType.Doughnut,
+                "radar" => ChartType.Radar,
+                "bubble" => ChartType.Bubble,
+                "cylinder" => ChartType.Cylinder,
+                "cone" => ChartType.Cone,
+                "pyramid" => ChartType.Pyramid,
                 _ => chart.Type
             };
             chart.Type = chartType;
-            changes.Add($"圖表類型: {chartTypeStr}");
+            changes.Add($"Chart type: {chartTypeStr}");
         }
 
         if (showLegend.HasValue)
@@ -410,7 +452,7 @@ Usage examples:
             {
                 chart.ShowLegend = false;
             }
-            changes.Add($"圖例: {(showLegend.Value ? "顯示" : "隱藏")}");
+            changes.Add($"Legend: {(showLegend.Value ? "show" : "hide")}");
         }
 
         if (!string.IsNullOrEmpty(legendPosition) && chart.Legend != null)
@@ -424,15 +466,15 @@ Usage examples:
                 _ => chart.Legend.Position
             };
             chart.Legend.Position = position;
-            changes.Add($"圖例位置: {legendPosition}");
+            changes.Add($"Legend position: {legendPosition}");
         }
 
         workbook.Save(outputPath);
 
-        var result = $"成功編輯圖表 #{chartIndex}\n";
+        var result = $"Successfully edited chart #{chartIndex}\n";
         if (changes.Count > 0)
         {
-            result += "變更:\n";
+            result += "Changes:\n";
             foreach (var change in changes)
             {
                 result += $"  - {change}\n";
@@ -440,9 +482,9 @@ Usage examples:
         }
         else
         {
-            result += "無變更。\n";
+            result += "No changes.\n";
         }
-        result += $"輸出: {outputPath}";
+        result += $"Output: {outputPath}";
 
         return await Task.FromResult(result);
     }
@@ -456,7 +498,7 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> DeleteChartAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var chartIndex = ArgumentHelper.GetInt(arguments, "chartIndex", "chartIndex");
+        var chartIndex = ArgumentHelper.GetInt(arguments, "chartIndex");
 
         using var workbook = new Workbook(path);
         
@@ -465,18 +507,19 @@ Usage examples:
         
         if (chartIndex < 0 || chartIndex >= charts.Count)
         {
-            throw new ArgumentException($"圖表索引 {chartIndex} 超出範圍 (工作表共有 {charts.Count} 個圖表)");
+            throw new ArgumentException($"Chart index {chartIndex} is out of range (worksheet has {charts.Count} charts)");
         }
 
         var chart = charts[chartIndex];
-        var chartName = chart.Name ?? $"圖表 {chartIndex}";
+        var chartName = chart.Name ?? $"Chart {chartIndex}";
         
         charts.RemoveAt(chartIndex);
-        workbook.Save(path);
-        
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        workbook.Save(outputPath);
+
         var remainingCount = charts.Count;
         
-        return await Task.FromResult($"成功刪除圖表 #{chartIndex} ({chartName})\n工作表剩餘圖表數: {remainingCount}\n輸出: {path}");
+        return await Task.FromResult($"Successfully deleted chart #{chartIndex} ({chartName})\nRemaining charts in worksheet: {remainingCount}\nOutput: {outputPath}");
     }
 
     /// <summary>
@@ -494,38 +537,38 @@ Usage examples:
         var charts = worksheet.Charts;
         var result = new StringBuilder();
 
-        result.AppendLine($"=== 工作表 '{worksheet.Name}' 的圖表資訊 ===\n");
-        result.AppendLine($"總圖表數: {charts.Count}\n");
+        result.AppendLine($"=== Chart information for worksheet '{worksheet.Name}' ===\n");
+        result.AppendLine($"Total charts: {charts.Count}\n");
 
         if (charts.Count == 0)
         {
-            result.AppendLine("未找到圖表");
+            result.AppendLine("No charts found");
             return await Task.FromResult(result.ToString());
         }
 
         for (int i = 0; i < charts.Count; i++)
         {
             var chart = charts[i];
-            result.AppendLine($"【圖表 {i}】");
-            result.AppendLine($"名稱: {chart.Name ?? "(無名稱)"}");
-            result.AppendLine($"類型: {chart.Type}");
-            result.AppendLine($"位置: 行 {chart.ChartObject.UpperLeftRow} - {chart.ChartObject.LowerRightRow}, 列 {chart.ChartObject.UpperLeftColumn} - {chart.ChartObject.LowerRightColumn}");
-            result.AppendLine($"寬度: {chart.ChartObject.Width}");
-            result.AppendLine($"高度: {chart.ChartObject.Height}");
+            result.AppendLine($"[Chart {i}]");
+            result.AppendLine($"Name: {chart.Name ?? "(no name)"}");
+            result.AppendLine($"Type: {chart.Type}");
+            result.AppendLine($"Location: rows {chart.ChartObject.UpperLeftRow} - {chart.ChartObject.LowerRightRow}, columns {chart.ChartObject.UpperLeftColumn} - {chart.ChartObject.LowerRightColumn}");
+            result.AppendLine($"Width: {chart.ChartObject.Width}");
+            result.AppendLine($"Height: {chart.ChartObject.Height}");
             
             if (chart.NSeries != null && chart.NSeries.Count > 0)
             {
-                result.AppendLine($"數據系列數: {chart.NSeries.Count}");
+                result.AppendLine($"Data series count: {chart.NSeries.Count}");
                 for (int j = 0; j < chart.NSeries.Count && j < 5; j++)
                 {
                     var series = chart.NSeries[j];
-                    var seriesName = series.Name ?? "(無名稱)";
+                    var seriesName = series.Name ?? "(no name)";
                     var valuesRange = series.Values ?? "";
                     
-                    result.AppendLine($"  系列 {j}: {seriesName}");
+                    result.AppendLine($"  Series {j}: {seriesName}");
                     if (!string.IsNullOrEmpty(valuesRange))
                     {
-                        result.AppendLine($"    數據範圍 (Y軸): {valuesRange}");
+                        result.AppendLine($"    Data range (Y-axis): {valuesRange}");
                     }
                     
                     string? categoryData = null;
@@ -579,19 +622,19 @@ Usage examples:
                     
                     if (!string.IsNullOrEmpty(categoryData))
                     {
-                        result.AppendLine($"    X軸數據: {categoryData}");
+                        result.AppendLine($"    X-axis data: {categoryData}");
                     }
                 }
             }
             
             if (chart.Title != null)
             {
-                result.AppendLine($"標題: {chart.Title.Text}");
+                result.AppendLine($"Title: {chart.Title.Text}");
             }
             
             if (chart.Legend != null)
             {
-                result.AppendLine($"圖例: 已啟用");
+                result.AppendLine($"Legend: enabled");
             }
             result.AppendLine();
         }
@@ -609,8 +652,8 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> UpdateChartDataAsync(JsonObject? arguments, string path, string outputPath, int sheetIndex)
     {
-        var chartIndex = ArgumentHelper.GetInt(arguments, "chartIndex", "chartIndex");
-        var dataRange = ArgumentHelper.GetString(arguments, "dataRange", "dataRange");
+        var chartIndex = ArgumentHelper.GetInt(arguments, "chartIndex");
+        var dataRange = ArgumentHelper.GetString(arguments, "dataRange");
 
         using var workbook = new Workbook(path);
         
@@ -619,7 +662,7 @@ Usage examples:
         
         if (chartIndex < 0 || chartIndex >= charts.Count)
         {
-            throw new ArgumentException($"圖表索引 {chartIndex} 超出範圍 (工作表共有 {charts.Count} 個圖表)");
+            throw new ArgumentException($"Chart index {chartIndex} is out of range (worksheet has {charts.Count} charts)");
         }
 
         var chart = charts[chartIndex];
@@ -642,7 +685,7 @@ Usage examples:
 
         workbook.Save(outputPath);
 
-        return await Task.FromResult($"成功更新圖表 #{chartIndex} 的數據源\n新數據範圍: {dataRange}\n輸出: {outputPath}");
+        return await Task.FromResult($"Successfully updated data source for chart #{chartIndex}\nNew data range: {dataRange}\nOutput: {outputPath}");
     }
 
     /// <summary>
@@ -655,15 +698,15 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> SetChartPropertiesAsync(JsonObject? arguments, string path, string outputPath, int sheetIndex)
     {
-        var chartIndex = ArgumentHelper.GetInt(arguments, "chartIndex", "chartIndex");
-        var title = arguments?["title"]?.GetValue<string>();
-        var removeTitle = arguments?["removeTitle"]?.GetValue<bool?>() ?? false;
-        var legendVisible = arguments?["legendVisible"]?.GetValue<bool?>();
-        var legendPosition = arguments?["legendPosition"]?.GetValue<string>();
+        var chartIndex = ArgumentHelper.GetInt(arguments, "chartIndex");
+        var title = ArgumentHelper.GetStringNullable(arguments, "title");
+        var removeTitle = ArgumentHelper.GetBool(arguments, "removeTitle", false);
+        var legendVisible = ArgumentHelper.GetBoolNullable(arguments, "legendVisible");
+        var legendPosition = ArgumentHelper.GetStringNullable(arguments, "legendPosition");
 
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        PowerPointHelper.ValidateCollectionIndex(chartIndex, worksheet.Charts, "圖表");
+        PowerPointHelper.ValidateCollectionIndex(chartIndex, worksheet.Charts, "chart");
 
         var chart = worksheet.Charts[chartIndex];
         var changes = new List<string>();
@@ -672,19 +715,19 @@ Usage examples:
         if (removeTitle)
         {
             chart.Title.Text = "";
-            changes.Add("標題已移除");
+            changes.Add("Title removed");
         }
         else if (!string.IsNullOrEmpty(title))
         {
             chart.Title.Text = title;
-            changes.Add($"標題: {title}");
+            changes.Add($"Title: {title}");
         }
 
         // Handle legend visibility
         if (legendVisible.HasValue)
         {
             chart.ShowLegend = legendVisible.Value;
-            changes.Add($"圖例: {(legendVisible.Value ? "顯示" : "隱藏")}");
+            changes.Add($"Legend: {(legendVisible.Value ? "show" : "hide")}");
         }
 
         // Handle legend position
@@ -700,14 +743,14 @@ Usage examples:
                 _ => chart.Legend.Position
             };
             chart.Legend.Position = position;
-            changes.Add($"圖例位置: {legendPosition}");
+            changes.Add($"Legend position: {legendPosition}");
         }
 
         workbook.Save(outputPath);
         
         var result = changes.Count > 0 
-            ? $"圖表屬性已更新: {string.Join(", ", changes)}\n輸出: {outputPath}"
-            : $"無變更\n輸出: {outputPath}";
+            ? $"Chart properties updated: {string.Join(", ", changes)}\nOutput: {outputPath}"
+            : $"No changes\nOutput: {outputPath}";
         
         return await Task.FromResult(result);
     }

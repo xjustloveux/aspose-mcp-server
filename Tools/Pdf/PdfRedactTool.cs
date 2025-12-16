@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
 using Aspose.Pdf.Text;
@@ -53,6 +53,11 @@ Usage examples:
             {
                 type = "string",
                 description = "Fill color (optional, default: black, format: 'R,G,B' or color name)"
+            },
+            outputPath = new
+            {
+                type = "string",
+                description = "Output file path (optional, defaults to input path)"
             }
         },
         required = new[] { "path", "pageIndex", "x", "y", "width", "height" }
@@ -61,12 +66,12 @@ Usage examples:
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex", "pageIndex");
-        var x = ArgumentHelper.GetDouble(arguments, "x", "x");
-        var y = ArgumentHelper.GetDouble(arguments, "y", "y");
-        var width = ArgumentHelper.GetDouble(arguments, "width", "width");
-        var height = ArgumentHelper.GetDouble(arguments, "height", "height");
-        var fillColor = arguments?["fillColor"]?.GetValue<string>();
+        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
+        var x = ArgumentHelper.GetDouble(arguments, "x");
+        var y = ArgumentHelper.GetDouble(arguments, "y");
+        var width = ArgumentHelper.GetDouble(arguments, "width");
+        var height = ArgumentHelper.GetDouble(arguments, "height");
+        var fillColor = ArgumentHelper.GetStringNullable(arguments, "fillColor");
 
         using var document = new Document(path);
         if (pageIndex < 1 || pageIndex > document.Pages.Count)
@@ -101,9 +106,10 @@ Usage examples:
         page.Annotations.Add(redactionAnnotation);
         // The annotation is added and will be visible
         
-        document.Save(path);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        document.Save(outputPath);
 
-        return await Task.FromResult($"Redaction applied to page {pageIndex}: {path}");
+        return await Task.FromResult($"Redaction applied to page {pageIndex}: {outputPath}");
     }
 }
 

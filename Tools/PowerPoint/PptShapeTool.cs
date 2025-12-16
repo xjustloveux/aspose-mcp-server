@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Text;
 using Aspose.Slides;
 using Aspose.Slides.Charts;
@@ -86,6 +86,11 @@ Usage examples:
             {
                 type = "boolean",
                 description = "Flip vertically (optional, for edit)"
+            },
+            outputPath = new
+            {
+                type = "string",
+                description = "Output file path (optional, for add/edit/delete operations, defaults to input path)"
             }
         },
         required = new[] { "operation", "path", "slideIndex" }
@@ -93,9 +98,9 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
 
         return operation.ToLower() switch
         {
@@ -116,14 +121,14 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> EditShapeAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
-        var x = arguments?["x"]?.GetValue<float?>();
-        var y = arguments?["y"]?.GetValue<float?>();
-        var width = arguments?["width"]?.GetValue<float?>();
-        var height = arguments?["height"]?.GetValue<float?>();
-        var rotation = arguments?["rotation"]?.GetValue<float?>();
-        var flipHorizontal = arguments?["flipHorizontal"]?.GetValue<bool?>();
-        var flipVertical = arguments?["flipVertical"]?.GetValue<bool?>();
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
+        var x = ArgumentHelper.GetFloatNullable(arguments, "x");
+        var y = ArgumentHelper.GetFloatNullable(arguments, "y");
+        var width = ArgumentHelper.GetFloatNullable(arguments, "width");
+        var height = ArgumentHelper.GetFloatNullable(arguments, "height");
+        var rotation = ArgumentHelper.GetFloatNullable(arguments, "rotation");
+        var flipHorizontal = ArgumentHelper.GetBoolNullable(arguments, "flipHorizontal");
+        var flipVertical = ArgumentHelper.GetBoolNullable(arguments, "flipVertical");
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
@@ -170,9 +175,10 @@ Usage examples:
             changes.Add($"FlipVertical: {flipVertical.Value} (applied)");
         }
 
-        presentation.Save(path, SaveFormat.Pptx);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
 
-        return await Task.FromResult($"Shape {shapeIndex} edited: {string.Join(", ", changes)} - {path}");
+        return await Task.FromResult($"Shape {shapeIndex} edited: {string.Join(", ", changes)} - {outputPath}");
     }
 
     /// <summary>
@@ -184,7 +190,7 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> DeleteShapeAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
 
         using var presentation = new Presentation(path);
         if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
@@ -199,8 +205,9 @@ Usage examples:
         }
 
         slide.Shapes.RemoveAt(shapeIndex);
-        presentation.Save(path, SaveFormat.Pptx);
-        return await Task.FromResult($"已刪除投影片 {slideIndex} 的形狀 {shapeIndex}");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
+        return await Task.FromResult($"Shape {shapeIndex} deleted from slide {slideIndex}");
     }
 
     /// <summary>
@@ -254,7 +261,7 @@ Usage examples:
     /// <returns>Formatted string with shape details</returns>
     private async Task<string> GetShapeDetailsAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);

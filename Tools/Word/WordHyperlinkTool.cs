@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using Aspose.Words;
 using Aspose.Words.Fields;
 using AsposeMcpServer.Core;
@@ -80,7 +80,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         return operation.ToLower() switch
@@ -102,10 +102,10 @@ Usage examples:
     private async Task<string> AddHyperlinkAsync(JsonObject? arguments, string path)
     {
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var text = ArgumentHelper.GetString(arguments, "text", "text");
-        var url = ArgumentHelper.GetString(arguments, "url", "url");
-        var paragraphIndex = arguments?["paragraphIndex"]?.GetValue<int?>();
-        var tooltip = arguments?["tooltip"]?.GetValue<string>();
+        var text = ArgumentHelper.GetString(arguments, "text");
+        var url = ArgumentHelper.GetString(arguments, "url");
+        var paragraphIndex = ArgumentHelper.GetIntNullable(arguments, "paragraphIndex");
+        var tooltip = ArgumentHelper.GetStringNullable(arguments, "tooltip");
 
         var doc = new Document(path);
         var builder = new DocumentBuilder(doc);
@@ -153,17 +153,17 @@ Usage examples:
                     }
                     else
                     {
-                        throw new InvalidOperationException($"無法找到索引 {paragraphIndex.Value} 的段落的父節點");
+                        throw new InvalidOperationException($"Unable to find parent node of paragraph at index {paragraphIndex.Value}");
                     }
                 }
                 else
                 {
-                    throw new InvalidOperationException($"無法找到索引 {paragraphIndex.Value} 的段落");
+                    throw new InvalidOperationException($"Unable to find paragraph at index {paragraphIndex.Value}");
                 }
             }
             else
             {
-                throw new ArgumentException($"段落索引 {paragraphIndex.Value} 超出範圍 (文檔共有 {paragraphs.Count} 個段落)");
+                throw new ArgumentException($"Paragraph index {paragraphIndex.Value} is out of range (document has {paragraphs.Count} paragraphs)");
             }
         }
         else
@@ -192,29 +192,29 @@ Usage examples:
         
         doc.Save(outputPath);
         
-        var result = $"成功添加超連結\n";
-        result += $"顯示文字: {text}\n";
+        var result = $"Hyperlink added successfully\n";
+        result += $"Display text: {text}\n";
         result += $"URL: {url}\n";
         if (!string.IsNullOrEmpty(tooltip))
         {
-            result += $"提示文字: {tooltip}\n";
+            result += $"Tooltip: {tooltip}\n";
         }
         if (paragraphIndex.HasValue)
         {
             if (paragraphIndex.Value == -1)
             {
-                result += "插入位置: 文檔開頭\n";
+                result += "Insert position: beginning of document\n";
             }
             else
             {
-                result += $"插入位置: 段落 #{paragraphIndex.Value} 之後\n";
+                result += $"Insert position: after paragraph #{paragraphIndex.Value}\n";
             }
         }
         else
         {
-            result += "插入位置: 文檔末尾\n";
+            result += "Insert position: end of document\n";
         }
-        result += $"輸出: {outputPath}";
+        result += $"Output: {outputPath}";
         
         return await Task.FromResult(result);
     }
@@ -228,10 +228,10 @@ Usage examples:
     private async Task<string> EditHyperlinkAsync(JsonObject? arguments, string path)
     {
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var hyperlinkIndex = ArgumentHelper.GetInt(arguments, "hyperlinkIndex", "hyperlinkIndex");
-        var url = arguments?["url"]?.GetValue<string>();
-        var displayText = arguments?["displayText"]?.GetValue<string>();
-        var tooltip = arguments?["tooltip"]?.GetValue<string>();
+        var hyperlinkIndex = ArgumentHelper.GetInt(arguments, "hyperlinkIndex");
+        var url = ArgumentHelper.GetStringNullable(arguments, "url");
+        var displayText = ArgumentHelper.GetStringNullable(arguments, "displayText");
+        var tooltip = ArgumentHelper.GetStringNullable(arguments, "tooltip");
 
         var doc = new Document(path);
         
@@ -248,9 +248,9 @@ Usage examples:
         if (hyperlinkIndex < 0 || hyperlinkIndex >= hyperlinkFields.Count)
         {
             var availableInfo = hyperlinkFields.Count > 0 
-                ? $" (有效索引: 0-{hyperlinkFields.Count - 1})"
-                : " (文檔中沒有超連結)";
-            throw new ArgumentException($"超連結索引 {hyperlinkIndex} 超出範圍 (文檔共有 {hyperlinkFields.Count} 個超連結){availableInfo}。請使用 get 操作查看所有可用超連結");
+                ? $" (valid index: 0-{hyperlinkFields.Count - 1})"
+                : " (document has no hyperlinks)";
+            throw new ArgumentException($"Hyperlink index {hyperlinkIndex} is out of range (document has {hyperlinkFields.Count} hyperlinks){availableInfo}. Use get operation to view all available hyperlinks");
         }
         
         var hyperlinkField = hyperlinkFields[hyperlinkIndex];
@@ -267,14 +267,14 @@ Usage examples:
         if (!string.IsNullOrEmpty(displayText))
         {
             hyperlinkField.Result = displayText;
-            changes.Add($"顯示文字: {displayText}");
+            changes.Add($"Display text: {displayText}");
         }
         
         // Update tooltip if provided
         if (!string.IsNullOrEmpty(tooltip))
         {
             hyperlinkField.ScreenTip = tooltip;
-            changes.Add($"提示文字: {tooltip}");
+            changes.Add($"Tooltip: {tooltip}");
         }
         
         // Update the field
@@ -282,16 +282,16 @@ Usage examples:
         
         doc.Save(outputPath);
         
-        var result = $"成功編輯超連結 #{hyperlinkIndex}\n";
+        var result = $"Hyperlink #{hyperlinkIndex} edited successfully\n";
         if (changes.Count > 0)
         {
-            result += $"變更內容: {string.Join("、", changes)}\n";
+            result += $"Changes: {string.Join(", ", changes)}\n";
         }
         else
         {
-            result += "未提供變更參數\n";
+            result += "No change parameters provided\n";
         }
-        result += $"輸出: {outputPath}";
+        result += $"Output: {outputPath}";
         
         return await Task.FromResult(result);
     }
@@ -305,7 +305,7 @@ Usage examples:
     private async Task<string> DeleteHyperlinkAsync(JsonObject? arguments, string path)
     {
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var hyperlinkIndex = ArgumentHelper.GetInt(arguments, "hyperlinkIndex", "hyperlinkIndex");
+        var hyperlinkIndex = ArgumentHelper.GetInt(arguments, "hyperlinkIndex");
 
         var doc = new Document(path);
         
@@ -322,9 +322,9 @@ Usage examples:
         if (hyperlinkIndex < 0 || hyperlinkIndex >= hyperlinkFields.Count)
         {
             var availableInfo = hyperlinkFields.Count > 0 
-                ? $" (有效索引: 0-{hyperlinkFields.Count - 1})"
-                : " (文檔中沒有超連結)";
-            throw new ArgumentException($"超連結索引 {hyperlinkIndex} 超出範圍 (文檔共有 {hyperlinkFields.Count} 個超連結){availableInfo}。請使用 get 操作查看所有可用超連結");
+                ? $" (valid index: 0-{hyperlinkFields.Count - 1})"
+                : " (document has no hyperlinks)";
+            throw new ArgumentException($"Hyperlink index {hyperlinkIndex} is out of range (document has {hyperlinkFields.Count} hyperlinks){availableInfo}. Use get operation to view all available hyperlinks");
         }
         
         var hyperlinkField = hyperlinkFields[hyperlinkIndex];
@@ -353,7 +353,7 @@ Usage examples:
             }
             catch
             {
-                throw new InvalidOperationException("無法刪除超連結，請檢查文檔結構");
+                throw new InvalidOperationException("Unable to delete hyperlink, please check document structure");
             }
         }
         
@@ -369,11 +369,11 @@ Usage examples:
             }
         }
         
-        var result = $"成功刪除超連結 #{hyperlinkIndex}\n";
-        result += $"顯示文字: {displayText}\n";
-        result += $"地址: {address}\n";
-        result += $"文檔剩餘超連結數: {remainingCount}\n";
-        result += $"輸出: {outputPath}";
+        var result = $"Hyperlink #{hyperlinkIndex} deleted successfully\n";
+        result += $"Display text: {displayText}\n";
+        result += $"Address: {address}\n";
+        result += $"Remaining hyperlinks in document: {remainingCount}\n";
+        result += $"Output: {outputPath}";
         
         return await Task.FromResult(result);
     }
@@ -418,21 +418,21 @@ Usage examples:
         
         if (hyperlinks.Count == 0)
         {
-            return await Task.FromResult("文檔中沒有找到超連結");
+            return await Task.FromResult("No hyperlinks found in document");
         }
         
         var result = new System.Text.StringBuilder();
-        result.AppendLine($"找到 {hyperlinks.Count} 個超連結：\n");
+        result.AppendLine($"Found {hyperlinks.Count} hyperlinks:\n");
         
         for (int i = 0; i < hyperlinks.Count; i++)
         {
             var (idx, displayText, address, tooltip) = hyperlinks[i];
-            result.AppendLine($"超連結 #{idx}:");
-            result.AppendLine($"  顯示文字: {displayText}");
-            result.AppendLine($"  地址: {address}");
+            result.AppendLine($"Hyperlink #{idx}:");
+            result.AppendLine($"  Display text: {displayText}");
+            result.AppendLine($"  Address: {address}");
             if (!string.IsNullOrEmpty(tooltip))
             {
-                result.AppendLine($"  提示文字: {tooltip}");
+                result.AppendLine($"  Tooltip: {tooltip}");
             }
             result.AppendLine();
         }

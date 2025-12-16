@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Text;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
@@ -38,7 +38,7 @@ Usage examples:
 - 'clear': Clear range (required params: path, range)
 - 'copy': Copy range (required params: path, sourceRange, destCell)
 - 'move': Move range (required params: path, sourceRange, destCell)
-- 'copy_format': Copy format only (required params: path, range, destRange or destCell)",
+- 'copy_format': Copy format only (required params: path, range or sourceRange, destRange or destCell)",
                 @enum = new[] { "write", "edit", "get", "clear", "copy", "move", "copy_format" }
             },
             path = new
@@ -69,12 +69,12 @@ Usage examples:
             range = new
             {
                 type = "string",
-                description = "Source cell range (e.g., 'A1:C5', required for edit/get/clear/copy_format operations)"
+                description = "Source cell range (e.g., 'A1:C5', required for edit/get/clear operations, optional for copy_format - can use sourceRange instead)"
             },
             sourceRange = new
             {
                 type = "string",
-                description = "Source range (e.g., 'A1:C5', required for copy/move)"
+                description = "Source range (e.g., 'A1:C5', required for copy/move, optional for copy_format as alternative to range)"
             },
             destCell = new
             {
@@ -114,7 +114,7 @@ Usage examples:
             clearContent = new
             {
                 type = "boolean",
-                description = "Clear cell content (optional, for clear, default: true)"
+                description = "Clear cell content (required for clear operation, default: true). Set clearContent=true to clear cell content, or clearContent=false to keep content."
             },
             clearFormat = new
             {
@@ -131,6 +131,11 @@ Usage examples:
             {
                 type = "boolean",
                 description = "Copy cell values as well (optional, for copy_format, default: false)"
+            },
+            outputPath = new
+            {
+                type = "string",
+                description = "Output file path (optional, for write/edit/clear/copy/move/copy_format operations, defaults to input path)"
             }
         },
         required = new[] { "operation", "path" }
@@ -138,9 +143,9 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var sheetIndex = arguments?["sheetIndex"]?.GetValue<int>() ?? 0;
+        var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
 
         return operation.ToLower() switch
         {
@@ -164,8 +169,8 @@ Usage examples:
     /// <returns>Success message with range location</returns>
     private async Task<string> WriteRangeAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var startCell = ArgumentHelper.GetString(arguments, "startCell", "startCell");
-        var dataArray = arguments?["data"]?.AsArray() ?? throw new ArgumentException("data is required for write operation");
+        var startCell = ArgumentHelper.GetString(arguments, "startCell");
+        var dataArray = ArgumentHelper.GetArray(arguments, "data");
 
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
@@ -200,8 +205,9 @@ Usage examples:
             }
         }
 
-        workbook.Save(path);
-        return await Task.FromResult($"Data written to range starting at {startCell}: {path}");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        workbook.Save(outputPath);
+        return await Task.FromResult($"Data written to range starting at {startCell}: {outputPath}");
     }
 
     /// <summary>
@@ -213,14 +219,15 @@ Usage examples:
     /// <returns>Success message with range information</returns>
     private async Task<string> EditRangeAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var range = ArgumentHelper.GetString(arguments, "range", "range");
-        var dataArray = arguments?["data"]?.AsArray() ?? throw new ArgumentException("data is required for edit operation");
-        var clearRange = arguments?["clearRange"]?.GetValue<bool?>() ?? false;
+        var range = ArgumentHelper.GetString(arguments, "range");
+        var dataArray = ArgumentHelper.GetArray(arguments, "data");
+        var clearRange = ArgumentHelper.GetBool(arguments, "clearRange", false);
 
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
         var cells = worksheet.Cells;
-        var cellRange = cells.CreateRange(range);
+        
+        var cellRange = ExcelHelper.CreateRange(cells, range);
 
         if (clearRange)
         {
@@ -263,8 +270,9 @@ Usage examples:
             }
         }
 
-        workbook.Save(path);
-        return await Task.FromResult($"Range {range} edited in sheet {sheetIndex}: {path}");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        workbook.Save(outputPath);
+        return await Task.FromResult($"Range {range} edited in sheet {sheetIndex}: {outputPath}");
     }
 
     /// <summary>
@@ -276,9 +284,9 @@ Usage examples:
     /// <returns>Formatted string with range data</returns>
     private async Task<string> GetRangeAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var range = ArgumentHelper.GetString(arguments, "range", "range");
-        var includeFormulas = arguments?["includeFormulas"]?.GetValue<bool?>() ?? false;
-        var includeFormat = arguments?["includeFormat"]?.GetValue<bool?>() ?? false;
+        var range = ArgumentHelper.GetString(arguments, "range");
+        var includeFormulas = ArgumentHelper.GetBool(arguments, "includeFormulas", false);
+        var includeFormat = ArgumentHelper.GetBool(arguments, "includeFormat", false);
 
         using var workbook = new Workbook(path);
         if (sheetIndex < 0 || sheetIndex >= workbook.Worksheets.Count)
@@ -290,7 +298,8 @@ Usage examples:
 
         var worksheet = workbook.Worksheets[sheetIndex];
         var cells = worksheet.Cells;
-        var cellRange = cells.CreateRange(range);
+        
+        var cellRange = ExcelHelper.CreateRange(cells, range);
 
         var sb = new StringBuilder();
         sb.AppendLine($"Range: {range}");
@@ -361,14 +370,15 @@ Usage examples:
     /// <returns>Success message with cleared range</returns>
     private async Task<string> ClearRangeAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var range = ArgumentHelper.GetString(arguments, "range", "range");
-        var clearContent = arguments?["clearContent"]?.GetValue<bool?>() ?? true;
-        var clearFormat = arguments?["clearFormat"]?.GetValue<bool?>() ?? false;
+        var range = ArgumentHelper.GetString(arguments, "range");
+        var clearContent = ArgumentHelper.GetBool(arguments, "clearContent", true);
+        var clearFormat = ArgumentHelper.GetBool(arguments, "clearFormat", false);
 
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
         var cells = worksheet.Cells;
-        var cellRange = cells.CreateRange(range);
+        
+        var cellRange = ExcelHelper.CreateRange(cells, range);
 
         if (clearContent && clearFormat)
         {
@@ -398,8 +408,9 @@ Usage examples:
             cellRange.ApplyStyle(defaultStyle, new StyleFlag { All = true });
         }
 
-        workbook.Save(path);
-        return await Task.FromResult($"Range {range} cleared in sheet {sheetIndex}: {path}");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        workbook.Save(outputPath);
+        return await Task.FromResult($"Range {range} cleared in sheet {sheetIndex}: {outputPath}");
     }
 
     /// <summary>
@@ -411,19 +422,28 @@ Usage examples:
     /// <returns>Success message with copy details</returns>
     private async Task<string> CopyRangeAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var sourceSheetIndex = arguments?["sourceSheetIndex"]?.GetValue<int?>() ?? sheetIndex;
-        var sourceRange = ArgumentHelper.GetString(arguments, "sourceRange", "sourceRange");
-        var destSheetIndex = arguments?["destSheetIndex"]?.GetValue<int?>();
-        var destCell = ArgumentHelper.GetString(arguments, "destCell", "destCell");
-        var copyOptions = arguments?["copyOptions"]?.GetValue<string>() ?? "All";
+        var sourceSheetIndex = ArgumentHelper.GetInt(arguments, "sourceSheetIndex", sheetIndex);
+        var sourceRange = ArgumentHelper.GetString(arguments, "sourceRange");
+        var destSheetIndex = ArgumentHelper.GetIntNullable(arguments, "destSheetIndex");
+        var destCell = ArgumentHelper.GetString(arguments, "destCell");
+        var copyOptions = ArgumentHelper.GetString(arguments, "copyOptions", "All");
 
         using var workbook = new Workbook(path);
         var sourceSheet = ExcelHelper.GetWorksheet(workbook, sourceSheetIndex);
         var destSheetIdx = destSheetIndex ?? sourceSheetIndex;
         var destSheet = ExcelHelper.GetWorksheet(workbook, destSheetIdx);
 
-        var sourceRangeObj = sourceSheet.Cells.CreateRange(sourceRange);
-        var destRangeObj = destSheet.Cells.CreateRange(destCell);
+        Aspose.Cells.Range sourceRangeObj;
+        Aspose.Cells.Range destRangeObj;
+        try
+        {
+            sourceRangeObj = sourceSheet.Cells.CreateRange(sourceRange);
+            destRangeObj = destSheet.Cells.CreateRange(destCell);
+        }
+        catch (Exception ex)
+        {
+            throw new ArgumentException($"Invalid range format. Source range: '{sourceRange}', Destination cell: '{destCell}'. Range exceeds Excel limits (valid range: A1:XFD1048576). Error: {ex.Message}");
+        }
 
         var copyOptionsEnum = copyOptions switch
         {
@@ -435,8 +455,9 @@ Usage examples:
 
         destRangeObj.Copy(sourceRangeObj, new PasteOptions { PasteType = copyOptionsEnum });
 
-        workbook.Save(path);
-        return await Task.FromResult($"Range {sourceRange} copied to {destCell} in sheet {destSheetIdx}: {path}");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        workbook.Save(outputPath);
+        return await Task.FromResult($"Range {sourceRange} copied to {destCell} in sheet {destSheetIdx}: {outputPath}");
     }
 
     /// <summary>
@@ -448,18 +469,18 @@ Usage examples:
     /// <returns>Success message with move details</returns>
     private async Task<string> MoveRangeAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var sourceSheetIndex = arguments?["sourceSheetIndex"]?.GetValue<int?>() ?? sheetIndex;
-        var sourceRange = ArgumentHelper.GetString(arguments, "sourceRange", "sourceRange");
-        var destSheetIndex = arguments?["destSheetIndex"]?.GetValue<int?>();
-        var destCell = ArgumentHelper.GetString(arguments, "destCell", "destCell");
+        var sourceSheetIndex = ArgumentHelper.GetInt(arguments, "sourceSheetIndex", sheetIndex);
+        var sourceRange = ArgumentHelper.GetString(arguments, "sourceRange");
+        var destSheetIndex = ArgumentHelper.GetIntNullable(arguments, "destSheetIndex");
+        var destCell = ArgumentHelper.GetString(arguments, "destCell");
 
         using var workbook = new Workbook(path);
         var sourceSheet = ExcelHelper.GetWorksheet(workbook, sourceSheetIndex);
         var destSheetIdx = destSheetIndex ?? sourceSheetIndex;
         var destSheet = ExcelHelper.GetWorksheet(workbook, destSheetIdx);
 
-        var sourceRangeObj = sourceSheet.Cells.CreateRange(sourceRange);
-        var destRangeObj = destSheet.Cells.CreateRange(destCell);
+        var sourceRangeObj = ExcelHelper.CreateRange(sourceSheet.Cells, sourceRange, "source range");
+        var destRangeObj = ExcelHelper.CreateRange(destSheet.Cells, destCell, "destination cell");
 
         destRangeObj.Copy(sourceRangeObj, new PasteOptions { PasteType = PasteType.All });
 
@@ -471,58 +492,55 @@ Usage examples:
             }
         }
 
-        workbook.Save(path);
-        return await Task.FromResult($"Range {sourceRange} moved to {destCell} in sheet {destSheetIdx}: {path}");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        workbook.Save(outputPath);
+        return await Task.FromResult($"Range {sourceRange} moved to {destCell} in sheet {destSheetIdx}: {outputPath}");
     }
 
     /// <summary>
     /// Copies format (and optionally values) from source range to destination
     /// </summary>
-    /// <param name="arguments">JSON arguments containing range, destRange or destCell, optional copyValue</param>
+    /// <param name="arguments">JSON arguments containing range or sourceRange, destRange or destCell, optional copyValue</param>
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message with format copy details</returns>
     private async Task<string> CopyFormatAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var range = arguments?["range"]?.GetValue<string>();
-        var destRange = arguments?["destRange"]?.GetValue<string>();
-        var destCell = arguments?["destCell"]?.GetValue<string>();
-        
-        if (string.IsNullOrEmpty(range))
-        {
-            throw new ArgumentException("range (source range) is required for copy_format operation. Example: range='A1:C5', destRange='E1:G5'");
-        }
+        // Support both 'range' and 'sourceRange' for consistency with copy/move operations
+        var range = ArgumentHelper.GetString(arguments, "range", "sourceRange", "range or sourceRange");
+        var destRange = ArgumentHelper.GetString(arguments, "destRange", false);
+        var destCell = ArgumentHelper.GetString(arguments, "destCell", false);
         
         if (string.IsNullOrEmpty(destRange) && string.IsNullOrEmpty(destCell))
         {
             throw new ArgumentException("Either destRange or destCell is required for copy_format operation. Example: range='A1:C5', destRange='E1:G5' or destCell='E1'");
         }
         
-        var copyValue = arguments?["copyValue"]?.GetValue<bool>() ?? false;
+        var copyValue = ArgumentHelper.GetBool(arguments, "copyValue", false);
 
         using var workbook = new Workbook(path);
         
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
         var cells = worksheet.Cells;
         
-        var sourceCellRange = cells.CreateRange(range);
-        var destCellRange = cells.CreateRange(destRange ?? destCell!);
+        var destTarget = destRange ?? destCell!;
+        var sourceCellRange = ExcelHelper.CreateRange(cells, range, "source range");
+        var destCellRange = ExcelHelper.CreateRange(cells, destTarget, "destination");
 
         var pasteOptions = new PasteOptions();
         pasteOptions.PasteType = copyValue ? PasteType.All : PasteType.Formats;
-        pasteOptions.SkipBlanks = false;
 
         destCellRange.Copy(sourceCellRange, pasteOptions);
 
-        workbook.Save(path);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        workbook.Save(outputPath);
 
         var result = "Format copied";
         if (copyValue)
         {
             result += " with values";
         }
-        var destTarget = destRange ?? destCell!;
-        result += $"\nSource range: {range}\nDestination: {destTarget}\nOutput: {path}";
+        result += $"\nSource range: {range}\nDestination: {destTarget}\nOutput: {outputPath}";
 
         return await Task.FromResult(result);
     }

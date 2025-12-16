@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Text;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
@@ -14,9 +14,12 @@ public class ExcelConditionalFormattingTool : IAsposeTool
 {
     public string Description => @"Manage Excel conditional formatting. Supports 4 operations: add, edit, delete, get.
 
+You can add multiple conditional formatting rules to the same range by calling the 'add' operation multiple times. Each rule is independent and will be evaluated separately. To add multiple rules, simply call the 'add' operation multiple times with different conditions for the same range.
+
 Usage examples:
-- Add conditional formatting: excel_conditional_formatting(operation='add', path='book.xlsx', range='A1:A10', type='CellValue', operator='Between', formula1='10', formula2='100')
-- Edit conditional formatting: excel_conditional_formatting(operation='edit', path='book.xlsx', conditionalFormattingIndex=0, type='CellValue')
+- Add conditional formatting: excel_conditional_formatting(operation='add', path='book.xlsx', range='A1:A10', condition='Between', value='10', formula2='100', backgroundColor='#FF0000')
+- Add multiple rules: Call 'add' multiple times with different conditions to create multiple rules for the same range
+- Edit conditional formatting: excel_conditional_formatting(operation='edit', path='book.xlsx', conditionalFormattingIndex=0, condition='GreaterThan', value='50')
 - Delete conditional formatting: excel_conditional_formatting(operation='delete', path='book.xlsx', conditionalFormattingIndex=0)
 - Get conditional formatting: excel_conditional_formatting(operation='get', path='book.xlsx', range='A1:A10')";
 
@@ -43,7 +46,7 @@ Usage examples:
             outputPath = new
             {
                 type = "string",
-                description = "Output file path (optional, for edit operation, defaults to input path)"
+                description = "Output file path (optional, for add/edit/delete operations, defaults to input path)"
             },
             sheetIndex = new
             {
@@ -86,9 +89,9 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var sheetIndex = arguments?["sheetIndex"]?.GetValue<int>() ?? 0;
+        var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
 
         return operation.ToLower() switch
         {
@@ -109,10 +112,10 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> AddConditionalFormattingAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var range = ArgumentHelper.GetString(arguments, "range", "range");
-        var conditionStr = ArgumentHelper.GetString(arguments, "condition", "condition");
-        var value = ArgumentHelper.GetString(arguments, "value", "value");
-        var backgroundColor = arguments?["backgroundColor"]?.GetValue<string>() ?? "Yellow";
+        var range = ArgumentHelper.GetString(arguments, "range");
+        var conditionStr = ArgumentHelper.GetString(arguments, "condition");
+        var value = ArgumentHelper.GetString(arguments, "value");
+        var backgroundColor = ArgumentHelper.GetString(arguments, "backgroundColor", "Yellow");
 
         using var workbook = new Workbook(path);
         var worksheet = workbook.Worksheets[sheetIndex];
@@ -120,7 +123,7 @@ Usage examples:
         int formatIndex = worksheet.ConditionalFormattings.Add();
         var fcs = worksheet.ConditionalFormattings[formatIndex];
         
-        var cellRange = worksheet.Cells.CreateRange(range);
+        var cellRange = ExcelHelper.CreateRange(worksheet.Cells, range);
         var areaIndex = fcs.AddArea(new CellArea 
         { 
             StartRow = cellRange.FirstRow,
@@ -141,7 +144,11 @@ Usage examples:
         int conditionIndex = fcs.AddCondition(conditionType);
         var fc = fcs[conditionIndex];
 
-        var operatorType = conditionStr.ToLower() switch
+        var validConditions = new[] { "greaterthan", "lessthan", "between", "equal" };
+        var conditionLower = conditionStr.ToLower();
+        var isValidCondition = validConditions.Contains(conditionLower);
+        
+        var operatorType = conditionLower switch
         {
             "greaterthan" => OperatorType.GreaterThan,
             "lessthan" => OperatorType.LessThan,
@@ -151,6 +158,13 @@ Usage examples:
         };
 
         fc.Operator = operatorType;
+        
+        // Warning for invalid condition types
+        string? warningMessage = null;
+        if (!isValidCondition)
+        {
+            warningMessage = $"\n⚠️ Warning: Condition type '{conditionStr}' may not be supported. Valid types are: GreaterThan, LessThan, Between, Equal. Please verify in Excel.";
+        }
         
         // Handle Between condition - need Formula2
         if (operatorType == OperatorType.Between && value.Contains(","))
@@ -185,9 +199,15 @@ Usage examples:
         fc.Style.Pattern = BackgroundType.Solid;
 
         workbook.CalculateFormula();
-        workbook.Save(path);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        workbook.Save(outputPath);
 
-        return await Task.FromResult($"條件格式已添加到範圍 {range} ({conditionStr}): {path}");
+        var result = $"Conditional formatting added to range {range} ({conditionStr}): {outputPath}";
+        if (!string.IsNullOrEmpty(warningMessage))
+        {
+            result += warningMessage;
+        }
+        return await Task.FromResult(result);
     }
 
     /// <summary>
@@ -200,11 +220,11 @@ Usage examples:
     private async Task<string> EditConditionalFormattingAsync(JsonObject? arguments, string path, int sheetIndex)
     {
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var conditionalFormattingIndex = ArgumentHelper.GetInt(arguments, "conditionalFormattingIndex", "conditionalFormattingIndex");
-        var conditionIndex = arguments?["conditionIndex"]?.GetValue<int?>();
-        var conditionStr = arguments?["condition"]?.GetValue<string>();
-        var value = arguments?["value"]?.GetValue<string>();
-        var backgroundColor = arguments?["backgroundColor"]?.GetValue<string>();
+        var conditionalFormattingIndex = ArgumentHelper.GetInt(arguments, "conditionalFormattingIndex");
+        var conditionIndex = ArgumentHelper.GetIntNullable(arguments, "conditionIndex");
+        var conditionStr = ArgumentHelper.GetStringNullable(arguments, "condition");
+        var value = ArgumentHelper.GetStringNullable(arguments, "value");
+        var backgroundColor = ArgumentHelper.GetStringNullable(arguments, "backgroundColor");
 
         using var workbook = new Workbook(path);
         
@@ -213,7 +233,7 @@ Usage examples:
         
         if (conditionalFormattingIndex < 0 || conditionalFormattingIndex >= conditionalFormattings.Count)
         {
-            throw new ArgumentException($"條件格式索引 {conditionalFormattingIndex} 超出範圍 (工作表共有 {conditionalFormattings.Count} 個條件格式)");
+            throw new ArgumentException($"Conditional formatting index {conditionalFormattingIndex} is out of range (worksheet has {conditionalFormattings.Count} conditional formattings)");
         }
 
         var fcs = conditionalFormattings[conditionalFormattingIndex];
@@ -223,7 +243,7 @@ Usage examples:
         {
             if (conditionIndex.Value < 0 || conditionIndex.Value >= fcs.Count)
             {
-                throw new ArgumentException($"條件索引 {conditionIndex.Value} 超出範圍");
+                throw new ArgumentException($"Condition index {conditionIndex.Value} is out of range");
             }
 
             var condition = fcs[conditionIndex.Value];
@@ -239,7 +259,7 @@ Usage examples:
                     _ => condition.Operator
                 };
                 condition.Operator = operatorType;
-                changes.Add($"運算符: {conditionStr}");
+                changes.Add($"Operator: {conditionStr}");
             }
 
             if (!string.IsNullOrEmpty(value))
@@ -257,7 +277,7 @@ Usage examples:
                 {
                     condition.Formula1 = value;
                 }
-                changes.Add($"值: {value}");
+                changes.Add($"Value: {value}");
             }
 
             if (!string.IsNullOrEmpty(backgroundColor))
@@ -274,7 +294,7 @@ Usage examples:
                     style.BackgroundColor = System.Drawing.Color.Yellow;
                 }
                 style.Pattern = BackgroundType.Solid;
-                changes.Add($"背景色: {backgroundColor}");
+                changes.Add($"Background color: {backgroundColor}");
             }
         }
         
@@ -283,10 +303,10 @@ Usage examples:
 
         workbook.Save(outputPath);
 
-        var result = $"成功編輯條件格式 #{conditionalFormattingIndex}\n";
+        var result = $"Successfully edited conditional formatting #{conditionalFormattingIndex}\n";
         if (changes.Count > 0)
         {
-            result += "變更:\n";
+            result += "Changes:\n";
             foreach (var change in changes)
             {
                 result += $"  - {change}\n";
@@ -294,9 +314,9 @@ Usage examples:
         }
         else
         {
-            result += "無變更。\n";
+            result += "No changes.\n";
         }
-        result += $"輸出: {outputPath}";
+        result += $"Output: {outputPath}";
 
         return await Task.FromResult(result);
     }
@@ -310,7 +330,7 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> DeleteConditionalFormattingAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var conditionalFormattingIndex = ArgumentHelper.GetInt(arguments, "conditionalFormattingIndex", "conditionalFormattingIndex");
+        var conditionalFormattingIndex = ArgumentHelper.GetInt(arguments, "conditionalFormattingIndex");
 
         using var workbook = new Workbook(path);
         
@@ -319,15 +339,16 @@ Usage examples:
         
         if (conditionalFormattingIndex < 0 || conditionalFormattingIndex >= conditionalFormattings.Count)
         {
-            throw new ArgumentException($"條件格式索引 {conditionalFormattingIndex} 超出範圍 (工作表共有 {conditionalFormattings.Count} 個條件格式)");
+            throw new ArgumentException($"Conditional formatting index {conditionalFormattingIndex} is out of range (worksheet has {conditionalFormattings.Count} conditional formattings)");
         }
 
         conditionalFormattings.RemoveAt(conditionalFormattingIndex);
-        workbook.Save(path);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        workbook.Save(outputPath);
         
         var remainingCount = conditionalFormattings.Count;
         
-        return await Task.FromResult($"成功刪除條件格式 #{conditionalFormattingIndex}\n工作表剩餘條件格式數: {remainingCount}\n輸出: {path}");
+        return await Task.FromResult($"Successfully deleted conditional formatting #{conditionalFormattingIndex}\nRemaining conditional formattings in worksheet: {remainingCount}\nOutput: {outputPath}");
     }
 
     /// <summary>
@@ -345,21 +366,21 @@ Usage examples:
         var conditionalFormattings = worksheet.ConditionalFormattings;
         var result = new StringBuilder();
 
-        result.AppendLine($"=== 工作表 '{worksheet.Name}' 的條件格式資訊 ===\n");
-        result.AppendLine($"總條件格式數: {conditionalFormattings.Count}\n");
+        result.AppendLine($"=== Conditional formatting information for worksheet '{worksheet.Name}' ===\n");
+        result.AppendLine($"Total conditional formattings: {conditionalFormattings.Count}\n");
 
         if (conditionalFormattings.Count == 0)
         {
-            result.AppendLine("未找到條件格式");
+            result.AppendLine("No conditional formattings found");
             return await Task.FromResult(result.ToString());
         }
 
         for (int i = 0; i < conditionalFormattings.Count; i++)
         {
             var cf = conditionalFormattings[i];
-            result.AppendLine($"【條件格式 {i}】");
-            result.AppendLine($"條件格式集合索引: {i}");
-            result.AppendLine("狀態: 條件格式已應用");
+            result.AppendLine($"[Conditional formatting {i}]");
+            result.AppendLine($"Conditional formatting collection index: {i}");
+            result.AppendLine("Status: Conditional formatting applied");
             result.AppendLine();
         }
 

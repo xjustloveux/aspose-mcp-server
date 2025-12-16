@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using AsposeMcpServer.Core;
@@ -84,7 +84,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
 
         return operation.ToLower() switch
         {
@@ -106,12 +106,12 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var count = arguments?["count"]?.GetValue<int?>() ?? 1;
-        var insertAt = arguments?["insertAt"]?.GetValue<int?>();
-        var width = arguments?["width"]?.GetValue<double?>();
-        var height = arguments?["height"]?.GetValue<double?>();
+        var count = ArgumentHelper.GetInt(arguments, "count", 1);
+        var insertAt = ArgumentHelper.GetIntNullable(arguments, "insertAt");
+        var width = ArgumentHelper.GetDoubleNullable(arguments, "width");
+        var height = ArgumentHelper.GetDoubleNullable(arguments, "height");
 
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         using var document = new Document(path);
@@ -153,9 +153,9 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex", "pageIndex");
+        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
 
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         using var document = new Document(path);
@@ -176,11 +176,11 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var rotation = ArgumentHelper.GetInt(arguments, "rotation", "rotation");
-        var pageIndex = arguments?["pageIndex"]?.GetValue<int?>();
-        var pageIndicesArray = arguments?["pageIndices"]?.AsArray();
+        var rotation = ArgumentHelper.GetInt(arguments, "rotation");
+        var pageIndex = ArgumentHelper.GetIntNullable(arguments, "pageIndex");
+        var pageIndicesArray = ArgumentHelper.GetArray(arguments, "pageIndices", false);
 
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         if (rotation != 0 && rotation != 90 && rotation != 180 && rotation != 270)
@@ -221,9 +221,9 @@ Usage examples:
     private async Task<string> GetPageDetails(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex", "pageIndex");
+        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
 
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
 
         using var document = new Document(path);
         if (pageIndex < 1 || pageIndex > document.Pages.Count)

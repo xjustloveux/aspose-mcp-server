@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using Aspose.Pdf.Forms;
@@ -98,7 +98,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
 
         return operation.ToLower() switch
         {
@@ -119,14 +119,14 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex", "pageIndex");
-        var fieldType = ArgumentHelper.GetString(arguments, "fieldType", "fieldType");
-        var fieldName = ArgumentHelper.GetString(arguments, "fieldName", "fieldName");
-        var x = ArgumentHelper.GetDouble(arguments, "x", "x");
-        var y = ArgumentHelper.GetDouble(arguments, "y", "y");
-        var width = ArgumentHelper.GetDouble(arguments, "width", "width");
-        var height = ArgumentHelper.GetDouble(arguments, "height", "height");
-        var defaultValue = arguments?["defaultValue"]?.GetValue<string>();
+        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
+        var fieldType = ArgumentHelper.GetString(arguments, "fieldType");
+        var fieldName = ArgumentHelper.GetString(arguments, "fieldName");
+        var x = ArgumentHelper.GetDouble(arguments, "x");
+        var y = ArgumentHelper.GetDouble(arguments, "y");
+        var width = ArgumentHelper.GetDouble(arguments, "width");
+        var height = ArgumentHelper.GetDouble(arguments, "height");
+        var defaultValue = ArgumentHelper.GetStringNullable(arguments, "defaultValue");
 
         using var document = new Document(path);
         if (pageIndex < 1 || pageIndex > document.Pages.Count)
@@ -169,9 +169,9 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var fieldName = ArgumentHelper.GetString(arguments, "fieldName", "fieldName");
+        var fieldName = ArgumentHelper.GetString(arguments, "fieldName");
 
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         using var document = new Document(path);
@@ -189,11 +189,11 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var fieldName = ArgumentHelper.GetString(arguments, "fieldName", "fieldName");
-        var value = arguments?["value"]?.GetValue<string>();
-        var checkedValue = arguments?["checkedValue"]?.GetValue<bool?>();
+        var fieldName = ArgumentHelper.GetString(arguments, "fieldName");
+        var value = ArgumentHelper.GetStringNullable(arguments, "value");
+        var checkedValue = ArgumentHelper.GetBoolNullable(arguments, "checkedValue");
 
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         using var document = new Document(path);

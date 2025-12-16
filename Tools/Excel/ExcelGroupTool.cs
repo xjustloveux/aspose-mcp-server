@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 
@@ -67,6 +67,11 @@ Usage examples:
             {
                 type = "boolean",
                 description = "Collapse group initially (optional, for group_rows/group_columns, default: false)"
+            },
+            outputPath = new
+            {
+                type = "string",
+                description = "Output file path (optional, for all operations, defaults to input path)"
             }
         },
         required = new[] { "operation", "path" }
@@ -74,9 +79,9 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var sheetIndex = arguments?["sheetIndex"]?.GetValue<int>() ?? 0;
+        var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
 
         return operation.ToLower() switch
         {
@@ -97,16 +102,17 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> GroupRowsAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var startRow = ArgumentHelper.GetInt(arguments, "startRow", "startRow");
-        var endRow = ArgumentHelper.GetInt(arguments, "endRow", "endRow");
-        var isCollapsed = arguments?["isCollapsed"]?.GetValue<bool?>() ?? false;
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var startRow = ArgumentHelper.GetInt(arguments, "startRow");
+        var endRow = ArgumentHelper.GetInt(arguments, "endRow");
+        var isCollapsed = ArgumentHelper.GetBool(arguments, "isCollapsed", false);
 
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
         worksheet.Cells.GroupRows(startRow, endRow, isCollapsed);
 
-        workbook.Save(path);
-        return await Task.FromResult($"Rows {startRow}-{endRow} grouped in sheet {sheetIndex}: {path}");
+        workbook.Save(outputPath);
+        return await Task.FromResult($"Rows {startRow}-{endRow} grouped in sheet {sheetIndex}: {outputPath}");
     }
 
     /// <summary>
@@ -118,15 +124,16 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> UngroupRowsAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var startRow = ArgumentHelper.GetInt(arguments, "startRow", "startRow");
-        var endRow = ArgumentHelper.GetInt(arguments, "endRow", "endRow");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var startRow = ArgumentHelper.GetInt(arguments, "startRow");
+        var endRow = ArgumentHelper.GetInt(arguments, "endRow");
 
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
         worksheet.Cells.UngroupRows(startRow, endRow);
 
-        workbook.Save(path);
-        return await Task.FromResult($"Rows {startRow}-{endRow} ungrouped in sheet {sheetIndex}: {path}");
+        workbook.Save(outputPath);
+        return await Task.FromResult($"Rows {startRow}-{endRow} ungrouped in sheet {sheetIndex}: {outputPath}");
     }
 
     /// <summary>
@@ -138,16 +145,17 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> GroupColumnsAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var startColumn = ArgumentHelper.GetInt(arguments, "startColumn", "startColumn");
-        var endColumn = ArgumentHelper.GetInt(arguments, "endColumn", "endColumn");
-        var isCollapsed = arguments?["isCollapsed"]?.GetValue<bool?>() ?? false;
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var startColumn = ArgumentHelper.GetInt(arguments, "startColumn");
+        var endColumn = ArgumentHelper.GetInt(arguments, "endColumn");
+        var isCollapsed = ArgumentHelper.GetBool(arguments, "isCollapsed", false);
 
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
         worksheet.Cells.GroupColumns(startColumn, endColumn, isCollapsed);
 
-        workbook.Save(path);
-        return await Task.FromResult($"Columns {startColumn}-{endColumn} grouped in sheet {sheetIndex}: {path}");
+        workbook.Save(outputPath);
+        return await Task.FromResult($"Columns {startColumn}-{endColumn} grouped in sheet {sheetIndex}: {outputPath}");
     }
 
     /// <summary>
@@ -159,15 +167,16 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> UngroupColumnsAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var startColumn = ArgumentHelper.GetInt(arguments, "startColumn", "startColumn");
-        var endColumn = ArgumentHelper.GetInt(arguments, "endColumn", "endColumn");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var startColumn = ArgumentHelper.GetInt(arguments, "startColumn");
+        var endColumn = ArgumentHelper.GetInt(arguments, "endColumn");
 
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
         worksheet.Cells.UngroupColumns(startColumn, endColumn);
 
-        workbook.Save(path);
-        return await Task.FromResult($"Columns {startColumn}-{endColumn} ungrouped in sheet {sheetIndex}: {path}");
+        workbook.Save(outputPath);
+        return await Task.FromResult($"Columns {startColumn}-{endColumn} ungrouped in sheet {sheetIndex}: {outputPath}");
     }
 }
 

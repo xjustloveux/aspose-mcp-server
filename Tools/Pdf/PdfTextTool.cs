@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using Aspose.Pdf.Text;
@@ -95,7 +95,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
 
         return operation.ToLower() switch
         {
@@ -115,14 +115,14 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex", "pageIndex");
-        var text = ArgumentHelper.GetString(arguments, "text", "text");
-        var x = arguments?["x"]?.GetValue<double>() ?? 100;
-        var y = arguments?["y"]?.GetValue<double>() ?? 700;
-        var fontName = arguments?["fontName"]?.GetValue<string>() ?? "Arial";
-        var fontSize = arguments?["fontSize"]?.GetValue<double>() ?? 12;
+        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
+        var text = ArgumentHelper.GetString(arguments, "text");
+        var x = ArgumentHelper.GetDouble(arguments, "x", "x", false, 100);
+        var y = ArgumentHelper.GetDouble(arguments, "y", "y", false, 700);
+        var fontName = ArgumentHelper.GetString(arguments, "fontName", "Arial");
+        var fontSize = ArgumentHelper.GetDouble(arguments, "fontSize", "fontSize", false, 12);
 
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         using var document = new Document(path);
@@ -150,12 +150,12 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex", "pageIndex");
-        var oldText = ArgumentHelper.GetString(arguments, "oldText", "oldText");
-        var newText = ArgumentHelper.GetString(arguments, "newText", "newText");
-        var replaceAll = arguments?["replaceAll"]?.GetValue<bool>() ?? false;
+        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
+        var oldText = ArgumentHelper.GetString(arguments, "oldText");
+        var newText = ArgumentHelper.GetString(arguments, "newText");
+        var replaceAll = ArgumentHelper.GetBool(arguments, "replaceAll", false);
 
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         using var document = new Document(path);
@@ -188,10 +188,10 @@ Usage examples:
     private async Task<string> ExtractText(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex", "pageIndex");
-        var includeFontInfo = arguments?["includeFontInfo"]?.GetValue<bool>() ?? false;
+        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
+        var includeFontInfo = ArgumentHelper.GetBool(arguments, "includeFontInfo", false);
 
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
 
         using var document = new Document(path);
         if (pageIndex < 1 || pageIndex > document.Pages.Count)

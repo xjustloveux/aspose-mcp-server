@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using Aspose.Pdf.Devices;
@@ -87,7 +87,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
 
         return operation.ToLower() switch
         {
@@ -108,14 +108,14 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex", "pageIndex");
-        var imagePath = ArgumentHelper.GetString(arguments, "imagePath", "imagePath");
-        var x = arguments?["x"]?.GetValue<double>() ?? 100;
-        var y = arguments?["y"]?.GetValue<double>() ?? 600;
-        var width = arguments?["width"]?.GetValue<double?>();
-        var height = arguments?["height"]?.GetValue<double?>();
+        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
+        var imagePath = ArgumentHelper.GetString(arguments, "imagePath");
+        var x = ArgumentHelper.GetDouble(arguments, "x", "x", false, 100);
+        var y = ArgumentHelper.GetDouble(arguments, "y", "y", false, 600);
+        var width = ArgumentHelper.GetDoubleNullable(arguments, "width");
+        var height = ArgumentHelper.GetDoubleNullable(arguments, "height");
 
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
         SecurityHelper.ValidateFilePath(imagePath, "imagePath");
 
@@ -141,10 +141,10 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex", "pageIndex");
-        var imageIndex = ArgumentHelper.GetInt(arguments, "imageIndex", "imageIndex");
+        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
+        var imageIndex = ArgumentHelper.GetInt(arguments, "imageIndex");
 
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         using var document = new Document(path);
@@ -170,15 +170,15 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex", "pageIndex");
-        var imageIndex = ArgumentHelper.GetInt(arguments, "imageIndex", "imageIndex");
-        var imagePath = ArgumentHelper.GetString(arguments, "imagePath", "imagePath");
-        var x = arguments?["x"]?.GetValue<double?>();
-        var y = arguments?["y"]?.GetValue<double?>();
-        var width = arguments?["width"]?.GetValue<double?>();
-        var height = arguments?["height"]?.GetValue<double?>();
+        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
+        var imageIndex = ArgumentHelper.GetInt(arguments, "imageIndex");
+        var imagePath = ArgumentHelper.GetString(arguments, "imagePath");
+        var x = ArgumentHelper.GetDoubleNullable(arguments, "x");
+        var y = ArgumentHelper.GetDoubleNullable(arguments, "y");
+        var width = ArgumentHelper.GetDoubleNullable(arguments, "width");
+        var height = ArgumentHelper.GetDoubleNullable(arguments, "height");
 
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
         SecurityHelper.ValidateFilePath(imagePath, "imagePath");
 
@@ -210,12 +210,12 @@ Usage examples:
     private async Task<string> ExtractImages(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = arguments?["outputPath"]?.GetValue<string>();
-        var outputDir = arguments?["outputDir"]?.GetValue<string>();
-        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex", "pageIndex");
-        var imageIndex = arguments?["imageIndex"]?.GetValue<int?>();
+        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath");
+        var outputDir = ArgumentHelper.GetStringNullable(arguments, "outputDir");
+        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
+        var imageIndex = ArgumentHelper.GetIntNullable(arguments, "imageIndex");
 
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
         if (!string.IsNullOrEmpty(outputPath))
             SecurityHelper.ValidateFilePath(outputPath, "outputPath");
         if (!string.IsNullOrEmpty(outputDir))

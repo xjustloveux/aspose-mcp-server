@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using Aspose.Pdf.Forms;
@@ -71,7 +71,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
 
         return operation.ToLower() switch
         {
@@ -91,12 +91,12 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var certificatePath = ArgumentHelper.GetString(arguments, "certificatePath", "certificatePath");
-        var certificatePassword = ArgumentHelper.GetString(arguments, "certificatePassword", "certificatePassword");
-        var reason = arguments?["reason"]?.GetValue<string>() ?? "Document approval";
-        var location = arguments?["location"]?.GetValue<string>() ?? "";
+        var certificatePath = ArgumentHelper.GetString(arguments, "certificatePath");
+        var certificatePassword = ArgumentHelper.GetString(arguments, "certificatePassword");
+        var reason = ArgumentHelper.GetString(arguments, "reason", "Document approval");
+        var location = ArgumentHelper.GetString(arguments, "location", "");
 
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
         SecurityHelper.ValidateFilePath(certificatePath, "certificatePath");
 
@@ -124,7 +124,7 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var signatureIndex = ArgumentHelper.GetInt(arguments, "signatureIndex", "signatureIndex");
+        var signatureIndex = ArgumentHelper.GetInt(arguments, "signatureIndex");
 
         using var document = new Document(path);
         using var pdfSign = new PdfFileSignature(document);

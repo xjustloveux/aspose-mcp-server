@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Text;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
@@ -47,7 +47,7 @@ Usage examples:
             outputPath = new
             {
                 type = "string",
-                description = "Output file path (optional, for calculate operation, defaults to input path)"
+                description = "Output file path (optional, for add/calculate/set_array operations, defaults to input path)"
             },
             sheetIndex = new
             {
@@ -80,9 +80,9 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var sheetIndex = arguments?["sheetIndex"]?.GetValue<int>() ?? 0;
+        var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
 
         return operation.ToLower() switch
         {
@@ -105,8 +105,8 @@ Usage examples:
     /// <returns>Success message with cell reference</returns>
     private async Task<string> AddFormulaAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var cell = ArgumentHelper.GetString(arguments, "cell", "cell");
-        var formula = ArgumentHelper.GetString(arguments, "formula", "formula");
+        var cell = ArgumentHelper.GetString(arguments, "cell");
+        var formula = ArgumentHelper.GetString(arguments, "formula");
 
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
@@ -119,11 +119,41 @@ Usage examples:
         
         // Ensure calculated result is saved (accessing the value triggers calculation)
         // This ensures that when Excel opens the file, formulas already have correct calculated results
-        var calculatedValue = cellObj.Value;
+        _ = cellObj.Value;
         
-        workbook.Save(path);
+        // Check for formula calculation errors after calculation
+        string? warningMessage = null;
+        if (cellObj.Type == CellValueType.IsError)
+        {
+            var errorValue = cellObj.DisplayStringValue;
+            // Common Excel error values: #NAME?, #VALUE?, #REF!, #DIV/0!, #NUM!, #NULL!, #N/A
+            if (!string.IsNullOrEmpty(errorValue) && errorValue.StartsWith("#"))
+            {
+                warningMessage = $"\n⚠️ Warning: Formula calculation resulted in error: {errorValue}";
+                if (errorValue == "#NAME?")
+                {
+                    warningMessage += " This usually indicates an invalid function name or undefined name.";
+                }
+                else if (errorValue == "#VALUE?")
+                {
+                    warningMessage += " This usually indicates an incorrect argument type.";
+                }
+                else if (errorValue == "#REF!")
+                {
+                    warningMessage += " This usually indicates an invalid cell reference.";
+                }
+            }
+        }
+        
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        workbook.Save(outputPath);
 
-        return await Task.FromResult($"Formula added to cell {cell}: {formula}");
+        var result = $"Formula added to cell {cell}: {formula}\nOutput: {outputPath}";
+        if (!string.IsNullOrEmpty(warningMessage))
+        {
+            result += warningMessage;
+        }
+        return await Task.FromResult(result);
     }
 
     /// <summary>
@@ -135,7 +165,7 @@ Usage examples:
     /// <returns>Formula string</returns>
     private async Task<string> GetFormulasAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var range = arguments?["range"]?.GetValue<string>();
+        var range = ArgumentHelper.GetStringNullable(arguments, "range");
 
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
@@ -150,7 +180,7 @@ Usage examples:
         {
             try
             {
-                var cellRange = cells.CreateRange(range);
+                var cellRange = ExcelHelper.CreateRange(cells, range);
                 startRow = cellRange.FirstRow;
                 endRow = cellRange.FirstRow + cellRange.RowCount - 1;
                 startCol = cellRange.FirstColumn;
@@ -207,8 +237,8 @@ Usage examples:
     /// <returns>Formula result value</returns>
     private async Task<string> GetFormulaResultAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var cell = ArgumentHelper.GetString(arguments, "cell", "cell");
-        var calculateBeforeRead = arguments?["calculateBeforeRead"]?.GetValue<bool?>() ?? true;
+        var cell = ArgumentHelper.GetString(arguments, "cell");
+        var calculateBeforeRead = ArgumentHelper.GetBool(arguments, "calculateBeforeRead", true);
 
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
@@ -252,7 +282,7 @@ Usage examples:
     private async Task<string> CalculateFormulasAsync(JsonObject? arguments, string path, int sheetIndex)
     {
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var cell = arguments?["cell"]?.GetValue<string>();
+        var cell = ArgumentHelper.GetStringNullable(arguments, "cell");
 
         using var workbook = new Workbook(path);
         
@@ -263,8 +293,12 @@ Usage examples:
             
             if (!string.IsNullOrEmpty(cellObj.Formula))
             {
-                var oldValue = cellObj.Value;
-                cellObj.PutValue(cellObj.Formula);
+                // Calculate formula first
+                workbook.CalculateFormula();
+                // Access value to trigger calculation and ensure result is saved
+                _ = cellObj.Value;
+                // Convert formula result to value (replace formula with calculated value)
+                cellObj.PutValue(cellObj.Value);
             }
         }
         else
@@ -294,12 +328,13 @@ Usage examples:
     /// <returns>Success message with range</returns>
     private async Task<string> SetArrayFormulaAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var range = ArgumentHelper.GetString(arguments, "range", "range");
-        var formula = ArgumentHelper.GetString(arguments, "formula", "formula");
+        var range = ArgumentHelper.GetString(arguments, "range");
+        var formula = ArgumentHelper.GetString(arguments, "formula");
 
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var rangeObj = worksheet.Cells.CreateRange(range);
+        
+        var rangeObj = ExcelHelper.CreateRange(worksheet.Cells, range);
 
         // Remove curly braces if present (they're not needed)
         var cleanFormula = formula.TrimStart('{').TrimEnd('}');
@@ -337,6 +372,8 @@ Usage examples:
             }
         }
         
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        
         try
         {
             // Use SetArrayFormula with rowCount and columnCount (not startRow/startCol)
@@ -346,22 +383,22 @@ Usage examples:
             // Calculate formulas to ensure array formula is processed
             workbook.CalculateFormula();
             
-            // Check immediately if it's an array formula
+            // Check immediately if it's an array formula (optimization: avoid save/reload if already valid)
             if (firstCell.IsArrayFormula)
             {
-                workbook.Save(path);
-                return await Task.FromResult($"Array formula set in range {range}: {path}");
+                workbook.Save(outputPath);
+                return await Task.FromResult($"Array formula set in range {range}: {outputPath}");
             }
             
-            // Save and reload to verify
-            workbook.Save(path);
-            using var verifyWorkbook = new Workbook(path);
+            // Save and reload to verify (in case immediate check didn't detect it)
+            workbook.Save(outputPath);
+            using var verifyWorkbook = new Workbook(outputPath);
             var verifyWorksheet = verifyWorkbook.Worksheets[sheetIndex];
             var verifyCell = verifyWorksheet.Cells[rangeObj.FirstRow, rangeObj.FirstColumn];
             
             if (verifyCell.IsArrayFormula)
             {
-                return await Task.FromResult($"Array formula set in range {range}: {path}");
+                return await Task.FromResult($"Array formula set in range {range}: {outputPath}");
             }
             else
             {
@@ -371,13 +408,14 @@ Usage examples:
         }
         catch (Exception ex)
         {
+            
             // Try with 5 parameters: SetArrayFormula(formula, startRow, startCol, isR1C1, isLocal)
             try
             {
                 // Reload for clean state
                 using var retryWorkbook = new Workbook(path);
                 var retryWorksheet = retryWorkbook.Worksheets[sheetIndex];
-                var retryRangeObj = retryWorksheet.Cells.CreateRange(range);
+                var retryRangeObj = ExcelHelper.CreateRange(retryWorksheet.Cells, range);
                 var retryFirstCell = retryWorksheet.Cells[retryRangeObj.FirstRow, retryRangeObj.FirstColumn];
                 
                 // Clear range
@@ -394,16 +432,16 @@ Usage examples:
                 retryFirstCell.SetArrayFormula(formulaWithoutEquals, retryRangeObj.FirstRow, retryRangeObj.FirstColumn, false, false);
                 
                 retryWorkbook.CalculateFormula();
-                retryWorkbook.Save(path);
+                retryWorkbook.Save(outputPath);
                 
                 // Verify
-                using var verifyWorkbook = new Workbook(path);
+                using var verifyWorkbook = new Workbook(outputPath);
                 var verifyWorksheet = verifyWorkbook.Worksheets[sheetIndex];
                 var verifyCell = verifyWorksheet.Cells[retryRangeObj.FirstRow, retryRangeObj.FirstColumn];
                 
                 if (verifyCell.IsArrayFormula)
                 {
-                    return await Task.FromResult($"Array formula set in range {range}: {path}");
+                    return await Task.FromResult($"Array formula set in range {range}: {outputPath}");
                 }
                 else
                 {
@@ -417,7 +455,7 @@ Usage examples:
                 {
                     using var fallbackWorkbook = new Workbook(path);
                     var fallbackWorksheet = fallbackWorkbook.Worksheets[sheetIndex];
-                    var fallbackRangeObj = fallbackWorksheet.Cells.CreateRange(range);
+                    var fallbackRangeObj = ExcelHelper.CreateRange(fallbackWorksheet.Cells, range);
                     
                     var formulaWithEquals = cleanFormula.StartsWith("=") ? cleanFormula : "=" + cleanFormula;
                     for (int i = 0; i < fallbackRangeObj.RowCount; i++)
@@ -429,8 +467,8 @@ Usage examples:
                         }
                     }
                     
-                    fallbackWorkbook.Save(path);
-                    return await Task.FromResult($"Formula set to range {range} (Note: This is not a true array formula): {path}");
+                    fallbackWorkbook.Save(outputPath);
+                    return await Task.FromResult($"Formula set to range {range} (Note: This is not a true array formula): {outputPath}");
                 }
                 catch (Exception ex3)
                 {
@@ -450,7 +488,7 @@ Usage examples:
     /// <returns>Array formula information</returns>
     private async Task<string> GetArrayFormulaAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var cell = ArgumentHelper.GetString(arguments, "cell", "cell");
+        var cell = ArgumentHelper.GetString(arguments, "cell");
 
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);

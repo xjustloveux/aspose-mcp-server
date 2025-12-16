@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using Aspose.Words;
 using Aspose.Words.Fields;
 using AsposeMcpServer.Core;
@@ -10,7 +10,7 @@ public class WordReferenceTool : IAsposeTool
     public string Description => @"Manage references in Word documents. Supports 4 operations: add_table_of_contents, update_table_of_contents, add_index, add_cross_reference.
 
 Usage examples:
-- Add table of contents: word_reference(operation='add_table_of_contents', path='doc.docx', title='目錄', maxLevel=3)
+- Add table of contents: word_reference(operation='add_table_of_contents', path='doc.docx', title='Table of Contents', maxLevel=3)
 - Update table of contents: word_reference(operation='update_table_of_contents', path='doc.docx')
 - Add index: word_reference(operation='add_index', path='doc.docx', entries=[{'text':'Index term','page':1}])
 - Add cross-reference: word_reference(operation='add_cross_reference', path='doc.docx', referenceType='Heading', targetText='Chapter 1', displayText='See Chapter 1')";
@@ -49,7 +49,7 @@ Usage examples:
             title = new
             {
                 type = "string",
-                description = "Table of contents title (for add_table_of_contents, default: '目錄')"
+                description = "Table of contents title (for add_table_of_contents, default: 'Table of Contents')"
             },
             maxLevel = new
             {
@@ -134,7 +134,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
 
         return operation.ToLower() switch
         {
@@ -156,12 +156,12 @@ Usage examples:
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var position = arguments?["position"]?.GetValue<string>() ?? "start";
-        var title = arguments?["title"]?.GetValue<string>() ?? "目錄";
-        var maxLevel = arguments?["maxLevel"]?.GetValue<int>() ?? 3;
-        var hyperlinks = ArgumentHelper.GetBool(arguments, "hyperlinks", "hyperlinks", true);
-        var pageNumbers = ArgumentHelper.GetBool(arguments, "pageNumbers", "pageNumbers", true);
-        var rightAlignPageNumbers = ArgumentHelper.GetBool(arguments, "rightAlignPageNumbers", "rightAlignPageNumbers", true);
+        var position = ArgumentHelper.GetString(arguments, "position", "start");
+        var title = ArgumentHelper.GetString(arguments, "title", "Table of Contents");
+        var maxLevel = ArgumentHelper.GetInt(arguments, "maxLevel", 3);
+        var hyperlinks = ArgumentHelper.GetBool(arguments, "hyperlinks");
+        var pageNumbers = ArgumentHelper.GetBool(arguments, "pageNumbers");
+        var rightAlignPageNumbers = ArgumentHelper.GetBool(arguments, "rightAlignPageNumbers");
 
         var doc = new Document(path);
         var builder = new DocumentBuilder(doc);
@@ -207,7 +207,7 @@ Usage examples:
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var tocIndex = arguments?["tocIndex"]?.GetValue<int?>();
+        var tocIndex = ArgumentHelper.GetIntNullable(arguments, "tocIndex");
 
         var doc = new Document(path);
         // Search for TOC fields in the entire document (including headers/footers)
@@ -258,9 +258,9 @@ Usage examples:
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var indexEntriesArray = arguments?["indexEntries"]?.AsArray() ?? throw new ArgumentException("indexEntries is required");
-        var insertIndexAtEnd = arguments?["insertIndexAtEnd"]?.GetValue<bool?>() ?? true;
-        var headingStyle = arguments?["headingStyle"]?.GetValue<string>() ?? "Heading 1";
+        var indexEntriesArray = ArgumentHelper.GetArray(arguments, "indexEntries");
+        var insertIndexAtEnd = ArgumentHelper.GetBool(arguments, "insertIndexAtEnd");
+        var headingStyle = ArgumentHelper.GetString(arguments, "headingStyle", "Heading 1");
 
         var doc = new Document(path);
         var builder = new DocumentBuilder(doc);
@@ -309,11 +309,11 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var referenceType = ArgumentHelper.GetString(arguments, "referenceType", "referenceType");
+        var referenceType = ArgumentHelper.GetString(arguments, "referenceType");
         var referenceText = ArgumentHelper.GetStringNullable(arguments, "referenceText");
-        var targetName = ArgumentHelper.GetString(arguments, "targetName", "targetName");
-        var insertAsHyperlink = arguments?["insertAsHyperlink"]?.GetValue<bool?>() ?? true;
-        var includeAboveBelow = arguments?["includeAboveBelow"]?.GetValue<bool?>() ?? false;
+        var targetName = ArgumentHelper.GetString(arguments, "targetName");
+        var insertAsHyperlink = ArgumentHelper.GetBool(arguments, "insertAsHyperlink");
+        var includeAboveBelow = ArgumentHelper.GetBool(arguments, "includeAboveBelow", false);
 
         var doc = new Document(path);
         var builder = new DocumentBuilder(doc);

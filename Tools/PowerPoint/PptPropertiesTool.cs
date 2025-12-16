@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Text;
 using Aspose.Slides;
 using Aspose.Slides.Export;
@@ -80,6 +80,11 @@ Usage examples:
             {
                 type = "object",
                 description = "Custom properties as key-value pairs (optional, for set)"
+            },
+            outputPath = new
+            {
+                type = "string",
+                description = "Output file path (optional, for set operation, defaults to input path)"
             }
         },
         required = new[] { "operation", "path" }
@@ -87,7 +92,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         return operation.ToLower() switch
@@ -134,15 +139,15 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> SetPropertiesAsync(JsonObject? arguments, string path)
     {
-        var title = arguments?["title"]?.GetValue<string>();
-        var subject = arguments?["subject"]?.GetValue<string>();
-        var author = arguments?["author"]?.GetValue<string>();
-        var keywords = arguments?["keywords"]?.GetValue<string>();
-        var comments = arguments?["comments"]?.GetValue<string>();
-        var category = arguments?["category"]?.GetValue<string>();
-        var company = arguments?["company"]?.GetValue<string>();
-        var manager = arguments?["manager"]?.GetValue<string>();
-        var customProps = arguments?["customProperties"]?.AsObject();
+        var title = ArgumentHelper.GetStringNullable(arguments, "title");
+        var subject = ArgumentHelper.GetStringNullable(arguments, "subject");
+        var author = ArgumentHelper.GetStringNullable(arguments, "author");
+        var keywords = ArgumentHelper.GetStringNullable(arguments, "keywords");
+        var comments = ArgumentHelper.GetStringNullable(arguments, "comments");
+        var category = ArgumentHelper.GetStringNullable(arguments, "category");
+        var company = ArgumentHelper.GetStringNullable(arguments, "company");
+        var manager = ArgumentHelper.GetStringNullable(arguments, "manager");
+        var customProps = ArgumentHelper.GetObject(arguments, "customProperties", false);
 
         using var presentation = new Presentation(path);
         var props = presentation.DocumentProperties;
@@ -198,9 +203,10 @@ Usage examples:
             changes.Add("CustomProperties");
         }
 
-        presentation.Save(path, SaveFormat.Pptx);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
 
-        return await Task.FromResult($"Document properties updated: {string.Join(", ", changes)} - {path}");
+        return await Task.FromResult($"Document properties updated: {string.Join(", ", changes)} - {outputPath}");
     }
 }
 

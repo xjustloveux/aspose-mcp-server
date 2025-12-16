@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Text;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
@@ -51,6 +51,11 @@ Usage examples:
             {
                 type = "string",
                 description = "Comment for the named range (optional, for add)"
+            },
+            outputPath = new
+            {
+                type = "string",
+                description = "Output file path (optional, for add/delete operations, defaults to input path)"
             }
         },
         required = new[] { "operation", "path" }
@@ -58,7 +63,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         return operation.ToLower() switch
@@ -78,9 +83,10 @@ Usage examples:
     /// <returns>Success message with named range details</returns>
     private async Task<string> AddNamedRangeAsync(JsonObject? arguments, string path)
     {
-        var name = ArgumentHelper.GetString(arguments, "name", "name");
-        var range = ArgumentHelper.GetString(arguments, "range", "range");
-        var comment = arguments?["comment"]?.GetValue<string>();
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var name = ArgumentHelper.GetString(arguments, "name");
+        var range = ArgumentHelper.GetString(arguments, "range");
+        var comment = ArgumentHelper.GetStringNullable(arguments, "comment");
 
         using var workbook = new Workbook(path);
         var names = workbook.Worksheets.Names;
@@ -117,7 +123,7 @@ Usage examples:
                     var checkText = checkName.Text;
                     if (!string.IsNullOrEmpty(checkText) && checkText == name)
                     {
-                        throw new ArgumentException($"名稱範圍 '{name}' 已存在");
+                        throw new ArgumentException($"Named range '{name}' already exists");
                     }
                 }
                 catch (ArgumentException)
@@ -144,9 +150,9 @@ Usage examples:
             }
             
             // Save the workbook to persist the changes
-            workbook.Save(path);
+            workbook.Save(outputPath);
             
-            return await Task.FromResult($"成功添加名稱範圍 '{name}'\n引用: {refersTo}\n輸出: {path}");
+            return await Task.FromResult($"Successfully added named range '{name}'\nReference: {refersTo}\nOutput: {outputPath}");
         }
         catch (ArgumentException)
         {
@@ -154,7 +160,7 @@ Usage examples:
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException($"無法創建名稱範圍 '{name}'，引用: {refersTo}。錯誤: {ex.Message}", ex);
+            throw new InvalidOperationException($"Unable to create named range '{name}', reference: {refersTo}. Error: {ex.Message}", ex);
         }
     }
 
@@ -166,7 +172,8 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> DeleteNamedRangeAsync(JsonObject? arguments, string path)
     {
-        var name = ArgumentHelper.GetString(arguments, "name", "name");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var name = ArgumentHelper.GetString(arguments, "name");
 
         using var workbook = new Workbook(path);
         var names = workbook.Worksheets.Names;
@@ -178,12 +185,12 @@ Usage examples:
         }
         catch
         {
-            throw new ArgumentException($"名稱範圍 '{name}' 不存在");
+            throw new ArgumentException($"Named range '{name}' does not exist");
         }
         
         if (namedRange == null)
         {
-            throw new ArgumentException($"名稱範圍 '{name}' 不存在");
+            throw new ArgumentException($"Named range '{name}' does not exist");
         }
         
         var refersTo = namedRange.RefersTo;
@@ -202,11 +209,11 @@ Usage examples:
         {
             names.RemoveAt(indexToRemove);
         }
-        workbook.Save(path);
+        workbook.Save(outputPath);
         
         var remainingCount = names.Count;
         
-        return await Task.FromResult($"成功刪除名稱範圍 '{name}'\n原引用: {refersTo}\n工作簿剩餘名稱範圍數: {remainingCount}\n輸出: {path}");
+        return await Task.FromResult($"Successfully deleted named range '{name}'\nOriginal reference: {refersTo}\nRemaining named ranges in workbook: {remainingCount}\nOutput: {outputPath}");
     }
 
     /// <summary>
@@ -221,23 +228,23 @@ Usage examples:
         var names = workbook.Worksheets.Names;
         var result = new StringBuilder();
 
-        result.AppendLine("=== Excel 工作簿的名稱範圍資訊 ===\n");
-        result.AppendLine($"總名稱範圍數: {names.Count}\n");
+        result.AppendLine("=== Named ranges information for Excel workbook ===\n");
+        result.AppendLine($"Total named ranges: {names.Count}\n");
 
         if (names.Count == 0)
         {
-            result.AppendLine("未找到名稱範圍");
+            result.AppendLine("No named ranges found");
             return await Task.FromResult(result.ToString());
         }
 
         for (int i = 0; i < names.Count; i++)
         {
             var name = names[i];
-            result.AppendLine($"【名稱範圍 {i}】");
-            result.AppendLine($"名稱: {name.Text}");
-            result.AppendLine($"引用: {name.RefersTo}");
-            result.AppendLine($"註解: {name.Comment ?? "(無)"}");
-            result.AppendLine($"是否可見: {name.IsVisible}");
+            result.AppendLine($"[Named range {i}]");
+            result.AppendLine($"Name: {name.Text}");
+            result.AppendLine($"Reference: {name.RefersTo}");
+            result.AppendLine($"Comment: {name.Comment ?? "(none)"}");
+            result.AppendLine($"Is visible: {name.IsVisible}");
             result.AppendLine();
         }
 

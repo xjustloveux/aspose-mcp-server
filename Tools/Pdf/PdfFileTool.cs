@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using Aspose.Pdf.Optimization;
 using AsposeMcpServer.Core;
@@ -89,7 +89,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
 
         return operation.ToLower() switch
         {
@@ -109,7 +109,7 @@ Usage examples:
     /// <returns>Success message with file path</returns>
     private async Task<string> CreateDocument(JsonObject? arguments)
     {
-        var outputPath = ArgumentHelper.GetString(arguments, "outputPath", "outputPath", false) ?? ArgumentHelper.GetString(arguments, "path", "path", false) ?? throw new ArgumentException("outputPath is required");
+        var outputPath = ArgumentHelper.GetString(arguments, "outputPath", "path", "outputPath", true);
 
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
@@ -126,8 +126,8 @@ Usage examples:
     /// <returns>Success message with merged file path</returns>
     private async Task<string> MergeDocuments(JsonObject? arguments)
     {
-        var inputPathsArray = arguments?["inputPaths"]?.AsArray() ?? throw new ArgumentException("inputPaths is required");
-        var outputPath = ArgumentHelper.GetString(arguments, "outputPath", "outputPath");
+        var inputPathsArray = ArgumentHelper.GetArray(arguments, "inputPaths");
+        var outputPath = ArgumentHelper.GetString(arguments, "outputPath");
 
         // Validate array size
         SecurityHelper.ValidateArraySize(inputPathsArray, "inputPaths");
@@ -164,10 +164,10 @@ Usage examples:
     private async Task<string> SplitDocument(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputDir = ArgumentHelper.GetString(arguments, "outputDir", "outputDir");
-        var pagesPerFile = arguments?["pagesPerFile"]?.GetValue<int>() ?? 1;
+        var outputDir = ArgumentHelper.GetString(arguments, "outputDir");
+        var pagesPerFile = ArgumentHelper.GetInt(arguments, "pagesPerFile", 1);
 
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
         SecurityHelper.ValidateFilePath(outputDir, "outputDir");
 
         if (pagesPerFile < 1 || pagesPerFile > 1000)
@@ -201,11 +201,11 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var compressImages = arguments?["compressImages"]?.GetValue<bool>() ?? true;
-        var compressFonts = arguments?["compressFonts"]?.GetValue<bool>() ?? true;
-        var removeUnusedObjects = arguments?["removeUnusedObjects"]?.GetValue<bool>() ?? true;
+        var compressImages = ArgumentHelper.GetBool(arguments, "compressImages");
+        var compressFonts = ArgumentHelper.GetBool(arguments, "compressFonts");
+        var removeUnusedObjects = ArgumentHelper.GetBool(arguments, "removeUnusedObjects");
 
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         var document = new Document(path);
@@ -243,10 +243,10 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var userPassword = ArgumentHelper.GetString(arguments, "userPassword", "userPassword");
-        var ownerPassword = ArgumentHelper.GetString(arguments, "ownerPassword", "ownerPassword");
+        var userPassword = ArgumentHelper.GetString(arguments, "userPassword");
+        var ownerPassword = ArgumentHelper.GetString(arguments, "ownerPassword");
 
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         using var document = new Document(path);

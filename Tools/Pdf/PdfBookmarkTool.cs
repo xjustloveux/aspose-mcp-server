@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
@@ -62,7 +62,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
 
         return operation.ToLower() switch
         {
@@ -83,10 +83,10 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var title = ArgumentHelper.GetString(arguments, "title", "title");
-        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex", "pageIndex");
+        var title = ArgumentHelper.GetString(arguments, "title");
+        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
 
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         using var document = new Document(path);
@@ -113,9 +113,9 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var bookmarkIndex = ArgumentHelper.GetInt(arguments, "bookmarkIndex", "bookmarkIndex");
+        var bookmarkIndex = ArgumentHelper.GetInt(arguments, "bookmarkIndex");
 
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         using var document = new Document(path);
@@ -138,11 +138,11 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var bookmarkIndex = ArgumentHelper.GetInt(arguments, "bookmarkIndex", "bookmarkIndex");
-        var title = arguments?["title"]?.GetValue<string>();
-        var pageIndex = arguments?["pageIndex"]?.GetValue<int?>();
+        var bookmarkIndex = ArgumentHelper.GetInt(arguments, "bookmarkIndex");
+        var title = ArgumentHelper.GetStringNullable(arguments, "title");
+        var pageIndex = ArgumentHelper.GetIntNullable(arguments, "pageIndex");
 
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         using var document = new Document(path);

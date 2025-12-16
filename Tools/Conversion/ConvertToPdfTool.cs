@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using Aspose.Words;
 using Aspose.Cells;
 using Aspose.Slides;
@@ -36,8 +36,8 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var inputPath = ArgumentHelper.GetString(arguments, "inputPath", "inputPath");
-        var outputPath = ArgumentHelper.GetString(arguments, "outputPath", "outputPath");
+        var inputPath = ArgumentHelper.GetString(arguments, "inputPath");
+        var outputPath = ArgumentHelper.GetString(arguments, "outputPath");
 
         SecurityHelper.ValidateFilePath(inputPath, "inputPath");
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");

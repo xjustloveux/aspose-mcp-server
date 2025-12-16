@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using Aspose.Slides;
 using Aspose.Slides.SmartArt;
 using Aspose.Slides.Export;
@@ -97,6 +97,11 @@ Usage examples:
             {
                 type = "number",
                 description = "Height (optional, for add, default: 300)"
+            },
+            outputPath = new
+            {
+                type = "string",
+                description = "Output file path (optional, for add/edit/delete operations, defaults to input path)"
             }
         },
         required = new[] { "operation", "path", "slideIndex" }
@@ -104,9 +109,9 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
 
         return operation.ToLower() switch
         {
@@ -125,11 +130,11 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> AddSmartArtAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var layoutStr = ArgumentHelper.GetString(arguments, "layout", "layout");
-        var x = arguments?["x"]?.GetValue<float?>() ?? 50;
-        var y = arguments?["y"]?.GetValue<float?>() ?? 50;
-        var width = arguments?["width"]?.GetValue<float?>() ?? 400;
-        var height = arguments?["height"]?.GetValue<float?>() ?? 300;
+        var layoutStr = ArgumentHelper.GetString(arguments, "layout");
+        var x = ArgumentHelper.GetFloat(arguments, "x", 50);
+        var y = ArgumentHelper.GetFloat(arguments, "y", 50);
+        var width = ArgumentHelper.GetFloat(arguments, "width", 400);
+        var height = ArgumentHelper.GetFloat(arguments, "height", 300);
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
@@ -147,8 +152,9 @@ Usage examples:
         };
         slide.Shapes.AddSmartArt(x, y, width, height, layout);
 
-        presentation.Save(path, SaveFormat.Pptx);
-        return await Task.FromResult($"已新增 SmartArt ({layout}) 至投影片 {slideIndex}");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
+        return await Task.FromResult($"SmartArt ({layout}) added to slide {slideIndex}");
     }
 
     /// <summary>
@@ -160,12 +166,14 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> ManageNodesAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
-        var action = arguments?["action"]?.GetValue<string>()?.ToLower() ?? throw new ArgumentException("action is required for manage_nodes operation");
-        var targetPath = arguments?["targetPath"]?.AsArray()?.Select(x => x?.GetValue<int>() ?? -1).ToArray();
-        var text = arguments?["text"]?.GetValue<string>();
-        var moveParentPath = arguments?["moveParentPath"]?.AsArray()?.Select(x => x?.GetValue<int>() ?? -1).ToArray();
-        var moveIndex = arguments?["moveIndex"]?.GetValue<int?>();
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
+        var action = ArgumentHelper.GetString(arguments, "action").ToLower();
+        var targetPathArray = ArgumentHelper.GetArray(arguments, "targetPath", false);
+        var targetPath = targetPathArray?.Select(x => x?.GetValue<int>() ?? -1).ToArray();
+        var text = ArgumentHelper.GetStringNullable(arguments, "text");
+        var moveParentPathArray = ArgumentHelper.GetArray(arguments, "moveParentPath", false);
+        var moveParentPath = moveParentPathArray?.Select(x => x?.GetValue<int>() ?? -1).ToArray();
+        var moveIndex = ArgumentHelper.GetIntNullable(arguments, "moveIndex");
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
@@ -173,7 +181,7 @@ Usage examples:
 
         if (shape is not ISmartArt smartArt)
         {
-            throw new ArgumentException("指定的 shape 不是 SmartArt");
+            throw new ArgumentException("The specified shape is not a SmartArt");
         }
 
         SmartArtNode? GetNode(int[]? pathArr)
@@ -200,21 +208,21 @@ Usage examples:
             case "remove":
                 {
                     var node = GetNode(targetPath);
-                    if (node == null) throw new ArgumentException("targetPath 無效");
+                    if (node == null) throw new ArgumentException("targetPath is invalid");
                     node.Remove();
                     break;
                 }
             case "rename":
                 {
                     var node = GetNode(targetPath);
-                    if (node == null) throw new ArgumentException("targetPath 無效");
+                    if (node == null) throw new ArgumentException("targetPath is invalid");
                     node.TextFrame.Text = text ?? string.Empty;
                     break;
                 }
             case "move":
                 {
                     var node = GetNode(targetPath);
-                    if (node == null) throw new ArgumentException("targetPath 無效");
+                    if (node == null) throw new ArgumentException("targetPath is invalid");
                     var parent = GetNode(moveParentPath) ?? smartArt.AllNodes.AddNode();
                     var clone = parent.ChildNodes.AddNode();
                     clone.TextFrame.Text = node.TextFrame.Text;
@@ -227,11 +235,12 @@ Usage examples:
                     break;
                 }
             default:
-                throw new ArgumentException("action 必須為 add/remove/rename/move");
+                throw new ArgumentException("action must be one of: add/remove/rename/move");
         }
 
-        presentation.Save(path, SaveFormat.Pptx);
-        return await Task.FromResult($"SmartArt {action} 完成：slide {slideIndex}, shape {shapeIndex}");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
+        return await Task.FromResult($"SmartArt {action} completed: slide {slideIndex}, shape {shapeIndex}");
     }
 }
 

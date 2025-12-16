@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Text;
 using Aspose.Words;
 using Aspose.Words.Drawing;
@@ -155,10 +155,10 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
 
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
 
         return operation.ToLower() switch
         {
@@ -181,17 +181,17 @@ Usage examples:
     private async Task<string> AddImageAsync(JsonObject? arguments, string path)
     {
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var imagePath = ArgumentHelper.GetString(arguments, "imagePath", "imagePath");
-        var width = arguments?["width"]?.GetValue<double?>();
-        var height = arguments?["height"]?.GetValue<double?>();
-        var alignment = arguments?["alignment"]?.GetValue<string>() ?? "left";
-        var textWrapping = arguments?["textWrapping"]?.GetValue<string>() ?? "inline";
-        var caption = arguments?["caption"]?.GetValue<string>();
-        var captionPosition = arguments?["captionPosition"]?.GetValue<string>() ?? "below";
+        var imagePath = ArgumentHelper.GetString(arguments, "imagePath");
+        var width = ArgumentHelper.GetDoubleNullable(arguments, "width");
+        var height = ArgumentHelper.GetDoubleNullable(arguments, "height");
+        var alignment = ArgumentHelper.GetString(arguments, "alignment", "left");
+        var textWrapping = ArgumentHelper.GetString(arguments, "textWrapping", "inline");
+        var caption = ArgumentHelper.GetStringNullable(arguments, "caption");
+        var captionPosition = ArgumentHelper.GetString(arguments, "captionPosition", "below");
 
         if (!File.Exists(imagePath))
         {
-            throw new FileNotFoundException($"找不到圖片檔案: {imagePath}");
+            throw new FileNotFoundException($"Image file not found: {imagePath}");
         }
 
         var doc = new Document(path);
@@ -299,19 +299,19 @@ Usage examples:
 
         doc.Save(outputPath);
 
-        var result = $"成功添加圖片\n";
-        result += $"圖片: {Path.GetFileName(imagePath)}\n";
+        var result = $"Image added successfully\n";
+        result += $"Image: {Path.GetFileName(imagePath)}\n";
         if (width.HasValue || height.HasValue)
         {
-            result += $"尺寸: {(width.HasValue ? width.Value.ToString() : "auto")} x {(height.HasValue ? height.Value.ToString() : "auto")} pt\n";
+            result += $"Size: {(width.HasValue ? width.Value.ToString() : "auto")} x {(height.HasValue ? height.Value.ToString() : "auto")} pt\n";
         }
-        result += $"對齊: {alignment}\n";
-        result += $"文繞圖: {textWrapping}\n";
+        result += $"Alignment: {alignment}\n";
+        result += $"Text wrapping: {textWrapping}\n";
         if (!string.IsNullOrEmpty(caption))
         {
-            result += $"圖片說明: {caption} ({captionPosition})\n";
+            result += $"Caption: {caption} ({captionPosition})\n";
         }
-        result += $"輸出: {outputPath}";
+        result += $"Output: {outputPath}";
 
         return await Task.FromResult(result);
     }
@@ -324,9 +324,9 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> EditImageAsync(JsonObject? arguments, string path)
     {
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var imageIndex = ArgumentHelper.GetInt(arguments, "imageIndex", "imageIndex");
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
+        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
+        var imageIndex = ArgumentHelper.GetInt(arguments, "imageIndex");
+        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
 
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
@@ -336,35 +336,28 @@ Usage examples:
         
         if (imageIndex < 0 || imageIndex >= allImages.Count)
         {
-            throw new ArgumentException($"圖片索引 {imageIndex} 超出範圍 (文檔共有 {allImages.Count} 張圖片)");
+            throw new ArgumentException($"Image index {imageIndex} is out of range (document has {allImages.Count} images)");
         }
         
         var shape = allImages[imageIndex];
         
         // Apply size properties
-        if (arguments?["width"] != null)
-        {
-            var width = arguments["width"]?.GetValue<double>();
-            if (width.HasValue)
-                shape.Width = width.Value;
-        }
+        var width = ArgumentHelper.GetDoubleNullable(arguments, "width");
+        if (width.HasValue)
+            shape.Width = width.Value;
         
-        if (arguments?["height"] != null)
-        {
-            var height = arguments["height"]?.GetValue<double>();
-            if (height.HasValue)
-                shape.Height = height.Value;
-        }
+        var height = ArgumentHelper.GetDoubleNullable(arguments, "height");
+        if (height.HasValue)
+            shape.Height = height.Value;
         
-        if (arguments?["aspectRatioLocked"] != null)
-        {
-            shape.AspectRatioLocked = arguments["aspectRatioLocked"]?.GetValue<bool>() ?? true;
-        }
+        var aspectRatioLocked = ArgumentHelper.GetBoolNullable(arguments, "aspectRatioLocked");
+        if (aspectRatioLocked.HasValue)
+            shape.AspectRatioLocked = aspectRatioLocked.Value;
         
         // Apply alignment (for inline images)
-        if (arguments?["alignment"] != null)
+        var alignment = ArgumentHelper.GetStringNullable(arguments, "alignment") ?? "left";
+        if (!string.IsNullOrEmpty(alignment))
         {
-            var alignment = arguments["alignment"]?.GetValue<string>() ?? "left";
             var parentPara = shape.ParentNode as Paragraph;
             if (parentPara != null)
             {
@@ -373,23 +366,23 @@ Usage examples:
         }
         
         // Apply text wrapping
-        if (arguments?["textWrapping"] != null)
+        var textWrapping = ArgumentHelper.GetStringNullable(arguments, "textWrapping") ?? "inline";
+        if (!string.IsNullOrEmpty(textWrapping))
         {
-            var textWrapping = arguments["textWrapping"]?.GetValue<string>() ?? "inline";
             shape.WrapType = GetWrapType(textWrapping);
             
             if (textWrapping != "inline")
             {
-                if (arguments?["horizontalAlignment"] != null)
+                var hAlign = ArgumentHelper.GetStringNullable(arguments, "horizontalAlignment") ?? "left";
+                if (!string.IsNullOrEmpty(hAlign))
                 {
-                    var hAlign = arguments["horizontalAlignment"]?.GetValue<string>() ?? "left";
                     shape.RelativeHorizontalPosition = RelativeHorizontalPosition.Page;
                     shape.HorizontalAlignment = GetHorizontalAlignment(hAlign);
                 }
                 
-                if (arguments?["verticalAlignment"] != null)
+                var vAlign = ArgumentHelper.GetStringNullable(arguments, "verticalAlignment") ?? "top";
+                if (!string.IsNullOrEmpty(vAlign))
                 {
-                    var vAlign = arguments["verticalAlignment"]?.GetValue<string>() ?? "top";
                     shape.RelativeVerticalPosition = RelativeVerticalPosition.Page;
                     shape.VerticalAlignment = GetVerticalAlignment(vAlign);
                 }
@@ -397,46 +390,46 @@ Usage examples:
         }
         else if (shape.WrapType != WrapType.Inline)
         {
-            if (arguments?["horizontalAlignment"] != null)
+            var hAlign = ArgumentHelper.GetStringNullable(arguments, "horizontalAlignment") ?? "left";
+            if (!string.IsNullOrEmpty(hAlign))
             {
-                var hAlign = arguments["horizontalAlignment"]?.GetValue<string>() ?? "left";
                 shape.RelativeHorizontalPosition = RelativeHorizontalPosition.Page;
                 shape.HorizontalAlignment = GetHorizontalAlignment(hAlign);
             }
             
-            if (arguments?["verticalAlignment"] != null)
+            var vAlign = ArgumentHelper.GetStringNullable(arguments, "verticalAlignment") ?? "top";
+            if (!string.IsNullOrEmpty(vAlign))
             {
-                var vAlign = arguments["verticalAlignment"]?.GetValue<string>() ?? "top";
                 shape.RelativeVerticalPosition = RelativeVerticalPosition.Page;
                 shape.VerticalAlignment = GetVerticalAlignment(vAlign);
             }
         }
         
         // Apply alternative text
-        if (arguments?["alternativeText"] != null)
-        {
-            var altText = arguments["alternativeText"]?.GetValue<string>();
-            shape.AlternativeText = altText ?? "";
-        }
+        var altText = ArgumentHelper.GetStringNullable(arguments, "alternativeText");
+        if (!string.IsNullOrEmpty(altText))
+            shape.AlternativeText = altText;
         
         // Apply title
-        if (arguments?["title"] != null)
-        {
-            var title = arguments["title"]?.GetValue<string>();
-            shape.Title = title ?? "";
-        }
+        var title = ArgumentHelper.GetStringNullable(arguments, "title");
+        if (!string.IsNullOrEmpty(title))
+            shape.Title = title;
         
         doc.Save(outputPath);
         
         var changes = new List<string>();
-        if (arguments?["width"] != null) changes.Add($"寬度：{arguments["width"]?.GetValue<double>()}");
-        if (arguments?["height"] != null) changes.Add($"高度：{arguments["height"]?.GetValue<double>()}");
-        if (arguments?["alignment"] != null) changes.Add($"對齊：{arguments["alignment"]?.GetValue<string>()}");
-        if (arguments?["textWrapping"] != null) changes.Add($"文字環繞：{arguments["textWrapping"]?.GetValue<string>()}");
+        var widthValue = ArgumentHelper.GetDoubleNullable(arguments, "width");
+        var heightValue = ArgumentHelper.GetDoubleNullable(arguments, "height");
+        var alignmentValue = ArgumentHelper.GetStringNullable(arguments, "alignment");
+        var textWrappingValue = ArgumentHelper.GetStringNullable(arguments, "textWrapping");
+        if (widthValue.HasValue) changes.Add($"Width: {widthValue.Value}");
+        if (heightValue.HasValue) changes.Add($"Height: {heightValue.Value}");
+        if (alignmentValue != null) changes.Add($"Alignment: {alignmentValue}");
+        if (textWrappingValue != null) changes.Add($"Text wrapping: {textWrappingValue}");
         
-        var changesDesc = changes.Count > 0 ? string.Join("、", changes) : "屬性";
+        var changesDesc = changes.Count > 0 ? string.Join(", ", changes) : "properties";
         
-        return await Task.FromResult($"成功編輯圖片 {imageIndex} 的{changesDesc}。輸出: {outputPath}");
+        return await Task.FromResult($"Image {imageIndex} edited successfully ({changesDesc}). Output: {outputPath}");
     }
 
     /// <summary>
@@ -447,9 +440,9 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> DeleteImageAsync(JsonObject? arguments, string path)
     {
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var imageIndex = ArgumentHelper.GetInt(arguments, "imageIndex", "imageIndex");
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
+        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
+        var imageIndex = ArgumentHelper.GetInt(arguments, "imageIndex");
+        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
 
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
@@ -459,17 +452,17 @@ Usage examples:
         
         if (imageIndex < 0 || imageIndex >= allImages.Count)
         {
-            throw new ArgumentException($"圖片索引 {imageIndex} 超出範圍 (文檔共有 {allImages.Count} 張圖片)");
+            throw new ArgumentException($"Image index {imageIndex} is out of range (document has {allImages.Count} images)");
         }
         
         var shapeToDelete = allImages[imageIndex];
         
-        string imageInfo = $"圖片 #{imageIndex}";
+        string imageInfo = $"Image #{imageIndex}";
         if (shapeToDelete.HasImage)
         {
             try
             {
-                imageInfo += $" (寬度: {shapeToDelete.Width:F1} pt, 高度: {shapeToDelete.Height:F1} pt)";
+                imageInfo += $" (Width: {shapeToDelete.Width:F1} pt, Height: {shapeToDelete.Height:F1} pt)";
             }
             catch
             {
@@ -484,9 +477,9 @@ Usage examples:
         
         int remainingCount = GetAllImages(doc, sectionIndex).Count;
 
-        var result = $"成功刪除 {imageInfo}\n";
-        result += $"文檔剩餘圖片數: {remainingCount}\n";
-        result += $"輸出: {outputPath}";
+        var result = $"{imageInfo} deleted successfully\n";
+        result += $"Remaining images in document: {remainingCount}\n";
+        result += $"Output: {outputPath}";
 
         return await Task.FromResult(result);
     }
@@ -500,28 +493,28 @@ Usage examples:
     private async Task<string> GetImagesAsync(JsonObject? arguments, string path)
     {
         var doc = new Document(path);
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? -1;
+        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", -1);
         
         var shapes = GetAllImages(doc, sectionIndex);
         
         var result = new StringBuilder();
 
-        result.AppendLine("=== 文檔圖片資訊 ===\n");
+        result.AppendLine("=== Document Image Information ===\n");
         if (sectionIndex == -1)
         {
-            result.AppendLine($"總圖片數: {shapes.Count}\n");
+            result.AppendLine($"Total images: {shapes.Count}\n");
         }
         else
         {
-            result.AppendLine($"節 {sectionIndex} 的圖片數: {shapes.Count}\n");
+            result.AppendLine($"Section {sectionIndex} images: {shapes.Count}\n");
         }
 
         if (shapes.Count == 0)
         {
-            result.AppendLine("未找到圖片");
+            result.AppendLine("No images found");
             if (sectionIndex != -1)
             {
-                result.AppendLine($"(在節 {sectionIndex} 中未找到圖片，使用 sectionIndex=-1 可搜索所有節)");
+                result.AppendLine($"(No images found in section {sectionIndex}, use sectionIndex=-1 to search all sections)");
             }
             return await Task.FromResult(result.ToString());
         }
@@ -529,10 +522,10 @@ Usage examples:
         for (int i = 0; i < shapes.Count; i++)
         {
             var shape = shapes[i];
-            result.AppendLine($"【圖片 {i}】");
-            result.AppendLine($"名稱: {shape.Name ?? "(無名稱)"}");
-            result.AppendLine($"寬度: {shape.Width} 點");
-            result.AppendLine($"高度: {shape.Height} 點");
+            result.AppendLine($"[Image {i}]");
+            result.AppendLine($"Name: {shape.Name ?? "(No name)"}");
+            result.AppendLine($"Width: {shape.Width} points");
+            result.AppendLine($"Height: {shape.Height} points");
             
             if (shape.IsInline)
             {
@@ -540,31 +533,31 @@ Usage examples:
                 var parentPara = shape.ParentNode as Paragraph;
                 if (parentPara != null)
                 {
-                    result.AppendLine($"對齊方式: {parentPara.ParagraphFormat.Alignment} (段落對齊)");
-                    result.AppendLine($"位置: 內嵌於段落中 (X/Y 位置不適用於內嵌圖片)");
+                    result.AppendLine($"Alignment: {parentPara.ParagraphFormat.Alignment} (paragraph alignment)");
+                    result.AppendLine($"Position: Inline in paragraph (X/Y position not applicable for inline images)");
                 }
                 else
                 {
-                    result.AppendLine($"位置: X={shape.Left}, Y={shape.Top}");
+                    result.AppendLine($"Position: X={shape.Left}, Y={shape.Top}");
                 }
             }
             else
             {
                 // For floating images, show position and alignment
-                result.AppendLine($"位置: X={shape.Left}, Y={shape.Top}");
-                result.AppendLine($"水平對齊: {shape.HorizontalAlignment}");
-                result.AppendLine($"垂直對齊: {shape.VerticalAlignment}");
-                result.AppendLine($"文字環繞: {shape.WrapType}");
+                result.AppendLine($"Position: X={shape.Left}, Y={shape.Top}");
+                result.AppendLine($"Horizontal alignment: {shape.HorizontalAlignment}");
+                result.AppendLine($"Vertical alignment: {shape.VerticalAlignment}");
+                result.AppendLine($"Text wrapping: {shape.WrapType}");
             }
             
             if (shape.ImageData != null)
             {
-                result.AppendLine($"圖片類型: {shape.ImageData.ImageType}");
+                result.AppendLine($"Image type: {shape.ImageData.ImageType}");
                 var imageSize = shape.ImageData.ImageSize;
-                result.AppendLine($"原始尺寸: {imageSize.WidthPixels} × {imageSize.HeightPixels} 像素");
+                result.AppendLine($"Original size: {imageSize.WidthPixels} × {imageSize.HeightPixels} pixels");
             }
             
-            result.AppendLine($"是否在文本內: {shape.IsInline}");
+            result.AppendLine($"Is inline: {shape.IsInline}");
             result.AppendLine();
         }
 
@@ -579,19 +572,19 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> ReplaceImageAsync(JsonObject? arguments, string path)
     {
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var imageIndex = ArgumentHelper.GetInt(arguments, "imageIndex", "imageIndex");
-        var newImagePath = ArgumentHelper.GetString(arguments, "newImagePath", "newImagePath");
-        var preserveSize = arguments?["preserveSize"]?.GetValue<bool>() ?? true;
-        var preservePosition = arguments?["preservePosition"]?.GetValue<bool>() ?? true;
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
+        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
+        var imageIndex = ArgumentHelper.GetInt(arguments, "imageIndex");
+        var newImagePath = ArgumentHelper.GetString(arguments, "newImagePath");
+        var preserveSize = ArgumentHelper.GetBool(arguments, "preserveSize");
+        var preservePosition = ArgumentHelper.GetBool(arguments, "preservePosition");
+        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
 
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
         SecurityHelper.ValidateFilePath(newImagePath, "newImagePath");
 
         if (!File.Exists(newImagePath))
         {
-            throw new FileNotFoundException($"找不到圖片檔案: {newImagePath}");
+            throw new FileNotFoundException($"Image file not found: {newImagePath}");
         }
 
         var doc = new Document(path);
@@ -600,7 +593,7 @@ Usage examples:
         
         if (imageIndex < 0 || imageIndex >= allImages.Count)
         {
-            throw new ArgumentException($"圖片索引 {imageIndex} 超出範圍 (文檔共有 {allImages.Count} 張圖片)");
+            throw new ArgumentException($"Image index {imageIndex} is out of range (document has {allImages.Count} images)");
         }
         
         var shapeToReplace = allImages[imageIndex];
@@ -654,22 +647,22 @@ Usage examples:
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException($"替換圖片時發生錯誤: {ex.Message}", ex);
+            throw new InvalidOperationException($"Error occurred while replacing image: {ex.Message}", ex);
         }
         
         doc.Save(outputPath);
         
-        var result = $"成功替換圖片 #{imageIndex}\n";
-        result += $"新圖片: {Path.GetFileName(newImagePath)}\n";
+        var result = $"Image #{imageIndex} replaced successfully\n";
+        result += $"New image: {Path.GetFileName(newImagePath)}\n";
         if (preserveSize)
         {
-            result += $"保留尺寸: {originalWidth:F1} pt x {originalHeight:F1} pt\n";
+            result += $"Preserved size: {originalWidth:F1} pt x {originalHeight:F1} pt\n";
         }
         if (preservePosition)
         {
-            result += $"保留位置和環繞方式\n";
+            result += $"Preserved position and wrapping\n";
         }
-        result += $"輸出: {outputPath}";
+        result += $"Output: {outputPath}";
         
         return await Task.FromResult(result);
     }
@@ -682,8 +675,8 @@ Usage examples:
     /// <returns>Success message with extracted image count</returns>
     private async Task<string> ExtractImagesAsync(JsonObject? arguments, string path)
     {
-        var outputDir = ArgumentHelper.GetString(arguments, "outputDir", "outputDir");
-        var prefix = arguments?["prefix"]?.GetValue<string>() ?? "image";
+        var outputDir = ArgumentHelper.GetString(arguments, "outputDir");
+        var prefix = ArgumentHelper.GetString(arguments, "prefix", "image");
 
         SecurityHelper.ValidateFilePath(outputDir, "outputDir");
 
@@ -694,7 +687,7 @@ Usage examples:
         
         if (shapes.Count == 0)
         {
-            return await Task.FromResult("文檔中沒有找到圖片");
+            return await Task.FromResult("No images found in document");
         }
 
         var extractedFiles = new List<string>();
@@ -731,8 +724,8 @@ Usage examples:
             extractedFiles.Add(outputPath);
         }
 
-        return await Task.FromResult($"成功提取 {shapes.Count} 張圖片到: {outputDir}\n" +
-                                    $"檔案列表:\n" + string.Join("\n", extractedFiles.Select(f => $"  - {Path.GetFileName(f)}")));
+        return await Task.FromResult($"Successfully extracted {shapes.Count} images to: {outputDir}\n" +
+                                    $"File list:\n" + string.Join("\n", extractedFiles.Select(f => $"  - {Path.GetFileName(f)}")));
     }
 
     private List<Shape> GetAllImages(Document doc, int sectionIndex)
@@ -751,7 +744,7 @@ Usage examples:
         {
             if (sectionIndex >= doc.Sections.Count)
             {
-                throw new ArgumentException($"節索引 {sectionIndex} 超出範圍 (文檔共有 {doc.Sections.Count} 個節)");
+                throw new ArgumentException($"Section index {sectionIndex} is out of range (document has {doc.Sections.Count} sections)");
             }
             
             var section = doc.Sections[sectionIndex];

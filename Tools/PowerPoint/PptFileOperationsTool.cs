@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Core;
@@ -96,7 +96,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
 
         return operation.ToLower() switch
         {
@@ -115,8 +115,8 @@ Usage examples:
     /// <returns>Success message with file path</returns>
     private async Task<string> CreatePresentationAsync(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetString(arguments, "path", "path", false) ?? ArgumentHelper.GetString(arguments, "outputPath", "outputPath", false) ?? throw new ArgumentException("path or outputPath is required for create operation");
-        SecurityHelper.ValidateFilePath(path, "path");
+        var path = ArgumentHelper.GetString(arguments, "path", "outputPath", "path or outputPath", true);
+        SecurityHelper.ValidateFilePath(path);
 
         using var presentation = new Presentation();
         presentation.Save(path, SaveFormat.Pptx);
@@ -131,11 +131,11 @@ Usage examples:
     /// <returns>Success message with output path</returns>
     private async Task<string> ConvertPresentationAsync(JsonObject? arguments)
     {
-        var inputPath = ArgumentHelper.GetString(arguments, "inputPath", "inputPath", false) ?? ArgumentHelper.GetString(arguments, "path", "path", false) ?? throw new ArgumentException("inputPath or path is required for convert operation");
+        var inputPath = ArgumentHelper.GetString(arguments, "inputPath", "path", "inputPath or path", true);
         SecurityHelper.ValidateFilePath(inputPath, "inputPath");
-        var outputPath = ArgumentHelper.GetString(arguments, "outputPath", "outputPath");
+        var outputPath = ArgumentHelper.GetString(arguments, "outputPath");
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var format = arguments?["format"]?.GetValue<string>()?.ToLower() ?? throw new ArgumentException("format is required for convert operation");
+        var format = ArgumentHelper.GetString(arguments, "format").ToLower();
 
         using var presentation = new Presentation(inputPath);
 
@@ -183,11 +183,11 @@ Usage examples:
     /// <returns>Success message with merged file path</returns>
     private async Task<string> MergePresentationsAsync(JsonObject? arguments)
     {
-        var outputPath = ArgumentHelper.GetString(arguments, "path", "path", false) ?? ArgumentHelper.GetString(arguments, "outputPath", "outputPath", false) ?? throw new ArgumentException("path or outputPath is required for merge operation");
+        var outputPath = ArgumentHelper.GetString(arguments, "path", "outputPath", "path or outputPath", true);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var inputPathsArray = arguments?["inputPaths"]?.AsArray() ?? throw new ArgumentException("inputPaths is required for merge operation");
+        var inputPathsArray = ArgumentHelper.GetArray(arguments, "inputPaths");
         SecurityHelper.ValidateArraySize(inputPathsArray, "inputPaths");
-        var keepSourceFormatting = arguments?["keepSourceFormatting"]?.GetValue<bool?>() ?? true;
+        var keepSourceFormatting = ArgumentHelper.GetBool(arguments, "keepSourceFormatting");
 
         if (inputPathsArray.Count == 0)
         {
@@ -235,12 +235,12 @@ Usage examples:
     /// <returns>Success message with split file count</returns>
     private async Task<string> SplitPresentationAsync(JsonObject? arguments)
     {
-        var inputPath = ArgumentHelper.GetString(arguments, "inputPath", "inputPath", false) ?? ArgumentHelper.GetString(arguments, "path", "path", false) ?? throw new ArgumentException("inputPath or path is required for split operation");
-        var outputDirectory = ArgumentHelper.GetString(arguments, "outputDirectory", "outputDirectory");
-        var slidesPerFile = arguments?["slidesPerFile"]?.GetValue<int?>() ?? 1;
-        var startSlideIndex = arguments?["startSlideIndex"]?.GetValue<int?>();
-        var endSlideIndex = arguments?["endSlideIndex"]?.GetValue<int?>();
-        var fileNamePattern = arguments?["outputFileNamePattern"]?.GetValue<string>() ?? "slide_{index}.pptx";
+        var inputPath = ArgumentHelper.GetString(arguments, "inputPath", "path", "inputPath or path", true);
+        var outputDirectory = ArgumentHelper.GetString(arguments, "outputDirectory");
+        var slidesPerFile = ArgumentHelper.GetInt(arguments, "slidesPerFile", 1);
+        var startSlideIndex = ArgumentHelper.GetIntNullable(arguments, "startSlideIndex");
+        var endSlideIndex = ArgumentHelper.GetIntNullable(arguments, "endSlideIndex");
+        var fileNamePattern = ArgumentHelper.GetString(arguments, "outputFileNamePattern", "slide_{index}.pptx");
 
         if (!Directory.Exists(outputDirectory))
         {

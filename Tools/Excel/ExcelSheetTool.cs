@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Text;
 using System.Linq;
 using Aspose.Cells;
@@ -60,7 +60,7 @@ Usage examples:
             newName = new
             {
                 type = "string",
-                description = "New name for the sheet (required for rename)"
+                description = "New name for the sheet (required for rename, maximum 31 characters recommended for Excel compatibility)"
             },
             insertAt = new
             {
@@ -76,6 +76,11 @@ Usage examples:
             {
                 type = "string",
                 description = "Target file path for copy operation (optional, if not provided copies within same workbook)"
+            },
+            outputPath = new
+            {
+                type = "string",
+                description = "Output file path (optional, for add/delete/rename/move/copy/hide operations, defaults to input path)"
             }
         },
         required = new[] { "operation", "path" }
@@ -83,7 +88,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         return operation.ToLower() switch
@@ -107,8 +112,8 @@ Usage examples:
     /// <returns>Success message with worksheet name</returns>
     private async Task<string> AddSheetAsync(JsonObject? arguments, string path)
     {
-        var sheetName = arguments?["sheetName"]?.GetValue<string>()?.Trim() ?? throw new ArgumentException("sheetName is required for add operation");
-        var insertAt = arguments?["insertAt"]?.GetValue<int?>();
+        var sheetName = ArgumentHelper.GetString(arguments, "sheetName").Trim();
+        var insertAt = ArgumentHelper.GetIntNullable(arguments, "insertAt");
 
         if (string.IsNullOrWhiteSpace(sheetName))
         {
@@ -149,9 +154,10 @@ Usage examples:
         }
         
         newSheet.Name = sheetName;
-        workbook.Save(path);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        workbook.Save(outputPath);
 
-        return await Task.FromResult($"Worksheet '{sheetName}' added: {path}");
+        return await Task.FromResult($"Worksheet '{sheetName}' added: {outputPath}");
     }
 
     /// <summary>
@@ -162,21 +168,22 @@ Usage examples:
     /// <returns>Success message with deleted sheet name</returns>
     private async Task<string> DeleteSheetAsync(JsonObject? arguments, string path)
     {
-        var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", "sheetIndex");
+        var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex");
 
         using var workbook = new Workbook(path);
         ExcelHelper.ValidateSheetIndex(sheetIndex, workbook);
 
         if (workbook.Worksheets.Count <= 1)
         {
-            throw new InvalidOperationException("無法刪除最後一個工作表");
+            throw new InvalidOperationException("Cannot delete the last worksheet");
         }
 
         var sheetName = workbook.Worksheets[sheetIndex].Name;
         workbook.Worksheets.RemoveAt(sheetIndex);
-        workbook.Save(path);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        workbook.Save(outputPath);
 
-        return await Task.FromResult($"工作表 '{sheetName}' (索引 {sheetIndex}) 已刪除: {path}");
+        return await Task.FromResult($"Worksheet '{sheetName}' (index {sheetIndex}) deleted: {outputPath}");
     }
 
     /// <summary>
@@ -190,13 +197,13 @@ Usage examples:
         using var workbook = new Workbook(path);
         var result = new StringBuilder();
 
-        result.AppendLine($"=== 工作簿 '{Path.GetFileName(path)}' 的工作表列表 ===\n");
-        result.AppendLine($"總工作表數: {workbook.Worksheets.Count}\n");
+        result.AppendLine($"=== Worksheet list for workbook '{Path.GetFileName(path)}' ===\n");
+        result.AppendLine($"Total worksheets: {workbook.Worksheets.Count}\n");
 
         for (int i = 0; i < workbook.Worksheets.Count; i++)
         {
             var worksheet = workbook.Worksheets[i];
-            result.AppendLine($"{i}. {worksheet.Name} (可見性: {(worksheet.IsVisible ? "Visible" : "Hidden")})");
+            result.AppendLine($"{i}. {worksheet.Name} (visibility: {(worksheet.IsVisible ? "Visible" : "Hidden")})");
         }
 
         return await Task.FromResult(result.ToString());
@@ -210,8 +217,8 @@ Usage examples:
     /// <returns>Success message with old and new names</returns>
     private async Task<string> RenameSheetAsync(JsonObject? arguments, string path)
     {
-        var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", "sheetIndex");
-        var newName = ArgumentHelper.GetString(arguments, "newName", "newName").Trim();
+        var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex");
+        var newName = ArgumentHelper.GetString(arguments, "newName").Trim();
 
         if (string.IsNullOrWhiteSpace(newName))
         {
@@ -230,10 +237,17 @@ Usage examples:
             throw new ArgumentException($"Worksheet name '{newName}' already exists in the workbook");
         }
 
-        worksheet.Name = newName;
-        workbook.Save(path);
+        // Check length before setting name (Excel worksheet name limit is 31 characters)
+        if (newName.Length > 31)
+        {
+            throw new ArgumentException($"Worksheet name '{newName}' (length: {newName.Length}) exceeds Excel's standard limit of 31 characters. Aspose.Cells does not allow worksheet names longer than 31 characters.");
+        }
 
-        return await Task.FromResult($"工作表 '{oldName}' 已重新命名為 '{newName}': {path}");
+        worksheet.Name = newName;
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        workbook.Save(outputPath);
+
+        return await Task.FromResult($"Worksheet '{oldName}' renamed to '{newName}': {outputPath}");
     }
 
     /// <summary>
@@ -244,9 +258,9 @@ Usage examples:
     /// <returns>Success message with move details</returns>
     private async Task<string> MoveSheetAsync(JsonObject? arguments, string path)
     {
-        var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", "sheetIndex");
-        var targetIndex = arguments?["targetIndex"]?.GetValue<int?>();
-        var insertAt = arguments?["insertAt"]?.GetValue<int?>();
+        var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex");
+        var targetIndex = ArgumentHelper.GetIntNullable(arguments, "targetIndex");
+        var insertAt = ArgumentHelper.GetIntNullable(arguments, "insertAt");
         
         if (!targetIndex.HasValue && !insertAt.HasValue)
         {
@@ -259,17 +273,17 @@ Usage examples:
 
         if (sheetIndex < 0 || sheetIndex >= workbook.Worksheets.Count)
         {
-            throw new ArgumentException($"工作表索引 {sheetIndex} 超出範圍 (共有 {workbook.Worksheets.Count} 個工作表)");
+            throw new ArgumentException($"Worksheet index {sheetIndex} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
         }
 
         if (finalTargetIndex < 0 || finalTargetIndex >= workbook.Worksheets.Count)
         {
-            throw new ArgumentException($"目標索引 {finalTargetIndex} 超出範圍 (共有 {workbook.Worksheets.Count} 個工作表)");
+            throw new ArgumentException($"Target index {finalTargetIndex} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
         }
 
         if (sheetIndex == finalTargetIndex)
         {
-            return await Task.FromResult($"工作表已在位置 {sheetIndex}，無需移動: {path}");
+            return await Task.FromResult($"Worksheet is already at position {sheetIndex}, no move needed: {path}");
         }
 
         var sheetName = workbook.Worksheets[sheetIndex].Name;
@@ -333,9 +347,10 @@ Usage examples:
             throw new ArgumentException($"Failed to move sheet: {ex.Message}. Source index: {sheetIndex}, Target index: {finalTargetIndex}, Total sheets: {workbook.Worksheets.Count}");
         }
         
-        workbook.Save(path);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        workbook.Save(outputPath);
 
-        return await Task.FromResult($"工作表 '{sheetName}' 已從位置 {sheetIndex} 移動到位置 {finalTargetIndex}: {path}");
+        return await Task.FromResult($"Worksheet '{sheetName}' moved from position {sheetIndex} to {finalTargetIndex}: {outputPath}");
     }
 
     /// <summary>
@@ -346,9 +361,9 @@ Usage examples:
     /// <returns>Success message with copy details</returns>
     private async Task<string> CopySheetAsync(JsonObject? arguments, string path)
     {
-        var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", "sheetIndex");
-        var targetIndex = arguments?["targetIndex"]?.GetValue<int?>();
-        var copyToPath = arguments?["copyToPath"]?.GetValue<string>();
+        var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex");
+        var targetIndex = ArgumentHelper.GetIntNullable(arguments, "targetIndex");
+        var copyToPath = ArgumentHelper.GetStringNullable(arguments, "copyToPath");
         if (!string.IsNullOrEmpty(copyToPath))
         {
             SecurityHelper.ValidateFilePath(copyToPath, "copyToPath");
@@ -358,7 +373,7 @@ Usage examples:
 
         if (sheetIndex < 0 || sheetIndex >= workbook.Worksheets.Count)
         {
-            throw new ArgumentException($"工作表索引 {sheetIndex} 超出範圍 (共有 {workbook.Worksheets.Count} 個工作表)");
+            throw new ArgumentException($"Worksheet index {sheetIndex} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
         }
 
         var sourceSheet = workbook.Worksheets[sheetIndex];
@@ -371,7 +386,7 @@ Usage examples:
             var newSheet = targetWorkbook.Worksheets.Add(sheetName);
             sourceSheet.Copy(newSheet);
             targetWorkbook.Save(copyToPath);
-            return await Task.FromResult($"工作表 '{sheetName}' 已複製到 '{copyToPath}': {path}");
+            return await Task.FromResult($"Worksheet '{sheetName}' copied to '{copyToPath}': {path}");
         }
         else
         {
@@ -383,13 +398,14 @@ Usage examples:
 
             if (targetIndex.Value < 0 || targetIndex.Value > workbook.Worksheets.Count)
             {
-                throw new ArgumentException($"目標索引 {targetIndex.Value} 超出範圍 (共有 {workbook.Worksheets.Count} 個工作表)");
+                throw new ArgumentException($"Target index {targetIndex.Value} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
             }
 
             var newSheetIndex = workbook.Worksheets.AddCopy(sheetIndex);
             // If specific position is needed, would need to copy and reorder manually
-            workbook.Save(path);
-            return await Task.FromResult($"工作表 '{sheetName}' 已複製到位置 {targetIndex.Value}: {path}");
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            workbook.Save(outputPath);
+            return await Task.FromResult($"Worksheet '{sheetName}' copied to position {targetIndex.Value}: {outputPath}");
         }
     }
 
@@ -401,24 +417,25 @@ Usage examples:
     /// <returns>Success message with visibility status</returns>
     private async Task<string> HideSheetAsync(JsonObject? arguments, string path)
     {
-        var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", "sheetIndex");
+        var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex");
 
         using var workbook = new Workbook(path);
 
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
         var sheetName = worksheet.Name;
 
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         if (worksheet.IsVisible)
         {
             worksheet.IsVisible = false;
-            workbook.Save(path);
-            return await Task.FromResult($"工作表 '{sheetName}' 已隱藏: {path}");
+            workbook.Save(outputPath);
+            return await Task.FromResult($"Worksheet '{sheetName}' hidden: {outputPath}");
         }
         else
         {
             worksheet.IsVisible = true;
-            workbook.Save(path);
-            return await Task.FromResult($"工作表 '{sheetName}' 已顯示: {path}");
+            workbook.Save(outputPath);
+            return await Task.FromResult($"Worksheet '{sheetName}' shown: {outputPath}");
         }
     }
 }

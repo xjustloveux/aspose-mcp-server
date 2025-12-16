@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using Aspose.Words;
 using AsposeMcpServer.Core;
 
@@ -29,7 +29,7 @@ Usage examples:
                 type = "string",
                 description = @"Operation to perform.
 - 'add': Add a bookmark (required params: path, name)
-- 'edit': Edit a bookmark (required params: path, name, text)
+- 'edit': Edit a bookmark (required params: path, name, newText or text)
 - 'delete': Delete a bookmark (required params: path, name)
 - 'get': Get all bookmarks (required params: path)
 - 'goto': Get bookmark location (required params: path, name)",
@@ -68,7 +68,7 @@ Usage examples:
             newText = new
             {
                 type = "string",
-                description = "New text content for the bookmark (optional, for edit operation)"
+                description = "New text content for the bookmark (required for edit operation, can also use 'text' parameter)"
             },
             keepText = new
             {
@@ -81,7 +81,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         return operation.ToLower() switch
@@ -104,9 +104,9 @@ Usage examples:
     private async Task<string> AddBookmarkAsync(JsonObject? arguments, string path)
     {
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var name = ArgumentHelper.GetString(arguments, "name", "name");
-        var text = arguments?["text"]?.GetValue<string>();
-        var paragraphIndex = arguments?["paragraphIndex"]?.GetValue<int?>();
+        var name = ArgumentHelper.GetString(arguments, "name");
+        var text = ArgumentHelper.GetStringNullable(arguments, "text");
+        var paragraphIndex = ArgumentHelper.GetIntNullable(arguments, "paragraphIndex");
 
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
@@ -116,7 +116,7 @@ Usage examples:
         // Check if bookmark already exists
         if (doc.Range.Bookmarks[name] != null)
         {
-            throw new InvalidOperationException($"書籤 '{name}' 已存在");
+            throw new InvalidOperationException($"Bookmark '{name}' already exists");
         }
         
         // Determine insertion position
@@ -145,12 +145,12 @@ Usage examples:
                 }
                 else
                 {
-                    throw new InvalidOperationException($"無法找到索引 {paragraphIndex.Value} 的段落");
+                    throw new InvalidOperationException($"Unable to find paragraph at index {paragraphIndex.Value}");
                 }
             }
             else
             {
-                throw new ArgumentException($"段落索引 {paragraphIndex.Value} 超出範圍 (文檔共有 {paragraphs.Count} 個段落)");
+                throw new ArgumentException($"Paragraph index {paragraphIndex.Value} is out of range (document has {paragraphs.Count} paragraphs)");
             }
         }
         else
@@ -172,28 +172,28 @@ Usage examples:
         
         doc.Save(outputPath);
         
-        var result = $"成功添加書籤\n";
-        result += $"書籤名稱: {name}\n";
+        var result = $"Bookmark added successfully\n";
+        result += $"Bookmark name: {name}\n";
         if (!string.IsNullOrEmpty(text))
         {
-            result += $"書籤文字: {text}\n";
+            result += $"Bookmark text: {text}\n";
         }
         if (paragraphIndex.HasValue)
         {
             if (paragraphIndex.Value == -1)
             {
-                result += "插入位置: 文檔開頭\n";
+                result += "Insert position: beginning of document\n";
             }
             else
             {
-                result += $"插入位置: 段落 #{paragraphIndex.Value} 之後\n";
+                result += $"Insert position: after paragraph #{paragraphIndex.Value}\n";
             }
         }
         else
         {
-            result += "插入位置: 文檔末尾\n";
+            result += "Insert position: end of document\n";
         }
-        result += $"輸出: {outputPath}";
+        result += $"Output: {outputPath}";
         
         return await Task.FromResult(result);
     }
@@ -207,11 +207,10 @@ Usage examples:
     private async Task<string> EditBookmarkAsync(JsonObject? arguments, string path)
     {
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var bookmarkName = ArgumentHelper.GetString(arguments, "name", "name");
-        var newName = arguments?["newName"]?.GetValue<string>();
-        // Accept both text and newText for compatibility
-        var newText = arguments?["newText"]?.GetValue<string>() ?? 
-                     arguments?["text"]?.GetValue<string>();
+        var bookmarkName = ArgumentHelper.GetString(arguments, "name");
+        var newName = ArgumentHelper.GetStringNullable(arguments, "newName");
+        // Accept both text and newText for compatibility, text is required for edit operation
+        var newText = ArgumentHelper.GetString(arguments, "newText", "text", "newText or text");
 
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
@@ -232,9 +231,9 @@ Usage examples:
                 availableBookmarks.Add(bm.Name);
             }
             var availableInfo = availableBookmarks.Count > 0 
-                ? $"\n可用書籤: {string.Join(", ", availableBookmarks.Take(10))}{(availableBookmarks.Count > 10 ? "..." : "")}"
-                : "\n文檔中沒有書籤";
-            throw new ArgumentException($"找不到書籤 '{bookmarkName}'{availableInfo}。請使用 get 操作查看所有可用書籤");
+                ? $"\nAvailable bookmarks: {string.Join(", ", availableBookmarks.Take(10))}{(availableBookmarks.Count > 10 ? "..." : "")}"
+                : "\nDocument has no bookmarks";
+            throw new ArgumentException($"Bookmark '{bookmarkName}' not found{availableInfo}. Use get operation to view all available bookmarks");
         }
         
         if (bookmark == null)
@@ -246,9 +245,9 @@ Usage examples:
                 availableBookmarks.Add(bm.Name);
             }
             var availableInfo = availableBookmarks.Count > 0 
-                ? $"\n可用書籤: {string.Join(", ", availableBookmarks.Take(10))}{(availableBookmarks.Count > 10 ? "..." : "")}"
-                : "\n文檔中沒有書籤";
-            throw new ArgumentException($"找不到書籤 '{bookmarkName}'{availableInfo}。請使用 get 操作查看所有可用書籤");
+                ? $"\nAvailable bookmarks: {string.Join(", ", availableBookmarks.Take(10))}{(availableBookmarks.Count > 10 ? "..." : "")}"
+                : "\nDocument has no bookmarks";
+            throw new ArgumentException($"Bookmark '{bookmarkName}' not found{availableInfo}. Use get operation to view all available bookmarks");
         }
         var oldName = bookmark.Name;
         var oldText = bookmark.Text;
@@ -270,17 +269,17 @@ Usage examples:
             
             if (existingBookmark != null)
             {
-                throw new ArgumentException($"書籤名稱 '{newName}' 已存在");
+                throw new ArgumentException($"Bookmark name '{newName}' already exists");
             }
             
             try
             {
                 bookmark.Name = newName;
-                changes.Add($"書籤名稱: {oldName} -> {newName}");
+                changes.Add($"Bookmark name: {oldName} -> {newName}");
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"無法重新命名書籤: {ex.Message}", ex);
+                throw new InvalidOperationException($"Unable to rename bookmark: {ex.Message}", ex);
             }
         }
         
@@ -309,35 +308,35 @@ Usage examples:
                     builder.MoveTo(bookmarkRange);
                     builder.Write(newText);
                     
-                    changes.Add($"書籤內容已更新");
+                    changes.Add($"Bookmark content updated");
                 }
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"無法更新書籤內容: {ex.Message}", ex);
+                throw new InvalidOperationException($"Unable to update bookmark content: {ex.Message}", ex);
             }
         }
         
         if (changes.Count == 0)
         {
-            return await Task.FromResult($"未進行任何變更。請提供 newName 或 newText 參數。");
+            return await Task.FromResult($"No changes made. Please provide newName or newText parameter.");
         }
         
         doc.Save(outputPath);
         
-        var result = $"成功編輯書籤 '{bookmarkName}'\n";
-        result += $"原名稱: {oldName}\n";
-        result += $"原內容: {oldText}\n";
+        var result = $"Bookmark '{bookmarkName}' edited successfully\n";
+        result += $"Original name: {oldName}\n";
+        result += $"Original content: {oldText}\n";
         if (!string.IsNullOrEmpty(newName))
         {
-            result += $"新名稱: {newName}\n";
+            result += $"New name: {newName}\n";
         }
         if (!string.IsNullOrEmpty(newText))
         {
-            result += $"新內容: {newText}\n";
+            result += $"New content: {newText}\n";
         }
-        result += $"變更: {string.Join(", ", changes)}\n";
-        result += $"輸出: {outputPath}";
+        result += $"Changes: {string.Join(", ", changes)}\n";
+        result += $"Output: {outputPath}";
         
         return await Task.FromResult(result);
     }
@@ -351,8 +350,8 @@ Usage examples:
     private async Task<string> DeleteBookmarkAsync(JsonObject? arguments, string path)
     {
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var name = ArgumentHelper.GetString(arguments, "name", "name");
-        var keepText = ArgumentHelper.GetBool(arguments, "keepText", "keepText", true);
+        var name = ArgumentHelper.GetString(arguments, "name");
+        var keepText = ArgumentHelper.GetBool(arguments, "keepText");
 
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
@@ -362,7 +361,7 @@ Usage examples:
         var bookmark = doc.Range.Bookmarks[name];
         if (bookmark == null)
         {
-            throw new ArgumentException($"找不到書籤 '{name}'，可用書籤請使用 get 操作查看");
+            throw new ArgumentException($"Bookmark '{name}' not found. Use get operation to view available bookmarks");
         }
         
         // Get bookmark info before deletion
@@ -386,11 +385,11 @@ Usage examples:
         // Count remaining bookmarks
         int remainingCount = doc.Range.Bookmarks.Count;
         
-        var result = $"成功刪除書籤 '{name}'\n";
-        result += $"書籤文字: {bookmarkText}\n";
-        result += $"保留文字: {(keepText ? "是" : "否")}\n";
-        result += $"文檔剩餘書籤數: {remainingCount}\n";
-        result += $"輸出: {outputPath}";
+        var result = $"Bookmark '{name}' deleted successfully\n";
+        result += $"Bookmark text: {bookmarkText}\n";
+        result += $"Keep text: {(keepText ? "Yes" : "No")}\n";
+        result += $"Remaining bookmarks in document: {remainingCount}\n";
+        result += $"Output: {outputPath}";
         
         return await Task.FromResult(result);
     }
@@ -410,19 +409,19 @@ Usage examples:
         
         if (bookmarks.Count == 0)
         {
-            return await Task.FromResult("文檔中沒有找到書籤");
+            return await Task.FromResult("No bookmarks found in document");
         }
         
         var result = new System.Text.StringBuilder();
-        result.AppendLine($"找到 {bookmarks.Count} 個書籤：\n");
+        result.AppendLine($"Found {bookmarks.Count} bookmarks:\n");
         
         int index = 0;
         foreach (Bookmark bookmark in bookmarks)
         {
-            result.AppendLine($"書籤 #{index}:");
-            result.AppendLine($"  名稱: {bookmark.Name}");
-            result.AppendLine($"  文字: {bookmark.Text}");
-            result.AppendLine($"  長度: {bookmark.Text.Length} 個字元");
+            result.AppendLine($"Bookmark #{index}:");
+            result.AppendLine($"  Name: {bookmark.Name}");
+            result.AppendLine($"  Text: {bookmark.Text}");
+            result.AppendLine($"  Length: {bookmark.Text.Length} characters");
             result.AppendLine();
             index++;
         }
@@ -438,7 +437,7 @@ Usage examples:
     /// <returns>Formatted string with bookmark information</returns>
     private async Task<string> GotoBookmarkAsync(JsonObject? arguments, string path)
     {
-        var name = ArgumentHelper.GetString(arguments, "name", "name");
+        var name = ArgumentHelper.GetString(arguments, "name");
 
         var doc = new Document(path);
         
@@ -446,7 +445,7 @@ Usage examples:
         var bookmark = doc.Range.Bookmarks[name];
         if (bookmark == null)
         {
-            throw new ArgumentException($"找不到書籤 '{name}'，可用書籤請使用 get 操作查看");
+            throw new ArgumentException($"Bookmark '{name}' not found. Use get operation to view available bookmarks");
         }
         
         // Get bookmark information
@@ -465,14 +464,14 @@ Usage examples:
             }
         }
         
-        var result = $"書籤位置資訊\n";
-        result += $"書籤名稱: {name}\n";
-        result += $"書籤文字: {bookmarkText}\n";
+        var result = $"Bookmark location information\n";
+        result += $"Bookmark name: {name}\n";
+        result += $"Bookmark text: {bookmarkText}\n";
         if (paragraphIndex >= 0)
         {
-            result += $"段落索引: {paragraphIndex}\n";
+            result += $"Paragraph index: {paragraphIndex}\n";
         }
-        result += $"書籤範圍長度: {bookmarkText.Length} 個字元\n";
+        result += $"Bookmark range length: {bookmarkText.Length} characters\n";
         
         // Get surrounding context if possible
         if (bookmarkRange != null)
@@ -482,7 +481,7 @@ Usage examples:
             {
                 paraText = paraText.Substring(0, 100) + "...";
             }
-            result += $"所在段落內容: {paraText}\n";
+            result += $"Paragraph content: {paraText}\n";
         }
         
         return await Task.FromResult(result);

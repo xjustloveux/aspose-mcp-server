@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using Aspose.Words;
 using AsposeMcpServer.Core;
 
@@ -138,7 +138,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
@@ -166,12 +166,12 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> SetMarginsAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var top = arguments?["top"]?.GetValue<double?>();
-        var bottom = arguments?["bottom"]?.GetValue<double?>();
-        var left = arguments?["left"]?.GetValue<double?>();
-        var right = arguments?["right"]?.GetValue<double?>();
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>();
-        var sectionIndicesArray = arguments?["sectionIndices"]?.AsArray();
+        var top = ArgumentHelper.GetDoubleNullable(arguments, "top");
+        var bottom = ArgumentHelper.GetDoubleNullable(arguments, "bottom");
+        var left = ArgumentHelper.GetDoubleNullable(arguments, "left");
+        var right = ArgumentHelper.GetDoubleNullable(arguments, "right");
+        var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
+        var sectionIndicesArray = ArgumentHelper.GetArray(arguments, "sectionIndices", false);
 
         var doc = new Document(path);
         List<int> sectionsToUpdate;
@@ -215,9 +215,9 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> SetOrientationAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var orientation = ArgumentHelper.GetString(arguments, "orientation", "orientation");
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>();
-        var sectionIndicesArray = arguments?["sectionIndices"]?.AsArray();
+        var orientation = ArgumentHelper.GetString(arguments, "orientation");
+        var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
+        var sectionIndicesArray = ArgumentHelper.GetArray(arguments, "sectionIndices", false);
 
         var doc = new Document(path);
         var orientationEnum = orientation.ToLower() == "landscape" ? Orientation.Landscape : Orientation.Portrait;
@@ -257,10 +257,10 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> SetSizeAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var width = arguments?["width"]?.GetValue<double?>();
-        var height = arguments?["height"]?.GetValue<double?>();
-        var paperSize = arguments?["paperSize"]?.GetValue<string>();
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>();
+        var width = ArgumentHelper.GetDoubleNullable(arguments, "width");
+        var height = ArgumentHelper.GetDoubleNullable(arguments, "height");
+        var paperSize = ArgumentHelper.GetStringNullable(arguments, "paperSize");
+        var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
 
         var doc = new Document(path);
         List<int> sectionsToUpdate;
@@ -318,9 +318,9 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> SetPageNumberAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var pageNumberFormat = arguments?["pageNumberFormat"]?.GetValue<string>();
-        var startingPageNumber = arguments?["startingPageNumber"]?.GetValue<int?>();
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>();
+        var pageNumberFormat = ArgumentHelper.GetStringNullable(arguments, "pageNumberFormat");
+        var startingPageNumber = ArgumentHelper.GetIntNullable(arguments, "startingPageNumber");
+        var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
 
         var doc = new Document(path);
         List<int> sectionsToUpdate;
@@ -375,7 +375,7 @@ Usage examples:
     {
         // This is a combined operation that can set multiple page setup properties
         var doc = new Document(path);
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>() ?? 0;
+        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
         
         if (sectionIndex < 0 || sectionIndex >= doc.Sections.Count)
         {
@@ -386,54 +386,39 @@ Usage examples:
         var changes = new List<string>();
 
         // Apply all page setup parameters
-        if (arguments?["top"] != null)
+        var top = ArgumentHelper.GetDoubleNullable(arguments, "top");
+        if (top.HasValue)
         {
-            var top = arguments["top"]?.GetValue<double>();
-            if (top.HasValue)
-            {
-                pageSetup.TopMargin = top.Value;
-                changes.Add($"Top margin: {top.Value}");
-            }
+            pageSetup.TopMargin = top.Value;
+            changes.Add($"Top margin: {top.Value}");
         }
 
-        if (arguments?["bottom"] != null)
+        var bottom = ArgumentHelper.GetDoubleNullable(arguments, "bottom");
+        if (bottom.HasValue)
         {
-            var bottom = arguments["bottom"]?.GetValue<double>();
-            if (bottom.HasValue)
-            {
-                pageSetup.BottomMargin = bottom.Value;
-                changes.Add($"Bottom margin: {bottom.Value}");
-            }
+            pageSetup.BottomMargin = bottom.Value;
+            changes.Add($"Bottom margin: {bottom.Value}");
         }
 
-        if (arguments?["left"] != null)
+        var left = ArgumentHelper.GetDoubleNullable(arguments, "left");
+        if (left.HasValue)
         {
-            var left = arguments["left"]?.GetValue<double>();
-            if (left.HasValue)
-            {
-                pageSetup.LeftMargin = left.Value;
-                changes.Add($"Left margin: {left.Value}");
-            }
+            pageSetup.LeftMargin = left.Value;
+            changes.Add($"Left margin: {left.Value}");
         }
 
-        if (arguments?["right"] != null)
+        var right = ArgumentHelper.GetDoubleNullable(arguments, "right");
+        if (right.HasValue)
         {
-            var right = arguments["right"]?.GetValue<double>();
-            if (right.HasValue)
-            {
-                pageSetup.RightMargin = right.Value;
-                changes.Add($"Right margin: {right.Value}");
-            }
+            pageSetup.RightMargin = right.Value;
+            changes.Add($"Right margin: {right.Value}");
         }
 
-        if (arguments?["orientation"] != null)
+        var orientation = ArgumentHelper.GetStringNullable(arguments, "orientation");
+        if (!string.IsNullOrEmpty(orientation))
         {
-            var orientation = arguments["orientation"]?.GetValue<string>();
-            if (!string.IsNullOrEmpty(orientation))
-            {
-                pageSetup.Orientation = orientation.ToLower() == "landscape" ? Orientation.Landscape : Orientation.Portrait;
-                changes.Add($"Orientation: {orientation}");
-            }
+            pageSetup.Orientation = orientation.ToLower() == "landscape" ? Orientation.Landscape : Orientation.Portrait;
+            changes.Add($"Orientation: {orientation}");
         }
 
         doc.Save(outputPath);
@@ -449,7 +434,7 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> DeletePageAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex", "pageIndex");
+        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
 
         var doc = new Document(path);
         
@@ -483,7 +468,7 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> InsertBlankPageAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var insertAtPageIndex = arguments?["insertAtPageIndex"]?.GetValue<int?>();
+        var insertAtPageIndex = ArgumentHelper.GetIntNullable(arguments, "insertAtPageIndex");
 
         var doc = new Document(path);
         var builder = new DocumentBuilder(doc);
@@ -523,7 +508,7 @@ Usage examples:
         builder.InsertBreak(BreakType.PageBreak);
 
         doc.Save(outputPath);
-        return await Task.FromResult($"成功添加分頁符號\n輸出: {outputPath}");
+        return await Task.FromResult($"Page break added successfully\nOutput: {outputPath}");
     }
 }
 

@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Linq;
 using Aspose.Slides;
 using Aspose.Slides.Animation;
@@ -73,6 +73,11 @@ Usage examples:
             {
                 type = "number",
                 description = "Animation index (0-based, optional, for delete, if not provided deletes all animations for the shape)"
+            },
+            outputPath = new
+            {
+                type = "string",
+                description = "Output file path (optional, for add/edit/delete operations, defaults to input path)"
             }
         },
         required = new[] { "operation", "path", "slideIndex" }
@@ -80,9 +85,9 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
 
         return operation.ToLower() switch
         {
@@ -102,8 +107,8 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> AddAnimationAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
-        var effectTypeStr = arguments?["effectType"]?.GetValue<string>() ?? "Fade";
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
+        var effectTypeStr = ArgumentHelper.GetString(arguments, "effectType", "Fade");
 
         using var presentation = new Presentation(path);
         var slide = presentation.Slides[slideIndex];
@@ -121,9 +126,10 @@ Usage examples:
 
         slide.Timeline.MainSequence.AddEffect(shape, effectType, EffectSubtype.None, EffectTriggerType.OnClick);
 
-        presentation.Save(path, SaveFormat.Pptx);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
 
-        return await Task.FromResult($"Animation added to shape on slide {slideIndex}: {path}");
+        return await Task.FromResult($"Animation added to shape on slide {slideIndex}: {outputPath}");
     }
 
     /// <summary>
@@ -135,11 +141,11 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> EditAnimationAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
-        var effectTypeStr = arguments?["effectType"]?.GetValue<string>();
-        var triggerTypeStr = arguments?["triggerType"]?.GetValue<string>();
-        var duration = arguments?["duration"]?.GetValue<float?>();
-        var delay = arguments?["delay"]?.GetValue<float?>();
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
+        var effectTypeStr = ArgumentHelper.GetStringNullable(arguments, "effectType");
+        var triggerTypeStr = ArgumentHelper.GetStringNullable(arguments, "triggerType");
+        var duration = ArgumentHelper.GetFloatNullable(arguments, "duration");
+        var delay = ArgumentHelper.GetFloatNullable(arguments, "delay");
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
@@ -198,7 +204,8 @@ Usage examples:
             }
         }
 
-        presentation.Save(path, SaveFormat.Pptx);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
         return await Task.FromResult($"Animation updated on slide {slideIndex}, shape {shapeIndex}");
     }
 
@@ -211,8 +218,8 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> DeleteAnimationAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = arguments?["shapeIndex"]?.GetValue<int?>();
-        var animationIndex = arguments?["animationIndex"]?.GetValue<int?>();
+        var shapeIndex = ArgumentHelper.GetIntNullable(arguments, "shapeIndex");
+        var animationIndex = ArgumentHelper.GetIntNullable(arguments, "animationIndex");
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
@@ -250,7 +257,8 @@ Usage examples:
             sequence.Clear();
         }
 
-        presentation.Save(path, SaveFormat.Pptx);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
         return await Task.FromResult($"Animation(s) deleted from slide {slideIndex}");
     }
 }

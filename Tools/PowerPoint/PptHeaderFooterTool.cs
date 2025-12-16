@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Linq;
 using Aspose.Slides;
 using Aspose.Slides.Export;
@@ -70,6 +70,11 @@ Usage examples:
             {
                 type = "number",
                 description = "First slide number (optional, for set_slide_numbering, default: 1)"
+            },
+            outputPath = new
+            {
+                type = "string",
+                description = "Output file path (optional, for all operations, defaults to input path)"
             }
         },
         required = new[] { "operation", "path" }
@@ -77,7 +82,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         return operation.ToLower() switch
@@ -98,8 +103,9 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> SetHeaderAsync(JsonObject? arguments, string path)
     {
-        var headerText = ArgumentHelper.GetString(arguments, "headerText", "headerText");
-        var slideIndices = arguments?["slideIndices"]?.AsArray()?.Select(x => x?.GetValue<int>()).Where(x => x.HasValue).Select(x => x!.Value).ToArray();
+        var headerText = ArgumentHelper.GetString(arguments, "headerText");
+        var slideIndicesArray = ArgumentHelper.GetArray(arguments, "slideIndices", false);
+        var slideIndices = slideIndicesArray?.Select(x => x?.GetValue<int>()).Where(x => x.HasValue).Select(x => x!.Value).ToArray();
 
         using var presentation = new Presentation(path);
         var slides = slideIndices?.Length > 0
@@ -113,9 +119,10 @@ Usage examples:
             headerFooter.SetFooterVisibility(true);
         }
 
-        presentation.Save(path, SaveFormat.Pptx);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
 
-        return await Task.FromResult($"Header set for {slides.Count} slide(s): {path}");
+        return await Task.FromResult($"Header set for {slides.Count} slide(s): {outputPath}");
     }
 
     /// <summary>
@@ -126,9 +133,9 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> SetFooterAsync(JsonObject? arguments, string path)
     {
-        var footerText = arguments?["footerText"]?.GetValue<string>();
-        var showSlideNumber = arguments?["showSlideNumber"]?.GetValue<bool?>() ?? true;
-        var dateText = arguments?["dateText"]?.GetValue<string>();
+        var footerText = ArgumentHelper.GetStringNullable(arguments, "footerText");
+        var showSlideNumber = ArgumentHelper.GetBool(arguments, "showSlideNumber");
+        var dateText = ArgumentHelper.GetStringNullable(arguments, "dateText");
 
         using var presentation = new Presentation(path);
         foreach (var slide in presentation.Slides)
@@ -158,8 +165,9 @@ Usage examples:
             }
         }
 
-        presentation.Save(path, SaveFormat.Pptx);
-        return await Task.FromResult("已更新頁尾/頁碼設定");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
+        return await Task.FromResult("Footer/page number settings updated");
     }
 
     /// <summary>
@@ -170,10 +178,11 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> BatchSetHeaderFooterAsync(JsonObject? arguments, string path)
     {
-        var footerText = arguments?["footerText"]?.GetValue<string>();
-        var showSlideNumber = arguments?["showSlideNumber"]?.GetValue<bool?>() ?? true;
-        var dateText = arguments?["dateText"]?.GetValue<string>();
-        var slideIndices = arguments?["slideIndices"]?.AsArray()?.Select(x => x?.GetValue<int>() ?? -1).ToArray();
+        var footerText = ArgumentHelper.GetStringNullable(arguments, "footerText");
+        var showSlideNumber = ArgumentHelper.GetBool(arguments, "showSlideNumber");
+        var dateText = ArgumentHelper.GetStringNullable(arguments, "dateText");
+        var slideIndicesArray = ArgumentHelper.GetArray(arguments, "slideIndices", false);
+        var slideIndices = slideIndicesArray?.Select(x => x?.GetValue<int>() ?? -1).ToArray();
 
         using var presentation = new Presentation(path);
         var targets = slideIndices?.Length > 0
@@ -215,8 +224,9 @@ Usage examples:
             }
         }
 
-        presentation.Save(path, SaveFormat.Pptx);
-        return await Task.FromResult($"已批次更新 {targets.Length} 張投影片的頁尾/頁碼/日期");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
+        return await Task.FromResult($"Batch updated footer/page number/date for {targets.Length} slides");
     }
 
     /// <summary>
@@ -227,13 +237,14 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> SetSlideNumberingAsync(JsonObject? arguments, string path)
     {
-        var firstNumber = arguments?["firstNumber"]?.GetValue<int?>() ?? 1;
+        var firstNumber = ArgumentHelper.GetInt(arguments, "firstNumber", 1);
 
         using var presentation = new Presentation(path);
         presentation.FirstSlideNumber = firstNumber;
-        presentation.Save(path, SaveFormat.Pptx);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
 
-        return await Task.FromResult($"已設定起始頁碼為 {firstNumber}");
+        return await Task.FromResult($"Starting page number set to {firstNumber}");
     }
 }
 

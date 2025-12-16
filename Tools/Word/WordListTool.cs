@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using Aspose.Words.Lists;
@@ -18,7 +18,7 @@ public class WordListTool : IAsposeTool
 Usage examples:
 - Add bullet list: word_list(path='doc.docx', items=['Item 1', 'Item 2', 'Item 3'])
 - Add numbered list: word_list(path='doc.docx', items=['First', 'Second'], listType='number')
-- Add list item: word_list(path='doc.docx', text='New item', styleName='!標題4-數字')
+- Add list item: word_list(path='doc.docx', text='New item', styleName='Heading 4')
 - Delete list item: word_list(path='doc.docx', paragraphIndex=0)
 - Edit list item: word_list(path='doc.docx', paragraphIndex=0, text='Updated text')
 - Get list format: word_list(path='doc.docx', paragraphIndex=0)
@@ -87,7 +87,7 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
             styleName = new
             {
                 type = "string",
-                description = "Style name for the list item (required for add_item operation). Example: '!標題4-數字'. Use word_get_styles tool to see available styles."
+                description = "Style name for the list item (required for add_item operation). Example: 'Heading 4'. Use word_get_styles tool to see available styles."
             },
             listLevel = new
             {
@@ -151,7 +151,7 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
                                       $"📋 Provided parameters: {(providedKeys.Count > 0 ? string.Join(", ", providedKeys.Select(k => $"'{k}'")) : "none")}\n\n" +
                                       $"📝 Usage examples:\n" +
                                       $"  word_list(path='doc.docx', items=['Item 1', 'Item 2', 'Item 3'])\n" +
-                                      $"  word_list(path='doc.docx', text='New item', styleName='!標題4-數字')\n" +
+                                      $"  word_list(path='doc.docx', text='New item', styleName='Heading 4')\n" +
                                       $"  word_list(path='doc.docx', paragraphIndex=0)\n\n" +
                                       $"💡 Note: 'path' parameter is required for all operations.");
         }
@@ -186,7 +186,7 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
                                       $"💡 Note: 'path' must be a non-empty string containing the document file path.");
         }
         
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
         
         // Auto-infer operation if not provided
         string operation;
@@ -195,7 +195,7 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
             // Auto-infer operation from provided parameters
             // This allows users to call word_list without explicitly specifying operation
             var providedKeys = arguments.Select(kvp => kvp.Key).ToList();
-            var providedParamsInfo = $"提供的參數: {string.Join(", ", providedKeys.Select(k => $"'{k}'"))}";
+            var providedParamsInfo = $"Provided parameters: {string.Join(", ", providedKeys.Select(k => $"'{k}'"))}";
             
             // Infer operation based on provided parameters
             if (arguments.ContainsKey("items") && arguments["items"] != null)
@@ -228,8 +228,8 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
                 {
                     // Has itemIndex but no text -> delete_item (or get_format)
                     // Check if it's a read operation (no outputPath or outputPath == path)
-                    var docPath = arguments["path"]?.GetValue<string>();
-                    var docOutputPath = arguments["outputPath"]?.GetValue<string>() ?? docPath;
+                    var docPath = ArgumentHelper.GetStringNullable(arguments, "path");
+                    var docOutputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? docPath;
                     if (docPath == docOutputPath && !arguments.ContainsKey("text"))
                     {
                         // Same path and no text -> get_format (read operation)
@@ -246,23 +246,23 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
             {
                 // Cannot infer operation
                 var availableOps = new[] { "add_list", "add_item", "delete_item", "edit_item", "set_format", "get_format" };
-                throw new ArgumentException($"❌ 缺少必需參數 'operation'，且無法從提供的參數自動推斷操作類型\n\n" +
+                throw new ArgumentException($"❌ Required parameter 'operation' is missing and cannot be inferred from provided parameters\n\n" +
                                           $"📋 {providedParamsInfo}\n\n" +
-                                          $"📋 可用操作: {string.Join(", ", availableOps)}\n\n" +
-                                          $"📝 使用範例:\n" +
-                                          $"  1. 添加項目符號列表（自動推斷）:\n" +
-                                          $"     word_list(path='doc.docx', items=['項目1', '項目2', '項目3'])\n\n" +
-                                          $"  2. 添加編號列表（自動推斷）:\n" +
-                                          $"     word_list(path='doc.docx', items=['第一項', '第二項'], listType='number')\n\n" +
-                                          $"  3. 添加列表項目（自動推斷）:\n" +
-                                          $"     word_list(path='doc.docx', text='新項目')\n\n" +
-                                          $"  4. 刪除列表項目（明確指定）:\n" +
+                                          $"📋 Available operations: {string.Join(", ", availableOps)}\n\n" +
+                                          $"📝 Usage examples:\n" +
+                                          $"  1. Add bullet list (auto-inferred):\n" +
+                                          $"     word_list(path='doc.docx', items=['Item 1', 'Item 2', 'Item 3'])\n\n" +
+                                          $"  2. Add numbered list (auto-inferred):\n" +
+                                          $"     word_list(path='doc.docx', items=['First item', 'Second item'], listType='number')\n\n" +
+                                          $"  3. Add list item (auto-inferred):\n" +
+                                          $"     word_list(path='doc.docx', text='New item')\n\n" +
+                                          $"  4. Delete list item (explicit):\n" +
                                           $"     word_list(operation='delete_item', path='doc.docx', itemIndex=0)\n\n" +
-                                          $"  5. 編輯列表項目（自動推斷）:\n" +
-                                          $"     word_list(path='doc.docx', itemIndex=0, text='修改後的文字')\n\n" +
-                                          $"  6. 獲取列表格式（自動推斷）:\n" +
+                                          $"  5. Edit list item (auto-inferred):\n" +
+                                          $"     word_list(path='doc.docx', itemIndex=0, text='Modified text')\n\n" +
+                                          $"  6. Get list format (auto-inferred):\n" +
                                           $"     word_list(path='doc.docx', itemIndex=0)\n\n" +
-                                          $"💡 提示: 如果自動推斷失敗，請明確指定 operation 參數");
+                                          $"💡 Tip: If auto-inference fails, explicitly specify the operation parameter");
             }
             
             // Add the inferred operation to arguments for consistency
@@ -270,7 +270,7 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
         }
         else
         {
-            operation = arguments["operation"]?.GetValue<string>() ?? throw new ArgumentException("operation is required");
+            operation = ArgumentHelper.GetString(arguments, "operation");
             
             // Validate operation value
             var validOperations = new[] { "add_list", "add_item", "delete_item", "edit_item", "set_format", "get_format" };
@@ -280,7 +280,7 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
             }
         }
         
-        var outputPath = arguments["outputPath"]?.GetValue<string>() ?? path;
+        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         return operation switch
@@ -313,9 +313,9 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
         try
         {
             var parsedItems = ParseItems(items);
-            var listType = arguments?["listType"]?.GetValue<string>() ?? "bullet";
-            var bulletChar = arguments?["bulletChar"]?.GetValue<string>() ?? "●";
-            var numberFormat = arguments?["numberFormat"]?.GetValue<string>() ?? "arabic";
+            var listType = ArgumentHelper.GetString(arguments, "listType", "bullet");
+            var bulletChar = ArgumentHelper.GetString(arguments, "bulletChar", "●");
+            var numberFormat = ArgumentHelper.GetString(arguments, "numberFormat", "arabic");
             
             // Open document and create list
             var doc = new Document(path);
@@ -358,12 +358,12 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
             builder.ListFormat.RemoveNumbers();
             doc.Save(outputPath);
             
-            var result = $"成功添加清單\n";
-            result += $"類型: {listType}\n";
-            if (listType == "custom") result += $"項目符號: {bulletChar}\n";
-            if (listType == "number") result += $"數字格式: {numberFormat}\n";
-            result += $"項目數: {parsedItems.Count}\n";
-            result += $"輸出: {outputPath}";
+            var result = $"List added successfully\n";
+            result += $"Type: {listType}\n";
+            if (listType == "custom") result += $"Bullet character: {bulletChar}\n";
+            if (listType == "number") result += $"Number format: {numberFormat}\n";
+            result += $"Item count: {parsedItems.Count}\n";
+            result += $"Output: {outputPath}";
 
             return await Task.FromResult(result);
         }
@@ -382,10 +382,10 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
     /// <returns>Success message</returns>
     private async Task<string> AddListItemAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var text = ArgumentHelper.GetString(arguments, "text", "text");
-        var styleName = ArgumentHelper.GetString(arguments, "styleName", "styleName");
-        var listLevel = arguments?["listLevel"]?.GetValue<int>() ?? 0;
-        var applyStyleIndent = arguments?["applyStyleIndent"]?.GetValue<bool>() ?? true;
+        var text = ArgumentHelper.GetString(arguments, "text");
+        var styleName = ArgumentHelper.GetString(arguments, "styleName");
+        var listLevel = ArgumentHelper.GetInt(arguments, "listLevel", 0);
+        var applyStyleIndent = ArgumentHelper.GetBool(arguments, "applyStyleIndent");
 
         var doc = new Document(path);
         var builder = new DocumentBuilder(doc);
@@ -394,7 +394,7 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
         var style = doc.Styles[styleName];
         if (style == null)
         {
-            throw new ArgumentException($"找不到樣式 '{styleName}'，可用樣式請使用 word_get_styles 工具查看");
+            throw new ArgumentException($"Style '{styleName}' not found. Use word_get_styles tool to view available styles");
         }
 
         var para = new Paragraph(doc);
@@ -411,20 +411,20 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
 
         doc.Save(outputPath);
 
-        var result = "成功添加清單項目\n";
-        result += $"樣式: {styleName}\n";
-        result += $"級別: {listLevel}\n";
+        var result = "List item added successfully\n";
+        result += $"Style: {styleName}\n";
+        result += $"Level: {listLevel}\n";
         
         if (applyStyleIndent)
         {
-            result += "縮排: 使用樣式定義的縮排（推薦）\n";
+            result += "Indent: Using style-defined indent (recommended)\n";
         }
         else if (listLevel > 0)
         {
-            result += $"縮排: 手動設定 ({listLevel * 36} points)\n";
+            result += $"Indent: Manually set ({listLevel * 36} points)\n";
         }
         
-        result += $"輸出: {outputPath}";
+        result += $"Output: {outputPath}";
 
         return await Task.FromResult(result);
     }
@@ -438,37 +438,37 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
     /// <returns>Success message</returns>
     private async Task<string> DeleteListItemAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex", "paragraphIndex");
+        var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex");
 
         var doc = new Document(path);
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
         
         if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
         {
-            throw new ArgumentException($"段落索引 {paragraphIndex} 超出範圍 (文檔共有 {paragraphs.Count} 個段落)");
+            throw new ArgumentException($"Paragraph index {paragraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
         }
         
         var paraToDelete = paragraphs[paragraphIndex] as Paragraph;
         if (paraToDelete == null)
         {
-            throw new InvalidOperationException($"無法獲取索引 {paragraphIndex} 的段落");
+            throw new InvalidOperationException($"Unable to get paragraph at index {paragraphIndex}");
         }
         
         string itemText = paraToDelete.GetText().Trim();
         string itemPreview = itemText.Length > 50 ? itemText.Substring(0, 50) + "..." : itemText;
         bool isListItem = paraToDelete.ListFormat.IsListItem;
-        string listInfo = isListItem ? "（清單項目）" : "（一般段落）";
+        string listInfo = isListItem ? " (list item)" : " (regular paragraph)";
         
         paraToDelete.Remove();
         doc.Save(outputPath);
         
-        var result = $"成功刪除清單項目 #{paragraphIndex}{listInfo}\n";
+        var result = $"List item #{paragraphIndex} deleted successfully{listInfo}\n";
         if (!string.IsNullOrEmpty(itemPreview))
         {
-            result += $"內容預覽: {itemPreview}\n";
+            result += $"Content preview: {itemPreview}\n";
         }
-        result += $"文檔剩餘段落數: {doc.GetChildNodes(NodeType.Paragraph, true).Count}\n";
-        result += $"輸出: {outputPath}";
+        result += $"Remaining paragraphs: {doc.GetChildNodes(NodeType.Paragraph, true).Count}\n";
+        result += $"Output: {outputPath}";
         
         return await Task.FromResult(result);
     }
@@ -482,22 +482,22 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
     /// <returns>Success message</returns>
     private async Task<string> EditListItemAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex", "paragraphIndex");
-        var text = ArgumentHelper.GetString(arguments, "text", "text");
-        var level = arguments?["level"]?.GetValue<int?>();
+        var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex");
+        var text = ArgumentHelper.GetString(arguments, "text");
+        var level = ArgumentHelper.GetIntNullable(arguments, "level");
 
         var doc = new Document(path);
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
         
         if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
         {
-            throw new ArgumentException($"段落索引 {paragraphIndex} 超出範圍 (文檔共有 {paragraphs.Count} 個段落)");
+            throw new ArgumentException($"Paragraph index {paragraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
         }
         
         var para = paragraphs[paragraphIndex] as Paragraph;
         if (para == null)
         {
-            throw new InvalidOperationException($"無法獲取索引 {paragraphIndex} 的段落");
+            throw new InvalidOperationException($"Unable to get paragraph at index {paragraphIndex}");
         }
         
         para.Runs.Clear();
@@ -511,14 +511,14 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
         
         doc.Save(outputPath);
         
-        var result = $"成功編輯清單項目\n";
-        result += $"段落索引: {paragraphIndex}\n";
-        result += $"新文字: {text}\n";
+        var result = $"List item edited successfully\n";
+        result += $"Paragraph index: {paragraphIndex}\n";
+        result += $"New text: {text}\n";
         if (level.HasValue)
         {
-            result += $"級別: {level.Value}\n";
+            result += $"Level: {level.Value}\n";
         }
-        result += $"輸出: {outputPath}";
+        result += $"Output: {outputPath}";
         
         return await Task.FromResult(result);
     }
@@ -532,24 +532,24 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
     /// <returns>Success message</returns>
     private async Task<string> SetListFormatAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex", "paragraphIndex");
-        var numberStyle = arguments?["numberStyle"]?.GetValue<string>();
-        var indentLevel = arguments?["indentLevel"]?.GetValue<int?>();
-        var leftIndent = arguments?["leftIndent"]?.GetValue<double?>();
-        var firstLineIndent = arguments?["firstLineIndent"]?.GetValue<double?>();
+        var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex");
+        var numberStyle = ArgumentHelper.GetStringNullable(arguments, "numberStyle");
+        var indentLevel = ArgumentHelper.GetIntNullable(arguments, "indentLevel");
+        var leftIndent = ArgumentHelper.GetDoubleNullable(arguments, "leftIndent");
+        var firstLineIndent = ArgumentHelper.GetDoubleNullable(arguments, "firstLineIndent");
 
         var doc = new Document(path);
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
         
         if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
         {
-            throw new ArgumentException($"段落索引 {paragraphIndex} 超出範圍 (文檔共有 {paragraphs.Count} 個段落)");
+            throw new ArgumentException($"Paragraph index {paragraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
         }
         
         var para = paragraphs[paragraphIndex] as Paragraph;
         if (para == null)
         {
-            throw new InvalidOperationException($"無法找到索引 {paragraphIndex} 的段落");
+            throw new InvalidOperationException($"Unable to find paragraph at index {paragraphIndex}");
         }
         
         var changes = new List<string>();
@@ -573,41 +573,41 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
                 };
                 
                 listLevel.NumberStyle = style;
-                changes.Add($"編號樣式: {numberStyle}");
+                changes.Add($"Number style: {numberStyle}");
             }
         }
         
         if (indentLevel.HasValue)
         {
             para.ParagraphFormat.LeftIndent = indentLevel.Value * 36;
-            changes.Add($"縮排層級: {indentLevel.Value}");
+            changes.Add($"Indent level: {indentLevel.Value}");
         }
         
         if (leftIndent.HasValue)
         {
             para.ParagraphFormat.LeftIndent = leftIndent.Value;
-            changes.Add($"左縮排: {leftIndent.Value} 點");
+            changes.Add($"Left indent: {leftIndent.Value} points");
         }
         
         if (firstLineIndent.HasValue)
         {
             para.ParagraphFormat.FirstLineIndent = firstLineIndent.Value;
-            changes.Add($"首行縮排: {firstLineIndent.Value} 點");
+            changes.Add($"First line indent: {firstLineIndent.Value} points");
         }
         
         doc.Save(outputPath);
         
-        var result = $"成功設定清單格式\n";
-        result += $"段落索引: {paragraphIndex}\n";
+        var result = $"List format set successfully\n";
+        result += $"Paragraph index: {paragraphIndex}\n";
         if (changes.Count > 0)
         {
-            result += $"變更內容: {string.Join("、", changes)}\n";
+            result += $"Changes: {string.Join(", ", changes)}\n";
         }
         else
         {
-            result += "未提供變更參數\n";
+            result += "No change parameters provided\n";
         }
-        result += $"輸出: {outputPath}";
+        result += $"Output: {outputPath}";
         
         return await Task.FromResult(result);
     }
@@ -621,19 +621,19 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
     /// <returns>Formatted string with list format details</returns>
     private async Task<string> GetListFormatAsync(JsonObject? arguments, string path)
     {
-        var paragraphIndex = arguments?["paragraphIndex"]?.GetValue<int?>();
+        var paragraphIndex = ArgumentHelper.GetIntNullable(arguments, "paragraphIndex");
 
         var doc = new Document(path);
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
         var result = new StringBuilder();
 
-        result.AppendLine("=== 文檔列表格式資訊 ===\n");
+        result.AppendLine("=== Document List Format Information ===\n");
 
         if (paragraphIndex.HasValue)
         {
             if (paragraphIndex.Value < 0 || paragraphIndex.Value >= paragraphs.Count)
             {
-                throw new ArgumentException($"段落索引 {paragraphIndex.Value} 超出範圍 (文檔共有 {paragraphs.Count} 個段落)");
+                throw new ArgumentException($"Paragraph index {paragraphIndex.Value} is out of range (document has {paragraphs.Count} paragraphs)");
             }
             
             var para = paragraphs[paragraphIndex.Value];
@@ -645,11 +645,11 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
                 .Where(p => p.ListFormat != null && p.ListFormat.IsListItem)
                 .ToList();
             
-            result.AppendLine($"總列表段落數: {listParagraphs.Count}\n");
+            result.AppendLine($"Total list paragraphs: {listParagraphs.Count}\n");
             
             if (listParagraphs.Count == 0)
             {
-                result.AppendLine("未找到列表段落");
+                result.AppendLine("No list paragraphs found");
                 return await Task.FromResult(result.ToString());
             }
             
@@ -670,32 +670,32 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
 
     private void AppendListFormatInfo(StringBuilder result, Paragraph para, int paraIndex)
     {
-        result.AppendLine($"【段落 {paraIndex}】");
-        result.AppendLine($"內容預覽: {para.GetText().Trim().Substring(0, Math.Min(50, para.GetText().Trim().Length))}...");
+        result.AppendLine($"[Paragraph {paraIndex}]");
+        result.AppendLine($"Content preview: {para.GetText().Trim().Substring(0, Math.Min(50, para.GetText().Trim().Length))}...");
         
         if (para.ListFormat != null && para.ListFormat.IsListItem)
         {
-            result.AppendLine($"是否列表項: 是");
-            result.AppendLine($"列表級別: {para.ListFormat.ListLevelNumber}");
+            result.AppendLine($"Is list item: Yes");
+            result.AppendLine($"List level: {para.ListFormat.ListLevelNumber}");
             
             if (para.ListFormat.List != null)
             {
-                result.AppendLine($"列表ID: {para.ListFormat.List.ListId}");
+                result.AppendLine($"List ID: {para.ListFormat.List.ListId}");
             }
             
             if (para.ListFormat.ListLevel != null)
             {
                 var level = para.ListFormat.ListLevel;
-                result.AppendLine($"列表符號: {level.NumberFormat}");
-                result.AppendLine($"對齊方式: {level.Alignment}");
-                result.AppendLine($"文本位置: {level.TextPosition}");
-                result.AppendLine($"編號樣式: {level.NumberStyle}");
+                result.AppendLine($"List symbol: {level.NumberFormat}");
+                result.AppendLine($"Alignment: {level.Alignment}");
+                result.AppendLine($"Text position: {level.TextPosition}");
+                result.AppendLine($"Number style: {level.NumberStyle}");
             }
         }
         else
         {
-            result.AppendLine($"是否列表項: 否");
-            result.AppendLine($"說明: 此段落不是列表項，無法獲取列表格式資訊。如需將此段落轉換為列表項，請使用 insert_list 或 set_list_style 操作");
+            result.AppendLine($"Is list item: No");
+            result.AppendLine($"Note: This paragraph is not a list item, cannot get list format information. To convert this paragraph to a list item, use insert_list or set_list_style operation");
         }
     }
 
@@ -705,10 +705,10 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
 
         if (itemsNode == null)
         {
-            throw new ArgumentException("❌ items 參數不能為 null\n\n" +
-                                      $"📝 請提供一個數組，格式:\n" +
-                                      $"  簡單格式: [\"項目1\", \"項目2\", \"項目3\"]\n" +
-                                      $"  帶級別格式: [{{\"text\": \"項目1\", \"level\": 0}}, {{\"text\": \"子項目\", \"level\": 1}}]");
+            throw new ArgumentException("❌ items parameter cannot be null\n\n" +
+                                      $"📝 Please provide an array in the format:\n" +
+                                      $"  Simple format: [\"Item 1\", \"Item 2\", \"Item 3\"]\n" +
+                                      $"  With level format: [{{\"text\": \"Item 1\", \"level\": 0}}, {{\"text\": \"Sub-item\", \"level\": 1}}]");
         }
 
         try
@@ -718,18 +718,18 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
             {
                 var nodeType = itemsNode.GetType().Name;
                 var nodeValue = itemsNode.ToString();
-                throw new ArgumentException($"❌ items 參數必須是一個數組\n\n" +
-                                          $"📋 當前類型: {nodeType}\n" +
-                                          $"📋 當前值: {nodeValue}\n\n" +
-                                          $"📝 正確格式範例:\n" +
-                                          $"  簡單格式: [\"項目1\", \"項目2\", \"項目3\"]\n" +
-                                          $"  帶級別格式: [{{\"text\": \"項目1\", \"level\": 0}}, {{\"text\": \"子項目\", \"level\": 1}}]");
+                throw new ArgumentException($"❌ items parameter must be an array\n\n" +
+                                          $"📋 Current type: {nodeType}\n" +
+                                          $"📋 Current value: {nodeValue}\n\n" +
+                                          $"📝 Correct format examples:\n" +
+                                          $"  Simple format: [\"Item 1\", \"Item 2\", \"Item 3\"]\n" +
+                                          $"  With level format: [{{\"text\": \"Item 1\", \"level\": 0}}, {{\"text\": \"Sub-item\", \"level\": 1}}]");
             }
             
             if (itemsArray.Count == 0)
             {
-                throw new ArgumentException("❌ items 數組不能為空\n\n" +
-                                          $"📝 請至少提供一個項目，例如: [\"項目1\"]");
+                throw new ArgumentException("❌ items array cannot be empty\n\n" +
+                                          $"📝 Please provide at least one item, e.g.: [\"Item 1\"]");
             }
             
             foreach (var item in itemsArray)
@@ -752,9 +752,9 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
                     }
                     catch (Exception ex)
                     {
-                        throw new ArgumentException($"❌ 無法解析列表項目為字符串: {ex.Message}\n\n" +
-                                                  $"📋 項目值: {item}\n\n" +
-                                                  $"📝 正確格式: 字符串，例如 \"項目1\"");
+                        throw new ArgumentException($"❌ Unable to parse list item as string: {ex.Message}\n\n" +
+                                                  $"📋 Item value: {item}\n\n" +
+                                                  $"📝 Correct format: string, e.g. \"Item 1\"");
                     }
                 }
                 else if (item is JsonObject jsonObj)
@@ -764,9 +764,9 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
                     if (string.IsNullOrEmpty(text))
                     {
                         var objKeys = string.Join(", ", jsonObj.Select(kvp => $"'{kvp.Key}'"));
-                        throw new ArgumentException($"❌ 列表項目對象必須包含 'text' 屬性\n\n" +
-                                                  $"📋 當前對象的鍵: {objKeys}\n\n" +
-                                                  $"📝 正確格式: {{\"text\": \"項目文字\", \"level\": 0}}");
+                        throw new ArgumentException($"❌ List item object must contain 'text' property\n\n" +
+                                                  $"📋 Current object keys: {objKeys}\n\n" +
+                                                  $"📝 Correct format: {{\"text\": \"Item text\", \"level\": 0}}");
                     }
                     
                     var level = jsonObj["level"]?.GetValue<int>() ?? 0;
@@ -779,19 +779,19 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
                 }
                 else
                 {
-                    throw new ArgumentException($"❌ 無效的列表項目格式\n\n" +
-                                              $"📋 項目類型: {item.GetType().Name}\n" +
-                                              $"📋 項目值: {item}\n\n" +
-                                              $"📝 正確格式:\n" +
-                                              $"  字符串: \"項目文字\"\n" +
-                                              $"  對象: {{\"text\": \"項目文字\", \"level\": 0}}");
+                    throw new ArgumentException($"❌ Invalid list item format\n\n" +
+                                              $"📋 Item type: {item.GetType().Name}\n" +
+                                              $"📋 Item value: {item}\n\n" +
+                                              $"📝 Correct format:\n" +
+                                              $"  String: \"Item text\"\n" +
+                                              $"  Object: {{\"text\": \"Item text\", \"level\": 0}}");
                 }
             }
             
             if (items.Count == 0)
             {
-                throw new ArgumentException("❌ 解析後沒有有效的列表項目\n\n" +
-                                          $"📝 請確保 items 數組包含至少一個有效的字符串或對象");
+                throw new ArgumentException("❌ No valid list items after parsing\n\n" +
+                                          $"📝 Please ensure items array contains at least one valid string or object");
             }
         }
         catch (ArgumentException)
@@ -800,16 +800,16 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
         }
         catch (Exception ex)
         {
-            throw new ArgumentException($"❌ 解析 items 參數時發生錯誤: {ex.Message}\n\n" +
-                                      $"📋 錯誤類型: {ex.GetType().Name}\n\n" +
-                                      $"📝 請確保 items 是一個數組，格式:\n" +
-                                      $"  簡單格式: [\"項目1\", \"項目2\"]\n" +
-                                      $"  帶級別格式: [{{\"text\": \"項目1\", \"level\": 0}}, ...]", ex);
+            throw new ArgumentException($"❌ Error parsing items parameter: {ex.Message}\n\n" +
+                                      $"📋 Error type: {ex.GetType().Name}\n\n" +
+                                      $"📝 Please ensure items is an array in the format:\n" +
+                                      $"  Simple format: [\"Item 1\", \"Item 2\"]\n" +
+                                      $"  With level format: [{{\"text\": \"Item 1\", \"level\": 0}}, ...]", ex);
         }
 
         if (items.Count == 0)
         {
-            throw new ArgumentException("無法解析任何有效的列表項目。請檢查 items 參數格式");
+            throw new ArgumentException("Unable to parse any valid list items. Please check items parameter format");
         }
 
         return items;

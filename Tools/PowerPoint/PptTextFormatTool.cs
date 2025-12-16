@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Drawing;
 using System.Linq;
 using Aspose.Slides;
@@ -59,6 +59,11 @@ Usage examples:
             {
                 type = "string",
                 description = "Hex color, e.g. #FF5500 (optional)"
+            },
+            outputPath = new
+            {
+                type = "string",
+                description = "Output file path (optional, defaults to input path)"
             }
         },
         required = new[] { "path" }
@@ -67,12 +72,13 @@ Usage examples:
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var slideIndices = arguments?["slideIndices"]?.AsArray()?.Select(x => x?.GetValue<int>() ?? -1).ToArray();
-        var fontName = arguments?["fontName"]?.GetValue<string>();
-        var fontSize = arguments?["fontSize"]?.GetValue<double?>();
-        var bold = arguments?["bold"]?.GetValue<bool?>();
-        var italic = arguments?["italic"]?.GetValue<bool?>();
-        var colorHex = arguments?["color"]?.GetValue<string>();
+        var slideIndicesArray = ArgumentHelper.GetArray(arguments, "slideIndices", false);
+        var slideIndices = slideIndicesArray?.Select(x => x?.GetValue<int>() ?? -1).ToArray();
+        var fontName = ArgumentHelper.GetStringNullable(arguments, "fontName");
+        var fontSize = ArgumentHelper.GetDoubleNullable(arguments, "fontSize");
+        var bold = ArgumentHelper.GetBoolNullable(arguments, "bold");
+        var italic = ArgumentHelper.GetBoolNullable(arguments, "italic");
+        var colorHex = ArgumentHelper.GetStringNullable(arguments, "color");
 
         using var presentation = new Presentation(path);
         var targets = slideIndices?.Length > 0
@@ -119,8 +125,9 @@ Usage examples:
             }
         }
 
-        presentation.Save(path, SaveFormat.Pptx);
-        return await Task.FromResult($"已批次格式化文字，套用投影片數：{targets.Length}");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
+        return await Task.FromResult($"Batch formatted text, applied to {targets.Length} slides");
     }
 }
 

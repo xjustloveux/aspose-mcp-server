@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using AsposeMcpServer.Core;
@@ -72,7 +72,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
 
         return operation.ToLower() switch
         {
@@ -121,14 +121,14 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var title = arguments?["title"]?.GetValue<string>();
-        var author = arguments?["author"]?.GetValue<string>();
-        var subject = arguments?["subject"]?.GetValue<string>();
-        var keywords = arguments?["keywords"]?.GetValue<string>();
-        var creator = arguments?["creator"]?.GetValue<string>();
-        var producer = arguments?["producer"]?.GetValue<string>();
+        var title = ArgumentHelper.GetStringNullable(arguments, "title");
+        var author = ArgumentHelper.GetStringNullable(arguments, "author");
+        var subject = ArgumentHelper.GetStringNullable(arguments, "subject");
+        var keywords = ArgumentHelper.GetStringNullable(arguments, "keywords");
+        var creator = ArgumentHelper.GetStringNullable(arguments, "creator");
+        var producer = ArgumentHelper.GetStringNullable(arguments, "producer");
 
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         using var document = new Document(path);

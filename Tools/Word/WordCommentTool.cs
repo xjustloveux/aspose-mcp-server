@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using Aspose.Words;
 using AsposeMcpServer.Core;
 
@@ -84,10 +84,10 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
 
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
 
         return operation.ToLower() switch
         {
@@ -107,12 +107,12 @@ Usage examples:
     /// <returns>Success message with comment details</returns>
     private async Task<string> AddCommentAsync(JsonObject? arguments, string path)
     {
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var text = ArgumentHelper.GetString(arguments, "text", "text");
-        var author = arguments?["author"]?.GetValue<string>() ?? "Comment Author";
-        var paragraphIndex = arguments?["paragraphIndex"]?.GetValue<int?>();
-        var startRunIndex = arguments?["startRunIndex"]?.GetValue<int?>();
-        var endRunIndex = arguments?["endRunIndex"]?.GetValue<int?>();
+        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
+        var text = ArgumentHelper.GetString(arguments, "text");
+        var author = ArgumentHelper.GetString(arguments, "author", "Comment Author");
+        var paragraphIndex = ArgumentHelper.GetIntNullable(arguments, "paragraphIndex");
+        var startRunIndex = ArgumentHelper.GetIntNullable(arguments, "startRunIndex");
+        var endRunIndex = ArgumentHelper.GetIntNullable(arguments, "endRunIndex");
 
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
@@ -142,19 +142,19 @@ Usage examples:
                 }
                 else
                 {
-                    throw new InvalidOperationException("文檔中沒有段落可以添加註解");
+                    throw new InvalidOperationException("Document has no paragraphs to add comment to");
                 }
             }
             else if (paragraphIndex.Value < 0 || paragraphIndex.Value >= paragraphs.Count)
             {
-                throw new ArgumentException($"段落索引 {paragraphIndex.Value} 超出範圍 (文檔共有 {paragraphs.Count} 個段落，有效索引: 0-{paragraphs.Count - 1} 或 -1 表示最後一個段落)");
+                throw new ArgumentException($"Paragraph index {paragraphIndex.Value} is out of range (document has {paragraphs.Count} paragraphs, valid index: 0-{paragraphs.Count - 1} or -1 for last paragraph)");
             }
             else
             {
                 targetPara = paragraphs[paragraphIndex.Value] as Paragraph;
                 if (targetPara == null)
                 {
-                    throw new ArgumentException($"無法找到索引 {paragraphIndex.Value} 的段落");
+                    throw new ArgumentException($"Unable to find paragraph at index {paragraphIndex.Value}");
                 }
             }
         }
@@ -183,7 +183,7 @@ Usage examples:
         // Determine which runs to comment on
         if (targetPara == null)
         {
-            throw new InvalidOperationException("無法確定目標段落");
+            throw new InvalidOperationException("Unable to determine target paragraph");
         }
         var runs = targetPara.GetChildNodes(NodeType.Run, false);
         if (runs == null || runs.Count == 0)
@@ -201,7 +201,7 @@ Usage examples:
                 endRunIndex.Value < 0 || endRunIndex.Value >= runs.Count ||
                 startRunIndex.Value > endRunIndex.Value)
             {
-                throw new ArgumentException($"Run 索引超出範圍 (段落共有 {runs.Count} 個 Run)");
+                throw new ArgumentException($"Run index is out of range (paragraph has {runs.Count} Runs)");
             }
             startRun = runs[startRunIndex.Value] as Run;
             endRun = runs[endRunIndex.Value] as Run;
@@ -211,7 +211,7 @@ Usage examples:
             // Comment on single run
             if (startRunIndex.Value < 0 || startRunIndex.Value >= runs.Count)
             {
-                throw new ArgumentException($"Run 索引超出範圍 (段落共有 {runs.Count} 個 Run)");
+                throw new ArgumentException($"Run index is out of range (paragraph has {runs.Count} Runs)");
             }
             startRun = runs[startRunIndex.Value] as Run;
             endRun = startRun;
@@ -225,7 +225,7 @@ Usage examples:
         
         if (startRun == null || endRun == null)
         {
-            throw new InvalidOperationException("無法確定評論範圍");
+            throw new InvalidOperationException("Unable to determine comment range");
         }
         
         // Get the paragraph containing the runs
@@ -237,7 +237,7 @@ Usage examples:
         
         if (para == null)
         {
-            throw new InvalidOperationException("無法找到包含 Run 的段落節點");
+            throw new InvalidOperationException("Unable to find paragraph node containing Run");
         }
         
         var comment = new Comment(doc, author, author.Length >= 2 ? author.Substring(0, 2).ToUpper() : author.ToUpper(), System.DateTime.Now);
@@ -286,7 +286,7 @@ Usage examples:
             
             if (endPara == null)
             {
-                throw new InvalidOperationException($"無法找到包含 endRun 的段落");
+                throw new InvalidOperationException($"Unable to find paragraph containing endRun");
             }
             
             // Insert CommentRangeEnd after endRun
@@ -342,12 +342,12 @@ Usage examples:
             }
             else
             {
-                throw new InvalidOperationException($"無法找到目標段落來插入 Comment 對象");
+                throw new InvalidOperationException($"Unable to find target paragraph to insert Comment object");
             }
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException($"插入評論範圍標記時發生錯誤: {ex.Message}", ex);
+            throw new InvalidOperationException($"Error occurred while inserting comment range markers: {ex.Message}", ex);
         }
         
         doc.EnsureMinimum();
@@ -368,28 +368,28 @@ Usage examples:
         
         if (!commentFound)
         {
-            throw new InvalidOperationException($"評論添加失敗：評論對象未能成功插入到文檔中。這可能發生在已有回復的情況下。");
+            throw new InvalidOperationException($"Comment addition failed: Comment object was not successfully inserted into the document. This may occur when there are existing replies.");
         }
         
         doc.Save(outputPath);
         
-        var result = $"成功添加註解\n";
-        result += $"作者: {author}\n";
-        result += $"內容: {text}\n";
+        var result = $"Comment added successfully\n";
+        result += $"Author: {author}\n";
+        result += $"Content: {text}\n";
         if (paragraphIndex.HasValue)
         {
-            result += $"段落索引: {paragraphIndex.Value}\n";
+            result += $"Paragraph index: {paragraphIndex.Value}\n";
         }
         if (startRunIndex.HasValue)
         {
-            result += $"Run 範圍: {startRunIndex.Value}";
+            result += $"Run range: {startRunIndex.Value}";
             if (endRunIndex.HasValue)
             {
                 result += $" - {endRunIndex.Value}";
             }
             result += "\n";
         }
-        result += $"輸出: {outputPath}";
+        result += $"Output: {outputPath}";
         
         return await Task.FromResult(result);
     }
@@ -402,8 +402,8 @@ Usage examples:
     /// <returns>Success message with remaining comment count</returns>
     private async Task<string> DeleteCommentAsync(JsonObject? arguments, string path)
     {
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var commentIndex = ArgumentHelper.GetInt(arguments, "commentIndex", "commentIndex");
+        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
+        var commentIndex = ArgumentHelper.GetInt(arguments, "commentIndex");
 
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
@@ -414,13 +414,13 @@ Usage examples:
         
         if (commentIndex < 0 || commentIndex >= comments.Count)
         {
-            throw new ArgumentException($"註解索引 {commentIndex} 超出範圍 (文檔共有 {comments.Count} 個註解)");
+            throw new ArgumentException($"Comment index {commentIndex} is out of range (document has {comments.Count} comments)");
         }
         
         var commentToDelete = comments[commentIndex] as Comment;
         if (commentToDelete == null)
         {
-            throw new InvalidOperationException($"無法找到索引 {commentIndex} 的註解");
+            throw new InvalidOperationException($"Unable to find comment at index {commentIndex}");
         }
         
         // Get comment info before deletion
@@ -456,11 +456,11 @@ Usage examples:
         // Count remaining comments
         int remainingCount = doc.GetChildNodes(NodeType.Comment, true).Count;
         
-        var result = $"成功刪除註解 #{commentIndex}\n";
-        result += $"作者: {author}\n";
-        result += $"內容預覽: {preview}\n";
-        result += $"文檔剩餘註解數: {remainingCount}\n";
-        result += $"輸出: {outputPath}";
+        var result = $"Comment #{commentIndex} deleted successfully\n";
+        result += $"Author: {author}\n";
+        result += $"Content preview: {preview}\n";
+        result += $"Remaining comments in document: {remainingCount}\n";
+        result += $"Output: {outputPath}";
         
         return await Task.FromResult(result);
     }
@@ -518,11 +518,11 @@ Usage examples:
         
         if (topLevelComments.Count == 0)
         {
-            return await Task.FromResult("文檔中沒有找到註解");
+            return await Task.FromResult("No comments found in document");
         }
         
         var result = new System.Text.StringBuilder();
-        result.AppendLine($"找到 {topLevelComments.Count} 個頂層註解：\n");
+        result.AppendLine($"Found {topLevelComments.Count} top-level comments:\n");
         
         int index = 0;
         foreach (Comment comment in topLevelComments)
@@ -537,12 +537,12 @@ Usage examples:
     private void AppendCommentInfo(System.Text.StringBuilder result, Comment comment, Document doc, int index, int indentLevel)
     {
         string indent = new string(' ', indentLevel * 2);
-        string prefix = indentLevel == 0 ? $"註解 #{index}" : $"  └─ 回復";
+        string prefix = indentLevel == 0 ? $"Comment #{index}" : $"  └─ Reply";
         
         result.AppendLine($"{indent}{prefix}:");
-        result.AppendLine($"{indent}  作者: {comment.Author}");
-        result.AppendLine($"{indent}  初始: {comment.Initial}");
-        result.AppendLine($"{indent}  日期: {comment.DateTime:yyyy-MM-dd HH:mm:ss}");
+        result.AppendLine($"{indent}  Author: {comment.Author}");
+        result.AppendLine($"{indent}  Initial: {comment.Initial}");
+        result.AppendLine($"{indent}  Date: {comment.DateTime:yyyy-MM-dd HH:mm:ss}");
         
         // Get comment text
         string commentText = comment.GetText().Trim();
@@ -550,7 +550,7 @@ Usage examples:
         {
             commentText = commentText.Substring(0, 100) + "...";
         }
-        result.AppendLine($"{indent}  內容: {commentText}");
+        result.AppendLine($"{indent}  Content: {commentText}");
         
         // Get commented text range if available
         var commentRangeStarts = doc.GetChildNodes(NodeType.CommentRangeStart, true);
@@ -559,20 +559,20 @@ Usage examples:
         {
             if (rangeStart.Id == comment.Id)
             {
-                result.AppendLine($"{indent}  範圍: 已標記文字");
+                result.AppendLine($"{indent}  Range: Marked text");
                 hasRange = true;
                 break;
             }
         }
         if (!hasRange)
         {
-            result.AppendLine($"{indent}  範圍: 未找到範圍標記");
+            result.AppendLine($"{indent}  Range: Range marker not found");
         }
         
         // Display replies if any
         if (comment.Replies != null && comment.Replies.Count > 0)
         {
-            result.AppendLine($"{indent}  回復數: {comment.Replies.Count}");
+            result.AppendLine($"{indent}  Replies: {comment.Replies.Count}");
             foreach (Comment reply in comment.Replies)
             {
                 AppendCommentInfo(result, reply, doc, -1, indentLevel + 1);
@@ -590,13 +590,11 @@ Usage examples:
     /// <returns>Success message with reply details</returns>
     private async Task<string> ReplyCommentAsync(JsonObject? arguments, string path)
     {
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var commentIndex = ArgumentHelper.GetInt(arguments, "commentIndex", "commentIndex");
+        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
+        var commentIndex = ArgumentHelper.GetInt(arguments, "commentIndex");
         // Accept both replyText and text for compatibility
-        var replyText = arguments?["replyText"]?.GetValue<string>() ?? 
-                        arguments?["text"]?.GetValue<string>() ?? 
-                        throw new ArgumentException("replyText or text is required for reply operation");
-        var author = arguments?["author"]?.GetValue<string>() ?? "Reply Author";
+        var replyText = ArgumentHelper.GetString(arguments, "replyText", "text", "replyText or text");
+        var author = ArgumentHelper.GetString(arguments, "author", "Reply Author");
 
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
@@ -648,7 +646,7 @@ Usage examples:
         // Validate commentIndex against top-level comments only
         if (commentIndex < 0 || commentIndex >= topLevelComments.Count)
         {
-            throw new ArgumentException($"註解索引 {commentIndex} 超出範圍 (文檔共有 {topLevelComments.Count} 個頂層註解)");
+            throw new ArgumentException($"Comment index {commentIndex} is out of range (document has {topLevelComments.Count} top-level comments)");
         }
         
         var parentComment = topLevelComments[commentIndex];
@@ -656,7 +654,7 @@ Usage examples:
         // Check if parentComment is actually a reply (should not happen, but safety check)
         if (parentComment.Ancestor != null)
         {
-            throw new InvalidOperationException($"註解索引 {commentIndex} 指向一個回復，無法對回復添加回復。請使用頂層註解的索引。");
+            throw new InvalidOperationException($"Comment index {commentIndex} points to a reply. Cannot add reply to a reply. Please use the top-level comment index.");
         }
         
         // Use AddReply() method to create reply comment
@@ -665,11 +663,11 @@ Usage examples:
         Comment replyComment = parentComment.AddReply(author, initial, System.DateTime.Now, replyText);
         doc.Save(outputPath);
         
-        var result = $"成功回覆註解 #{commentIndex}\n";
-        result += $"原註解作者: {parentComment.Author}\n";
-        result += $"回覆作者: {author}\n";
-        result += $"回覆內容: {replyText}\n";
-        result += $"輸出: {outputPath}";
+        var result = $"Reply to comment #{commentIndex} added successfully\n";
+        result += $"Original comment author: {parentComment.Author}\n";
+        result += $"Reply author: {author}\n";
+        result += $"Reply content: {replyText}\n";
+        result += $"Output: {outputPath}";
         
         return await Task.FromResult(result);
     }

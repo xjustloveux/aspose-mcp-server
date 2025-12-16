@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Text;
 using Aspose.Slides;
 using Aspose.Slides.Charts;
@@ -51,7 +51,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         return operation.ToLower() switch
@@ -190,7 +190,7 @@ Usage examples:
     /// <returns>Formatted string with slide details</returns>
     private async Task<string> GetSlideDetailsAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);

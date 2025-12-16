@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using Aspose.Words.Fields;
@@ -14,7 +14,7 @@ namespace AsposeMcpServer.Tools;
 /// </summary>
 public class WordFieldTool : IAsposeTool
 {
-    public string Description => @"Manage fields and form fields in Word documents. Supports 10 operations: insert_field, edit_field, delete_field, update_field (or update_all), get_fields, get_field_detail, add_form_field, edit_form_field, delete_form_field, get_form_fields.
+    public string Description => @"Manage fields and form fields in Word documents. Supports 11 operations: insert_field, edit_field, delete_field, update_field, update_all, get_fields, get_field_detail, add_form_field, edit_form_field, delete_form_field, get_form_fields.
 
 Usage examples:
 - Insert field: word_field(operation='insert_field', path='doc.docx', fieldType='DATE', paragraphIndex=0)
@@ -41,11 +41,11 @@ Usage examples:
 - 'update_all': Alias for update_field with updateAll=true (required params: path)
 - 'get_fields': Get all fields (required params: path)
 - 'get_field_detail': Get field details (required params: path, fieldIndex)
-- 'add_form_field': Add a form field (required params: path, formFieldType, fieldName)
+- 'add_form_field': Add a form field (required params: path, formFieldType, fieldName, options for DropDown type)
 - 'edit_form_field': Edit a form field (required params: path, fieldName)
 - 'delete_form_field': Delete a form field (required params: path, fieldName)
 - 'get_form_fields': Get all form fields (required params: path)",
-                @enum = new[] { "insert_field", "edit_field", "delete_field", "update_field", "get_fields", "get_field_detail", "add_form_field", "edit_form_field", "delete_form_field", "get_form_fields" }
+                @enum = new[] { "insert_field", "edit_field", "delete_field", "update_field", "update_all", "get_fields", "get_field_detail", "add_form_field", "edit_form_field", "delete_form_field", "get_form_fields" }
             },
             path = new
             {
@@ -176,10 +176,10 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        SecurityHelper.ValidateFilePath(path, "path");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        SecurityHelper.ValidateFilePath(path);
+        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         // Normalize operation name: update_all is an alias for update_field with updateAll=true
@@ -218,10 +218,10 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> InsertFieldAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var fieldType = arguments?["fieldType"]?.GetValue<string>()?.ToUpper() ?? throw new ArgumentException("fieldType is required");
-        var fieldArgument = arguments?["fieldArgument"]?.GetValue<string>() ?? "";
-        var paragraphIndex = arguments?["paragraphIndex"]?.GetValue<int?>();
-        var insertAtStart = arguments?["insertAtStart"]?.GetValue<bool>() ?? false;
+        var fieldType = ArgumentHelper.GetString(arguments, "fieldType").ToUpper();
+        var fieldArgument = ArgumentHelper.GetString(arguments, "fieldArgument", "");
+        var paragraphIndex = ArgumentHelper.GetIntNullable(arguments, "paragraphIndex");
+        var insertAtStart = ArgumentHelper.GetBool(arguments, "insertAtStart", false);
 
         var doc = new Document(path);
         var builder = new DocumentBuilder(doc);
@@ -315,12 +315,12 @@ Usage examples:
                 }
                 else
                 {
-                    throw new InvalidOperationException($"無法找到索引 {paragraphIndex.Value} 的段落");
+                    throw new InvalidOperationException($"Unable to find paragraph at index {paragraphIndex.Value}");
                 }
             }
             else
             {
-                throw new ArgumentException($"段落索引 {paragraphIndex.Value} 超出範圍 (文檔共有 {paragraphs.Count} 個段落)");
+                throw new ArgumentException($"Paragraph index {paragraphIndex.Value} is out of range (document has {paragraphs.Count} paragraphs)");
             }
         }
         else
@@ -342,22 +342,22 @@ Usage examples:
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException($"無法插入欄位 '{fieldCode}': {ex.Message}", ex);
+            throw new InvalidOperationException($"Unable to insert field '{fieldCode}': {ex.Message}", ex);
         }
 
         doc.Save(outputPath);
 
-        var result = $"成功插入欄位\n";
-        result += $"欄位類型: {fieldType}\n";
+        var result = $"Field inserted successfully\n";
+        result += $"Field type: {fieldType}\n";
         if (!string.IsNullOrEmpty(fieldArgument))
-            result += $"欄位參數: {fieldArgument}\n";
-        result += $"欄位代碼: {fieldCode}\n";
+            result += $"Field argument: {fieldArgument}\n";
+        result += $"Field code: {fieldCode}\n";
         
         try
         {
             var fieldResult = field.Result;
             if (!string.IsNullOrEmpty(fieldResult))
-                result += $"欄位結果: {fieldResult}\n";
+                result += $"Field result: {fieldResult}\n";
         }
         catch
         {
@@ -368,16 +368,16 @@ Usage examples:
         if (paragraphIndex.HasValue)
         {
             if (paragraphIndex.Value == -1)
-                result += "插入位置: 文檔開頭\n";
+                result += "Insert position: beginning of document\n";
             else
-                result += $"插入位置: 段落 #{paragraphIndex.Value}\n";
+                result += $"Insert position: paragraph #{paragraphIndex.Value}\n";
         }
         else
         {
-            result += "插入位置: 文檔末尾\n";
+            result += "Insert position: end of document\n";
         }
         
-        result += $"輸出: {outputPath}";
+        result += $"Output: {outputPath}";
 
         return await Task.FromResult(result);
     }
@@ -391,18 +391,18 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> EditFieldAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var fieldIndex = ArgumentHelper.GetInt(arguments, "fieldIndex", "fieldIndex");
-        var fieldCode = arguments?["fieldCode"]?.GetValue<string>();
-        var lockField = arguments?["lockField"]?.GetValue<bool?>();
-        var unlockField = arguments?["unlockField"]?.GetValue<bool?>();
-        var updateField = arguments?["updateField"]?.GetValue<bool>() ?? true;
+        var fieldIndex = ArgumentHelper.GetInt(arguments, "fieldIndex");
+        var fieldCode = ArgumentHelper.GetStringNullable(arguments, "fieldCode");
+        var lockField = ArgumentHelper.GetBoolNullable(arguments, "lockField");
+        var unlockField = ArgumentHelper.GetBoolNullable(arguments, "unlockField");
+        var updateField = ArgumentHelper.GetBool(arguments, "updateField");
 
         var doc = new Document(path);
         var fields = doc.Range.Fields.ToList();
         
         if (fieldIndex < 0 || fieldIndex >= fields.Count)
         {
-            throw new ArgumentException($"欄位索引 {fieldIndex} 超出範圍 (文檔共有 {fields.Count} 個欄位)");
+            throw new ArgumentException($"Field index {fieldIndex} is out of range (document has {fields.Count} fields)");
         }
 
         var field = fields[fieldIndex];
@@ -438,24 +438,24 @@ Usage examples:
                     builder.MoveTo(fieldStart);
                     builder.Write(fieldCode);
                     
-                    changes.Add($"欄位代碼已更新: {oldFieldCode} -> {fieldCode}");
+                    changes.Add($"Field code updated: {oldFieldCode} -> {fieldCode}");
                 }
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"無法更新欄位代碼: {ex.Message}", ex);
+                throw new InvalidOperationException($"Unable to update field code: {ex.Message}", ex);
             }
         }
         
         if (lockField.HasValue && lockField.Value)
         {
             field.IsLocked = true;
-            changes.Add("欄位已鎖定");
+            changes.Add("Field locked");
         }
         else if (unlockField.HasValue && unlockField.Value)
         {
             field.IsLocked = false;
-            changes.Add("欄位已解鎖");
+            changes.Add("Field unlocked");
         }
         
         if (updateField)
@@ -466,19 +466,19 @@ Usage examples:
         
         doc.Save(outputPath);
         
-        var result = $"成功編輯欄位 #{fieldIndex}\n";
-        result += $"原欄位代碼: {oldFieldCode}\n";
+        var result = $"Field #{fieldIndex} edited successfully\n";
+        result += $"Original field code: {oldFieldCode}\n";
         if (!string.IsNullOrEmpty(fieldCode))
         {
-            result += $"新欄位代碼: {fieldCode}\n";
+            result += $"New field code: {fieldCode}\n";
         }
-        result += $"原結果: {oldResult}\n";
-        result += $"原鎖定狀態: {(oldLocked ? "已鎖定" : "未鎖定")}\n";
+        result += $"Original result: {oldResult}\n";
+        result += $"Original lock status: {(oldLocked ? "Locked" : "Unlocked")}\n";
         if (changes.Count > 0)
         {
-            result += $"變更: {string.Join(", ", changes)}\n";
+            result += $"Changes: {string.Join(", ", changes)}\n";
         }
-        result += $"輸出: {outputPath}";
+        result += $"Output: {outputPath}";
         
         return await Task.FromResult(result);
     }
@@ -492,15 +492,15 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> DeleteFieldAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var fieldIndex = ArgumentHelper.GetInt(arguments, "fieldIndex", "fieldIndex");
-        var keepResult = arguments?["keepResult"]?.GetValue<bool>() ?? false;
+        var fieldIndex = ArgumentHelper.GetInt(arguments, "fieldIndex");
+        var keepResult = ArgumentHelper.GetBool(arguments, "keepResult", false);
 
         var doc = new Document(path);
         var fields = doc.Range.Fields.ToList();
         
         if (fieldIndex < 0 || fieldIndex >= fields.Count)
         {
-            throw new ArgumentException($"功能變數索引 {fieldIndex} 超出範圍 (文檔共有 {fields.Count} 個功能變數)");
+            throw new ArgumentException($"Field index {fieldIndex} is out of range (document has {fields.Count} fields)");
         }
         
         var field = fields[fieldIndex];
@@ -579,22 +579,22 @@ Usage examples:
             
             var remainingFields = doc.Range.Fields.Count;
             
-            var result = $"成功刪除功能變數 #{fieldIndex}\n";
-            result += $"類型: {fieldType}\n";
-            result += $"代碼: {fieldCode}\n";
+            var result = $"Field #{fieldIndex} deleted successfully\n";
+            result += $"Type: {fieldType}\n";
+            result += $"Code: {fieldCode}\n";
             if (!string.IsNullOrEmpty(fieldResult))
             {
-                result += $"結果: {fieldResult}\n";
+                result += $"Result: {fieldResult}\n";
             }
-            result += $"保留結果文字: {(keepResult ? "是" : "否")}\n";
-            result += $"文檔剩餘功能變數數: {remainingFields}\n";
-            result += $"輸出: {outputPath}";
+            result += $"Keep result text: {(keepResult ? "Yes" : "No")}\n";
+            result += $"Remaining fields in document: {remainingFields}\n";
+            result += $"Output: {outputPath}";
             
             return await Task.FromResult(result);
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException($"無法刪除功能變數: {ex.Message}", ex);
+            throw new InvalidOperationException($"Unable to delete field: {ex.Message}", ex);
         }
     }
 
@@ -607,9 +607,9 @@ Usage examples:
     /// <returns>Success message with update count</returns>
     private async Task<string> UpdateFieldAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var fieldIndex = arguments?["fieldIndex"]?.GetValue<int?>();
-        var fieldTypeFilter = arguments?["fieldType"]?.GetValue<string>();
-        var updateAll = arguments?["updateAll"]?.GetValue<bool>() ?? (!fieldIndex.HasValue);
+        var fieldIndex = ArgumentHelper.GetIntNullable(arguments, "fieldIndex");
+        var fieldTypeFilter = ArgumentHelper.GetStringNullable(arguments, "fieldType");
+        var updateAll = ArgumentHelper.GetBool(arguments, "updateAll", !fieldIndex.HasValue);
 
         var doc = new Document(path);
         var fields = doc.Range.Fields.ToList();
@@ -620,7 +620,7 @@ Usage examples:
         {
             if (fieldIndex.Value < 0 || fieldIndex.Value >= fields.Count)
             {
-                throw new ArgumentException($"功能變數索引 {fieldIndex.Value} 超出範圍 (文檔共有 {fields.Count} 個功能變數)");
+                throw new ArgumentException($"Field index {fieldIndex.Value} is out of range (document has {fields.Count} fields)");
             }
             
             var field = fields[fieldIndex.Value];
@@ -633,18 +633,18 @@ Usage examples:
                 
                 doc.Save(outputPath);
                 
-                var result = $"成功更新功能變數 #{fieldIndex.Value}\n";
-                result += $"類型: {field.Type}\n";
-                result += $"代碼: {field.GetFieldCode()}\n";
-                result += $"舊結果: {oldResult}\n";
-                result += $"新結果: {newResult}\n";
-                result += $"輸出: {outputPath}";
+                var result = $"Field #{fieldIndex.Value} updated successfully\n";
+                result += $"Type: {field.Type}\n";
+                result += $"Code: {field.GetFieldCode()}\n";
+                result += $"Old result: {oldResult}\n";
+                result += $"New result: {newResult}\n";
+                result += $"Output: {outputPath}";
                 
                 return await Task.FromResult(result);
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"無法更新功能變數 #{fieldIndex.Value}: {ex.Message}", ex);
+                throw new InvalidOperationException($"Unable to update field #{fieldIndex.Value}: {ex.Message}", ex);
             }
         }
         else
@@ -668,28 +668,28 @@ Usage examples:
                 }
                 catch (Exception ex)
                 {
-                    errors.Add($"功能變數 {field.Type} (索引 {fields.IndexOf(field)}): {ex.Message}");
+                    errors.Add($"Field {field.Type} (index {fields.IndexOf(field)}): {ex.Message}");
                 }
             }
             
             doc.Save(outputPath);
             
-            var result = $"成功更新 {updatedCount} 個功能變數\n";
+            var result = $"Successfully updated {updatedCount} fields\n";
             if (!string.IsNullOrEmpty(fieldTypeFilter))
             {
-                result += $"過濾類型: {fieldTypeFilter}\n";
+                result += $"Filter type: {fieldTypeFilter}\n";
             }
             
             if (errors.Count > 0)
             {
-                result += $"\n更新失敗的功能變數 ({errors.Count} 個):\n";
+                result += $"\nFailed to update fields ({errors.Count}):\n";
                 foreach (var error in errors)
                 {
                     result += $"  - {error}\n";
                 }
             }
             
-            result += $"輸出: {outputPath}";
+            result += $"Output: {outputPath}";
             
             return await Task.FromResult(result);
         }
@@ -703,9 +703,9 @@ Usage examples:
     /// <returns>Formatted string with all fields</returns>
     private async Task<string> GetFieldsAsync(JsonObject? arguments, string path)
     {
-        var fieldTypeFilter = arguments?["fieldType"]?.GetValue<string>();
-        var includeCode = arguments?["includeCode"]?.GetValue<bool>() ?? true;
-        var includeResult = arguments?["includeResult"]?.GetValue<bool>() ?? true;
+        var fieldTypeFilter = ArgumentHelper.GetStringNullable(arguments, "fieldType");
+        var includeCode = ArgumentHelper.GetBool(arguments, "includeCode");
+        var includeResult = ArgumentHelper.GetBool(arguments, "includeResult");
 
         var doc = new Document(path);
         var fields = new List<FieldInfo>();
@@ -746,47 +746,47 @@ Usage examples:
         }
         
         var result = new StringBuilder();
-        result.AppendLine($"文檔中共有 {fields.Count} 個功能變數\n");
+        result.AppendLine($"Document has {fields.Count} fields\n");
         
         if (fields.Count == 0)
         {
-            result.AppendLine("未找到功能變數");
+            result.AppendLine("No fields found");
             return await Task.FromResult(result.ToString());
         }
         
-        result.AppendLine("【功能變數列表】");
+        result.AppendLine("[Field List]");
         result.AppendLine(new string('-', 80));
         
         foreach (var fieldInfo in fields)
         {
-            result.AppendLine($"索引: {fieldInfo.Index}");
-            result.AppendLine($"類型: {fieldInfo.Type}");
+            result.AppendLine($"Index: {fieldInfo.Index}");
+            result.AppendLine($"Type: {fieldInfo.Type}");
             
             if (includeCode)
             {
-                result.AppendLine($"代碼: {fieldInfo.Code}");
+                result.AppendLine($"Code: {fieldInfo.Code}");
             }
             
             if (includeResult && fieldInfo.Result != null)
             {
-                result.AppendLine($"結果: {fieldInfo.Result}");
+                result.AppendLine($"Result: {fieldInfo.Result}");
             }
             
             if (fieldInfo.ExtraInfo != null)
             {
-                result.AppendLine($"額外資訊: {fieldInfo.ExtraInfo}");
+                result.AppendLine($"Extra info: {fieldInfo.ExtraInfo}");
             }
             
-            result.AppendLine($"鎖定: {(fieldInfo.IsLocked ? "是" : "否")}");
-            result.AppendLine($"需要更新: {(fieldInfo.IsDirty ? "是" : "否")}");
+            result.AppendLine($"Locked: {(fieldInfo.IsLocked ? "Yes" : "No")}");
+            result.AppendLine($"Needs update: {(fieldInfo.IsDirty ? "Yes" : "No")}");
             result.AppendLine(new string('-', 80));
         }
         
         var typeGroups = fields.GroupBy(f => f.Type).OrderBy(g => g.Key);
-        result.AppendLine("\n【按類型統計】");
+        result.AppendLine("\n[Statistics by Type]");
         foreach (var group in typeGroups)
         {
-            result.AppendLine($"{group.Key}: {group.Count()} 個");
+            result.AppendLine($"{group.Key}: {group.Count()}");
         }
         
         return await Task.FromResult(result.ToString());
@@ -800,37 +800,37 @@ Usage examples:
     /// <returns>Formatted string with field details</returns>
     private async Task<string> GetFieldDetailAsync(JsonObject? arguments, string path)
     {
-        var fieldIndex = ArgumentHelper.GetInt(arguments, "fieldIndex", "fieldIndex");
+        var fieldIndex = ArgumentHelper.GetInt(arguments, "fieldIndex");
 
         var doc = new Document(path);
         var fields = doc.Range.Fields.ToList();
         
         if (fieldIndex < 0 || fieldIndex >= fields.Count)
         {
-            throw new ArgumentException($"功能變數索引 {fieldIndex} 超出範圍 (文檔共有 {fields.Count} 個功能變數)");
+            throw new ArgumentException($"Field index {fieldIndex} is out of range (document has {fields.Count} fields)");
         }
         
         var field = fields[fieldIndex];
         var result = new StringBuilder();
         
-        result.AppendLine("【功能變數詳細資訊】");
+        result.AppendLine("[Field Details]");
         result.AppendLine(new string('=', 80));
-        result.AppendLine($"索引: {fieldIndex}");
-        result.AppendLine($"類型: {field.Type}");
-        result.AppendLine($"類型代碼: {(int)field.Type}");
-        result.AppendLine($"代碼: {field.GetFieldCode()}");
-        result.AppendLine($"結果: {field.Result ?? "(無結果)"}");
-        result.AppendLine($"鎖定: {(field.IsLocked ? "是" : "否")}");
-        result.AppendLine($"需要更新: {(field.IsDirty ? "是" : "否")}");
+        result.AppendLine($"Index: {fieldIndex}");
+        result.AppendLine($"Type: {field.Type}");
+        result.AppendLine($"Type code: {(int)field.Type}");
+        result.AppendLine($"Code: {field.GetFieldCode()}");
+        result.AppendLine($"Result: {field.Result ?? "(No result)"}");
+        result.AppendLine($"Locked: {(field.IsLocked ? "Yes" : "No")}");
+        result.AppendLine($"Needs update: {(field.IsDirty ? "Yes" : "No")}");
         
         if (field is FieldHyperlink hyperlinkField)
         {
-            result.AppendLine($"地址: {hyperlinkField.Address ?? "(無)"}");
-            result.AppendLine($"提示文字: {hyperlinkField.ScreenTip ?? "(無)"}");
+            result.AppendLine($"Address: {hyperlinkField.Address ?? "(None)"}");
+            result.AppendLine($"Screen tip: {hyperlinkField.ScreenTip ?? "(None)"}");
         }
         else if (field is FieldRef refField)
         {
-            result.AppendLine($"書籤名稱: {refField.BookmarkName ?? "(無)"}");
+            result.AppendLine($"Bookmark name: {refField.BookmarkName ?? "(None)"}");
         }
         
         result.AppendLine(new string('=', 80));
@@ -847,11 +847,10 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> AddFormFieldAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var fieldType = ArgumentHelper.GetString(arguments, "formFieldType", "formFieldType");
-        var fieldName = ArgumentHelper.GetString(arguments, "fieldName", "fieldName");
-        var defaultValue = arguments?["defaultValue"]?.GetValue<string>();
-        var optionsArray = arguments?["options"]?.AsArray();
-        var checkedValue = arguments?["checkedValue"]?.GetValue<bool?>();
+        var fieldType = ArgumentHelper.GetString(arguments, "formFieldType");
+        var fieldName = ArgumentHelper.GetString(arguments, "fieldName");
+        var defaultValue = ArgumentHelper.GetStringNullable(arguments, "defaultValue");
+        var checkedValue = ArgumentHelper.GetBoolNullable(arguments, "checkedValue");
 
         var doc = new Document(path);
         var builder = new DocumentBuilder(doc);
@@ -869,9 +868,10 @@ Usage examples:
                 break;
 
             case "dropdown":
-                if (optionsArray == null || optionsArray.Count == 0)
+                var optionsArray = ArgumentHelper.GetArray(arguments, "options");
+                if (optionsArray.Count == 0)
                 {
-                    throw new ArgumentException("options array is required for DropDown type");
+                    throw new ArgumentException("options array cannot be empty for DropDown type");
                 }
                 var options = optionsArray.Select(o => o?.GetValue<string>()).Where(o => !string.IsNullOrEmpty(o)).ToArray();
                 field = builder.InsertComboBox(fieldName, options, 0);
@@ -894,10 +894,10 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> EditFormFieldAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var fieldName = ArgumentHelper.GetString(arguments, "fieldName", "fieldName");
-        var value = arguments?["value"]?.GetValue<string>();
-        var checkedValue = arguments?["checkedValue"]?.GetValue<bool?>();
-        var selectedIndex = arguments?["selectedIndex"]?.GetValue<int?>();
+        var fieldName = ArgumentHelper.GetString(arguments, "fieldName");
+        var value = ArgumentHelper.GetStringNullable(arguments, "value");
+        var checkedValue = ArgumentHelper.GetBoolNullable(arguments, "checkedValue");
+        var selectedIndex = ArgumentHelper.GetIntNullable(arguments, "selectedIndex");
 
         var doc = new Document(path);
         var field = doc.Range.FormFields[fieldName];
@@ -936,8 +936,8 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> DeleteFormFieldAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var fieldName = arguments?["fieldName"]?.GetValue<string>();
-        var fieldNamesArray = arguments?["fieldNames"]?.AsArray();
+        var fieldName = ArgumentHelper.GetStringNullable(arguments, "fieldName");
+        var fieldNamesArray = ArgumentHelper.GetArray(arguments, "fieldNames", false);
 
         var doc = new Document(path);
         var formFields = doc.Range.FormFields;

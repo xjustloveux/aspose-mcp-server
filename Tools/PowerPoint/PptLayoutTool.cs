@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Text;
 using System.Linq;
 using Aspose.Slides;
@@ -76,6 +76,11 @@ Usage examples:
             {
                 type = "string",
                 description = "Theme template file path (required for apply_theme)"
+            },
+            outputPath = new
+            {
+                type = "string",
+                description = "Output file path (optional, for apply_theme operation, defaults to input path)"
             }
         },
         required = new[] { "operation", "path" }
@@ -83,7 +88,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         return operation.ToLower() switch
@@ -106,8 +111,8 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> SetLayoutAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
-        var layoutStr = ArgumentHelper.GetString(arguments, "layout", "layout");
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
+        var layoutStr = ArgumentHelper.GetString(arguments, "layout");
 
         using var presentation = new Presentation(path);
         if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
@@ -128,8 +133,9 @@ Usage examples:
         var layout = presentation.LayoutSlides.FirstOrDefault(ls => ls.LayoutType == layoutType) ?? presentation.LayoutSlides[0];
         presentation.Slides[slideIndex].LayoutSlide = layout;
 
-        presentation.Save(path, SaveFormat.Pptx);
-        return await Task.FromResult($"已設定投影片 {slideIndex} 版面：{layoutStr}");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
+        return await Task.FromResult($"Layout set for slide {slideIndex}: {layoutStr}");
     }
 
     /// <summary>
@@ -140,7 +146,7 @@ Usage examples:
     /// <returns>Formatted string with available layouts</returns>
     private async Task<string> GetLayoutsAsync(JsonObject? arguments, string path)
     {
-        var masterIndex = arguments?["masterIndex"]?.GetValue<int?>();
+        var masterIndex = ArgumentHelper.GetIntNullable(arguments, "masterIndex");
 
         using var presentation = new Presentation(path);
         var sb = new StringBuilder();
@@ -216,15 +222,16 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> ApplyMasterAsync(JsonObject? arguments, string path)
     {
-        var slideIndices = arguments?["slideIndices"]?.AsArray()?.Select(x => x?.GetValue<int>() ?? -1).ToArray();
-        var masterIndex = arguments?["masterIndex"]?.GetValue<int?>() ?? 0;
-        var layoutIndex = arguments?["layoutIndex"]?.GetValue<int?>() ?? 0;
+        var slideIndicesArray = ArgumentHelper.GetArray(arguments, "slideIndices", false);
+        var slideIndices = slideIndicesArray?.Select(x => x?.GetValue<int>() ?? -1).ToArray();
+        var masterIndex = ArgumentHelper.GetInt(arguments, "masterIndex", 0);
+        var layoutIndex = ArgumentHelper.GetInt(arguments, "layoutIndex", 0);
 
         using var presentation = new Presentation(path);
 
-        PowerPointHelper.ValidateCollectionIndex(masterIndex, presentation.Masters.Count, "母版");
+        PowerPointHelper.ValidateCollectionIndex(masterIndex, presentation.Masters.Count, "master");
         var master = presentation.Masters[masterIndex];
-        PowerPointHelper.ValidateCollectionIndex(layoutIndex, master.LayoutSlides.Count, "版面配置");
+        PowerPointHelper.ValidateCollectionIndex(layoutIndex, master.LayoutSlides.Count, "layout");
 
         var targets = slideIndices?.Length > 0
             ? slideIndices
@@ -244,8 +251,9 @@ Usage examples:
             presentation.Slides[idx].LayoutSlide = layout;
         }
 
-        presentation.Save(path, SaveFormat.Pptx);
-        return await Task.FromResult($"已套用母片 {masterIndex} / 版面 {layoutIndex} 至 {targets.Length} 張投影片");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
+        return await Task.FromResult($"Master {masterIndex} / Layout {layoutIndex} applied to {targets.Length} slides");
     }
 
     /// <summary>
@@ -256,9 +264,10 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> ApplyLayoutRangeAsync(JsonObject? arguments, string path)
     {
-        var layoutStr = ArgumentHelper.GetString(arguments, "layout", "layout");
-        var slideIndices = arguments?["slideIndices"]?.AsArray()?.Select(x => x?.GetValue<int>() ?? -1).ToArray()
-                           ?? throw new ArgumentException("slideIndices is required for apply_layout_range operation");
+        var layoutStr = ArgumentHelper.GetString(arguments, "layout");
+        var slideIndicesArray = ArgumentHelper.GetArray(arguments, "slideIndices");
+
+        var slideIndices = slideIndicesArray.Select(x => x?.GetValue<int>() ?? -1).ToArray();
 
         using var presentation = new Presentation(path);
 
@@ -287,8 +296,9 @@ Usage examples:
             presentation.Slides[idx].LayoutSlide = layout;
         }
 
-        presentation.Save(path, SaveFormat.Pptx);
-        return await Task.FromResult($"已套用版面 {layoutStr} 到 {slideIndices.Length} 張投影片");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
+        return await Task.FromResult($"Layout {layoutStr} applied to {slideIndices.Length} slides");
     }
 
     /// <summary>
@@ -299,7 +309,7 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> ApplyThemeAsync(JsonObject? arguments, string path)
     {
-        var themePath = ArgumentHelper.GetString(arguments, "themePath", "themePath");
+        var themePath = ArgumentHelper.GetString(arguments, "themePath");
 
         using var presentation = new Presentation(path);
         using var themePresentation = new Presentation(themePath);
@@ -307,9 +317,10 @@ Usage examples:
         // Copy theme from the first slide of theme presentation
         presentation.Slides[0].LayoutSlide = themePresentation.Slides[0].LayoutSlide;
 
-        presentation.Save(path, SaveFormat.Pptx);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
 
-        return await Task.FromResult($"Theme applied to presentation: {path}");
+        return await Task.FromResult($"Theme applied to presentation: {outputPath}");
     }
 }
 

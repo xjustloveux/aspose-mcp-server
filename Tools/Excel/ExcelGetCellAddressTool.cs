@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 
@@ -43,10 +43,10 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var cellAddress = ArgumentHelper.GetString(arguments, "cellAddress", "cellAddress");
-        var convertToIndex = arguments?["convertToIndex"]?.GetValue<bool?>() ?? false;
-        var row = arguments?["row"]?.GetValue<int?>();
-        var column = arguments?["column"]?.GetValue<int?>();
+        var cellAddress = ArgumentHelper.GetString(arguments, "cellAddress");
+        var convertToIndex = ArgumentHelper.GetBool(arguments, "convertToIndex", false);
+        var row = ArgumentHelper.GetIntNullable(arguments, "row");
+        var column = ArgumentHelper.GetIntNullable(arguments, "column");
 
         if (row.HasValue && column.HasValue)
         {

@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Text;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
@@ -46,6 +46,11 @@ Usage examples:
             {
                 type = "string",
                 description = "Cell range to merge/unmerge (e.g., 'A1:C3', required for merge/unmerge)"
+            },
+            outputPath = new
+            {
+                type = "string",
+                description = "Output file path (optional, for merge/unmerge operations, defaults to input path)"
             }
         },
         required = new[] { "operation", "path" }
@@ -53,9 +58,9 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var sheetIndex = arguments?["sheetIndex"]?.GetValue<int>() ?? 0;
+        var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
 
         return operation.ToLower() switch
         {
@@ -75,16 +80,18 @@ Usage examples:
     /// <returns>Success message with merged range</returns>
     private async Task<string> MergeCellsAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var range = ArgumentHelper.GetString(arguments, "range", "range");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var range = ArgumentHelper.GetString(arguments, "range");
 
         using var workbook = new Workbook(path);
         var worksheet = workbook.Worksheets[sheetIndex];
         var cells = worksheet.Cells;
-        var cellRange = cells.CreateRange(range);
+        
+        var cellRange = ExcelHelper.CreateRange(cells, range);
 
         cellRange.Merge();
-        workbook.Save(path);
-        return await Task.FromResult($"範圍 {range} 已合併: {path}");
+        workbook.Save(outputPath);
+        return await Task.FromResult($"Range {range} merged: {outputPath}");
     }
 
     /// <summary>
@@ -96,16 +103,18 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> UnmergeCellsAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var range = ArgumentHelper.GetString(arguments, "range", "range");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var range = ArgumentHelper.GetString(arguments, "range");
 
         using var workbook = new Workbook(path);
         var worksheet = workbook.Worksheets[sheetIndex];
         var cells = worksheet.Cells;
-        var cellRange = cells.CreateRange(range);
+        
+        var cellRange = ExcelHelper.CreateRange(cells, range);
 
         cellRange.UnMerge();
-        workbook.Save(path);
-        return await Task.FromResult($"範圍 {range} 已取消合併: {path}");
+        workbook.Save(outputPath);
+        return await Task.FromResult($"Range {range} unmerged: {outputPath}");
     }
 
     /// <summary>
@@ -122,16 +131,16 @@ Usage examples:
         var mergedCells = worksheet.Cells.MergedCells;
         if (mergedCells == null)
         {
-            throw new InvalidOperationException($"無法取得合併單元格資訊：{worksheet.Name}");
+            throw new InvalidOperationException($"Unable to get merged cells information: {worksheet.Name}");
         }
         var result = new StringBuilder();
 
-        result.AppendLine($"=== 工作表 '{worksheet.Name}' 的合併單元格資訊 ===\n");
-        result.AppendLine($"總合併區域數: {mergedCells.Count}\n");
+        result.AppendLine($"=== Merged cells information for worksheet '{worksheet.Name}' ===\n");
+        result.AppendLine($"Total merged regions: {mergedCells.Count}\n");
 
         if (mergedCells.Count == 0)
         {
-            result.AppendLine("未找到合併單元格");
+            result.AppendLine("No merged cells found");
             return await Task.FromResult(result.ToString());
         }
 
@@ -240,38 +249,38 @@ Usage examples:
                 catch (Exception ex)
                 {
                     // Skip this merged cell if we can't access it
-                    result.AppendLine($"【合併區域 {i}】");
-                    result.AppendLine($"錯誤: 無法讀取合併單元格資訊 - {ex.Message}");
+                    result.AppendLine($"[Merged region {i}]");
+                    result.AppendLine($"Error: Unable to read merged cell information - {ex.Message}");
                     result.AppendLine();
                     continue;
                 }
                 
                 if (string.IsNullOrWhiteSpace(mergedCellName) || startRow < 0)
                 {
-                    result.AppendLine($"【合併區域 {i}】");
-                    result.AppendLine($"範圍: {mergedCellName ?? "未知"}");
-                    result.AppendLine($"注意: 無法解析範圍格式");
+                    result.AppendLine($"[Merged region {i}]");
+                    result.AppendLine($"Range: {mergedCellName ?? "unknown"}");
+                    result.AppendLine($"Note: Unable to parse range format");
                     result.AppendLine();
                     continue;
                 }
                 
                 // Display merged cell information
-                result.AppendLine($"【合併區域 {i}】");
-                result.AppendLine($"範圍: {mergedCellName}");
+                result.AppendLine($"[Merged region {i}]");
+                result.AppendLine($"Range: {mergedCellName}");
                 
                 if (startRow >= 0 && endRow >= 0 && startCol >= 0 && endCol >= 0)
                 {
-                    result.AppendLine($"行數: {endRow - startRow + 1}");
-                    result.AppendLine($"列數: {endCol - startCol + 1}");
+                    result.AppendLine($"Row count: {endRow - startRow + 1}");
+                    result.AppendLine($"Column count: {endCol - startCol + 1}");
                     
                     try
                     {
                         var cell = worksheet.Cells[startRow, startCol];
-                        result.AppendLine($"值: {cell.Value ?? "(空白)"}");
+                        result.AppendLine($"Value: {cell.Value ?? "(empty)"}");
                     }
                     catch
                     {
-                        result.AppendLine($"值: (無法讀取)");
+                        result.AppendLine($"Value: (unable to read)");
                     }
                 }
                 result.AppendLine();
@@ -279,8 +288,8 @@ Usage examples:
             catch (Exception ex)
             {
                 // Skip this merged cell if there's an error
-                result.AppendLine($"【合併區域 {i}】");
-                result.AppendLine($"錯誤: 無法讀取合併單元格資訊 - {ex.Message}");
+                result.AppendLine($"[Merged region {i}]");
+                result.AppendLine($"Error: Unable to read merged cell information - {ex.Message}");
                 result.AppendLine();
             }
         }

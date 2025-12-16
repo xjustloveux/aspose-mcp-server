@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using Aspose.Words.Drawing;
@@ -241,7 +241,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
 
         return operation.ToLower() switch
         {
@@ -263,15 +263,15 @@ Usage examples:
     private async Task<string> AddLine(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        SecurityHelper.ValidateFilePath(path, "path");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        SecurityHelper.ValidateFilePath(path);
+        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var location = arguments?["location"]?.GetValue<string>() ?? "body";
-        var position = arguments?["position"]?.GetValue<string>() ?? "end";
-        var lineStyle = arguments?["lineStyle"]?.GetValue<string>() ?? "shape";
-        var lineWidth = arguments?["lineWidth"]?.GetValue<double?>() ?? 1.0;
-        var lineColor = arguments?["lineColor"]?.GetValue<string>() ?? "000000";
-        var width = arguments?["width"]?.GetValue<double?>();
+        var location = ArgumentHelper.GetString(arguments, "location", "body");
+        var position = ArgumentHelper.GetString(arguments, "position", "end");
+        var lineStyle = ArgumentHelper.GetString(arguments, "lineStyle", "shape");
+        var lineWidth = ArgumentHelper.GetDouble(arguments, "lineWidth", 1.0);
+        var lineColor = ArgumentHelper.GetString(arguments, "lineColor", "000000");
+        var width = ArgumentHelper.GetDoubleNullable(arguments, "width");
 
         var doc = new Document(path);
         var section = doc.FirstSection;
@@ -381,23 +381,23 @@ Usage examples:
     private async Task<string> AddTextBox(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        SecurityHelper.ValidateFilePath(path, "path");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        SecurityHelper.ValidateFilePath(path);
+        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var text = ArgumentHelper.GetString(arguments, "text", "text");
-        var textboxWidth = arguments?["textboxWidth"]?.GetValue<double>() ?? 200;
-        var textboxHeight = arguments?["textboxHeight"]?.GetValue<double>() ?? 100;
-        var positionX = arguments?["positionX"]?.GetValue<double>() ?? 100;
-        var positionY = arguments?["positionY"]?.GetValue<double>() ?? 100;
-        var backgroundColor = arguments?["backgroundColor"]?.GetValue<string>();
-        var borderColor = arguments?["borderColor"]?.GetValue<string>();
-        var borderWidth = arguments?["borderWidth"]?.GetValue<double>() ?? 1;
-        var fontName = arguments?["fontName"]?.GetValue<string>();
-        var fontNameAscii = arguments?["fontNameAscii"]?.GetValue<string>();
-        var fontNameFarEast = arguments?["fontNameFarEast"]?.GetValue<string>();
-        var fontSize = arguments?["fontSize"]?.GetValue<double?>();
-        var bold = arguments?["bold"]?.GetValue<bool?>();
-        var textAlignment = arguments?["textAlignment"]?.GetValue<string>() ?? "left";
+        var text = ArgumentHelper.GetString(arguments, "text");
+        var textboxWidth = ArgumentHelper.GetDouble(arguments, "textboxWidth", "textboxWidth", false, 200);
+        var textboxHeight = ArgumentHelper.GetDouble(arguments, "textboxHeight", "textboxHeight", false, 100);
+        var positionX = ArgumentHelper.GetDouble(arguments, "positionX", "positionX", false, 100);
+        var positionY = ArgumentHelper.GetDouble(arguments, "positionY", "positionY", false, 100);
+        var backgroundColor = ArgumentHelper.GetStringNullable(arguments, "backgroundColor");
+        var borderColor = ArgumentHelper.GetStringNullable(arguments, "borderColor");
+        var borderWidth = ArgumentHelper.GetDouble(arguments, "borderWidth", "borderWidth", false, 1);
+        var fontName = ArgumentHelper.GetStringNullable(arguments, "fontName");
+        var fontNameAscii = ArgumentHelper.GetStringNullable(arguments, "fontNameAscii");
+        var fontNameFarEast = ArgumentHelper.GetStringNullable(arguments, "fontNameFarEast");
+        var fontSize = ArgumentHelper.GetDoubleNullable(arguments, "fontSize");
+        var bold = ArgumentHelper.GetBoolNullable(arguments, "bold");
+        var textAlignment = ArgumentHelper.GetString(arguments, "textAlignment", "left");
 
         var doc = new Document(path);
         var builder = new DocumentBuilder(doc);
@@ -476,8 +476,8 @@ Usage examples:
     private async Task<string> GetTextboxes(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        SecurityHelper.ValidateFilePath(path, "path");
-        var includeContent = arguments?["includeContent"]?.GetValue<bool>() ?? true;
+        SecurityHelper.ValidateFilePath(path);
+        var includeContent = ArgumentHelper.GetBool(arguments, "includeContent");
 
         var doc = new Document(path);
         var shapes = FindAllTextboxes(doc);
@@ -527,20 +527,20 @@ Usage examples:
     private async Task<string> EditTextBoxContent(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        SecurityHelper.ValidateFilePath(path, "path");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        SecurityHelper.ValidateFilePath(path);
+        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var textboxIndex = ArgumentHelper.GetInt(arguments, "textboxIndex", "textboxIndex");
-        var text = arguments?["text"]?.GetValue<string>();
-        var appendText = arguments?["appendText"]?.GetValue<bool>() ?? false;
-        var fontName = arguments?["fontName"]?.GetValue<string>();
-        var fontNameAscii = arguments?["fontNameAscii"]?.GetValue<string>();
-        var fontNameFarEast = arguments?["fontNameFarEast"]?.GetValue<string>();
-        var fontSize = arguments?["fontSize"]?.GetValue<double?>();
-        var bold = arguments?["bold"]?.GetValue<bool?>();
-        var italic = arguments?["italic"]?.GetValue<bool?>();
-        var color = arguments?["color"]?.GetValue<string>();
-        var clearFormatting = arguments?["clearFormatting"]?.GetValue<bool>() ?? false;
+        var textboxIndex = ArgumentHelper.GetInt(arguments, "textboxIndex");
+        var text = ArgumentHelper.GetStringNullable(arguments, "text");
+        var appendText = ArgumentHelper.GetBool(arguments, "appendText", false);
+        var fontName = ArgumentHelper.GetStringNullable(arguments, "fontName");
+        var fontNameAscii = ArgumentHelper.GetStringNullable(arguments, "fontNameAscii");
+        var fontNameFarEast = ArgumentHelper.GetStringNullable(arguments, "fontNameFarEast");
+        var fontSize = ArgumentHelper.GetDoubleNullable(arguments, "fontSize");
+        var bold = ArgumentHelper.GetBoolNullable(arguments, "bold");
+        var italic = ArgumentHelper.GetBoolNullable(arguments, "italic");
+        var color = ArgumentHelper.GetStringNullable(arguments, "color");
+        var clearFormatting = ArgumentHelper.GetBool(arguments, "clearFormatting", false);
 
         var doc = new Document(path);
         var textboxes = FindAllTextboxes(doc);
@@ -641,7 +641,7 @@ Usage examples:
                     }
                     catch (Exception colorEx)
                     {
-                        throw new ArgumentException($"無法解析顏色 '{color}': {colorEx.Message}。請使用有效的顏色格式（如 #FF0000、255,0,0 或 red）");
+                        throw new ArgumentException($"Unable to parse color '{color}': {colorEx.Message}. Please use a valid color format (e.g., #FF0000, 255,0,0, or red)");
                     }
                 }
             }
@@ -659,13 +659,13 @@ Usage examples:
     private async Task<string> SetTextBoxBorder(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        SecurityHelper.ValidateFilePath(path, "path");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        SecurityHelper.ValidateFilePath(path);
+        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var textboxIndex = ArgumentHelper.GetInt(arguments, "textboxIndex", "textboxIndex");
-        var borderVisible = arguments?["borderVisible"]?.GetValue<bool>() ?? true;
-        var borderColor = arguments?["borderColor"]?.GetValue<string>() ?? "000000";
-        var borderWidth = arguments?["borderWidth"]?.GetValue<double>() ?? 1.0;
+        var textboxIndex = ArgumentHelper.GetInt(arguments, "textboxIndex");
+        var borderVisible = ArgumentHelper.GetBool(arguments, "borderVisible");
+        var borderColor = ArgumentHelper.GetString(arguments, "borderColor", "000000");
+        var borderWidth = ArgumentHelper.GetDouble(arguments, "borderWidth", "borderWidth", false, 1.0);
 
         var doc = new Document(path);
         var allTextboxes = FindAllTextboxes(doc);
@@ -701,16 +701,16 @@ Usage examples:
     private async Task<string> AddChart(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        SecurityHelper.ValidateFilePath(path, "path");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        SecurityHelper.ValidateFilePath(path);
+        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var chartType = arguments?["chartType"]?.GetValue<string>() ?? "column";
-        var data = arguments?["data"]?.AsArray() ?? throw new ArgumentException("data is required");
-        var chartTitle = arguments?["chartTitle"]?.GetValue<string>();
-        var chartWidth = arguments?["chartWidth"]?.GetValue<double>() ?? 432.0;
-        var chartHeight = arguments?["chartHeight"]?.GetValue<double>() ?? 252.0;
-        var paragraphIndex = arguments?["paragraphIndex"]?.GetValue<int?>();
-        var alignment = arguments?["alignment"]?.GetValue<string>() ?? "left";
+        var chartType = ArgumentHelper.GetString(arguments, "chartType", "column");
+        var data = ArgumentHelper.GetArray(arguments, "data");
+        var chartTitle = ArgumentHelper.GetStringNullable(arguments, "chartTitle");
+        var chartWidth = ArgumentHelper.GetDouble(arguments, "chartWidth", "chartWidth", false, 432.0);
+        var chartHeight = ArgumentHelper.GetDouble(arguments, "chartHeight", "chartHeight", false, 252.0);
+        var paragraphIndex = ArgumentHelper.GetIntNullable(arguments, "paragraphIndex");
+        var alignment = ArgumentHelper.GetString(arguments, "alignment", "left");
 
         if (data.Count == 0)
             throw new ArgumentException("Chart data cannot be empty");

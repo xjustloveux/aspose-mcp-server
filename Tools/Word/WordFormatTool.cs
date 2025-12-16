@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using System.Linq;
@@ -154,7 +154,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
 
         return operation.ToLower() switch
         {
@@ -174,9 +174,9 @@ Usage examples:
     private async Task<string> GetRunFormat(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex", "paragraphIndex");
-        var runIndex = arguments?["runIndex"]?.GetValue<int?>();
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>();
+        var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex");
+        var runIndex = ArgumentHelper.GetIntNullable(arguments, "runIndex");
+        var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
 
         var doc = new Document(path);
         
@@ -213,7 +213,7 @@ Usage examples:
         if (runIndex.HasValue)
         {
             if (runIndex.Value < 0 || runIndex.Value >= runs.Count)
-                throw new ArgumentException($"runIndex {runIndex.Value} 超出範圍 (段落 #{paragraphIndex} 共有 {runs.Count} 個 Run，有效範圍: 0-{runs.Count - 1})");
+                throw new ArgumentException($"runIndex {runIndex.Value} is out of range (paragraph #{paragraphIndex} has {runs.Count} Runs, valid range: 0-{runs.Count - 1})");
 
             var run = runs[runIndex.Value];
             sb.AppendLine($"=== Run {runIndex.Value} Format ===");
@@ -259,17 +259,17 @@ Usage examples:
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex", "paragraphIndex");
-        var runIndex = arguments?["runIndex"]?.GetValue<int?>();
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>();
-        var fontName = arguments?["fontName"]?.GetValue<string>();
-        var fontNameAscii = arguments?["fontNameAscii"]?.GetValue<string>();
-        var fontNameFarEast = arguments?["fontNameFarEast"]?.GetValue<string>();
-        var fontSize = arguments?["fontSize"]?.GetValue<double?>();
-        var bold = arguments?["bold"]?.GetValue<bool?>();
-        var italic = arguments?["italic"]?.GetValue<bool?>();
-        var underline = arguments?["underline"]?.GetValue<bool?>();
-        var color = arguments?["color"]?.GetValue<string>();
+        var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex");
+        var runIndex = ArgumentHelper.GetIntNullable(arguments, "runIndex");
+        var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
+        var fontName = ArgumentHelper.GetStringNullable(arguments, "fontName");
+        var fontNameAscii = ArgumentHelper.GetStringNullable(arguments, "fontNameAscii");
+        var fontNameFarEast = ArgumentHelper.GetStringNullable(arguments, "fontNameFarEast");
+        var fontSize = ArgumentHelper.GetDoubleNullable(arguments, "fontSize");
+        var bold = ArgumentHelper.GetBoolNullable(arguments, "bold");
+        var italic = ArgumentHelper.GetBoolNullable(arguments, "italic");
+        var underline = ArgumentHelper.GetBoolNullable(arguments, "underline");
+        var color = ArgumentHelper.GetStringNullable(arguments, "color");
 
         var doc = new Document(path);
         
@@ -307,7 +307,7 @@ Usage examples:
         {
             if (runIndex.Value != 0)
             {
-                throw new ArgumentException($"段落沒有 Run 節點，runIndex 必須為 0 才能創建新的 Run");
+                throw new ArgumentException($"Paragraph has no Run nodes, runIndex must be 0 to create a new Run");
             }
             // Create a new run with empty text
             var newRun = new Run(doc);
@@ -326,7 +326,7 @@ Usage examples:
         if (runIndex.HasValue)
         {
             if (runIndex.Value < 0 || runIndex.Value >= runs.Count)
-                throw new ArgumentException($"runIndex must be between 0 and {runs.Count - 1} (段落共有 {runs.Count} 個 Run)");
+                throw new ArgumentException($"runIndex must be between 0 and {runs.Count - 1} (paragraph has {runs.Count} Runs)");
             runsToFormat = new List<Run> { runs[runIndex.Value] };
         }
         else
@@ -368,11 +368,11 @@ Usage examples:
     private async Task<string> GetTabStops(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var location = arguments?["location"]?.GetValue<string>() ?? "body";
-        var paragraphIndex = arguments?["paragraphIndex"]?.GetValue<int>() ?? 0;
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
-        var allParagraphs = ArgumentHelper.GetBool(arguments, "allParagraphs", "allParagraphs", false);
-        var includeStyle = ArgumentHelper.GetBool(arguments, "includeStyle", "includeStyle", true);
+        var location = ArgumentHelper.GetString(arguments, "location", "body");
+        var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex", 0);
+        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
+        var allParagraphs = ArgumentHelper.GetBool(arguments, "allParagraphs", false);
+        var includeStyle = ArgumentHelper.GetBool(arguments, "includeStyle");
 
         var doc = new Document(path);
         
@@ -546,8 +546,8 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex", "paragraphIndex");
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
+        var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex");
+        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
 
         var doc = new Document(path);
         
@@ -563,11 +563,11 @@ Usage examples:
         var para = paragraphs[paragraphIndex];
         var borders = para.ParagraphFormat.Borders;
         
-        var defaultLineStyle = arguments?["lineStyle"]?.GetValue<string>() ?? "single";
-        var defaultLineWidth = arguments?["lineWidth"]?.GetValue<double>() ?? 0.5;
-        var defaultLineColor = arguments?["lineColor"]?.GetValue<string>() ?? "000000";
+        var defaultLineStyle = ArgumentHelper.GetString(arguments, "lineStyle", "single");
+        var defaultLineWidth = ArgumentHelper.GetDouble(arguments, "lineWidth", "lineWidth", 0.5);
+        var defaultLineColor = ArgumentHelper.GetString(arguments, "lineColor", "000000");
         
-        if (arguments?["borderTop"]?.GetValue<bool>() == true)
+        if (ArgumentHelper.GetBool(arguments, "borderTop", false))
         {
             borders.Top.LineStyle = GetLineStyle(defaultLineStyle);
             borders.Top.LineWidth = defaultLineWidth;
@@ -576,7 +576,7 @@ Usage examples:
         else
             borders.Top.LineStyle = LineStyle.None;
         
-        if (arguments?["borderBottom"]?.GetValue<bool>() == true)
+        if (ArgumentHelper.GetBool(arguments, "borderBottom", false))
         {
             borders.Bottom.LineStyle = GetLineStyle(defaultLineStyle);
             borders.Bottom.LineWidth = defaultLineWidth;
@@ -585,7 +585,7 @@ Usage examples:
         else
             borders.Bottom.LineStyle = LineStyle.None;
         
-        if (arguments?["borderLeft"]?.GetValue<bool>() == true)
+        if (ArgumentHelper.GetBool(arguments, "borderLeft", false))
         {
             borders.Left.LineStyle = GetLineStyle(defaultLineStyle);
             borders.Left.LineWidth = defaultLineWidth;
@@ -594,7 +594,7 @@ Usage examples:
         else
             borders.Left.LineStyle = LineStyle.None;
         
-        if (arguments?["borderRight"]?.GetValue<bool>() == true)
+        if (ArgumentHelper.GetBool(arguments, "borderRight", false))
         {
             borders.Right.LineStyle = GetLineStyle(defaultLineStyle);
             borders.Right.LineWidth = defaultLineWidth;
@@ -606,10 +606,10 @@ Usage examples:
         doc.Save(outputPath);
         
         var enabledBorders = new List<string>();
-        if (arguments?["borderTop"]?.GetValue<bool>() == true) enabledBorders.Add("Top");
-        if (arguments?["borderBottom"]?.GetValue<bool>() == true) enabledBorders.Add("Bottom");
-        if (arguments?["borderLeft"]?.GetValue<bool>() == true) enabledBorders.Add("Left");
-        if (arguments?["borderRight"]?.GetValue<bool>() == true) enabledBorders.Add("Right");
+        if (ArgumentHelper.GetBool(arguments, "borderTop", false)) enabledBorders.Add("Top");
+        if (ArgumentHelper.GetBool(arguments, "borderBottom", false)) enabledBorders.Add("Bottom");
+        if (ArgumentHelper.GetBool(arguments, "borderLeft", false)) enabledBorders.Add("Left");
+        if (ArgumentHelper.GetBool(arguments, "borderRight", false)) enabledBorders.Add("Right");
         
         var bordersDesc = enabledBorders.Count > 0 ? string.Join(", ", enabledBorders) : "None";
         

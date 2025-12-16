@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using AsposeMcpServer.Core;
@@ -42,7 +42,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
 
         return operation.ToLower() switch
         {
@@ -60,9 +60,9 @@ Usage examples:
     private async Task<string> GetContent(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var pageIndex = arguments?["pageIndex"]?.GetValue<int?>();
+        var pageIndex = ArgumentHelper.GetIntNullable(arguments, "pageIndex");
 
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
 
         using var document = new Document(path);
         var sb = new StringBuilder();

@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Drawing.Imaging;
 using System.Diagnostics.CodeAnalysis;
 using Aspose.Slides;
@@ -73,6 +73,11 @@ Usage examples:
             {
                 type = "number",
                 description = "JPEG quality 10-100 (optional, for replace_with_compression, re-encode as JPEG if provided)"
+            },
+            outputPath = new
+            {
+                type = "string",
+                description = "Output file path (optional, for all operations, defaults to input path)"
             }
         },
         required = new[] { "operation", "path" }
@@ -80,7 +85,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         return operation.ToLower() switch
@@ -100,9 +105,9 @@ Usage examples:
     /// <returns>Success message with exported image count</returns>
     private async Task<string> ExportSlidesAsImagesAsync(JsonObject? arguments, string path)
     {
-        var outputDir = arguments?["outputDir"]?.GetValue<string>() ?? Path.GetDirectoryName(path) ?? ".";
-        var formatStr = arguments?["format"]?.GetValue<string>() ?? "png";
-        var scale = arguments?["scale"]?.GetValue<float?>() ?? 1.0f;
+        var outputDir = ArgumentHelper.GetStringNullable(arguments, "outputDir") ?? Path.GetDirectoryName(path) ?? ".";
+        var formatStr = ArgumentHelper.GetString(arguments, "format", "png");
+        var scale = ArgumentHelper.GetFloat(arguments, "scale", 1.0f);
 
 #pragma warning disable CA1416 // Validate platform compatibility
         var format = formatStr.ToLower() switch
@@ -125,7 +130,7 @@ Usage examples:
 #pragma warning restore CA1416 // Validate platform compatibility
         }
 
-        return await Task.FromResult($"已匯出 {presentation.Slides.Count} 張幻燈片到: {Path.GetFullPath(outputDir)}");
+        return await Task.FromResult($"Exported {presentation.Slides.Count} slides to: {Path.GetFullPath(outputDir)}");
     }
 
     /// <summary>
@@ -136,8 +141,8 @@ Usage examples:
     /// <returns>Success message with extracted image count</returns>
     private async Task<string> ExtractImagesAsync(JsonObject? arguments, string path)
     {
-        var outputDir = arguments?["outputDir"]?.GetValue<string>() ?? Path.GetDirectoryName(path) ?? ".";
-        var formatStr = arguments?["format"]?.GetValue<string>() ?? "png";
+        var outputDir = ArgumentHelper.GetStringNullable(arguments, "outputDir") ?? Path.GetDirectoryName(path) ?? ".";
+        var formatStr = ArgumentHelper.GetString(arguments, "format", "png");
 
 #pragma warning disable CA1416 // Validate platform compatibility
         var format = formatStr.ToLower() switch
@@ -170,7 +175,7 @@ Usage examples:
             }
         }
 
-        return await Task.FromResult($"已匯出圖片 {count} 張到: {Path.GetFullPath(outputDir)}");
+        return await Task.FromResult($"Exported {count} images to: {Path.GetFullPath(outputDir)}");
     }
 
     /// <summary>
@@ -181,10 +186,10 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> ReplaceImageWithCompressionAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
-        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
-        var imagePath = ArgumentHelper.GetString(arguments, "imagePath", "imagePath");
-        var jpegQuality = arguments?["jpegQuality"]?.GetValue<int?>();
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
+        var imagePath = ArgumentHelper.GetString(arguments, "imagePath");
+        var jpegQuality = ArgumentHelper.GetIntNullable(arguments, "jpegQuality");
 
         using var presentation = new Presentation(path);
         if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
@@ -200,7 +205,7 @@ Usage examples:
 
         if (slide.Shapes[shapeIndex] is not PictureFrame pic)
         {
-            throw new ArgumentException("指定的 shape 不是圖片框 (PictureFrame)");
+            throw new ArgumentException("The specified shape is not a PictureFrame");
         }
 
         byte[] imageBytes;
@@ -225,8 +230,9 @@ Usage examples:
         var newImage = presentation.Images.AddImage(imageBytes);
         pic.PictureFormat.Picture.Image = newImage;
 
-        presentation.Save(path, SaveFormat.Pptx);
-        return await Task.FromResult($"已替換圖片並套用壓縮 (quality={jpegQuality?.ToString() ?? "原始"})");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
+        return await Task.FromResult($"Image replaced with compression applied (quality={jpegQuality?.ToString() ?? "original"})");
     }
 }
 

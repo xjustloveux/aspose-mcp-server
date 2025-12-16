@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using Aspose.Words;
 using Aspose.Words.MailMerging;
 using AsposeMcpServer.Core;
@@ -38,9 +38,9 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var templatePath = ArgumentHelper.GetString(arguments, "templatePath", "templatePath");
-        var outputPath = ArgumentHelper.GetString(arguments, "outputPath", "outputPath");
-        var data = arguments?["data"]?.AsObject() ?? throw new ArgumentException("data is required");
+        var templatePath = ArgumentHelper.GetString(arguments, "templatePath");
+        var outputPath = ArgumentHelper.GetString(arguments, "outputPath");
+        var data = ArgumentHelper.GetObject(arguments, "data");
 
         SecurityHelper.ValidateFilePath(templatePath, "templatePath");
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");

@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using Aspose.Words;
 using AsposeMcpServer.Core;
 
@@ -65,7 +65,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
 
         return operation.ToLower() switch
         {
@@ -84,11 +84,11 @@ Usage examples:
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var text = ArgumentHelper.GetString(arguments, "text", "text");
-        var fontFamily = arguments?["fontFamily"]?.GetValue<string>() ?? "Arial";
-        var fontSize = arguments?["fontSize"]?.GetValue<double>() ?? 72;
-        var isSemitransparent = arguments?["isSemitransparent"]?.GetValue<bool?>() ?? true;
-        var layout = arguments?["layout"]?.GetValue<string>() ?? "Diagonal";
+        var text = ArgumentHelper.GetString(arguments, "text");
+        var fontFamily = ArgumentHelper.GetString(arguments, "fontFamily", "Arial");
+        var fontSize = ArgumentHelper.GetDouble(arguments, "fontSize", "fontSize", false, 72);
+        var isSemitransparent = ArgumentHelper.GetBool(arguments, "isSemitransparent");
+        var layout = ArgumentHelper.GetString(arguments, "layout", "Diagonal");
 
         var doc = new Document(path);
         

@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 
@@ -73,6 +73,11 @@ Usage examples:
                 type = "string",
                 description = "Shift direction: 'Right'/'Down' for insert_cells, 'Left'/'Up' for delete_cells",
                 @enum = new[] { "Right", "Down", "Left", "Up" }
+            },
+            outputPath = new
+            {
+                type = "string",
+                description = "Output file path (optional, for all operations, defaults to input path)"
             }
         },
         required = new[] { "operation", "path" }
@@ -80,9 +85,9 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var sheetIndex = arguments?["sheetIndex"]?.GetValue<int>() ?? 0;
+        var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
 
         return operation.ToLower() switch
         {
@@ -92,6 +97,7 @@ Usage examples:
             "delete_column" => await DeleteColumnAsync(arguments, path, sheetIndex),
             "insert_cells" => await InsertCellsAsync(arguments, path, sheetIndex),
             "delete_cells" => await DeleteCellsAsync(arguments, path, sheetIndex),
+            "set_column_width" => throw new ArgumentException($"Operation 'set_column_width' is not supported by excel_row_column. Please use excel_view_settings operation instead. Example: excel_view_settings(operation='set_column_width', path='{path}', columnIndex=0, width=15)"),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -105,8 +111,9 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> InsertRowAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex", "rowIndex");
-        var count = arguments?["count"]?.GetValue<int>() ?? 1;
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex");
+        var count = ArgumentHelper.GetInt(arguments, "count", 1);
 
         using var workbook = new Workbook(path);
         var worksheet = workbook.Worksheets[sheetIndex];
@@ -115,9 +122,9 @@ Usage examples:
         {
             worksheet.Cells.InsertRow(rowIndex);
         }
-        workbook.Save(path);
+        workbook.Save(outputPath);
 
-        return await Task.FromResult($"在第 {rowIndex} 行插入了 {count} 行: {path}");
+        return await Task.FromResult($"Inserted {count} rows at row {rowIndex}: {outputPath}");
     }
 
     /// <summary>
@@ -129,8 +136,9 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> DeleteRowAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex", "rowIndex");
-        var count = arguments?["count"]?.GetValue<int>() ?? 1;
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex");
+        var count = ArgumentHelper.GetInt(arguments, "count", 1);
 
         using var workbook = new Workbook(path);
         var worksheet = workbook.Worksheets[sheetIndex];
@@ -139,9 +147,9 @@ Usage examples:
         {
             worksheet.Cells.DeleteRow(rowIndex);
         }
-        workbook.Save(path);
+        workbook.Save(outputPath);
 
-        return await Task.FromResult($"已刪除第 {rowIndex} 行起的 {count} 行: {path}");
+        return await Task.FromResult($"Deleted {count} rows starting from row {rowIndex}: {outputPath}");
     }
 
     /// <summary>
@@ -153,8 +161,9 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> InsertColumnAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var columnIndex = ArgumentHelper.GetInt(arguments, "columnIndex", "columnIndex");
-        var count = arguments?["count"]?.GetValue<int>() ?? 1;
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var columnIndex = ArgumentHelper.GetInt(arguments, "columnIndex");
+        var count = ArgumentHelper.GetInt(arguments, "count", 1);
 
         using var workbook = new Workbook(path);
         var worksheet = workbook.Worksheets[sheetIndex];
@@ -163,9 +172,9 @@ Usage examples:
         {
             worksheet.Cells.InsertColumn(columnIndex);
         }
-        workbook.Save(path);
+        workbook.Save(outputPath);
 
-        return await Task.FromResult($"在第 {columnIndex} 列插入了 {count} 列: {path}");
+        return await Task.FromResult($"Inserted {count} columns at column {columnIndex}: {outputPath}");
     }
 
     /// <summary>
@@ -177,8 +186,9 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> DeleteColumnAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var columnIndex = ArgumentHelper.GetInt(arguments, "columnIndex", "columnIndex");
-        var count = arguments?["count"]?.GetValue<int>() ?? 1;
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var columnIndex = ArgumentHelper.GetInt(arguments, "columnIndex");
+        var count = ArgumentHelper.GetInt(arguments, "count", 1);
 
         using var workbook = new Workbook(path);
         var worksheet = workbook.Worksheets[sheetIndex];
@@ -187,9 +197,9 @@ Usage examples:
         {
             worksheet.Cells.DeleteColumn(columnIndex);
         }
-        workbook.Save(path);
+        workbook.Save(outputPath);
 
-        return await Task.FromResult($"已刪除第 {columnIndex} 列起的 {count} 列: {path}");
+        return await Task.FromResult($"Deleted {count} columns starting from column {columnIndex}: {outputPath}");
     }
 
     /// <summary>
@@ -201,12 +211,14 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> InsertCellsAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var range = ArgumentHelper.GetString(arguments, "range", "range");
-        var shiftDirection = ArgumentHelper.GetString(arguments, "shiftDirection", "shiftDirection");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var range = ArgumentHelper.GetString(arguments, "range");
+        var shiftDirection = ArgumentHelper.GetString(arguments, "shiftDirection");
 
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var rangeObj = worksheet.Cells.CreateRange(range);
+        
+        var rangeObj = ExcelHelper.CreateRange(worksheet.Cells, range);
 
         var shiftType = shiftDirection.ToLower() == "right" ? ShiftType.Right : ShiftType.Down;
         
@@ -225,8 +237,8 @@ Usage examples:
             }
         }
 
-        workbook.Save(path);
-        return await Task.FromResult($"Cells inserted in range {range}, shifted {shiftDirection}: {path}");
+        workbook.Save(outputPath);
+        return await Task.FromResult($"Cells inserted in range {range}, shifted {shiftDirection}: {outputPath}");
     }
 
     /// <summary>
@@ -238,18 +250,20 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> DeleteCellsAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var range = ArgumentHelper.GetString(arguments, "range", "range");
-        var shiftDirection = ArgumentHelper.GetString(arguments, "shiftDirection", "shiftDirection");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var range = ArgumentHelper.GetString(arguments, "range");
+        var shiftDirection = ArgumentHelper.GetString(arguments, "shiftDirection");
 
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var rangeObj = worksheet.Cells.CreateRange(range);
+        
+        var rangeObj = ExcelHelper.CreateRange(worksheet.Cells, range);
 
         var shiftType = shiftDirection.ToLower() == "left" ? ShiftType.Left : ShiftType.Up;
         worksheet.Cells.DeleteRange(rangeObj.FirstRow, rangeObj.FirstColumn, rangeObj.RowCount, rangeObj.ColumnCount, shiftType);
 
-        workbook.Save(path);
-        return await Task.FromResult($"Cells deleted in range {range}, shifted {shiftDirection}: {path}");
+        workbook.Save(outputPath);
+        return await Task.FromResult($"Cells deleted in range {range}, shifted {shiftDirection}: {outputPath}");
     }
 }
 

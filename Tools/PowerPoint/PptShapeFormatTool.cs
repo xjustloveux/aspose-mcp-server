@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Text;
 using System.Drawing;
 using Aspose.Slides;
@@ -81,6 +81,11 @@ Usage examples:
             {
                 type = "string",
                 description = "Line color hex (optional, for set)"
+            },
+            outputPath = new
+            {
+                type = "string",
+                description = "Output file path (optional, for set operation, defaults to input path)"
             }
         },
         required = new[] { "operation", "path", "slideIndex", "shapeIndex" }
@@ -88,10 +93,10 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
-        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
 
         return operation.ToLower() switch
         {
@@ -111,13 +116,13 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> SetShapeFormatAsync(JsonObject? arguments, string path, int slideIndex, int shapeIndex)
     {
-        var x = arguments?["x"]?.GetValue<float?>();
-        var y = arguments?["y"]?.GetValue<float?>();
-        var width = arguments?["width"]?.GetValue<float?>();
-        var height = arguments?["height"]?.GetValue<float?>();
-        var rotation = arguments?["rotation"]?.GetValue<float?>();
-        var fillColor = arguments?["fillColor"]?.GetValue<string>();
-        var lineColor = arguments?["lineColor"]?.GetValue<string>();
+        var x = ArgumentHelper.GetFloatNullable(arguments, "x");
+        var y = ArgumentHelper.GetFloatNullable(arguments, "y");
+        var width = ArgumentHelper.GetFloatNullable(arguments, "width");
+        var height = ArgumentHelper.GetFloatNullable(arguments, "height");
+        var rotation = ArgumentHelper.GetFloatNullable(arguments, "rotation");
+        var fillColor = ArgumentHelper.GetStringNullable(arguments, "fillColor");
+        var lineColor = ArgumentHelper.GetStringNullable(arguments, "lineColor");
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
@@ -143,8 +148,9 @@ Usage examples:
             shape.LineFormat.FillFormat.SolidFillColor.Color = color;
         }
 
-        presentation.Save(path, SaveFormat.Pptx);
-        return await Task.FromResult($"已更新形狀格式：slide {slideIndex}, shape {shapeIndex}");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
+        return await Task.FromResult($"Shape format updated: slide {slideIndex}, shape {shapeIndex}");
     }
 
     /// <summary>

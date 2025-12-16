@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Text;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
@@ -58,6 +58,11 @@ Usage examples:
             {
                 type = "string",
                 description = "Comment author (optional)"
+            },
+            outputPath = new
+            {
+                type = "string",
+                description = "Output file path (optional, for add/edit/delete operations, defaults to input path)"
             }
         },
         required = new[] { "operation", "path" }
@@ -65,9 +70,9 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var sheetIndex = arguments?["sheetIndex"]?.GetValue<int>() ?? 0;
+        var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
 
         return operation.ToLower() switch
         {
@@ -82,15 +87,16 @@ Usage examples:
     /// <summary>
     /// Adds a comment to a cell
     /// </summary>
-    /// <param name="arguments">JSON arguments containing cell, comment, and optional author</param>
+    /// <param name="arguments">JSON arguments containing cell address and comment text</param>
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <returns>Success message with cell reference</returns>
+    /// <returns>Success message with comment details</returns>
     private async Task<string> AddCommentAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var cell = ArgumentHelper.GetString(arguments, "cell", "cell");
-        var comment = ArgumentHelper.GetString(arguments, "comment", "comment");
-        var author = arguments?["author"]?.GetValue<string>();
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var cell = ArgumentHelper.GetString(arguments, "cell");
+        var comment = ArgumentHelper.GetString(arguments, "comment");
+        var author = ArgumentHelper.GetStringNullable(arguments, "author");
 
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
@@ -109,8 +115,8 @@ Usage examples:
             commentObj.Author = author;
         }
 
-        workbook.Save(path);
-        return await Task.FromResult($"Comment added to cell {cell} in sheet {sheetIndex}: {path}");
+        workbook.Save(outputPath);
+        return await Task.FromResult($"Comment added to cell {cell} in sheet {sheetIndex}: {outputPath}");
     }
 
     /// <summary>
@@ -120,11 +126,19 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message with cell reference</returns>
+    /// <summary>
+    /// Edits an existing comment
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing cell address and new comment text</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> EditCommentAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var cell = ArgumentHelper.GetString(arguments, "cell", "cell");
-        var comment = ArgumentHelper.GetString(arguments, "comment", "comment");
-        var author = arguments?["author"]?.GetValue<string>();
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var cell = ArgumentHelper.GetString(arguments, "cell");
+        var comment = ArgumentHelper.GetString(arguments, "comment");
+        var author = ArgumentHelper.GetStringNullable(arguments, "author");
 
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
@@ -142,8 +156,8 @@ Usage examples:
             commentObj.Author = author;
         }
 
-        workbook.Save(path);
-        return await Task.FromResult($"Comment edited on cell {cell} in sheet {sheetIndex}: {path}");
+        workbook.Save(outputPath);
+        return await Task.FromResult($"Comment edited on cell {cell} in sheet {sheetIndex}: {outputPath}");
     }
 
     /// <summary>
@@ -153,9 +167,17 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
+    /// <summary>
+    /// Deletes a comment from a cell
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing cell address</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Success message</returns>
     private async Task<string> DeleteCommentAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var cell = ArgumentHelper.GetString(arguments, "cell", "cell");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var cell = ArgumentHelper.GetString(arguments, "cell");
 
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
@@ -166,8 +188,8 @@ Usage examples:
             worksheet.Comments.RemoveAt(cell);
         }
 
-        workbook.Save(path);
-        return await Task.FromResult($"Comment deleted from cell {cell} in sheet {sheetIndex}: {path}");
+        workbook.Save(outputPath);
+        return await Task.FromResult($"Comment deleted from cell {cell} in sheet {sheetIndex}: {outputPath}");
     }
 
     /// <summary>
@@ -177,9 +199,16 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Formatted string with all comments</returns>
+    /// <summary>
+    /// Gets all comments or comments for a specific cell
+    /// </summary>
+    /// <param name="arguments">JSON arguments optionally containing cell address</param>
+    /// <param name="path">Excel file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <returns>Formatted string with comment information</returns>
     private async Task<string> GetCommentsAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var cell = arguments?["cell"]?.GetValue<string>();
+        var cell = ArgumentHelper.GetStringNullable(arguments, "cell");
 
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);

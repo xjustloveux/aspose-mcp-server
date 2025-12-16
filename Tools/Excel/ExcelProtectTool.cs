@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Text;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
@@ -73,6 +73,11 @@ Usage examples:
             {
                 type = "boolean",
                 description = "Locked status (true = locked, false = unlocked, required for set_cell_locked)"
+            },
+            outputPath = new
+            {
+                type = "string",
+                description = "Output file path (optional, for protect/unprotect/set_cell_locked operations, defaults to input path)"
             }
         },
         required = new[] { "operation", "path" }
@@ -80,7 +85,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         return operation.ToLower() switch
@@ -101,11 +106,13 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> ProtectAsync(JsonObject? arguments, string path)
     {
-        var password = ArgumentHelper.GetString(arguments, "password", "password");
-        var sheetIndex = arguments?["sheetIndex"]?.GetValue<int?>();
-        var protectWorkbook = arguments?["protectWorkbook"]?.GetValue<bool?>() ?? false;
-        var protectStructure = arguments?["protectStructure"]?.GetValue<bool?>() ?? true;
-        var protectWindows = arguments?["protectWindows"]?.GetValue<bool?>() ?? false;
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var password = ArgumentHelper.GetString(arguments, "password");
+        var sheetIndex = ArgumentHelper.GetIntNullable(arguments, "sheetIndex");
+        var protectWorkbook = ArgumentHelper.GetBool(arguments, "protectWorkbook", false);
+        // protectStructure defaults to true when protectWorkbook is true, otherwise defaults to false
+        var protectStructure = ArgumentHelper.GetBool(arguments, "protectStructure", protectWorkbook);
+        var protectWindows = ArgumentHelper.GetBool(arguments, "protectWindows", false);
 
         using var workbook = new Workbook(path);
 
@@ -140,13 +147,13 @@ Usage examples:
             workbook.Worksheets[sheetIndex.Value].Protect(ProtectionType.All, password, null);
         }
 
-        workbook.Save(path);
+        workbook.Save(outputPath);
 
-        var target = protectWorkbook ? "工作簿" : (sheetIndex.HasValue ? $"工作表 {sheetIndex.Value}" : "工作簿");
-        var result = $"Excel {target} protected with password: {path}";
+        var target = protectWorkbook ? "workbook" : (sheetIndex.HasValue ? $"worksheet {sheetIndex.Value}" : "workbook");
+        var result = $"Excel {target} protected with password: {outputPath}";
         if (protectWorkbook)
         {
-            result += $"\n保護結構: {protectStructure}\n保護視窗: {protectWindows}";
+            result += $"\nProtect structure: {protectStructure}\nProtect windows: {protectWindows}";
         }
         return await Task.FromResult(result);
     }
@@ -159,8 +166,9 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> UnprotectAsync(JsonObject? arguments, string path)
     {
-        var password = arguments?["password"]?.GetValue<string>();
-        var sheetIndex = arguments?["sheetIndex"]?.GetValue<int?>();
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var password = ArgumentHelper.GetStringNullable(arguments, "password");
+        var sheetIndex = ArgumentHelper.GetIntNullable(arguments, "sheetIndex");
 
         using var workbook = new Workbook(path);
 
@@ -173,16 +181,31 @@ Usage examples:
 
             var worksheet = workbook.Worksheets[sheetIndex.Value];
             var wasProtected = worksheet.IsProtected;
-            worksheet.Unprotect(password);
+            
+            if (!wasProtected)
+            {
+                workbook.Save(outputPath);
+                return await Task.FromResult($"Worksheet '{worksheet.Name}' is not protected. No password needed.\nOutput: {outputPath}");
+            }
+            
+            try
+            {
+                worksheet.Unprotect(password);
+            }
+            catch (Exception ex)
+            {
+                workbook.Save(outputPath);
+                throw new ArgumentException($"Incorrect password. Cannot unprotect worksheet '{worksheet.Name}'. Error: {ex.Message}");
+            }
 
-            workbook.Save(path);
-            return await Task.FromResult($"工作表解除保護完成: {worksheet.Name}\n原狀態: {(wasProtected ? "已保護" : "未保護")}\n輸出: {path}");
+            workbook.Save(outputPath);
+            return await Task.FromResult($"Worksheet protection removed: {worksheet.Name}\nOutput: {outputPath}");
         }
         else
         {
             workbook.Unprotect(password);
-            workbook.Save(path);
-            return await Task.FromResult($"工作簿保護已解除\n輸出: {path}");
+            workbook.Save(outputPath);
+            return await Task.FromResult($"Workbook protection removed\nOutput: {outputPath}");
         }
     }
 
@@ -194,22 +217,22 @@ Usage examples:
     /// <returns>Formatted string with protection status</returns>
     private async Task<string> GetProtectionAsync(JsonObject? arguments, string path)
     {
-        var sheetIndex = arguments?["sheetIndex"]?.GetValue<int?>();
+        var sheetIndex = ArgumentHelper.GetIntNullable(arguments, "sheetIndex");
 
         using var workbook = new Workbook(path);
         var result = new StringBuilder();
 
-        result.AppendLine("=== Excel 保護設定資訊 ===\n");
+        result.AppendLine("=== Excel Protection Settings Information ===\n");
 
-        result.AppendLine("【工作簿保護】");
-        result.AppendLine("注意: 工作簿保護狀態需要通過保護方法檢查");
+        result.AppendLine("[Workbook Protection]");
+        result.AppendLine("Note: Workbook protection status needs to be checked through protection methods");
         result.AppendLine();
 
         if (sheetIndex.HasValue)
         {
             if (sheetIndex.Value < 0 || sheetIndex.Value >= workbook.Worksheets.Count)
             {
-                throw new ArgumentException($"工作表索引 {sheetIndex.Value} 超出範圍 (共有 {workbook.Worksheets.Count} 個工作表)");
+                throw new ArgumentException($"Worksheet index {sheetIndex.Value} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
             }
             AppendSheetProtection(result, workbook.Worksheets[sheetIndex.Value], sheetIndex.Value);
         }
@@ -228,23 +251,23 @@ Usage examples:
     private void AppendSheetProtection(StringBuilder result, Worksheet worksheet, int index)
     {
         var protection = worksheet.Protection;
-        result.AppendLine($"【工作表 {index}: {worksheet.Name}】");
-        result.AppendLine($"保護狀態: {(protection.IsProtectedWithPassword ? "已保護" : "未保護")}");
-        result.AppendLine($"允許選擇鎖定單元格: {protection.AllowSelectingLockedCell}");
-        result.AppendLine($"允許選擇未鎖定單元格: {protection.AllowSelectingUnlockedCell}");
-        result.AppendLine($"允許格式化單元格: {protection.AllowFormattingCell}");
-        result.AppendLine($"允許格式化列: {protection.AllowFormattingColumn}");
-        result.AppendLine($"允許格式化行: {protection.AllowFormattingRow}");
-        result.AppendLine($"允許插入列: {protection.AllowInsertingColumn}");
-        result.AppendLine($"允許插入行: {protection.AllowInsertingRow}");
-        result.AppendLine($"允許插入超連結: {protection.AllowInsertingHyperlink}");
-        result.AppendLine($"允許刪除列: {protection.AllowDeletingColumn}");
-        result.AppendLine($"允許刪除行: {protection.AllowDeletingRow}");
-        result.AppendLine($"允許排序: {protection.AllowSorting}");
-        result.AppendLine($"允許自動篩選: {protection.AllowFiltering}");
-        result.AppendLine($"允許使用樞紐表: {protection.AllowUsingPivotTable}");
-        result.AppendLine($"允許編輯對象: {protection.AllowEditingObject}");
-        result.AppendLine($"允許編輯場景: {protection.AllowEditingScenario}");
+        result.AppendLine($"[Worksheet {index}: {worksheet.Name}]");
+        result.AppendLine($"Protection status: {(protection.IsProtectedWithPassword ? "Protected" : "Not protected")}");
+        result.AppendLine($"Allow selecting locked cells: {protection.AllowSelectingLockedCell}");
+        result.AppendLine($"Allow selecting unlocked cells: {protection.AllowSelectingUnlockedCell}");
+        result.AppendLine($"Allow formatting cells: {protection.AllowFormattingCell}");
+        result.AppendLine($"Allow formatting columns: {protection.AllowFormattingColumn}");
+        result.AppendLine($"Allow formatting rows: {protection.AllowFormattingRow}");
+        result.AppendLine($"Allow inserting columns: {protection.AllowInsertingColumn}");
+        result.AppendLine($"Allow inserting rows: {protection.AllowInsertingRow}");
+        result.AppendLine($"Allow inserting hyperlinks: {protection.AllowInsertingHyperlink}");
+        result.AppendLine($"Allow deleting columns: {protection.AllowDeletingColumn}");
+        result.AppendLine($"Allow deleting rows: {protection.AllowDeletingRow}");
+        result.AppendLine($"Allow sorting: {protection.AllowSorting}");
+        result.AppendLine($"Allow auto filtering: {protection.AllowFiltering}");
+        result.AppendLine($"Allow using pivot tables: {protection.AllowUsingPivotTable}");
+        result.AppendLine($"Allow editing objects: {protection.AllowEditingObject}");
+        result.AppendLine($"Allow editing scenarios: {protection.AllowEditingScenario}");
     }
 
     /// <summary>
@@ -255,14 +278,16 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> SetCellLockedAsync(JsonObject? arguments, string path)
     {
-        var sheetIndex = arguments?["sheetIndex"]?.GetValue<int>() ?? 0;
-        var range = ArgumentHelper.GetString(arguments, "range", "range");
-        var locked = arguments?["locked"]?.GetValue<bool>() ?? throw new ArgumentException("locked is required for set_cell_locked operation");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
+        var range = ArgumentHelper.GetString(arguments, "range");
+        var locked = ArgumentHelper.GetBool(arguments, "locked", false);
 
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
         var cells = worksheet.Cells;
-        var cellRange = cells.CreateRange(range);
+        
+        var cellRange = ExcelHelper.CreateRange(cells, range);
 
         var style = workbook.CreateStyle();
         style.IsLocked = locked;
@@ -270,7 +295,7 @@ Usage examples:
         var styleFlag = new StyleFlag { Locked = true };
         cellRange.ApplyStyle(style, styleFlag);
 
-        workbook.Save(path);
-        return await Task.FromResult($"Cell lock status set to {(locked ? "locked" : "unlocked")} for range {range} in sheet {sheetIndex}: {path}");
+        workbook.Save(outputPath);
+        return await Task.FromResult($"Cell lock status set to {(locked ? "locked" : "unlocked")} for range {range} in sheet {sheetIndex}: {outputPath}");
     }
 }

@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Text;
 using System.Reflection;
 using Aspose.Cells;
@@ -52,6 +52,11 @@ Usage examples:
             {
                 type = "number",
                 description = "Column index to freeze at (0-based, required for freeze)"
+            },
+            outputPath = new
+            {
+                type = "string",
+                description = "Output file path (optional, for freeze/unfreeze operations, defaults to input path)"
             }
         },
         required = new[] { "operation", "path" }
@@ -59,9 +64,9 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var sheetIndex = arguments?["sheetIndex"]?.GetValue<int>() ?? 0;
+        var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
 
         return operation.ToLower() switch
         {
@@ -81,8 +86,9 @@ Usage examples:
     /// <returns>Success message with freeze position</returns>
     private async Task<string> FreezePanesAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var row = ArgumentHelper.GetInt(arguments, "row", "row");
-        var column = ArgumentHelper.GetInt(arguments, "column", "column");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var row = ArgumentHelper.GetInt(arguments, "row");
+        var column = ArgumentHelper.GetInt(arguments, "column");
 
         using var workbook = new Workbook(path);
         var worksheet = workbook.Worksheets[sheetIndex];
@@ -111,8 +117,8 @@ Usage examples:
         // Add new freeze property
         customProperties.Add(freezeKey, freezeValue);
         
-        workbook.Save(path);
-        return await Task.FromResult($"已凍結窗格 (行 {row}, 列 {column}): {path}");
+        workbook.Save(outputPath);
+        return await Task.FromResult($"Frozen panes (row {row}, column {column}): {outputPath}");
     }
 
     /// <summary>
@@ -208,8 +214,9 @@ Usage examples:
             // Ignore if property doesn't exist
         }
         
-        workbook.Save(path);
-        return await Task.FromResult($"已取消凍結窗格: {path}");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        workbook.Save(outputPath);
+        return await Task.FromResult($"Unfrozen panes: {outputPath}");
     }
 
     /// <summary>
@@ -225,7 +232,7 @@ Usage examples:
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
         var result = new StringBuilder();
 
-        result.AppendLine($"=== 工作表 '{worksheet.Name}' 的凍結窗格狀態 ===\n");
+        result.AppendLine($"=== Freeze panes status for worksheet '{worksheet.Name}' ===\n");
 
         // Check freeze panes status
         // Since FirstVisibleRow/FirstVisibleColumn might not reliably detect freeze status,
@@ -281,14 +288,14 @@ Usage examples:
         
         if (!isFrozen)
         {
-            result.AppendLine("狀態: 未凍結窗格");
+            result.AppendLine("Status: Panes not frozen");
         }
         else
         {
-            result.AppendLine("狀態: 已凍結窗格");
-            result.AppendLine($"凍結行: {frozenRow}");
-            result.AppendLine($"凍結列: {frozenColumn}");
-            result.AppendLine($"凍結位置: 行 {frozenRow + 1} 和列 {frozenColumn + 1} 之前");
+            result.AppendLine("Status: Panes frozen");
+            result.AppendLine($"Frozen row: {frozenRow}");
+            result.AppendLine($"Frozen column: {frozenColumn}");
+            result.AppendLine($"Freeze position: before row {frozenRow + 1} and column {frozenColumn + 1}");
         }
 
         return await Task.FromResult(result.ToString());

@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
@@ -72,7 +72,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
 
         return operation.ToLower() switch
         {
@@ -93,10 +93,10 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex", "pageIndex");
-        var text = ArgumentHelper.GetString(arguments, "text", "text");
-        var x = arguments?["x"]?.GetValue<double>() ?? 100;
-        var y = arguments?["y"]?.GetValue<double>() ?? 700;
+        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
+        var text = ArgumentHelper.GetString(arguments, "text");
+        var x = ArgumentHelper.GetDouble(arguments, "x", "x", false, 100);
+        var y = ArgumentHelper.GetDouble(arguments, "y", "y", false, 700);
 
         using var document = new Document(path);
         if (pageIndex < 1 || pageIndex > document.Pages.Count)
@@ -126,10 +126,10 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex", "pageIndex");
-        var annotationIndex = ArgumentHelper.GetInt(arguments, "annotationIndex", "annotationIndex");
+        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
+        var annotationIndex = ArgumentHelper.GetInt(arguments, "annotationIndex");
 
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         using var document = new Document(path);
@@ -154,13 +154,13 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex", "pageIndex");
-        var annotationIndex = ArgumentHelper.GetInt(arguments, "annotationIndex", "annotationIndex");
-        var text = ArgumentHelper.GetString(arguments, "text", "text");
-        var x = arguments?["x"]?.GetValue<double?>();
-        var y = arguments?["y"]?.GetValue<double?>();
+        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
+        var annotationIndex = ArgumentHelper.GetInt(arguments, "annotationIndex");
+        var text = ArgumentHelper.GetString(arguments, "text");
+        var x = ArgumentHelper.GetDoubleNullable(arguments, "x");
+        var y = ArgumentHelper.GetDoubleNullable(arguments, "y");
 
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         using var document = new Document(path);
@@ -193,9 +193,9 @@ Usage examples:
     private async Task<string> GetAnnotations(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var pageIndex = arguments?["pageIndex"]?.GetValue<int?>();
+        var pageIndex = ArgumentHelper.GetIntNullable(arguments, "pageIndex");
 
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
 
         using var document = new Document(path);
         var sb = new StringBuilder();

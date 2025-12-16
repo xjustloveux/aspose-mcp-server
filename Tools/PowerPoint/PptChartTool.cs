@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Text;
 using Aspose.Slides;
 using Aspose.Slides.Charts;
@@ -99,6 +99,11 @@ Usage examples:
             {
                 type = "boolean",
                 description = "Clear existing data before adding new (optional, for update_data, default: false)"
+            },
+            outputPath = new
+            {
+                type = "string",
+                description = "Output file path (optional, for add/edit/delete/update_data operations, defaults to input path)"
             }
         },
         required = new[] { "operation", "path", "slideIndex" }
@@ -106,9 +111,9 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
 
         return operation.ToLower() switch
         {
@@ -130,8 +135,8 @@ Usage examples:
     /// <returns>Success message with chart index</returns>
     private async Task<string> AddChartAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var chartTypeStr = ArgumentHelper.GetString(arguments, "chartType", "chartType");
-        var title = arguments?["title"]?.GetValue<string>();
+        var chartTypeStr = ArgumentHelper.GetString(arguments, "chartType");
+        var title = ArgumentHelper.GetStringNullable(arguments, "title");
 
         using var presentation = new Presentation(path);
         if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
@@ -160,9 +165,10 @@ Usage examples:
             chart.ChartTitle.AddTextFrameForOverriding(title);
         }
 
-        presentation.Save(path, SaveFormat.Pptx);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
 
-        return await Task.FromResult($"Chart added to slide {slideIndex}: {path}");
+        return await Task.FromResult($"Chart added to slide {slideIndex}: {outputPath}");
     }
 
     /// <summary>
@@ -174,9 +180,9 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> EditChartAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
-        var title = arguments?["title"]?.GetValue<string>();
-        var chartTypeStr = arguments?["chartType"]?.GetValue<string>();
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
+        var title = ArgumentHelper.GetStringNullable(arguments, "title");
+        var chartTypeStr = ArgumentHelper.GetStringNullable(arguments, "chartType");
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
@@ -217,7 +223,8 @@ Usage examples:
             chart.Type = chartType;
         }
 
-        presentation.Save(path, SaveFormat.Pptx);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
         return await Task.FromResult($"Chart updated on slide {slideIndex}, shape {shapeIndex}");
     }
 
@@ -230,7 +237,7 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> DeleteChartAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
@@ -242,7 +249,8 @@ Usage examples:
 
         slide.Shapes.Remove(shape);
 
-        presentation.Save(path, SaveFormat.Pptx);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
         return await Task.FromResult($"Chart deleted from slide {slideIndex}, shape {shapeIndex}");
     }
 
@@ -255,7 +263,7 @@ Usage examples:
     /// <returns>Formatted string with chart data</returns>
     private async Task<string> GetChartDataAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
@@ -312,10 +320,10 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> UpdateChartDataAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
-        var categoriesArray = arguments?["categories"]?.AsArray();
-        var seriesArray = arguments?["series"]?.AsArray();
-        var clearExisting = arguments?["clearExisting"]?.GetValue<bool?>() ?? false;
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
+        var categoriesArray = ArgumentHelper.GetArray(arguments, "categories", false);
+        var seriesArray = ArgumentHelper.GetArray(arguments, "series", false);
+        var clearExisting = ArgumentHelper.GetBool(arguments, "clearExisting", false);
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
@@ -349,7 +357,8 @@ Usage examples:
             }
         }
 
-        presentation.Save(path, SaveFormat.Pptx);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
         return await Task.FromResult($"Chart data updated on slide {slideIndex}, shape {shapeIndex}");
     }
 }

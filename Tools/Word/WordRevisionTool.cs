@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using Aspose.Words.Comparing;
@@ -70,7 +70,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
 
         return operation.ToLower() switch
         {
@@ -124,7 +124,7 @@ Usage examples:
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
 
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         var doc = new Document(path);
@@ -144,7 +144,7 @@ Usage examples:
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
 
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         var doc = new Document(path);
@@ -166,9 +166,9 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var action = arguments?["action"]?.GetValue<string>()?.ToLowerInvariant() ?? "accept";
+        var action = ArgumentHelper.GetString(arguments, "action", "accept").ToLowerInvariant();
 
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         var doc = new Document(path);
@@ -207,10 +207,10 @@ Usage examples:
     /// <returns>Success message with comparison result</returns>
     private async Task<string> CompareDocuments(JsonObject? arguments)
     {
-        var originalPath = ArgumentHelper.GetString(arguments, "originalPath", "originalPath");
-        var revisedPath = ArgumentHelper.GetString(arguments, "revisedPath", "revisedPath");
-        var outputPath = ArgumentHelper.GetString(arguments, "outputPath", "outputPath");
-        var authorName = arguments?["authorName"]?.GetValue<string>() ?? "Comparison";
+        var originalPath = ArgumentHelper.GetString(arguments, "originalPath");
+        var revisedPath = ArgumentHelper.GetString(arguments, "revisedPath");
+        var outputPath = ArgumentHelper.GetString(arguments, "outputPath");
+        var authorName = ArgumentHelper.GetString(arguments, "authorName", "Comparison");
 
         SecurityHelper.ValidateFilePath(originalPath, "originalPath");
         SecurityHelper.ValidateFilePath(revisedPath, "revisedPath");

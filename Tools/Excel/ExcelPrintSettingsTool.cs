@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 
@@ -123,6 +123,11 @@ Usage examples:
             {
                 type = "number",
                 description = "Fit to pages tall (optional)"
+            },
+            outputPath = new
+            {
+                type = "string",
+                description = "Output file path (optional, for all operations, defaults to input path)"
             }
         },
         required = new[] { "operation", "path" }
@@ -130,9 +135,9 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var sheetIndex = arguments?["sheetIndex"]?.GetValue<int>() ?? 0;
+        var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
 
         return operation.ToLower() switch
         {
@@ -153,8 +158,8 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> SetPrintAreaAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var range = arguments?["range"]?.GetValue<string>();
-        var clearPrintArea = arguments?["clearPrintArea"]?.GetValue<bool?>() ?? false;
+        var range = ArgumentHelper.GetStringNullable(arguments, "range");
+        var clearPrintArea = ArgumentHelper.GetBool(arguments, "clearPrintArea", false);
 
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
@@ -172,10 +177,11 @@ Usage examples:
             throw new ArgumentException("Either range or clearPrintArea must be provided");
         }
 
-        workbook.Save(path);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        workbook.Save(outputPath);
         return await Task.FromResult(clearPrintArea
-            ? $"Print area cleared for sheet {sheetIndex}: {path}"
-            : $"Print area set to {range} for sheet {sheetIndex}: {path}");
+            ? $"Print area cleared for sheet {sheetIndex}: {outputPath}"
+            : $"Print area set to {range} for sheet {sheetIndex}: {outputPath}");
     }
 
     /// <summary>
@@ -187,9 +193,9 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> SetPrintTitlesAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var rows = arguments?["rows"]?.GetValue<string>();
-        var columns = arguments?["columns"]?.GetValue<string>();
-        var clearTitles = arguments?["clearTitles"]?.GetValue<bool?>() ?? false;
+        var rows = ArgumentHelper.GetStringNullable(arguments, "rows");
+        var columns = ArgumentHelper.GetStringNullable(arguments, "columns");
+        var clearTitles = ArgumentHelper.GetBool(arguments, "clearTitles", false);
 
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
@@ -211,8 +217,9 @@ Usage examples:
             }
         }
 
-        workbook.Save(path);
-        return await Task.FromResult($"Print titles updated for sheet {sheetIndex}: {path}");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        workbook.Save(outputPath);
+        return await Task.FromResult($"Print titles updated for sheet {sheetIndex}: {outputPath}");
     }
 
     /// <summary>
@@ -224,14 +231,14 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> SetPageSetupAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var orientation = arguments?["orientation"]?.GetValue<string>();
-        var paperSize = arguments?["paperSize"]?.GetValue<string>();
-        var leftMargin = arguments?["leftMargin"]?.GetValue<double?>();
-        var rightMargin = arguments?["rightMargin"]?.GetValue<double?>();
-        var topMargin = arguments?["topMargin"]?.GetValue<double?>();
-        var bottomMargin = arguments?["bottomMargin"]?.GetValue<double?>();
-        var header = arguments?["header"]?.GetValue<string>();
-        var footer = arguments?["footer"]?.GetValue<string>();
+        var orientation = ArgumentHelper.GetStringNullable(arguments, "orientation");
+        var paperSize = ArgumentHelper.GetStringNullable(arguments, "paperSize");
+        var leftMargin = ArgumentHelper.GetDoubleNullable(arguments, "leftMargin");
+        var rightMargin = ArgumentHelper.GetDoubleNullable(arguments, "rightMargin");
+        var topMargin = ArgumentHelper.GetDoubleNullable(arguments, "topMargin");
+        var bottomMargin = ArgumentHelper.GetDoubleNullable(arguments, "bottomMargin");
+        var header = ArgumentHelper.GetStringNullable(arguments, "header");
+        var footer = ArgumentHelper.GetStringNullable(arguments, "footer");
 
         using var workbook = new Workbook(path);
         var worksheet = workbook.Worksheets[sheetIndex];
@@ -273,17 +280,18 @@ Usage examples:
             pageSetup.SetFooter(0, footer);
         }
 
-        workbook.Save(path);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        workbook.Save(outputPath);
 
         var changes = new List<string>();
-        if (!string.IsNullOrEmpty(orientation)) changes.Add($"方向: {orientation}");
-        if (!string.IsNullOrEmpty(paperSize)) changes.Add($"紙張大小: {paperSize}");
+        if (!string.IsNullOrEmpty(orientation)) changes.Add($"Orientation: {orientation}");
+        if (!string.IsNullOrEmpty(paperSize)) changes.Add($"Paper size: {paperSize}");
         if (leftMargin.HasValue || rightMargin.HasValue || topMargin.HasValue || bottomMargin.HasValue)
-            changes.Add("邊距已設定");
-        if (!string.IsNullOrEmpty(header)) changes.Add("頁首已設定");
-        if (!string.IsNullOrEmpty(footer)) changes.Add("頁尾已設定");
+            changes.Add("Margins set");
+        if (!string.IsNullOrEmpty(header)) changes.Add("Header set");
+        if (!string.IsNullOrEmpty(footer)) changes.Add("Footer set");
 
-        return await Task.FromResult($"頁面設定已更新: {string.Join(", ", changes)}");
+        return await Task.FromResult($"Page setup updated: {string.Join(", ", changes)}");
     }
 
     /// <summary>
@@ -295,14 +303,14 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> SetAllAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var printArea = arguments?["range"]?.GetValue<string>();
-        var printTitleRows = arguments?["rows"]?.GetValue<string>();
-        var printTitleColumns = arguments?["columns"]?.GetValue<string>();
-        var fitToPage = arguments?["fitToPage"]?.GetValue<bool?>();
-        var fitToPagesWide = arguments?["fitToPagesWide"]?.GetValue<int?>();
-        var fitToPagesTall = arguments?["fitToPagesTall"]?.GetValue<int?>();
-        var orientation = arguments?["orientation"]?.GetValue<string>();
-        var paperSize = arguments?["paperSize"]?.GetValue<string>();
+        var printArea = ArgumentHelper.GetStringNullable(arguments, "range");
+        var printTitleRows = ArgumentHelper.GetStringNullable(arguments, "rows");
+        var printTitleColumns = ArgumentHelper.GetStringNullable(arguments, "columns");
+        var fitToPage = ArgumentHelper.GetBoolNullable(arguments, "fitToPage");
+        var fitToPagesWide = ArgumentHelper.GetIntNullable(arguments, "fitToPagesWide");
+        var fitToPagesTall = ArgumentHelper.GetIntNullable(arguments, "fitToPagesTall");
+        var orientation = ArgumentHelper.GetStringNullable(arguments, "orientation");
+        var paperSize = ArgumentHelper.GetStringNullable(arguments, "paperSize");
 
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
@@ -348,8 +356,9 @@ Usage examples:
             pageSetup.PaperSize = paperSizeEnum;
         }
 
-        workbook.Save(path);
-        return await Task.FromResult($"Print settings updated for sheet {sheetIndex}: {path}");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        workbook.Save(outputPath);
+        return await Task.FromResult($"Print settings updated for sheet {sheetIndex}: {outputPath}");
     }
 }
 

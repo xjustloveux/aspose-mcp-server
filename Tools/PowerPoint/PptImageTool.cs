@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Core;
@@ -69,6 +69,11 @@ Usage examples:
             {
                 type = "number",
                 description = "Image height (optional)"
+            },
+            outputPath = new
+            {
+                type = "string",
+                description = "Output file path (optional, for add/edit/delete operations, defaults to input path)"
             }
         },
         required = new[] { "operation", "path", "slideIndex" }
@@ -76,10 +81,10 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        SecurityHelper.ValidateFilePath(path, "path");
-        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
+        SecurityHelper.ValidateFilePath(path);
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
 
         return operation.ToLower() switch
         {
@@ -98,11 +103,11 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> AddImageAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var imagePath = ArgumentHelper.GetString(arguments, "imagePath", "imagePath");
-        var x = arguments?["x"]?.GetValue<float>() ?? 100;
-        var y = arguments?["y"]?.GetValue<float>() ?? 100;
-        var width = arguments?["width"]?.GetValue<float>();
-        var height = arguments?["height"]?.GetValue<float>();
+        var imagePath = ArgumentHelper.GetString(arguments, "imagePath");
+        var x = ArgumentHelper.GetFloat(arguments, "x", "x", false, 100);
+        var y = ArgumentHelper.GetFloat(arguments, "y", "y", false, 100);
+        var width = ArgumentHelper.GetFloatNullable(arguments, "width");
+        var height = ArgumentHelper.GetFloatNullable(arguments, "height");
 
         if (!File.Exists(imagePath))
         {
@@ -129,9 +134,10 @@ Usage examples:
             slide.Shapes.AddPictureFrame(ShapeType.Rectangle, x, y, pictureImage.Width, pictureImage.Height, pictureImage);
         }
 
-        presentation.Save(path, SaveFormat.Pptx);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
 
-        return await Task.FromResult($"Image added to slide {slideIndex}: {path}");
+        return await Task.FromResult($"Image added to slide {slideIndex}: {outputPath}");
     }
 
     /// <summary>
@@ -143,12 +149,12 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> EditImageAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
-        var imagePath = arguments?["imagePath"]?.GetValue<string>();
-        var x = arguments?["x"]?.GetValue<float?>();
-        var y = arguments?["y"]?.GetValue<float?>();
-        var width = arguments?["width"]?.GetValue<float?>();
-        var height = arguments?["height"]?.GetValue<float?>();
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
+        var imagePath = ArgumentHelper.GetStringNullable(arguments, "imagePath");
+        var x = ArgumentHelper.GetFloatNullable(arguments, "x");
+        var y = ArgumentHelper.GetFloatNullable(arguments, "y");
+        var width = ArgumentHelper.GetFloatNullable(arguments, "width");
+        var height = ArgumentHelper.GetFloatNullable(arguments, "height");
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
@@ -170,7 +176,8 @@ Usage examples:
         if (width.HasValue) pictureFrame.Width = width.Value;
         if (height.HasValue) pictureFrame.Height = height.Value;
 
-        presentation.Save(path, SaveFormat.Pptx);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
         return await Task.FromResult($"Image updated on slide {slideIndex}, shape {shapeIndex}");
     }
 }

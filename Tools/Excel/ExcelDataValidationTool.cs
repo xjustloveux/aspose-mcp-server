@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Text;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
@@ -45,7 +45,7 @@ Usage examples:
             outputPath = new
             {
                 type = "string",
-                description = "Output file path (optional, for edit operation, defaults to input path)"
+                description = "Output file path (optional, for add/edit/delete/set_messages operations, defaults to input path)"
             },
             sheetIndex = new
             {
@@ -94,9 +94,9 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var sheetIndex = arguments?["sheetIndex"]?.GetValue<int>() ?? 0;
+        var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
 
         return operation.ToLower() switch
         {
@@ -118,17 +118,18 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> AddDataValidationAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var range = ArgumentHelper.GetString(arguments, "range", "range");
-        var validationType = ArgumentHelper.GetString(arguments, "validationType", "validationType");
-        var formula1 = ArgumentHelper.GetString(arguments, "formula1", "formula1");
-        var formula2 = arguments?["formula2"]?.GetValue<string>();
-        var errorMessage = arguments?["errorMessage"]?.GetValue<string>();
-        var inputMessage = arguments?["inputMessage"]?.GetValue<string>();
+        var range = ArgumentHelper.GetString(arguments, "range");
+        var validationType = ArgumentHelper.GetString(arguments, "validationType");
+        var formula1 = ArgumentHelper.GetString(arguments, "formula1");
+        var formula2 = ArgumentHelper.GetStringNullable(arguments, "formula2");
+        var errorMessage = ArgumentHelper.GetStringNullable(arguments, "errorMessage");
+        var inputMessage = ArgumentHelper.GetStringNullable(arguments, "inputMessage");
 
         using var workbook = new Workbook(path);
         var worksheet = workbook.Worksheets[sheetIndex];
         var cells = worksheet.Cells;
-        var cellRange = cells.CreateRange(range);
+        
+        var cellRange = ExcelHelper.CreateRange(cells, range);
 
         var area = new CellArea();
         area.StartRow = cellRange.FirstRow;
@@ -177,9 +178,10 @@ Usage examples:
 
         validation.InCellDropDown = true;
 
-        workbook.Save(path);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        workbook.Save(outputPath);
 
-        return await Task.FromResult($"範圍 {range} 已添加數據驗證 ({validationType}): {path}");
+        return await Task.FromResult($"Data validation added to range {range} ({validationType}): {outputPath}");
     }
 
     /// <summary>
@@ -192,12 +194,12 @@ Usage examples:
     private async Task<string> EditDataValidationAsync(JsonObject? arguments, string path, int sheetIndex)
     {
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var validationIndex = ArgumentHelper.GetInt(arguments, "validationIndex", "validationIndex");
-        var validationTypeStr = arguments?["validationType"]?.GetValue<string>();
-        var formula1 = arguments?["formula1"]?.GetValue<string>();
-        var formula2 = arguments?["formula2"]?.GetValue<string>();
-        var errorMessage = arguments?["errorMessage"]?.GetValue<string>();
-        var inputMessage = arguments?["inputMessage"]?.GetValue<string>();
+        var validationIndex = ArgumentHelper.GetInt(arguments, "validationIndex");
+        var validationTypeStr = ArgumentHelper.GetStringNullable(arguments, "validationType");
+        var formula1 = ArgumentHelper.GetStringNullable(arguments, "formula1");
+        var formula2 = ArgumentHelper.GetStringNullable(arguments, "formula2");
+        var errorMessage = ArgumentHelper.GetStringNullable(arguments, "errorMessage");
+        var inputMessage = ArgumentHelper.GetStringNullable(arguments, "inputMessage");
 
         using var workbook = new Workbook(path);
         
@@ -206,7 +208,7 @@ Usage examples:
         
         if (validationIndex < 0 || validationIndex >= validations.Count)
         {
-            throw new ArgumentException($"數據驗證索引 {validationIndex} 超出範圍 (工作表共有 {validations.Count} 個數據驗證規則)");
+            throw new ArgumentException($"Data validation index {validationIndex} is out of range (worksheet has {validations.Count} data validation rules)");
         }
 
         var validation = validations[validationIndex];
@@ -226,13 +228,13 @@ Usage examples:
                 _ => validation.Type
             };
             validation.Type = vType;
-            changes.Add($"驗證類型: {validationTypeStr}");
+            changes.Add($"Validation type: {validationTypeStr}");
         }
 
         if (!string.IsNullOrEmpty(formula1))
         {
             validation.Formula1 = formula1;
-            changes.Add($"公式1: {formula1}");
+            changes.Add($"Formula1: {formula1}");
         }
 
         if (formula2 != null)
@@ -242,29 +244,29 @@ Usage examples:
             {
                 validation.Operator = OperatorType.Between;
             }
-            changes.Add($"公式2: {formula2 ?? "(已清除)"}");
+            changes.Add($"Formula2: {formula2 ?? "(cleared)"}");
         }
 
         if (errorMessage != null)
         {
             validation.ErrorMessage = errorMessage;
             validation.ShowError = !string.IsNullOrEmpty(errorMessage);
-            changes.Add($"錯誤訊息: {errorMessage ?? "(已清除)"}");
+            changes.Add($"Error message: {errorMessage ?? "(cleared)"}");
         }
 
         if (inputMessage != null)
         {
             validation.InputMessage = inputMessage;
             validation.ShowInput = !string.IsNullOrEmpty(inputMessage);
-            changes.Add($"輸入訊息: {inputMessage ?? "(已清除)"}");
+            changes.Add($"Input message: {inputMessage ?? "(cleared)"}");
         }
 
         workbook.Save(outputPath);
 
-        var result = $"成功編輯數據驗證規則 #{validationIndex}\n";
+        var result = $"Successfully edited data validation rule #{validationIndex}\n";
         if (changes.Count > 0)
         {
-            result += "變更:\n";
+            result += "Changes:\n";
             foreach (var change in changes)
             {
                 result += $"  - {change}\n";
@@ -272,9 +274,9 @@ Usage examples:
         }
         else
         {
-            result += "無變更。\n";
+            result += "No changes.\n";
         }
-        result += $"輸出: {outputPath}";
+        result += $"Output: {outputPath}";
 
         return await Task.FromResult(result);
     }
@@ -288,21 +290,22 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> DeleteDataValidationAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var validationIndex = ArgumentHelper.GetInt(arguments, "validationIndex", "validationIndex");
+        var validationIndex = ArgumentHelper.GetInt(arguments, "validationIndex");
 
         using var workbook = new Workbook(path);
         
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
         var validations = worksheet.Validations;
         
-        PowerPointHelper.ValidateCollectionIndex(validationIndex, validations, "數據驗證");
+        PowerPointHelper.ValidateCollectionIndex(validationIndex, validations, "data validation");
 
         validations.RemoveAt(validationIndex);
-        workbook.Save(path);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        workbook.Save(outputPath);
         
         var remainingCount = validations.Count;
         
-        return await Task.FromResult($"成功刪除數據驗證 #{validationIndex}\n工作表剩餘數據驗證數: {remainingCount}\n輸出: {path}");
+        return await Task.FromResult($"Successfully deleted data validation #{validationIndex}\nRemaining data validations in worksheet: {remainingCount}\nOutput: {outputPath}");
     }
 
     /// <summary>
@@ -320,42 +323,42 @@ Usage examples:
         var validations = worksheet.Validations;
         var result = new StringBuilder();
 
-        result.AppendLine($"=== 工作表 '{worksheet.Name}' 的數據驗證資訊 ===\n");
-        result.AppendLine($"總數據驗證數: {validations.Count}\n");
+        result.AppendLine($"=== Data validation information for worksheet '{worksheet.Name}' ===\n");
+        result.AppendLine($"Total data validations: {validations.Count}\n");
 
         if (validations.Count == 0)
         {
-            result.AppendLine("未找到數據驗證");
+            result.AppendLine("No data validations found");
             return await Task.FromResult(result.ToString());
         }
 
         for (int i = 0; i < validations.Count; i++)
         {
             var validation = validations[i];
-            result.AppendLine($"【數據驗證 {i}】");
-            result.AppendLine($"類型: {validation.Type}");
-            result.AppendLine($"運算符: {validation.Operator}");
-            result.AppendLine("應用範圍: 已應用（詳細範圍資訊需通過其他方式獲取）");
+            result.AppendLine($"[Data validation {i}]");
+            result.AppendLine($"Type: {validation.Type}");
+            result.AppendLine($"Operator: {validation.Operator}");
+            result.AppendLine("Applied range: Applied (detailed range information needs to be obtained through other methods)");
             
             if (!string.IsNullOrEmpty(validation.Formula1))
             {
-                result.AppendLine($"公式1: {validation.Formula1}");
+                result.AppendLine($"Formula1: {validation.Formula1}");
             }
             if (!string.IsNullOrEmpty(validation.Formula2))
             {
-                result.AppendLine($"公式2: {validation.Formula2}");
+                result.AppendLine($"Formula2: {validation.Formula2}");
             }
             if (!string.IsNullOrEmpty(validation.ErrorMessage))
             {
-                result.AppendLine($"錯誤訊息: {validation.ErrorMessage}");
+                result.AppendLine($"Error message: {validation.ErrorMessage}");
             }
             if (!string.IsNullOrEmpty(validation.InputMessage))
             {
-                result.AppendLine($"輸入訊息: {validation.InputMessage}");
+                result.AppendLine($"Input message: {validation.InputMessage}");
             }
-            result.AppendLine($"顯示錯誤: {validation.ShowError}");
-            result.AppendLine($"顯示輸入: {validation.ShowInput}");
-            result.AppendLine($"下拉列表: {validation.InCellDropDown}");
+            result.AppendLine($"Show error: {validation.ShowError}");
+            result.AppendLine($"Show input: {validation.ShowInput}");
+            result.AppendLine($"Dropdown list: {validation.InCellDropDown}");
             result.AppendLine();
         }
 
@@ -371,16 +374,16 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> SetMessagesAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var validationIndex = ArgumentHelper.GetInt(arguments, "validationIndex", "validationIndex");
-        var errorMessage = arguments?["errorMessage"]?.GetValue<string>();
-        var inputMessage = arguments?["inputMessage"]?.GetValue<string>();
+        var validationIndex = ArgumentHelper.GetInt(arguments, "validationIndex");
+        var errorMessage = ArgumentHelper.GetStringNullable(arguments, "errorMessage");
+        var inputMessage = ArgumentHelper.GetStringNullable(arguments, "inputMessage");
 
         using var workbook = new Workbook(path);
         
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
         var validations = worksheet.Validations;
         
-        PowerPointHelper.ValidateCollectionIndex(validationIndex, validations, "數據驗證");
+        PowerPointHelper.ValidateCollectionIndex(validationIndex, validations, "data validation");
 
         var validation = validations[validationIndex];
         var changes = new List<string>();
@@ -389,21 +392,22 @@ Usage examples:
         {
             validation.ErrorMessage = errorMessage;
             validation.ShowError = !string.IsNullOrEmpty(errorMessage);
-            changes.Add($"錯誤訊息: {errorMessage ?? "(已清除)"}");
+            changes.Add($"Error message: {errorMessage ?? "(cleared)"}");
         }
 
         if (inputMessage != null)
         {
             validation.InputMessage = inputMessage;
             validation.ShowInput = !string.IsNullOrEmpty(inputMessage);
-            changes.Add($"輸入訊息: {inputMessage ?? "(已清除)"}");
+            changes.Add($"Input message: {inputMessage ?? "(cleared)"}");
         }
 
-        workbook.Save(path);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        workbook.Save(outputPath);
 
         var result = changes.Count > 0 
-            ? $"數據驗證訊息已更新: {string.Join(", ", changes)}\n輸出: {path}"
-            : $"無變更\n輸出: {path}";
+            ? $"Data validation messages updated: {string.Join(", ", changes)}\nOutput: {outputPath}"
+            : $"No changes\nOutput: {outputPath}";
         
         return await Task.FromResult(result);
     }

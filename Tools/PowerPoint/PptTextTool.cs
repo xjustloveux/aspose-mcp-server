@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Text;
 using Aspose.Slides;
 using Aspose.Slides.Export;
@@ -87,6 +87,11 @@ Usage examples:
             {
                 type = "number",
                 description = "Text box height (optional, for add, default: 100)"
+            },
+            outputPath = new
+            {
+                type = "string",
+                description = "Output file path (optional, for add/edit/delete operations, defaults to input path)"
             }
         },
         required = new[] { "operation", "path" }
@@ -94,7 +99,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         return operation.ToLower() switch
@@ -114,12 +119,12 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> AddTextAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
-        var text = ArgumentHelper.GetString(arguments, "text", "text");
-        var x = arguments?["x"]?.GetValue<float>() ?? 50;
-        var y = arguments?["y"]?.GetValue<float>() ?? 50;
-        var width = arguments?["width"]?.GetValue<float>() ?? 400;
-        var height = arguments?["height"]?.GetValue<float>() ?? 100;
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
+        var text = ArgumentHelper.GetString(arguments, "text");
+        var x = ArgumentHelper.GetFloat(arguments, "x", "x", false, 50);
+        var y = ArgumentHelper.GetFloat(arguments, "y", "y", false, 50);
+        var width = ArgumentHelper.GetFloat(arguments, "width", "width", false, 400);
+        var height = ArgumentHelper.GetFloat(arguments, "height", "height", false, 100);
 
         using var presentation = new Presentation(path);
         if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
@@ -131,9 +136,10 @@ Usage examples:
         var textBox = slide.Shapes.AddAutoShape(ShapeType.Rectangle, x, y, width, height);
         textBox.TextFrame.Text = text;
 
-        presentation.Save(path, SaveFormat.Pptx);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
 
-        return await Task.FromResult($"Text added to slide {slideIndex}: {path}");
+        return await Task.FromResult($"Text added to slide {slideIndex}: {outputPath}");
     }
 
     /// <summary>
@@ -144,9 +150,9 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> EditTextAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
-        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
-        var text = ArgumentHelper.GetString(arguments, "text", "text");
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
+        var text = ArgumentHelper.GetString(arguments, "text");
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
@@ -160,7 +166,8 @@ Usage examples:
             throw new ArgumentException($"Shape at index {shapeIndex} does not support text editing");
         }
 
-        presentation.Save(path, SaveFormat.Pptx);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
         return await Task.FromResult($"Text updated on slide {slideIndex}, shape {shapeIndex}");
     }
 
@@ -172,9 +179,9 @@ Usage examples:
     /// <returns>Success message with replacement count</returns>
     private async Task<string> ReplaceTextAsync(JsonObject? arguments, string path)
     {
-        var findText = ArgumentHelper.GetString(arguments, "findText", "findText");
-        var replaceText = ArgumentHelper.GetString(arguments, "replaceText", "replaceText");
-        var matchCase = arguments?["matchCase"]?.GetValue<bool>() ?? false;
+        var findText = ArgumentHelper.GetString(arguments, "findText");
+        var replaceText = ArgumentHelper.GetString(arguments, "replaceText");
+        var matchCase = ArgumentHelper.GetBool(arguments, "matchCase", false);
 
         using var presentation = new Presentation(path);
         var comparison = matchCase ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
@@ -205,8 +212,9 @@ Usage examples:
             }
         }
 
-        presentation.Save(path, SaveFormat.Pptx);
-        return await Task.FromResult($"完成文字替換：{replacements} 個片段\n查找: {findText}\n替換為: {replaceText}\n輸出: {path}");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
+        return await Task.FromResult($"Text replacement completed: {replacements} occurrences\nFind: {findText}\nReplace with: {replaceText}\nOutput: {outputPath}");
     }
 
     private static string ReplaceAll(string source, string find, string replace, StringComparison comparison)

@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using Aspose.Pdf.Text;
 using AsposeMcpServer.Core;
@@ -77,7 +77,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
 
         return operation.ToLower() switch
         {
@@ -95,16 +95,16 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var text = ArgumentHelper.GetString(arguments, "text", "text");
-        var opacity = arguments?["opacity"]?.GetValue<double>() ?? 0.3;
-        var fontSize = arguments?["fontSize"]?.GetValue<double>() ?? 72;
-        var fontName = arguments?["fontName"]?.GetValue<string>() ?? "Arial";
-        var rotation = arguments?["rotation"]?.GetValue<double>() ?? 45;
+        var text = ArgumentHelper.GetString(arguments, "text");
+        var opacity = ArgumentHelper.GetDouble(arguments, "opacity", "opacity", false, 0.3);
+        var fontSize = ArgumentHelper.GetDouble(arguments, "fontSize", "fontSize", false, 72);
+        var fontName = ArgumentHelper.GetString(arguments, "fontName", "Arial");
+        var rotation = ArgumentHelper.GetDouble(arguments, "rotation", "rotation", false, 45);
 
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var horizontalAlignment = arguments?["horizontalAlignment"]?.GetValue<string>() ?? "Center";
-        var verticalAlignment = arguments?["verticalAlignment"]?.GetValue<string>() ?? "Center";
+        var horizontalAlignment = ArgumentHelper.GetString(arguments, "horizontalAlignment", "Center");
+        var verticalAlignment = ArgumentHelper.GetString(arguments, "verticalAlignment", "Center");
 
         using var document = new Document(path);
 

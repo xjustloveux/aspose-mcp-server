@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Core;
@@ -56,6 +56,11 @@ Usage examples:
                 type = "string",
                 description = "Orientation: 'Portrait' or 'Landscape' (required for set_orientation)",
                 @enum = new[] { "Portrait", "Landscape" }
+            },
+            outputPath = new
+            {
+                type = "string",
+                description = "Output file path (optional, for set_orientation operation, defaults to input path)"
             }
         },
         required = new[] { "operation", "path" }
@@ -63,7 +68,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         return operation.ToLower() switch
@@ -82,9 +87,9 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> SetSlideSizeAsync(JsonObject? arguments, string path)
     {
-        var preset = arguments?["preset"]?.GetValue<string>() ?? "OnScreen16x9";
-        var width = arguments?["width"]?.GetValue<double?>();
-        var height = arguments?["height"]?.GetValue<double?>();
+        var preset = ArgumentHelper.GetString(arguments, "preset", "OnScreen16x9");
+        var width = ArgumentHelper.GetDoubleNullable(arguments, "width");
+        var height = ArgumentHelper.GetDoubleNullable(arguments, "height");
 
         using var presentation = new Presentation(path);
         var slideSize = presentation.SlideSize;
@@ -110,8 +115,9 @@ Usage examples:
             slideSize.SetSize(type, SlideSizeScaleType.DoNotScale);
         }
 
-        presentation.Save(path, SaveFormat.Pptx);
-        return await Task.FromResult($"已設定投影片尺寸: {slideSize.Type} {(slideSize.Type == SlideSizeType.Custom ? $"{slideSize.Size.Width}x{slideSize.Size.Height}" : string.Empty)}");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
+        return await Task.FromResult($"Slide size set: {slideSize.Type} {(slideSize.Type == SlideSizeType.Custom ? $"{slideSize.Size.Width}x{slideSize.Size.Height}" : string.Empty)}");
     }
 
     /// <summary>
@@ -122,7 +128,7 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> SetSlideOrientationAsync(JsonObject? arguments, string path)
     {
-        var orientation = ArgumentHelper.GetString(arguments, "orientation", "orientation");
+        var orientation = ArgumentHelper.GetString(arguments, "orientation");
 
         using var presentation = new Presentation(path);
         
@@ -135,9 +141,10 @@ Usage examples:
             presentation.SlideSize.SetSize(SlideSizeType.OnScreen16x10, SlideSizeScaleType.EnsureFit);
         }
 
-        presentation.Save(path, SaveFormat.Pptx);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
 
-        return await Task.FromResult($"Slide orientation set to {orientation}: {path}");
+        return await Task.FromResult($"Slide orientation set to {orientation}: {outputPath}");
     }
 }
 

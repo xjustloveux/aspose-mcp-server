@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using Aspose.Words;
 using AsposeMcpServer.Core;
 
@@ -56,7 +56,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         return operation.ToLower() switch
@@ -76,8 +76,8 @@ Usage examples:
     private async Task<string> ProtectAsync(JsonObject? arguments, string path)
     {
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var password = ArgumentHelper.GetString(arguments, "password", "password");
-        var protectionTypeStr = arguments?["protectionType"]?.GetValue<string>() ?? "ReadOnly";
+        var password = ArgumentHelper.GetString(arguments, "password");
+        var protectionTypeStr = ArgumentHelper.GetString(arguments, "protectionType", "ReadOnly");
 
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
@@ -107,7 +107,7 @@ Usage examples:
     private async Task<string> UnprotectAsync(JsonObject? arguments, string path)
     {
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var password = arguments?["password"]?.GetValue<string>();
+        var password = ArgumentHelper.GetStringNullable(arguments, "password");
 
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
@@ -119,21 +119,21 @@ Usage examples:
             if (!string.Equals(path, outputPath, StringComparison.OrdinalIgnoreCase))
             {
                 doc.Save(outputPath);
-                return await Task.FromResult($"文檔未受保護，已另存到: {outputPath}");
+                return await Task.FromResult($"Document is not protected, saved to: {outputPath}");
             }
 
-            return await Task.FromResult("文檔未受保護，無需解除");
+            return await Task.FromResult("Document is not protected, no need to unprotect");
         }
 
         doc.Unprotect(password);
 
         if (doc.ProtectionType != ProtectionType.NoProtection)
         {
-            throw new InvalidOperationException("解除保護失敗，可能是密碼錯誤或文檔被限制");
+            throw new InvalidOperationException("Unprotect failed, password may be incorrect or document is restricted");
         }
 
         doc.Save(outputPath);
-        return await Task.FromResult($"解除保護完成\n輸出: {outputPath}");
+        return await Task.FromResult($"Protection removed successfully\nOutput: {outputPath}");
     }
 }
 

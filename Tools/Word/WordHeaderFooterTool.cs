@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Aspose.Words;
 using Aspose.Words.Drawing;
@@ -178,10 +178,10 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        SecurityHelper.ValidateFilePath(path, "path");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        SecurityHelper.ValidateFilePath(path);
+        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         return operation switch
@@ -209,21 +209,21 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> SetHeaderTextAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var headerLeft = arguments?["headerLeft"]?.GetValue<string>();
-        var headerCenter = arguments?["headerCenter"]?.GetValue<string>();
-        var headerRight = arguments?["headerRight"]?.GetValue<string>();
-        var fontName = arguments?["fontName"]?.GetValue<string>();
-        var fontNameAscii = arguments?["fontNameAscii"]?.GetValue<string>();
-        var fontNameFarEast = arguments?["fontNameFarEast"]?.GetValue<string>();
-        var fontSize = arguments?["fontSize"]?.GetValue<double?>();
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
-        var clearExisting = arguments?["clearExisting"]?.GetValue<bool>() ?? true;
+        var headerLeft = ArgumentHelper.GetStringNullable(arguments, "headerLeft");
+        var headerCenter = ArgumentHelper.GetStringNullable(arguments, "headerCenter");
+        var headerRight = ArgumentHelper.GetStringNullable(arguments, "headerRight");
+        var fontName = ArgumentHelper.GetStringNullable(arguments, "fontName");
+        var fontNameAscii = ArgumentHelper.GetStringNullable(arguments, "fontNameAscii");
+        var fontNameFarEast = ArgumentHelper.GetStringNullable(arguments, "fontNameFarEast");
+        var fontSize = ArgumentHelper.GetDoubleNullable(arguments, "fontSize");
+        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
+        var clearExisting = ArgumentHelper.GetBool(arguments, "clearExisting");
 
         var doc = new Document(path);
         
         bool hasContent = !string.IsNullOrEmpty(headerLeft) || !string.IsNullOrEmpty(headerCenter) || !string.IsNullOrEmpty(headerRight);
         if (!hasContent)
-            return await Task.FromResult("警告：未提供任何頁首文字內容");
+            return await Task.FromResult("Warning: No header text content provided");
 
         var sections = sectionIndex == -1 ? doc.Sections.Cast<Section>() : new[] { doc.Sections[sectionIndex] };
 
@@ -271,14 +271,14 @@ Usage examples:
         doc.Save(outputPath);
         
         var contentParts = new List<string>();
-        if (!string.IsNullOrEmpty(headerLeft)) contentParts.Add("左");
-        if (!string.IsNullOrEmpty(headerCenter)) contentParts.Add("中");
-        if (!string.IsNullOrEmpty(headerRight)) contentParts.Add("右");
+        if (!string.IsNullOrEmpty(headerLeft)) contentParts.Add("left");
+        if (!string.IsNullOrEmpty(headerCenter)) contentParts.Add("center");
+        if (!string.IsNullOrEmpty(headerRight)) contentParts.Add("right");
         
-        var contentDesc = string.Join("、", contentParts);
-        var sectionsDesc = sectionIndex == -1 ? "所有節" : $"第 {sectionIndex} 節";
+        var contentDesc = string.Join(", ", contentParts);
+        var sectionsDesc = sectionIndex == -1 ? "all sections" : $"section {sectionIndex}";
         
-        return await Task.FromResult($"成功設定頁首文字（{contentDesc}）於 {sectionsDesc}");
+        return await Task.FromResult($"Header text set successfully ({contentDesc}) in {sectionsDesc}");
     }
 
     /// <summary>
@@ -290,21 +290,21 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> SetFooterTextAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var footerLeft = arguments?["footerLeft"]?.GetValue<string>();
-        var footerCenter = arguments?["footerCenter"]?.GetValue<string>();
-        var footerRight = arguments?["footerRight"]?.GetValue<string>();
-        var fontName = arguments?["fontName"]?.GetValue<string>();
-        var fontNameAscii = arguments?["fontNameAscii"]?.GetValue<string>();
-        var fontNameFarEast = arguments?["fontNameFarEast"]?.GetValue<string>();
-        var fontSize = arguments?["fontSize"]?.GetValue<double?>();
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
-        var clearExisting = arguments?["clearExisting"]?.GetValue<bool>() ?? true;
+        var footerLeft = ArgumentHelper.GetStringNullable(arguments, "footerLeft");
+        var footerCenter = ArgumentHelper.GetStringNullable(arguments, "footerCenter");
+        var footerRight = ArgumentHelper.GetStringNullable(arguments, "footerRight");
+        var fontName = ArgumentHelper.GetStringNullable(arguments, "fontName");
+        var fontNameAscii = ArgumentHelper.GetStringNullable(arguments, "fontNameAscii");
+        var fontNameFarEast = ArgumentHelper.GetStringNullable(arguments, "fontNameFarEast");
+        var fontSize = ArgumentHelper.GetDoubleNullable(arguments, "fontSize");
+        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
+        var clearExisting = ArgumentHelper.GetBool(arguments, "clearExisting");
 
         var doc = new Document(path);
         
         bool hasContent = !string.IsNullOrEmpty(footerLeft) || !string.IsNullOrEmpty(footerCenter) || !string.IsNullOrEmpty(footerRight);
         if (!hasContent)
-            return await Task.FromResult("警告：未提供任何頁尾文字內容");
+            return await Task.FromResult("Warning: No footer text content provided");
 
         var sections = sectionIndex == -1 ? doc.Sections.Cast<Section>() : new[] { doc.Sections[sectionIndex] };
 
@@ -352,14 +352,14 @@ Usage examples:
         doc.Save(outputPath);
         
         var contentParts = new List<string>();
-        if (!string.IsNullOrEmpty(footerLeft)) contentParts.Add("左");
-        if (!string.IsNullOrEmpty(footerCenter)) contentParts.Add("中");
-        if (!string.IsNullOrEmpty(footerRight)) contentParts.Add("右");
+        if (!string.IsNullOrEmpty(footerLeft)) contentParts.Add("left");
+        if (!string.IsNullOrEmpty(footerCenter)) contentParts.Add("center");
+        if (!string.IsNullOrEmpty(footerRight)) contentParts.Add("right");
         
-        var contentDesc = string.Join("、", contentParts);
-        var sectionsDesc = sectionIndex == -1 ? "所有節" : $"第 {sectionIndex} 節";
+        var contentDesc = string.Join(", ", contentParts);
+        var sectionsDesc = sectionIndex == -1 ? "all sections" : $"section {sectionIndex}";
         
-        return await Task.FromResult($"成功設定頁尾文字（{contentDesc}）於 {sectionsDesc}");
+        return await Task.FromResult($"Footer text set successfully ({contentDesc}) in {sectionsDesc}");
     }
 
     /// <summary>
@@ -371,16 +371,16 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> SetHeaderImageAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var imagePath = ArgumentHelper.GetString(arguments, "imagePath", "imagePath");
+        var imagePath = ArgumentHelper.GetString(arguments, "imagePath");
         SecurityHelper.ValidateFilePath(imagePath, "imagePath");
-        var alignment = arguments?["alignment"]?.GetValue<string>() ?? "left";
-        var imageWidth = arguments?["imageWidth"]?.GetValue<double?>();
-        var imageHeight = arguments?["imageHeight"]?.GetValue<double?>();
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
-        var removeExisting = arguments?["removeExisting"]?.GetValue<bool>() ?? true;
+        var alignment = ArgumentHelper.GetString(arguments, "alignment", "left");
+        var imageWidth = ArgumentHelper.GetDoubleNullable(arguments, "imageWidth");
+        var imageHeight = ArgumentHelper.GetDoubleNullable(arguments, "imageHeight");
+        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
+        var removeExisting = ArgumentHelper.GetBool(arguments, "removeExisting");
 
         if (!File.Exists(imagePath))
-            throw new FileNotFoundException($"找不到圖片檔案: {imagePath}");
+            throw new FileNotFoundException($"Image file not found: {imagePath}");
 
         var doc = new Document(path);
         var sections = sectionIndex == -1 ? doc.Sections.Cast<Section>() : new[] { doc.Sections[sectionIndex] };
@@ -442,16 +442,16 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> SetFooterImageAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var imagePath = ArgumentHelper.GetString(arguments, "imagePath", "imagePath");
+        var imagePath = ArgumentHelper.GetString(arguments, "imagePath");
         SecurityHelper.ValidateFilePath(imagePath, "imagePath");
-        var alignment = arguments?["alignment"]?.GetValue<string>() ?? "left";
-        var imageWidth = arguments?["imageWidth"]?.GetValue<double?>();
-        var imageHeight = arguments?["imageHeight"]?.GetValue<double?>();
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
-        var removeExisting = arguments?["removeExisting"]?.GetValue<bool>() ?? true;
+        var alignment = ArgumentHelper.GetString(arguments, "alignment", "left");
+        var imageWidth = ArgumentHelper.GetDoubleNullable(arguments, "imageWidth");
+        var imageHeight = ArgumentHelper.GetDoubleNullable(arguments, "imageHeight");
+        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
+        var removeExisting = ArgumentHelper.GetBool(arguments, "removeExisting");
 
         if (!File.Exists(imagePath))
-            throw new FileNotFoundException($"找不到圖片檔案: {imagePath}");
+            throw new FileNotFoundException($"Image file not found: {imagePath}");
 
         var doc = new Document(path);
         var sections = sectionIndex == -1 ? doc.Sections.Cast<Section>() : new[] { doc.Sections[sectionIndex] };
@@ -513,9 +513,9 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> SetHeaderLineAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var lineStyle = arguments?["lineStyle"]?.GetValue<string>() ?? "single";
-        var lineWidth = arguments?["lineWidth"]?.GetValue<double?>();
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
+        var lineStyle = ArgumentHelper.GetString(arguments, "lineStyle", "single");
+        var lineWidth = ArgumentHelper.GetDoubleNullable(arguments, "lineWidth");
+        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
 
         var doc = new Document(path);
         var sections = sectionIndex == -1 ? doc.Sections.Cast<Section>() : new[] { doc.Sections[sectionIndex] };
@@ -558,9 +558,9 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> SetFooterLineAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var lineStyle = arguments?["lineStyle"]?.GetValue<string>() ?? "single";
-        var lineWidth = arguments?["lineWidth"]?.GetValue<double?>();
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
+        var lineStyle = ArgumentHelper.GetString(arguments, "lineStyle", "single");
+        var lineWidth = ArgumentHelper.GetDoubleNullable(arguments, "lineWidth");
+        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
 
         var doc = new Document(path);
         var sections = sectionIndex == -1 ? doc.Sections.Cast<Section>() : new[] { doc.Sections[sectionIndex] };
@@ -603,8 +603,8 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> SetHeaderTabStopsAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var tabStops = arguments?["tabStops"]?.AsArray();
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
+        var tabStops = ArgumentHelper.GetArray(arguments, "tabStops", false);
+        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
 
         var doc = new Document(path);
         var sections = sectionIndex == -1 ? doc.Sections.Cast<Section>() : new[] { doc.Sections[sectionIndex] };
@@ -669,8 +669,8 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> SetFooterTabStopsAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var tabStops = arguments?["tabStops"]?.AsArray();
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
+        var tabStops = ArgumentHelper.GetArray(arguments, "tabStops", false);
+        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
 
         var doc = new Document(path);
         var sections = sectionIndex == -1 ? doc.Sections.Cast<Section>() : new[] { doc.Sections[sectionIndex] };
@@ -749,15 +749,15 @@ Usage examples:
     /// <returns>Formatted string with all headers and footers</returns>
     private async Task<string> GetHeadersFootersAsync(JsonObject? arguments, string path)
     {
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>();
+        var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
 
         var doc = new Document(path);
         doc.UpdateFields();
         
         var result = new System.Text.StringBuilder();
 
-        result.AppendLine("=== 文檔頁眉頁腳資訊 ===\n");
-        result.AppendLine($"總節數: {doc.Sections.Count}\n");
+        result.AppendLine("=== Document Header and Footer Information ===\n");
+        result.AppendLine($"Total sections: {doc.Sections.Count}\n");
 
         var sections = sectionIndex.HasValue 
             ? new[] { doc.Sections[sectionIndex.Value] }
@@ -765,7 +765,7 @@ Usage examples:
 
         if (sectionIndex.HasValue && (sectionIndex.Value < 0 || sectionIndex.Value >= doc.Sections.Count))
         {
-            throw new ArgumentException($"節索引 {sectionIndex.Value} 超出範圍 (文檔共有 {doc.Sections.Count} 個節)");
+            throw new ArgumentException($"Section index {sectionIndex.Value} is out of range (document has {doc.Sections.Count} sections)");
         }
 
         for (int i = 0; i < sections.Length; i++)
@@ -773,14 +773,14 @@ Usage examples:
             var section = sections[i];
             var actualIndex = sectionIndex ?? i;
             
-            result.AppendLine($"【節 {actualIndex}】");
+            result.AppendLine($"[Section {actualIndex}]");
             
-            result.AppendLine("頁眉:");
+            result.AppendLine("Headers:");
             var headerTypes = new[]
             {
-                (HeaderFooterType.HeaderPrimary, "主要頁眉"),
-                (HeaderFooterType.HeaderFirst, "首頁頁眉"),
-                (HeaderFooterType.HeaderEven, "偶數頁頁眉")
+                (HeaderFooterType.HeaderPrimary, "Primary header"),
+                (HeaderFooterType.HeaderFirst, "First page header"),
+                (HeaderFooterType.HeaderEven, "Even page header")
             };
             
             bool hasHeader = false;
@@ -801,17 +801,17 @@ Usage examples:
             
             if (!hasHeader)
             {
-                result.AppendLine("  (無頁眉)");
+                result.AppendLine("  (No header)");
             }
             
             result.AppendLine();
             
-            result.AppendLine("頁尾:");
+            result.AppendLine("Footers:");
             var footerTypes = new[]
             {
-                (HeaderFooterType.FooterPrimary, "主要頁尾"),
-                (HeaderFooterType.FooterFirst, "首頁頁尾"),
-                (HeaderFooterType.FooterEven, "偶數頁頁尾")
+                (HeaderFooterType.FooterPrimary, "Primary footer"),
+                (HeaderFooterType.FooterFirst, "First page footer"),
+                (HeaderFooterType.FooterEven, "Even page footer")
             };
             
             bool hasFooter = false;
@@ -832,7 +832,7 @@ Usage examples:
             
             if (!hasFooter)
             {
-                result.AppendLine("  (無頁尾)");
+                result.AppendLine("  (No footer)");
             }
             
             if (i < sections.Length - 1)

@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
@@ -87,7 +87,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
 
         return operation.ToLower() switch
         {
@@ -108,15 +108,15 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex", "pageIndex");
-        var x = ArgumentHelper.GetDouble(arguments, "x", "x");
-        var y = ArgumentHelper.GetDouble(arguments, "y", "y");
-        var width = ArgumentHelper.GetDouble(arguments, "width", "width");
-        var height = ArgumentHelper.GetDouble(arguments, "height", "height");
-        var url = arguments?["url"]?.GetValue<string>();
-        var targetPage = arguments?["targetPage"]?.GetValue<int?>();
+        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
+        var x = ArgumentHelper.GetDouble(arguments, "x");
+        var y = ArgumentHelper.GetDouble(arguments, "y");
+        var width = ArgumentHelper.GetDouble(arguments, "width");
+        var height = ArgumentHelper.GetDouble(arguments, "height");
+        var url = ArgumentHelper.GetStringNullable(arguments, "url");
+        var targetPage = ArgumentHelper.GetIntNullable(arguments, "targetPage");
 
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         using var document = new Document(path);
@@ -154,10 +154,10 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex", "pageIndex");
-        var linkIndex = ArgumentHelper.GetInt(arguments, "linkIndex", "linkIndex");
+        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
+        var linkIndex = ArgumentHelper.GetInt(arguments, "linkIndex");
 
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         using var document = new Document(path);
@@ -183,12 +183,12 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex", "pageIndex");
-        var linkIndex = ArgumentHelper.GetInt(arguments, "linkIndex", "linkIndex");
-        var url = arguments?["url"]?.GetValue<string>();
-        var targetPage = arguments?["targetPage"]?.GetValue<int?>();
+        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
+        var linkIndex = ArgumentHelper.GetInt(arguments, "linkIndex");
+        var url = ArgumentHelper.GetStringNullable(arguments, "url");
+        var targetPage = ArgumentHelper.GetIntNullable(arguments, "targetPage");
 
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         using var document = new Document(path);
@@ -222,9 +222,9 @@ Usage examples:
     private async Task<string> GetLinks(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var pageIndex = arguments?["pageIndex"]?.GetValue<int?>();
+        var pageIndex = ArgumentHelper.GetIntNullable(arguments, "pageIndex");
 
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
 
         using var document = new Document(path);
         var sb = new StringBuilder();

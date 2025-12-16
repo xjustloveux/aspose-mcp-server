@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Text;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
@@ -16,7 +16,7 @@ public class ExcelFileOperationsTool : IAsposeTool
 Usage examples:
 - Create workbook: excel_file_operations(operation='create', path='new.xlsx')
 - Convert format: excel_file_operations(operation='convert', inputPath='book.xlsx', outputPath='book.pdf', format='pdf')
-- Merge workbooks: excel_file_operations(operation='merge', inputPath='book1.xlsx', outputPath='merged.xlsx', inputPaths=['book2.xlsx'])
+- Merge workbooks: excel_file_operations(operation='merge', path='merged.xlsx', inputPaths=['book1.xlsx', 'book2.xlsx'])
 - Split workbook: excel_file_operations(operation='split', inputPath='book.xlsx', outputDirectory='output/')";
 
     public object InputSchema => new
@@ -28,16 +28,16 @@ Usage examples:
             {
                 type = "string",
                 description = @"Operation to perform.
-- 'create': Create a new workbook (required params: path)
+- 'create': Create a new workbook (required params: path or outputPath)
 - 'convert': Convert workbook format (required params: inputPath, outputPath, format)
-- 'merge': Merge workbooks (required params: inputPath, outputPath, inputPaths)
-- 'split': Split workbook (required params: inputPath, outputDirectory)",
+- 'merge': Merge workbooks (required params: path or outputPath, inputPaths)
+- 'split': Split workbook (required params: inputPath or path, outputDirectory)",
                 @enum = new[] { "create", "convert", "merge", "split" }
             },
             path = new
             {
                 type = "string",
-                description = "File path (output path for create operation, input path for convert/split operations)"
+                description = "File path (output path for create/merge operations, input path for split operation, can be used instead of inputPath/outputPath)"
             },
             outputPath = new
             {
@@ -47,7 +47,7 @@ Usage examples:
             inputPath = new
             {
                 type = "string",
-                description = "Input file path (required for convert/split)"
+                description = "Input file path (required for convert/split, can also use 'path' for split)"
             },
             outputDirectory = new
             {
@@ -92,7 +92,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
 
         return operation.ToLower() switch
         {
@@ -111,8 +111,8 @@ Usage examples:
     /// <returns>Success message with file path</returns>
     private async Task<string> CreateWorkbookAsync(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetString(arguments, "path", "path", false) ?? ArgumentHelper.GetString(arguments, "outputPath", "outputPath", false) ?? throw new ArgumentException("path or outputPath is required for create operation");
-        var sheetName = arguments?["sheetName"]?.GetValue<string>();
+        var path = ArgumentHelper.GetString(arguments, "path", "outputPath", "path or outputPath", true);
+        var sheetName = ArgumentHelper.GetStringNullable(arguments, "sheetName");
 
         using var workbook = new Workbook();
         
@@ -121,6 +121,8 @@ Usage examples:
             workbook.Worksheets[0].Name = sheetName;
         }
 
+        // For create operation, path is the output path
+        SecurityHelper.ValidateFilePath(path);
         workbook.Save(path);
         return await Task.FromResult($"Excel workbook created successfully at: {path}");
     }
@@ -132,9 +134,9 @@ Usage examples:
     /// <returns>Success message with output path</returns>
     private async Task<string> ConvertWorkbookAsync(JsonObject? arguments)
     {
-        var inputPath = ArgumentHelper.GetString(arguments, "inputPath", "inputPath");
-        var outputPath = ArgumentHelper.GetString(arguments, "outputPath", "outputPath");
-        var format = arguments?["format"]?.GetValue<string>()?.ToLower() ?? throw new ArgumentException("format is required for convert operation");
+        var inputPath = ArgumentHelper.GetString(arguments, "inputPath");
+        var outputPath = ArgumentHelper.GetString(arguments, "outputPath");
+        var format = ArgumentHelper.GetString(arguments, "format").ToLower();
 
         using var workbook = new Workbook(inputPath);
 
@@ -162,9 +164,9 @@ Usage examples:
     /// <returns>Success message with merged file path</returns>
     private async Task<string> MergeWorkbooksAsync(JsonObject? arguments)
     {
-        var outputPath = ArgumentHelper.GetString(arguments, "path", "path", false) ?? ArgumentHelper.GetString(arguments, "outputPath", "outputPath", false) ?? throw new ArgumentException("path or outputPath is required for merge operation");
-        var inputPathsArray = arguments?["inputPaths"]?.AsArray() ?? throw new ArgumentException("inputPaths is required for merge operation");
-        var mergeSheets = arguments?["mergeSheets"]?.GetValue<bool?>() ?? false;
+        var outputPath = ArgumentHelper.GetString(arguments, "path", "outputPath", "path or outputPath", true);
+        var inputPathsArray = ArgumentHelper.GetArray(arguments, "inputPaths");
+        var mergeSheets = ArgumentHelper.GetBool(arguments, "mergeSheets", false);
 
         // Validate array size
         SecurityHelper.ValidateArraySize(inputPathsArray, "inputPaths");
@@ -238,10 +240,10 @@ Usage examples:
     /// <returns>Success message with split file count</returns>
     private async Task<string> SplitWorkbookAsync(JsonObject? arguments)
     {
-        var inputPath = ArgumentHelper.GetString(arguments, "inputPath", "inputPath", false) ?? ArgumentHelper.GetString(arguments, "path", "path", false) ?? throw new ArgumentException("inputPath or path is required for split operation");
-        var outputDirectory = ArgumentHelper.GetString(arguments, "outputDirectory", "outputDirectory");
-        var sheetIndicesArray = arguments?["sheetIndices"]?.AsArray();
-        var fileNamePattern = arguments?["outputFileNamePattern"]?.GetValue<string>() ?? "sheet_{name}.xlsx";
+        var inputPath = ArgumentHelper.GetString(arguments, "inputPath", "path", "inputPath or path", true);
+        var outputDirectory = ArgumentHelper.GetString(arguments, "outputDirectory");
+        var sheetIndicesArray = ArgumentHelper.GetArray(arguments, "sheetIndices", false);
+        var fileNamePattern = ArgumentHelper.GetString(arguments, "outputFileNamePattern", "sheet_{name}.xlsx");
 
         if (!Directory.Exists(outputDirectory))
         {

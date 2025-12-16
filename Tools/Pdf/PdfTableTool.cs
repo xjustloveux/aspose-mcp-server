@@ -1,10 +1,13 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using Aspose.Pdf.Text;
 using AsposeMcpServer.Core;
 
 namespace AsposeMcpServer.Tools;
 
+/// <summary>
+/// Unified tool for managing PDF tables (add, edit)
+/// </summary>
 public class PdfTableTool : IAsposeTool
 {
     public string Description => @"Manage tables in PDF documents. Supports 2 operations: add, edit.
@@ -97,7 +100,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
 
         return operation.ToLower() switch
         {
@@ -116,11 +119,11 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex", "pageIndex");
-        var rows = ArgumentHelper.GetInt(arguments, "rows", "rows");
-        var columns = ArgumentHelper.GetInt(arguments, "columns", "columns");
-        var x = arguments?["x"]?.GetValue<double>() ?? 100;
-        var y = arguments?["y"]?.GetValue<double>() ?? 600;
+        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
+        var rows = ArgumentHelper.GetInt(arguments, "rows");
+        var columns = ArgumentHelper.GetInt(arguments, "columns");
+        var x = ArgumentHelper.GetDouble(arguments, "x", "x", false, 100);
+        var y = ArgumentHelper.GetDouble(arguments, "y", "y", false, 600);
 
         using var document = new Document(path);
         if (pageIndex < 1 || pageIndex > document.Pages.Count)
@@ -142,7 +145,7 @@ Usage examples:
             }
             catch (Exception jsonEx)
             {
-                throw new ArgumentException($"無法解析 data 參數: {jsonEx.Message}。請確保 data 是有效的二維字符串數組格式，例如: [[\"A1\",\"B1\"],[\"A2\",\"B2\"]]");
+                throw new ArgumentException($"Unable to parse data parameter: {jsonEx.Message}. Please ensure data is a valid 2D string array format, e.g.: [[\"A1\",\"B1\"],[\"A2\",\"B2\"]]");
             }
         }
 
@@ -175,12 +178,12 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex", "tableIndex");
-        var cellRow = arguments?["cellRow"]?.GetValue<int>();
-        var cellColumn = arguments?["cellColumn"]?.GetValue<int>();
-        var cellValue = arguments?["cellValue"]?.GetValue<string>();
+        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex");
+        var cellRow = ArgumentHelper.GetIntNullable(arguments, "cellRow");
+        var cellColumn = ArgumentHelper.GetIntNullable(arguments, "cellColumn");
+        var cellValue = ArgumentHelper.GetStringNullable(arguments, "cellValue");
 
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         using var document = new Document(path);

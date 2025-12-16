@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Text;
 using System.Linq;
 using Aspose.Slides;
@@ -90,6 +90,11 @@ Usage examples:
             {
                 type = "number",
                 description = "Layout index (0-based, optional, for edit operation)"
+            },
+            outputPath = new
+            {
+                type = "string",
+                description = "Output file path (optional, for add/copy/delete/edit/hide operations, defaults to input path)"
             }
         },
         required = new[] { "operation", "path" }
@@ -97,7 +102,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         return operation.ToLower() switch
@@ -122,7 +127,7 @@ Usage examples:
     /// <returns>Success message with slide index</returns>
     private async Task<string> AddSlideAsync(JsonObject? arguments, string path)
     {
-        var layoutType = arguments?["layoutType"]?.GetValue<string>() ?? "Blank";
+        var layoutType = ArgumentHelper.GetString(arguments, "layoutType", "Blank");
 
         using var presentation = new Presentation(path);
         
@@ -134,9 +139,10 @@ Usage examples:
         var layoutSlide = presentation.LayoutSlides[0];
         var slide = presentation.Slides.AddEmptySlide(layoutSlide);
 
-        presentation.Save(path, SaveFormat.Pptx);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
 
-        return await Task.FromResult($"Slide added to presentation: {path} (Total: {presentation.Slides.Count})");
+        return await Task.FromResult($"Slide added to presentation: {outputPath} (Total: {presentation.Slides.Count})");
     }
 
     /// <summary>
@@ -147,7 +153,7 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> DeleteSlideAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
 
         using var presentation = new Presentation(path);
         if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
@@ -156,9 +162,10 @@ Usage examples:
         }
 
         presentation.Slides.RemoveAt(slideIndex);
-        presentation.Save(path, SaveFormat.Pptx);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
 
-        return await Task.FromResult($"已刪除投影片 {slideIndex}，剩餘 {presentation.Slides.Count} 張: {path}");
+        return await Task.FromResult($"Slide {slideIndex} deleted, {presentation.Slides.Count} slides remaining: {outputPath}");
     }
 
     /// <summary>
@@ -172,20 +179,20 @@ Usage examples:
         using var presentation = new Presentation(path);
         var sb = new StringBuilder();
 
-        sb.AppendLine($"總投影片數: {presentation.Slides.Count}");
+        sb.AppendLine($"Total slides: {presentation.Slides.Count}");
 
         for (int i = 0; i < presentation.Slides.Count; i++)
         {
             var slide = presentation.Slides[i];
             var title = slide.Shapes.FirstOrDefault(s => s.Placeholder?.Type == PlaceholderType.Title) as IAutoShape;
-            var titleText = title?.TextFrame?.Text ?? "(無標題)";
+            var titleText = title?.TextFrame?.Text ?? "(no title)";
             var notes = slide.NotesSlideManager.NotesSlide?.NotesTextFrame?.Text;
 
-            sb.AppendLine($"\n--- 投影片 {i} ---");
-            sb.AppendLine($"標題: {titleText}");
-            sb.AppendLine($"形狀數: {slide.Shapes.Count}");
-            sb.AppendLine($"是否有講者備註: {(string.IsNullOrWhiteSpace(notes) ? "否" : "是")}");
-            sb.AppendLine($"隱藏: {slide.Hidden}");
+            sb.AppendLine($"\n--- Slide {i} ---");
+            sb.AppendLine($"Title: {titleText}");
+            sb.AppendLine($"Shapes count: {slide.Shapes.Count}");
+            sb.AppendLine($"Has speaker notes: {(string.IsNullOrWhiteSpace(notes) ? "No" : "Yes")}");
+            sb.AppendLine($"Hidden: {slide.Hidden}");
         }
 
         return await Task.FromResult(sb.ToString());
@@ -199,8 +206,8 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> MoveSlideAsync(JsonObject? arguments, string path)
     {
-        var fromIndex = ArgumentHelper.GetInt(arguments, "fromIndex", "fromIndex");
-        var toIndex = ArgumentHelper.GetInt(arguments, "toIndex", "toIndex");
+        var fromIndex = ArgumentHelper.GetInt(arguments, "fromIndex");
+        var toIndex = ArgumentHelper.GetInt(arguments, "toIndex");
 
         using var presentation = new Presentation(path);
         var count = presentation.Slides.Count;
@@ -218,9 +225,10 @@ Usage examples:
         presentation.Slides.InsertClone(toIndex, source);
         var removeIndex = fromIndex + (fromIndex < toIndex ? 1 : 0);
         presentation.Slides.RemoveAt(removeIndex);
-        presentation.Save(path, SaveFormat.Pptx);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
 
-        return await Task.FromResult($"投影片已移動: {fromIndex} -> {toIndex} (總數 {count})");
+        return await Task.FromResult($"Slide moved: {fromIndex} -> {toIndex} (total {count})");
     }
 
     /// <summary>
@@ -231,8 +239,8 @@ Usage examples:
     /// <returns>Success message with new slide index</returns>
     private async Task<string> DuplicateSlideAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
-        var insertAt = arguments?["insertAt"]?.GetValue<int?>();
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
+        var insertAt = ArgumentHelper.GetIntNullable(arguments, "insertAt");
 
         using var presentation = new Presentation(path);
         var count = presentation.Slides.Count;
@@ -256,8 +264,9 @@ Usage examples:
             presentation.Slides.AddClone(presentation.Slides[slideIndex]);
         }
 
-        presentation.Save(path, SaveFormat.Pptx);
-        return await Task.FromResult($"已複製投影片 {slideIndex}，總數 {presentation.Slides.Count} 張: {path}");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
+        return await Task.FromResult($"Slide {slideIndex} duplicated, total {presentation.Slides.Count} slides: {outputPath}");
     }
 
     /// <summary>
@@ -268,8 +277,9 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> HideSlidesAsync(JsonObject? arguments, string path)
     {
-        var hidden = arguments?["hidden"]?.GetValue<bool?>() ?? false;
-        var slideIndices = arguments?["slideIndices"]?.AsArray()?.Select(x => x?.GetValue<int>() ?? -1).ToArray();
+        var hidden = ArgumentHelper.GetBool(arguments, "hidden", false);
+        var slideIndicesArray = ArgumentHelper.GetArray(arguments, "slideIndices", false);
+        var slideIndices = slideIndicesArray?.Select(x => x?.GetValue<int>() ?? -1).ToArray();
 
         using var presentation = new Presentation(path);
         var targets = slideIndices?.Length > 0
@@ -289,8 +299,9 @@ Usage examples:
             presentation.Slides[idx].Hidden = hidden;
         }
 
-        presentation.Save(path, SaveFormat.Pptx);
-        return await Task.FromResult($"已設定 {targets.Length} 張投影片 Hidden={hidden}");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
+        return await Task.FromResult($"Set {targets.Length} slides Hidden={hidden}");
     }
 
     /// <summary>
@@ -301,7 +312,7 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> ClearSlideAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
@@ -310,8 +321,9 @@ Usage examples:
             slide.Shapes.RemoveAt(0);
         }
 
-        presentation.Save(path, SaveFormat.Pptx);
-        return await Task.FromResult($"已清除投影片 {slideIndex} 的所有形狀");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
+        return await Task.FromResult($"Cleared all shapes from slide {slideIndex}");
     }
 
     /// <summary>
@@ -322,8 +334,8 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> EditSlideAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
-        var layoutIndex = arguments?["layoutIndex"]?.GetValue<int?>();
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
+        var layoutIndex = ArgumentHelper.GetIntNullable(arguments, "layoutIndex");
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
@@ -337,8 +349,9 @@ Usage examples:
             slide.LayoutSlide = presentation.LayoutSlides[layoutIndex.Value];
         }
 
-        presentation.Save(path, SaveFormat.Pptx);
-        return await Task.FromResult($"Slide {slideIndex} updated: {path}");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
+        return await Task.FromResult($"Slide {slideIndex} updated: {outputPath}");
     }
 }
 

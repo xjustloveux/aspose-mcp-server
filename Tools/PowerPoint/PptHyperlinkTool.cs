@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Text;
 using Aspose.Slides;
 using Aspose.Slides.Export;
@@ -89,6 +89,11 @@ Usage examples:
             {
                 type = "number",
                 description = "Height (optional, for add, default: 50)"
+            },
+            outputPath = new
+            {
+                type = "string",
+                description = "Output file path (optional, for add/edit/delete operations, defaults to input path)"
             }
         },
         required = new[] { "operation", "path" }
@@ -96,7 +101,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         return operation.ToLower() switch
@@ -117,13 +122,13 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> AddHyperlinkAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
-        var text = ArgumentHelper.GetString(arguments, "text", "text");
-        var url = ArgumentHelper.GetString(arguments, "url", "url");
-        var x = arguments?["x"]?.GetValue<float?>() ?? 50;
-        var y = arguments?["y"]?.GetValue<float?>() ?? 50;
-        var width = arguments?["width"]?.GetValue<float?>() ?? 300;
-        var height = arguments?["height"]?.GetValue<float?>() ?? 50;
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
+        var text = ArgumentHelper.GetString(arguments, "text");
+        var url = ArgumentHelper.GetString(arguments, "url");
+        var x = ArgumentHelper.GetFloat(arguments, "x", 50);
+        var y = ArgumentHelper.GetFloat(arguments, "y", 50);
+        var width = ArgumentHelper.GetFloat(arguments, "width", 300);
+        var height = ArgumentHelper.GetFloat(arguments, "height", 50);
 
         using var presentation = new Presentation(path);
         if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
@@ -142,8 +147,9 @@ Usage examples:
         portion.PortionFormat.FillFormat.FillType = FillType.Solid;
         portion.PortionFormat.FillFormat.SolidFillColor.Color = System.Drawing.Color.Blue;
 
-        presentation.Save(path, SaveFormat.Pptx);
-        return await Task.FromResult($"已在投影片 {slideIndex} 新增超連結文字: {url}");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
+        return await Task.FromResult($"Hyperlink added to slide {slideIndex}: {url}");
     }
 
     /// <summary>
@@ -154,11 +160,11 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> EditHyperlinkAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
-        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
-        var url = arguments?["url"]?.GetValue<string>();
-        var slideTargetIndex = arguments?["slideTargetIndex"]?.GetValue<int?>();
-        var removeHyperlink = arguments?["removeHyperlink"]?.GetValue<bool?>() ?? false;
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
+        var url = ArgumentHelper.GetStringNullable(arguments, "url");
+        var slideTargetIndex = ArgumentHelper.GetIntNullable(arguments, "slideTargetIndex");
+        var removeHyperlink = ArgumentHelper.GetBool(arguments, "removeHyperlink", false);
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
@@ -195,7 +201,8 @@ Usage examples:
             throw new ArgumentException("Either url, slideTargetIndex, or removeHyperlink must be provided");
         }
 
-        presentation.Save(path, SaveFormat.Pptx);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
         return await Task.FromResult($"Hyperlink updated on slide {slideIndex}, shape {shapeIndex}");
     }
 
@@ -207,8 +214,8 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> DeleteHyperlinkAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
-        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
@@ -226,7 +233,8 @@ Usage examples:
             }
         }
 
-        presentation.Save(path, SaveFormat.Pptx);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
         return await Task.FromResult($"Hyperlink deleted from slide {slideIndex}, shape {shapeIndex}");
     }
 
@@ -238,7 +246,7 @@ Usage examples:
     /// <returns>Formatted string with all hyperlinks</returns>
     private async Task<string> GetHyperlinksAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = arguments?["slideIndex"]?.GetValue<int?>();
+        var slideIndex = ArgumentHelper.GetIntNullable(arguments, "slideIndex");
 
         using var presentation = new Presentation(path);
         var sb = new StringBuilder();

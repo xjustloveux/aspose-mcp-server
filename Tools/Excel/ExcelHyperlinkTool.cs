@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Text;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
@@ -73,6 +73,11 @@ Usage examples:
             {
                 type = "string",
                 description = "New display text (optional, for edit)"
+            },
+            outputPath = new
+            {
+                type = "string",
+                description = "Output file path (optional, for add/edit/delete operations, defaults to input path)"
             }
         },
         required = new[] { "operation", "path" }
@@ -80,9 +85,9 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var sheetIndex = arguments?["sheetIndex"]?.GetValue<int>() ?? 0;
+        var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
 
         return operation.ToLower() switch
         {
@@ -103,9 +108,9 @@ Usage examples:
     /// <returns>Success message with hyperlink details</returns>
     private async Task<string> AddHyperlinkAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var cell = ArgumentHelper.GetString(arguments, "cell", "cell");
-        var url = ArgumentHelper.GetString(arguments, "url", "url");
-        var displayText = arguments?["displayText"]?.GetValue<string>();
+        var cell = ArgumentHelper.GetString(arguments, "cell");
+        var url = ArgumentHelper.GetString(arguments, "url");
+        var displayText = ArgumentHelper.GetStringNullable(arguments, "displayText");
 
         using var workbook = new Workbook(path);
         var worksheet = workbook.Worksheets[sheetIndex];
@@ -117,9 +122,10 @@ Usage examples:
         }
 
         worksheet.Hyperlinks.Add(cell, 1, 1, url);
-        workbook.Save(path);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        workbook.Save(outputPath);
 
-        return await Task.FromResult($"單元格 {cell} 已添加超連結: {url}");
+        return await Task.FromResult($"Hyperlink added to cell {cell}: {url}");
     }
 
     /// <summary>
@@ -131,10 +137,10 @@ Usage examples:
     /// <returns>Success message with updated hyperlink details</returns>
     private async Task<string> EditHyperlinkAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var hyperlinkIndex = arguments?["hyperlinkIndex"]?.GetValue<int?>();
-        var cell = arguments?["cell"]?.GetValue<string>();
-        var address = arguments?["address"]?.GetValue<string>();
-        var textToDisplay = arguments?["textToDisplay"]?.GetValue<string>();
+        var hyperlinkIndex = ArgumentHelper.GetIntNullable(arguments, "hyperlinkIndex");
+        var cell = ArgumentHelper.GetStringNullable(arguments, "cell");
+        var address = ArgumentHelper.GetStringNullable(arguments, "address");
+        var textToDisplay = ArgumentHelper.GetStringNullable(arguments, "textToDisplay");
 
         if (!hyperlinkIndex.HasValue && string.IsNullOrEmpty(cell))
         {
@@ -187,7 +193,7 @@ Usage examples:
         int index = foundIndex.Value;
         if (index < 0 || index >= hyperlinks.Count)
         {
-            throw new ArgumentException($"超連結索引 {index} 超出範圍 (工作表共有 {hyperlinks.Count} 個超連結)");
+            throw new ArgumentException($"Hyperlink index {index} is out of range (worksheet has {hyperlinks.Count} hyperlinks)");
         }
 
         var hyperlink = hyperlinks[index];
@@ -204,19 +210,20 @@ Usage examples:
             hyperlink.TextToDisplay = textToDisplay;
         }
         
-        workbook.Save(path);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        workbook.Save(outputPath);
         
-        var result = $"成功編輯超連結 #{index}";
+        var result = $"Successfully edited hyperlink #{index}";
         if (!string.IsNullOrEmpty(cell))
         {
-            result += $" (單元格: {cell})";
+            result += $" (cell: {cell})";
         }
         result += "\n";
-        result += $"舊地址: {oldAddress}\n";
-        result += $"新地址: {hyperlink.Address ?? oldAddress}\n";
-        result += $"舊顯示文字: {oldText}\n";
-        result += $"新顯示文字: {hyperlink.TextToDisplay ?? oldText}\n";
-        result += $"輸出: {path}";
+        result += $"Old address: {oldAddress}\n";
+        result += $"New address: {hyperlink.Address ?? oldAddress}\n";
+        result += $"Old display text: {oldText}\n";
+        result += $"New display text: {hyperlink.TextToDisplay ?? oldText}\n";
+        result += $"Output: {outputPath}";
         
         return await Task.FromResult(result);
     }
@@ -230,8 +237,8 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> DeleteHyperlinkAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var hyperlinkIndex = arguments?["hyperlinkIndex"]?.GetValue<int?>();
-        var cell = arguments?["cell"]?.GetValue<string>();
+        var hyperlinkIndex = ArgumentHelper.GetIntNullable(arguments, "hyperlinkIndex");
+        var cell = ArgumentHelper.GetStringNullable(arguments, "cell");
 
         if (!hyperlinkIndex.HasValue && string.IsNullOrEmpty(cell))
         {
@@ -284,23 +291,24 @@ Usage examples:
         int index = foundIndex.Value;
         if (index < 0 || index >= hyperlinks.Count)
         {
-            throw new ArgumentException($"超連結索引 {index} 超出範圍 (工作表共有 {hyperlinks.Count} 個超連結)");
+            throw new ArgumentException($"Hyperlink index {index} is out of range (worksheet has {hyperlinks.Count} hyperlinks)");
         }
 
         var hyperlink = hyperlinks[index];
         var address = hyperlink.Address ?? "";
         
         hyperlinks.RemoveAt(index);
-        workbook.Save(path);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        workbook.Save(outputPath);
         
         var remainingCount = hyperlinks.Count;
         
-        var result = $"成功刪除超連結 #{index}";
+        var result = $"Successfully deleted hyperlink #{index}";
         if (!string.IsNullOrEmpty(cell))
         {
-            result += $" (單元格: {cell})";
+            result += $" (cell: {cell})";
         }
-        result += $"\n地址: {address}\n工作表剩餘超連結數: {remainingCount}\n輸出: {path}";
+        result += $"\nAddress: {address}\nRemaining hyperlinks in worksheet: {remainingCount}\nOutput: {outputPath}";
         
         return await Task.FromResult(result);
     }
@@ -319,23 +327,23 @@ Usage examples:
         var hyperlinks = worksheet.Hyperlinks;
         var result = new StringBuilder();
 
-        result.AppendLine($"=== 工作表 '{worksheet.Name}' 的超連結資訊 ===\n");
-        result.AppendLine($"總超連結數: {hyperlinks.Count}\n");
+        result.AppendLine($"=== Hyperlink information for worksheet '{worksheet.Name}' ===\n");
+        result.AppendLine($"Total hyperlinks: {hyperlinks.Count}\n");
 
         if (hyperlinks.Count == 0)
         {
-            result.AppendLine("未找到超連結");
+            result.AppendLine("No hyperlinks found");
             return await Task.FromResult(result.ToString());
         }
 
         for (int i = 0; i < hyperlinks.Count; i++)
         {
             var hyperlink = hyperlinks[i];
-            result.AppendLine($"【超連結 {i}】");
-            result.AppendLine($"地址: {hyperlink.Address ?? "(無)"}");
-            result.AppendLine($"顯示文字: {hyperlink.TextToDisplay ?? "(無)"}");
+            result.AppendLine($"[Hyperlink {i}]");
+            result.AppendLine($"Address: {hyperlink.Address ?? "(none)"}");
+            result.AppendLine($"Display text: {hyperlink.TextToDisplay ?? "(none)"}");
             var area = hyperlink.Area;
-            result.AppendLine($"位置: 行 {area.StartRow}-{area.EndRow}, 列 {area.StartColumn}-{area.EndColumn}");
+            result.AppendLine($"Location: rows {area.StartRow}-{area.EndRow}, columns {area.StartColumn}-{area.EndColumn}");
             result.AppendLine();
         }
 

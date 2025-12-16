@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Text;
 using System.Linq;
 using Aspose.Slides;
@@ -56,6 +56,11 @@ Usage examples:
                 type = "array",
                 items = new { type = "number" },
                 description = "Slide indices array (optional, for clear, if not provided affects all slides)"
+            },
+            outputPath = new
+            {
+                type = "string",
+                description = "Output file path (optional, for set/clear operations, defaults to input path)"
             }
         },
         required = new[] { "operation", "path" }
@@ -63,7 +68,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         return operation.ToLower() switch
@@ -84,8 +89,8 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> AddNotesAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
-        var notes = ArgumentHelper.GetString(arguments, "notes", "notes");
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
+        var notes = ArgumentHelper.GetString(arguments, "notes");
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
@@ -93,15 +98,16 @@ Usage examples:
         var textFrame = notesSlide.NotesTextFrame;
         if (textFrame == null)
         {
-            throw new InvalidOperationException("無法取得 NotesTextFrame，可能是檔案受損或格式不支援");
+            throw new InvalidOperationException("Unable to get NotesTextFrame, file may be corrupted or format not supported");
         }
         textFrame.Paragraphs.Clear();
         var para = new Paragraph();
         para.Portions.Add(new Portion(notes));
         textFrame.Paragraphs.Add(para);
 
-        presentation.Save(path, SaveFormat.Pptx);
-        return await Task.FromResult($"已更新投影片 {slideIndex} 的講者備註: {path}");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
+        return await Task.FromResult($"Speaker notes updated for slide {slideIndex}: {outputPath}");
     }
 
     /// <summary>
@@ -112,8 +118,8 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> EditNotesAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
-        var notes = ArgumentHelper.GetString(arguments, "notes", "notes");
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
+        var notes = ArgumentHelper.GetString(arguments, "notes");
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
@@ -124,9 +130,10 @@ Usage examples:
         }
         notesSlide.NotesTextFrame.Text = notes;
 
-        presentation.Save(path, SaveFormat.Pptx);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
 
-        return await Task.FromResult($"Notes updated for slide {slideIndex}: {path}");
+        return await Task.FromResult($"Notes updated for slide {slideIndex}: {outputPath}");
     }
 
     /// <summary>
@@ -137,7 +144,7 @@ Usage examples:
     /// <returns>Formatted string with notes</returns>
     private async Task<string> GetNotesAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = arguments?["slideIndex"]?.GetValue<int?>();
+        var slideIndex = ArgumentHelper.GetIntNullable(arguments, "slideIndex");
 
         using var presentation = new Presentation(path);
         var sb = new StringBuilder();
@@ -187,7 +194,8 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> ClearNotesAsync(JsonObject? arguments, string path)
     {
-        var slideIndices = arguments?["slideIndices"]?.AsArray()?.Select(x => x?.GetValue<int>() ?? -1).ToArray();
+        var slideIndicesArray = ArgumentHelper.GetArray(arguments, "slideIndices", false);
+        var slideIndices = slideIndicesArray?.Select(x => x?.GetValue<int>() ?? -1).ToArray();
 
         using var presentation = new Presentation(path);
         var targets = slideIndices?.Length > 0
@@ -212,8 +220,9 @@ Usage examples:
             }
         }
 
-        presentation.Save(path, SaveFormat.Pptx);
-        return await Task.FromResult($"已清空 {targets.Length} 張投影片的講者備註");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
+        return await Task.FromResult($"Cleared speaker notes for {targets.Length} slides");
     }
 }
 

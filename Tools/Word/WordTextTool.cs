@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Aspose.Words;
@@ -19,11 +19,11 @@ public class WordTextTool : IAsposeTool
 Usage examples:
 - Add text: word_text(operation='add', path='doc.docx', text='Hello World')
 - Add formatted text: word_text(operation='add', path='doc.docx', text='Bold text', bold=true)
-- Replace text: word_text(operation='replace', path='doc.docx', searchText='old', replaceText='new')
+- Replace text: word_text(operation='replace', path='doc.docx', find='old', replace='new')
 - Search text: word_text(operation='search', path='doc.docx', searchText='keyword')
 - Format text: word_text(operation='format', path='doc.docx', paragraphIndex=0, runIndex=0, bold=true)
 - Insert at position: word_text(operation='insert_at_position', path='doc.docx', paragraphIndex=0, runIndex=0, text='Inserted')
-- Delete text: word_text(operation='delete', path='doc.docx', searchText='text to delete')
+- Delete text: word_text(operation='delete', path='doc.docx', searchText='text to delete') or word_text(operation='delete', path='doc.docx', startParagraphIndex=0, endParagraphIndex=0)
 - Delete range: word_text(operation='delete_range', path='doc.docx', startParagraphIndex=0, startRunIndex=0, endParagraphIndex=0, endRunIndex=5)";
 
     public object InputSchema => new
@@ -36,8 +36,8 @@ Usage examples:
                 type = "string",
                 description = @"Operation to perform.
 - 'add': Add text at document end (required params: path, text)
-- 'delete': Delete text matching searchText (required params: path, searchText)
-- 'replace': Replace text (required params: path, searchText, replaceText)
+- 'delete': Delete text (required params: path, searchText OR startParagraphIndex+endParagraphIndex)
+- 'replace': Replace text (required params: path, find, replace)
 - 'search': Search for text (required params: path, searchText)
 - 'format': Format existing text (required params: path, paragraphIndex, runIndex)
 - 'insert_at_position': Insert text at specific position (required params: path, paragraphIndex, runIndex, text)
@@ -65,7 +65,7 @@ Usage examples:
             fontName = new
             {
                 type = "string",
-                description = "Font name (optional, e.g., 'Arial', '微軟雅黑')"
+                description = "Font name (optional, e.g., 'Arial')"
             },
             fontNameAscii = new
             {
@@ -75,7 +75,7 @@ Usage examples:
             fontNameFarEast = new
             {
                 type = "string",
-                description = "Font name for Far East characters (Chinese/Japanese/Korean, e.g., '標楷體')"
+                description = "Font name for Far East characters (Chinese/Japanese/Korean, optional)"
             },
             fontSize = new
             {
@@ -143,7 +143,7 @@ Usage examples:
             searchText = new
             {
                 type = "string",
-                description = "Text to search for (required for search operation)"
+                description = "Text to search for (required for search operation, optional for delete operation as alternative to startParagraphIndex+endParagraphIndex)"
             },
             caseSensitive = new
             {
@@ -164,7 +164,7 @@ Usage examples:
             startParagraphIndex = new
             {
                 type = "number",
-                description = "Start paragraph index (0-based, required for delete operation)"
+                description = "Start paragraph index (0-based, required for delete operation if searchText is not provided)"
             },
             startRunIndex = new
             {
@@ -174,7 +174,7 @@ Usage examples:
             endParagraphIndex = new
             {
                 type = "number",
-                description = "End paragraph index (0-based, inclusive, required for delete operation)"
+                description = "End paragraph index (0-based, inclusive, required for delete operation if searchText is not provided)"
             },
             endRunIndex = new
             {
@@ -228,7 +228,7 @@ Usage examples:
             styleName = new
             {
                 type = "string",
-                description = "Style name to apply (e.g., 'Heading 1', '標題1', 'Normal', optional, for add_with_style operation)"
+                description = "Style name to apply (e.g., 'Heading 1', 'Normal', optional, for add_with_style operation)"
             },
             alignment = new
             {
@@ -277,9 +277,9 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         return operation switch
@@ -305,16 +305,16 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> AddTextAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var text = ArgumentHelper.GetString(arguments, "text", "text");
-        var fontName = arguments?["fontName"]?.GetValue<string>();
-        var fontSize = arguments?["fontSize"]?.GetValue<double>();
-        var bold = arguments?["bold"]?.GetValue<bool>() ?? false;
-        var italic = arguments?["italic"]?.GetValue<bool>() ?? false;
-        var underline = arguments?["underline"]?.GetValue<string>();
-        var color = arguments?["color"]?.GetValue<string>();
-        var strikethrough = arguments?["strikethrough"]?.GetValue<bool>() ?? false;
-        var superscript = arguments?["superscript"]?.GetValue<bool>() ?? false;
-        var subscript = arguments?["subscript"]?.GetValue<bool>() ?? false;
+        var text = ArgumentHelper.GetString(arguments, "text");
+        var fontName = ArgumentHelper.GetStringNullable(arguments, "fontName");
+        var fontSize = ArgumentHelper.GetDoubleNullable(arguments, "fontSize");
+        var bold = ArgumentHelper.GetBool(arguments, "bold", false);
+        var italic = ArgumentHelper.GetBool(arguments, "italic", false);
+        var underline = ArgumentHelper.GetStringNullable(arguments, "underline");
+        var color = ArgumentHelper.GetStringNullable(arguments, "color");
+        var strikethrough = ArgumentHelper.GetBool(arguments, "strikethrough", false);
+        var superscript = ArgumentHelper.GetBool(arguments, "superscript", false);
+        var subscript = ArgumentHelper.GetBool(arguments, "subscript", false);
 
         var doc = new Document(path);
         
@@ -539,19 +539,19 @@ Usage examples:
         doc.Save(outputPath);
 
         var formatInfo = new List<string>();
-        if (bold) formatInfo.Add("粗體");
-        if (italic) formatInfo.Add("斜體");
-        if (!string.IsNullOrEmpty(underline) && underline != "none") formatInfo.Add($"底線({underline})");
-        if (strikethrough) formatInfo.Add("刪除線");
-        if (superscript) formatInfo.Add("上標");
-        if (subscript) formatInfo.Add("下標");
+        if (bold) formatInfo.Add("bold");
+        if (italic) formatInfo.Add("italic");
+        if (!string.IsNullOrEmpty(underline) && underline != "none") formatInfo.Add($"underline({underline})");
+        if (strikethrough) formatInfo.Add("strikethrough");
+        if (superscript) formatInfo.Add("superscript");
+        if (subscript) formatInfo.Add("subscript");
         
-        var result = $"成功添加文字到文檔\n";
+        var result = $"Text added to document successfully\n";
         if (formatInfo.Count > 0)
         {
-            result += $"應用格式: {string.Join(", ", formatInfo)}\n";
+            result += $"Applied formats: {string.Join(", ", formatInfo)}\n";
         }
-        result += $"輸出: {outputPath}";
+        result += $"Output: {outputPath}";
 
         return await Task.FromResult(result);
     }
@@ -565,11 +565,11 @@ Usage examples:
     /// <returns>Success message with deletion count</returns>
     private async Task<string> DeleteTextAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var searchText = arguments?["searchText"]?.GetValue<string>();
-        var startParagraphIndex = arguments?["startParagraphIndex"]?.GetValue<int?>();
-        var startRunIndex = arguments?["startRunIndex"]?.GetValue<int>() ?? 0;
-        var endParagraphIndex = arguments?["endParagraphIndex"]?.GetValue<int?>();
-        var endRunIndex = arguments?["endRunIndex"]?.GetValue<int?>();
+        var searchText = ArgumentHelper.GetStringNullable(arguments, "searchText");
+        var startParagraphIndex = ArgumentHelper.GetIntNullable(arguments, "startParagraphIndex");
+        var startRunIndex = ArgumentHelper.GetInt(arguments, "startRunIndex", 0);
+        var endParagraphIndex = ArgumentHelper.GetIntNullable(arguments, "endParagraphIndex");
+        var endRunIndex = ArgumentHelper.GetIntNullable(arguments, "endRunIndex");
 
         var doc = new Document(path);
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
@@ -638,7 +638,7 @@ Usage examples:
             
             if (!found)
             {
-                throw new ArgumentException($"未找到文字 '{searchText}'。請使用 search 操作先確認文字位置。");
+                throw new ArgumentException($"Text '{searchText}' not found. Please use search operation to confirm text location first.");
             }
         }
         else
@@ -652,14 +652,14 @@ Usage examples:
         
         if (!startParagraphIndex.HasValue || !endParagraphIndex.HasValue)
         {
-            throw new ArgumentException("無法確定段落索引");
+            throw new ArgumentException("Unable to determine paragraph index");
         }
         
         if (startParagraphIndex.Value < 0 || startParagraphIndex.Value >= paragraphs.Count ||
             endParagraphIndex.Value < 0 || endParagraphIndex.Value >= paragraphs.Count ||
             startParagraphIndex.Value > endParagraphIndex.Value)
         {
-            throw new ArgumentException($"段落索引超出範圍 (文檔共有 {paragraphs.Count} 個段落)");
+            throw new ArgumentException($"Paragraph index is out of range (document has {paragraphs.Count} paragraphs)");
         }
         
         var startPara = paragraphs[startParagraphIndex.Value] as Paragraph;
@@ -667,7 +667,7 @@ Usage examples:
         
         if (startPara == null || endPara == null)
         {
-            throw new InvalidOperationException("無法找到指定的段落");
+            throw new InvalidOperationException("Unable to find specified paragraph");
         }
         
         // Get deleted text preview before deletion
@@ -788,17 +788,17 @@ Usage examples:
         
         string preview = deletedText.Length > 50 ? deletedText.Substring(0, 50) + "..." : deletedText;
         
-        var result = $"成功刪除文字\n";
+        var result = $"Text deleted successfully\n";
         if (!string.IsNullOrEmpty(searchText))
         {
-            result += $"刪除文字: {searchText}\n";
+            result += $"Deleted text: {searchText}\n";
         }
-        result += $"範圍: 段落 {startParagraphIndex.Value} Run {startRunIndex} 到 段落 {endParagraphIndex.Value} Run {endRunIndex ?? -1}\n";
+        result += $"Range: Paragraph {startParagraphIndex.Value} Run {startRunIndex} to Paragraph {endParagraphIndex.Value} Run {endRunIndex ?? -1}\n";
         if (!string.IsNullOrEmpty(preview))
         {
-            result += $"刪除內容預覽: {preview}\n";
+            result += $"Deleted content preview: {preview}\n";
         }
-        result += $"輸出: {outputPath}";
+        result += $"Output: {outputPath}";
         
         return await Task.FromResult(result);
     }
@@ -812,10 +812,10 @@ Usage examples:
     /// <returns>Success message with replacement count</returns>
     private async Task<string> ReplaceTextAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var find = ArgumentHelper.GetString(arguments, "find", "find");
-        var replace = ArgumentHelper.GetString(arguments, "replace", "replace");
-        var useRegex = arguments?["useRegex"]?.GetValue<bool>() ?? false;
-        var replaceInFields = arguments?["replaceInFields"]?.GetValue<bool>() ?? false;
+        var find = ArgumentHelper.GetString(arguments, "find");
+        var replace = ArgumentHelper.GetString(arguments, "replace");
+        var useRegex = ArgumentHelper.GetBool(arguments, "useRegex", false);
+        var replaceInFields = ArgumentHelper.GetBool(arguments, "replaceInFields", false);
 
         var doc = new Document(path);
         
@@ -854,11 +854,11 @@ Usage examples:
     /// <returns>Formatted string with search results</returns>
     private async Task<string> SearchTextAsync(JsonObject? arguments, string path)
     {
-        var searchText = ArgumentHelper.GetString(arguments, "searchText", "searchText");
-        var useRegex = arguments?["useRegex"]?.GetValue<bool>() ?? false;
-        var caseSensitive = arguments?["caseSensitive"]?.GetValue<bool>() ?? false;
-        var maxResults = arguments?["maxResults"]?.GetValue<int>() ?? 50;
-        var contextLength = arguments?["contextLength"]?.GetValue<int>() ?? 50;
+        var searchText = ArgumentHelper.GetString(arguments, "searchText");
+        var useRegex = ArgumentHelper.GetBool(arguments, "useRegex", false);
+        var caseSensitive = ArgumentHelper.GetBool(arguments, "caseSensitive", false);
+        var maxResults = ArgumentHelper.GetInt(arguments, "maxResults", 50);
+        var contextLength = ArgumentHelper.GetInt(arguments, "contextLength", 50);
 
         var doc = new Document(path);
         var result = new StringBuilder();
@@ -903,25 +903,25 @@ Usage examples:
             }
         }
 
-        result.AppendLine($"=== 搜尋結果 ===");
-        result.AppendLine($"搜尋文字: {searchText}");
-        result.AppendLine($"使用正則表達式: {(useRegex ? "是" : "否")}");
-        result.AppendLine($"區分大小寫: {(caseSensitive ? "是" : "否")}");
-        result.AppendLine($"找到 {matches.Count} 個匹配項{(matches.Count >= maxResults ? $" (限制前 {maxResults} 個)" : "")}\n");
+        result.AppendLine($"=== Search Results ===");
+        result.AppendLine($"Search text: {searchText}");
+        result.AppendLine($"Use regex: {(useRegex ? "Yes" : "No")}");
+        result.AppendLine($"Case sensitive: {(caseSensitive ? "Yes" : "No")}");
+        result.AppendLine($"Found {matches.Count} matches{(matches.Count >= maxResults ? $" (limited to first {maxResults})" : "")}\n");
 
         if (matches.Count == 0)
         {
-            result.AppendLine("未找到匹配的文字");
+            result.AppendLine("No matching text found");
         }
         else
         {
             for (int i = 0; i < matches.Count; i++)
             {
                 var match = matches[i];
-                result.AppendLine($"匹配 #{i + 1}:");
-                result.AppendLine($"  位置: 段落 #{match.paragraphIndex}");
-                result.AppendLine($"  匹配文字: {match.text}");
-                result.AppendLine($"  上下文: ...{match.context}...");
+                result.AppendLine($"Match #{i + 1}:");
+                result.AppendLine($"  Location: Paragraph #{match.paragraphIndex}");
+                result.AppendLine($"  Matched text: {match.text}");
+                result.AppendLine($"  Context: ...{match.context}...");
                 result.AppendLine();
             }
         }
@@ -960,20 +960,20 @@ Usage examples:
     /// <returns>Success message with format count</returns>
     private async Task<string> FormatTextAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex", "paragraphIndex");
-        var runIndex = arguments?["runIndex"]?.GetValue<int?>();
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>() ?? 0;
-        var fontName = arguments?["fontName"]?.GetValue<string>();
-        var fontNameAscii = arguments?["fontNameAscii"]?.GetValue<string>();
-        var fontNameFarEast = arguments?["fontNameFarEast"]?.GetValue<string>();
-        var fontSize = arguments?["fontSize"]?.GetValue<double?>();
-        var bold = arguments?["bold"]?.GetValue<bool?>();
-        var italic = arguments?["italic"]?.GetValue<bool?>();
-        var underline = arguments?["underline"]?.GetValue<string>();
-        var color = arguments?["color"]?.GetValue<string>();
-        var strikethrough = arguments?["strikethrough"]?.GetValue<bool?>();
-        var superscript = arguments?["superscript"]?.GetValue<bool?>();
-        var subscript = arguments?["subscript"]?.GetValue<bool?>();
+        var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex");
+        var runIndex = ArgumentHelper.GetIntNullable(arguments, "runIndex");
+        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
+        var fontName = ArgumentHelper.GetStringNullable(arguments, "fontName");
+        var fontNameAscii = ArgumentHelper.GetStringNullable(arguments, "fontNameAscii");
+        var fontNameFarEast = ArgumentHelper.GetStringNullable(arguments, "fontNameFarEast");
+        var fontSize = ArgumentHelper.GetDoubleNullable(arguments, "fontSize");
+        var bold = ArgumentHelper.GetBoolNullable(arguments, "bold");
+        var italic = ArgumentHelper.GetBoolNullable(arguments, "italic");
+        var underline = ArgumentHelper.GetStringNullable(arguments, "underline");
+        var color = ArgumentHelper.GetStringNullable(arguments, "color");
+        var strikethrough = ArgumentHelper.GetBoolNullable(arguments, "strikethrough");
+        var superscript = ArgumentHelper.GetBoolNullable(arguments, "superscript");
+        var subscript = ArgumentHelper.GetBoolNullable(arguments, "subscript");
 
         var doc = new Document(path);
         
@@ -981,7 +981,7 @@ Usage examples:
         // This ensures consistent indexing between format and get operations
         if (sectionIndex < 0 || sectionIndex >= doc.Sections.Count)
         {
-            throw new ArgumentException($"sectionIndex {sectionIndex} 超出範圍 (文檔共有 {doc.Sections.Count} 個節)");
+            throw new ArgumentException($"sectionIndex {sectionIndex} is out of range (document has {doc.Sections.Count} sections)");
         }
         
         var section = doc.Sections[sectionIndex];
@@ -989,7 +989,7 @@ Usage examples:
         
         if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
         {
-            throw new ArgumentException($"段落索引 {paragraphIndex} 超出範圍 (節 {sectionIndex} 的正文共有 {paragraphs.Count} 個段落)");
+            throw new ArgumentException($"Paragraph index {paragraphIndex} is out of range (section {sectionIndex} body has {paragraphs.Count} paragraphs)");
         }
         
         var para = paragraphs[paragraphIndex];
@@ -1002,7 +1002,7 @@ Usage examples:
             runs = para.GetChildNodes(NodeType.Run, false);
             if (runs == null || runs.Count == 0)
             {
-                throw new InvalidOperationException($"段落 #{paragraphIndex} 中沒有 Run 節點，且無法創建新的 Run 節點");
+                throw new InvalidOperationException($"Paragraph #{paragraphIndex} has no Run nodes and cannot create new Run node");
             }
         }
         
@@ -1013,7 +1013,7 @@ Usage examples:
         {
             if (runIndex.Value < 0 || runIndex.Value >= runs.Count)
             {
-                throw new ArgumentException($"Run 索引 {runIndex.Value} 超出範圍 (段落共有 {runs.Count} 個 Run)");
+                throw new ArgumentException($"Run index {runIndex.Value} is out of range (paragraph has {runs.Count} Runs)");
             }
             var run = runs[runIndex.Value] as Run;
             if (run != null)
@@ -1072,13 +1072,13 @@ Usage examples:
             if (!string.IsNullOrEmpty(fontNameAscii))
             {
                 run.Font.NameAscii = fontNameAscii;
-                changes.Add($"字型（英文）: {fontNameAscii}");
+                changes.Add($"Font (ASCII): {fontNameAscii}");
             }
             
             if (!string.IsNullOrEmpty(fontNameFarEast))
             {
                 run.Font.NameFarEast = fontNameFarEast;
-                changes.Add($"字型（中文）: {fontNameFarEast}");
+                changes.Add($"Font (Far East): {fontNameFarEast}");
             }
             
             if (!string.IsNullOrEmpty(fontName))
@@ -1086,7 +1086,7 @@ Usage examples:
                 if (string.IsNullOrEmpty(fontNameAscii) && string.IsNullOrEmpty(fontNameFarEast))
                 {
                     run.Font.Name = fontName;
-                    changes.Add($"字型: {fontName}");
+                    changes.Add($"Font: {fontName}");
                 }
                 else
                 {
@@ -1100,20 +1100,20 @@ Usage examples:
             if (fontSize.HasValue)
             {
                 run.Font.Size = fontSize.Value;
-                changes.Add($"字型大小: {fontSize.Value} 點");
+                changes.Add($"Font size: {fontSize.Value} points");
             }
             
             // Apply bold/italic - ensure they are set correctly
             if (bold.HasValue)
             {
                 run.Font.Bold = bold.Value;
-                changes.Add($"粗體: {(bold.Value ? "是" : "否")}");
+                changes.Add($"Bold: {(bold.Value ? "Yes" : "No")}");
             }
             
             if (italic.HasValue)
             {
                 run.Font.Italic = italic.Value;
-                changes.Add($"斜體: {(italic.Value ? "是" : "否")}");
+                changes.Add($"Italic: {(italic.Value ? "Yes" : "No")}");
             }
             
             // Apply underline - ensure it's set correctly
@@ -1128,7 +1128,7 @@ Usage examples:
                     "none" => Underline.None,
                     _ => Underline.None
                 };
-                changes.Add($"底線: {underline}");
+                changes.Add($"Underline: {underline}");
             }
             
             if (!string.IsNullOrEmpty(color))
@@ -1137,7 +1137,7 @@ Usage examples:
                 {
                     run.Font.Color = ColorHelper.ParseColor(color);
                     var colorValue = color.TrimStart('#');
-                    changes.Add($"顏色: {(colorValue.Length == 6 ? "#" : "")}{colorValue}");
+                    changes.Add($"Color: {(colorValue.Length == 6 ? "#" : "")}{colorValue}");
                 }
                 catch
                 {
@@ -1149,44 +1149,44 @@ Usage examples:
             if (strikethrough.HasValue)
             {
                 run.Font.StrikeThrough = strikethrough.Value;
-                changes.Add($"刪除線: {(strikethrough.Value ? "是" : "否")}");
+                changes.Add($"Strikethrough: {(strikethrough.Value ? "Yes" : "No")}");
             }
             
             // Apply superscript/subscript (already cleared conflicting ones above)
             if (superscript.HasValue)
             {
                 run.Font.Superscript = superscript.Value;
-                changes.Add($"上標: {(superscript.Value ? "是" : "否")}");
+                changes.Add($"Superscript: {(superscript.Value ? "Yes" : "No")}");
             }
             
             if (subscript.HasValue)
             {
                 run.Font.Subscript = subscript.Value;
-                changes.Add($"下標: {(subscript.Value ? "是" : "否")}");
+                changes.Add($"Subscript: {(subscript.Value ? "Yes" : "No")}");
             }
         }
         
         doc.Save(outputPath);
         
-        var result = $"成功設定 Run 層級格式\n";
-        result += $"段落索引: {paragraphIndex}\n";
+        var result = $"Run-level formatting set successfully\n";
+        result += $"Paragraph index: {paragraphIndex}\n";
         if (runIndex.HasValue)
         {
-            result += $"Run 索引: {runIndex.Value}\n";
+            result += $"Run index: {runIndex.Value}\n";
         }
         else
         {
-            result += $"格式化的 Run 數: {runsToFormat.Count}\n";
+            result += $"Formatted Runs: {runsToFormat.Count}\n";
         }
         if (changes.Count > 0)
         {
-            result += $"變更內容: {string.Join("、", changes.Distinct())}\n";
+            result += $"Changes: {string.Join(", ", changes.Distinct())}\n";
         }
         else
         {
-            result += "未提供變更參數\n";
+            result += "No change parameters provided\n";
         }
-        result += $"輸出: {outputPath}";
+        result += $"Output: {outputPath}";
         
         return await Task.FromResult(result);
     }
@@ -1200,11 +1200,11 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> InsertTextAtPositionAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var paragraphIndex = ArgumentHelper.GetInt(arguments, "insertParagraphIndex", "insertParagraphIndex");
-        var charIndex = ArgumentHelper.GetInt(arguments, "charIndex", "charIndex");
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>();
-        var text = ArgumentHelper.GetString(arguments, "text", "text");
-        var insertBefore = arguments?["insertBefore"]?.GetValue<bool?>() ?? false;
+        var paragraphIndex = ArgumentHelper.GetInt(arguments, "insertParagraphIndex");
+        var charIndex = ArgumentHelper.GetInt(arguments, "charIndex");
+        var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
+        var text = ArgumentHelper.GetString(arguments, "text");
+        var insertBefore = ArgumentHelper.GetBool(arguments, "insertBefore", false);
 
         var doc = new Document(path);
         var sectionIdx = sectionIndex ?? 0;
@@ -1264,11 +1264,11 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> DeleteTextRangeAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var startParagraphIndex = ArgumentHelper.GetInt(arguments, "startParagraphIndex", "startParagraphIndex");
-        var startCharIndex = ArgumentHelper.GetInt(arguments, "startCharIndex", "startCharIndex");
-        var endParagraphIndex = ArgumentHelper.GetInt(arguments, "endParagraphIndex", "endParagraphIndex");
-        var endCharIndex = ArgumentHelper.GetInt(arguments, "endCharIndex", "endCharIndex");
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>();
+        var startParagraphIndex = ArgumentHelper.GetInt(arguments, "startParagraphIndex");
+        var startCharIndex = ArgumentHelper.GetInt(arguments, "startCharIndex");
+        var endParagraphIndex = ArgumentHelper.GetInt(arguments, "endParagraphIndex");
+        var endCharIndex = ArgumentHelper.GetInt(arguments, "endCharIndex");
+        var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
 
         var doc = new Document(path);
         var sectionIdx = sectionIndex ?? 0;
@@ -1376,22 +1376,22 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> AddTextWithStyleAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var text = ArgumentHelper.GetString(arguments, "text", "text");
-        var styleName = arguments?["styleName"]?.GetValue<string>();
-        var fontName = arguments?["fontName"]?.GetValue<string>();
-        var fontNameAscii = arguments?["fontNameAscii"]?.GetValue<string>();
-        var fontNameFarEast = arguments?["fontNameFarEast"]?.GetValue<string>();
-        var fontSize = arguments?["fontSize"]?.GetValue<double?>();
-        var bold = arguments?["bold"]?.GetValue<bool?>();
-        var italic = arguments?["italic"]?.GetValue<bool?>();
-        var underline = arguments?["underline"]?.GetValue<bool?>();
-        var color = arguments?["color"]?.GetValue<string>();
-        var alignment = arguments?["alignment"]?.GetValue<string>();
-        var indentLevel = arguments?["indentLevel"]?.GetValue<int?>();
-        var leftIndent = arguments?["leftIndent"]?.GetValue<double?>();
-        var firstLineIndent = arguments?["firstLineIndent"]?.GetValue<double?>();
-        var tabStops = arguments?["tabStops"]?.AsArray();
-        var paragraphIndex = arguments?["paragraphIndexForAdd"]?.GetValue<int?>();
+        var text = ArgumentHelper.GetString(arguments, "text");
+        var styleName = ArgumentHelper.GetStringNullable(arguments, "styleName");
+        var fontName = ArgumentHelper.GetStringNullable(arguments, "fontName");
+        var fontNameAscii = ArgumentHelper.GetStringNullable(arguments, "fontNameAscii");
+        var fontNameFarEast = ArgumentHelper.GetStringNullable(arguments, "fontNameFarEast");
+        var fontSize = ArgumentHelper.GetDoubleNullable(arguments, "fontSize");
+        var bold = ArgumentHelper.GetBoolNullable(arguments, "bold");
+        var italic = ArgumentHelper.GetBoolNullable(arguments, "italic");
+        var underline = ArgumentHelper.GetBoolNullable(arguments, "underline");
+        var color = ArgumentHelper.GetStringNullable(arguments, "color");
+        var alignment = ArgumentHelper.GetStringNullable(arguments, "alignment");
+        var indentLevel = ArgumentHelper.GetIntNullable(arguments, "indentLevel");
+        var leftIndent = ArgumentHelper.GetDoubleNullable(arguments, "leftIndent");
+        var firstLineIndent = ArgumentHelper.GetDoubleNullable(arguments, "firstLineIndent");
+        var tabStops = ArgumentHelper.GetArray(arguments, "tabStops", false);
+        var paragraphIndex = ArgumentHelper.GetIntNullable(arguments, "paragraphIndexForAdd");
 
         var doc = new Document(path);
         var builder = new DocumentBuilder(doc);
@@ -1421,12 +1421,12 @@ Usage examples:
                 }
                 else
                 {
-                    throw new InvalidOperationException($"無法找到索引 {paragraphIndex.Value} 的段落");
+                    throw new InvalidOperationException($"Unable to find paragraph at index {paragraphIndex.Value}");
                 }
             }
             else
             {
-                throw new ArgumentException($"段落索引 {paragraphIndex.Value} 超出範圍 (文檔共有 {paragraphs.Count} 個段落)");
+                throw new ArgumentException($"Paragraph index {paragraphIndex.Value} is out of range (document has {paragraphs.Count} paragraphs)");
             }
         }
         else
@@ -1445,10 +1445,10 @@ Usage examples:
         string warningMessage = "";
         if (!string.IsNullOrEmpty(styleName) && hasCustomParams)
         {
-            warningMessage = "\n⚠️ 注意: 同時使用 styleName 和自訂參數時，自訂參數會覆蓋樣式中對應的屬性。\n" +
-                           "這允許您在應用樣式的同時自訂特定屬性。\n" +
-                           "如果需要完全自訂的樣式，建議使用 word_create_style 創建自訂樣式。\n" +
-                           "範例: word_create_style(styleName='自訂標題', baseStyle='Heading 1', color='000000')";
+            warningMessage = "\n⚠️ Note: When using both styleName and custom parameters, custom parameters will override corresponding properties in the style.\n" +
+                           "This allows you to customize specific properties while applying a style.\n" +
+                           "If you need a fully custom style, it is recommended to use word_create_style to create a custom style.\n" +
+                           "Example: word_create_style(styleName='Custom Heading', baseStyle='Heading 1', color='000000')";
         }
 
         if (!string.IsNullOrEmpty(styleName))
@@ -1462,12 +1462,12 @@ Usage examples:
                 }
                 else
                 {
-                    throw new ArgumentException($"找不到樣式 '{styleName}'，可用樣式請使用 word_get_styles 工具查看");
+                    throw new ArgumentException($"Style '{styleName}' not found. Use word_get_styles tool to view available styles");
                 }
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"無法應用樣式 '{styleName}': {ex.Message}，可用樣式請使用 word_get_styles 工具查看", ex);
+                throw new InvalidOperationException($"Unable to apply style '{styleName}': {ex.Message}. Use word_get_styles tool to view available styles", ex);
             }
         }
         
@@ -1595,45 +1595,45 @@ Usage examples:
 
         doc.Save(outputPath);
 
-        var result = "成功添加文本\n";
+        var result = "Text added successfully\n";
         if (paragraphIndex.HasValue)
         {
             if (paragraphIndex.Value == -1)
             {
-                result += "插入位置: 文檔開頭\n";
+                result += "Insert position: beginning of document\n";
             }
             else
             {
-                result += $"插入位置: 段落 #{paragraphIndex.Value} 之後\n";
+                result += $"Insert position: after paragraph #{paragraphIndex.Value}\n";
             }
         }
         else
         {
-            result += "插入位置: 文檔末尾\n";
+            result += "Insert position: end of document\n";
         }
         
         if (!string.IsNullOrEmpty(styleName))
         {
-            result += $"應用樣式: {styleName}\n";
+            result += $"Applied style: {styleName}\n";
         }
         else
         {
-            result += "自定義格式:\n";
-            if (!string.IsNullOrEmpty(fontNameAscii)) result += $"  字體（英文）: {fontNameAscii}\n";
-            if (!string.IsNullOrEmpty(fontNameFarEast)) result += $"  字體（中文）: {fontNameFarEast}\n";
+            result += "Custom formatting:\n";
+            if (!string.IsNullOrEmpty(fontNameAscii)) result += $"  Font (ASCII): {fontNameAscii}\n";
+            if (!string.IsNullOrEmpty(fontNameFarEast)) result += $"  Font (Far East): {fontNameFarEast}\n";
             if (!string.IsNullOrEmpty(fontName) && string.IsNullOrEmpty(fontNameAscii) && string.IsNullOrEmpty(fontNameFarEast)) 
-                result += $"  字體: {fontName}\n";
-            if (fontSize.HasValue) result += $"  字號: {fontSize.Value} pt\n";
-            if (bold.HasValue && bold.Value) result += $"  粗體\n";
-            if (italic.HasValue && italic.Value) result += $"  斜體\n";
-            if (underline.HasValue && underline.Value) result += $"  底線\n";
-            if (!string.IsNullOrEmpty(color)) result += $"  顏色: {color}\n";
-            if (!string.IsNullOrEmpty(alignment)) result += $"  對齊: {alignment}\n";
+                result += $"  Font: {fontName}\n";
+            if (fontSize.HasValue) result += $"  Font size: {fontSize.Value} pt\n";
+            if (bold.HasValue && bold.Value) result += $"  Bold\n";
+            if (italic.HasValue && italic.Value) result += $"  Italic\n";
+            if (underline.HasValue && underline.Value) result += $"  Underline\n";
+            if (!string.IsNullOrEmpty(color)) result += $"  Color: {color}\n";
+            if (!string.IsNullOrEmpty(alignment)) result += $"  Alignment: {alignment}\n";
         }
-        if (indentLevel.HasValue) result += $"縮排級別: {indentLevel.Value} ({indentLevel.Value * 36} pt)\n";
-        else if (leftIndent.HasValue) result += $"左縮排: {leftIndent.Value} pt\n";
-        if (firstLineIndent.HasValue) result += $"首行縮排: {firstLineIndent.Value} pt\n";
-        result += $"輸出: {outputPath}";
+        if (indentLevel.HasValue) result += $"Indent level: {indentLevel.Value} ({indentLevel.Value * 36} pt)\n";
+        else if (leftIndent.HasValue) result += $"Left indent: {leftIndent.Value} pt\n";
+        if (firstLineIndent.HasValue) result += $"First line indent: {firstLineIndent.Value} pt\n";
+        result += $"Output: {outputPath}";
         
         result += warningMessage;
 

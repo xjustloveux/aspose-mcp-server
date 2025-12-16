@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using AsposeMcpServer.Core;
@@ -170,7 +170,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
 
         return operation.ToLower() switch
         {
@@ -190,8 +190,8 @@ Usage examples:
     private async Task<string> GetStyles(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        SecurityHelper.ValidateFilePath(path, "path");
-        var includeBuiltIn = arguments?["includeBuiltIn"]?.GetValue<bool>() ?? false;
+        SecurityHelper.ValidateFilePath(path);
+        var includeBuiltIn = ArgumentHelper.GetBool(arguments, "includeBuiltIn", false);
 
         var doc = new Document(path);
         var result = new StringBuilder();
@@ -280,24 +280,24 @@ Usage examples:
     private async Task<string> CreateStyle(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        SecurityHelper.ValidateFilePath(path, "path");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        SecurityHelper.ValidateFilePath(path);
+        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var styleName = ArgumentHelper.GetString(arguments, "styleName", "styleName");
-        var styleTypeStr = arguments?["styleType"]?.GetValue<string>() ?? "paragraph";
-        var baseStyle = arguments?["baseStyle"]?.GetValue<string>();
-        var fontName = arguments?["fontName"]?.GetValue<string>();
-        var fontNameAscii = arguments?["fontNameAscii"]?.GetValue<string>();
-        var fontNameFarEast = arguments?["fontNameFarEast"]?.GetValue<string>();
-        var fontSize = arguments?["fontSize"]?.GetValue<double?>();
-        var bold = arguments?["bold"]?.GetValue<bool?>();
-        var italic = arguments?["italic"]?.GetValue<bool?>();
-        var underline = arguments?["underline"]?.GetValue<bool?>();
-        var color = arguments?["color"]?.GetValue<string>();
-        var alignment = arguments?["alignment"]?.GetValue<string>();
-        var spaceBefore = arguments?["spaceBefore"]?.GetValue<double?>();
-        var spaceAfter = arguments?["spaceAfter"]?.GetValue<double?>();
-        var lineSpacing = arguments?["lineSpacing"]?.GetValue<double?>();
+        var styleName = ArgumentHelper.GetString(arguments, "styleName");
+        var styleTypeStr = ArgumentHelper.GetString(arguments, "styleType", "paragraph");
+        var baseStyle = ArgumentHelper.GetStringNullable(arguments, "baseStyle");
+        var fontName = ArgumentHelper.GetStringNullable(arguments, "fontName");
+        var fontNameAscii = ArgumentHelper.GetStringNullable(arguments, "fontNameAscii");
+        var fontNameFarEast = ArgumentHelper.GetStringNullable(arguments, "fontNameFarEast");
+        var fontSize = ArgumentHelper.GetDoubleNullable(arguments, "fontSize");
+        var bold = ArgumentHelper.GetBoolNullable(arguments, "bold");
+        var italic = ArgumentHelper.GetBoolNullable(arguments, "italic");
+        var underline = ArgumentHelper.GetBoolNullable(arguments, "underline");
+        var color = ArgumentHelper.GetStringNullable(arguments, "color");
+        var alignment = ArgumentHelper.GetStringNullable(arguments, "alignment");
+        var spaceBefore = ArgumentHelper.GetDoubleNullable(arguments, "spaceBefore");
+        var spaceAfter = ArgumentHelper.GetDoubleNullable(arguments, "spaceAfter");
+        var lineSpacing = ArgumentHelper.GetDoubleNullable(arguments, "lineSpacing");
 
         var doc = new Document(path);
 
@@ -360,7 +360,7 @@ Usage examples:
             }
             catch (Exception colorEx)
             {
-                throw new ArgumentException($"無法解析顏色 '{color}': {colorEx.Message}。請使用有效的顏色格式（如 #FF0000 或 red）");
+                throw new ArgumentException($"Unable to parse color '{color}': {colorEx.Message}. Please use a valid color format (e.g., #FF0000 or red)");
             }
         }
 
@@ -402,15 +402,15 @@ Usage examples:
     private async Task<string> ApplyStyle(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        SecurityHelper.ValidateFilePath(path, "path");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        SecurityHelper.ValidateFilePath(path);
+        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var styleName = ArgumentHelper.GetString(arguments, "styleName", "styleName");
-        var paragraphIndex = arguments?["paragraphIndex"]?.GetValue<int?>();
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>();
-        var paragraphIndicesArray = arguments?["paragraphIndices"]?.AsArray();
-        var tableIndex = arguments?["tableIndex"]?.GetValue<int?>();
-        var applyToAllParagraphs = arguments?["applyToAllParagraphs"]?.GetValue<bool?>() ?? false;
+        var styleName = ArgumentHelper.GetString(arguments, "styleName");
+        var paragraphIndex = ArgumentHelper.GetIntNullable(arguments, "paragraphIndex");
+        var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
+        var paragraphIndicesArray = ArgumentHelper.GetArray(arguments, "paragraphIndices", false);
+        var tableIndex = ArgumentHelper.GetIntNullable(arguments, "tableIndex");
+        var applyToAllParagraphs = ArgumentHelper.GetBool(arguments, "applyToAllParagraphs", false);
 
         var doc = new Document(path);
         var style = doc.Styles[styleName];
@@ -465,7 +465,7 @@ Usage examples:
             var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
             
             if (paragraphIndex.Value < 0 || paragraphIndex.Value >= paragraphs.Count)
-                throw new ArgumentException($"paragraphIndex must be between 0 and {paragraphs.Count - 1} (節 {sectionIdx} 共有 {paragraphs.Count} 個段落，總文檔段落數: {doc.GetChildNodes(NodeType.Paragraph, true).Count})");
+                throw new ArgumentException($"paragraphIndex must be between 0 and {paragraphs.Count - 1} (section {sectionIdx} has {paragraphs.Count} paragraphs, total document paragraphs: {doc.GetChildNodes(NodeType.Paragraph, true).Count})");
 
             paragraphs[paragraphIndex.Value].ParagraphFormat.Style = style;
             appliedCount = 1;
@@ -487,12 +487,12 @@ Usage examples:
     private async Task<string> CopyStyles(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        SecurityHelper.ValidateFilePath(path, "path");
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        SecurityHelper.ValidateFilePath(path);
+        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var sourceDocument = ArgumentHelper.GetString(arguments, "sourceDocument", "sourceDocument");
+        var sourceDocument = ArgumentHelper.GetString(arguments, "sourceDocument");
         SecurityHelper.ValidateFilePath(sourceDocument, "sourceDocument");
-        var overwriteExisting = arguments?["overwriteExisting"]?.GetValue<bool>() ?? false;
+        var overwriteExisting = ArgumentHelper.GetBool(arguments, "overwriteExisting", false);
 
         if (!File.Exists(sourceDocument))
             throw new FileNotFoundException($"Source document not found: {sourceDocument}");

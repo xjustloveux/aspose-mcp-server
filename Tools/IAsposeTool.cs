@@ -2,10 +2,26 @@ using System.Text.Json.Nodes;
 
 namespace AsposeMcpServer.Tools;
 
+/// <summary>
+/// Interface for Aspose MCP tools that provide document manipulation capabilities
+/// </summary>
 public interface IAsposeTool
 {
+    /// <summary>
+    /// Gets the description of the tool and its usage examples
+    /// </summary>
     string Description { get; }
+    
+    /// <summary>
+    /// Gets the JSON schema defining the input parameters for the tool
+    /// </summary>
     object InputSchema { get; }
+    
+    /// <summary>
+    /// Executes the tool operation with the provided JSON arguments
+    /// </summary>
+    /// <param name="arguments">JSON arguments object containing operation parameters</param>
+    /// <returns>Result message as a string</returns>
     Task<string> ExecuteAsync(JsonObject? arguments);
 }
 

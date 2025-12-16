@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using Aspose.Words.Fields;
@@ -100,9 +100,9 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         return operation switch
@@ -128,11 +128,11 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> AddFootnoteAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var footnoteText = ArgumentHelper.GetString(arguments, "noteText", "noteText");
-        var paragraphIndex = arguments?["paragraphIndex"]?.GetValue<int?>();
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>() ?? 0;
-        var referenceText = arguments?["referenceText"]?.GetValue<string>();
-        var customMark = arguments?["customMark"]?.GetValue<string>();
+        var footnoteText = ArgumentHelper.GetString(arguments, "noteText");
+        var paragraphIndex = ArgumentHelper.GetIntNullable(arguments, "paragraphIndex");
+        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
+        var referenceText = ArgumentHelper.GetStringNullable(arguments, "referenceText");
+        var customMark = ArgumentHelper.GetStringNullable(arguments, "customMark");
 
         var doc = new Document(path);
         if (sectionIndex < 0 || sectionIndex >= doc.Sections.Count)
@@ -224,11 +224,11 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> AddEndnoteAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var endnoteText = ArgumentHelper.GetString(arguments, "noteText", "noteText");
-        var paragraphIndex = arguments?["paragraphIndex"]?.GetValue<int?>();
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>() ?? 0;
-        var referenceText = arguments?["referenceText"]?.GetValue<string>();
-        var customMark = arguments?["customMark"]?.GetValue<string>();
+        var endnoteText = ArgumentHelper.GetString(arguments, "noteText");
+        var paragraphIndex = ArgumentHelper.GetIntNullable(arguments, "paragraphIndex");
+        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
+        var referenceText = ArgumentHelper.GetStringNullable(arguments, "referenceText");
+        var customMark = ArgumentHelper.GetStringNullable(arguments, "customMark");
 
         var doc = new Document(path);
         if (sectionIndex < 0 || sectionIndex >= doc.Sections.Count)
@@ -342,8 +342,8 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> DeleteFootnoteAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var referenceMark = arguments?["referenceMark"]?.GetValue<string>();
-        var footnoteIndex = arguments?["noteIndex"]?.GetValue<int?>();
+        var referenceMark = ArgumentHelper.GetStringNullable(arguments, "referenceMark");
+        var footnoteIndex = ArgumentHelper.GetIntNullable(arguments, "noteIndex");
 
         var doc = new Document(path);
         var footnotes = doc.GetChildNodes(NodeType.Footnote, true).Cast<Footnote>()
@@ -391,8 +391,8 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> DeleteEndnoteAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var referenceMark = arguments?["referenceMark"]?.GetValue<string>();
-        var endnoteIndex = arguments?["noteIndex"]?.GetValue<int?>();
+        var referenceMark = ArgumentHelper.GetStringNullable(arguments, "referenceMark");
+        var endnoteIndex = ArgumentHelper.GetIntNullable(arguments, "noteIndex");
 
         var doc = new Document(path);
         var endnotes = doc.GetChildNodes(NodeType.Footnote, true).Cast<Footnote>()
@@ -440,9 +440,9 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> EditFootnoteAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var referenceMark = arguments?["referenceMark"]?.GetValue<string>();
-        var footnoteIndex = arguments?["noteIndex"]?.GetValue<int?>();
-        var newText = ArgumentHelper.GetString(arguments, "newText", "newText");
+        var referenceMark = ArgumentHelper.GetStringNullable(arguments, "referenceMark");
+        var footnoteIndex = ArgumentHelper.GetIntNullable(arguments, "noteIndex");
+        var newText = ArgumentHelper.GetString(arguments, "newText");
 
         var doc = new Document(path);
         var footnotes = doc.GetChildNodes(NodeType.Footnote, true).Cast<Footnote>()
@@ -472,13 +472,13 @@ Usage examples:
             var availableInfo = "";
             if (footnotes.Count > 0)
             {
-                availableInfo = $" (文檔共有 {footnotes.Count} 個腳注，有效索引: 0-{footnotes.Count - 1})";
+                availableInfo = $" (document has {footnotes.Count} footnotes, valid index: 0-{footnotes.Count - 1})";
             }
             else
             {
-                availableInfo = " (文檔中沒有腳注)";
+                availableInfo = " (document has no footnotes)";
             }
-            throw new ArgumentException($"找不到指定的腳注{availableInfo}。請使用 get_footnotes 操作查看可用的腳注");
+            throw new ArgumentException($"Specified footnote not found{availableInfo}. Use get_footnotes operation to view available footnotes");
         }
 
         footnote.RemoveAllChildren();
@@ -499,9 +499,9 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> EditEndnoteAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var referenceMark = arguments?["referenceMark"]?.GetValue<string>();
-        var endnoteIndex = arguments?["noteIndex"]?.GetValue<int?>();
-        var newText = ArgumentHelper.GetString(arguments, "newText", "newText");
+        var referenceMark = ArgumentHelper.GetStringNullable(arguments, "referenceMark");
+        var endnoteIndex = ArgumentHelper.GetIntNullable(arguments, "noteIndex");
+        var newText = ArgumentHelper.GetString(arguments, "newText");
 
         var doc = new Document(path);
         var endnotes = doc.GetChildNodes(NodeType.Footnote, true).Cast<Footnote>()
@@ -531,13 +531,13 @@ Usage examples:
             var availableInfo = "";
             if (endnotes.Count > 0)
             {
-                availableInfo = $" (文檔共有 {endnotes.Count} 個尾注，有效索引: 0-{endnotes.Count - 1})";
+                availableInfo = $" (document has {endnotes.Count} endnotes, valid index: 0-{endnotes.Count - 1})";
             }
             else
             {
-                availableInfo = " (文檔中沒有尾注)";
+                availableInfo = " (document has no endnotes)";
             }
-            throw new ArgumentException($"找不到指定的尾注{availableInfo}。請使用 get_endnotes 操作查看可用的尾注");
+            throw new ArgumentException($"Specified endnote not found{availableInfo}. Use get_endnotes operation to view available endnotes");
         }
 
         endnote.RemoveAllChildren();

@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Words;
@@ -396,7 +396,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
 
         return operation.ToLower() switch
         {
@@ -430,18 +430,18 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var rows = ArgumentHelper.GetInt(arguments, "rows", "rows");
-        var columns = ArgumentHelper.GetInt(arguments, "columns", "columns");
-        var headerRow = arguments?["headerRow"]?.GetValue<bool>() ?? false;
-        var headerBgColor = arguments?["headerBackgroundColor"]?.GetValue<string>();
-        var borderStyle = arguments?["borderStyle"]?.GetValue<string>() ?? "single";
-        var alignment = arguments?["alignment"]?.GetValue<string>() ?? "left";
-        var verticalAlignment = arguments?["verticalAlignment"]?.GetValue<string>() ?? "center";
-        var cellPadding = arguments?["cellPadding"]?.GetValue<double>() ?? 5.0;
-        var tableFontName = arguments?["tableFontName"]?.GetValue<string>();
-        var tableFontSize = arguments?["tableFontSize"]?.GetValue<double?>();
-        var tableFontNameAscii = arguments?["tableFontNameAscii"]?.GetValue<string>();
-        var tableFontNameFarEast = arguments?["tableFontNameFarEast"]?.GetValue<string>();
+        var rows = ArgumentHelper.GetInt(arguments, "rows");
+        var columns = ArgumentHelper.GetInt(arguments, "columns");
+        var headerRow = ArgumentHelper.GetBool(arguments, "headerRow", false);
+        var headerBgColor = ArgumentHelper.GetStringNullable(arguments, "headerBackgroundColor");
+        var borderStyle = ArgumentHelper.GetString(arguments, "borderStyle", "single");
+        var alignment = ArgumentHelper.GetString(arguments, "alignment", "left");
+        var verticalAlignment = ArgumentHelper.GetString(arguments, "verticalAlignment", "center");
+        var cellPadding = ArgumentHelper.GetDouble(arguments, "cellPadding", "cellPadding", false, 5.0);
+        var tableFontName = ArgumentHelper.GetStringNullable(arguments, "tableFontName");
+        var tableFontSize = ArgumentHelper.GetDoubleNullable(arguments, "tableFontSize");
+        var tableFontNameAscii = ArgumentHelper.GetStringNullable(arguments, "tableFontNameAscii");
+        var tableFontNameFarEast = ArgumentHelper.GetStringNullable(arguments, "tableFontNameFarEast");
 
         var doc = new Document(path);
         var builder = new DocumentBuilder(doc);
@@ -462,7 +462,7 @@ Usage examples:
             }
             catch (Exception jsonEx)
             {
-                throw new ArgumentException($"無法解析 data 參數: {jsonEx.Message}。請確保 data 是有效的二維字符串數組格式，例如: [[\"A1\",\"B1\"],[\"A2\",\"B2\"]]");
+                throw new ArgumentException($"Unable to parse data parameter: {jsonEx.Message}. Please ensure data is a valid 2D string array format, e.g.: [[\"A1\",\"B1\"],[\"A2\",\"B2\"]]");
             }
         }
 
@@ -616,8 +616,8 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex", "tableIndex");
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
+        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex");
+        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
 
         var doc = new Document(path);
         if (sectionIndex >= doc.Sections.Count)
@@ -630,9 +630,9 @@ Usage examples:
 
         var table = tables[tableIndex];
 
-        if (arguments?["alignment"] != null)
+        var alignment = ArgumentHelper.GetStringNullable(arguments, "alignment") ?? "left";
+        if (!string.IsNullOrEmpty(alignment))
         {
-            var alignment = arguments["alignment"]?.GetValue<string>() ?? "left";
             table.Alignment = alignment.ToLower() switch
             {
                 "center" => TableAlignment.Center,
@@ -641,28 +641,25 @@ Usage examples:
             };
         }
 
-        if (arguments?["width"] != null && arguments?["widthType"]?.GetValue<string>() == "points")
+        if (arguments?["width"] != null && ArgumentHelper.GetStringNullable(arguments, "widthType") == "points")
         {
-            var width = arguments["width"]?.GetValue<double>();
+            var width = ArgumentHelper.GetDoubleNullable(arguments, "width");
             if (width.HasValue)
                 table.PreferredWidth = PreferredWidth.FromPoints(width.Value);
         }
-        else if (arguments?["widthType"]?.GetValue<string>() == "auto")
+        else if (ArgumentHelper.GetStringNullable(arguments, "widthType") == "auto")
             table.PreferredWidth = PreferredWidth.Auto;
 
-        if (arguments?["styleName"] != null)
+        var styleName = ArgumentHelper.GetStringNullable(arguments, "styleName");
+        if (!string.IsNullOrEmpty(styleName))
         {
-            var styleName = arguments["styleName"]?.GetValue<string>();
-            if (!string.IsNullOrEmpty(styleName))
+            try 
+            { 
+                table.Style = doc.Styles[styleName]; 
+            } 
+            catch (Exception styleEx)
             {
-                try 
-                { 
-                    table.Style = doc.Styles[styleName]; 
-                } 
-                catch (Exception styleEx)
-                {
-                    throw new ArgumentException($"無法應用表格樣式 '{styleName}': {styleEx.Message}。請使用 word_get_styles 工具查看可用的樣式");
-                }
+                throw new ArgumentException($"Unable to apply table style '{styleName}': {styleEx.Message}. Use word_get_styles tool to view available styles");
             }
         }
 
@@ -679,8 +676,8 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex", "tableIndex");
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
+        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex");
+        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
 
         var doc = new Document(path);
         if (sectionIndex >= doc.Sections.Count)
@@ -708,8 +705,8 @@ Usage examples:
     private async Task<string> GetTables(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>();
-        var includeContent = arguments?["includeContent"]?.GetValue<bool>() ?? false;
+        var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
+        var includeContent = ArgumentHelper.GetBool(arguments, "includeContent", false);
 
         var doc = new Document(path);
         List<Table> tables;
@@ -757,11 +754,11 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex", "tableIndex");
-        var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex", "rowIndex");
-        var insertBefore = arguments?["insertBefore"]?.GetValue<bool>() ?? false;
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
-        var dataArray = arguments?["rowData"]?.AsArray();
+        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex");
+        var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex");
+        var insertBefore = ArgumentHelper.GetBool(arguments, "insertBefore", false);
+        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
+        var dataArray = ArgumentHelper.GetArray(arguments, "rowData", false);
 
         var doc = new Document(path);
         if (sectionIndex >= doc.Sections.Count)
@@ -815,9 +812,9 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex", "tableIndex");
-        var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex", "rowIndex");
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
+        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex");
+        var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex");
+        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
 
         var doc = new Document(path);
         if (sectionIndex >= doc.Sections.Count)
@@ -848,7 +845,7 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex", "tableIndex");
+        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex");
         int columnIndex;
         var columnIndexNode = arguments?["columnIndex"];
         if (columnIndexNode != null)
@@ -872,9 +869,9 @@ Usage examples:
         {
             throw new ArgumentException("columnIndex is required");
         }
-        var insertBefore = arguments?["insertBefore"]?.GetValue<bool>() ?? false;
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
-        var dataArray = arguments?["columnData"]?.AsArray();
+        var insertBefore = ArgumentHelper.GetBool(arguments, "insertBefore", false);
+        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
+        var dataArray = ArgumentHelper.GetArray(arguments, "columnData", false);
 
         var doc = new Document(path);
         if (sectionIndex >= doc.Sections.Count)
@@ -967,7 +964,7 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex", "tableIndex");
+        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex");
         int columnIndex;
         var columnIndexNode = arguments?["columnIndex"];
         if (columnIndexNode != null)
@@ -991,7 +988,7 @@ Usage examples:
         {
             throw new ArgumentException("columnIndex is required");
         }
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>();
+        var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
 
         var doc = new Document(path);
         List<Table> tables;
@@ -1041,15 +1038,15 @@ Usage examples:
     private async Task<string> MergeCells(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex", "tableIndex");
-        var startRow = ArgumentHelper.GetInt(arguments?["startRow"], "startRow", true);
+        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex");
+        var startRow = ArgumentHelper.GetInt(arguments, "startRow");
         var startCol = ArgumentHelper.GetInt(arguments, "startCol", "startColumn", "startCol or startColumn", true);
-        var endRow = ArgumentHelper.GetInt(arguments?["endRow"], "endRow", true);
+        var endRow = ArgumentHelper.GetInt(arguments, "endRow");
         var endCol = ArgumentHelper.GetInt(arguments, "endCol", "endColumn", "endCol or endColumn", true);
         
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
+        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
 
         var doc = new Document(path);
         if (sectionIndex >= doc.Sections.Count)
@@ -1127,13 +1124,13 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex", "tableIndex");
+        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex");
         
-        var rowIndex = ArgumentHelper.GetInt(arguments?["rowIndex"], "rowIndex", true);
+        var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex");
         var colIndex = ArgumentHelper.GetInt(arguments, "colIndex", "columnIndex", "colIndex or columnIndex", true);
-        var splitRows = ArgumentHelper.GetIntNullable(arguments?["splitRows"], "splitRows") ?? 2;
-        var splitCols = ArgumentHelper.GetIntNullable(arguments?["splitCols"], "splitCols") ?? 2;
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
+        var splitRows = ArgumentHelper.GetInt(arguments, "splitRows", 2);
+        var splitCols = ArgumentHelper.GetInt(arguments, "splitCols", 2);
+        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
 
         var doc = new Document(path);
         if (sectionIndex >= doc.Sections.Count)
@@ -1240,11 +1237,11 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex", "tableIndex");
-        var rowIndex = ArgumentHelper.GetInt(arguments?["rowIndex"], "rowIndex", true);
+        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex");
+        var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex");
         var colIndex = ArgumentHelper.GetInt(arguments, "colIndex", "columnIndex", "colIndex or columnIndex", true);
         
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
+        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
 
         var doc = new Document(path);
         if (sectionIndex >= doc.Sections.Count)
@@ -1266,25 +1263,22 @@ Usage examples:
         var cell = row.Cells[colIndex];
         var cellFormat = cell.CellFormat;
 
-        if (arguments?["backgroundColor"] != null)
+        var backgroundColor = ArgumentHelper.GetStringNullable(arguments, "backgroundColor");
+        if (!string.IsNullOrEmpty(backgroundColor))
         {
-            var backgroundColor = arguments["backgroundColor"]?.GetValue<string>();
-            if (!string.IsNullOrEmpty(backgroundColor))
+            try 
+            { 
+                cellFormat.Shading.BackgroundPatternColor = ColorHelper.ParseColor(backgroundColor); 
+            } 
+            catch (Exception colorEx)
             {
-                try 
-                { 
-                    cellFormat.Shading.BackgroundPatternColor = ColorHelper.ParseColor(backgroundColor); 
-                } 
-                catch (Exception colorEx)
-                {
-                    throw new ArgumentException($"無法解析背景顏色 '{backgroundColor}': {colorEx.Message}。請使用有效的顏色格式（如 #FF0000 或 red）");
-                }
+                throw new ArgumentException($"Unable to parse background color '{backgroundColor}': {colorEx.Message}. Please use a valid color format (e.g., #FF0000 or red)");
             }
         }
 
-        if (arguments?["alignment"] != null)
+        var alignment = ArgumentHelper.GetStringNullable(arguments, "alignment") ?? "left";
+        if (!string.IsNullOrEmpty(alignment))
         {
-            var alignment = arguments["alignment"]?.GetValue<string>() ?? "left";
             var paragraphs = cell.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
             foreach (var para in paragraphs)
             {
@@ -1297,9 +1291,9 @@ Usage examples:
             }
         }
 
-        if (arguments?["verticalAlignment"] != null)
+        var verticalAlignment = ArgumentHelper.GetStringNullable(arguments, "verticalAlignment") ?? "top";
+        if (!string.IsNullOrEmpty(verticalAlignment))
         {
-            var verticalAlignment = arguments["verticalAlignment"]?.GetValue<string>() ?? "top";
             cellFormat.VerticalAlignment = verticalAlignment.ToLower() switch
             {
                 "center" => CellVerticalAlignment.Center,
@@ -1308,22 +1302,26 @@ Usage examples:
             };
         }
 
-        if (arguments?["paddingTop"] != null)
-            cellFormat.TopPadding = arguments["paddingTop"]?.GetValue<double>() ?? cellFormat.TopPadding;
-        if (arguments?["paddingBottom"] != null)
-            cellFormat.BottomPadding = arguments["paddingBottom"]?.GetValue<double>() ?? cellFormat.BottomPadding;
-        if (arguments?["paddingLeft"] != null)
-            cellFormat.LeftPadding = arguments["paddingLeft"]?.GetValue<double>() ?? cellFormat.LeftPadding;
-        if (arguments?["paddingRight"] != null)
-            cellFormat.RightPadding = arguments["paddingRight"]?.GetValue<double>() ?? cellFormat.RightPadding;
+        var paddingTop = ArgumentHelper.GetDoubleNullable(arguments, "paddingTop");
+        if (paddingTop.HasValue)
+            cellFormat.TopPadding = paddingTop.Value;
+        var paddingBottom = ArgumentHelper.GetDoubleNullable(arguments, "paddingBottom");
+        if (paddingBottom.HasValue)
+            cellFormat.BottomPadding = paddingBottom.Value;
+        var paddingLeft = ArgumentHelper.GetDoubleNullable(arguments, "paddingLeft");
+        if (paddingLeft.HasValue)
+            cellFormat.LeftPadding = paddingLeft.Value;
+        var paddingRight = ArgumentHelper.GetDoubleNullable(arguments, "paddingRight");
+        if (paddingRight.HasValue)
+            cellFormat.RightPadding = paddingRight.Value;
 
-        var fontName = arguments?["fontName"]?.GetValue<string>();
-        var fontNameAscii = arguments?["fontNameAscii"]?.GetValue<string>();
-        var fontNameFarEast = arguments?["fontNameFarEast"]?.GetValue<string>();
-        var fontSize = ArgumentHelper.GetDoubleNullable(arguments?["fontSize"], "fontSize");
-        var bold = arguments?["bold"]?.GetValue<bool?>();
-        var italic = arguments?["italic"]?.GetValue<bool?>();
-        var color = arguments?["color"]?.GetValue<string>();
+        var fontName = ArgumentHelper.GetStringNullable(arguments, "fontName");
+        var fontNameAscii = ArgumentHelper.GetStringNullable(arguments, "fontNameAscii");
+        var fontNameFarEast = ArgumentHelper.GetStringNullable(arguments, "fontNameFarEast");
+        var fontSize = ArgumentHelper.GetDoubleNullable(arguments, "fontSize");
+        var bold = ArgumentHelper.GetBoolNullable(arguments, "bold");
+        var italic = ArgumentHelper.GetBoolNullable(arguments, "italic");
+        var color = ArgumentHelper.GetStringNullable(arguments, "color");
 
         bool hasTextFormatting = !string.IsNullOrEmpty(fontName) || !string.IsNullOrEmpty(fontNameAscii) || 
                                  !string.IsNullOrEmpty(fontNameFarEast) || fontSize.HasValue || 
@@ -1364,7 +1362,7 @@ Usage examples:
                     } 
                     catch (Exception colorEx)
                     {
-                        throw new ArgumentException($"無法解析字體顏色 '{color}': {colorEx.Message}。請使用有效的顏色格式（如 #FF0000 或 red）");
+                        throw new ArgumentException($"Unable to parse font color '{color}': {colorEx.Message}. Please use a valid color format (e.g., #FF0000 or red)");
                     }
                 }
             }
@@ -1383,9 +1381,9 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex", "tableIndex");
-        var targetParagraphIndex = ArgumentHelper.GetInt(arguments, "targetParagraphIndex", "targetParagraphIndex");
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>();
+        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex");
+        var targetParagraphIndex = ArgumentHelper.GetInt(arguments, "targetParagraphIndex");
+        var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
 
         var doc = new Document(path);
         var sectionIdx = sectionIndex ?? 0;
@@ -1445,12 +1443,10 @@ Usage examples:
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         // Accept both sourceTableIndex and tableIndex for compatibility
-        var sourceTableIndex = arguments?["sourceTableIndex"]?.GetValue<int>() ?? 
-                               arguments?["tableIndex"]?.GetValue<int>() ?? 
-                               throw new ArgumentException("sourceTableIndex or tableIndex is required");
-        var targetParagraphIndex = ArgumentHelper.GetInt(arguments, "targetParagraphIndex", "targetParagraphIndex");
-        var sourceSectionIndex = arguments?["sourceSectionIndex"]?.GetValue<int?>();
-        var targetSectionIndex = arguments?["targetSectionIndex"]?.GetValue<int?>();
+        var sourceTableIndex = ArgumentHelper.GetInt(arguments, "sourceTableIndex", "tableIndex", "sourceTableIndex or tableIndex", true);
+        var targetParagraphIndex = ArgumentHelper.GetInt(arguments, "targetParagraphIndex");
+        var sourceSectionIndex = ArgumentHelper.GetIntNullable(arguments, "sourceSectionIndex");
+        var targetSectionIndex = ArgumentHelper.GetIntNullable(arguments, "targetSectionIndex");
 
         var doc = new Document(path);
         var sourceSectionIdx = sourceSectionIndex ?? 0;
@@ -1533,7 +1529,7 @@ Usage examples:
         
         if (insertionPoint == null)
         {
-            throw new ArgumentException($"無法找到有效的插入位置 (targetParagraphIndex: {targetParagraphIndex})");
+            throw new ArgumentException($"Unable to find valid insertion point (targetParagraphIndex: {targetParagraphIndex})");
         }
         
         var clonedTable = (Table)sourceTable.Clone(true);
@@ -1551,10 +1547,10 @@ Usage examples:
     private async Task<string> GetTableStructure(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex", "tableIndex");
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
-        var includeContent = arguments?["includeContent"]?.GetValue<bool>() ?? true;
-        var includeCellFormatting = arguments?["includeCellFormatting"]?.GetValue<bool>() ?? true;
+        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex");
+        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
+        var includeContent = ArgumentHelper.GetBool(arguments, "includeContent");
+        var includeCellFormatting = ArgumentHelper.GetBool(arguments, "includeCellFormatting");
 
         var doc = new Document(path);
         if (sectionIndex >= doc.Sections.Count)
@@ -1630,10 +1626,10 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex", "tableIndex");
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
-        var rowIndex = arguments?["rowIndex"]?.GetValue<int?>();
-        var columnIndex = arguments?["columnIndex"]?.GetValue<int?>();
+        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex");
+        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
+        var rowIndex = ArgumentHelper.GetIntNullable(arguments, "rowIndex");
+        var columnIndex = ArgumentHelper.GetIntNullable(arguments, "columnIndex");
 
         var doc = new Document(path);
         if (sectionIndex >= doc.Sections.Count)
@@ -1645,9 +1641,9 @@ Usage examples:
             throw new ArgumentException($"Table index {tableIndex} out of range");
 
         var table = tables[tableIndex];
-        var defaultLineStyle = arguments?["lineStyle"]?.GetValue<string>() ?? "single";
-        var defaultLineWidth = arguments?["lineWidth"]?.GetValue<double>() ?? 0.5;
-        var defaultLineColor = arguments?["lineColor"]?.GetValue<string>() ?? "000000";
+        var defaultLineStyle = ArgumentHelper.GetString(arguments, "lineStyle", "single");
+        var defaultLineWidth = ArgumentHelper.GetDouble(arguments, "lineWidth", "lineWidth", false, 0.5);
+        var defaultLineColor = ArgumentHelper.GetString(arguments, "lineColor", "000000");
 
         var lineStyle = GetLineStyle(defaultLineStyle);
         var lineWidth = defaultLineWidth;
@@ -1685,7 +1681,7 @@ Usage examples:
         foreach (var cell in targetCells)
         {
             var borders = cell.CellFormat.Borders;
-            if (arguments?["borderTop"]?.GetValue<bool>() == true)
+            if (ArgumentHelper.GetBool(arguments, "borderTop", false))
             {
                 borders.Top.LineStyle = lineStyle;
                 borders.Top.LineWidth = lineWidth;
@@ -1694,7 +1690,7 @@ Usage examples:
             else if (arguments?["borderTop"] != null)
                 borders.Top.LineStyle = LineStyle.None;
 
-            if (arguments?["borderBottom"]?.GetValue<bool>() == true)
+            if (ArgumentHelper.GetBool(arguments, "borderBottom", false))
             {
                 borders.Bottom.LineStyle = lineStyle;
                 borders.Bottom.LineWidth = lineWidth;
@@ -1703,7 +1699,7 @@ Usage examples:
             else if (arguments?["borderBottom"] != null)
                 borders.Bottom.LineStyle = LineStyle.None;
 
-            if (arguments?["borderLeft"]?.GetValue<bool>() == true)
+            if (ArgumentHelper.GetBool(arguments, "borderLeft", false))
             {
                 borders.Left.LineStyle = lineStyle;
                 borders.Left.LineWidth = lineWidth;
@@ -1712,7 +1708,7 @@ Usage examples:
             else if (arguments?["borderLeft"] != null)
                 borders.Left.LineStyle = LineStyle.None;
 
-            if (arguments?["borderRight"]?.GetValue<bool>() == true)
+            if (ArgumentHelper.GetBool(arguments, "borderRight", false))
             {
                 borders.Right.LineStyle = lineStyle;
                 borders.Right.LineWidth = lineWidth;
@@ -1735,11 +1731,11 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex", "tableIndex");
-        var columnIndex = ArgumentHelper.GetInt(arguments?["columnIndex"], "columnIndex", true);
-        var columnWidth = ArgumentHelper.GetDouble(arguments?["columnWidth"], "columnWidth", true);
+        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex");
+        var columnIndex = ArgumentHelper.GetInt(arguments, "columnIndex");
+        var columnWidth = ArgumentHelper.GetDouble(arguments, "columnWidth");
         
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
+        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
 
         if (columnWidth <= 0)
             throw new ArgumentException($"Column width {columnWidth} must be greater than 0");
@@ -1784,12 +1780,12 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex", "tableIndex");
-        var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex", "rowIndex");
-        var rowHeight = ArgumentHelper.GetDouble(arguments?["rowHeight"], "rowHeight", true);
+        var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex");
+        var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex");
+        var rowHeight = ArgumentHelper.GetDouble(arguments, "rowHeight");
         
-        var heightRule = arguments?["heightRule"]?.GetValue<string>() ?? "atLeast";
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
+        var heightRule = ArgumentHelper.GetString(arguments, "heightRule", "atLeast");
+        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
 
         if (rowHeight <= 0)
             throw new ArgumentException($"Row height {rowHeight} must be greater than 0");

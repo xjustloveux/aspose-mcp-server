@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
@@ -60,7 +60,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
 
         return operation.ToLower() switch
         {
@@ -80,12 +80,12 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var attachmentPath = ArgumentHelper.GetString(arguments, "attachmentPath", "attachmentPath");
-        var attachmentName = ArgumentHelper.GetString(arguments, "attachmentName", "attachmentName");
-        var description = arguments?["description"]?.GetValue<string>();
+        var attachmentPath = ArgumentHelper.GetString(arguments, "attachmentPath");
+        var attachmentName = ArgumentHelper.GetString(arguments, "attachmentName");
+        var description = ArgumentHelper.GetStringNullable(arguments, "description");
 
         // Validate paths
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
         SecurityHelper.ValidateFilePath(attachmentPath, "attachmentPath");
         
@@ -116,7 +116,7 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var attachmentName = ArgumentHelper.GetString(arguments, "attachmentName", "attachmentName");
+        var attachmentName = ArgumentHelper.GetString(arguments, "attachmentName");
 
         using var document = new Document(path);
         var embeddedFiles = document.EmbeddedFiles;

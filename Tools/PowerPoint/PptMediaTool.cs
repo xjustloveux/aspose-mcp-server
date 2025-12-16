@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Core;
@@ -100,6 +100,11 @@ Usage examples:
             {
                 type = "string",
                 description = "mute|low|medium|loud (optional, for set_playback, default: medium)"
+            },
+            outputPath = new
+            {
+                type = "string",
+                description = "Output file path (optional, for add/edit/delete/set_playback operations, defaults to input path)"
             }
         },
         required = new[] { "operation", "path", "slideIndex" }
@@ -107,9 +112,9 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
 
         return operation.ToLower() switch
         {
@@ -131,11 +136,11 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> AddAudioAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var audioPath = ArgumentHelper.GetString(arguments, "audioPath", "audioPath");
-        var x = arguments?["x"]?.GetValue<float?>() ?? 50;
-        var y = arguments?["y"]?.GetValue<float?>() ?? 50;
-        var width = arguments?["width"]?.GetValue<float?>() ?? 80;
-        var height = arguments?["height"]?.GetValue<float?>() ?? 80;
+        var audioPath = ArgumentHelper.GetString(arguments, "audioPath");
+        var x = ArgumentHelper.GetFloat(arguments, "x", 50);
+        var y = ArgumentHelper.GetFloat(arguments, "y", 50);
+        var width = ArgumentHelper.GetFloat(arguments, "width", 80);
+        var height = ArgumentHelper.GetFloat(arguments, "height", 80);
 
         using var presentation = new Presentation(path);
         if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
@@ -147,8 +152,9 @@ Usage examples:
         using var audioStream = File.OpenRead(audioPath);
         slide.Shapes.AddAudioFrameEmbedded(x, y, width, height, audioStream);
 
-        presentation.Save(path, SaveFormat.Pptx);
-        return await Task.FromResult($"已在投影片 {slideIndex} 插入音訊: {audioPath}");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
+        return await Task.FromResult($"Audio inserted into slide {slideIndex}: {audioPath}");
     }
 
     /// <summary>
@@ -160,7 +166,7 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> DeleteAudioAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
@@ -172,7 +178,8 @@ Usage examples:
 
         slide.Shapes.Remove(shape);
 
-        presentation.Save(path, SaveFormat.Pptx);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
         return await Task.FromResult($"Audio deleted from slide {slideIndex}, shape {shapeIndex}");
     }
 
@@ -185,11 +192,11 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> AddVideoAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var videoPath = ArgumentHelper.GetString(arguments, "videoPath", "videoPath");
-        var x = arguments?["x"]?.GetValue<float?>() ?? 50;
-        var y = arguments?["y"]?.GetValue<float?>() ?? 50;
-        var width = arguments?["width"]?.GetValue<float?>() ?? 320;
-        var height = arguments?["height"]?.GetValue<float?>() ?? 240;
+        var videoPath = ArgumentHelper.GetString(arguments, "videoPath");
+        var x = ArgumentHelper.GetFloat(arguments, "x", 50);
+        var y = ArgumentHelper.GetFloat(arguments, "y", 50);
+        var width = ArgumentHelper.GetFloat(arguments, "width", 320);
+        var height = ArgumentHelper.GetFloat(arguments, "height", 240);
 
         using var presentation = new Presentation(path);
         if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
@@ -200,8 +207,9 @@ Usage examples:
         var slide = presentation.Slides[slideIndex];
         var frame = slide.Shapes.AddVideoFrame(x, y, width, height, videoPath);
 
-        presentation.Save(path, SaveFormat.Pptx);
-        return await Task.FromResult($"已在投影片 {slideIndex} 插入影片: {videoPath}");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
+        return await Task.FromResult($"Video inserted into slide {slideIndex}: {videoPath}");
     }
 
     /// <summary>
@@ -213,7 +221,7 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> DeleteVideoAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
@@ -225,7 +233,8 @@ Usage examples:
 
         slide.Shapes.Remove(shape);
 
-        presentation.Save(path, SaveFormat.Pptx);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
         return await Task.FromResult($"Video deleted from slide {slideIndex}, shape {shapeIndex}");
     }
 
@@ -238,11 +247,11 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> SetPlaybackAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex", "shapeIndex");
-        var playModeStr = arguments?["playMode"]?.GetValue<string>() ?? "auto";
-        var loop = arguments?["loop"]?.GetValue<bool?>() ?? false;
-        var rewind = arguments?["rewind"]?.GetValue<bool?>() ?? false;
-        var volumeStr = arguments?["volume"]?.GetValue<string>() ?? "medium";
+        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
+        var playModeStr = ArgumentHelper.GetString(arguments, "playMode", "auto");
+        var loop = ArgumentHelper.GetBool(arguments, "loop", false);
+        var rewind = ArgumentHelper.GetBool(arguments, "rewind", false);
+        var volumeStr = ArgumentHelper.GetString(arguments, "volume", "medium");
 
         using var presentation = new Presentation(path);
         if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
@@ -282,11 +291,12 @@ Usage examples:
         }
         else
         {
-            throw new ArgumentException("指定的 shape 不是音訊或影片");
+            throw new ArgumentException("The specified shape is not audio or video");
         }
 
-        presentation.Save(path, SaveFormat.Pptx);
-        return await Task.FromResult($"已更新媒體播放設定：slide {slideIndex}, shape {shapeIndex}");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
+        return await Task.FromResult($"Media playback settings updated: slide {slideIndex}, shape {shapeIndex}");
     }
 }
 

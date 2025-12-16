@@ -64,6 +64,69 @@ public static class ExcelHelper
         ValidateSheetIndex(sheetIndex, workbook, customMessage);
         return workbook.Worksheets[sheetIndex];
     }
+
+    /// <summary>
+    /// Creates a range with validation and unified error handling
+    /// This method wraps CreateRange with try-catch to provide consistent error messages
+    /// </summary>
+    /// <param name="cells">Cells collection to create range from</param>
+    /// <param name="range">Range string (e.g., "A1:C5", "Sheet1!A1:C5")</param>
+    /// <returns>Range object</returns>
+    /// <exception cref="ArgumentException">Thrown if range format is invalid</exception>
+    public static Aspose.Cells.Range CreateRange(Cells cells, string range)
+    {
+        try
+        {
+            return cells.CreateRange(range);
+        }
+        catch (Exception ex)
+        {
+            // Provide specific error message based on range format
+            if (range.Contains(':'))
+            {
+                var parts = range.Split(':');
+                if (parts.Length == 2)
+                {
+                    var startCell = parts[0].Trim();
+                    var endCell = parts[1].Trim();
+                    throw new ArgumentException($"Invalid range format: '{range}'. Range exceeds Excel limits (valid range: A1:XFD1048576). Start cell: '{startCell}', End cell: '{endCell}'. Error: {ex.Message}");
+                }
+            }
+            throw new ArgumentException($"Invalid range format: '{range}'. Range exceeds Excel limits (valid range: A1:XFD1048576). Error: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Creates a range with validation and unified error handling (for multiple ranges)
+    /// This method wraps CreateRange with try-catch to provide consistent error messages
+    /// </summary>
+    /// <param name="cells">Cells collection to create range from</param>
+    /// <param name="range">Range string (e.g., "A1:C5", "Sheet1!A1:C5")</param>
+    /// <param name="rangeDescription">Description of the range for error message (e.g., "source range", "destination range")</param>
+    /// <returns>Range object</returns>
+    /// <exception cref="ArgumentException">Thrown if range format is invalid</exception>
+    public static Aspose.Cells.Range CreateRange(Cells cells, string range, string rangeDescription)
+    {
+        try
+        {
+            return cells.CreateRange(range);
+        }
+        catch (Exception ex)
+        {
+            // Provide specific error message with range description
+            if (range.Contains(':'))
+            {
+                var parts = range.Split(':');
+                if (parts.Length == 2)
+                {
+                    var startCell = parts[0].Trim();
+                    var endCell = parts[1].Trim();
+                    throw new ArgumentException($"Invalid {rangeDescription} format: '{range}'. Range exceeds Excel limits (valid range: A1:XFD1048576). Start cell: '{startCell}', End cell: '{endCell}'. Error: {ex.Message}");
+                }
+            }
+            throw new ArgumentException($"Invalid {rangeDescription} format: '{range}'. Range exceeds Excel limits (valid range: A1:XFD1048576). Error: {ex.Message}");
+        }
+    }
 }
 
 /// <summary>
@@ -162,7 +225,9 @@ public static class PowerPointHelper
 /// </summary>
 public static class WordHelper
 {
-    // Word document operations are typically simpler and don't require as much validation
+    /// <summary>
+    /// Helper methods for Word document operations
+    /// </summary>
     // Most operations work directly on the document without index validation
     // This class can be extended if common patterns emerge
 }

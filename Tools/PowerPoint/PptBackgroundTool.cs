@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Text;
 using System.Drawing;
 using Aspose.Slides;
@@ -52,6 +52,11 @@ Usage examples:
             {
                 type = "string",
                 description = "Background image path (optional, for set)"
+            },
+            outputPath = new
+            {
+                type = "string",
+                description = "Output file path (optional, for set operation, defaults to input path)"
             }
         },
         required = new[] { "operation", "path" }
@@ -59,7 +64,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         return operation.ToLower() switch
@@ -78,9 +83,9 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> SetBackgroundAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = arguments?["slideIndex"]?.GetValue<int?>() ?? 0;
-        var colorHex = arguments?["color"]?.GetValue<string>();
-        var imagePath = arguments?["imagePath"]?.GetValue<string>();
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", 0);
+        var colorHex = ArgumentHelper.GetStringNullable(arguments, "color");
+        var imagePath = ArgumentHelper.GetStringNullable(arguments, "imagePath");
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
@@ -101,11 +106,12 @@ Usage examples:
         }
         else
         {
-            throw new ArgumentException("請至少提供 color 或 imagePath 其中之一");
+            throw new ArgumentException("Please provide at least one of color or imagePath");
         }
 
-        presentation.Save(path, SaveFormat.Pptx);
-        return await Task.FromResult($"已更新投影片 {slideIndex} 背景: {path}");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
+        return await Task.FromResult($"Background updated for slide {slideIndex}: {outputPath}");
     }
 
     /// <summary>
@@ -116,7 +122,7 @@ Usage examples:
     /// <returns>Formatted string with background details</returns>
     private async Task<string> GetBackgroundAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);

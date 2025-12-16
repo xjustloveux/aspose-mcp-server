@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Text;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
@@ -111,6 +111,11 @@ Usage examples:
             {
                 type = "boolean",
                 description = "Set as selected sheet (optional, for edit_sheet_properties)"
+            },
+            outputPath = new
+            {
+                type = "string",
+                description = "Output file path (optional, for set/edit_sheet_properties operations, defaults to input path)"
             }
         },
         required = new[] { "operation", "path" }
@@ -118,9 +123,9 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var sheetIndex = arguments?["sheetIndex"]?.GetValue<int>() ?? 0;
+        var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
 
         return operation.ToLower() switch
         {
@@ -183,15 +188,16 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> SetWorkbookPropertiesAsync(JsonObject? arguments, string path)
     {
-        var title = arguments?["title"]?.GetValue<string>();
-        var subject = arguments?["subject"]?.GetValue<string>();
-        var author = arguments?["author"]?.GetValue<string>();
-        var keywords = arguments?["keywords"]?.GetValue<string>();
-        var comments = arguments?["comments"]?.GetValue<string>();
-        var category = arguments?["category"]?.GetValue<string>();
-        var company = arguments?["company"]?.GetValue<string>();
-        var manager = arguments?["manager"]?.GetValue<string>();
-        var customProps = arguments?["customProperties"]?.AsObject();
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var title = ArgumentHelper.GetStringNullable(arguments, "title");
+        var subject = ArgumentHelper.GetStringNullable(arguments, "subject");
+        var author = ArgumentHelper.GetStringNullable(arguments, "author");
+        var keywords = ArgumentHelper.GetStringNullable(arguments, "keywords");
+        var comments = ArgumentHelper.GetStringNullable(arguments, "comments");
+        var category = ArgumentHelper.GetStringNullable(arguments, "category");
+        var company = ArgumentHelper.GetStringNullable(arguments, "company");
+        var manager = ArgumentHelper.GetStringNullable(arguments, "manager");
+        var customProps = ArgumentHelper.GetObject(arguments, "customProperties", false);
 
         using var workbook = new Workbook(path);
         var props = workbook.BuiltInDocumentProperties;
@@ -213,8 +219,8 @@ Usage examples:
             }
         }
 
-        workbook.Save(path);
-        return await Task.FromResult($"Workbook properties updated: {path}");
+        workbook.Save(outputPath);
+        return await Task.FromResult($"Workbook properties updated: {outputPath}");
     }
 
     /// <summary>
@@ -266,10 +272,11 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> EditSheetPropertiesAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var name = arguments?["name"]?.GetValue<string>();
-        var isVisible = arguments?["isVisible"]?.GetValue<bool?>();
-        var tabColor = arguments?["tabColor"]?.GetValue<string>();
-        var isSelected = arguments?["isSelected"]?.GetValue<bool?>();
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var name = ArgumentHelper.GetStringNullable(arguments, "name");
+        var isVisible = ArgumentHelper.GetBoolNullable(arguments, "isVisible");
+        var tabColor = ArgumentHelper.GetStringNullable(arguments, "tabColor");
+        var isSelected = ArgumentHelper.GetBoolNullable(arguments, "isSelected");
 
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
@@ -295,8 +302,8 @@ Usage examples:
             workbook.Worksheets.ActiveSheetIndex = sheetIndex;
         }
 
-        workbook.Save(path);
-        return await Task.FromResult($"Sheet {sheetIndex} properties updated: {path}");
+        workbook.Save(outputPath);
+        return await Task.FromResult($"Sheet {sheetIndex} properties updated: {outputPath}");
     }
 
     /// <summary>
@@ -307,19 +314,19 @@ Usage examples:
     /// <returns>Formatted string with sheet information</returns>
     private async Task<string> GetSheetInfoAsync(JsonObject? arguments, string path)
     {
-        var sheetIndex = arguments?["sheetIndex"]?.GetValue<int?>();
+        var sheetIndex = ArgumentHelper.GetIntNullable(arguments, "sheetIndex");
 
         using var workbook = new Workbook(path);
         var result = new StringBuilder();
 
-        result.AppendLine("=== Excel 工作簿資訊 ===\n");
-        result.AppendLine($"總工作表數: {workbook.Worksheets.Count}\n");
+        result.AppendLine("=== Excel Workbook Information ===\n");
+        result.AppendLine($"Total worksheets: {workbook.Worksheets.Count}\n");
 
         if (sheetIndex.HasValue)
         {
             if (sheetIndex.Value < 0 || sheetIndex.Value >= workbook.Worksheets.Count)
             {
-                throw new ArgumentException($"工作表索引 {sheetIndex.Value} 超出範圍 (共有 {workbook.Worksheets.Count} 個工作表)");
+                throw new ArgumentException($"Worksheet index {sheetIndex.Value} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
             }
 
             var worksheet = workbook.Worksheets[sheetIndex.Value];
@@ -339,14 +346,14 @@ Usage examples:
 
     private void AppendSheetInfo(StringBuilder result, Worksheet worksheet, int index)
     {
-        result.AppendLine($"【工作表 {index}: {worksheet.Name}】");
-        result.AppendLine($"  可見性: {worksheet.VisibilityType}");
-        result.AppendLine($"  最大行: {worksheet.Cells.MaxDataRow + 1}");
-        result.AppendLine($"  最大列: {worksheet.Cells.MaxDataColumn + 1}");
-        result.AppendLine($"  已使用範圍: {worksheet.Cells.MaxRow + 1} 行 × {worksheet.Cells.MaxColumn + 1} 列");
-        result.AppendLine($"  頁面方向: {worksheet.PageSetup.Orientation}");
-        result.AppendLine($"  紙張大小: {worksheet.PageSetup.PaperSize}");
-        result.AppendLine($"  凍結窗格: 行 {worksheet.FirstVisibleRow}, 列 {worksheet.FirstVisibleColumn}");
+        result.AppendLine($"[Worksheet {index}: {worksheet.Name}]");
+        result.AppendLine($"  Visibility: {worksheet.VisibilityType}");
+        result.AppendLine($"  Max row: {worksheet.Cells.MaxDataRow + 1}");
+        result.AppendLine($"  Max column: {worksheet.Cells.MaxDataColumn + 1}");
+        result.AppendLine($"  Used range: {worksheet.Cells.MaxRow + 1} rows × {worksheet.Cells.MaxColumn + 1} columns");
+        result.AppendLine($"  Page orientation: {worksheet.PageSetup.Orientation}");
+        result.AppendLine($"  Paper size: {worksheet.PageSetup.PaperSize}");
+        result.AppendLine($"  Freeze panes: row {worksheet.FirstVisibleRow}, column {worksheet.FirstVisibleColumn}");
     }
 }
 

@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using Aspose.Words;
 using AsposeMcpServer.Core;
 
@@ -150,7 +150,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
 
         return operation.ToLower() switch
         {
@@ -170,20 +170,20 @@ Usage examples:
     /// <returns>Success message with file path</returns>
     private async Task<string> CreateDocument(JsonObject? arguments)
     {
-        var outputPath = ArgumentHelper.GetString(arguments, "outputPath", "outputPath");
+        var outputPath = ArgumentHelper.GetString(arguments, "outputPath");
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var content = arguments?["content"]?.GetValue<string>();
-        var skipInitialContent = arguments?["skipInitialContent"]?.GetValue<bool>() ?? false;
-        var marginTop = arguments?["marginTop"]?.GetValue<double?>() ?? 70.87;
-        var marginBottom = arguments?["marginBottom"]?.GetValue<double?>() ?? 70.87;
-        var marginLeft = arguments?["marginLeft"]?.GetValue<double?>() ?? 70.87;
-        var marginRight = arguments?["marginRight"]?.GetValue<double?>() ?? 70.87;
-        var compatibilityMode = arguments?["compatibilityMode"]?.GetValue<string>() ?? "Word2019";
-        var pageWidth = arguments?["pageWidth"]?.GetValue<double?>();
-        var pageHeight = arguments?["pageHeight"]?.GetValue<double?>();
-        var paperSize = arguments?["paperSize"]?.GetValue<string>() ?? "A4";
-        var headerDistance = arguments?["headerDistance"]?.GetValue<double?>() ?? 35.4;
-        var footerDistance = arguments?["footerDistance"]?.GetValue<double?>() ?? 35.4;
+        var content = ArgumentHelper.GetStringNullable(arguments, "content");
+        var skipInitialContent = ArgumentHelper.GetBool(arguments, "skipInitialContent", false);
+        var marginTop = ArgumentHelper.GetDouble(arguments, "marginTop", 70.87);
+        var marginBottom = ArgumentHelper.GetDouble(arguments, "marginBottom", 70.87);
+        var marginLeft = ArgumentHelper.GetDouble(arguments, "marginLeft", 70.87);
+        var marginRight = ArgumentHelper.GetDouble(arguments, "marginRight", 70.87);
+        var compatibilityMode = ArgumentHelper.GetString(arguments, "compatibilityMode", "Word2019");
+        var pageWidth = ArgumentHelper.GetDoubleNullable(arguments, "pageWidth");
+        var pageHeight = ArgumentHelper.GetDoubleNullable(arguments, "pageHeight");
+        var paperSize = ArgumentHelper.GetString(arguments, "paperSize", "A4");
+        var headerDistance = ArgumentHelper.GetDouble(arguments, "headerDistance", 35.4);
+        var footerDistance = ArgumentHelper.GetDouble(arguments, "footerDistance", 35.4);
 
         var doc = new Document();
         
@@ -286,9 +286,9 @@ Usage examples:
     /// <returns>Success message with output path</returns>
     private async Task<string> CreateFromTemplate(JsonObject? arguments)
     {
-        var templatePath = ArgumentHelper.GetString(arguments, "templatePath", "templatePath");
-        var outputPath = ArgumentHelper.GetString(arguments, "outputPath", "outputPath");
-        var placeholderStyle = arguments?["placeholderStyle"]?.GetValue<string>() ?? "doubleCurly";
+        var templatePath = ArgumentHelper.GetString(arguments, "templatePath");
+        var outputPath = ArgumentHelper.GetString(arguments, "outputPath");
+        var placeholderStyle = ArgumentHelper.GetString(arguments, "placeholderStyle", "doubleCurly");
 
         SecurityHelper.ValidateFilePath(templatePath, "templatePath");
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
@@ -336,9 +336,9 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidatePath(arguments, "outputPath");
-        var format = arguments?["format"]?.GetValue<string>()?.ToLower() ?? throw new ArgumentException("format is required");
+        var format = ArgumentHelper.GetString(arguments, "format").ToLower();
 
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         var doc = new Document(path);
@@ -368,8 +368,8 @@ Usage examples:
     /// <returns>Success message with merged file path</returns>
     private async Task<string> MergeDocuments(JsonObject? arguments)
     {
-        var inputPathsArray = arguments?["inputPaths"]?.AsArray() ?? throw new ArgumentException("inputPaths is required");
-        var outputPath = ArgumentHelper.GetString(arguments, "outputPath", "outputPath");
+        var inputPathsArray = ArgumentHelper.GetArray(arguments, "inputPaths");
+        var outputPath = ArgumentHelper.GetString(arguments, "outputPath");
 
         SecurityHelper.ValidateArraySize(inputPathsArray, "inputPaths");
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
@@ -404,10 +404,10 @@ Usage examples:
     private async Task<string> SplitDocument(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputDir = ArgumentHelper.GetString(arguments, "outputDir", "outputDir");
-        var splitBy = arguments?["splitBy"]?.GetValue<string>() ?? "section";
+        var outputDir = ArgumentHelper.GetString(arguments, "outputDir");
+        var splitBy = ArgumentHelper.GetString(arguments, "splitBy", "section");
 
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
         SecurityHelper.ValidateFilePath(outputDir, "outputDir");
 
         Directory.CreateDirectory(outputDir);

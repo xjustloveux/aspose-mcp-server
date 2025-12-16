@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Text;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
@@ -47,7 +47,7 @@ Usage examples:
             outputPath = new
             {
                 type = "string",
-                description = "Output file path (optional, for find_replace/batch_write, defaults to input path)"
+                description = "Output file path (optional, for sort/find_replace/batch_write operations, defaults to input path)"
             },
             sheetIndex = new
             {
@@ -115,9 +115,9 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var sheetIndex = arguments?["sheetIndex"]?.GetValue<int>() ?? 0;
+        var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
 
         return operation.ToLower() switch
         {
@@ -140,22 +140,24 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> SortDataAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var range = ArgumentHelper.GetString(arguments, "range", "range");
-        var sortColumn = ArgumentHelper.GetInt(arguments, "sortColumn", "sortColumn");
-        var ascending = arguments?["ascending"]?.GetValue<bool?>() ?? true;
-        var hasHeader = arguments?["hasHeader"]?.GetValue<bool?>() ?? false;
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var range = ArgumentHelper.GetString(arguments, "range");
+        var sortColumn = ArgumentHelper.GetInt(arguments, "sortColumn");
+        var ascending = ArgumentHelper.GetBool(arguments, "ascending");
+        var hasHeader = ArgumentHelper.GetBool(arguments, "hasHeader", false);
 
         using var workbook = new Workbook(path);
         var worksheet = workbook.Worksheets[sheetIndex];
         var cells = worksheet.Cells;
-        var cellRange = cells.CreateRange(range);
+        
+        var cellRange = ExcelHelper.CreateRange(cells, range);
 
         var dataSorter = workbook.DataSorter;
         // Sort data - use the 5-parameter overload
         dataSorter.Sort(cells, cellRange.FirstRow, cellRange.FirstColumn, cellRange.FirstRow + cellRange.RowCount - 1, cellRange.FirstColumn + cellRange.ColumnCount - 1);
 
-        workbook.Save(path);
-        return await Task.FromResult($"Data sorted in range {range} by column {sortColumn} ({ (ascending ? "ascending" : "descending") }): {path}");
+        workbook.Save(outputPath);
+        return await Task.FromResult($"Data sorted in range {range} by column {sortColumn} ({ (ascending ? "ascending" : "descending") }): {outputPath}");
     }
 
     /// <summary>
@@ -168,11 +170,11 @@ Usage examples:
     private async Task<string> FindReplaceAsync(JsonObject? arguments, string path, int sheetIndex)
     {
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var findText = ArgumentHelper.GetString(arguments, "findText", "findText");
-        var replaceText = ArgumentHelper.GetString(arguments, "replaceText", "replaceText");
-        var sheetIndexParam = arguments?["sheetIndex"]?.GetValue<int?>();
-        var matchCase = arguments?["matchCase"]?.GetValue<bool?>() ?? false;
-        var matchEntireCell = arguments?["matchEntireCell"]?.GetValue<bool?>() ?? false;
+        var findText = ArgumentHelper.GetString(arguments, "findText");
+        var replaceText = ArgumentHelper.GetString(arguments, "replaceText");
+        var sheetIndexParam = ArgumentHelper.GetIntNullable(arguments, "sheetIndex");
+        var matchCase = ArgumentHelper.GetBool(arguments, "matchCase", false);
+        var matchEntireCell = ArgumentHelper.GetBool(arguments, "matchEntireCell", false);
 
         using var workbook = new Workbook(path);
         var totalReplacements = 0;
@@ -182,7 +184,7 @@ Usage examples:
         {
             if (sheetIndexParam.Value < 0 || sheetIndexParam.Value >= workbook.Worksheets.Count)
             {
-                throw new ArgumentException($"工作表索引 {sheetIndexParam.Value} 超出範圍 (共有 {workbook.Worksheets.Count} 個工作表)");
+                throw new ArgumentException($"Worksheet index {sheetIndexParam.Value} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
             }
             
             var worksheet = workbook.Worksheets[sheetIndexParam.Value];
@@ -199,7 +201,7 @@ Usage examples:
         
         workbook.Save(outputPath);
         
-        return await Task.FromResult($"查找替換完成\n查找: '{findText}'\n替換為: '{replaceText}'\n總替換數: {totalReplacements}\n輸出: {outputPath}");
+        return await Task.FromResult($"Find and replace completed\nFind: '{findText}'\nReplace with: '{replaceText}'\nTotal replacements: {totalReplacements}\nOutput: {outputPath}");
     }
 
     private int ReplaceInWorksheet(Worksheet worksheet, string findText, string replaceText, bool matchCase, LookAtType lookAt)
@@ -233,7 +235,7 @@ Usage examples:
     private async Task<string> BatchWriteAsync(JsonObject? arguments, string path, int sheetIndex)
     {
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var dataArray = arguments?["data"]?.AsArray() ?? throw new ArgumentException("data is required for batch_write operation");
+        var dataArray = ArgumentHelper.GetArray(arguments, "data");
 
         using var workbook = new Workbook(path);
         var worksheet = workbook.Worksheets[sheetIndex];
@@ -280,7 +282,7 @@ Usage examples:
     /// <returns>Formatted string with cell content</returns>
     private async Task<string> GetContentAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var range = arguments?["range"]?.GetValue<string>();
+        var range = ArgumentHelper.GetStringNullable(arguments, "range");
 
         using var workbook = new Workbook(path);
         var worksheet = workbook.Worksheets[sheetIndex];
@@ -288,7 +290,17 @@ Usage examples:
         if (!string.IsNullOrEmpty(range))
         {
             var cells = worksheet.Cells;
-            var cellRange = cells.CreateRange(range);
+            
+            Aspose.Cells.Range cellRange;
+            try
+            {
+                cellRange = ExcelHelper.CreateRange(cells, range);
+            }
+            catch (Exception ex)
+            {
+                throw new ArgumentException($"Invalid range format: '{range}'. Range exceeds Excel limits (valid range: A1:XFD1048576). Error: {ex.Message}");
+            }
+            
             var options = new ExportTableOptions
             {
                 ExportColumnName = false
@@ -321,23 +333,23 @@ Usage examples:
     /// <returns>Formatted string with statistics</returns>
     private async Task<string> GetStatisticsAsync(JsonObject? arguments, string path)
     {
-        var sheetIndex = arguments?["sheetIndex"]?.GetValue<int?>();
+        var sheetIndex = ArgumentHelper.GetIntNullable(arguments, "sheetIndex");
 
         using var workbook = new Workbook(path);
         var result = new StringBuilder();
 
-        result.AppendLine("=== Excel 工作簿統計資訊 ===\n");
+        result.AppendLine("=== Excel Workbook Statistics ===\n");
 
-        result.AppendLine("【工作簿資訊】");
-        result.AppendLine($"總工作表數: {workbook.Worksheets.Count}");
-        result.AppendLine($"檔案格式: {workbook.FileFormat}");
+        result.AppendLine("[Workbook Information]");
+        result.AppendLine($"Total worksheets: {workbook.Worksheets.Count}");
+        result.AppendLine($"File format: {workbook.FileFormat}");
         result.AppendLine();
 
         if (sheetIndex.HasValue)
         {
             if (sheetIndex.Value < 0 || sheetIndex.Value >= workbook.Worksheets.Count)
             {
-                throw new ArgumentException($"工作表索引 {sheetIndex.Value} 超出範圍 (共有 {workbook.Worksheets.Count} 個工作表)");
+                throw new ArgumentException($"Worksheet index {sheetIndex.Value} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
             }
             AppendSheetStatistics(result, workbook.Worksheets[sheetIndex.Value], sheetIndex.Value);
         }
@@ -355,13 +367,13 @@ Usage examples:
 
     private void AppendSheetStatistics(StringBuilder result, Worksheet worksheet, int index)
     {
-        result.AppendLine($"【工作表 {index}: {worksheet.Name}】");
-        result.AppendLine($"最大數據行: {worksheet.Cells.MaxDataRow + 1}");
-        result.AppendLine($"最大數據列: {worksheet.Cells.MaxDataColumn + 1}");
-        result.AppendLine($"圖表數: {worksheet.Charts.Count}");
-        result.AppendLine($"圖片數: {worksheet.Pictures.Count}");
-        result.AppendLine($"超連結數: {worksheet.Hyperlinks.Count}");
-        result.AppendLine($"註釋數: {worksheet.Comments.Count}");
+        result.AppendLine($"[Worksheet {index}: {worksheet.Name}]");
+        result.AppendLine($"Max data row: {worksheet.Cells.MaxDataRow + 1}");
+        result.AppendLine($"Max data column: {worksheet.Cells.MaxDataColumn + 1}");
+        result.AppendLine($"Charts count: {worksheet.Charts.Count}");
+        result.AppendLine($"Pictures count: {worksheet.Pictures.Count}");
+        result.AppendLine($"Hyperlinks count: {worksheet.Hyperlinks.Count}");
+        result.AppendLine($"Comments count: {worksheet.Comments.Count}");
     }
 
     /// <summary>

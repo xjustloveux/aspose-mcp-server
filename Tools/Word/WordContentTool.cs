@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using Aspose.Words.Drawing;
@@ -82,7 +82,7 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
 
         return operation.ToLower() switch
         {
@@ -118,11 +118,11 @@ Usage examples:
     private async Task<string> GetContentDetailed(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var includeHeaders = ArgumentHelper.GetBool(arguments, "includeHeaders", "includeHeaders", true);
-        var includeFooters = ArgumentHelper.GetBool(arguments, "includeFooters", "includeFooters", true);
-        var includeStyles = ArgumentHelper.GetBool(arguments, "includeStyles", "includeStyles", true);
-        var includeTables = ArgumentHelper.GetBool(arguments, "includeTables", "includeTables", true);
-        var includeImages = ArgumentHelper.GetBool(arguments, "includeImages", "includeImages", true);
+        var includeHeaders = ArgumentHelper.GetBool(arguments, "includeHeaders");
+        var includeFooters = ArgumentHelper.GetBool(arguments, "includeFooters");
+        var includeStyles = ArgumentHelper.GetBool(arguments, "includeStyles");
+        var includeTables = ArgumentHelper.GetBool(arguments, "includeTables");
+        var includeImages = ArgumentHelper.GetBool(arguments, "includeImages");
 
         var doc = new Document(path);
         var result = new StringBuilder();
@@ -207,8 +207,8 @@ Usage examples:
     private async Task<string> GetStatistics(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var includeFootnotes = ArgumentHelper.GetBool(arguments, "includeFootnotes", "includeFootnotes", true);
-        var includeTextboxes = ArgumentHelper.GetBool(arguments, "includeTextboxes", "includeTextboxes", true);
+        var includeFootnotes = ArgumentHelper.GetBool(arguments, "includeFootnotes");
+        var includeTextboxes = ArgumentHelper.GetBool(arguments, "includeTextboxes");
 
         var doc = new Document(path);
         doc.UpdateWordCount(true);
@@ -265,7 +265,7 @@ Usage examples:
     private async Task<string> GetDocumentInfo(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var includeTabStops = ArgumentHelper.GetBool(arguments, "includeTabStops", "includeTabStops", true);
+        var includeTabStops = ArgumentHelper.GetBool(arguments, "includeTabStops");
 
         var doc = new Document(path);
         var result = new StringBuilder();

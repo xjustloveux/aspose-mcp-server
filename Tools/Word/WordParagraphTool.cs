@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using AsposeMcpServer.Core;
@@ -72,7 +72,7 @@ Important notes for 'get' operation:
             styleName = new
             {
                 type = "string",
-                description = "Style name to apply (e.g., 'Heading 1', '標題1', 'Normal', optional, for insert/edit operations)"
+                description = "Style name to apply (e.g., 'Heading 1', 'Normal', optional, for insert/edit operations)"
             },
             alignment = new
             {
@@ -116,7 +116,7 @@ Important notes for 'get' operation:
             fontName = new
             {
                 type = "string",
-                description = "Font name (e.g., '標楷體', 'Arial', optional, for edit operation)"
+                description = "Font name (e.g., 'Arial', optional, for edit operation)"
             },
             fontNameAscii = new
             {
@@ -232,9 +232,9 @@ Important notes for 'get' operation:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
+        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         return operation switch
@@ -259,21 +259,21 @@ Important notes for 'get' operation:
     /// <returns>Success message</returns>
     private async Task<string> InsertParagraphAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var text = ArgumentHelper.GetString(arguments, "text", "text");
-        var paragraphIndex = arguments?["paragraphIndex"]?.GetValue<int?>();
-        var styleName = arguments?["styleName"]?.GetValue<string>();
-        var alignment = arguments?["alignment"]?.GetValue<string>();
-        var indentLeft = arguments?["indentLeft"]?.GetValue<double>();
-        var indentRight = arguments?["indentRight"]?.GetValue<double>();
-        var firstLineIndent = arguments?["firstLineIndent"]?.GetValue<double>();
-        var spaceBefore = arguments?["spaceBefore"]?.GetValue<double>();
-        var spaceAfter = arguments?["spaceAfter"]?.GetValue<double>();
+        var text = ArgumentHelper.GetString(arguments, "text");
+        var paragraphIndex = ArgumentHelper.GetIntNullable(arguments, "paragraphIndex");
+        var styleName = ArgumentHelper.GetStringNullable(arguments, "styleName");
+        var alignment = ArgumentHelper.GetStringNullable(arguments, "alignment");
+        var indentLeft = ArgumentHelper.GetDoubleNullable(arguments, "indentLeft");
+        var indentRight = ArgumentHelper.GetDoubleNullable(arguments, "indentRight");
+        var firstLineIndent = ArgumentHelper.GetDoubleNullable(arguments, "firstLineIndent");
+        var spaceBefore = ArgumentHelper.GetDoubleNullable(arguments, "spaceBefore");
+        var spaceAfter = ArgumentHelper.GetDoubleNullable(arguments, "spaceAfter");
 
         var doc = new Document(path);
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
         
         Paragraph? targetPara = null;
-        string insertPosition = "文檔末尾";
+        string insertPosition = "end of document";
         
         if (paragraphIndex.HasValue)
         {
@@ -282,17 +282,17 @@ Important notes for 'get' operation:
                 if (paragraphs.Count > 0)
                 {
                     targetPara = paragraphs[0] as Paragraph;
-                    insertPosition = "文檔開頭";
+                    insertPosition = "beginning of document";
                 }
             }
             else if (paragraphIndex.Value >= 0 && paragraphIndex.Value < paragraphs.Count)
             {
                 targetPara = paragraphs[paragraphIndex.Value] as Paragraph;
-                insertPosition = $"段落 #{paragraphIndex.Value} 之後";
+                insertPosition = $"after paragraph #{paragraphIndex.Value}";
             }
             else
             {
-                throw new ArgumentException($"段落索引 {paragraphIndex.Value} 超出範圍 (文檔共有 {paragraphs.Count} 個段落)");
+                throw new ArgumentException($"Paragraph index {paragraphIndex.Value} is out of range (document has {paragraphs.Count} paragraphs)");
             }
         }
 
@@ -311,7 +311,7 @@ Important notes for 'get' operation:
                 }
                 else
                 {
-                    throw new ArgumentException($"找不到樣式 '{styleName}'，可用樣式請使用 word_get_styles 工具查看");
+                    throw new ArgumentException($"Style '{styleName}' not found. Use word_get_styles tool to view available styles");
                 }
             }
             catch (ArgumentException)
@@ -320,7 +320,7 @@ Important notes for 'get' operation:
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"無法應用樣式 '{styleName}': {ex.Message}，可用樣式請使用 word_get_styles 工具查看", ex);
+                throw new InvalidOperationException($"Unable to apply style '{styleName}': {ex.Message}. Use word_get_styles tool to view available styles", ex);
             }
         }
 
@@ -381,35 +381,35 @@ Important notes for 'get' operation:
 
         doc.Save(outputPath);
 
-        var result = $"成功插入段落\n";
-        result += $"插入位置: {insertPosition}\n";
+        var result = $"Paragraph inserted successfully\n";
+        result += $"Insert position: {insertPosition}\n";
         if (!string.IsNullOrEmpty(styleName))
         {
-            result += $"應用樣式: {styleName}\n";
+            result += $"Applied style: {styleName}\n";
         }
         if (!string.IsNullOrEmpty(alignment))
         {
-            result += $"對齊方式: {alignment}\n";
+            result += $"Alignment: {alignment}\n";
         }
         if (indentLeft.HasValue || indentRight.HasValue || firstLineIndent.HasValue)
         {
-            result += $"縮排: ";
+            result += $"Indent: ";
             var indentParts = new List<string>();
-            if (indentLeft.HasValue) indentParts.Add($"左={indentLeft.Value}pt");
-            if (indentRight.HasValue) indentParts.Add($"右={indentRight.Value}pt");
-            if (firstLineIndent.HasValue) indentParts.Add($"首行={firstLineIndent.Value}pt");
+            if (indentLeft.HasValue) indentParts.Add($"Left={indentLeft.Value}pt");
+            if (indentRight.HasValue) indentParts.Add($"Right={indentRight.Value}pt");
+            if (firstLineIndent.HasValue) indentParts.Add($"First line={firstLineIndent.Value}pt");
             result += string.Join(", ", indentParts) + "\n";
         }
         if (spaceBefore.HasValue || spaceAfter.HasValue)
         {
-            result += $"間距: ";
+            result += $"Spacing: ";
             var spaceParts = new List<string>();
-            if (spaceBefore.HasValue) spaceParts.Add($"段前={spaceBefore.Value}pt");
-            if (spaceAfter.HasValue) spaceParts.Add($"段後={spaceAfter.Value}pt");
+            if (spaceBefore.HasValue) spaceParts.Add($"Before={spaceBefore.Value}pt");
+            if (spaceAfter.HasValue) spaceParts.Add($"After={spaceAfter.Value}pt");
             result += string.Join(", ", spaceParts) + "\n";
         }
-        result += $"文檔段落數: {doc.GetChildNodes(NodeType.Paragraph, true).Count}\n";
-        result += $"輸出: {outputPath}";
+        result += $"Document paragraph count: {doc.GetChildNodes(NodeType.Paragraph, true).Count}\n";
+        result += $"Output: {outputPath}";
 
         return await Task.FromResult(result);
     }
@@ -423,7 +423,7 @@ Important notes for 'get' operation:
     /// <returns>Success message</returns>
     private async Task<string> DeleteParagraphAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex", "paragraphIndex");
+        var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex");
 
         var doc = new Document(path);
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
@@ -433,20 +433,20 @@ Important notes for 'get' operation:
         {
             if (paragraphs.Count == 0)
             {
-                throw new ArgumentException("無法刪除段落：文檔中沒有段落");
+                throw new ArgumentException("Cannot delete paragraph: document has no paragraphs");
             }
             paragraphIndex = paragraphs.Count - 1;
         }
         
         if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
         {
-            throw new ArgumentException($"段落索引 {paragraphIndex} 超出範圍 (文檔共有 {paragraphs.Count} 個段落)");
+            throw new ArgumentException($"Paragraph index {paragraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
         }
 
         var paragraphToDelete = paragraphs[paragraphIndex] as Paragraph;
         if (paragraphToDelete == null)
         {
-            throw new InvalidOperationException($"無法獲取索引 {paragraphIndex} 的段落");
+            throw new InvalidOperationException($"Unable to get paragraph at index {paragraphIndex}");
         }
 
         var textPreview = paragraphToDelete.GetText().Trim();
@@ -459,13 +459,13 @@ Important notes for 'get' operation:
 
         doc.Save(outputPath);
 
-        var result = $"成功刪除段落 #{paragraphIndex}\n";
+        var result = $"Paragraph #{paragraphIndex} deleted successfully\n";
         if (!string.IsNullOrEmpty(textPreview))
         {
-            result += $"內容預覽: {textPreview}\n";
+            result += $"Content preview: {textPreview}\n";
         }
-        result += $"文檔剩餘段落數: {doc.GetChildNodes(NodeType.Paragraph, true).Count}\n";
-        result += $"輸出: {outputPath}";
+        result += $"Remaining paragraphs: {doc.GetChildNodes(NodeType.Paragraph, true).Count}\n";
+        result += $"Output: {outputPath}";
 
         return await Task.FromResult(result);
     }
@@ -479,8 +479,8 @@ Important notes for 'get' operation:
     /// <returns>Success message</returns>
     private async Task<string> EditParagraphAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex", "paragraphIndex");
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int>() ?? 0;
+        var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex");
+        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
 
         var doc = new Document(path);
         
@@ -523,104 +523,71 @@ Important notes for 'get' operation:
         }
         
         // Apply font properties
-        if (arguments?["fontName"] != null)
-        {
-            var fontName = arguments["fontName"]?.GetValue<string>();
-            builder.Font.Name = fontName ?? "";
-        }
+        var fontName = ArgumentHelper.GetStringNullable(arguments, "fontName");
+        if (!string.IsNullOrEmpty(fontName))
+            builder.Font.Name = fontName;
         
-        if (arguments?["fontNameAscii"] != null)
-        {
-            var fontNameAscii = arguments["fontNameAscii"]?.GetValue<string>();
-            builder.Font.NameAscii = fontNameAscii ?? "";
-        }
+        var fontNameAscii = ArgumentHelper.GetStringNullable(arguments, "fontNameAscii");
+        if (!string.IsNullOrEmpty(fontNameAscii))
+            builder.Font.NameAscii = fontNameAscii;
         
-        if (arguments?["fontNameFarEast"] != null)
-        {
-            var fontNameFarEast = arguments["fontNameFarEast"]?.GetValue<string>();
-            builder.Font.NameFarEast = fontNameFarEast ?? "";
-        }
+        var fontNameFarEast = ArgumentHelper.GetStringNullable(arguments, "fontNameFarEast");
+        if (!string.IsNullOrEmpty(fontNameFarEast))
+            builder.Font.NameFarEast = fontNameFarEast;
         
-        if (arguments?["fontSize"] != null)
-        {
-            var fontSize = arguments["fontSize"]?.GetValue<double>();
-            if (fontSize.HasValue)
-                builder.Font.Size = fontSize.Value;
-        }
+        var fontSize = ArgumentHelper.GetDoubleNullable(arguments, "fontSize");
+        if (fontSize.HasValue)
+            builder.Font.Size = fontSize.Value;
         
-        if (arguments?["bold"] != null)
-        {
-            builder.Font.Bold = arguments["bold"]?.GetValue<bool>() ?? false;
-        }
+        var bold = ArgumentHelper.GetBoolNullable(arguments, "bold");
+        if (bold.HasValue)
+            builder.Font.Bold = bold.Value;
         
-        if (arguments?["italic"] != null)
-        {
-            builder.Font.Italic = arguments["italic"]?.GetValue<bool>() ?? false;
-        }
+        var italic = ArgumentHelper.GetBoolNullable(arguments, "italic");
+        if (italic.HasValue)
+            builder.Font.Italic = italic.Value;
         
-        if (arguments?["underline"] != null)
-        {
-            var underline = arguments["underline"]?.GetValue<bool>() ?? false;
-            builder.Font.Underline = underline ? Underline.Single : Underline.None;
-        }
+        var underline = ArgumentHelper.GetBoolNullable(arguments, "underline");
+        if (underline.HasValue)
+            builder.Font.Underline = underline.Value ? Underline.Single : Underline.None;
         
-        if (arguments?["color"] != null)
+        var colorStr = ArgumentHelper.GetStringNullable(arguments, "color");
+        if (!string.IsNullOrEmpty(colorStr))
         {
-            var colorStr = arguments["color"]?.GetValue<string>();
-            if (!string.IsNullOrEmpty(colorStr))
-            {
-                builder.Font.Color = ColorHelper.ParseColor(colorStr);
-            }
+            builder.Font.Color = ColorHelper.ParseColor(colorStr);
         }
         
         // Apply paragraph properties
         var paraFormat = para.ParagraphFormat;
         
-        if (arguments?["alignment"] != null)
-        {
-            var alignment = arguments["alignment"]?.GetValue<string>() ?? "left";
+        var alignment = ArgumentHelper.GetStringNullable(arguments, "alignment") ?? "left";
+        if (!string.IsNullOrEmpty(alignment))
             paraFormat.Alignment = GetAlignment(alignment);
-        }
         
-        if (arguments?["indentLeft"] != null)
-        {
-            var indentLeft = arguments["indentLeft"]?.GetValue<double>();
-            if (indentLeft.HasValue)
-                paraFormat.LeftIndent = indentLeft.Value;
-        }
+        var indentLeft = ArgumentHelper.GetDoubleNullable(arguments, "indentLeft");
+        if (indentLeft.HasValue)
+            paraFormat.LeftIndent = indentLeft.Value;
         
-        if (arguments?["indentRight"] != null)
-        {
-            var indentRight = arguments["indentRight"]?.GetValue<double>();
-            if (indentRight.HasValue)
-                paraFormat.RightIndent = indentRight.Value;
-        }
+        var indentRight = ArgumentHelper.GetDoubleNullable(arguments, "indentRight");
+        if (indentRight.HasValue)
+            paraFormat.RightIndent = indentRight.Value;
         
-        if (arguments?["firstLineIndent"] != null)
-        {
-            var firstLineIndent = arguments["firstLineIndent"]?.GetValue<double>();
-            if (firstLineIndent.HasValue)
-                paraFormat.FirstLineIndent = firstLineIndent.Value;
-        }
+        var firstLineIndent = ArgumentHelper.GetDoubleNullable(arguments, "firstLineIndent");
+        if (firstLineIndent.HasValue)
+            paraFormat.FirstLineIndent = firstLineIndent.Value;
         
-        if (arguments?["spaceBefore"] != null)
-        {
-            var spaceBefore = arguments["spaceBefore"]?.GetValue<double>();
-            if (spaceBefore.HasValue)
-                paraFormat.SpaceBefore = spaceBefore.Value;
-        }
+        var spaceBefore = ArgumentHelper.GetDoubleNullable(arguments, "spaceBefore");
+        if (spaceBefore.HasValue)
+            paraFormat.SpaceBefore = spaceBefore.Value;
         
-        if (arguments?["spaceAfter"] != null)
-        {
-            var spaceAfter = arguments["spaceAfter"]?.GetValue<double>();
-            if (spaceAfter.HasValue)
-                paraFormat.SpaceAfter = spaceAfter.Value;
-        }
+        var spaceAfter = ArgumentHelper.GetDoubleNullable(arguments, "spaceAfter");
+        if (spaceAfter.HasValue)
+            paraFormat.SpaceAfter = spaceAfter.Value;
         
         if (arguments?["lineSpacing"] != null || arguments?["lineSpacingRule"] != null)
         {
-            var lineSpacing = arguments?["lineSpacing"]?.GetValue<double>();
-            var lineSpacingRule = arguments?["lineSpacingRule"]?.GetValue<string>() ?? "single";
+            var lineSpacing = ArgumentHelper.GetDoubleNullable(arguments, "lineSpacing");
+            var lineSpacingRule = ArgumentHelper.GetString(arguments, "lineSpacingRule", "single");
             
             var rule = GetLineSpacingRule(lineSpacingRule);
             paraFormat.LineSpacingRule = rule;
@@ -643,76 +610,66 @@ Important notes for 'get' operation:
             }
         }
         
-        if (arguments?["styleName"] != null)
+        var styleName = ArgumentHelper.GetStringNullable(arguments, "styleName");
+        if (!string.IsNullOrEmpty(styleName))
         {
-            var styleName = arguments["styleName"]?.GetValue<string>();
-            if (!string.IsNullOrEmpty(styleName))
+            try
             {
-                try
-                {
-                    paraFormat.Style = doc.Styles[styleName];
-                }
-                catch
-                {
-                    // Style not found, ignore
-                }
+                paraFormat.Style = doc.Styles[styleName];
+            }
+            catch
+            {
+                // Style not found, ignore
             }
         }
         
         // Apply tab stops
-        if (arguments?["tabStops"] != null)
+        var tabStops = ArgumentHelper.GetArray(arguments, "tabStops", false);
+        if (tabStops != null && tabStops.Count > 0)
         {
-            var tabStops = arguments["tabStops"]?.AsArray();
-            if (tabStops != null && tabStops.Count > 0)
+            paraFormat.TabStops.Clear();
+            foreach (var ts in tabStops)
             {
-                paraFormat.TabStops.Clear();
-                foreach (var ts in tabStops)
+                var tsObj = ts?.AsObject();
+                if (tsObj != null)
                 {
-                    var position = ts?["position"]?.GetValue<double>() ?? 0;
-                    var alignment = ts?["alignment"]?.GetValue<string>() ?? "left";
-                    var leader = ts?["leader"]?.GetValue<string>() ?? "none";
+                    var position = tsObj["position"]?.GetValue<double>() ?? 0;
+                    var tabAlignment = tsObj["alignment"]?.GetValue<string>() ?? "left";
+                    var leader = tsObj["leader"]?.GetValue<string>() ?? "none";
                     
                     paraFormat.TabStops.Add(new TabStop(
                         position,
-                        GetTabAlignment(alignment),
+                        GetTabAlignment(tabAlignment),
                         GetTabLeader(leader)
                     ));
                 }
             }
         }
         
-        var textParam = arguments?["text"]?.GetValue<string>();
+        var textParam = ArgumentHelper.GetStringNullable(arguments, "text");
         if (!string.IsNullOrEmpty(textParam))
         {
             // Clear existing content and add new text
             para.RemoveAllChildren();
             var newRun = new Run(doc, textParam);
             
-            // Apply font settings to the new run
-            if (arguments?["fontName"] != null)
-                newRun.Font.Name = arguments["fontName"]?.GetValue<string>() ?? "";
-            if (arguments?["fontNameAscii"] != null)
-                newRun.Font.NameAscii = arguments["fontNameAscii"]?.GetValue<string>() ?? "";
-            if (arguments?["fontNameFarEast"] != null)
-                newRun.Font.NameFarEast = arguments["fontNameFarEast"]?.GetValue<string>() ?? "";
-            if (arguments?["fontSize"] != null)
-            {
-                var fontSizeValue = arguments["fontSize"]?.GetValue<double?>();
-                if (fontSizeValue.HasValue)
-                    newRun.Font.Size = fontSizeValue.Value;
-            }
-            if (arguments?["bold"] != null)
-                newRun.Font.Bold = arguments["bold"]?.GetValue<bool>() ?? false;
-            if (arguments?["italic"] != null)
-                newRun.Font.Italic = arguments["italic"]?.GetValue<bool>() ?? false;
-            if (arguments?["underline"] != null)
-                newRun.Font.Underline = arguments["underline"]?.GetValue<bool>() == true ? Underline.Single : Underline.None;
-            if (arguments?["color"] != null)
-            {
-                var colorStr = arguments["color"]?.GetValue<string>();
-                if (!string.IsNullOrEmpty(colorStr))
-                    newRun.Font.Color = ColorHelper.ParseColor(colorStr);
-            }
+            // Apply font settings to the new run (reuse variables from outer scope)
+            if (!string.IsNullOrEmpty(fontName))
+                newRun.Font.Name = fontName;
+            if (!string.IsNullOrEmpty(fontNameAscii))
+                newRun.Font.NameAscii = fontNameAscii;
+            if (!string.IsNullOrEmpty(fontNameFarEast))
+                newRun.Font.NameFarEast = fontNameFarEast;
+            if (fontSize.HasValue)
+                newRun.Font.Size = fontSize.Value;
+            if (bold.HasValue)
+                newRun.Font.Bold = bold.Value;
+            if (italic.HasValue)
+                newRun.Font.Italic = italic.Value;
+            if (underline.HasValue)
+                newRun.Font.Underline = underline.Value ? Underline.Single : Underline.None;
+            if (!string.IsNullOrEmpty(colorStr))
+                newRun.Font.Color = ColorHelper.ParseColor(colorStr);
             
             para.AppendChild(newRun);
         }
@@ -729,64 +686,32 @@ Important notes for 'get' operation:
             {
                 foreach (Run run in runs)
                 {
-                    if (arguments?["fontName"] != null)
-                    {
-                        var fontName = arguments["fontName"]?.GetValue<string>();
-                        run.Font.Name = fontName ?? "";
-                    }
-                    
-                    if (arguments?["fontNameAscii"] != null)
-                    {
-                        var fontNameAscii = arguments["fontNameAscii"]?.GetValue<string>();
-                        run.Font.NameAscii = fontNameAscii ?? "";
-                    }
-                    
-                    if (arguments?["fontNameFarEast"] != null)
-                    {
-                        var fontNameFarEast = arguments["fontNameFarEast"]?.GetValue<string>();
-                        run.Font.NameFarEast = fontNameFarEast ?? "";
-                    }
-                    
-                    if (arguments?["fontSize"] != null)
-                    {
-                        var fontSize = arguments["fontSize"]?.GetValue<double>();
-                        if (fontSize.HasValue)
-                            run.Font.Size = fontSize.Value;
-                    }
-                    
-                    if (arguments?["bold"] != null)
-                    {
-                        run.Font.Bold = arguments["bold"]?.GetValue<bool>() ?? false;
-                    }
-                    
-                    if (arguments?["italic"] != null)
-                    {
-                        run.Font.Italic = arguments["italic"]?.GetValue<bool>() ?? false;
-                    }
-                    
-                    if (arguments?["underline"] != null)
-                    {
-                        var underline = arguments["underline"]?.GetValue<bool>() ?? false;
-                        run.Font.Underline = underline ? Underline.Single : Underline.None;
-                    }
-                    
-                    if (arguments?["color"] != null)
-                    {
-                        var colorStr = arguments["color"]?.GetValue<string>();
-                        if (!string.IsNullOrEmpty(colorStr))
-                        {
-                            run.Font.Color = ColorHelper.ParseColor(colorStr);
-                        }
-                    }
+                    // Apply font settings (reuse variables from outer scope)
+                    if (!string.IsNullOrEmpty(fontName))
+                        run.Font.Name = fontName;
+                    if (!string.IsNullOrEmpty(fontNameAscii))
+                        run.Font.NameAscii = fontNameAscii;
+                    if (!string.IsNullOrEmpty(fontNameFarEast))
+                        run.Font.NameFarEast = fontNameFarEast;
+                    if (fontSize.HasValue)
+                        run.Font.Size = fontSize.Value;
+                    if (bold.HasValue)
+                        run.Font.Bold = bold.Value;
+                    if (italic.HasValue)
+                        run.Font.Italic = italic.Value;
+                    if (underline.HasValue)
+                        run.Font.Underline = underline.Value ? Underline.Single : Underline.None;
+                    if (!string.IsNullOrEmpty(colorStr))
+                        run.Font.Color = ColorHelper.ParseColor(colorStr);
                 }
             }
         }
         
         doc.Save(outputPath);
         
-        var resultMsg = $"成功編輯段落 {paragraphIndex} 的格式";
+        var resultMsg = $"Paragraph {paragraphIndex} format edited successfully";
         if (!string.IsNullOrEmpty(textParam))
-            resultMsg += $"，文字內容已更新";
+            resultMsg += $", text content updated";
         return await Task.FromResult(resultMsg);
     }
 
@@ -798,11 +723,11 @@ Important notes for 'get' operation:
     /// <returns>Formatted string with all paragraphs</returns>
     private async Task<string> GetParagraphsAsync(JsonObject? arguments, string path)
     {
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>();
-        var includeEmpty = arguments?["includeEmpty"]?.GetValue<bool?>() ?? true;
-        var styleFilter = arguments?["styleFilter"]?.GetValue<string>();
-        var includeCommentParagraphs = arguments?["includeCommentParagraphs"]?.GetValue<bool?>() ?? true;
-        var includeTextboxParagraphs = arguments?["includeTextboxParagraphs"]?.GetValue<bool?>() ?? true;
+        var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
+        var includeEmpty = ArgumentHelper.GetBool(arguments, "includeEmpty");
+        var styleFilter = ArgumentHelper.GetStringNullable(arguments, "styleFilter");
+        var includeCommentParagraphs = ArgumentHelper.GetBool(arguments, "includeCommentParagraphs");
+        var includeTextboxParagraphs = ArgumentHelper.GetBool(arguments, "includeTextboxParagraphs");
 
         var doc = new Document(path);
         var sb = new StringBuilder();
@@ -984,86 +909,86 @@ Important notes for 'get' operation:
     /// <returns>Formatted string with paragraph format details</returns>
     private async Task<string> GetParagraphFormatAsync(JsonObject? arguments, string path)
     {
-        var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex", "paragraphIndex");
-        var includeRunDetails = arguments?["includeRunDetails"]?.GetValue<bool>() ?? true;
+        var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex");
+        var includeRunDetails = ArgumentHelper.GetBool(arguments, "includeRunDetails");
 
         var doc = new Document(path);
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
         
         if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
         {
-            throw new ArgumentException($"段落索引 {paragraphIndex} 超出範圍 (文檔共有 {paragraphs.Count} 個段落)");
+            throw new ArgumentException($"Paragraph index {paragraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
         }
         
         var para = paragraphs[paragraphIndex] as Paragraph;
         if (para == null)
         {
-            throw new InvalidOperationException($"無法找到索引 {paragraphIndex} 的段落");
+            throw new InvalidOperationException($"Unable to find paragraph at index {paragraphIndex}");
         }
 
         var result = new StringBuilder();
-        result.AppendLine($"=== 段落 #{paragraphIndex} 格式資訊 ===\n");
+        result.AppendLine($"=== Paragraph #{paragraphIndex} Format Information ===\n");
 
-        result.AppendLine("【基本資訊】");
-        result.AppendLine($"段落文字: {para.GetText().Trim()}");
-        result.AppendLine($"文字長度: {para.GetText().Trim().Length} 字元");
-        result.AppendLine($"Run 數量: {para.Runs.Count}");
+        result.AppendLine("[Basic Information]");
+        result.AppendLine($"Paragraph text: {para.GetText().Trim()}");
+        result.AppendLine($"Text length: {para.GetText().Trim().Length} characters");
+        result.AppendLine($"Run count: {para.Runs.Count}");
         result.AppendLine();
 
         var format = para.ParagraphFormat;
-        result.AppendLine("【段落格式】");
-        result.AppendLine($"樣式名稱: {format.StyleName}");
-        result.AppendLine($"對齊方式: {format.Alignment}");
-        result.AppendLine($"左縮排: {format.LeftIndent:F2} pt ({format.LeftIndent / 28.35:F2} cm)");
-        result.AppendLine($"右縮排: {format.RightIndent:F2} pt ({format.RightIndent / 28.35:F2} cm)");
-        result.AppendLine($"首行縮排: {format.FirstLineIndent:F2} pt ({format.FirstLineIndent / 28.35:F2} cm)");
-        result.AppendLine($"段前間距: {format.SpaceBefore:F2} pt");
-        result.AppendLine($"段後間距: {format.SpaceAfter:F2} pt");
-        result.AppendLine($"行距: {format.LineSpacing:F2} pt");
-        result.AppendLine($"行距規則: {format.LineSpacingRule}");
+        result.AppendLine("[Paragraph Format]");
+        result.AppendLine($"Style name: {format.StyleName}");
+        result.AppendLine($"Alignment: {format.Alignment}");
+        result.AppendLine($"Left indent: {format.LeftIndent:F2} pt ({format.LeftIndent / 28.35:F2} cm)");
+        result.AppendLine($"Right indent: {format.RightIndent:F2} pt ({format.RightIndent / 28.35:F2} cm)");
+        result.AppendLine($"First line indent: {format.FirstLineIndent:F2} pt ({format.FirstLineIndent / 28.35:F2} cm)");
+        result.AppendLine($"Space before: {format.SpaceBefore:F2} pt");
+        result.AppendLine($"Space after: {format.SpaceAfter:F2} pt");
+        result.AppendLine($"Line spacing: {format.LineSpacing:F2} pt");
+        result.AppendLine($"Line spacing rule: {format.LineSpacingRule}");
         result.AppendLine();
 
         if (para.ListFormat != null && para.ListFormat.IsListItem)
         {
-            result.AppendLine("【列表格式】");
-            result.AppendLine($"是列表項: 是");
-            result.AppendLine($"列表層級: {para.ListFormat.ListLevelNumber}");
+            result.AppendLine("[List Format]");
+            result.AppendLine($"Is list item: Yes");
+            result.AppendLine($"List level: {para.ListFormat.ListLevelNumber}");
             if (para.ListFormat.List != null)
             {
-                result.AppendLine($"列表 ID: {para.ListFormat.List.ListId}");
+                result.AppendLine($"List ID: {para.ListFormat.List.ListId}");
             }
             result.AppendLine();
         }
 
         if (format.Borders.Count > 0)
         {
-            result.AppendLine("【邊框】");
+            result.AppendLine("[Borders]");
             if (format.Borders.Top.LineStyle != LineStyle.None)
-                result.AppendLine($"上邊框: {format.Borders.Top.LineStyle}, {format.Borders.Top.LineWidth} pt, 顏色: {format.Borders.Top.Color.Name}");
+                result.AppendLine($"Top border: {format.Borders.Top.LineStyle}, {format.Borders.Top.LineWidth} pt, Color: {format.Borders.Top.Color.Name}");
             if (format.Borders.Bottom.LineStyle != LineStyle.None)
-                result.AppendLine($"下邊框: {format.Borders.Bottom.LineStyle}, {format.Borders.Bottom.LineWidth} pt, 顏色: {format.Borders.Bottom.Color.Name}");
+                result.AppendLine($"Bottom border: {format.Borders.Bottom.LineStyle}, {format.Borders.Bottom.LineWidth} pt, Color: {format.Borders.Bottom.Color.Name}");
             if (format.Borders.Left.LineStyle != LineStyle.None)
-                result.AppendLine($"左邊框: {format.Borders.Left.LineStyle}, {format.Borders.Left.LineWidth} pt, 顏色: {format.Borders.Left.Color.Name}");
+                result.AppendLine($"Left border: {format.Borders.Left.LineStyle}, {format.Borders.Left.LineWidth} pt, Color: {format.Borders.Left.Color.Name}");
             if (format.Borders.Right.LineStyle != LineStyle.None)
-                result.AppendLine($"右邊框: {format.Borders.Right.LineStyle}, {format.Borders.Right.LineWidth} pt, 顏色: {format.Borders.Right.Color.Name}");
+                result.AppendLine($"Right border: {format.Borders.Right.LineStyle}, {format.Borders.Right.LineWidth} pt, Color: {format.Borders.Right.Color.Name}");
             result.AppendLine();
         }
 
         if (format.Shading.BackgroundPatternColor.ToArgb() != System.Drawing.Color.Empty.ToArgb())
         {
-            result.AppendLine("【背景色】");
+            result.AppendLine("[Background Color]");
             var color = format.Shading.BackgroundPatternColor;
-            result.AppendLine($"背景色: #{color.R:X2}{color.G:X2}{color.B:X2}");
+            result.AppendLine($"Background color: #{color.R:X2}{color.G:X2}{color.B:X2}");
             result.AppendLine();
         }
 
         if (format.TabStops.Count > 0)
         {
-            result.AppendLine("【Tab 停駐點】");
+            result.AppendLine("[Tab Stops]");
             for (int i = 0; i < format.TabStops.Count; i++)
             {
                 var tab = format.TabStops[i];
-                result.AppendLine($"  Tab {i + 1}: 位置={tab.Position:F2} pt, 對齊={tab.Alignment}, 前導字元={tab.Leader}");
+                result.AppendLine($"  Tab {i + 1}: Position={tab.Position:F2} pt, Alignment={tab.Alignment}, Leader={tab.Leader}");
             }
             result.AppendLine();
         }
@@ -1071,79 +996,79 @@ Important notes for 'get' operation:
         if (para.Runs.Count > 0)
         {
             var firstRun = para.Runs[0];
-            result.AppendLine("【字型格式（第一個 Run）】");
+            result.AppendLine("[Font Format (First Run)]");
             
             if (firstRun.Font.NameAscii != firstRun.Font.NameFarEast)
             {
-                result.AppendLine($"字體（英文）: {firstRun.Font.NameAscii}");
-                result.AppendLine($"字體（中文）: {firstRun.Font.NameFarEast}");
+                result.AppendLine($"Font (ASCII): {firstRun.Font.NameAscii}");
+                result.AppendLine($"Font (Far East): {firstRun.Font.NameFarEast}");
             }
             else
             {
-                result.AppendLine($"字體: {firstRun.Font.Name}");
+                result.AppendLine($"Font: {firstRun.Font.Name}");
             }
             
-            result.AppendLine($"字號: {firstRun.Font.Size} pt");
+            result.AppendLine($"Font size: {firstRun.Font.Size} pt");
             
-            if (firstRun.Font.Bold) result.AppendLine("粗體: 是");
-            if (firstRun.Font.Italic) result.AppendLine("斜體: 是");
-            if (firstRun.Font.Underline != Underline.None) result.AppendLine($"底線: {firstRun.Font.Underline}");
-            if (firstRun.Font.StrikeThrough) result.AppendLine("刪除線: 是");
-            if (firstRun.Font.Superscript) result.AppendLine("上標: 是");
-            if (firstRun.Font.Subscript) result.AppendLine("下標: 是");
+            if (firstRun.Font.Bold) result.AppendLine("Bold: Yes");
+            if (firstRun.Font.Italic) result.AppendLine("Italic: Yes");
+            if (firstRun.Font.Underline != Underline.None) result.AppendLine($"Underline: {firstRun.Font.Underline}");
+            if (firstRun.Font.StrikeThrough) result.AppendLine("Strikethrough: Yes");
+            if (firstRun.Font.Superscript) result.AppendLine("Superscript: Yes");
+            if (firstRun.Font.Subscript) result.AppendLine("Subscript: Yes");
             
             if (firstRun.Font.Color.ToArgb() != System.Drawing.Color.Empty.ToArgb())
             {
                 var color = firstRun.Font.Color;
-                result.AppendLine($"顏色: #{color.R:X2}{color.G:X2}{color.B:X2}");
+                result.AppendLine($"Color: #{color.R:X2}{color.G:X2}{color.B:X2}");
             }
             
             if (firstRun.Font.HighlightColor != System.Drawing.Color.Empty)
             {
-                result.AppendLine($"螢光筆: {firstRun.Font.HighlightColor.Name}");
+                result.AppendLine($"Highlight: {firstRun.Font.HighlightColor.Name}");
             }
             result.AppendLine();
         }
 
         if (includeRunDetails && para.Runs.Count > 1)
         {
-            result.AppendLine("【Run 詳細資訊】");
-            result.AppendLine($"共 {para.Runs.Count} 個 Run:");
+            result.AppendLine("[Run Details]");
+            result.AppendLine($"Total {para.Runs.Count} Runs:");
             
             for (int i = 0; i < Math.Min(para.Runs.Count, 10); i++)
             {
                 var run = para.Runs[i];
                 result.AppendLine($"\n  Run #{i}:");
-                result.AppendLine($"    文字: {run.Text.Replace("\r", "\\r").Replace("\n", "\\n")}");
+                result.AppendLine($"    Text: {run.Text.Replace("\r", "\\r").Replace("\n", "\\n")}");
                 
                 if (run.Font.NameAscii != run.Font.NameFarEast)
                 {
-                    result.AppendLine($"    字體（英文）: {run.Font.NameAscii}");
-                    result.AppendLine($"    字體（中文）: {run.Font.NameFarEast}");
+                    result.AppendLine($"    Font (ASCII): {run.Font.NameAscii}");
+                    result.AppendLine($"    Font (Far East): {run.Font.NameFarEast}");
                 }
                 else
                 {
-                    result.AppendLine($"    字體: {run.Font.Name}");
+                    result.AppendLine($"    Font: {run.Font.Name}");
                 }
                 
-                result.AppendLine($"    字號: {run.Font.Size} pt");
+                result.AppendLine($"    Font size: {run.Font.Size} pt");
                 
                 var styles = new List<string>();
-                if (run.Font.Bold) styles.Add("粗體");
-                if (run.Font.Italic) styles.Add("斜體");
-                if (run.Font.Underline != Underline.None) styles.Add($"底線({run.Font.Underline})");
+                if (run.Font.Bold) styles.Add("Bold");
+                if (run.Font.Italic) styles.Add("Italic");
+                if (run.Font.Underline != Underline.None) styles.Add($"Underline({run.Font.Underline})");
                 if (styles.Count > 0)
-                    result.AppendLine($"    樣式: {string.Join(", ", styles)}");
+                    result.AppendLine($"    Styles: {string.Join(", ", styles)}");
             }
             
             if (para.Runs.Count > 10)
             {
-                result.AppendLine($"\n  ... 還有 {para.Runs.Count - 10} 個 Run（已省略）");
+                result.AppendLine($"\n  ... {para.Runs.Count - 10} more Runs (omitted)");
             }
             result.AppendLine();
         }
 
-        result.AppendLine("【JSON 格式（可用於 word_edit_paragraph）】");
+        result.AppendLine("[JSON Format (for word_edit_paragraph)]");
         result.AppendLine("{");
         result.AppendLine($"  \"alignment\": \"{format.Alignment.ToString().ToLower()}\",");
         result.AppendLine($"  \"leftIndent\": {format.LeftIndent:F2},");
@@ -1177,20 +1102,20 @@ Important notes for 'get' operation:
     /// <returns>Success message</returns>
     private async Task<string> CopyParagraphFormatAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var sourceParagraphIndex = ArgumentHelper.GetInt(arguments, "sourceParagraphIndex", "sourceParagraphIndex");
-        var targetParagraphIndex = ArgumentHelper.GetInt(arguments, "targetParagraphIndex", "targetParagraphIndex");
+        var sourceParagraphIndex = ArgumentHelper.GetInt(arguments, "sourceParagraphIndex");
+        var targetParagraphIndex = ArgumentHelper.GetInt(arguments, "targetParagraphIndex");
 
         var doc = new Document(path);
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
         
         if (sourceParagraphIndex < 0 || sourceParagraphIndex >= paragraphs.Count)
         {
-            throw new ArgumentException($"來源段落索引 {sourceParagraphIndex} 超出範圍 (文檔共有 {paragraphs.Count} 個段落)");
+            throw new ArgumentException($"Source paragraph index {sourceParagraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
         }
         
         if (targetParagraphIndex < 0 || targetParagraphIndex >= paragraphs.Count)
         {
-            throw new ArgumentException($"目標段落索引 {targetParagraphIndex} 超出範圍 (文檔共有 {paragraphs.Count} 個段落)");
+            throw new ArgumentException($"Target paragraph index {targetParagraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
         }
         
         var sourcePara = paragraphs[sourceParagraphIndex] as Paragraph;
@@ -1198,7 +1123,7 @@ Important notes for 'get' operation:
         
         if (sourcePara == null || targetPara == null)
         {
-            throw new InvalidOperationException("無法獲取段落");
+            throw new InvalidOperationException("Unable to get paragraphs");
         }
         
         targetPara.ParagraphFormat.StyleName = sourcePara.ParagraphFormat.StyleName;
@@ -1220,10 +1145,10 @@ Important notes for 'get' operation:
         
         doc.Save(outputPath);
         
-        var result = $"成功複製段落格式\n";
-        result += $"來源段落: #{sourceParagraphIndex}\n";
-        result += $"目標段落: #{targetParagraphIndex}\n";
-        result += $"輸出: {outputPath}";
+        var result = $"Paragraph format copied successfully\n";
+        result += $"Source paragraph: #{sourceParagraphIndex}\n";
+        result += $"Target paragraph: #{targetParagraphIndex}\n";
+        result += $"Output: {outputPath}";
         
         return await Task.FromResult(result);
     }
@@ -1237,36 +1162,36 @@ Important notes for 'get' operation:
     /// <returns>Success message</returns>
     private async Task<string> MergeParagraphsAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var startParagraphIndex = ArgumentHelper.GetInt(arguments, "startParagraphIndex", "startParagraphIndex");
-        var endParagraphIndex = ArgumentHelper.GetInt(arguments, "endParagraphIndex", "endParagraphIndex");
+        var startParagraphIndex = ArgumentHelper.GetInt(arguments, "startParagraphIndex");
+        var endParagraphIndex = ArgumentHelper.GetInt(arguments, "endParagraphIndex");
 
         var doc = new Document(path);
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
         
         if (startParagraphIndex < 0 || startParagraphIndex >= paragraphs.Count)
         {
-            throw new ArgumentException($"起始段落索引 {startParagraphIndex} 超出範圍 (文檔共有 {paragraphs.Count} 個段落)");
+            throw new ArgumentException($"Start paragraph index {startParagraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
         }
         
         if (endParagraphIndex < 0 || endParagraphIndex >= paragraphs.Count)
         {
-            throw new ArgumentException($"結束段落索引 {endParagraphIndex} 超出範圍 (文檔共有 {paragraphs.Count} 個段落)");
+            throw new ArgumentException($"End paragraph index {endParagraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
         }
         
         if (startParagraphIndex > endParagraphIndex)
         {
-            throw new ArgumentException($"起始段落索引 {startParagraphIndex} 不能大於結束段落索引 {endParagraphIndex}");
+            throw new ArgumentException($"Start paragraph index {startParagraphIndex} cannot be greater than end paragraph index {endParagraphIndex}");
         }
         
         if (startParagraphIndex == endParagraphIndex)
         {
-            throw new ArgumentException("起始和結束段落索引相同，無需合併");
+            throw new ArgumentException("Start and end paragraph indices are the same, no merge needed");
         }
         
         var startPara = paragraphs[startParagraphIndex] as Paragraph;
         if (startPara == null)
         {
-            throw new InvalidOperationException("無法獲取起始段落");
+            throw new InvalidOperationException("Unable to get start paragraph");
         }
         
         for (int i = startParagraphIndex + 1; i <= endParagraphIndex; i++)
@@ -1292,11 +1217,11 @@ Important notes for 'get' operation:
         
         doc.Save(outputPath);
         
-        var result = $"成功合併段落\n";
-        result += $"合併範圍: 段落 #{startParagraphIndex} 到 #{endParagraphIndex}\n";
-        result += $"合併段落數: {endParagraphIndex - startParagraphIndex + 1}\n";
-        result += $"文檔剩餘段落數: {doc.GetChildNodes(NodeType.Paragraph, true).Count}\n";
-        result += $"輸出: {outputPath}";
+        var result = $"Paragraphs merged successfully\n";
+        result += $"Merge range: Paragraph #{startParagraphIndex} to #{endParagraphIndex}\n";
+        result += $"Merged paragraphs: {endParagraphIndex - startParagraphIndex + 1}\n";
+        result += $"Remaining paragraphs: {doc.GetChildNodes(NodeType.Paragraph, true).Count}\n";
+        result += $"Output: {outputPath}";
         
         return await Task.FromResult(result);
     }

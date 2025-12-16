@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Text;
 using Aspose.Slides;
 using Aspose.Slides.Export;
@@ -53,6 +53,11 @@ Usage examples:
             {
                 type = "number",
                 description = "Transition duration in seconds (optional, for set, default 1.0)"
+            },
+            outputPath = new
+            {
+                type = "string",
+                description = "Output file path (optional, for set/remove operations, defaults to input path)"
             }
         },
         required = new[] { "operation", "path", "slideIndex" }
@@ -60,9 +65,9 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", "slideIndex");
+        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
 
         return operation.ToLower() switch
         {
@@ -82,8 +87,8 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> SetTransitionAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var transitionTypeStr = ArgumentHelper.GetString(arguments, "transitionType", "transitionType");
-        var duration = arguments?["durationSeconds"]?.GetValue<double?>() ?? 1.0;
+        var transitionTypeStr = ArgumentHelper.GetString(arguments, "transitionType");
+        var duration = ArgumentHelper.GetDouble(arguments, "durationSeconds", 1.0);
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
@@ -102,8 +107,9 @@ Usage examples:
         };
         transition.AdvanceAfterTime = (uint)(duration * 1000);
 
-        presentation.Save(path, SaveFormat.Pptx);
-        return await Task.FromResult($"已設定投影片 {slideIndex} 轉場：{transition.Type}，時間 {duration:0.##}s");
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
+        return await Task.FromResult($"Transition set for slide {slideIndex}: {transition.Type}, duration {duration:0.##}s");
     }
 
     /// <summary>
@@ -156,9 +162,10 @@ Usage examples:
         slide.SlideShowTransition.AdvanceOnClick = false;
         slide.SlideShowTransition.AdvanceAfterTime = 0;
 
-        presentation.Save(path, SaveFormat.Pptx);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        presentation.Save(outputPath, SaveFormat.Pptx);
 
-        return await Task.FromResult($"Transition removed from slide {slideIndex}: {path}");
+        return await Task.FromResult($"Transition removed from slide {slideIndex}: {outputPath}");
     }
 }
 

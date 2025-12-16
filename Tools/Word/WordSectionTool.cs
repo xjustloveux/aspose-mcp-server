@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Text;
 using Aspose.Words;
 using AsposeMcpServer.Core;
@@ -70,10 +70,10 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
 
-        SecurityHelper.ValidateFilePath(path, "path");
+        SecurityHelper.ValidateFilePath(path);
 
         return operation.ToLower() switch
         {
@@ -92,10 +92,10 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> InsertSectionAsync(JsonObject? arguments, string path)
     {
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var sectionBreakType = ArgumentHelper.GetString(arguments, "sectionBreakType", "sectionBreakType");
-        var insertAtParagraphIndex = arguments?["insertAtParagraphIndex"]?.GetValue<int?>();
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>();
+        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
+        var sectionBreakType = ArgumentHelper.GetString(arguments, "sectionBreakType");
+        var insertAtParagraphIndex = ArgumentHelper.GetIntNullable(arguments, "insertAtParagraphIndex");
+        var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
 
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
@@ -161,9 +161,9 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> DeleteSectionAsync(JsonObject? arguments, string path)
     {
-        var outputPath = arguments?["outputPath"]?.GetValue<string>() ?? path;
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>();
-        var sectionIndicesArray = arguments?["sectionIndices"]?.AsArray();
+        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
+        var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
+        var sectionIndicesArray = ArgumentHelper.GetArray(arguments, "sectionIndices", false);
 
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
@@ -212,19 +212,19 @@ Usage examples:
     /// <returns>Formatted string with all sections</returns>
     private async Task<string> GetSectionsAsync(JsonObject? arguments, string path)
     {
-        var sectionIndex = arguments?["sectionIndex"]?.GetValue<int?>();
+        var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
 
         var doc = new Document(path);
         var result = new StringBuilder();
 
-        result.AppendLine("=== 文檔節資訊 ===\n");
-        result.AppendLine($"總節數: {doc.Sections.Count}\n");
+        result.AppendLine("=== Document Section Information ===\n");
+        result.AppendLine($"Total sections: {doc.Sections.Count}\n");
 
         if (sectionIndex.HasValue)
         {
             if (sectionIndex.Value < 0 || sectionIndex.Value >= doc.Sections.Count)
             {
-                throw new ArgumentException($"節索引 {sectionIndex.Value} 超出範圍 (文檔共有 {doc.Sections.Count} 個節)");
+                throw new ArgumentException($"Section index {sectionIndex.Value} is out of range (document has {doc.Sections.Count} sections)");
             }
             
             var section = doc.Sections[sectionIndex.Value];
@@ -248,34 +248,34 @@ Usage examples:
 
     private void AppendSectionInfo(StringBuilder result, Section section, int index)
     {
-        result.AppendLine($"【節 {index}】");
+        result.AppendLine($"[Section {index}]");
         
         var pageSetup = section.PageSetup;
-        result.AppendLine($"頁面設置:");
-        result.AppendLine($"  紙張大小: {pageSetup.PaperSize}");
-        result.AppendLine($"  方向: {pageSetup.Orientation}");
-        result.AppendLine($"  上邊距: {pageSetup.TopMargin} 點");
-        result.AppendLine($"  下邊距: {pageSetup.BottomMargin} 點");
-        result.AppendLine($"  左邊距: {pageSetup.LeftMargin} 點");
-        result.AppendLine($"  右邊距: {pageSetup.RightMargin} 點");
-        result.AppendLine($"  頁眉距離: {pageSetup.HeaderDistance} 點");
-        result.AppendLine($"  頁尾距離: {pageSetup.FooterDistance} 點");
-        result.AppendLine($"  頁碼起始: {(pageSetup.RestartPageNumbering ? pageSetup.PageStartingNumber.ToString() : "繼承上一節")}");
-        result.AppendLine($"  不同首頁: {pageSetup.DifferentFirstPageHeaderFooter}");
-        result.AppendLine($"  不同奇偶頁: {pageSetup.OddAndEvenPagesHeaderFooter}");
-        result.AppendLine($"  分欄數: {pageSetup.TextColumns.Count}");
+        result.AppendLine($"Page setup:");
+        result.AppendLine($"  Paper size: {pageSetup.PaperSize}");
+        result.AppendLine($"  Orientation: {pageSetup.Orientation}");
+        result.AppendLine($"  Top margin: {pageSetup.TopMargin} points");
+        result.AppendLine($"  Bottom margin: {pageSetup.BottomMargin} points");
+        result.AppendLine($"  Left margin: {pageSetup.LeftMargin} points");
+        result.AppendLine($"  Right margin: {pageSetup.RightMargin} points");
+        result.AppendLine($"  Header distance: {pageSetup.HeaderDistance} points");
+        result.AppendLine($"  Footer distance: {pageSetup.FooterDistance} points");
+        result.AppendLine($"  Page number start: {(pageSetup.RestartPageNumbering ? pageSetup.PageStartingNumber.ToString() : "Inherit from previous section")}");
+        result.AppendLine($"  Different first page: {pageSetup.DifferentFirstPageHeaderFooter}");
+        result.AppendLine($"  Different odd/even pages: {pageSetup.OddAndEvenPagesHeaderFooter}");
+        result.AppendLine($"  Column count: {pageSetup.TextColumns.Count}");
         
         result.AppendLine();
-        result.AppendLine($"內容統計:");
+        result.AppendLine($"Content statistics:");
         var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true);
         var tables = section.Body.GetChildNodes(NodeType.Table, true);
         var shapes = section.Body.GetChildNodes(NodeType.Shape, true);
-        result.AppendLine($"  段落數: {paragraphs.Count}");
-        result.AppendLine($"  表格數: {tables.Count}");
-        result.AppendLine($"  形狀數: {shapes.Count}");
+        result.AppendLine($"  Paragraphs: {paragraphs.Count}");
+        result.AppendLine($"  Tables: {tables.Count}");
+        result.AppendLine($"  Shapes: {shapes.Count}");
         
         result.AppendLine();
-        result.AppendLine($"頁眉頁尾:");
+        result.AppendLine($"Headers and footers:");
         var headerCount = 0;
         var footerCount = 0;
         foreach (HeaderFooter hf in section.HeadersFooters)
@@ -295,8 +295,8 @@ Usage examples:
                     footerCount++;
             }
         }
-        result.AppendLine($"  頁眉數: {headerCount}");
-        result.AppendLine($"  頁尾數: {footerCount}");
+        result.AppendLine($"  Headers: {headerCount}");
+        result.AppendLine($"  Footers: {footerCount}");
     }
 }
 

@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Text;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
@@ -133,6 +133,11 @@ Usage examples:
             {
                 type = "boolean",
                 description = "Copy row heights (optional, for copy_sheet_format, default: true)"
+            },
+            outputPath = new
+            {
+                type = "string",
+                description = "Output file path (optional, for format/copy_sheet_format operations, defaults to input path)"
             }
         },
         required = new[] { "operation", "path" }
@@ -140,9 +145,9 @@ Usage examples:
 
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation", "operation");
+        var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var sheetIndex = arguments?["sheetIndex"]?.GetValue<int>() ?? 0;
+        var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
 
         return operation.ToLower() switch
         {
@@ -162,19 +167,20 @@ Usage examples:
     /// <returns>Success message with formatted range count</returns>
     private async Task<string> FormatCellsAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var range = arguments?["range"]?.GetValue<string>();
-        var rangesArray = arguments?["ranges"]?.AsArray();
-        var fontName = arguments?["fontName"]?.GetValue<string>();
-        var fontSize = arguments?["fontSize"]?.GetValue<int?>();
-        var bold = arguments?["bold"]?.GetValue<bool?>();
-        var italic = arguments?["italic"]?.GetValue<bool?>();
-        var fontColor = arguments?["fontColor"]?.GetValue<string>();
-        var backgroundColor = arguments?["backgroundColor"]?.GetValue<string>();
-        var numberFormat = arguments?["numberFormat"]?.GetValue<string>();
-        var borderStyle = arguments?["borderStyle"]?.GetValue<string>();
-        var borderColor = arguments?["borderColor"]?.GetValue<string>();
-        var horizontalAlignment = arguments?["horizontalAlignment"]?.GetValue<string>();
-        var verticalAlignment = arguments?["verticalAlignment"]?.GetValue<string>();
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var range = ArgumentHelper.GetStringNullable(arguments, "range");
+        var rangesArray = ArgumentHelper.GetArray(arguments, "ranges", false);
+        var fontName = ArgumentHelper.GetStringNullable(arguments, "fontName");
+        var fontSize = ArgumentHelper.GetIntNullable(arguments, "fontSize");
+        var bold = ArgumentHelper.GetBoolNullable(arguments, "bold");
+        var italic = ArgumentHelper.GetBoolNullable(arguments, "italic");
+        var fontColor = ArgumentHelper.GetStringNullable(arguments, "fontColor");
+        var backgroundColor = ArgumentHelper.GetStringNullable(arguments, "backgroundColor");
+        var numberFormat = ArgumentHelper.GetStringNullable(arguments, "numberFormat");
+        var borderStyle = ArgumentHelper.GetStringNullable(arguments, "borderStyle");
+        var borderColor = ArgumentHelper.GetStringNullable(arguments, "borderColor");
+        var horizontalAlignment = ArgumentHelper.GetStringNullable(arguments, "horizontalAlignment");
+        var verticalAlignment = ArgumentHelper.GetStringNullable(arguments, "verticalAlignment");
 
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
@@ -194,7 +200,7 @@ Usage examples:
             {
                 // Color parsing failed, but continue with other formatting
                 // The error will be visible in the result message if needed
-                throw new ArgumentException($"無法解析字體顏色 '{fontColor}': {colorEx.Message}。請使用有效的顏色格式（如 #FF0000、255,0,0 或 red）");
+                throw new ArgumentException($"Unable to parse font color '{fontColor}': {colorEx.Message}. Please use a valid color format (e.g., #FF0000, 255,0,0, or red)");
             }
         }
         if (!string.IsNullOrWhiteSpace(backgroundColor))
@@ -207,7 +213,7 @@ Usage examples:
             catch (Exception colorEx)
             {
                 // Color parsing failed, but continue with other formatting
-                throw new ArgumentException($"無法解析背景顏色 '{backgroundColor}': {colorEx.Message}。請使用有效的顏色格式（如 #FF0000 或 red）");
+                throw new ArgumentException($"Unable to parse background color '{backgroundColor}': {colorEx.Message}. Please use a valid color format (e.g., #FF0000 or red)");
             }
         }
         if (!string.IsNullOrEmpty(numberFormat))
@@ -267,7 +273,7 @@ Usage examples:
                 }
                 catch (Exception colorEx)
                 {
-                    throw new ArgumentException($"無法解析邊框顏色 '{borderColor}': {colorEx.Message}。請使用有效的顏色格式（如 #FF0000、255,0,0 或 red）");
+                    throw new ArgumentException($"Unable to parse border color '{borderColor}': {colorEx.Message}. Please use a valid color format (e.g., #FF0000, 255,0,0, or red)");
                 }
             }
             
@@ -293,14 +299,14 @@ Usage examples:
                 var rangeStr = rangeNode?.GetValue<string>();
                 if (!string.IsNullOrEmpty(rangeStr))
                 {
-                    var cellRange = worksheet.Cells.CreateRange(rangeStr);
+                    var cellRange = ExcelHelper.CreateRange(worksheet.Cells, rangeStr);
                     cellRange.ApplyStyle(style, styleFlag);
                 }
             }
         }
         else if (!string.IsNullOrEmpty(range))
         {
-            var cellRange = worksheet.Cells.CreateRange(range);
+            var cellRange = ExcelHelper.CreateRange(worksheet.Cells, range);
             cellRange.ApplyStyle(style, styleFlag);
         }
         else
@@ -308,8 +314,8 @@ Usage examples:
             throw new ArgumentException("Either range or ranges must be provided for format operation");
         }
 
-        workbook.Save(path);
-        return await Task.FromResult($"Cells formatted in sheet {sheetIndex}: {path}");
+        workbook.Save(outputPath);
+        return await Task.FromResult($"Cells formatted in sheet {sheetIndex}: {outputPath}");
     }
 
     /// <summary>
@@ -321,8 +327,8 @@ Usage examples:
     /// <returns>Formatted string with cell format details</returns>
     private async Task<string> GetCellFormatAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var cell = arguments?["cell"]?.GetValue<string>();
-        var range = arguments?["range"]?.GetValue<string>();
+        var cell = ArgumentHelper.GetStringNullable(arguments, "cell");
+        var range = ArgumentHelper.GetStringNullable(arguments, "range");
         
         if (string.IsNullOrEmpty(cell) && string.IsNullOrEmpty(range))
         {
@@ -336,11 +342,11 @@ Usage examples:
         var cells = worksheet.Cells;
         var result = new StringBuilder();
 
-        result.AppendLine($"=== 工作表 '{worksheet.Name}' 的單元格格式資訊 ===\n");
+        result.AppendLine($"=== Cell format information for worksheet '{worksheet.Name}' ===\n");
 
         try
         {
-            var cellRange = cells.CreateRange(cellOrRange);
+            var cellRange = ExcelHelper.CreateRange(cells, cellOrRange);
             var startRow = cellRange.FirstRow;
             var endRow = cellRange.FirstRow + cellRange.RowCount - 1;
             var startCol = cellRange.FirstColumn;
@@ -353,40 +359,40 @@ Usage examples:
                     var cellObj = cells[row, col];
                     var style = cellObj.GetStyle();
                     
-                    result.AppendLine($"【單元格 {CellsHelper.CellIndexToName(row, col)}】");
-                    result.AppendLine($"值: {cellObj.Value ?? "(空)"}");
-                    result.AppendLine($"公式: {cellObj.Formula ?? "(無)"}");
-                    result.AppendLine($"數據類型: {cellObj.Type}");
+                    result.AppendLine($"[Cell {CellsHelper.CellIndexToName(row, col)}]");
+                    result.AppendLine($"Value: {cellObj.Value ?? "(empty)"}");
+                    result.AppendLine($"Formula: {cellObj.Formula ?? "(none)"}");
+                    result.AppendLine($"Data type: {cellObj.Type}");
                     result.AppendLine();
                     
-                    result.AppendLine("格式資訊:");
-                    result.AppendLine($"  字型: {style.Font.Name}, 大小: {style.Font.Size}");
-                    result.AppendLine($"  粗體: {style.Font.IsBold}, 斜體: {style.Font.IsItalic}");
-                    result.AppendLine($"  底線: {style.Font.Underline}, 刪除線: {style.Font.IsStrikeout}");
-                    result.AppendLine($"  字型顏色: {style.Font.Color}");
-                    result.AppendLine($"  背景色: {style.BackgroundColor}");
-                    result.AppendLine($"  數字格式: {style.Number}");
-                    result.AppendLine($"  水平對齊: {style.HorizontalAlignment}");
-                    result.AppendLine($"  垂直對齊: {style.VerticalAlignment}");
+                    result.AppendLine("Format information:");
+                    result.AppendLine($"  Font: {style.Font.Name}, Size: {style.Font.Size}");
+                    result.AppendLine($"  Bold: {style.Font.IsBold}, Italic: {style.Font.IsItalic}");
+                    result.AppendLine($"  Underline: {style.Font.Underline}, Strikethrough: {style.Font.IsStrikeout}");
+                    result.AppendLine($"  Font color: {style.Font.Color}");
+                    result.AppendLine($"  Background color: {style.BackgroundColor}");
+                    result.AppendLine($"  Number format: {style.Number}");
+                    result.AppendLine($"  Horizontal alignment: {style.HorizontalAlignment}");
+                    result.AppendLine($"  Vertical alignment: {style.VerticalAlignment}");
                     
                     // Add border information
-                    result.AppendLine("  邊框資訊:");
+                    result.AppendLine("  Border information:");
                     var topBorder = style.Borders[BorderType.TopBorder];
                     var bottomBorder = style.Borders[BorderType.BottomBorder];
                     var leftBorder = style.Borders[BorderType.LeftBorder];
                     var rightBorder = style.Borders[BorderType.RightBorder];
                     
-                    result.AppendLine($"    上邊框: {topBorder.LineStyle} ({topBorder.Color})");
-                    result.AppendLine($"    下邊框: {bottomBorder.LineStyle} ({bottomBorder.Color})");
-                    result.AppendLine($"    左邊框: {leftBorder.LineStyle} ({leftBorder.Color})");
-                    result.AppendLine($"    右邊框: {rightBorder.LineStyle} ({rightBorder.Color})");
+                    result.AppendLine($"    Top border: {topBorder.LineStyle} ({topBorder.Color})");
+                    result.AppendLine($"    Bottom border: {bottomBorder.LineStyle} ({bottomBorder.Color})");
+                    result.AppendLine($"    Left border: {leftBorder.LineStyle} ({leftBorder.Color})");
+                    result.AppendLine($"    Right border: {rightBorder.LineStyle} ({rightBorder.Color})");
                     result.AppendLine();
                 }
             }
         }
         catch
         {
-            throw new ArgumentException($"無效的單元格範圍: {cellOrRange}");
+            throw new ArgumentException($"Invalid cell range: {cellOrRange}");
         }
 
         return await Task.FromResult(result.ToString());
@@ -400,10 +406,11 @@ Usage examples:
     /// <returns>Success message with sheet names</returns>
     private async Task<string> CopySheetFormatAsync(JsonObject? arguments, string path)
     {
-        var sourceSheetIndex = ArgumentHelper.GetInt(arguments, "sourceSheetIndex", "sourceSheetIndex");
-        var targetSheetIndex = ArgumentHelper.GetInt(arguments, "targetSheetIndex", "targetSheetIndex");
-        var copyColumnWidths = arguments?["copyColumnWidths"]?.GetValue<bool?>() ?? true;
-        var copyRowHeights = arguments?["copyRowHeights"]?.GetValue<bool?>() ?? true;
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        var sourceSheetIndex = ArgumentHelper.GetInt(arguments, "sourceSheetIndex");
+        var targetSheetIndex = ArgumentHelper.GetInt(arguments, "targetSheetIndex");
+        var copyColumnWidths = ArgumentHelper.GetBool(arguments, "copyColumnWidths");
+        var copyRowHeights = ArgumentHelper.GetBool(arguments, "copyRowHeights");
 
         using var workbook = new Workbook(path);
         var sourceSheet = ExcelHelper.GetWorksheet(workbook, sourceSheetIndex);
@@ -425,8 +432,8 @@ Usage examples:
             }
         }
 
-        workbook.Save(path);
-        return await Task.FromResult($"Sheet format copied from sheet {sourceSheetIndex} to sheet {targetSheetIndex}: {path}");
+        workbook.Save(outputPath);
+        return await Task.FromResult($"Sheet format copied from sheet {sourceSheetIndex} to sheet {targetSheetIndex}: {outputPath}");
     }
 }
 
