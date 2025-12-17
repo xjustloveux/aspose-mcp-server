@@ -430,7 +430,7 @@ Usage examples:
                     var sum = numericValues.Sum();
                     var average = sum / numericValues.Count;
                     var min = numericValues[0];
-                    var max = numericValues[numericValues.Count - 1];
+                    var max = numericValues[^1];
 
                     result.AppendLine($"Sum: {sum:F2}");
                     result.AppendLine($"Average: {average:F2}");

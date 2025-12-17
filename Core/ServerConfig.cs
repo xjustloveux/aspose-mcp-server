@@ -38,9 +38,10 @@ public class ServerConfig
     /// <returns>ServerConfig instance</returns>
     public static ServerConfig LoadFromArgs(string[] args)
     {
-        var config = new ServerConfig();
-
-        config.LicensePath = Environment.GetEnvironmentVariable("ASPOSE_LICENSE_PATH");
+        var config = new ServerConfig
+        {
+            LicensePath = Environment.GetEnvironmentVariable("ASPOSE_LICENSE_PATH")
+        };
 
         // If no arguments provided, enable all tools by default
         if (args.Length == 0) return config;

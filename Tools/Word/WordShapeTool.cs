@@ -245,6 +245,11 @@ Usage examples:
         required = new[] { "operation", "path" }
     };
 
+    /// <summary>
+    ///     Executes the tool operation with the provided JSON arguments
+    /// </summary>
+    /// <param name="arguments">JSON arguments object containing operation parameters</param>
+    /// <returns>Result message as a string</returns>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
@@ -327,15 +332,22 @@ Usage examples:
 
         if (lineStyle == "shape")
         {
-            var linePara = new Paragraph(doc);
-            linePara.ParagraphFormat.SpaceBefore = 0;
-            linePara.ParagraphFormat.SpaceAfter = 0;
-            linePara.ParagraphFormat.LineSpacing = 1;
-            linePara.ParagraphFormat.LineSpacingRule = LineSpacingRule.Exactly;
+            var linePara = new Paragraph(doc)
+            {
+                ParagraphFormat =
+                {
+                    SpaceBefore = 0,
+                    SpaceAfter = 0,
+                    LineSpacing = 1,
+                    LineSpacingRule = LineSpacingRule.Exactly
+                }
+            };
 
-            var shape = new Shape(doc, ShapeType.Line);
-            shape.Width = calculatedWidth;
-            shape.Height = 0;
+            var shape = new Shape(doc, ShapeType.Line)
+            {
+                Width = calculatedWidth,
+                Height = 0
+            };
             shape.StrokeWeight = lineWidth;
             shape.StrokeColor = ColorHelper.ParseColor(lineColor);
             shape.WrapType = WrapType.Inline;

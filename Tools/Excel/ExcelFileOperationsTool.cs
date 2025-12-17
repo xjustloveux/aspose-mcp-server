@@ -91,6 +91,11 @@ Usage examples:
         required = new[] { "operation" }
     };
 
+    /// <summary>
+    ///     Executes the tool operation with the provided JSON arguments
+    /// </summary>
+    /// <param name="arguments">JSON arguments object containing operation parameters</param>
+    /// <returns>Result message as a string</returns>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
@@ -214,7 +219,7 @@ Usage examples:
                 else
                 {
                     targetWorkbook.Worksheets.Add(sourceSheet.Name);
-                    var newSheet = targetWorkbook.Worksheets[targetWorkbook.Worksheets.Count - 1];
+                    var newSheet = targetWorkbook.Worksheets[^1];
                     var sourceRange = sourceSheet.Cells.CreateRange(0, 0, sourceSheet.Cells.MaxDataRow + 1,
                         sourceSheet.Cells.MaxDataColumn + 1);
                     var destRange = newSheet.Cells.CreateRange(0, 0, sourceSheet.Cells.MaxDataRow + 1,

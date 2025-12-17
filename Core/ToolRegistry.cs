@@ -11,6 +11,8 @@ public static class ToolRegistry
     /// <summary>
     ///     Discovers and registers all tools based on configuration
     /// </summary>
+    /// <param name="config">Server configuration that determines which tool categories to enable</param>
+    /// <returns>Dictionary mapping tool names to tool instances</returns>
     public static Dictionary<string, IAsposeTool> DiscoverTools(ServerConfig config)
     {
         var tools = new Dictionary<string, IAsposeTool>();

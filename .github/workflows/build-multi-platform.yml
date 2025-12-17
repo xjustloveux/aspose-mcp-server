@@ -49,7 +49,7 @@ jobs:
         dotnet-version: '8.0.x'
     
     - name: Restore dependencies
-      run: dotnet restore
+      run: dotnet restore AsposeMcpServer.csproj
     
     - name: Make publish script executable (Unix)
       if: runner.os != 'Windows'

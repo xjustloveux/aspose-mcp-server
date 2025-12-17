@@ -503,6 +503,7 @@ public static class ArgumentHelper
     /// <param name="key">JSON property key (also used as paramName in error messages)</param>
     /// <param name="required">Must be false for this overload</param>
     /// <returns>String value or null if missing</returns>
+    /// <exception cref="ArgumentException">Thrown if required is true</exception>
     public static string? GetString(JsonObject? arguments, string key, bool required)
     {
         if (required)

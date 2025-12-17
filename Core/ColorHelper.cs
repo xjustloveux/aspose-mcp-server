@@ -167,8 +167,8 @@ public static class ColorHelper
     /// <summary>
     ///     Converts System.Drawing.Color to Aspose.Pdf.Color
     /// </summary>
-    /// <param name="color">System.Drawing.Color object</param>
-    /// <returns>Aspose.Pdf.Color object</returns>
+    /// <param name="color">System.Drawing.Color object to convert</param>
+    /// <returns>Aspose.Pdf.Color object with RGB values normalized to 0-1 range</returns>
     public static Aspose.Pdf.Color ToPdfColor(Color color)
     {
         return Aspose.Pdf.Color.FromRgb(

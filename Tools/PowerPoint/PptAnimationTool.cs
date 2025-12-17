@@ -84,6 +84,11 @@ Usage examples:
         required = new[] { "operation", "path", "slideIndex" }
     };
 
+    /// <summary>
+    ///     Executes the tool operation with the provided JSON arguments
+    /// </summary>
+    /// <param name="arguments">JSON arguments object containing operation parameters</param>
+    /// <returns>Result message as a string</returns>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");

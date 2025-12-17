@@ -144,6 +144,11 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
         required = new[] { "operation", "path" }
     };
 
+    /// <summary>
+    ///     Executes the tool operation with the provided JSON arguments
+    /// </summary>
+    /// <param name="arguments">JSON arguments object containing operation parameters</param>
+    /// <returns>Result message as a string</returns>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         if (arguments == null)

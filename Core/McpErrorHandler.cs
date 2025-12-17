@@ -79,6 +79,8 @@ public static class McpErrorHandler
     /// <summary>
     ///     Creates a method not found error
     /// </summary>
+    /// <param name="method">Method name that was not found</param>
+    /// <returns>MCP error object with method not found error code</returns>
     public static McpError MethodNotFound(string method)
     {
         return new McpError
@@ -91,6 +93,8 @@ public static class McpErrorHandler
     /// <summary>
     ///     Creates a tool not found error
     /// </summary>
+    /// <param name="toolName">Tool name that was not found</param>
+    /// <returns>MCP error object with method not found error code</returns>
     public static McpError ToolNotFound(string toolName)
     {
         return new McpError
@@ -103,6 +107,8 @@ public static class McpErrorHandler
     /// <summary>
     ///     Creates a parse error
     /// </summary>
+    /// <param name="message">Parse error message</param>
+    /// <returns>MCP error object with parse error code</returns>
     public static McpError ParseError(string message)
     {
         return new McpError
@@ -115,6 +121,8 @@ public static class McpErrorHandler
     /// <summary>
     ///     Creates an invalid params error
     /// </summary>
+    /// <param name="message">Invalid parameters error message</param>
+    /// <returns>MCP error object with invalid params error code</returns>
     public static McpError InvalidParams(string message)
     {
         return new McpError

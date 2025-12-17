@@ -95,7 +95,7 @@ build_platform() {
         version=$(echo "$git_tag" | sed 's/^v//')
     fi
     
-    dotnet publish \
+    dotnet publish AsposeMcpServer.csproj \
         --configuration Release \
         --runtime "$runtime" \
         --self-contained true \

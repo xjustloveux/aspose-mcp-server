@@ -149,10 +149,10 @@ Usage examples:
         var area = new CellArea
         {
             StartRow = cellRange.FirstRow,
-            StartColumn = cellRange.FirstColumn
+            StartColumn = cellRange.FirstColumn,
+            EndRow = cellRange.FirstRow + cellRange.RowCount - 1,
+            EndColumn = cellRange.FirstColumn + cellRange.ColumnCount - 1
         };
-        area.EndRow = cellRange.FirstRow + cellRange.RowCount - 1;
-        area.EndColumn = cellRange.FirstColumn + cellRange.ColumnCount - 1;
         var validationIndex = worksheet.Validations.Add(area);
         var validation = worksheet.Validations[validationIndex];
 

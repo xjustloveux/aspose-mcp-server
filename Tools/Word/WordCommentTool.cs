@@ -83,6 +83,11 @@ Usage examples:
         required = new[] { "operation", "path" }
     };
 
+    /// <summary>
+    ///     Executes the tool operation with the provided JSON arguments
+    /// </summary>
+    /// <param name="arguments">JSON arguments object containing operation parameters</param>
+    /// <returns>Result message as a string</returns>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
@@ -240,10 +245,9 @@ Usage examples:
             if (startRun.ParentNode != startPara)
             {
                 var actualParent = startRun.ParentNode;
-                if (actualParent is { NodeType: NodeType.Paragraph })
+                if (actualParent is Paragraph parentPara)
                 {
-                    var parentPara = actualParent as Paragraph;
-                    if (parentPara != null) startPara = parentPara;
+                    startPara = parentPara;
                 }
             }
 
