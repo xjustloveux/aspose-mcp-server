@@ -1,0 +1,41 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Shell scripts should always use LF
+*.sh text eol=lf
+*.bash text eol=lf
+
+# PowerShell scripts can use CRLF (Windows default)
+*.ps1 text eol=crlf
+
+# Batch files should use CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# C# source files should use CRLF (Windows default)
+*.cs text eol=crlf
+
+# JSON files should use LF
+*.json text eol=lf
+
+# YAML files should use LF
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Markdown files should use LF
+*.md text eol=lf
+
+# XML files should use LF
+*.xml text eol=lf
+
+# Config files should use LF
+*.config text eol=lf
+*.editorconfig text eol=lf
+
+# Binary files
+*.lic binary
+*.dll binary
+*.exe binary
+*.pdb binary
+*.zip binary
+
