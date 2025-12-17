@@ -14,7 +14,10 @@ namespace AsposeMcpServer.Tools.Excel;
 /// </summary>
 public class ExcelPivotTableTool : IAsposeTool
 {
-    /// <summary>    ///     Gets the description of the tool and its usage examples    /// </summary>    public string Description =>
+    /// <summary>
+    ///     Gets the description of the tool and its usage examples
+    /// </summary>
+    public string Description =>
         @"Manage Excel pivot tables. Supports 7 operations: add, edit, delete, get, add_field, delete_field, refresh.
 
 Usage examples:

@@ -11,7 +11,10 @@ namespace AsposeMcpServer.Tools.Excel;
 /// </summary>
 public class ExcelFreezePanesTool : IAsposeTool
 {
-    /// <summary>    ///     Gets the description of the tool and its usage examples    /// </summary>    public string Description => @"Manage Excel freeze panes. Supports 3 operations: freeze, unfreeze, get.
+    /// <summary>
+    ///     Gets the description of the tool and its usage examples
+    /// </summary>
+    public string Description => @"Manage Excel freeze panes. Supports 3 operations: freeze, unfreeze, get.
 
 Usage examples:
 - Freeze panes: excel_freeze_panes(operation='freeze', path='book.xlsx', row=1, column=1)

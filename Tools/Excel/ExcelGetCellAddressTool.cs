@@ -9,7 +9,10 @@ namespace AsposeMcpServer.Tools.Excel;
 /// </summary>
 public class ExcelGetCellAddressTool : IAsposeTool
 {
-    /// <summary>    ///     Gets the description of the tool and its usage examples    /// </summary>    public string Description => @"Convert between cell address formats (A1 notation and row/column index).
+    /// <summary>
+    ///     Gets the description of the tool and its usage examples
+    /// </summary>
+    public string Description => @"Convert between cell address formats (A1 notation and row/column index).
 
 Usage examples:
 - Convert A1 to index: excel_get_cell_address(cellAddress='A1', convertToIndex=true)

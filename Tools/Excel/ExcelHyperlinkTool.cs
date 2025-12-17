@@ -11,7 +11,10 @@ namespace AsposeMcpServer.Tools.Excel;
 /// </summary>
 public class ExcelHyperlinkTool : IAsposeTool
 {
-    /// <summary>    ///     Gets the description of the tool and its usage examples    /// </summary>    public string Description => @"Manage Excel hyperlinks. Supports 4 operations: add, edit, delete, get.
+    /// <summary>
+    ///     Gets the description of the tool and its usage examples
+    /// </summary>
+    public string Description => @"Manage Excel hyperlinks. Supports 4 operations: add, edit, delete, get.
 
 Usage examples:
 - Add hyperlink: excel_hyperlink(operation='add', path='book.xlsx', cell='A1', url='https://example.com', displayText='Link')

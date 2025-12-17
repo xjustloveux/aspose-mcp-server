@@ -10,7 +10,10 @@ namespace AsposeMcpServer.Tools.Excel;
 /// </summary>
 public class ExcelPrintSettingsTool : IAsposeTool
 {
-    /// <summary>    ///     Gets the description of the tool and its usage examples    /// </summary>    public string Description =>
+    /// <summary>
+    ///     Gets the description of the tool and its usage examples
+    /// </summary>
+    public string Description =>
         @"Manage Excel print settings. Supports 4 operations: set_print_area, set_print_titles, set_page_setup, set_all.
 
 Usage examples:

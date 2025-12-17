@@ -10,7 +10,10 @@ namespace AsposeMcpServer.Tools.Excel;
 /// </summary>
 public class ExcelGroupTool : IAsposeTool
 {
-    /// <summary>    ///     Gets the description of the tool and its usage examples    /// </summary>    public string Description =>
+    /// <summary>
+    ///     Gets the description of the tool and its usage examples
+    /// </summary>
+    public string Description =>
         @"Manage Excel groups. Supports 4 operations: group_rows, ungroup_rows, group_columns, ungroup_columns.
 
 Usage examples:

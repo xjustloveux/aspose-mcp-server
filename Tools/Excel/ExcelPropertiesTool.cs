@@ -12,7 +12,10 @@ namespace AsposeMcpServer.Tools.Excel;
 /// </summary>
 public class ExcelPropertiesTool : IAsposeTool
 {
-    /// <summary>    ///     Gets the description of the tool and its usage examples    /// </summary>    public string Description =>
+    /// <summary>
+    ///     Gets the description of the tool and its usage examples
+    /// </summary>
+    public string Description =>
         @"Manage Excel properties. Supports 5 operations: get_workbook_properties, set_workbook_properties, get_sheet_properties, edit_sheet_properties, get_sheet_info.
 
 Usage examples:

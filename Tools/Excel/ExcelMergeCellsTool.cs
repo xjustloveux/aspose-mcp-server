@@ -11,7 +11,10 @@ namespace AsposeMcpServer.Tools.Excel;
 /// </summary>
 public class ExcelMergeCellsTool : IAsposeTool
 {
-    /// <summary>    ///     Gets the description of the tool and its usage examples    /// </summary>    public string Description => @"Manage Excel merged cells. Supports 3 operations: merge, unmerge, get.
+    /// <summary>
+    ///     Gets the description of the tool and its usage examples
+    /// </summary>
+    public string Description => @"Manage Excel merged cells. Supports 3 operations: merge, unmerge, get.
 
 Usage examples:
 - Merge cells: excel_merge_cells(operation='merge', path='book.xlsx', range='A1:C1')

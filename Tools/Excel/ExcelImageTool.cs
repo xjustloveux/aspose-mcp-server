@@ -11,7 +11,10 @@ namespace AsposeMcpServer.Tools.Excel;
 /// </summary>
 public class ExcelImageTool : IAsposeTool
 {
-    /// <summary>    ///     Gets the description of the tool and its usage examples    /// </summary>    public string Description => @"Manage Excel images. Supports 3 operations: add, delete, get.
+    /// <summary>
+    ///     Gets the description of the tool and its usage examples
+    /// </summary>
+    public string Description => @"Manage Excel images. Supports 3 operations: add, delete, get.
 
 Usage examples:
 - Add image: excel_image(operation='add', path='book.xlsx', imagePath='image.png', cell='A1', width=200, height=150)
