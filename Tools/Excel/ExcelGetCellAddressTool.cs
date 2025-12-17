@@ -2,16 +2,22 @@
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Excel;
 
+/// <summary>
+///     Tool for converting between Excel cell address formats (A1 notation and row/column index)
+/// </summary>
 public class ExcelGetCellAddressTool : IAsposeTool
 {
-    public string Description => @"Convert between cell address formats (A1 notation and row/column index).
+    /// <summary>    ///     Gets the description of the tool and its usage examples    /// </summary>    public string Description => @"Convert between cell address formats (A1 notation and row/column index).
 
 Usage examples:
 - Convert A1 to index: excel_get_cell_address(cellAddress='A1', convertToIndex=true)
 - Convert index to A1: excel_get_cell_address(row=0, column=0, convertToIndex=false)";
 
+    /// <summary>
+    ///     Gets the JSON schema defining the input parameters for the tool
+    /// </summary>
     public object InputSchema => new
     {
         type = "object",
@@ -53,70 +59,60 @@ Usage examples:
             var a1Notation = CellsHelper.CellIndexToName(row.Value, column.Value);
             return await Task.FromResult($"Row {row.Value}, Column {column.Value} = {a1Notation}");
         }
-        else if (convertToIndex)
+
+        if (convertToIndex)
         {
             // Check if input is in row,column format (e.g., "0,0")
-            if (TryParseRowColumnFormat(cellAddress, out int parsedRow, out int parsedCol))
+            if (TryParseRowColumnFormat(cellAddress, out var parsedRow, out var parsedCol))
             {
                 var a1Notation = CellsHelper.CellIndexToName(parsedRow, parsedCol);
                 return await Task.FromResult($"Row {parsedRow}, Column {parsedCol} = {a1Notation}");
             }
-            else
+
+            // Try A1 notation
+            try
             {
-                // Try A1 notation
-                try
-                {
-                    int rowIndex, colIndex;
-                    CellsHelper.CellNameToIndex(cellAddress, out rowIndex, out colIndex);
-                    return await Task.FromResult($"{cellAddress} = Row {rowIndex}, Column {colIndex}");
-                }
-                catch
-                {
-                    throw new ArgumentException($"Invalid cell address format: {cellAddress}");
-                }
+                CellsHelper.CellNameToIndex(cellAddress, out var rowIndex, out var colIndex);
+                return await Task.FromResult($"{cellAddress} = Row {rowIndex}, Column {colIndex}");
+            }
+            catch
+            {
+                throw new ArgumentException($"Invalid cell address format: {cellAddress}");
             }
         }
         else
         {
             // Check if input is in row,column format (e.g., "0,0")
-            if (TryParseRowColumnFormat(cellAddress, out int parsedRow, out int parsedCol))
+            if (TryParseRowColumnFormat(cellAddress, out var parsedRow, out var parsedCol))
             {
                 var a1Notation = CellsHelper.CellIndexToName(parsedRow, parsedCol);
                 return await Task.FromResult($"Valid cell address: {a1Notation} (Row {parsedRow}, Column {parsedCol})");
             }
-            else
+
+            // Validate A1 notation
+            try
             {
-                // Validate A1 notation
-                try
-                {
-                    int rowIndex, colIndex;
-                    CellsHelper.CellNameToIndex(cellAddress, out rowIndex, out colIndex);
-                    return await Task.FromResult($"Valid cell address: {cellAddress} (Row {rowIndex}, Column {colIndex})");
-                }
-                catch
-                {
-                    throw new ArgumentException($"Invalid cell address format: {cellAddress}");
-                }
+                CellsHelper.CellNameToIndex(cellAddress, out var rowIndex, out var colIndex);
+                return await Task.FromResult($"Valid cell address: {cellAddress} (Row {rowIndex}, Column {colIndex})");
+            }
+            catch
+            {
+                throw new ArgumentException($"Invalid cell address format: {cellAddress}");
             }
         }
     }
-    
+
     private bool TryParseRowColumnFormat(string input, out int row, out int column)
     {
         row = 0;
         column = 0;
-        
+
         // Try to parse "row,column" format (e.g., "0,0", "5,3")
         var parts = input.Split(',');
         if (parts.Length == 2)
-        {
             if (int.TryParse(parts[0].Trim(), out row) && int.TryParse(parts[1].Trim(), out column))
-            {
                 return true;
-            }
-        }
-        
+
         return false;
     }
 }
-

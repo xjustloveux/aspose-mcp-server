@@ -3,11 +3,15 @@ using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Pdf;
 
+/// <summary>
+///     Tool for managing pages in PDF documents (add, delete, insert, extract, rotate, resize)
+/// </summary>
 public class PdfPageTool : IAsposeTool
 {
-    public string Description => @"Manage pages in PDF documents. Supports 5 operations: add, delete, rotate, get_details, get_info.
+    public string Description =>
+        @"Manage pages in PDF documents. Supports 5 operations: add, delete, rotate, get_details, get_info.
 
 Usage examples:
 - Add page: pdf_page(operation='add', path='doc.pdf', count=1)
@@ -98,7 +102,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Adds a page to the PDF
+    ///     Adds a page to the PDF
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, optional pageIndex, outputPath</param>
     /// <returns>Success message</returns>
@@ -116,7 +120,7 @@ Usage examples:
 
         using var document = new Document(path);
 
-        for (int i = 0; i < count; i++)
+        for (var i = 0; i < count; i++)
         {
             var page = document.Pages.Add();
             if (width.HasValue && height.HasValue)
@@ -125,14 +129,12 @@ Usage examples:
                 page.SetPageSize(PageSize.A4.Width, PageSize.A4.Height);
         }
 
-        if (insertAt.HasValue && insertAt.Value >= 1 && insertAt.Value <= document.Pages.Count)
+        if (insertAt is >= 1 && insertAt.Value <= document.Pages.Count)
         {
             // Move pages manually since GetRange may not be available
             var pagesToMove = new List<Page>();
-            for (int i = document.Pages.Count - count; i < document.Pages.Count; i++)
-            {
+            for (var i = document.Pages.Count - count; i < document.Pages.Count; i++)
                 pagesToMove.Add(document.Pages[i]);
-            }
             foreach (var page in pagesToMove)
             {
                 document.Pages.Remove(page);
@@ -145,7 +147,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Deletes a page from the PDF
+    ///     Deletes a page from the PDF
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, pageIndex, optional outputPath</param>
     /// <returns>Success message</returns>
@@ -164,11 +166,12 @@ Usage examples:
 
         document.Pages.Delete(pageIndex);
         document.Save(outputPath);
-        return await Task.FromResult($"Successfully deleted page {pageIndex}. Remaining pages: {document.Pages.Count}. Output: {outputPath}");
+        return await Task.FromResult(
+            $"Successfully deleted page {pageIndex}. Remaining pages: {document.Pages.Count}. Output: {outputPath}");
     }
 
     /// <summary>
-    /// Rotates a page
+    ///     Rotates a page
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, pageIndex, angle, optional outputPath</param>
     /// <returns>Success message</returns>
@@ -196,25 +199,25 @@ Usage examples:
         };
 
         List<int> pagesToRotate;
-        if (pageIndicesArray != null && pageIndicesArray.Count > 0)
-            pagesToRotate = pageIndicesArray.Select(p => p?.GetValue<int>()).Where(p => p.HasValue).Select(p => p!.Value).ToList();
+        if (pageIndicesArray is { Count: > 0 })
+            pagesToRotate = pageIndicesArray.Select(p => p?.GetValue<int>()).Where(p => p.HasValue)
+                .Select(p => p!.Value).ToList();
         else if (pageIndex.HasValue)
-            pagesToRotate = new List<int> { pageIndex.Value };
+            pagesToRotate = [pageIndex.Value];
         else
             pagesToRotate = Enumerable.Range(1, document.Pages.Count).ToList();
 
         foreach (var pageNum in pagesToRotate)
-        {
             if (pageNum >= 1 && pageNum <= document.Pages.Count)
                 document.Pages[pageNum].Rotate = rotationEnum;
-        }
 
         document.Save(outputPath);
-        return await Task.FromResult($"Rotated {pagesToRotate.Count} page(s) by {rotation} degrees. Output: {outputPath}");
+        return await Task.FromResult(
+            $"Rotated {pagesToRotate.Count} page(s) by {rotation} degrees. Output: {outputPath}");
     }
 
     /// <summary>
-    /// Gets detailed information about a page
+    ///     Gets detailed information about a page
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, pageIndex</param>
     /// <returns>Formatted string with page details</returns>
@@ -234,7 +237,8 @@ Usage examples:
         sb.AppendLine($"=== Page {pageIndex} Details ===");
         sb.AppendLine($"Size: {page.Rect.Width} x {page.Rect.Height}");
         sb.AppendLine($"Rotation: {page.Rotate}°");
-        sb.AppendLine($"MediaBox: ({page.MediaBox.LLX}, {page.MediaBox.LLY}) to ({page.MediaBox.URX}, {page.MediaBox.URY})");
+        sb.AppendLine(
+            $"MediaBox: ({page.MediaBox.LLX}, {page.MediaBox.LLY}) to ({page.MediaBox.URX}, {page.MediaBox.URY})");
         sb.AppendLine($"CropBox: ({page.CropBox.LLX}, {page.CropBox.LLY}) to ({page.CropBox.URX}, {page.CropBox.URY})");
         sb.AppendLine($"Annotations: {page.Annotations.Count}");
         sb.AppendLine($"Paragraphs: {page.Paragraphs.Count}");
@@ -244,7 +248,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Gets information about all pages
+    ///     Gets information about all pages
     /// </summary>
     /// <param name="arguments">JSON arguments (no specific parameters required)</param>
     /// <returns>Formatted string with page information</returns>
@@ -254,11 +258,11 @@ Usage examples:
 
         using var document = new Document(path);
         var sb = new StringBuilder();
-        sb.AppendLine($"=== PDF Page Info ===");
+        sb.AppendLine("=== PDF Page Info ===");
         sb.AppendLine($"Total Pages: {document.Pages.Count}");
         sb.AppendLine();
 
-        for (int i = 1; i <= Math.Min(document.Pages.Count, 10); i++)
+        for (var i = 1; i <= Math.Min(document.Pages.Count, 10); i++)
         {
             var page = document.Pages[i];
             sb.AppendLine($"Page {i}: {page.Rect.Width} x {page.Rect.Height}, Rotation: {page.Rotate}°");
@@ -270,4 +274,3 @@ Usage examples:
         return await Task.FromResult(sb.ToString());
     }
 }
-

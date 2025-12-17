@@ -1,15 +1,14 @@
-﻿using System.Text.Json.Nodes;
-using System.Drawing;
-using System.Linq;
+﻿using System.Drawing;
+using System.Text.Json.Nodes;
 using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.PowerPoint;
 
 /// <summary>
-/// Unified tool for PowerPoint text formatting (batch format text)
-/// Merges: PptBatchFormatTextTool
+///     Unified tool for PowerPoint text formatting (batch format text)
+///     Merges: PptBatchFormatTextTool
 /// </summary>
 public class PptTextFormatTool : IAsposeTool
 {
@@ -86,43 +85,33 @@ Usage examples:
             : Enumerable.Range(0, presentation.Slides.Count).ToArray();
 
         foreach (var idx in targets)
-        {
             if (idx < 0 || idx >= presentation.Slides.Count)
-            {
                 throw new ArgumentException($"slide index {idx} out of range");
-            }
-        }
 
         Color? color = null;
-        if (!string.IsNullOrWhiteSpace(colorHex))
-        {
-            color = ColorHelper.ParseColor(colorHex);
-        }
+        if (!string.IsNullOrWhiteSpace(colorHex)) color = ColorHelper.ParseColor(colorHex);
 
         foreach (var idx in targets)
         {
             var slide = presentation.Slides[idx];
             foreach (var shape in slide.Shapes)
-            {
-                if (shape is IAutoShape auto && auto.TextFrame != null)
-                {
+                if (shape is IAutoShape { TextFrame: not null } auto)
                     foreach (var para in auto.TextFrame.Paragraphs)
+                    foreach (var portion in para.Portions)
                     {
-                        foreach (var portion in para.Portions)
-                        {
-                            if (!string.IsNullOrWhiteSpace(fontName)) portion.PortionFormat.LatinFont = new FontData(fontName);
-                            if (fontSize.HasValue) portion.PortionFormat.FontHeight = (float)fontSize.Value;
-                            if (bold.HasValue) portion.PortionFormat.FontBold = bold.Value ? NullableBool.True : NullableBool.False;
-                            if (italic.HasValue) portion.PortionFormat.FontItalic = italic.Value ? NullableBool.True : NullableBool.False;
-                            if (color.HasValue)
-                            {
-                                portion.PortionFormat.FillFormat.FillType = FillType.Solid;
-                                portion.PortionFormat.FillFormat.SolidFillColor.Color = color.Value;
-                            }
-                        }
+                        // Apply font settings using FontHelper
+                        var colorStr = color.HasValue
+                            ? $"#{color.Value.R:X2}{color.Value.G:X2}{color.Value.B:X2}"
+                            : null;
+                        FontHelper.Ppt.ApplyFontSettings(
+                            portion.PortionFormat,
+                            fontName,
+                            fontSize,
+                            bold,
+                            italic,
+                            colorStr
+                        );
                     }
-                }
-            }
         }
 
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
@@ -130,4 +119,3 @@ Usage examples:
         return await Task.FromResult($"Batch formatted text, applied to {targets.Length} slides");
     }
 }
-

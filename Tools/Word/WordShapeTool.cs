@@ -1,17 +1,18 @@
 ﻿using System.Text;
 using System.Text.Json.Nodes;
-using Aspose.Words;
-using Aspose.Words.Drawing;
 using Aspose.Cells;
 using Aspose.Cells.Charts;
-using System.IO;
+using Aspose.Words;
+using Aspose.Words.Drawing;
 using AsposeMcpServer.Core;
+using ImageType = Aspose.Cells.Drawing.ImageType;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Word;
 
 public class WordShapeTool : IAsposeTool
 {
-    public string Description => @"Manage shapes in Word documents. Supports 6 operations: add_line, add_textbox, get_textboxes, edit_textbox_content, set_textbox_border, add_chart.
+    public string Description =>
+        @"Manage shapes in Word documents. Supports 6 operations: add_line, add_textbox, get_textboxes, edit_textbox_content, set_textbox_border, add_chart.
 
 Usage examples:
 - Add line: word_shape(operation='add_line', path='doc.docx', x1=100, y1=100, x2=200, y2=200)
@@ -36,7 +37,11 @@ Usage examples:
 - 'edit_textbox_content': Edit textbox content (required params: path, shapeIndex, text)
 - 'set_textbox_border': Set textbox border (required params: path, shapeIndex)
 - 'add_chart': Add a chart (required params: path, chartType, data)",
-                @enum = new[] { "add_line", "add_textbox", "get_textboxes", "edit_textbox_content", "set_textbox_border", "add_chart" }
+                @enum = new[]
+                {
+                    "add_line", "add_textbox", "get_textboxes", "edit_textbox_content", "set_textbox_border",
+                    "add_chart"
+                }
             },
             path = new
             {
@@ -196,7 +201,8 @@ Usage examples:
             chartType = new
             {
                 type = "string",
-                description = "Chart type: column, bar, line, pie, area, scatter, doughnut (for add_chart, default: column)",
+                description =
+                    "Chart type: column, bar, line, pie, area, scatter, doughnut (for add_chart, default: column)",
                 @enum = new[] { "column", "bar", "line", "pie", "area", "scatter", "doughnut" }
             },
             data = new
@@ -256,9 +262,12 @@ Usage examples:
     }
 
     /// <summary>
-    /// Adds a line shape to the document
+    ///     Adds a line shape to the document
     /// </summary>
-    /// <param name="arguments">JSON arguments containing x1, y1, x2, y2, optional location, position, lineStyle, lineWidth, lineColor, width</param>
+    /// <param name="arguments">
+    ///     JSON arguments containing x1, y1, x2, y2, optional location, position, lineStyle, lineWidth,
+    ///     lineColor, width
+    /// </param>
     /// <returns>Success message with line details</returns>
     private async Task<string> AddLine(JsonObject? arguments)
     {
@@ -275,10 +284,11 @@ Usage examples:
 
         var doc = new Document(path);
         var section = doc.FirstSection;
-        var calculatedWidth = width ?? (section.PageSetup.PageWidth - section.PageSetup.LeftMargin - section.PageSetup.RightMargin);
+        var calculatedWidth = width ?? section.PageSetup.PageWidth - section.PageSetup.LeftMargin -
+            section.PageSetup.RightMargin;
 
-        Node? targetNode = null;
-        string locationDesc = "";
+        Node? targetNode;
+        string locationDesc;
 
         switch (location.ToLower())
         {
@@ -289,6 +299,7 @@ Usage examples:
                     header = new HeaderFooter(doc, HeaderFooterType.HeaderPrimary);
                     section.HeadersFooters.Add(header);
                 }
+
                 targetNode = header;
                 locationDesc = "header";
                 break;
@@ -300,11 +311,11 @@ Usage examples:
                     footer = new HeaderFooter(doc, HeaderFooterType.FooterPrimary);
                     section.HeadersFooters.Add(footer);
                 }
+
                 targetNode = footer;
                 locationDesc = "footer";
                 break;
 
-            case "body":
             default:
                 targetNode = section.Body;
                 locationDesc = "document body";
@@ -321,14 +332,14 @@ Usage examples:
             linePara.ParagraphFormat.SpaceAfter = 0;
             linePara.ParagraphFormat.LineSpacing = 1;
             linePara.ParagraphFormat.LineSpacingRule = LineSpacingRule.Exactly;
-            
+
             var shape = new Shape(doc, ShapeType.Line);
             shape.Width = calculatedWidth;
             shape.Height = 0;
             shape.StrokeWeight = lineWidth;
             shape.StrokeColor = ColorHelper.ParseColor(lineColor);
             shape.WrapType = WrapType.Inline;
-            
+
             linePara.AppendChild(shape);
 
             if (position == "start")
@@ -370,13 +381,17 @@ Usage examples:
         }
 
         doc.Save(outputPath);
-        return await Task.FromResult($"Successfully inserted line in {locationDesc} at {position} position. Output: {outputPath}");
+        return await Task.FromResult(
+            $"Successfully inserted line in {locationDesc} at {position} position. Output: {outputPath}");
     }
 
     /// <summary>
-    /// Adds a textbox to the document
+    ///     Adds a textbox to the document
     /// </summary>
-    /// <param name="arguments">JSON arguments containing text, x, y, optional width, height, textboxWidth, textboxHeight, positionX, positionY, outputPath</param>
+    /// <param name="arguments">
+    ///     JSON arguments containing text, x, y, optional width, height, textboxWidth, textboxHeight,
+    ///     positionX, positionY, outputPath
+    /// </param>
     /// <returns>Success message with textbox details</returns>
     private async Task<string> AddTextBox(JsonObject? arguments)
     {
@@ -430,14 +445,16 @@ Usage examples:
 
         if (!string.IsNullOrEmpty(fontNameAscii))
             run.Font.NameAscii = fontNameAscii;
-        
+
         if (!string.IsNullOrEmpty(fontNameFarEast))
             run.Font.NameFarEast = fontNameFarEast;
-        
+
         if (!string.IsNullOrEmpty(fontName))
         {
             if (string.IsNullOrEmpty(fontNameAscii) && string.IsNullOrEmpty(fontNameFarEast))
+            {
                 run.Font.Name = fontName;
+            }
             else
             {
                 if (string.IsNullOrEmpty(fontNameAscii))
@@ -469,7 +486,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Gets all textboxes from the document
+    ///     Gets all textboxes from the document
     /// </summary>
     /// <param name="arguments">JSON arguments containing path</param>
     /// <returns>Formatted string with all textboxes</returns>
@@ -481,7 +498,7 @@ Usage examples:
 
         var doc = new Document(path);
         var shapes = FindAllTextboxes(doc);
-        
+
         var result = new StringBuilder();
         result.AppendLine("=== Document Textboxes ===\n");
         result.AppendLine($"Total Textboxes: {shapes.Count}\n");
@@ -492,7 +509,7 @@ Usage examples:
             return await Task.FromResult(result.ToString());
         }
 
-        for (int i = 0; i < shapes.Count; i++)
+        for (var i = 0; i < shapes.Count; i++)
         {
             var textbox = shapes[i];
             result.AppendLine($"【Textbox {i}】");
@@ -500,19 +517,21 @@ Usage examples:
             result.AppendLine($"Width: {textbox.Width} pt");
             result.AppendLine($"Height: {textbox.Height} pt");
             result.AppendLine($"Position: X={textbox.Left}, Y={textbox.Top}");
-            
+
             if (includeContent)
             {
                 var textboxText = textbox.GetText().Trim();
                 if (!string.IsNullOrEmpty(textboxText))
                 {
-                    result.AppendLine($"Content:");
+                    result.AppendLine("Content:");
                     result.AppendLine($"  {textboxText.Replace("\n", "\n  ")}");
                 }
                 else
-                    result.AppendLine($"Content: (empty)");
+                {
+                    result.AppendLine("Content: (empty)");
+                }
             }
-            
+
             result.AppendLine();
         }
 
@@ -520,7 +539,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Edits the content of a textbox
+    ///     Edits the content of a textbox
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, shapeIndex, text, optional outputPath</param>
     /// <returns>Success message with updated textbox details</returns>
@@ -544,16 +563,17 @@ Usage examples:
 
         var doc = new Document(path);
         var textboxes = FindAllTextboxes(doc);
-        
+
         if (textboxIndex < 0 || textboxIndex >= textboxes.Count)
-            throw new ArgumentException($"Textbox index {textboxIndex} out of range (total textboxes: {textboxes.Count})");
-        
+            throw new ArgumentException(
+                $"Textbox index {textboxIndex} out of range (total textboxes: {textboxes.Count})");
+
         var textbox = textboxes[textboxIndex];
-        
+
         // Use false to get only direct child paragraphs of the textbox (not recursive)
         var paragraphs = textbox.GetChildNodes(NodeType.Paragraph, false);
         Paragraph para;
-        
+
         if (paragraphs.Count == 0)
         {
             // Create a new paragraph inside the textbox
@@ -565,14 +585,15 @@ Usage examples:
             // Use the first paragraph that is a direct child of the textbox
             para = paragraphs[0] as Paragraph ?? throw new Exception("Cannot get textbox paragraph");
         }
-        
+
         // Ensure we're working only with content inside the textbox
         // Get runs that are direct children of the paragraph (which is inside the textbox)
-        var runs = para.GetChildNodes(NodeType.Run, false);
-        
+        var runsCollection = para.GetChildNodes(NodeType.Run, false);
+        var runs = runsCollection.Cast<Run>().ToList();
+
         if (text != null)
         {
-            if (appendText && runs.Count > 0)
+            if (appendText && runsCollection.Count > 0)
             {
                 // Append new run to existing content
                 var newRun = new Run(doc, text);
@@ -586,73 +607,44 @@ Usage examples:
                 var newRun = new Run(doc, text);
                 para.AppendChild(newRun);
             }
-            
+
             // Refresh runs list after modification
-            runs = para.GetChildNodes(NodeType.Run, false);
+            runs = para.GetChildNodes(NodeType.Run, false).Cast<Run>().ToList();
         }
-        
+
         if (clearFormatting)
-        {
-            foreach (Run run in runs)
+            foreach (var run in runs)
                 run.Font.ClearFormatting();
-        }
-        
-        bool hasFormatting = !string.IsNullOrEmpty(fontName) || !string.IsNullOrEmpty(fontNameAscii) || 
-                             !string.IsNullOrEmpty(fontNameFarEast) || fontSize.HasValue || 
-                             bold.HasValue || italic.HasValue || !string.IsNullOrEmpty(color);
-        
+
+        var hasFormatting = !string.IsNullOrEmpty(fontName) || !string.IsNullOrEmpty(fontNameAscii) ||
+                            !string.IsNullOrEmpty(fontNameFarEast) || fontSize.HasValue ||
+                            bold.HasValue || italic.HasValue || !string.IsNullOrEmpty(color);
+
         if (hasFormatting)
-        {
-            foreach (Run run in runs)
+            foreach (var run in runs)
             {
-                if (!string.IsNullOrEmpty(fontNameAscii))
-                    run.Font.NameAscii = fontNameAscii;
-                
-                if (!string.IsNullOrEmpty(fontNameFarEast))
-                    run.Font.NameFarEast = fontNameFarEast;
-                
-                if (!string.IsNullOrEmpty(fontName))
-                {
-                    if (string.IsNullOrEmpty(fontNameAscii) && string.IsNullOrEmpty(fontNameFarEast))
-                        run.Font.Name = fontName;
-                    else
-                    {
-                        if (string.IsNullOrEmpty(fontNameAscii))
-                            run.Font.NameAscii = fontName;
-                        if (string.IsNullOrEmpty(fontNameFarEast))
-                            run.Font.NameFarEast = fontName;
-                    }
-                }
-                
-                if (fontSize.HasValue)
-                    run.Font.Size = fontSize.Value;
-                
-                if (bold.HasValue)
-                    run.Font.Bold = bold.Value;
-                
-                if (italic.HasValue)
-                    run.Font.Italic = italic.Value;
-                
+                // Apply font settings using FontHelper
+                FontHelper.Word.ApplyFontSettings(
+                    run,
+                    fontName,
+                    fontNameAscii,
+                    fontNameFarEast,
+                    fontSize,
+                    bold,
+                    italic
+                );
+
+                // Handle color separately to throw exception on parse error
                 if (!string.IsNullOrEmpty(color))
-                {
-                    try
-                    {
-                        run.Font.Color = ColorHelper.ParseColor(color);
-                    }
-                    catch (Exception colorEx)
-                    {
-                        throw new ArgumentException($"Unable to parse color '{color}': {colorEx.Message}. Please use a valid color format (e.g., #FF0000, 255,0,0, or red)");
-                    }
-                }
+                    run.Font.Color = ColorHelper.ParseColor(color, true);
             }
-        }
-        
+
         doc.Save(outputPath);
         return await Task.FromResult($"Successfully edited textbox #{textboxIndex}. Output: {outputPath}");
     }
 
     /// <summary>
-    /// Sets border properties for a textbox
+    ///     Sets border properties for a textbox
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, shapeIndex, optional color, width, style, outputPath</param>
     /// <returns>Success message</returns>
@@ -669,32 +661,33 @@ Usage examples:
 
         var doc = new Document(path);
         var allTextboxes = FindAllTextboxes(doc);
-        
+
         if (textboxIndex < 0 || textboxIndex >= allTextboxes.Count)
-            throw new ArgumentException($"Textbox index {textboxIndex} out of range (total textboxes: {allTextboxes.Count})");
-        
+            throw new ArgumentException(
+                $"Textbox index {textboxIndex} out of range (total textboxes: {allTextboxes.Count})");
+
         var textBox = allTextboxes[textboxIndex];
         var stroke = textBox.Stroke;
-        
+
         stroke.Visible = borderVisible;
-        
+
         if (borderVisible)
         {
             stroke.Color = ColorHelper.ParseColor(borderColor);
             stroke.Weight = borderWidth;
         }
-        
+
         doc.Save(outputPath);
-        
-        var borderDesc = borderVisible 
+
+        var borderDesc = borderVisible
             ? $"Border: {borderWidth}pt, Color: {borderColor}"
             : "No border";
-        
+
         return await Task.FromResult($"Successfully set textbox {textboxIndex} {borderDesc}. Output: {outputPath}");
     }
 
     /// <summary>
-    /// Adds a chart to the document
+    ///     Adds a chart to the document
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, chartType, data, x, y, optional width, height, outputPath</param>
     /// <returns>Success message with chart details</returns>
@@ -717,7 +710,6 @@ Usage examples:
 
         var tableData = new List<List<string>>();
         foreach (var row in data)
-        {
             if (row is JsonArray rowArray)
             {
                 var rowData = new List<string>();
@@ -725,32 +717,29 @@ Usage examples:
                     rowData.Add(cell?.ToString() ?? "");
                 tableData.Add(rowData);
             }
-        }
 
         if (tableData.Count == 0)
             throw new ArgumentException("Cannot parse chart data");
 
-        string tempExcelPath = Path.Combine(Path.GetTempPath(), $"chart_{Guid.NewGuid()}.xlsx");
+        var tempExcelPath = Path.Combine(Path.GetTempPath(), $"chart_{Guid.NewGuid()}.xlsx");
         try
         {
             var workbook = new Workbook();
             var worksheet = workbook.Worksheets[0];
-            
-            for (int i = 0; i < tableData.Count; i++)
+
+            for (var i = 0; i < tableData.Count; i++)
+            for (var j = 0; j < tableData[i].Count; j++)
             {
-                for (int j = 0; j < tableData[i].Count; j++)
-                {
-                    var cellValue = tableData[i][j];
-                    if (double.TryParse(cellValue, out double numValue) && i > 0)
-                        worksheet.Cells[i, j].PutValue(numValue);
-                    else
-                        worksheet.Cells[i, j].PutValue(cellValue);
-                }
+                var cellValue = tableData[i][j];
+                if (double.TryParse(cellValue, out var numValue) && i > 0)
+                    worksheet.Cells[i, j].PutValue(numValue);
+                else
+                    worksheet.Cells[i, j].PutValue(cellValue);
             }
-            
-            int maxCol = tableData.Max(r => r.Count);
-            string dataRange = $"A1:{Convert.ToChar(64 + maxCol)}{tableData.Count}";
-            
+
+            var maxCol = tableData.Max(r => r.Count);
+            var dataRange = $"A1:{Convert.ToChar(64 + maxCol)}{tableData.Count}";
+
             var chartTypeEnum = chartType.ToLower() switch
             {
                 "bar" => ChartType.Bar,
@@ -761,68 +750,75 @@ Usage examples:
                 "doughnut" => ChartType.Doughnut,
                 _ => ChartType.Column
             };
-            
-            int chartIndex = worksheet.Charts.Add(chartTypeEnum, 0, tableData.Count + 2, 20, 10);
+
+            var chartIndex = worksheet.Charts.Add(chartTypeEnum, 0, tableData.Count + 2, 20, 10);
             var chart = worksheet.Charts[chartIndex];
             chart.SetChartDataRange(dataRange, true);
-            
+
             if (!string.IsNullOrEmpty(chartTitle))
                 chart.Title.Text = chartTitle;
-            
+
             workbook.Save(tempExcelPath);
-            
-            string tempImagePath = Path.Combine(Path.GetTempPath(), $"chart_{Guid.NewGuid()}.png");
-            chart.ToImage(tempImagePath, Aspose.Cells.Drawing.ImageType.Png);
-            
+
+            var tempImagePath = Path.Combine(Path.GetTempPath(), $"chart_{Guid.NewGuid()}.png");
+            chart.ToImage(tempImagePath, ImageType.Png);
+
             var doc = new Document(path);
             var builder = new DocumentBuilder(doc);
-            
+
             if (paragraphIndex.HasValue)
             {
                 var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
                 if (paragraphIndex.Value == -1)
                 {
                     if (paragraphs.Count > 0)
-                    {
-                        var firstPara = paragraphs[0] as Paragraph;
-                        if (firstPara != null)
+                        if (paragraphs[0] is Paragraph firstPara)
                             builder.MoveTo(firstPara);
-                    }
                 }
                 else if (paragraphIndex.Value >= 0 && paragraphIndex.Value < paragraphs.Count)
                 {
-                    var targetPara = paragraphs[paragraphIndex.Value] as Paragraph;
-                    if (targetPara != null)
+                    if (paragraphs[paragraphIndex.Value] is Paragraph targetPara)
                         builder.MoveTo(targetPara);
                     else
                         throw new ArgumentException($"Cannot find paragraph at index {paragraphIndex.Value}");
                 }
                 else
-                    throw new ArgumentException($"Paragraph index {paragraphIndex.Value} out of range (total paragraphs: {paragraphs.Count})");
+                {
+                    throw new ArgumentException(
+                        $"Paragraph index {paragraphIndex.Value} out of range (total paragraphs: {paragraphs.Count})");
+                }
             }
             else
+            {
                 builder.MoveToDocumentEnd();
-            
+            }
+
             builder.ParagraphFormat.Alignment = alignment.ToLower() switch
             {
                 "center" => ParagraphAlignment.Center,
                 "right" => ParagraphAlignment.Right,
                 _ => ParagraphAlignment.Left
             };
-            
+
             var shape = builder.InsertImage(tempImagePath);
             shape.Width = chartWidth;
             shape.Height = chartHeight;
             shape.WrapType = WrapType.Inline;
-            
+
             if (File.Exists(tempImagePath))
-            {
-                try { File.Delete(tempImagePath); } catch { }
-            }
-            
+                try
+                {
+                    File.Delete(tempImagePath);
+                }
+                catch (Exception ex)
+                {
+                    await Console.Error.WriteLineAsync($"[WARN] Error deleting temp image file: {ex.Message}");
+                }
+
             doc.Save(outputPath);
-            
-            return await Task.FromResult($"Successfully added chart. Type: {chartType}, Data rows: {tableData.Count}. Output: {outputPath}");
+
+            return await Task.FromResult(
+                $"Successfully added chart. Type: {chartType}, Data rows: {tableData.Count}. Output: {outputPath}");
         }
         catch (Exception ex)
         {
@@ -831,36 +827,40 @@ Usage examples:
         finally
         {
             if (File.Exists(tempExcelPath))
-            {
-                try { File.Delete(tempExcelPath); } catch { }
-            }
+                try
+                {
+                    File.Delete(tempExcelPath);
+                }
+                catch (Exception ex)
+                {
+                    await Console.Error.WriteLineAsync($"[WARN] Error deleting temp Excel file: {ex.Message}");
+                }
         }
     }
 
     /// <summary>
-    /// Find all textboxes in the document, searching in all sections' Body and HeaderFooter.
-    /// This ensures consistent textbox indexing across all operations.
+    ///     Find all textboxes in the document, searching in all sections' Body and HeaderFooter.
+    ///     This ensures consistent textbox indexing across all operations.
     /// </summary>
     private List<Shape> FindAllTextboxes(Document doc)
     {
         var textboxes = new List<Shape>();
-        foreach (Section section in doc.Sections)
+        foreach (var section in doc.Sections.Cast<Section>())
         {
             // Search in main body
             var bodyShapes = section.Body.GetChildNodes(NodeType.Shape, true).Cast<Shape>()
                 .Where(s => s.ShapeType == ShapeType.TextBox);
             textboxes.AddRange(bodyShapes);
-            
+
             // Search in headers and footers
-            foreach (HeaderFooter header in section.HeadersFooters)
+            foreach (var header in section.HeadersFooters.Cast<HeaderFooter>())
             {
                 var headerShapes = header.GetChildNodes(NodeType.Shape, true).Cast<Shape>()
                     .Where(s => s.ShapeType == ShapeType.TextBox);
                 textboxes.AddRange(headerShapes);
             }
         }
+
         return textboxes;
     }
-
 }
-

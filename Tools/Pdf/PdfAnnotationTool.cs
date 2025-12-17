@@ -4,8 +4,11 @@ using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Pdf;
 
+/// <summary>
+///     Tool for managing annotations in PDF documents (add, delete, edit, get)
+/// </summary>
 public class PdfAnnotationTool : IAsposeTool
 {
     public string Description => @"Manage annotations in PDF documents. Supports 4 operations: add, delete, edit, get.
@@ -85,9 +88,12 @@ Usage examples:
     }
 
     /// <summary>
-    /// Adds an annotation to a PDF page
+    ///     Adds an annotation to a PDF page
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, pageIndex, annotationType, x, y, width, height, optional text, outputPath</param>
+    /// <param name="arguments">
+    ///     JSON arguments containing path, pageIndex, annotationType, x, y, width, height, optional text,
+    ///     outputPath
+    /// </param>
     /// <returns>Success message</returns>
     private async Task<string> AddAnnotation(JsonObject? arguments)
     {
@@ -103,7 +109,7 @@ Usage examples:
             throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
 
         var page = document.Pages[pageIndex];
-        var annotation = new TextAnnotation(page, new Aspose.Pdf.Rectangle(x, y, x + 200, y + 50))
+        var annotation = new TextAnnotation(page, new Rectangle(x, y, x + 200, y + 50))
         {
             Title = "Comment",
             Subject = "Annotation",
@@ -118,7 +124,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Deletes an annotation from a PDF page
+    ///     Deletes an annotation from a PDF page
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, pageIndex, annotationIndex, optional outputPath</param>
     /// <returns>Success message</returns>
@@ -142,13 +148,17 @@ Usage examples:
 
         page.Annotations.Delete(annotationIndex);
         document.Save(outputPath);
-        return await Task.FromResult($"Successfully deleted annotation {annotationIndex} from page {pageIndex}. Output: {outputPath}");
+        return await Task.FromResult(
+            $"Successfully deleted annotation {annotationIndex} from page {pageIndex}. Output: {outputPath}");
     }
 
     /// <summary>
-    /// Edits an annotation in a PDF
+    ///     Edits an annotation in a PDF
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, pageIndex, annotationIndex, optional text, x, y, width, height, outputPath</param>
+    /// <param name="arguments">
+    ///     JSON arguments containing path, pageIndex, annotationIndex, optional text, x, y, width, height,
+    ///     outputPath
+    /// </param>
     /// <returns>Success message</returns>
     private async Task<string> EditAnnotation(JsonObject? arguments)
     {
@@ -176,17 +186,16 @@ Usage examples:
         {
             textAnnotation.Contents = text;
             if (x.HasValue && y.HasValue)
-            {
-                textAnnotation.Rect = new Aspose.Pdf.Rectangle(x.Value, y.Value, x.Value + 200, y.Value + 50);
-            }
+                textAnnotation.Rect = new Rectangle(x.Value, y.Value, x.Value + 200, y.Value + 50);
         }
 
         document.Save(outputPath);
-        return await Task.FromResult($"Successfully edited annotation {annotationIndex} on page {pageIndex}. Output: {outputPath}");
+        return await Task.FromResult(
+            $"Successfully edited annotation {annotationIndex} on page {pageIndex}. Output: {outputPath}");
     }
 
     /// <summary>
-    /// Gets all annotations from a PDF page
+    ///     Gets all annotations from a PDF page
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, pageIndex</param>
     /// <returns>Formatted string with all annotations</returns>
@@ -209,7 +218,7 @@ Usage examples:
 
             var page = document.Pages[pageIndex.Value];
             sb.AppendLine($"Page {pageIndex.Value} Annotations ({page.Annotations.Count}):");
-            for (int i = 0; i < page.Annotations.Count; i++)
+            for (var i = 0; i < page.Annotations.Count; i++)
             {
                 var annotation = page.Annotations[i];
                 sb.AppendLine($"  [{i}] Type: {annotation.GetType().Name}");
@@ -221,28 +230,29 @@ Usage examples:
         }
         else
         {
-            int totalCount = 0;
-            for (int i = 1; i <= document.Pages.Count; i++)
+            var totalCount = 0;
+            for (var i = 1; i <= document.Pages.Count; i++)
             {
                 var page = document.Pages[i];
                 if (page.Annotations.Count > 0)
                 {
                     sb.AppendLine($"Page {i} ({page.Annotations.Count} annotations):");
-                    for (int j = 0; j < page.Annotations.Count; j++)
+                    for (var j = 0; j < page.Annotations.Count; j++)
                     {
                         var annotation = page.Annotations[j];
                         sb.AppendLine($"  [{j}] Type: {annotation.GetType().Name}");
                         if (annotation is TextAnnotation textAnnotation)
                             sb.AppendLine($"      Text: {textAnnotation.Contents}");
                     }
+
                     sb.AppendLine();
                     totalCount += page.Annotations.Count;
                 }
             }
+
             sb.AppendLine($"Total Annotations: {totalCount}");
         }
 
         return await Task.FromResult(sb.ToString());
     }
 }
-

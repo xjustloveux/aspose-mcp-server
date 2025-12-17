@@ -3,8 +3,11 @@ using Aspose.Pdf;
 using Aspose.Pdf.Text;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Pdf;
 
+/// <summary>
+///     Tool for managing watermarks in PDF documents
+/// </summary>
 public class PdfWatermarkTool : IAsposeTool
 {
     public string Description => @"Manage watermarks in PDF documents. Supports 1 operation: add.
@@ -87,7 +90,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Adds a watermark to the PDF
+    ///     Adds a watermark to the PDF
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, optional text, imagePath, outputPath</param>
     /// <returns>Success message</returns>
@@ -122,15 +125,20 @@ Usage examples:
             _ => VerticalAlignment.Center
         };
 
-        foreach (Page page in document.Pages)
+        foreach (var page in document.Pages)
         {
             var watermark = new WatermarkArtifact();
             var textState = new TextState
             {
-                FontSize = (float)fontSize,
-                ForegroundColor = Aspose.Pdf.Color.Gray,
-                Font = FontRepository.FindFont(fontName)
+                ForegroundColor = Color.Gray
             };
+
+            // Apply font settings using FontHelper
+            FontHelper.Pdf.ApplyFontSettings(
+                textState,
+                fontName,
+                fontSize
+            );
 
             watermark.SetTextAndState(text, textState);
             watermark.ArtifactHorizontalAlignment = hAlign;
@@ -146,4 +154,3 @@ Usage examples:
         return await Task.FromResult($"Watermark added to PDF. Output: {outputPath}");
     }
 }
-

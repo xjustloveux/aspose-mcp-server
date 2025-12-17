@@ -1,14 +1,15 @@
-﻿using System.Text.Json.Nodes;
+﻿using System.Drawing;
 using System.Text;
+using System.Text.Json.Nodes;
 using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.PowerPoint;
 
 /// <summary>
-/// Unified tool for managing PowerPoint hyperlinks (add, edit, delete, get)
-/// Merges: PptAddHyperlinkTool, PptEditHyperlinkTool, PptDeleteHyperlinkTool, PptGetHyperlinksTool
+///     Unified tool for managing PowerPoint hyperlinks (add, edit, delete, get)
+///     Merges: PptAddHyperlinkTool, PptEditHyperlinkTool, PptDeleteHyperlinkTool, PptGetHyperlinksTool
 /// </summary>
 public class PptHyperlinkTool : IAsposeTool
 {
@@ -115,7 +116,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Adds a hyperlink to a shape
+    ///     Adds a hyperlink to a shape
     /// </summary>
     /// <param name="arguments">JSON arguments containing slideIndex, shapeIndex, address, optional text, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -132,9 +133,7 @@ Usage examples:
 
         using var presentation = new Presentation(path);
         if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
-        {
             throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
-        }
 
         var slide = presentation.Slides[slideIndex];
         var shape = slide.Shapes.AddAutoShape(ShapeType.Rectangle, x, y, width, height);
@@ -145,7 +144,7 @@ Usage examples:
         portion.PortionFormat.HyperlinkClick = new Hyperlink(url);
         portion.PortionFormat.FontHeight = 14;
         portion.PortionFormat.FillFormat.FillType = FillType.Solid;
-        portion.PortionFormat.FillFormat.SolidFillColor.Color = System.Drawing.Color.Blue;
+        portion.PortionFormat.FillFormat.SolidFillColor.Color = Color.Blue;
 
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         presentation.Save(outputPath, SaveFormat.Pptx);
@@ -153,7 +152,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Edits an existing hyperlink
+    ///     Edits an existing hyperlink
     /// </summary>
     /// <param name="arguments">JSON arguments containing slideIndex, shapeIndex, optional address, text, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -172,16 +171,11 @@ Usage examples:
 
         if (removeHyperlink)
         {
-            if (shape is IAutoShape autoShape && autoShape.TextFrame != null)
-            {
+            if (shape is IAutoShape { TextFrame: not null } autoShape)
                 foreach (var paragraph in autoShape.TextFrame.Paragraphs)
-                {
-                    foreach (var portion in paragraph.Portions)
-                    {
-                        portion.PortionFormat.HyperlinkClick = null;
-                    }
-                }
-            }
+                foreach (var portion in paragraph.Portions)
+                    portion.PortionFormat.HyperlinkClick = null;
+
             shape.HyperlinkClick = null;
         }
         else if (!string.IsNullOrEmpty(url))
@@ -191,9 +185,7 @@ Usage examples:
         else if (slideTargetIndex.HasValue)
         {
             if (slideTargetIndex.Value < 0 || slideTargetIndex.Value >= presentation.Slides.Count)
-            {
                 throw new ArgumentException($"slideTargetIndex must be between 0 and {presentation.Slides.Count - 1}");
-            }
             shape.HyperlinkClick = new Hyperlink(presentation.Slides[slideTargetIndex.Value]);
         }
         else
@@ -207,7 +199,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Deletes a hyperlink from a shape
+    ///     Deletes a hyperlink from a shape
     /// </summary>
     /// <param name="arguments">JSON arguments containing slideIndex, shapeIndex, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -222,16 +214,10 @@ Usage examples:
         var shape = PowerPointHelper.GetShape(slide, shapeIndex);
         shape.HyperlinkClick = null;
 
-        if (shape is IAutoShape autoShape && autoShape.TextFrame != null)
-        {
+        if (shape is IAutoShape { TextFrame: not null } autoShape)
             foreach (var paragraph in autoShape.TextFrame.Paragraphs)
-            {
-                foreach (var portion in paragraph.Portions)
-                {
-                    portion.PortionFormat.HyperlinkClick = null;
-                }
-            }
-        }
+            foreach (var portion in paragraph.Portions)
+                portion.PortionFormat.HyperlinkClick = null;
 
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         presentation.Save(outputPath, SaveFormat.Pptx);
@@ -239,7 +225,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Gets all hyperlinks from the presentation
+    ///     Gets all hyperlinks from the presentation
     /// </summary>
     /// <param name="arguments">JSON arguments (no specific parameters required)</param>
     /// <param name="path">PowerPoint file path</param>
@@ -254,9 +240,7 @@ Usage examples:
         if (slideIndex.HasValue)
         {
             if (slideIndex.Value < 0 || slideIndex.Value >= presentation.Slides.Count)
-            {
                 throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
-            }
             var slide = presentation.Slides[slideIndex.Value];
             sb.AppendLine($"=== Slide {slideIndex.Value} Hyperlinks ===");
             GetHyperlinksFromSlide(presentation, slide, sb);
@@ -264,7 +248,7 @@ Usage examples:
         else
         {
             sb.AppendLine("=== All Hyperlinks ===");
-            for (int i = 0; i < presentation.Slides.Count; i++)
+            for (var i = 0; i < presentation.Slides.Count; i++)
             {
                 var slide = presentation.Slides[i];
                 var hyperlinks = GetHyperlinksFromSlide(presentation, slide, null);
@@ -281,9 +265,8 @@ Usage examples:
 
     private int GetHyperlinksFromSlide(IPresentation presentation, ISlide slide, StringBuilder? sb)
     {
-        int count = 0;
+        var count = 0;
         foreach (var shape in slide.Shapes)
-        {
             if (shape is IAutoShape autoShape)
             {
                 if (autoShape.HyperlinkClick != null)
@@ -291,22 +274,27 @@ Usage examples:
                     count++;
                     if (sb != null)
                     {
-                        var url = autoShape.HyperlinkClick.ExternalUrl ?? (autoShape.HyperlinkClick.TargetSlide != null ? $"Slide {presentation.Slides.IndexOf(autoShape.HyperlinkClick.TargetSlide)}" : "Internal link");
+                        var url = autoShape.HyperlinkClick.ExternalUrl ?? (autoShape.HyperlinkClick.TargetSlide != null
+                            ? $"Slide {presentation.Slides.IndexOf(autoShape.HyperlinkClick.TargetSlide)}"
+                            : "Internal link");
                         sb.AppendLine($"  Shape [{slide.Shapes.IndexOf(shape)}]: {url}");
                     }
                 }
+
                 if (autoShape.HyperlinkMouseOver != null)
                 {
                     count++;
                     if (sb != null)
                     {
-                        var url = autoShape.HyperlinkMouseOver.ExternalUrl ?? (autoShape.HyperlinkMouseOver.TargetSlide != null ? $"Slide {presentation.Slides.IndexOf(autoShape.HyperlinkMouseOver.TargetSlide)}" : "Internal link");
+                        var url = autoShape.HyperlinkMouseOver.ExternalUrl ??
+                                  (autoShape.HyperlinkMouseOver.TargetSlide != null
+                                      ? $"Slide {presentation.Slides.IndexOf(autoShape.HyperlinkMouseOver.TargetSlide)}"
+                                      : "Internal link");
                         sb.AppendLine($"  Shape [{slide.Shapes.IndexOf(shape)}] (mouseover): {url}");
                     }
                 }
             }
-        }
+
         return count;
     }
 }
-

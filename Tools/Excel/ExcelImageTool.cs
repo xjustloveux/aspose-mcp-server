@@ -1,24 +1,26 @@
-﻿using System.Text.Json.Nodes;
-using System.Text;
+﻿using System.Text;
+using System.Text.Json.Nodes;
 using Aspose.Cells;
-using Aspose.Cells.Drawing;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Excel;
 
 /// <summary>
-/// Unified tool for managing Excel images (add, delete, get)
-/// Merges: ExcelAddImageTool, ExcelDeleteImageTool, ExcelGetImagesTool
+///     Unified tool for managing Excel images (add, delete, get)
+///     Merges: ExcelAddImageTool, ExcelDeleteImageTool, ExcelGetImagesTool
 /// </summary>
 public class ExcelImageTool : IAsposeTool
 {
-    public string Description => @"Manage Excel images. Supports 3 operations: add, delete, get.
+    /// <summary>    ///     Gets the description of the tool and its usage examples    /// </summary>    public string Description => @"Manage Excel images. Supports 3 operations: add, delete, get.
 
 Usage examples:
 - Add image: excel_image(operation='add', path='book.xlsx', imagePath='image.png', cell='A1', width=200, height=150)
 - Delete image: excel_image(operation='delete', path='book.xlsx', imageIndex=0)
 - Get images: excel_image(operation='get', path='book.xlsx')";
 
+    /// <summary>
+    ///     Gets the JSON schema defining the input parameters for the tool
+    /// </summary>
     public object InputSchema => new
     {
         type = "object",
@@ -93,7 +95,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Adds an image to the worksheet
+    ///     Adds an image to the worksheet
     /// </summary>
     /// <param name="arguments">JSON arguments containing imagePath, cell, optional width, height</param>
     /// <param name="path">Excel file path</param>
@@ -107,10 +109,7 @@ Usage examples:
         var width = ArgumentHelper.GetIntNullable(arguments, "width");
         var height = ArgumentHelper.GetIntNullable(arguments, "height");
 
-        if (!File.Exists(imagePath))
-        {
-            throw new FileNotFoundException($"Image file not found: {imagePath}");
-        }
+        if (!File.Exists(imagePath)) throw new FileNotFoundException($"Image file not found: {imagePath}");
 
         using var workbook = new Workbook(path);
         var worksheet = workbook.Worksheets[sheetIndex];
@@ -132,7 +131,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Deletes an image from the worksheet
+    ///     Deletes an image from the worksheet
     /// </summary>
     /// <param name="arguments">JSON arguments containing imageIndex</param>
     /// <param name="path">Excel file path</param>
@@ -145,29 +144,29 @@ Usage examples:
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
         var pictures = worksheet.Pictures;
-        
+
         if (imageIndex < 0 || imageIndex >= pictures.Count)
-        {
-            throw new ArgumentException($"Image index {imageIndex} is out of range (worksheet has {pictures.Count} images)");
-        }
+            throw new ArgumentException(
+                $"Image index {imageIndex} is out of range (worksheet has {pictures.Count} images)");
 
         pictures.RemoveAt(imageIndex);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         workbook.Save(outputPath);
-        
+
         var remainingCount = pictures.Count;
-        
-        return await Task.FromResult($"Successfully deleted image #{imageIndex}\nRemaining images in worksheet: {remainingCount}\nOutput: {outputPath}");
+
+        return await Task.FromResult(
+            $"Successfully deleted image #{imageIndex}\nRemaining images in worksheet: {remainingCount}\nOutput: {outputPath}");
     }
 
     /// <summary>
-    /// Gets all images from the worksheet
+    ///     Gets all images from the worksheet
     /// </summary>
-    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="_">Unused parameter</param>
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Formatted string with all images</returns>
-    private async Task<string> GetImagesAsync(JsonObject? arguments, string path, int sheetIndex)
+    private async Task<string> GetImagesAsync(JsonObject? _, string path, int sheetIndex)
     {
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
@@ -183,11 +182,12 @@ Usage examples:
             return await Task.FromResult(result.ToString());
         }
 
-        for (int i = 0; i < pictures.Count; i++)
+        for (var i = 0; i < pictures.Count; i++)
         {
             var picture = pictures[i];
             result.AppendLine($"[Image {i}]");
-            result.AppendLine($"Location: rows {picture.UpperLeftRow}-{picture.LowerRightRow}, columns {picture.UpperLeftColumn}-{picture.LowerRightColumn}");
+            result.AppendLine(
+                $"Location: rows {picture.UpperLeftRow}-{picture.LowerRightRow}, columns {picture.UpperLeftColumn}-{picture.LowerRightColumn}");
             result.AppendLine($"Width: {picture.Width} pixels");
             result.AppendLine($"Height: {picture.Height} pixels");
             result.AppendLine();
@@ -196,4 +196,3 @@ Usage examples:
         return await Task.FromResult(result.ToString());
     }
 }
-

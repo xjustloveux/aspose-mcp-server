@@ -3,11 +3,11 @@ using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.PowerPoint;
 
 /// <summary>
-/// Unified tool for PowerPoint slide settings (set slide size, set slide orientation)
-/// Merges: PptSetSlideSizeTool, PptSetSlideOrientationTool
+///     Unified tool for PowerPoint slide settings (set slide size, set slide orientation)
+///     Merges: PptSetSlideSizeTool, PptSetSlideOrientationTool
 /// </summary>
 public class PptSlideSettingsTool : IAsposeTool
 {
@@ -80,7 +80,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Sets slide size
+    ///     Sets slide size
     /// </summary>
     /// <param name="arguments">JSON arguments containing width, height, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -105,9 +105,7 @@ Usage examples:
         if (type == SlideSizeType.Custom)
         {
             if (!width.HasValue || !height.HasValue)
-            {
                 throw new ArgumentException("custom size requires width and height");
-            }
             slideSize.SetSize((float)width.Value, (float)height.Value, SlideSizeScaleType.DoNotScale);
         }
         else
@@ -117,11 +115,12 @@ Usage examples:
 
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         presentation.Save(outputPath, SaveFormat.Pptx);
-        return await Task.FromResult($"Slide size set: {slideSize.Type} {(slideSize.Type == SlideSizeType.Custom ? $"{slideSize.Size.Width}x{slideSize.Size.Height}" : string.Empty)}");
+        return await Task.FromResult(
+            $"Slide size set: {slideSize.Type} {(slideSize.Type == SlideSizeType.Custom ? $"{slideSize.Size.Width}x{slideSize.Size.Height}" : string.Empty)}");
     }
 
     /// <summary>
-    /// Sets slide orientation
+    ///     Sets slide orientation
     /// </summary>
     /// <param name="arguments">JSON arguments containing orientation (portrait/landscape), optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -131,15 +130,10 @@ Usage examples:
         var orientation = ArgumentHelper.GetString(arguments, "orientation");
 
         using var presentation = new Presentation(path);
-        
-        if (orientation.ToLower() == "portrait")
-        {
-            presentation.SlideSize.SetSize(SlideSizeType.A4Paper, SlideSizeScaleType.EnsureFit);
-        }
-        else
-        {
-            presentation.SlideSize.SetSize(SlideSizeType.OnScreen16x10, SlideSizeScaleType.EnsureFit);
-        }
+
+        presentation.SlideSize.SetSize(
+            orientation.ToLower() == "portrait" ? SlideSizeType.A4Paper : SlideSizeType.OnScreen16x10,
+            SlideSizeScaleType.EnsureFit);
 
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         presentation.Save(outputPath, SaveFormat.Pptx);
@@ -147,4 +141,3 @@ Usage examples:
         return await Task.FromResult($"Slide orientation set to {orientation}: {outputPath}");
     }
 }
-

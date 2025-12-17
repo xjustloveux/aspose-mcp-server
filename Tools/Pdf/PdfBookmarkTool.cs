@@ -4,8 +4,11 @@ using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Pdf;
 
+/// <summary>
+///     Tool for managing bookmarks in PDF documents (add, delete, edit, get)
+/// </summary>
 public class PdfBookmarkTool : IAsposeTool
 {
     public string Description => @"Manage bookmarks in PDF documents. Supports 4 operations: add, delete, edit, get.
@@ -75,7 +78,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Adds a bookmark to the PDF
+    ///     Adds a bookmark to the PDF
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, title, pageIndex, optional parentIndex, outputPath</param>
     /// <returns>Success message</returns>
@@ -101,11 +104,12 @@ Usage examples:
 
         document.Outlines.Add(bookmark);
         document.Save(outputPath);
-        return await Task.FromResult($"Successfully added bookmark '{title}' pointing to page {pageIndex}. Output: {outputPath}");
+        return await Task.FromResult(
+            $"Successfully added bookmark '{title}' pointing to page {pageIndex}. Output: {outputPath}");
     }
 
     /// <summary>
-    /// Deletes a bookmark from the PDF
+    ///     Deletes a bookmark from the PDF
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, bookmarkIndex, optional outputPath</param>
     /// <returns>Success message</returns>
@@ -126,11 +130,12 @@ Usage examples:
         var title = bookmark.Title;
         document.Outlines.Delete(title);
         document.Save(outputPath);
-        return await Task.FromResult($"Successfully deleted bookmark '{title}' (index {bookmarkIndex}). Output: {outputPath}");
+        return await Task.FromResult(
+            $"Successfully deleted bookmark '{title}' (index {bookmarkIndex}). Output: {outputPath}");
     }
 
     /// <summary>
-    /// Edits a bookmark
+    ///     Edits a bookmark
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, bookmarkIndex, optional title, pageIndex, outputPath</param>
     /// <returns>Success message</returns>
@@ -150,10 +155,10 @@ Usage examples:
             throw new ArgumentException($"bookmarkIndex must be between 0 and {document.Outlines.Count - 1}");
 
         var bookmark = document.Outlines[bookmarkIndex];
-        
+
         if (!string.IsNullOrEmpty(title))
             bookmark.Title = title;
-        
+
         if (pageIndex.HasValue)
         {
             if (pageIndex.Value < 1 || pageIndex.Value > document.Pages.Count)
@@ -166,7 +171,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Gets all bookmarks from the PDF
+    ///     Gets all bookmarks from the PDF
     /// </summary>
     /// <param name="arguments">JSON arguments (no specific parameters required)</param>
     /// <returns>Formatted string with all bookmarks</returns>
@@ -188,19 +193,19 @@ Usage examples:
         sb.AppendLine($"Total Bookmarks: {document.Outlines.Count}");
         sb.AppendLine();
 
-        for (int i = 0; i < document.Outlines.Count; i++)
+        for (var i = 0; i < document.Outlines.Count; i++)
         {
             var bookmark = document.Outlines[i];
             sb.AppendLine($"[{i}] Title: {bookmark.Title}");
-            if (bookmark.Action is GoToAction goToAction && goToAction.Destination is Aspose.Pdf.Annotations.XYZExplicitDestination xyzDest)
+            if (bookmark.Action is GoToAction { Destination: XYZExplicitDestination xyzDest })
             {
                 var pageNum = document.Pages.IndexOf(xyzDest.Page) + 1;
                 sb.AppendLine($"    Page: {pageNum}");
             }
+
             sb.AppendLine();
         }
 
         return await Task.FromResult(sb.ToString());
     }
 }
-

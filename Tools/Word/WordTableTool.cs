@@ -1,15 +1,17 @@
-﻿using System.Text;
+﻿using System.Drawing;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using Aspose.Words.Tables;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Word;
 
 public class WordTableTool : IAsposeTool
 {
-    public string Description => @"Manage tables in Word documents. Supports 17 operations: add_table, edit_table_format, delete_table, get_tables, insert_row, delete_row, insert_column, delete_column, merge_cells, split_cell, edit_cell_format, move_table, copy_table, get_table_structure, set_table_border, set_column_width, set_row_height.
+    public string Description =>
+        @"Manage tables in Word documents. Supports 17 operations: add_table, edit_table_format, delete_table, get_tables, insert_row, delete_row, insert_column, delete_column, merge_cells, split_cell, edit_cell_format, move_table, copy_table, get_table_structure, set_table_border, set_column_width, set_row_height.
 
 Usage examples:
 - Add table: word_table(operation='add_table', path='doc.docx', rows=3, columns=3, data=[['A1','B1','C1'],['A2','B2','C2']])
@@ -44,7 +46,12 @@ Usage examples:
 - 'set_table_border': Set table border (required params: path, tableIndex)
 - 'set_column_width': Set column width (required params: path, tableIndex, columnIndex, width)
 - 'set_row_height': Set row height (required params: path, tableIndex, rowIndex, height)",
-                @enum = new[] { "add_table", "edit_table_format", "delete_table", "get_tables", "insert_row", "delete_row", "insert_column", "delete_column", "merge_cells", "split_cell", "edit_cell_format", "move_table", "copy_table", "get_table_structure", "set_table_border", "set_column_width", "set_row_height" }
+                @enum = new[]
+                {
+                    "add_table", "edit_table_format", "delete_table", "get_tables", "insert_row", "delete_row",
+                    "insert_column", "delete_column", "merge_cells", "split_cell", "edit_cell_format", "move_table",
+                    "copy_table", "get_table_structure", "set_table_border", "set_column_width", "set_row_height"
+                }
             },
             path = new
             {
@@ -59,7 +66,8 @@ Usage examples:
             tableIndex = new
             {
                 type = "number",
-                description = "Table index (0-based, for most operations). Also accepts 'sourceTableIndex' for copy_table operation. Note: After delete operations, subsequent table indices will shift automatically. Use 'get_tables' operation to refresh indices."
+                description =
+                    "Table index (0-based, for most operations). Also accepts 'sourceTableIndex' for copy_table operation. Note: After delete operations, subsequent table indices will shift automatically. Use 'get_tables' operation to refresh indices."
             },
             sectionIndex = new
             {
@@ -204,12 +212,14 @@ Usage examples:
             rowIndex = new
             {
                 type = "number",
-                description = "Row index (0-based, for insert_row, delete_row, merge_cells, split_cell, edit_cell_format, set_row_height)"
+                description =
+                    "Row index (0-based, for insert_row, delete_row, merge_cells, split_cell, edit_cell_format, set_row_height)"
             },
             colIndex = new
             {
                 type = "number",
-                description = "Column index (0-based, for insert_column, delete_column, merge_cells, split_cell, edit_cell_format, set_column_width)"
+                description =
+                    "Column index (0-based, for insert_column, delete_column, merge_cells, split_cell, edit_cell_format, set_column_width)"
             },
             insertBefore = new
             {
@@ -422,9 +432,12 @@ Usage examples:
     }
 
     /// <summary>
-    /// Adds a new table to the document
+    ///     Adds a new table to the document
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, rows, columns, optional data, headerRow, formatting options, outputPath</param>
+    /// <param name="arguments">
+    ///     JSON arguments containing path, rows, columns, optional data, headerRow, formatting options,
+    ///     outputPath
+    /// </param>
     /// <returns>Success message with table index</returns>
     private async Task<string> AddTable(JsonObject? arguments)
     {
@@ -453,7 +466,6 @@ Usage examples:
 
         string[][]? data = null;
         if (arguments?.ContainsKey("data") == true)
-        {
             try
             {
                 var dataJson = arguments["data"]?.ToJsonString();
@@ -462,9 +474,9 @@ Usage examples:
             }
             catch (Exception jsonEx)
             {
-                throw new ArgumentException($"Unable to parse data parameter: {jsonEx.Message}. Please ensure data is a valid 2D string array format, e.g.: [[\"A1\",\"B1\"],[\"A2\",\"B2\"]]");
+                throw new ArgumentException(
+                    $"Unable to parse data parameter: {jsonEx.Message}. Please ensure data is a valid 2D string array format, e.g.: [[\"A1\",\"B1\"],[\"A2\",\"B2\"]]");
             }
-        }
 
         var rowBgColors = ParseColorDictionary(arguments?["rowBackgroundColors"]);
         var columnBgColors = ParseColorDictionary(arguments?["columnBackgroundColors"]);
@@ -474,76 +486,59 @@ Usage examples:
         var table = builder.StartTable();
         var cells = new Dictionary<(int row, int col), Cell>();
 
-        for (int i = 0; i < rows; i++)
+        for (var i = 0; i < rows; i++)
         {
-            for (int j = 0; j < columns; j++)
+            for (var j = 0; j < columns; j++)
             {
                 var cell = builder.InsertCell();
                 cells[(i, j)] = cell;
 
-                string cellText = "";
-                if (data != null && i < data.Length && j < data[i].Length)
-                    cellText = data[i][j];
-                else
-                    cellText = $"Cell {i + 1},{j + 1}";
+                var cellText = data != null && i < data.Length && j < data[i].Length
+                    ? data[i][j]
+                    : $"Cell {i + 1},{j + 1}";
 
-                bool isHeaderRow = headerRow && i == 0;
-                if (isHeaderRow)
-                {
-                    if (!string.IsNullOrEmpty(tableFontNameAscii))
-                        builder.Font.NameAscii = tableFontNameAscii;
-                    if (!string.IsNullOrEmpty(tableFontNameFarEast))
-                        builder.Font.NameFarEast = tableFontNameFarEast;
-                    if (!string.IsNullOrEmpty(tableFontName) && string.IsNullOrEmpty(tableFontNameAscii) && string.IsNullOrEmpty(tableFontNameFarEast))
-                        builder.Font.Name = tableFontName;
-                }
-                else
-                {
-                    if (!string.IsNullOrEmpty(tableFontNameAscii))
-                        builder.Font.NameAscii = tableFontNameAscii;
-                    if (!string.IsNullOrEmpty(tableFontNameFarEast))
-                        builder.Font.NameFarEast = tableFontNameFarEast;
-                    if (!string.IsNullOrEmpty(tableFontName) && string.IsNullOrEmpty(tableFontNameAscii) && string.IsNullOrEmpty(tableFontNameFarEast))
-                        builder.Font.Name = tableFontName;
-                }
-
-                if (isHeaderRow && tableFontSize.HasValue)
-                    builder.Font.Size = tableFontSize.Value;
-                else if (tableFontSize.HasValue)
-                    builder.Font.Size = tableFontSize.Value;
+                // Apply font settings using FontHelper (same logic for header and regular rows)
+                FontHelper.Word.ApplyFontSettings(
+                    builder,
+                    tableFontName,
+                    tableFontNameAscii,
+                    tableFontNameFarEast,
+                    tableFontSize
+                );
 
                 builder.Write(cellText);
                 builder.Font.Bold = false;
                 builder.Font.Italic = false;
-                builder.Font.Color = System.Drawing.Color.Black;
+                builder.Font.Color = Color.Black;
                 builder.Font.Name = "Calibri";
                 builder.Font.Size = 11;
 
                 cell.CellFormat.SetPaddings(cellPadding, cellPadding, cellPadding, cellPadding);
-                cell.CellFormat.Shading.BackgroundPatternColor = System.Drawing.Color.Empty;
+                cell.CellFormat.Shading.BackgroundPatternColor = Color.Empty;
                 cell.CellFormat.VerticalAlignment = GetVerticalAlignment(verticalAlignment);
 
-                bool hasColor = false;
+                var hasColor = false;
                 var cellColorMatch = cellColors.FirstOrDefault(c => c.row == i && c.col == j);
                 if (cellColorMatch != default)
                 {
                     cell.CellFormat.Shading.BackgroundPatternColor = ColorHelper.ParseColor(cellColorMatch.color);
                     hasColor = true;
                 }
-                if (!hasColor && columnBgColors.ContainsKey(j))
+
+                if (!hasColor && columnBgColors.TryGetValue(j, out var columnColor))
                 {
-                    cell.CellFormat.Shading.BackgroundPatternColor = ColorHelper.ParseColor(columnBgColors[j]);
+                    cell.CellFormat.Shading.BackgroundPatternColor = ColorHelper.ParseColor(columnColor);
                     hasColor = true;
                 }
-                if (!hasColor && rowBgColors.ContainsKey(i))
+
+                if (!hasColor && rowBgColors.TryGetValue(i, out var rowColor))
                 {
-                    cell.CellFormat.Shading.BackgroundPatternColor = ColorHelper.ParseColor(rowBgColors[i]);
+                    cell.CellFormat.Shading.BackgroundPatternColor = ColorHelper.ParseColor(rowColor);
                     hasColor = true;
                 }
+
                 if (!hasColor && headerRow && i == 0 && !string.IsNullOrEmpty(headerBgColor))
-                {
                     cell.CellFormat.Shading.BackgroundPatternColor = ColorHelper.ParseColor(headerBgColor);
-                }
 
                 if (borderStyle != "none")
                 {
@@ -554,38 +549,36 @@ Usage examples:
                         _ => LineStyle.Single
                     };
                     cell.CellFormat.Borders.LineStyle = lineStyle;
-                    cell.CellFormat.Borders.Color = System.Drawing.Color.Black;
+                    cell.CellFormat.Borders.Color = Color.Black;
                 }
                 else
+                {
                     cell.CellFormat.Borders.LineStyle = LineStyle.None;
+                }
             }
+
             builder.EndRow();
         }
 
         builder.EndTable();
 
         foreach (var merge in mergeCells)
-        {
             try
             {
                 var startCell = cells[(merge.startRow, merge.startCol)];
                 if (merge.startRow == merge.endRow && merge.startCol != merge.endCol)
                 {
                     startCell.CellFormat.HorizontalMerge = CellMerge.First;
-                    for (int col = merge.startCol + 1; col <= merge.endCol; col++)
-                    {
-                        if (cells.ContainsKey((merge.startRow, col)))
-                            cells[(merge.startRow, col)].CellFormat.HorizontalMerge = CellMerge.Previous;
-                    }
+                    for (var col = merge.startCol + 1; col <= merge.endCol; col++)
+                        if (cells.TryGetValue((merge.startRow, col), out var horizontalCell))
+                            horizontalCell.CellFormat.HorizontalMerge = CellMerge.Previous;
                 }
                 else if (merge.startCol == merge.endCol && merge.startRow != merge.endRow)
                 {
                     startCell.CellFormat.VerticalMerge = CellMerge.First;
-                    for (int row = merge.startRow + 1; row <= merge.endRow; row++)
-                    {
-                        if (cells.ContainsKey((row, merge.startCol)))
-                            cells[(row, merge.startCol)].CellFormat.VerticalMerge = CellMerge.Previous;
-                    }
+                    for (var row = merge.startRow + 1; row <= merge.endRow; row++)
+                        if (cells.TryGetValue((row, merge.startCol), out var verticalCell))
+                            verticalCell.CellFormat.VerticalMerge = CellMerge.Previous;
                 }
             }
             catch
@@ -594,7 +587,6 @@ Usage examples:
                 // Log warning but don't fail the entire operation
                 // The table will be created without the merge cells
             }
-        }
 
         table.Alignment = alignment.ToLower() switch
         {
@@ -604,11 +596,12 @@ Usage examples:
         };
 
         doc.Save(outputPath);
-        return await Task.FromResult($"Successfully added table ({rows} rows x {columns} columns). Output: {outputPath}");
+        return await Task.FromResult(
+            $"Successfully added table ({rows} rows x {columns} columns). Output: {outputPath}");
     }
 
     /// <summary>
-    /// Edits table format properties
+    ///     Edits table format properties
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, tableIndex, optional formatting options, outputPath</param>
     /// <returns>Success message</returns>
@@ -632,14 +625,12 @@ Usage examples:
 
         var alignment = ArgumentHelper.GetStringNullable(arguments, "alignment") ?? "left";
         if (!string.IsNullOrEmpty(alignment))
-        {
             table.Alignment = alignment.ToLower() switch
             {
                 "center" => TableAlignment.Center,
                 "right" => TableAlignment.Right,
                 _ => TableAlignment.Left
             };
-        }
 
         if (arguments?["width"] != null && ArgumentHelper.GetStringNullable(arguments, "widthType") == "points")
         {
@@ -648,27 +639,28 @@ Usage examples:
                 table.PreferredWidth = PreferredWidth.FromPoints(width.Value);
         }
         else if (ArgumentHelper.GetStringNullable(arguments, "widthType") == "auto")
+        {
             table.PreferredWidth = PreferredWidth.Auto;
+        }
 
         var styleName = ArgumentHelper.GetStringNullable(arguments, "styleName");
         if (!string.IsNullOrEmpty(styleName))
-        {
-            try 
-            { 
-                table.Style = doc.Styles[styleName]; 
-            } 
+            try
+            {
+                table.Style = doc.Styles[styleName];
+            }
             catch (Exception styleEx)
             {
-                throw new ArgumentException($"Unable to apply table style '{styleName}': {styleEx.Message}. Use word_get_styles tool to view available styles");
+                throw new ArgumentException(
+                    $"Unable to apply table style '{styleName}': {styleEx.Message}. Use word_get_styles tool to view available styles");
             }
-        }
 
         doc.Save(outputPath);
         return await Task.FromResult($"Successfully edited table {tableIndex} format. Output: {outputPath}");
     }
 
     /// <summary>
-    /// Deletes a table from the document
+    ///     Deletes a table from the document
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, tableIndex, optional outputPath</param>
     /// <returns>Success message with remaining table count</returns>
@@ -689,16 +681,17 @@ Usage examples:
             throw new ArgumentException($"Table index {tableIndex} out of range");
 
         var table = tables[tableIndex];
-        int rowCount = table.Rows.Count;
-        int colCount = table.Rows.Count > 0 ? table.Rows[0].Cells.Count : 0;
+        var rowCount = table.Rows.Count;
+        var colCount = table.Rows.Count > 0 ? table.Rows[0].Cells.Count : 0;
         table.Remove();
 
         doc.Save(outputPath);
-        return await Task.FromResult($"Successfully deleted table #{tableIndex} ({rowCount} rows x {colCount} columns). Output: {outputPath}");
+        return await Task.FromResult(
+            $"Successfully deleted table #{tableIndex} ({rowCount} rows x {colCount} columns). Output: {outputPath}");
     }
 
     /// <summary>
-    /// Gets all tables from the document
+    ///     Gets all tables from the document
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, optional sectionIndex</param>
     /// <returns>Formatted string with all tables</returns>
@@ -717,13 +710,15 @@ Usage examples:
             tables = doc.Sections[sectionIndex.Value].Body.GetChildNodes(NodeType.Table, true).Cast<Table>().ToList();
         }
         else
+        {
             tables = doc.GetChildNodes(NodeType.Table, true).Cast<Table>().ToList();
+        }
 
         var sb = new StringBuilder();
         sb.AppendLine($"=== Tables ({tables.Count}) ===");
         sb.AppendLine();
 
-        for (int i = 0; i < tables.Count; i++)
+        for (var i = 0; i < tables.Count; i++)
         {
             var table = tables[i];
             sb.AppendLine($"[{i}] Rows: {table.Rows.Count}, Columns: {table.FirstRow?.Cells?.Count ?? 0}");
@@ -731,14 +726,18 @@ Usage examples:
             if (includeContent)
             {
                 sb.AppendLine("    Content:");
-                for (int row = 0; row < Math.Min(3, table.Rows.Count); row++)
+                for (var row = 0; row < Math.Min(3, table.Rows.Count); row++)
                 {
-                    var rowText = string.Join(" | ", table.Rows[row].Cells.Cast<Cell>().Select(c => c.GetText().Trim().Substring(0, Math.Min(20, c.GetText().Trim().Length))));
+                    var rowText = string.Join(" | ",
+                        table.Rows[row].Cells.Cast<Cell>().Select(c =>
+                            c.GetText().Trim().Substring(0, Math.Min(20, c.GetText().Trim().Length))));
                     sb.AppendLine($"      {rowText}");
                 }
+
                 if (table.Rows.Count > 3)
                     sb.AppendLine($"      ... ({table.Rows.Count - 3} more rows)");
             }
+
             sb.AppendLine();
         }
 
@@ -746,9 +745,12 @@ Usage examples:
     }
 
     /// <summary>
-    /// Inserts a row into a table
+    ///     Inserts a row into a table
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, tableIndex, rowIndex, optional insertBefore, rowData, outputPath</param>
+    /// <param name="arguments">
+    ///     JSON arguments containing path, tableIndex, rowIndex, optional insertBefore, rowData,
+    ///     outputPath
+    /// </param>
     /// <returns>Success message</returns>
     private async Task<string> InsertRow(JsonObject? arguments)
     {
@@ -774,20 +776,20 @@ Usage examples:
             throw new ArgumentException($"Row index {rowIndex} out of range");
 
         var targetRow = table.Rows[rowIndex];
-        int columnCount = targetRow.Cells.Count;
-        Row newRow = new Row(doc);
+        var columnCount = targetRow.Cells.Count;
+        var newRow = new Row(doc);
 
-        for (int i = 0; i < columnCount; i++)
+        for (var i = 0; i < columnCount; i++)
         {
-            Cell newCell = new Cell(doc);
+            var newCell = new Cell(doc);
             newRow.AppendChild(newCell);
             if (dataArray != null && i < dataArray.Count)
             {
                 var cellText = dataArray[i]?.GetValue<string>() ?? "";
                 if (!string.IsNullOrEmpty(cellText))
                 {
-                    Paragraph para = new Paragraph(doc);
-                    Run run = new Run(doc, cellText);
+                    var para = new Paragraph(doc);
+                    var run = new Run(doc, cellText);
                     para.AppendChild(run);
                     newCell.AppendChild(para);
                 }
@@ -800,11 +802,12 @@ Usage examples:
             table.InsertAfter(newRow, targetRow);
 
         doc.Save(outputPath);
-        return await Task.FromResult($"Successfully inserted row at index {(insertBefore ? rowIndex : rowIndex + 1)}. Output: {outputPath}");
+        return await Task.FromResult(
+            $"Successfully inserted row at index {(insertBefore ? rowIndex : rowIndex + 1)}. Output: {outputPath}");
     }
 
     /// <summary>
-    /// Deletes a row from a table
+    ///     Deletes a row from a table
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, tableIndex, rowIndex, optional outputPath</param>
     /// <returns>Success message</returns>
@@ -833,13 +836,17 @@ Usage examples:
         rowToDelete.Remove();
 
         doc.Save(outputPath);
-        return await Task.FromResult($"Successfully deleted row #{rowIndex}. Remaining rows: {table.Rows.Count}. Output: {outputPath}");
+        return await Task.FromResult(
+            $"Successfully deleted row #{rowIndex}. Remaining rows: {table.Rows.Count}. Output: {outputPath}");
     }
 
     /// <summary>
-    /// Inserts a column into a table
+    ///     Inserts a column into a table
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, tableIndex, colIndex, optional insertBefore, columnData, outputPath</param>
+    /// <param name="arguments">
+    ///     JSON arguments containing path, tableIndex, colIndex, optional insertBefore, columnData,
+    ///     outputPath
+    /// </param>
     /// <returns>Success message</returns>
     private async Task<string> InsertColumn(JsonObject? arguments)
     {
@@ -850,13 +857,13 @@ Usage examples:
         var columnIndexNode = arguments?["columnIndex"];
         if (columnIndexNode != null)
         {
-            if (columnIndexNode.GetValueKind() == System.Text.Json.JsonValueKind.String)
+            if (columnIndexNode.GetValueKind() == JsonValueKind.String)
             {
                 var columnIndexStr = columnIndexNode.GetValue<string>();
                 if (string.IsNullOrEmpty(columnIndexStr) || !int.TryParse(columnIndexStr, out columnIndex))
                     throw new ArgumentException("columnIndex must be a valid integer");
             }
-            else if (columnIndexNode.GetValueKind() == System.Text.Json.JsonValueKind.Number)
+            else if (columnIndexNode.GetValueKind() == JsonValueKind.Number)
             {
                 columnIndex = columnIndexNode.GetValue<int>();
             }
@@ -869,6 +876,7 @@ Usage examples:
         {
             throw new ArgumentException("columnIndex is required");
         }
+
         var insertBefore = ArgumentHelper.GetBool(arguments, "insertBefore", false);
         var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
         var dataArray = ArgumentHelper.GetArray(arguments, "columnData", false);
@@ -890,12 +898,12 @@ Usage examples:
         if (columnIndex < 0 || columnIndex >= firstRow.Cells.Count)
             throw new ArgumentException($"Column index {columnIndex} out of range");
 
-        int insertPosition = insertBefore ? columnIndex : columnIndex + 1;
+        var insertPosition = insertBefore ? columnIndex : columnIndex + 1;
 
-        for (int rowIdx = 0; rowIdx < table.Rows.Count; rowIdx++)
+        for (var rowIdx = 0; rowIdx < table.Rows.Count; rowIdx++)
         {
             var row = table.Rows[rowIdx];
-            Cell newCell = new Cell(doc);
+            var newCell = new Cell(doc);
             if (columnIndex < row.Cells.Count)
             {
                 var sourceCell = row.Cells[columnIndex];
@@ -908,38 +916,31 @@ Usage examples:
                     sourceCell.CellFormat.RightPadding
                 );
             }
-            
+
             if (dataArray != null && rowIdx < dataArray.Count)
             {
                 var cellDataNode = dataArray[rowIdx];
-                string cellText = "";
-                
+                var cellText = "";
+
                 if (cellDataNode != null)
-                {
-                    if (cellDataNode.GetValueKind() == System.Text.Json.JsonValueKind.String)
-                    {
-                        cellText = cellDataNode.GetValue<string>() ?? "";
-                    }
-                    else
-                    {
-                        cellText = cellDataNode.ToString() ?? "";
-                    }
-                }
-                
+                    cellText = cellDataNode.GetValueKind() == JsonValueKind.String
+                        ? cellDataNode.GetValue<string>()
+                        : cellDataNode.ToString();
+
                 if (!string.IsNullOrEmpty(cellText))
                 {
-                    Paragraph para = new Paragraph(doc);
-                    Run run = new Run(doc, cellText);
+                    var para = new Paragraph(doc);
+                    var run = new Run(doc, cellText);
                     para.AppendChild(run);
                     newCell.AppendChild(para);
                 }
             }
             else
             {
-                Paragraph para = new Paragraph(doc);
+                var para = new Paragraph(doc);
                 newCell.AppendChild(para);
             }
-            
+
             if (insertPosition < row.Cells.Count)
             {
                 var targetCell = row.Cells[insertPosition];
@@ -952,11 +953,12 @@ Usage examples:
         }
 
         doc.Save(outputPath);
-        return await Task.FromResult($"Successfully inserted column at index {(insertBefore ? columnIndex : columnIndex + 1)}. Output: {outputPath}");
+        return await Task.FromResult(
+            $"Successfully inserted column at index {(insertBefore ? columnIndex : columnIndex + 1)}. Output: {outputPath}");
     }
 
     /// <summary>
-    /// Deletes a column from a table
+    ///     Deletes a column from a table
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, tableIndex, colIndex, optional outputPath</param>
     /// <returns>Success message</returns>
@@ -969,13 +971,13 @@ Usage examples:
         var columnIndexNode = arguments?["columnIndex"];
         if (columnIndexNode != null)
         {
-            if (columnIndexNode.GetValueKind() == System.Text.Json.JsonValueKind.String)
+            if (columnIndexNode.GetValueKind() == JsonValueKind.String)
             {
                 var columnIndexStr = columnIndexNode.GetValue<string>();
                 if (string.IsNullOrEmpty(columnIndexStr) || !int.TryParse(columnIndexStr, out columnIndex))
                     throw new ArgumentException("columnIndex must be a valid integer");
             }
-            else if (columnIndexNode.GetValueKind() == System.Text.Json.JsonValueKind.Number)
+            else if (columnIndexNode.GetValueKind() == JsonValueKind.Number)
             {
                 columnIndex = columnIndexNode.GetValue<int>();
             }
@@ -988,6 +990,7 @@ Usage examples:
         {
             throw new ArgumentException("columnIndex is required");
         }
+
         var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
 
         var doc = new Document(path);
@@ -1004,7 +1007,7 @@ Usage examples:
             // If sectionIndex is not specified, search in entire document (consistent with get_tables)
             tables = doc.GetChildNodes(NodeType.Table, true).Cast<Table>().ToList();
         }
-        
+
         if (tableIndex < 0 || tableIndex >= tables.Count)
             throw new ArgumentException($"Table index {tableIndex} out of range");
 
@@ -1016,24 +1019,26 @@ Usage examples:
         if (columnIndex < 0 || columnIndex >= firstRow.Cells.Count)
             throw new ArgumentException($"Column index {columnIndex} out of range");
 
-        int deletedCount = 0;
-        foreach (Row row in table.Rows)
-        {
+        var deletedCount = 0;
+        foreach (var row in table.Rows.Cast<Row>())
             if (columnIndex < row.Cells.Count)
             {
                 row.Cells[columnIndex].Remove();
                 deletedCount++;
             }
-        }
 
         doc.Save(outputPath);
-        return await Task.FromResult($"Successfully deleted column #{columnIndex} ({deletedCount} cells removed). Output: {outputPath}");
+        return await Task.FromResult(
+            $"Successfully deleted column #{columnIndex} ({deletedCount} cells removed). Output: {outputPath}");
     }
 
     /// <summary>
-    /// Merges cells in a table
+    ///     Merges cells in a table
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, tableIndex, startRow, startCol, endRow, endCol, optional outputPath</param>
+    /// <param name="arguments">
+    ///     JSON arguments containing path, tableIndex, startRow, startCol, endRow, endCol, optional
+    ///     outputPath
+    /// </param>
     /// <returns>Success message</returns>
     private async Task<string> MergeCells(JsonObject? arguments)
     {
@@ -1042,10 +1047,10 @@ Usage examples:
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
         var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex");
         var startRow = ArgumentHelper.GetInt(arguments, "startRow");
-        var startCol = ArgumentHelper.GetInt(arguments, "startCol", "startColumn", "startCol or startColumn", true);
+        var startCol = ArgumentHelper.GetInt(arguments, "startCol", "startColumn", "startCol or startColumn");
         var endRow = ArgumentHelper.GetInt(arguments, "endRow");
-        var endCol = ArgumentHelper.GetInt(arguments, "endCol", "endColumn", "endCol or endColumn", true);
-        
+        var endCol = ArgumentHelper.GetInt(arguments, "endCol", "endColumn", "endCol or endColumn");
+
         var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
 
         var doc = new Document(path);
@@ -1059,25 +1064,23 @@ Usage examples:
 
         var table = tables[tableIndex];
         if (startRow < 0 || startRow >= table.Rows.Count || endRow < 0 || endRow >= table.Rows.Count)
-            throw new ArgumentException($"Row indices out of range");
+            throw new ArgumentException("Row indices out of range");
         if (startRow > endRow)
             throw new ArgumentException($"Start row {startRow} cannot be greater than end row {endRow}");
 
         var firstRow = table.Rows[startRow];
         if (startCol < 0 || startCol >= firstRow.Cells.Count || endCol < 0 || endCol >= firstRow.Cells.Count)
-            throw new ArgumentException($"Column indices out of range");
+            throw new ArgumentException("Column indices out of range");
         if (startCol > endCol)
             throw new ArgumentException($"Start column {startCol} cannot be greater than end column {endCol}");
-
-        var startCell = table.Rows[startRow].Cells[startCol];
 
         // Merge cells: Set merge flags for all cells in the range
         // The first cell (startRow, startCol) is marked as First for both horizontal and vertical merge
         // Other cells are marked as Previous to merge with the first cell
-        for (int row = startRow; row <= endRow; row++)
+        for (var row = startRow; row <= endRow; row++)
         {
             var currentRow = table.Rows[row];
-            for (int col = startCol; col <= endCol; col++)
+            for (var col = startCol; col <= endCol; col++)
             {
                 var cell = currentRow.Cells[col];
                 if (row == startRow && col == startCol)
@@ -1112,11 +1115,12 @@ Usage examples:
         }
 
         doc.Save(outputPath);
-        return await Task.FromResult($"Successfully merged cells from [{startRow}, {startCol}] to [{endRow}, {endCol}]. Output: {outputPath}");
+        return await Task.FromResult(
+            $"Successfully merged cells from [{startRow}, {startCol}] to [{endRow}, {endCol}]. Output: {outputPath}");
     }
 
     /// <summary>
-    /// Splits a cell in a table
+    ///     Splits a cell in a table
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, tableIndex, rowIndex, colIndex, optional outputPath</param>
     /// <returns>Success message</returns>
@@ -1125,9 +1129,9 @@ Usage examples:
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex");
-        
+
         var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex");
-        var colIndex = ArgumentHelper.GetInt(arguments, "colIndex", "columnIndex", "colIndex or columnIndex", true);
+        var colIndex = ArgumentHelper.GetInt(arguments, "colIndex", "columnIndex", "colIndex or columnIndex");
         var splitRows = ArgumentHelper.GetInt(arguments, "splitRows", 2);
         var splitCols = ArgumentHelper.GetInt(arguments, "splitCols", 2);
         var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
@@ -1150,21 +1154,27 @@ Usage examples:
             throw new ArgumentException($"Column index {colIndex} out of range");
 
         var cell = row.Cells[colIndex];
-        bool isMerged = cell.CellFormat.HorizontalMerge != CellMerge.None || cell.CellFormat.VerticalMerge != CellMerge.None;
+        var isMerged = cell.CellFormat.HorizontalMerge != CellMerge.None ||
+                       cell.CellFormat.VerticalMerge != CellMerge.None;
         if (isMerged)
             throw new InvalidOperationException("Cannot split merged cell. Please unmerge first or edit directly.");
 
         try
         {
-            string cellText = cell.GetText();
+            var cellText = cell.GetText();
             var parentRow = cell.ParentRow;
             var cellIndex = parentRow.Cells.IndexOf(cell);
 
-            for (int c = 0; c < splitCols; c++)
+            for (var c = 0; c < splitCols; c++)
             {
-                Cell newCell = new Cell(doc);
-                newCell.CellFormat.Width = cell.CellFormat.Width / splitCols;
-                newCell.CellFormat.VerticalAlignment = cell.CellFormat.VerticalAlignment;
+                var newCell = new Cell(doc)
+                {
+                    CellFormat =
+                    {
+                        Width = cell.CellFormat.Width / splitCols,
+                        VerticalAlignment = cell.CellFormat.VerticalAlignment
+                    }
+                };
                 newCell.CellFormat.SetPaddings(
                     cell.CellFormat.TopPadding,
                     cell.CellFormat.BottomPadding,
@@ -1172,12 +1182,13 @@ Usage examples:
                     cell.CellFormat.RightPadding
                 );
 
-                Paragraph para = new Paragraph(doc);
+                var para = new Paragraph(doc);
                 if (splitCols == 1 || (c == 0 && !string.IsNullOrEmpty(cellText)))
                 {
-                    Run run = new Run(doc, cellText);
+                    var run = new Run(doc, cellText);
                     para.AppendChild(run);
                 }
+
                 newCell.AppendChild(para);
 
                 if (c == 0)
@@ -1186,21 +1197,22 @@ Usage examples:
                     parentRow.Cells.Insert(cellIndex, newCell);
                 }
                 else
+                {
                     parentRow.Cells.Insert(cellIndex + c, newCell);
+                }
             }
 
             if (splitRows > 1)
-            {
-                for (int r = 1; r < splitRows; r++)
+                for (var r = 1; r < splitRows; r++)
                 {
-                    int insertAfterRowIndex = rowIndex + r - 1;
+                    var insertAfterRowIndex = rowIndex + r - 1;
                     if (insertAfterRowIndex < table.Rows.Count)
                     {
-                        Row newRow = new Row(doc);
+                        var newRow = new Row(doc);
                         var sourceRow = table.Rows[rowIndex];
-                        for (int c = 0; c < sourceRow.Cells.Count; c++)
+                        for (var c = 0; c < sourceRow.Cells.Count; c++)
                         {
-                            Cell newCell = new Cell(doc);
+                            var newCell = new Cell(doc);
                             var sourceCell = sourceRow.Cells[c];
                             newCell.CellFormat.Width = sourceCell.CellFormat.Width;
                             newCell.CellFormat.VerticalAlignment = sourceCell.CellFormat.VerticalAlignment;
@@ -1210,17 +1222,18 @@ Usage examples:
                                 sourceCell.CellFormat.LeftPadding,
                                 sourceCell.CellFormat.RightPadding
                             );
-                            Paragraph para = new Paragraph(doc);
+                            var para = new Paragraph(doc);
                             newCell.AppendChild(para);
                             newRow.AppendChild(newCell);
                         }
+
                         table.InsertAfter(newRow, table.Rows[insertAfterRowIndex]);
                     }
                 }
-            }
 
             doc.Save(outputPath);
-            return await Task.FromResult($"Successfully split cell [{rowIndex}, {colIndex}] into {splitRows} rows x {splitCols} columns. Output: {outputPath}");
+            return await Task.FromResult(
+                $"Successfully split cell [{rowIndex}, {colIndex}] into {splitRows} rows x {splitCols} columns. Output: {outputPath}");
         }
         catch (Exception ex)
         {
@@ -1229,9 +1242,12 @@ Usage examples:
     }
 
     /// <summary>
-    /// Edits cell format properties
+    ///     Edits cell format properties
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, tableIndex, rowIndex, colIndex, optional formatting options, outputPath</param>
+    /// <param name="arguments">
+    ///     JSON arguments containing path, tableIndex, rowIndex, colIndex, optional formatting options,
+    ///     outputPath
+    /// </param>
     /// <returns>Success message</returns>
     private async Task<string> EditCellFormat(JsonObject? arguments)
     {
@@ -1239,8 +1255,8 @@ Usage examples:
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex");
         var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex");
-        var colIndex = ArgumentHelper.GetInt(arguments, "colIndex", "columnIndex", "colIndex or columnIndex", true);
-        
+        var colIndex = ArgumentHelper.GetInt(arguments, "colIndex", "columnIndex", "colIndex or columnIndex");
+
         var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
 
         var doc = new Document(path);
@@ -1265,42 +1281,30 @@ Usage examples:
 
         var backgroundColor = ArgumentHelper.GetStringNullable(arguments, "backgroundColor");
         if (!string.IsNullOrEmpty(backgroundColor))
-        {
-            try 
-            { 
-                cellFormat.Shading.BackgroundPatternColor = ColorHelper.ParseColor(backgroundColor); 
-            } 
-            catch (Exception colorEx)
-            {
-                throw new ArgumentException($"Unable to parse background color '{backgroundColor}': {colorEx.Message}. Please use a valid color format (e.g., #FF0000 or red)");
-            }
-        }
+            // Parse color with error handling - throws ArgumentException on failure
+            cellFormat.Shading.BackgroundPatternColor = ColorHelper.ParseColor(backgroundColor, true);
 
         var alignment = ArgumentHelper.GetStringNullable(arguments, "alignment") ?? "left";
         if (!string.IsNullOrEmpty(alignment))
         {
             var paragraphs = cell.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
             foreach (var para in paragraphs)
-            {
                 para.ParagraphFormat.Alignment = alignment.ToLower() switch
                 {
                     "center" => ParagraphAlignment.Center,
                     "right" => ParagraphAlignment.Right,
                     _ => ParagraphAlignment.Left
                 };
-            }
         }
 
         var verticalAlignment = ArgumentHelper.GetStringNullable(arguments, "verticalAlignment") ?? "top";
         if (!string.IsNullOrEmpty(verticalAlignment))
-        {
             cellFormat.VerticalAlignment = verticalAlignment.ToLower() switch
             {
                 "center" => CellVerticalAlignment.Center,
                 "bottom" => CellVerticalAlignment.Bottom,
                 _ => CellVerticalAlignment.Top
             };
-        }
 
         var paddingTop = ArgumentHelper.GetDoubleNullable(arguments, "paddingTop");
         if (paddingTop.HasValue)
@@ -1323,49 +1327,25 @@ Usage examples:
         var italic = ArgumentHelper.GetBoolNullable(arguments, "italic");
         var color = ArgumentHelper.GetStringNullable(arguments, "color");
 
-        bool hasTextFormatting = !string.IsNullOrEmpty(fontName) || !string.IsNullOrEmpty(fontNameAscii) || 
-                                 !string.IsNullOrEmpty(fontNameFarEast) || fontSize.HasValue || 
-                                 bold.HasValue || italic.HasValue || !string.IsNullOrEmpty(color);
+        var hasTextFormatting = !string.IsNullOrEmpty(fontName) || !string.IsNullOrEmpty(fontNameAscii) ||
+                                !string.IsNullOrEmpty(fontNameFarEast) || fontSize.HasValue ||
+                                bold.HasValue || italic.HasValue || !string.IsNullOrEmpty(color);
 
         if (hasTextFormatting)
         {
             var runs = cell.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
             foreach (var run in runs)
-            {
-                if (!string.IsNullOrEmpty(fontNameAscii))
-                    run.Font.NameAscii = fontNameAscii;
-                if (!string.IsNullOrEmpty(fontNameFarEast))
-                    run.Font.NameFarEast = fontNameFarEast;
-                if (!string.IsNullOrEmpty(fontName))
-                {
-                    if (string.IsNullOrEmpty(fontNameAscii) && string.IsNullOrEmpty(fontNameFarEast))
-                        run.Font.Name = fontName;
-                    else
-                    {
-                        if (string.IsNullOrEmpty(fontNameAscii))
-                            run.Font.NameAscii = fontName;
-                        if (string.IsNullOrEmpty(fontNameFarEast))
-                            run.Font.NameFarEast = fontName;
-                    }
-                }
-                if (fontSize.HasValue)
-                    run.Font.Size = fontSize.Value;
-                if (bold.HasValue)
-                    run.Font.Bold = bold.Value;
-                if (italic.HasValue)
-                    run.Font.Italic = italic.Value;
-                if (!string.IsNullOrEmpty(color))
-                {
-                    try 
-                    { 
-                        run.Font.Color = ColorHelper.ParseColor(color); 
-                    } 
-                    catch (Exception colorEx)
-                    {
-                        throw new ArgumentException($"Unable to parse font color '{color}': {colorEx.Message}. Please use a valid color format (e.g., #FF0000 or red)");
-                    }
-                }
-            }
+                // Apply font settings using FontHelper
+                FontHelper.Word.ApplyFontSettings(
+                    run,
+                    fontName,
+                    fontNameAscii,
+                    fontNameFarEast,
+                    fontSize,
+                    bold,
+                    italic,
+                    color: color
+                );
         }
 
         doc.Save(outputPath);
@@ -1373,9 +1353,12 @@ Usage examples:
     }
 
     /// <summary>
-    /// Moves a table to a different position
+    ///     Moves a table to a different position
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, tableIndex, optional targetParagraphIndex, sectionIndex, outputPath</param>
+    /// <param name="arguments">
+    ///     JSON arguments containing path, tableIndex, optional targetParagraphIndex, sectionIndex,
+    ///     outputPath
+    /// </param>
     /// <returns>Success message</returns>
     private async Task<string> MoveTable(JsonObject? arguments)
     {
@@ -1397,36 +1380,31 @@ Usage examples:
 
         if (tableIndex < 0 || tableIndex >= tables.Count)
             throw new ArgumentException($"tableIndex must be between 0 and {tables.Count - 1}");
-        
+
         var table = tables[tableIndex];
-        Paragraph? targetPara = null;
-        
+        Paragraph? targetPara;
+
         if (targetParagraphIndex == -1)
         {
             // targetParagraphIndex=-1 means document end - use last paragraph in Body
             if (paragraphs.Count > 0)
-            {
-                targetPara = paragraphs[paragraphs.Count - 1];
-            }
+                targetPara = paragraphs[^1];
             else
-            {
-                throw new ArgumentException("Cannot move table: section has no paragraphs. Use a valid paragraph index.");
-            }
+                throw new ArgumentException(
+                    "Cannot move table: section has no paragraphs. Use a valid paragraph index.");
         }
         else if (targetParagraphIndex < 0 || targetParagraphIndex >= paragraphs.Count)
         {
-            throw new ArgumentException($"targetParagraphIndex must be between 0 and {paragraphs.Count - 1}, or use -1 for document end");
+            throw new ArgumentException(
+                $"targetParagraphIndex must be between 0 and {paragraphs.Count - 1}, or use -1 for document end");
         }
         else
         {
             targetPara = paragraphs[targetParagraphIndex];
         }
-        
-        if (targetPara == null)
-        {
-            throw new ArgumentException("Cannot find target paragraph");
-        }
-        
+
+        if (targetPara == null) throw new ArgumentException("Cannot find target paragraph");
+
         section.Body.InsertAfter(table, targetPara);
 
         doc.Save(outputPath);
@@ -1434,16 +1412,20 @@ Usage examples:
     }
 
     /// <summary>
-    /// Copies a table to another location
+    ///     Copies a table to another location
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, tableIndex or sourceTableIndex, optional targetParagraphIndex, sectionIndex, outputPath</param>
+    /// <param name="arguments">
+    ///     JSON arguments containing path, tableIndex or sourceTableIndex, optional targetParagraphIndex,
+    ///     sectionIndex, outputPath
+    /// </param>
     /// <returns>Success message</returns>
     private async Task<string> CopyTable(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         // Accept both sourceTableIndex and tableIndex for compatibility
-        var sourceTableIndex = ArgumentHelper.GetInt(arguments, "sourceTableIndex", "tableIndex", "sourceTableIndex or tableIndex", true);
+        var sourceTableIndex =
+            ArgumentHelper.GetInt(arguments, "sourceTableIndex", "tableIndex", "sourceTableIndex or tableIndex");
         var targetParagraphIndex = ArgumentHelper.GetInt(arguments, "targetParagraphIndex");
         var sourceSectionIndex = ArgumentHelper.GetIntNullable(arguments, "sourceSectionIndex");
         var targetSectionIndex = ArgumentHelper.GetIntNullable(arguments, "targetSectionIndex");
@@ -1465,38 +1447,33 @@ Usage examples:
         var sourceTable = sourceTables[sourceTableIndex];
         var targetSection = doc.Sections[targetSectionIdx];
         var targetParagraphs = targetSection.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
-        
-        Paragraph? targetPara = null;
+
+        Paragraph? targetPara;
         if (targetParagraphIndex == -1)
         {
             // targetParagraphIndex=-1 means document end - use last paragraph
             if (targetParagraphs.Count > 0)
-            {
-                targetPara = targetParagraphs[targetParagraphs.Count - 1];
-            }
+                targetPara = targetParagraphs[^1];
             else
-            {
-                throw new ArgumentException("Cannot copy table: target section has no paragraphs. Use a valid paragraph index.");
-            }
+                throw new ArgumentException(
+                    "Cannot copy table: target section has no paragraphs. Use a valid paragraph index.");
         }
         else if (targetParagraphIndex < 0 || targetParagraphIndex >= targetParagraphs.Count)
         {
-            throw new ArgumentException($"targetParagraphIndex must be between 0 and {targetParagraphs.Count - 1}, or use -1 for document end");
+            throw new ArgumentException(
+                $"targetParagraphIndex must be between 0 and {targetParagraphs.Count - 1}, or use -1 for document end");
         }
         else
         {
             targetPara = targetParagraphs[targetParagraphIndex];
         }
-        
-        if (targetPara == null)
-        {
-            throw new ArgumentException("Cannot find target paragraph");
-        }
-        
+
+        if (targetPara == null) throw new ArgumentException("Cannot find target paragraph");
+
         // Ensure targetPara is a direct child of Body or find the correct insertion point
         // InsertAfter requires the reference node to be a direct child of the parent
-        Node? insertionPoint = null;
-        
+        Node? insertionPoint;
+
         // Check if targetPara is a direct child of Body
         if (targetPara.ParentNode == targetSection.Body)
         {
@@ -1507,40 +1484,36 @@ Usage examples:
             // Find the direct child paragraph in Body that contains or is after targetPara
             var bodyParagraphs = targetSection.Body.GetChildNodes(NodeType.Paragraph, false);
             Paragraph? directPara = null;
-            
+
             // Try to find targetPara in direct children
-            foreach (Paragraph para in bodyParagraphs)
-            {
+            foreach (var para in bodyParagraphs.Cast<Paragraph>())
                 if (para == targetPara)
                 {
                     directPara = para;
                     break;
                 }
-            }
-            
+
             // If not found, use the last direct child paragraph as insertion point
             if (directPara == null && bodyParagraphs.Count > 0)
-            {
-                directPara = bodyParagraphs[bodyParagraphs.Count - 1] as Paragraph;
-            }
-            
+                directPara = bodyParagraphs[^1] as Paragraph;
+
             insertionPoint = directPara ?? targetSection.Body.LastChild;
         }
-        
+
         if (insertionPoint == null)
-        {
-            throw new ArgumentException($"Unable to find valid insertion point (targetParagraphIndex: {targetParagraphIndex})");
-        }
-        
+            throw new ArgumentException(
+                $"Unable to find valid insertion point (targetParagraphIndex: {targetParagraphIndex})");
+
         var clonedTable = (Table)sourceTable.Clone(true);
         targetSection.Body.InsertAfter(clonedTable, insertionPoint);
 
         doc.Save(outputPath);
-        return await Task.FromResult($"Successfully copied table {sourceTableIndex} to paragraph {targetParagraphIndex}. Output: {outputPath}");
+        return await Task.FromResult(
+            $"Successfully copied table {sourceTableIndex} to paragraph {targetParagraphIndex}. Output: {outputPath}");
     }
 
     /// <summary>
-    /// Gets detailed table structure information
+    ///     Gets detailed table structure information
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, tableIndex, optional includeCellFormatting</param>
     /// <returns>Formatted string with table structure</returns>
@@ -1583,11 +1556,11 @@ Usage examples:
         if (includeContent)
         {
             result.AppendLine("【Content Preview】");
-            for (int i = 0; i < Math.Min(table.Rows.Count, 5); i++)
+            for (var i = 0; i < Math.Min(table.Rows.Count, 5); i++)
             {
                 var row = table.Rows[i];
                 result.Append($"  Row {i}: | ");
-                for (int j = 0; j < row.Cells.Count; j++)
+                for (var j = 0; j < row.Cells.Count; j++)
                 {
                     var cell = row.Cells[j];
                     var cellText = cell.GetText().Trim().Replace("\r", "").Replace("\n", " ");
@@ -1595,8 +1568,10 @@ Usage examples:
                         cellText = cellText.Substring(0, 27) + "...";
                     result.Append($"{cellText} | ");
                 }
+
                 result.AppendLine();
             }
+
             if (table.Rows.Count > 5)
                 result.AppendLine($"  ... ({table.Rows.Count - 5} more rows)");
             result.AppendLine();
@@ -1618,9 +1593,12 @@ Usage examples:
     }
 
     /// <summary>
-    /// Sets table border properties
+    ///     Sets table border properties
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, tableIndex, optional borderType, style, width, color, outputPath</param>
+    /// <param name="arguments">
+    ///     JSON arguments containing path, tableIndex, optional borderType, style, width, color,
+    ///     outputPath
+    /// </param>
     /// <returns>Success message</returns>
     private async Task<string> SetTableBorder(JsonObject? arguments)
     {
@@ -1649,7 +1627,7 @@ Usage examples:
         var lineWidth = defaultLineWidth;
         var lineColor = ColorHelper.ParseColor(defaultLineColor);
 
-        List<Cell> targetCells = new List<Cell>();
+        var targetCells = new List<Cell>();
         if (rowIndex.HasValue && columnIndex.HasValue)
         {
             if (rowIndex.Value < table.Rows.Count && columnIndex.Value < table.Rows[rowIndex.Value].Cells.Count)
@@ -1666,15 +1644,13 @@ Usage examples:
         }
         else if (columnIndex.HasValue)
         {
-            foreach (Row row in table.Rows)
-            {
+            foreach (var row in table.Rows.Cast<Row>())
                 if (columnIndex.Value < row.Cells.Count)
                     targetCells.Add(row.Cells[columnIndex.Value]);
-            }
         }
         else
         {
-            foreach (Row row in table.Rows)
+            foreach (var row in table.Rows.Cast<Row>())
                 targetCells.AddRange(row.Cells.Cast<Cell>());
         }
 
@@ -1688,7 +1664,9 @@ Usage examples:
                 borders.Top.Color = lineColor;
             }
             else if (arguments?["borderTop"] != null)
+            {
                 borders.Top.LineStyle = LineStyle.None;
+            }
 
             if (ArgumentHelper.GetBool(arguments, "borderBottom", false))
             {
@@ -1697,7 +1675,9 @@ Usage examples:
                 borders.Bottom.Color = lineColor;
             }
             else if (arguments?["borderBottom"] != null)
+            {
                 borders.Bottom.LineStyle = LineStyle.None;
+            }
 
             if (ArgumentHelper.GetBool(arguments, "borderLeft", false))
             {
@@ -1706,7 +1686,9 @@ Usage examples:
                 borders.Left.Color = lineColor;
             }
             else if (arguments?["borderLeft"] != null)
+            {
                 borders.Left.LineStyle = LineStyle.None;
+            }
 
             if (ArgumentHelper.GetBool(arguments, "borderRight", false))
             {
@@ -1715,7 +1697,9 @@ Usage examples:
                 borders.Right.Color = lineColor;
             }
             else if (arguments?["borderRight"] != null)
+            {
                 borders.Right.LineStyle = LineStyle.None;
+            }
         }
 
         doc.Save(outputPath);
@@ -1723,7 +1707,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Sets column width for a table
+    ///     Sets column width for a table
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, tableIndex, colIndex, width, optional outputPath</param>
     /// <returns>Success message</returns>
@@ -1734,7 +1718,7 @@ Usage examples:
         var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex");
         var columnIndex = ArgumentHelper.GetInt(arguments, "columnIndex");
         var columnWidth = ArgumentHelper.GetDouble(arguments, "columnWidth");
-        
+
         var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
 
         if (columnWidth <= 0)
@@ -1757,22 +1741,21 @@ Usage examples:
         if (columnIndex < 0 || columnIndex >= firstRow.Cells.Count)
             throw new ArgumentException($"Column index {columnIndex} out of range");
 
-        int cellsUpdated = 0;
-        foreach (Row row in table.Rows)
-        {
+        var cellsUpdated = 0;
+        foreach (var row in table.Rows.Cast<Row>())
             if (columnIndex < row.Cells.Count)
             {
                 row.Cells[columnIndex].CellFormat.PreferredWidth = PreferredWidth.FromPoints(columnWidth);
                 cellsUpdated++;
             }
-        }
 
         doc.Save(outputPath);
-        return await Task.FromResult($"Successfully set column {columnIndex} width to {columnWidth} pt ({cellsUpdated} cells updated). Output: {outputPath}");
+        return await Task.FromResult(
+            $"Successfully set column {columnIndex} width to {columnWidth} pt ({cellsUpdated} cells updated). Output: {outputPath}");
     }
 
     /// <summary>
-    /// Sets row height for a table
+    ///     Sets row height for a table
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, tableIndex, rowIndex, height, optional outputPath</param>
     /// <returns>Success message</returns>
@@ -1783,7 +1766,7 @@ Usage examples:
         var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex");
         var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex");
         var rowHeight = ArgumentHelper.GetDouble(arguments, "rowHeight");
-        
+
         var heightRule = ArgumentHelper.GetString(arguments, "heightRule", "atLeast");
         var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
 
@@ -1814,7 +1797,8 @@ Usage examples:
         row.RowFormat.Height = rowHeight;
 
         doc.Save(outputPath);
-        return await Task.FromResult($"Successfully set row {rowIndex} height to {rowHeight} pt ({heightRule}). Output: {outputPath}");
+        return await Task.FromResult(
+            $"Successfully set row {rowIndex} height to {rowHeight} pt ({heightRule}). Output: {outputPath}");
     }
 
     private Dictionary<int, string> ParseColorDictionary(JsonNode? node)
@@ -1825,12 +1809,14 @@ Usage examples:
         {
             var jsonObj = node.AsObject();
             foreach (var kvp in jsonObj)
-            {
-                if (int.TryParse(kvp.Key, out int key))
+                if (int.TryParse(kvp.Key, out var key))
                     result[key] = kvp.Value?.GetValue<string>() ?? "";
-            }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[WARN] Error parsing cell colors JSON: {ex.Message}");
+        }
+
         return result;
     }
 
@@ -1843,15 +1829,15 @@ Usage examples:
             var jsonStr = node.ToJsonString();
             var arr = JsonSerializer.Deserialize<JsonElement[][]>(jsonStr);
             if (arr != null)
-            {
                 foreach (var item in arr)
-                {
                     if (item.Length >= 3)
                         result.Add((item[0].GetInt32(), item[1].GetInt32(), item[2].GetString() ?? ""));
-                }
-            }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[WARN] Error parsing merge cells JSON: {ex.Message}");
+        }
+
         return result;
     }
 
@@ -1864,20 +1850,18 @@ Usage examples:
             var jsonStr = node.ToJsonString();
             var arr = JsonSerializer.Deserialize<JsonElement[]>(jsonStr);
             if (arr != null)
-            {
                 foreach (var item in arr)
-                {
                     if (item.TryGetProperty("startRow", out var sr) &&
                         item.TryGetProperty("endRow", out var er) &&
                         item.TryGetProperty("startCol", out var sc) &&
                         item.TryGetProperty("endCol", out var ec))
-                    {
                         result.Add((sr.GetInt32(), er.GetInt32(), sc.GetInt32(), ec.GetInt32()));
-                    }
-                }
-            }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[WARN] Error parsing merge cells JSON: {ex.Message}");
+        }
+
         return result;
     }
 
@@ -1904,6 +1888,4 @@ Usage examples:
             _ => LineStyle.Single
         };
     }
-
 }
-

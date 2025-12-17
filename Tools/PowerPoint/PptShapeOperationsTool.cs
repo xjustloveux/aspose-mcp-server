@@ -1,19 +1,19 @@
 ﻿using System.Text.Json.Nodes;
-using System.Linq;
 using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.PowerPoint;
 
 /// <summary>
-/// Unified tool for PowerPoint shape operations (group, ungroup, copy, reorder, align, flip)
-/// Merges: PptGroupShapesTool, PptUngroupShapesTool, PptCopyShapeTool, PptReorderShapeTool, 
-/// PptAlignShapesTool, PptFlipShapeTool
+///     Unified tool for PowerPoint shape operations (group, ungroup, copy, reorder, align, flip)
+///     Merges: PptGroupShapesTool, PptUngroupShapesTool, PptCopyShapeTool, PptReorderShapeTool,
+///     PptAlignShapesTool, PptFlipShapeTool
 /// </summary>
 public class PptShapeOperationsTool : IAsposeTool
 {
-    public string Description => @"PowerPoint shape operations. Supports 6 operations: group, ungroup, copy, reorder, align, flip.
+    public string Description =>
+        @"PowerPoint shape operations. Supports 6 operations: group, ungroup, copy, reorder, align, flip.
 
 Usage examples:
 - Group shapes: ppt_shape_operations(operation='group', path='presentation.pptx', slideIndex=0, shapeIndices=[0,1,2])
@@ -124,7 +124,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Groups shapes together
+    ///     Groups shapes together
     /// </summary>
     /// <param name="arguments">JSON arguments containing shapeIndexes array, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -134,28 +134,21 @@ Usage examples:
     {
         var shapeIndicesArray = ArgumentHelper.GetArray(arguments, "shapeIndices");
 
-        var shapeIndices = shapeIndicesArray.Select(s => s?.GetValue<int>()).Where(s => s.HasValue).Select(s => s!.Value).OrderByDescending(s => s).ToList();
+        var shapeIndices = shapeIndicesArray.Select(s => s?.GetValue<int>()).Where(s => s.HasValue)
+            .Select(s => s!.Value).OrderByDescending(s => s).ToList();
 
-        if (shapeIndices.Count < 2)
-        {
-            throw new ArgumentException("At least 2 shapes are required for grouping");
-        }
+        if (shapeIndices.Count < 2) throw new ArgumentException("At least 2 shapes are required for grouping");
 
         using var presentation = new Presentation(path);
         if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
-        {
             throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
-        }
 
         var slide = presentation.Slides[slideIndex];
         var shapesToGroup = new List<IShape>();
 
         foreach (var idx in shapeIndices)
         {
-            if (idx < 0 || idx >= slide.Shapes.Count)
-            {
-                throw new ArgumentException($"shapeIndex {idx} is out of range");
-            }
+            if (idx < 0 || idx >= slide.Shapes.Count) throw new ArgumentException($"shapeIndex {idx} is out of range");
             shapesToGroup.Add(slide.Shapes[idx]);
         }
 
@@ -173,7 +166,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Ungroups shapes
+    ///     Ungroups shapes
     /// </summary>
     /// <param name="arguments">JSON arguments containing shapeIndex, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -187,22 +180,14 @@ Usage examples:
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
         var shape = PowerPointHelper.GetShape(slide, shapeIndex);
         if (shape is not IGroupShape groupShape)
-        {
             throw new ArgumentException($"Shape at index {shapeIndex} is not a group");
-        }
 
         // Ungroup - add shapes back to slide and remove group
         var shapesInGroup = new List<IShape>();
-        foreach (IShape s in groupShape.Shapes)
-        {
-            shapesInGroup.Add(s);
-        }
-        
-        foreach (var s in shapesInGroup)
-        {
-            slide.Shapes.AddClone(s);
-        }
-        
+        foreach (var s in groupShape.Shapes) shapesInGroup.Add(s);
+
+        foreach (var s in shapesInGroup) slide.Shapes.AddClone(s);
+
         slide.Shapes.Remove(groupShape);
 
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
@@ -211,9 +196,12 @@ Usage examples:
     }
 
     /// <summary>
-    /// Copies a shape to another slide
+    ///     Copies a shape to another slide
     /// </summary>
-    /// <param name="arguments">JSON arguments containing sourceSlideIndex, sourceShapeIndex, targetSlideIndex, optional outputPath</param>
+    /// <param name="arguments">
+    ///     JSON arguments containing sourceSlideIndex, sourceShapeIndex, targetSlideIndex, optional
+    ///     outputPath
+    /// </param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Success message</returns>
     private async Task<string> CopyShapeAsync(JsonObject? arguments, string path)
@@ -223,11 +211,13 @@ Usage examples:
         var toSlide = ArgumentHelper.GetInt(arguments, "toSlide");
 
         using var presentation = new Presentation(path);
-        if (fromSlide < 0 || fromSlide >= presentation.Slides.Count) throw new ArgumentException("fromSlide out of range");
+        if (fromSlide < 0 || fromSlide >= presentation.Slides.Count)
+            throw new ArgumentException("fromSlide out of range");
         if (toSlide < 0 || toSlide >= presentation.Slides.Count) throw new ArgumentException("toSlide out of range");
 
         var sourceSlide = presentation.Slides[fromSlide];
-        if (shapeIndex < 0 || shapeIndex >= sourceSlide.Shapes.Count) throw new ArgumentException("shapeIndex out of range");
+        if (shapeIndex < 0 || shapeIndex >= sourceSlide.Shapes.Count)
+            throw new ArgumentException("shapeIndex out of range");
 
         var targetSlide = presentation.Slides[toSlide];
         targetSlide.Shapes.AddClone(sourceSlide.Shapes[shapeIndex]);
@@ -238,7 +228,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Changes the z-order of a shape
+    ///     Changes the z-order of a shape
     /// </summary>
     /// <param name="arguments">JSON arguments containing shapeIndex, newIndex, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -251,13 +241,12 @@ Usage examples:
 
         using var presentation = new Presentation(path);
         if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
-        {
             throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
-        }
 
         var slide = presentation.Slides[slideIndex];
         var count = slide.Shapes.Count;
-        if (shapeIndex < 0 || shapeIndex >= count) throw new ArgumentException($"shapeIndex must be between 0 and {count - 1}");
+        if (shapeIndex < 0 || shapeIndex >= count)
+            throw new ArgumentException($"shapeIndex must be between 0 and {count - 1}");
         if (toIndex < 0 || toIndex >= count) throw new ArgumentException($"toIndex must be between 0 and {count - 1}");
 
         var shape = slide.Shapes[shapeIndex];
@@ -271,7 +260,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Aligns shapes
+    ///     Aligns shapes
     /// </summary>
     /// <param name="arguments">JSON arguments containing shapeIndexes array, alignmentType, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -289,18 +278,12 @@ Usage examples:
 
         using var presentation = new Presentation(path);
         if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
-        {
             throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
-        }
 
         var slide = presentation.Slides[slideIndex];
         foreach (var idx in shapeIndices)
-        {
             if (idx < 0 || idx >= slide.Shapes.Count)
-            {
                 throw new ArgumentException($"shape index {idx} is out of range (0-{slide.Shapes.Count - 1})");
-            }
-        }
 
         var shapes = shapeIndices.Select(idx => slide.Shapes[idx]).ToArray();
         var refBox = alignToSlide
@@ -314,7 +297,6 @@ Usage examples:
             };
 
         foreach (var s in shapes)
-        {
             switch (alignStr.ToLower())
             {
                 case "left":
@@ -338,7 +320,6 @@ Usage examples:
                 default:
                     throw new ArgumentException("align must be one of: left, center, right, top, middle, bottom");
             }
-        }
 
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         presentation.Save(outputPath, SaveFormat.Pptx);
@@ -346,7 +327,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Flips a shape horizontally or vertically
+    ///     Flips a shape horizontally or vertically
     /// </summary>
     /// <param name="arguments">JSON arguments containing shapeIndex, flipType (horizontal/vertical), optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -359,21 +340,19 @@ Usage examples:
         var flipVertical = ArgumentHelper.GetBoolNullable(arguments, "flipVertical");
 
         if (!flipHorizontal.HasValue && !flipVertical.HasValue)
-        {
             throw new ArgumentException("At least one of flipHorizontal or flipVertical must be provided");
-        }
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
         var shape = PowerPointHelper.GetShape(slide, shapeIndex);
         // This functionality may require shape-specific implementations
-        if (flipHorizontal.HasValue && shape is IAutoShape autoShapeH)
+        if (flipHorizontal.HasValue && shape is IAutoShape)
         {
             // Flip horizontal is typically handled through transformation
             // For now, we'll skip this as it requires more complex matrix operations
         }
 
-        if (flipVertical.HasValue && shape is IAutoShape autoShapeV)
+        if (flipVertical.HasValue && shape is IAutoShape)
         {
             // Flip vertical is typically handled through transformation
             // For now, we'll skip this as it requires more complex matrix operations
@@ -384,4 +363,3 @@ Usage examples:
         return await Task.FromResult($"Shape flipped on slide {slideIndex}, shape {shapeIndex}");
     }
 }
-

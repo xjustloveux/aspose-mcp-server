@@ -2,17 +2,18 @@
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Excel;
 
 /// <summary>
-/// Unified tool for managing Excel view settings (zoom, gridlines, headers, zero values, etc.)
-/// Merges: ExcelSetZoomTool, ExcelSetGridlinesVisibleTool, ExcelSetRowColumnHeadersVisibleTool, 
-/// ExcelSetZeroValuesVisibleTool, ExcelSetViewSettingsTool, ExcelSetColumnWidthTool, ExcelSetRowHeightTool,
-/// ExcelSetSheetBackgroundTool, ExcelSetSheetTabColorTool
+///     Unified tool for managing Excel view settings (zoom, gridlines, headers, zero values, etc.)
+///     Merges: ExcelSetZoomTool, ExcelSetGridlinesVisibleTool, ExcelSetRowColumnHeadersVisibleTool,
+///     ExcelSetZeroValuesVisibleTool, ExcelSetViewSettingsTool, ExcelSetColumnWidthTool, ExcelSetRowHeightTool,
+///     ExcelSetSheetBackgroundTool, ExcelSetSheetTabColorTool
 /// </summary>
 public class ExcelViewSettingsTool : IAsposeTool
 {
-    public string Description => @"Manage Excel view settings. Supports 10 operations: set_zoom, set_gridlines, set_headers, set_zero_values, set_column_width, set_row_height, set_background, set_tab_color, set_all, split_window.
+    public string Description =>
+        @"Manage Excel view settings. Supports 10 operations: set_zoom, set_gridlines, set_headers, set_zero_values, set_column_width, set_row_height, set_background, set_tab_color, set_all, split_window.
 
 Usage examples:
 - Set zoom: excel_view_settings(operation='set_zoom', path='book.xlsx', zoom=150)
@@ -40,7 +41,11 @@ Usage examples:
 - 'set_tab_color': Set tab color (required params: path, sheetIndex, color)
 - 'set_all': Set multiple settings (required params: path)
 - 'split_window': Split window (required params: path, rowIndex, columnIndex)",
-                @enum = new[] { "set_zoom", "set_gridlines", "set_headers", "set_zero_values", "set_column_width", "set_row_height", "set_background", "set_tab_color", "set_all", "split_window" }
+                @enum = new[]
+                {
+                    "set_zoom", "set_gridlines", "set_headers", "set_zero_values", "set_column_width", "set_row_height",
+                    "set_background", "set_tab_color", "set_all", "split_window"
+                }
             },
             path = new
             {
@@ -164,7 +169,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Sets zoom level for the worksheet
+    ///     Sets zoom level for the worksheet
     /// </summary>
     /// <param name="arguments">JSON arguments containing zoom (10-400)</param>
     /// <param name="path">Excel file path</param>
@@ -175,10 +180,7 @@ Usage examples:
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var zoom = ArgumentHelper.GetInt(arguments, "zoom");
 
-        if (zoom < 10 || zoom > 400)
-        {
-            throw new ArgumentException("Zoom must be between 10 and 400");
-        }
+        if (zoom < 10 || zoom > 400) throw new ArgumentException("Zoom must be between 10 and 400");
 
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
@@ -189,7 +191,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Sets gridlines visibility
+    ///     Sets gridlines visibility
     /// </summary>
     /// <param name="arguments">JSON arguments containing isVisible</param>
     /// <param name="path">Excel file path</param>
@@ -209,7 +211,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Sets row/column headers visibility
+    ///     Sets row/column headers visibility
     /// </summary>
     /// <param name="arguments">JSON arguments containing isVisible</param>
     /// <param name="path">Excel file path</param>
@@ -225,11 +227,12 @@ Usage examples:
         worksheet.IsRowColumnHeadersVisible = visible;
 
         workbook.Save(outputPath);
-        return await Task.FromResult($"RowColumnHeaders visibility set to {(visible ? "visible" : "hidden")}: {outputPath}");
+        return await Task.FromResult(
+            $"RowColumnHeaders visibility set to {(visible ? "visible" : "hidden")}: {outputPath}");
     }
 
     /// <summary>
-    /// Sets zero values visibility
+    ///     Sets zero values visibility
     /// </summary>
     /// <param name="arguments">JSON arguments containing isVisible</param>
     /// <param name="path">Excel file path</param>
@@ -249,7 +252,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Sets column width
+    ///     Sets column width
     /// </summary>
     /// <param name="arguments">JSON arguments containing columnIndex, width</param>
     /// <param name="path">Excel file path</param>
@@ -271,7 +274,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Sets row height
+    ///     Sets row height
     /// </summary>
     /// <param name="arguments">JSON arguments containing rowIndex, height</param>
     /// <param name="path">Excel file path</param>
@@ -293,7 +296,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Sets worksheet background
+    ///     Sets worksheet background
     /// </summary>
     /// <param name="arguments">JSON arguments containing imagePath or color</param>
     /// <param name="path">Excel file path</param>
@@ -313,11 +316,8 @@ Usage examples:
         }
         else if (!string.IsNullOrEmpty(imagePath))
         {
-            if (!File.Exists(imagePath))
-            {
-                throw new FileNotFoundException($"Image file not found: {imagePath}");
-            }
-            var imageBytes = File.ReadAllBytes(imagePath);
+            if (!File.Exists(imagePath)) throw new FileNotFoundException($"Image file not found: {imagePath}");
+            var imageBytes = await File.ReadAllBytesAsync(imagePath);
             worksheet.BackgroundImage = imageBytes;
         }
         else
@@ -327,13 +327,13 @@ Usage examples:
 
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         workbook.Save(outputPath);
-        return await Task.FromResult(removeBackground 
+        return await Task.FromResult(removeBackground
             ? $"Background image removed from sheet {sheetIndex}: {outputPath}"
             : $"Background image set for sheet {sheetIndex}: {outputPath}");
     }
 
     /// <summary>
-    /// Sets worksheet tab color
+    ///     Sets worksheet tab color
     /// </summary>
     /// <param name="arguments">JSON arguments containing color</param>
     /// <param name="path">Excel file path</param>
@@ -356,7 +356,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Sets all view settings at once
+    ///     Sets all view settings at once
     /// </summary>
     /// <param name="arguments">JSON arguments containing all view settings</param>
     /// <param name="path">Excel file path</param>
@@ -375,32 +375,17 @@ Usage examples:
 
         if (zoom.HasValue)
         {
-            if (zoom.Value < 10 || zoom.Value > 400)
-            {
-                throw new ArgumentException("Zoom must be between 10 and 400");
-            }
+            if (zoom.Value < 10 || zoom.Value > 400) throw new ArgumentException("Zoom must be between 10 and 400");
             worksheet.Zoom = zoom.Value;
         }
 
-        if (showGridlines.HasValue)
-        {
-            worksheet.IsGridlinesVisible = showGridlines.Value;
-        }
+        if (showGridlines.HasValue) worksheet.IsGridlinesVisible = showGridlines.Value;
 
-        if (showRowColumnHeaders.HasValue)
-        {
-            worksheet.IsRowColumnHeadersVisible = showRowColumnHeaders.Value;
-        }
+        if (showRowColumnHeaders.HasValue) worksheet.IsRowColumnHeadersVisible = showRowColumnHeaders.Value;
 
-        if (showZeroValues.HasValue)
-        {
-            worksheet.DisplayZeros = showZeroValues.Value;
-        }
+        if (showZeroValues.HasValue) worksheet.DisplayZeros = showZeroValues.Value;
 
-        if (displayRightToLeft.HasValue)
-        {
-            worksheet.DisplayRightToLeft = displayRightToLeft.Value;
-        }
+        if (displayRightToLeft.HasValue) worksheet.DisplayRightToLeft = displayRightToLeft.Value;
 
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         workbook.Save(outputPath);
@@ -408,7 +393,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Splits worksheet window
+    ///     Splits worksheet window
     /// </summary>
     /// <param name="arguments">JSON arguments containing splitRow, splitColumn</param>
     /// <param name="path">Excel file path</param>
@@ -431,17 +416,11 @@ Usage examples:
         {
             // Split window - Use FreezePanes as alternative (requires 4 parameters)
             if (splitRow.HasValue && splitColumn.HasValue)
-            {
-                worksheet.FreezePanes(splitRow.Value + 1, splitColumn.Value + 1, splitRow.Value + 1, splitColumn.Value + 1);
-            }
+                worksheet.FreezePanes(splitRow.Value + 1, splitColumn.Value + 1, splitRow.Value + 1,
+                    splitColumn.Value + 1);
             else if (splitRow.HasValue)
-            {
                 worksheet.FreezePanes(splitRow.Value + 1, 0, splitRow.Value + 1, 0);
-            }
-            else if (splitColumn.HasValue)
-            {
-                worksheet.FreezePanes(0, splitColumn.Value + 1, 0, splitColumn.Value + 1);
-            }
+            else if (splitColumn.HasValue) worksheet.FreezePanes(0, splitColumn.Value + 1, 0, splitColumn.Value + 1);
         }
         else
         {
@@ -450,7 +429,7 @@ Usage examples:
 
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         workbook.Save(outputPath);
-        return await Task.FromResult($"Window split {(removeSplit ? "removed" : "applied")} for sheet {sheetIndex}: {outputPath}");
+        return await Task.FromResult(
+            $"Window split {(removeSplit ? "removed" : "applied")} for sheet {sheetIndex}: {outputPath}");
     }
 }
-

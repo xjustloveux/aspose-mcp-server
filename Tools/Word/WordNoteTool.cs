@@ -1,21 +1,21 @@
 ﻿using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Words;
-using Aspose.Words.Fields;
 using Aspose.Words.Notes;
 using Aspose.Words.Replacing;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Word;
 
 /// <summary>
-/// Unified tool for footnote and endnote operations in Word documents
-/// Merges: WordAddFootnoteTool, WordAddEndnoteTool, WordDeleteFootnoteTool, WordDeleteEndnoteTool,
-/// WordEditFootnoteTool, WordEditEndnoteTool, WordGetFootnotesTool, WordGetEndnotesTool
+///     Unified tool for footnote and endnote operations in Word documents
+///     Merges: WordAddFootnoteTool, WordAddEndnoteTool, WordDeleteFootnoteTool, WordDeleteEndnoteTool,
+///     WordEditFootnoteTool, WordEditEndnoteTool, WordGetFootnotesTool, WordGetEndnotesTool
 /// </summary>
 public class WordNoteTool : IAsposeTool
 {
-    public string Description => @"Manage footnotes and endnotes in Word documents. Supports 8 operations: add_footnote, add_endnote, delete_footnote, delete_endnote, edit_footnote, edit_endnote, get_footnotes, get_endnotes.
+    public string Description =>
+        @"Manage footnotes and endnotes in Word documents. Supports 8 operations: add_footnote, add_endnote, delete_footnote, delete_endnote, edit_footnote, edit_endnote, get_footnotes, get_endnotes.
 
 Usage examples:
 - Add footnote: word_note(operation='add_footnote', path='doc.docx', noteText='Footnote text', paragraphIndex=0, runIndex=0)
@@ -41,7 +41,11 @@ Usage examples:
 - 'edit_endnote': Edit an endnote (required params: path, noteIndex, newText)
 - 'get_footnotes': Get all footnotes (required params: path)
 - 'get_endnotes': Get all endnotes (required params: path)",
-                @enum = new[] { "add_footnote", "add_endnote", "delete_footnote", "delete_endnote", "edit_footnote", "edit_endnote", "get_footnotes", "get_endnotes" }
+                @enum = new[]
+                {
+                    "add_footnote", "add_endnote", "delete_footnote", "delete_endnote", "edit_footnote", "edit_endnote",
+                    "get_footnotes", "get_endnotes"
+                }
             },
             path = new
             {
@@ -120,7 +124,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Adds a footnote to the document
+    ///     Adds a footnote to the document
     /// </summary>
     /// <param name="arguments">JSON arguments containing noteText, optional paragraphIndex, sectionIndex</param>
     /// <param name="path">Word document file path</param>
@@ -136,9 +140,7 @@ Usage examples:
 
         var doc = new Document(path);
         if (sectionIndex < 0 || sectionIndex >= doc.Sections.Count)
-        {
             throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
-        }
 
         var builder = new DocumentBuilder(doc);
 
@@ -150,10 +152,7 @@ Usage examples:
             {
                 builder.MoveToDocumentEnd();
                 var footnote = builder.InsertFootnote(FootnoteType.Footnote, footnoteText);
-                if (!string.IsNullOrEmpty(customMark))
-                {
-                    footnote.ReferenceMark = customMark;
-                }
+                if (!string.IsNullOrEmpty(customMark)) footnote.ReferenceMark = customMark;
             }
             else
             {
@@ -169,7 +168,7 @@ Usage examples:
                 var bodyParagraphs = section.Body.GetChildNodes(NodeType.Paragraph, false).Cast<Paragraph>().ToList();
                 if (bodyParagraphs.Count > 0)
                 {
-                    var lastPara = bodyParagraphs[bodyParagraphs.Count - 1];
+                    var lastPara = bodyParagraphs[^1];
                     builder.MoveTo(lastPara);
                 }
                 else
@@ -177,38 +176,29 @@ Usage examples:
                     // No paragraphs in body, move to document end
                     builder.MoveToDocumentEnd();
                 }
+
                 var footnote = builder.InsertFootnote(FootnoteType.Footnote, footnoteText);
-                if (!string.IsNullOrEmpty(customMark))
-                {
-                    footnote.ReferenceMark = customMark;
-                }
+                if (!string.IsNullOrEmpty(customMark)) footnote.ReferenceMark = customMark;
             }
             else
             {
                 var section = doc.Sections[sectionIndex];
                 var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
                 if (paragraphIndex.Value < 0 || paragraphIndex.Value >= paragraphs.Count)
-                {
-                    throw new ArgumentException($"paragraphIndex must be between 0 and {paragraphs.Count - 1}, or use -1 for document end");
-                }
+                    throw new ArgumentException(
+                        $"paragraphIndex must be between 0 and {paragraphs.Count - 1}, or use -1 for document end");
 
                 var para = paragraphs[paragraphIndex.Value];
                 builder.MoveTo(para);
                 var footnote = builder.InsertFootnote(FootnoteType.Footnote, footnoteText);
-                if (!string.IsNullOrEmpty(customMark))
-                {
-                    footnote.ReferenceMark = customMark;
-                }
+                if (!string.IsNullOrEmpty(customMark)) footnote.ReferenceMark = customMark;
             }
         }
         else
         {
             builder.MoveToDocumentEnd();
             var footnote = builder.InsertFootnote(FootnoteType.Footnote, footnoteText);
-            if (!string.IsNullOrEmpty(customMark))
-            {
-                footnote.ReferenceMark = customMark;
-            }
+            if (!string.IsNullOrEmpty(customMark)) footnote.ReferenceMark = customMark;
         }
 
         doc.Save(outputPath);
@@ -216,7 +206,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Adds an endnote to the document
+    ///     Adds an endnote to the document
     /// </summary>
     /// <param name="arguments">JSON arguments containing noteText, optional paragraphIndex, sectionIndex</param>
     /// <param name="path">Word document file path</param>
@@ -232,9 +222,7 @@ Usage examples:
 
         var doc = new Document(path);
         if (sectionIndex < 0 || sectionIndex >= doc.Sections.Count)
-        {
             throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
-        }
 
         var builder = new DocumentBuilder(doc);
 
@@ -246,10 +234,7 @@ Usage examples:
             {
                 builder.MoveToDocumentEnd();
                 var endnote = builder.InsertFootnote(FootnoteType.Endnote, endnoteText);
-                if (!string.IsNullOrEmpty(customMark))
-                {
-                    endnote.ReferenceMark = customMark;
-                }
+                if (!string.IsNullOrEmpty(customMark)) endnote.ReferenceMark = customMark;
             }
             else
             {
@@ -265,7 +250,7 @@ Usage examples:
                 var bodyParagraphs = section.Body.GetChildNodes(NodeType.Paragraph, false).Cast<Paragraph>().ToList();
                 if (bodyParagraphs.Count > 0)
                 {
-                    var lastPara = bodyParagraphs[bodyParagraphs.Count - 1];
+                    var lastPara = bodyParagraphs[^1];
                     builder.MoveTo(lastPara);
                 }
                 else
@@ -273,49 +258,41 @@ Usage examples:
                     // No paragraphs in body, move to document end
                     builder.MoveToDocumentEnd();
                 }
+
                 var endnote = builder.InsertFootnote(FootnoteType.Endnote, endnoteText);
-                if (!string.IsNullOrEmpty(customMark))
-                {
-                    endnote.ReferenceMark = customMark;
-                }
+                if (!string.IsNullOrEmpty(customMark)) endnote.ReferenceMark = customMark;
             }
             else
             {
                 var section = doc.Sections[sectionIndex];
                 var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
                 if (paragraphIndex.Value < 0 || paragraphIndex.Value >= paragraphs.Count)
-                {
-                    throw new ArgumentException($"paragraphIndex must be between 0 and {paragraphs.Count - 1}, or use -1 for document end");
-                }
+                    throw new ArgumentException(
+                        $"paragraphIndex must be between 0 and {paragraphs.Count - 1}, or use -1 for document end");
 
                 var para = paragraphs[paragraphIndex.Value];
-                
+
                 var parentNode = para.ParentNode;
                 while (parentNode != null)
                 {
                     if (parentNode is HeaderFooter)
-                    {
-                        throw new InvalidOperationException($"Endnotes are only allowed inside the main document body. The paragraph at index {paragraphIndex.Value} is located in a header or footer. Please use a paragraph index that refers to a paragraph in the main document body.");
-                    }
-                    if (parentNode is Section || parentNode is Body)
-                    {
-                        break; // We're in the main body
-                    }
+                        throw new InvalidOperationException(
+                            $"Endnotes are only allowed inside the main document body. The paragraph at index {paragraphIndex.Value} is located in a header or footer. Please use a paragraph index that refers to a paragraph in the main document body.");
+                    if (parentNode is Section || parentNode is Body) break; // We're in the main body
                     parentNode = parentNode.ParentNode;
                 }
-                
+
                 builder.MoveTo(para);
                 try
                 {
                     var endnote = builder.InsertFootnote(FootnoteType.Endnote, endnoteText);
-                    if (!string.IsNullOrEmpty(customMark))
-                    {
-                        endnote.ReferenceMark = customMark;
-                    }
+                    if (!string.IsNullOrEmpty(customMark)) endnote.ReferenceMark = customMark;
                 }
                 catch (Exception ex)
                 {
-                    throw new InvalidOperationException($"Failed to insert endnote: {ex.Message}. Endnotes can only be inserted in the main document body, not in headers, footers, or other special sections.", ex);
+                    throw new InvalidOperationException(
+                        $"Failed to insert endnote: {ex.Message}. Endnotes can only be inserted in the main document body, not in headers, footers, or other special sections.",
+                        ex);
                 }
             }
         }
@@ -323,10 +300,7 @@ Usage examples:
         {
             builder.MoveToDocumentEnd();
             var endnote = builder.InsertFootnote(FootnoteType.Endnote, endnoteText);
-            if (!string.IsNullOrEmpty(customMark))
-            {
-                endnote.ReferenceMark = customMark;
-            }
+            if (!string.IsNullOrEmpty(customMark)) endnote.ReferenceMark = customMark;
         }
 
         doc.Save(outputPath);
@@ -334,7 +308,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Deletes a footnote from the document
+    ///     Deletes a footnote from the document
     /// </summary>
     /// <param name="arguments">JSON arguments containing noteIndex</param>
     /// <param name="path">Word document file path</param>
@@ -350,7 +324,7 @@ Usage examples:
             .Where(f => f.FootnoteType == FootnoteType.Footnote)
             .ToList();
 
-        int deletedCount = 0;
+        var deletedCount = 0;
 
         if (!string.IsNullOrEmpty(referenceMark))
         {
@@ -383,7 +357,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Deletes an endnote from the document
+    ///     Deletes an endnote from the document
     /// </summary>
     /// <param name="arguments">JSON arguments containing noteIndex</param>
     /// <param name="path">Word document file path</param>
@@ -399,7 +373,7 @@ Usage examples:
             .Where(f => f.FootnoteType == FootnoteType.Endnote)
             .ToList();
 
-        int deletedCount = 0;
+        var deletedCount = 0;
 
         if (!string.IsNullOrEmpty(referenceMark))
         {
@@ -432,7 +406,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Edits a footnote
+    ///     Edits a footnote
     /// </summary>
     /// <param name="arguments">JSON arguments containing noteIndex, noteText</param>
     /// <param name="path">Word document file path</param>
@@ -458,9 +432,7 @@ Usage examples:
         else if (footnoteIndex.HasValue)
         {
             if (footnoteIndex.Value >= 0 && footnoteIndex.Value < footnotes.Count)
-            {
                 footnote = footnotes[footnoteIndex.Value];
-            }
         }
         else if (footnotes.Count > 0)
         {
@@ -469,16 +441,11 @@ Usage examples:
 
         if (footnote == null)
         {
-            var availableInfo = "";
-            if (footnotes.Count > 0)
-            {
-                availableInfo = $" (document has {footnotes.Count} footnotes, valid index: 0-{footnotes.Count - 1})";
-            }
-            else
-            {
-                availableInfo = " (document has no footnotes)";
-            }
-            throw new ArgumentException($"Specified footnote not found{availableInfo}. Use get_footnotes operation to view available footnotes");
+            var availableInfo = footnotes.Count > 0
+                ? $" (document has {footnotes.Count} footnotes, valid index: 0-{footnotes.Count - 1})"
+                : " (document has no footnotes)";
+            throw new ArgumentException(
+                $"Specified footnote not found{availableInfo}. Use get_footnotes operation to view available footnotes");
         }
 
         footnote.RemoveAllChildren();
@@ -491,7 +458,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Edits an endnote
+    ///     Edits an endnote
     /// </summary>
     /// <param name="arguments">JSON arguments containing noteIndex, noteText</param>
     /// <param name="path">Word document file path</param>
@@ -516,10 +483,7 @@ Usage examples:
         }
         else if (endnoteIndex.HasValue)
         {
-            if (endnoteIndex.Value >= 0 && endnoteIndex.Value < endnotes.Count)
-            {
-                endnote = endnotes[endnoteIndex.Value];
-            }
+            if (endnoteIndex.Value >= 0 && endnoteIndex.Value < endnotes.Count) endnote = endnotes[endnoteIndex.Value];
         }
         else if (endnotes.Count > 0)
         {
@@ -528,16 +492,11 @@ Usage examples:
 
         if (endnote == null)
         {
-            var availableInfo = "";
-            if (endnotes.Count > 0)
-            {
-                availableInfo = $" (document has {endnotes.Count} endnotes, valid index: 0-{endnotes.Count - 1})";
-            }
-            else
-            {
-                availableInfo = " (document has no endnotes)";
-            }
-            throw new ArgumentException($"Specified endnote not found{availableInfo}. Use get_endnotes operation to view available endnotes");
+            var availableInfo = endnotes.Count > 0
+                ? $" (document has {endnotes.Count} endnotes, valid index: 0-{endnotes.Count - 1})"
+                : " (document has no endnotes)";
+            throw new ArgumentException(
+                $"Specified endnote not found{availableInfo}. Use get_endnotes operation to view available endnotes");
         }
 
         endnote.RemoveAllChildren();
@@ -550,12 +509,12 @@ Usage examples:
     }
 
     /// <summary>
-    /// Gets all footnotes from the document
+    ///     Gets all footnotes from the document
     /// </summary>
-    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="_">Unused parameter</param>
     /// <param name="path">Word document file path</param>
     /// <returns>Formatted string with all footnotes</returns>
-    private async Task<string> GetFootnotesAsync(JsonObject? arguments, string path)
+    private async Task<string> GetFootnotesAsync(JsonObject? _, string path)
     {
         var doc = new Document(path);
         var sb = new StringBuilder();
@@ -567,7 +526,7 @@ Usage examples:
             .Where(f => f.FootnoteType == FootnoteType.Footnote)
             .ToList();
 
-        for (int i = 0; i < footnotes.Count; i++)
+        for (var i = 0; i < footnotes.Count; i++)
         {
             var footnote = footnotes[i];
             sb.AppendLine($"[{i + 1}] Reference Mark: {footnote.ReferenceMark}");
@@ -582,12 +541,12 @@ Usage examples:
     }
 
     /// <summary>
-    /// Gets all endnotes from the document
+    ///     Gets all endnotes from the document
     /// </summary>
-    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="_">Unused parameter</param>
     /// <param name="path">Word document file path</param>
     /// <returns>Formatted string with all endnotes</returns>
-    private async Task<string> GetEndnotesAsync(JsonObject? arguments, string path)
+    private async Task<string> GetEndnotesAsync(JsonObject? _, string path)
     {
         var doc = new Document(path);
         var sb = new StringBuilder();
@@ -599,7 +558,7 @@ Usage examples:
             .Where(f => f.FootnoteType == FootnoteType.Endnote)
             .ToList();
 
-        for (int i = 0; i < endnotes.Count; i++)
+        for (var i = 0; i < endnotes.Count; i++)
         {
             var endnote = endnotes[i];
             sb.AppendLine($"[{i + 1}] Reference Mark: {endnote.ReferenceMark}");
@@ -613,4 +572,3 @@ Usage examples:
         return await Task.FromResult(sb.ToString());
     }
 }
-

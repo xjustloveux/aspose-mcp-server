@@ -4,8 +4,11 @@ using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Pdf;
 
+/// <summary>
+///     Tool for managing links in PDF documents (add, delete, edit, get)
+/// </summary>
 public class PdfLinkTool : IAsposeTool
 {
     public string Description => @"Manage links in PDF documents. Supports 4 operations: add, delete, edit, get.
@@ -100,9 +103,12 @@ Usage examples:
     }
 
     /// <summary>
-    /// Adds a link to a PDF page
+    ///     Adds a link to a PDF page
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, pageIndex, x, y, width, height, url or pageNumber, optional outputPath</param>
+    /// <param name="arguments">
+    ///     JSON arguments containing path, pageIndex, x, y, width, height, url or pageNumber, optional
+    ///     outputPath
+    /// </param>
     /// <returns>Success message</returns>
     private async Task<string> AddLink(JsonObject? arguments)
     {
@@ -124,7 +130,7 @@ Usage examples:
             throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
 
         var page = document.Pages[pageIndex];
-        var rect = new Aspose.Pdf.Rectangle(x, y, x + width, y + height);
+        var rect = new Rectangle(x, y, x + width, y + height);
         LinkAnnotation link;
 
         if (!string.IsNullOrEmpty(url))
@@ -138,7 +144,9 @@ Usage examples:
             link = new LinkAnnotation(page, rect) { Action = new GoToAction(document.Pages[targetPage.Value]) };
         }
         else
+        {
             throw new ArgumentException("Either url or targetPage must be provided");
+        }
 
         page.Annotations.Add(link);
         document.Save(outputPath);
@@ -146,7 +154,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Deletes a link from a PDF page
+    ///     Deletes a link from a PDF page
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, pageIndex, linkIndex, optional outputPath</param>
     /// <returns>Success message</returns>
@@ -171,11 +179,12 @@ Usage examples:
 
         page.Annotations.Delete(links[linkIndex]);
         document.Save(outputPath);
-        return await Task.FromResult($"Successfully deleted link {linkIndex} from page {pageIndex}. Output: {outputPath}");
+        return await Task.FromResult(
+            $"Successfully deleted link {linkIndex} from page {pageIndex}. Output: {outputPath}");
     }
 
     /// <summary>
-    /// Edits a link in a PDF
+    ///     Edits a link in a PDF
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, pageIndex, linkIndex, optional url, pageNumber, outputPath</param>
     /// <returns>Success message</returns>
@@ -202,7 +211,9 @@ Usage examples:
 
         var link = links[linkIndex];
         if (!string.IsNullOrEmpty(url))
+        {
             link.Action = new GoToURIAction(url);
+        }
         else if (targetPage.HasValue)
         {
             if (targetPage.Value < 1 || targetPage.Value > document.Pages.Count)
@@ -215,7 +226,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Gets all links from a PDF page
+    ///     Gets all links from a PDF page
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, pageIndex</param>
     /// <returns>Formatted string with all links</returns>
@@ -239,28 +250,28 @@ Usage examples:
             var page = document.Pages[pageIndex.Value];
             var links = page.Annotations.OfType<LinkAnnotation>().ToList();
             sb.AppendLine($"Page {pageIndex.Value} Links ({links.Count}):");
-            for (int i = 0; i < links.Count; i++)
+            for (var i = 0; i < links.Count; i++)
             {
                 var link = links[i];
                 sb.AppendLine($"  [{i}] Position: ({link.Rect.LLX}, {link.Rect.LLY})");
                 if (link.Action is GoToURIAction uriAction)
                     sb.AppendLine($"      URL: {uriAction.URI}");
-                else if (link.Action is GoToAction goToAction)
-                    sb.AppendLine($"      Target: Page");
+                else if (link.Action is GoToAction)
+                    sb.AppendLine("      Target: Page");
                 sb.AppendLine();
             }
         }
         else
         {
-            int totalCount = 0;
-            for (int p = 1; p <= document.Pages.Count; p++)
+            var totalCount = 0;
+            for (var p = 1; p <= document.Pages.Count; p++)
             {
                 var page = document.Pages[p];
                 var links = page.Annotations.OfType<LinkAnnotation>().ToList();
                 if (links.Count > 0)
                 {
                     sb.AppendLine($"Page {p} ({links.Count} links):");
-                    for (int i = 0; i < links.Count; i++)
+                    for (var i = 0; i < links.Count; i++)
                     {
                         var link = links[i];
                         if (link.Action is GoToURIAction uriAction)
@@ -268,14 +279,15 @@ Usage examples:
                         else if (link.Action is GoToAction)
                             sb.AppendLine($"  [{i}] Target: Page");
                     }
+
                     sb.AppendLine();
                     totalCount += links.Count;
                 }
             }
+
             sb.Insert(0, $"Total Links: {totalCount}\n\n");
         }
 
         return await Task.FromResult(sb.ToString());
     }
 }
-

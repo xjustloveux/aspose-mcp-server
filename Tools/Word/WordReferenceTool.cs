@@ -3,11 +3,15 @@ using Aspose.Words;
 using Aspose.Words.Fields;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Word;
 
+/// <summary>
+///     Tool for managing cross-references in Word documents
+/// </summary>
 public class WordReferenceTool : IAsposeTool
 {
-    public string Description => @"Manage references in Word documents. Supports 4 operations: add_table_of_contents, update_table_of_contents, add_index, add_cross_reference.
+    public string Description =>
+        @"Manage references in Word documents. Supports 4 operations: add_table_of_contents, update_table_of_contents, add_index, add_cross_reference.
 
 Usage examples:
 - Add table of contents: word_reference(operation='add_table_of_contents', path='doc.docx', title='Table of Contents', maxLevel=3)
@@ -28,7 +32,8 @@ Usage examples:
 - 'update_table_of_contents': Update table of contents (required params: path)
 - 'add_index': Add index (required params: path, entries)
 - 'add_cross_reference': Add cross-reference (required params: path, referenceType, targetText, displayText)",
-                @enum = new[] { "add_table_of_contents", "update_table_of_contents", "add_index", "add_cross_reference" }
+                @enum = new[]
+                    { "add_table_of_contents", "update_table_of_contents", "add_index", "add_cross_reference" }
             },
             path = new
             {
@@ -147,7 +152,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Adds a table of contents to the document
+    ///     Adds a table of contents to the document
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, optional outputPath, headingLevels</param>
     /// <returns>Success message</returns>
@@ -178,8 +183,10 @@ Usage examples:
             builder.ParagraphFormat.StyleIdentifier = StyleIdentifier.Normal;
         }
 
-        var switches = new List<string>();
-        switches.Add($"\\o \"1-{maxLevel}\"");
+        var switches = new List<string>
+        {
+            $"\\o \"1-{maxLevel}\""
+        };
 
         if (!hyperlinks)
             switches.Add("\\n");
@@ -198,7 +205,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Updates the table of contents
+    ///     Updates the table of contents
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, optional outputPath</param>
     /// <returns>Success message</returns>
@@ -212,20 +219,17 @@ Usage examples:
         var doc = new Document(path);
         // Search for TOC fields in the entire document (including headers/footers)
         var tocFields = doc.Range.Fields
-            .Cast<Field>()
             .Where(f => f.Type == FieldType.FieldTOC)
             .ToList();
 
         if (tocFields.Count == 0)
         {
             // Provide more helpful error message
-            var allFields = doc.Range.Fields.Cast<Field>().ToList();
+            var allFields = doc.Range.Fields.ToList();
             var fieldTypes = allFields.Select(f => f.Type.ToString()).Distinct().ToList();
             var message = "No table of contents fields found in document.";
             if (allFields.Count > 0)
-            {
                 message += $" Found {allFields.Count} field(s) of other types: {string.Join(", ", fieldTypes)}.";
-            }
             message += " Use 'add_table_of_contents' operation to add a table of contents first.";
             return await Task.FromResult(message);
         }
@@ -249,7 +253,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Adds an index to the document
+    ///     Adds an index to the document
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, optional outputPath, entries</param>
     /// <returns>Success message</returns>
@@ -266,7 +270,6 @@ Usage examples:
         var builder = new DocumentBuilder(doc);
 
         foreach (var entryObj in indexEntriesArray)
-        {
             if (entryObj is JsonObject entry)
             {
                 var text = entry["text"]?.GetValue<string>();
@@ -284,7 +287,6 @@ Usage examples:
                     builder.InsertField(xeField);
                 }
             }
-        }
 
         if (insertIndexAtEnd)
         {
@@ -297,11 +299,12 @@ Usage examples:
         }
 
         doc.Save(outputPath);
-        return await Task.FromResult($"Index entries added. Total entries: {indexEntriesArray.Count}. Output: {outputPath}");
+        return await Task.FromResult(
+            $"Index entries added. Total entries: {indexEntriesArray.Count}. Output: {outputPath}");
     }
 
     /// <summary>
-    /// Adds a cross-reference to the document
+    ///     Adds a cross-reference to the document
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, referenceType, target, optional outputPath</param>
     /// <returns>Success message</returns>
@@ -309,10 +312,10 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var referenceType = ArgumentHelper.GetString(arguments, "referenceType");
+        _ = ArgumentHelper.GetString(arguments, "referenceType");
         var referenceText = ArgumentHelper.GetStringNullable(arguments, "referenceText");
         var targetName = ArgumentHelper.GetString(arguments, "targetName");
-        var insertAsHyperlink = ArgumentHelper.GetBool(arguments, "insertAsHyperlink");
+        _ = ArgumentHelper.GetBool(arguments, "insertAsHyperlink");
         var includeAboveBelow = ArgumentHelper.GetBool(arguments, "includeAboveBelow", false);
 
         var doc = new Document(path);
@@ -330,4 +333,3 @@ Usage examples:
         return await Task.FromResult($"Cross-reference added: {outputPath}");
     }
 }
-

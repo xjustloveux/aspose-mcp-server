@@ -4,8 +4,11 @@ using Aspose.Pdf;
 using Aspose.Pdf.Forms;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Pdf;
 
+/// <summary>
+///     Tool for managing form fields in PDF documents (add, delete, edit, get)
+/// </summary>
 public class PdfFormFieldTool : IAsposeTool
 {
     public string Description => @"Manage form fields in PDF documents. Supports 4 operations: add, delete, edit, get.
@@ -111,9 +114,12 @@ Usage examples:
     }
 
     /// <summary>
-    /// Adds a form field to a PDF page
+    ///     Adds a form field to a PDF page
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, pageIndex, fieldType, name, x, y, width, height, optional defaultValue, outputPath</param>
+    /// <param name="arguments">
+    ///     JSON arguments containing path, pageIndex, fieldType, name, x, y, width, height, optional
+    ///     defaultValue, outputPath
+    /// </param>
     /// <returns>Success message</returns>
     private async Task<string> AddFormField(JsonObject? arguments)
     {
@@ -133,7 +139,7 @@ Usage examples:
             throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
 
         var page = document.Pages[pageIndex];
-        var rect = new Aspose.Pdf.Rectangle(x, y, x + width, y + height);
+        var rect = new Rectangle(x, y, x + width, y + height);
         Field field;
 
         switch (fieldType)
@@ -161,7 +167,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Deletes a form field from a PDF
+    ///     Deletes a form field from a PDF
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, fieldName, optional outputPath</param>
     /// <returns>Success message</returns>
@@ -181,7 +187,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Edits a form field in a PDF
+    ///     Edits a form field in a PDF
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, fieldName, optional value, x, y, width, height, outputPath</param>
     /// <returns>Success message</returns>
@@ -211,7 +217,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Gets all form fields from the PDF
+    ///     Gets all form fields from the PDF
     /// </summary>
     /// <param name="arguments">JSON arguments (no specific parameters required)</param>
     /// <returns>Formatted string with all form fields</returns>
@@ -233,7 +239,7 @@ Usage examples:
         sb.AppendLine($"Total Form Fields: {document.Form.Count}");
         sb.AppendLine();
 
-        foreach (Field field in document.Form)
+        foreach (var field in document.Form.Cast<Field>())
         {
             sb.AppendLine($"Name: {field.PartialName}");
             sb.AppendLine($"Type: {field.GetType().Name}");
@@ -247,4 +253,3 @@ Usage examples:
         return await Task.FromResult(sb.ToString());
     }
 }
-

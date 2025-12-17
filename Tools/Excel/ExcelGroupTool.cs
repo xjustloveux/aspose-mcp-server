@@ -2,15 +2,16 @@
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Excel;
 
 /// <summary>
-/// Unified tool for managing Excel groups (group/ungroup rows and columns)
-/// Merges: ExcelGroupRowsTool, ExcelUngroupRowsTool, ExcelGroupColumnsTool, ExcelUngroupColumnsTool
+///     Unified tool for managing Excel groups (group/ungroup rows and columns)
+///     Merges: ExcelGroupRowsTool, ExcelUngroupRowsTool, ExcelGroupColumnsTool, ExcelUngroupColumnsTool
 /// </summary>
 public class ExcelGroupTool : IAsposeTool
 {
-    public string Description => @"Manage Excel groups. Supports 4 operations: group_rows, ungroup_rows, group_columns, ungroup_columns.
+    /// <summary>    ///     Gets the description of the tool and its usage examples    /// </summary>    public string Description =>
+        @"Manage Excel groups. Supports 4 operations: group_rows, ungroup_rows, group_columns, ungroup_columns.
 
 Usage examples:
 - Group rows: excel_group(operation='group_rows', path='book.xlsx', startRow=1, endRow=5)
@@ -18,6 +19,9 @@ Usage examples:
 - Group columns: excel_group(operation='group_columns', path='book.xlsx', startColumn=1, endColumn=3)
 - Ungroup columns: excel_group(operation='ungroup_columns', path='book.xlsx', startColumn=1, endColumn=3)";
 
+    /// <summary>
+    ///     Gets the JSON schema defining the input parameters for the tool
+    /// </summary>
     public object InputSchema => new
     {
         type = "object",
@@ -94,7 +98,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Groups rows together
+    ///     Groups rows together
     /// </summary>
     /// <param name="arguments">JSON arguments containing startRow, endRow, optional isCollapsed</param>
     /// <param name="path">Excel file path</param>
@@ -116,7 +120,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Ungroups rows
+    ///     Ungroups rows
     /// </summary>
     /// <param name="arguments">JSON arguments containing startRow, endRow</param>
     /// <param name="path">Excel file path</param>
@@ -137,7 +141,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Groups columns together
+    ///     Groups columns together
     /// </summary>
     /// <param name="arguments">JSON arguments containing startColumn, endColumn, optional isCollapsed</param>
     /// <param name="path">Excel file path</param>
@@ -159,7 +163,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Ungroups columns
+    ///     Ungroups columns
     /// </summary>
     /// <param name="arguments">JSON arguments containing startColumn, endColumn</param>
     /// <param name="path">Excel file path</param>
@@ -176,7 +180,7 @@ Usage examples:
         worksheet.Cells.UngroupColumns(startColumn, endColumn);
 
         workbook.Save(outputPath);
-        return await Task.FromResult($"Columns {startColumn}-{endColumn} ungrouped in sheet {sheetIndex}: {outputPath}");
+        return await Task.FromResult(
+            $"Columns {startColumn}-{endColumn} ungrouped in sheet {sheetIndex}: {outputPath}");
     }
 }
-

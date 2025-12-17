@@ -1,14 +1,15 @@
-﻿using System.Text.Json.Nodes;
+﻿using System.Drawing;
 using System.Text;
+using System.Text.Json.Nodes;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Excel;
 
 /// <summary>
-/// Unified tool for managing Excel styles (create, apply, get, format cells)
-/// Merges: ExcelCreateStyleTool, ExcelApplyStyleTool, ExcelGetStylesTool, ExcelFormatCellsTool, 
-/// ExcelBatchFormatCellsTool, ExcelGetCellFormatTool, ExcelCopySheetFormatTool
+///     Unified tool for managing Excel styles (create, apply, get, format cells)
+///     Merges: ExcelCreateStyleTool, ExcelApplyStyleTool, ExcelGetStylesTool, ExcelFormatCellsTool,
+///     ExcelBatchFormatCellsTool, ExcelGetCellFormatTool, ExcelCopySheetFormatTool
 /// </summary>
 public class ExcelStyleTool : IAsposeTool
 {
@@ -56,12 +57,14 @@ Usage examples:
             range = new
             {
                 type = "string",
-                description = "Cell range (e.g., 'A1:C5', required for format, optional for get_format as alternative to cell)"
+                description =
+                    "Cell range (e.g., 'A1:C5', required for format, optional for get_format as alternative to cell)"
             },
             cell = new
             {
                 type = "string",
-                description = "Cell address or range (e.g., 'A1' or 'A1:C5', required for get_format, or use range as alternative)"
+                description =
+                    "Cell address or range (e.g., 'A1' or 'A1:C5', required for get_format, or use range as alternative)"
             },
             ranges = new
             {
@@ -137,7 +140,8 @@ Usage examples:
             outputPath = new
             {
                 type = "string",
-                description = "Output file path (optional, for format/copy_sheet_format operations, defaults to input path)"
+                description =
+                    "Output file path (optional, for format/copy_sheet_format operations, defaults to input path)"
             }
         },
         required = new[] { "operation", "path" }
@@ -159,7 +163,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Formats cells with specified style properties
+    ///     Formats cells with specified style properties
     /// </summary>
     /// <param name="arguments">JSON arguments containing ranges array and various format properties</param>
     /// <param name="path">Excel file path</param>
@@ -186,50 +190,42 @@ Usage examples:
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
         var style = workbook.CreateStyle();
 
-        if (!string.IsNullOrEmpty(fontName)) style.Font.Name = fontName;
-        if (fontSize.HasValue) style.Font.Size = fontSize.Value;
-        if (bold.HasValue) style.Font.IsBold = bold.Value;
-        if (italic.HasValue) style.Font.IsItalic = italic.Value;
-        if (!string.IsNullOrWhiteSpace(fontColor))
+        // Apply font settings using FontHelper
+        try
         {
-            try
-            {
-                style.Font.Color = ColorHelper.ParseColor(fontColor);
-            }
-            catch (Exception colorEx)
-            {
-                // Color parsing failed, but continue with other formatting
-                // The error will be visible in the result message if needed
-                throw new ArgumentException($"Unable to parse font color '{fontColor}': {colorEx.Message}. Please use a valid color format (e.g., #FF0000, 255,0,0, or red)");
-            }
+            FontHelper.Excel.ApplyFontSettings(
+                style,
+                fontName,
+                fontSize,
+                bold,
+                italic,
+                fontColor
+            );
         }
+        catch (Exception colorEx) when (colorEx is ArgumentException && !string.IsNullOrWhiteSpace(fontColor))
+        {
+            // Re-throw color parsing errors with context
+            throw new ArgumentException(
+                $"Unable to parse font color '{fontColor}': {colorEx.Message}. Please use a valid color format (e.g., #FF0000, 255,0,0, or red)");
+        }
+
         if (!string.IsNullOrWhiteSpace(backgroundColor))
         {
-            try
-            {
-                style.ForegroundColor = ColorHelper.ParseColor(backgroundColor);
-                style.Pattern = BackgroundType.Solid;
-            }
-            catch (Exception colorEx)
-            {
-                // Color parsing failed, but continue with other formatting
-                throw new ArgumentException($"Unable to parse background color '{backgroundColor}': {colorEx.Message}. Please use a valid color format (e.g., #FF0000 or red)");
-            }
+            // Parse color with error handling - throws ArgumentException on failure
+            style.ForegroundColor = ColorHelper.ParseColor(backgroundColor, true);
+            style.Pattern = BackgroundType.Solid;
         }
+
         if (!string.IsNullOrEmpty(numberFormat))
         {
             // Try to parse as built-in format number, otherwise use Custom
-            if (int.TryParse(numberFormat, out int formatNumber))
-            {
+            if (int.TryParse(numberFormat, out var formatNumber))
                 style.Number = formatNumber;
-            }
             else
-            {
                 style.Custom = numberFormat;
-            }
         }
+
         if (!string.IsNullOrEmpty(horizontalAlignment))
-        {
             style.HorizontalAlignment = horizontalAlignment.ToLower() switch
             {
                 "left" => TextAlignmentType.Left,
@@ -237,9 +233,7 @@ Usage examples:
                 "right" => TextAlignmentType.Right,
                 _ => TextAlignmentType.Left
             };
-        }
         if (!string.IsNullOrEmpty(verticalAlignment))
-        {
             style.VerticalAlignment = verticalAlignment.ToLower() switch
             {
                 "top" => TextAlignmentType.Top,
@@ -247,8 +241,7 @@ Usage examples:
                 "bottom" => TextAlignmentType.Bottom,
                 _ => TextAlignmentType.Center
             };
-        }
-        
+
         // Apply border settings
         if (!string.IsNullOrEmpty(borderStyle))
         {
@@ -263,20 +256,12 @@ Usage examples:
                 "double" => CellBorderType.Double,
                 _ => CellBorderType.Thin
             };
-            
-            System.Drawing.Color borderColorValue = System.Drawing.Color.Black;
+
+            var borderColorValue = Color.Black;
             if (!string.IsNullOrWhiteSpace(borderColor))
-            {
-                try
-                {
-                    borderColorValue = ColorHelper.ParseColor(borderColor);
-                }
-                catch (Exception colorEx)
-                {
-                    throw new ArgumentException($"Unable to parse border color '{borderColor}': {colorEx.Message}. Please use a valid color format (e.g., #FF0000, 255,0,0, or red)");
-                }
-            }
-            
+                // Parse color with error handling - throws ArgumentException on failure
+                borderColorValue = ColorHelper.ParseColor(borderColor, true);
+
             // Set borders for all sides
             style.SetBorder(BorderType.TopBorder, borderType, borderColorValue);
             style.SetBorder(BorderType.BottomBorder, borderType, borderColorValue);
@@ -285,14 +270,13 @@ Usage examples:
         }
 
         // Create StyleFlag to specify which style properties to apply
-        var styleFlag = new StyleFlag();
-        styleFlag.All = true;
-        if (!string.IsNullOrEmpty(borderStyle))
+        var styleFlag = new StyleFlag
         {
-            styleFlag.Borders = true;
-        }
+            All = true,
+            Borders = !string.IsNullOrEmpty(borderStyle)
+        };
 
-        if (rangesArray != null && rangesArray.Count > 0)
+        if (rangesArray is { Count: > 0 })
         {
             foreach (var rangeNode in rangesArray)
             {
@@ -319,7 +303,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Gets format information for a cell
+    ///     Gets format information for a cell
     /// </summary>
     /// <param name="arguments">JSON arguments containing cell</param>
     /// <param name="path">Excel file path</param>
@@ -329,12 +313,10 @@ Usage examples:
     {
         var cell = ArgumentHelper.GetStringNullable(arguments, "cell");
         var range = ArgumentHelper.GetStringNullable(arguments, "range");
-        
+
         if (string.IsNullOrEmpty(cell) && string.IsNullOrEmpty(range))
-        {
             throw new ArgumentException("Either cell or range is required for get_format operation");
-        }
-        
+
         var cellOrRange = cell ?? range!;
 
         using var workbook = new Workbook(path);
@@ -352,42 +334,40 @@ Usage examples:
             var startCol = cellRange.FirstColumn;
             var endCol = cellRange.FirstColumn + cellRange.ColumnCount - 1;
 
-            for (int row = startRow; row <= endRow; row++)
+            for (var row = startRow; row <= endRow; row++)
+            for (var col = startCol; col <= endCol; col++)
             {
-                for (int col = startCol; col <= endCol; col++)
-                {
-                    var cellObj = cells[row, col];
-                    var style = cellObj.GetStyle();
-                    
-                    result.AppendLine($"[Cell {CellsHelper.CellIndexToName(row, col)}]");
-                    result.AppendLine($"Value: {cellObj.Value ?? "(empty)"}");
-                    result.AppendLine($"Formula: {cellObj.Formula ?? "(none)"}");
-                    result.AppendLine($"Data type: {cellObj.Type}");
-                    result.AppendLine();
-                    
-                    result.AppendLine("Format information:");
-                    result.AppendLine($"  Font: {style.Font.Name}, Size: {style.Font.Size}");
-                    result.AppendLine($"  Bold: {style.Font.IsBold}, Italic: {style.Font.IsItalic}");
-                    result.AppendLine($"  Underline: {style.Font.Underline}, Strikethrough: {style.Font.IsStrikeout}");
-                    result.AppendLine($"  Font color: {style.Font.Color}");
-                    result.AppendLine($"  Background color: {style.BackgroundColor}");
-                    result.AppendLine($"  Number format: {style.Number}");
-                    result.AppendLine($"  Horizontal alignment: {style.HorizontalAlignment}");
-                    result.AppendLine($"  Vertical alignment: {style.VerticalAlignment}");
-                    
-                    // Add border information
-                    result.AppendLine("  Border information:");
-                    var topBorder = style.Borders[BorderType.TopBorder];
-                    var bottomBorder = style.Borders[BorderType.BottomBorder];
-                    var leftBorder = style.Borders[BorderType.LeftBorder];
-                    var rightBorder = style.Borders[BorderType.RightBorder];
-                    
-                    result.AppendLine($"    Top border: {topBorder.LineStyle} ({topBorder.Color})");
-                    result.AppendLine($"    Bottom border: {bottomBorder.LineStyle} ({bottomBorder.Color})");
-                    result.AppendLine($"    Left border: {leftBorder.LineStyle} ({leftBorder.Color})");
-                    result.AppendLine($"    Right border: {rightBorder.LineStyle} ({rightBorder.Color})");
-                    result.AppendLine();
-                }
+                var cellObj = cells[row, col];
+                var style = cellObj.GetStyle();
+
+                result.AppendLine($"[Cell {CellsHelper.CellIndexToName(row, col)}]");
+                result.AppendLine($"Value: {cellObj.Value ?? "(empty)"}");
+                result.AppendLine($"Formula: {cellObj.Formula ?? "(none)"}");
+                result.AppendLine($"Data type: {cellObj.Type}");
+                result.AppendLine();
+
+                result.AppendLine("Format information:");
+                result.AppendLine($"  Font: {style.Font.Name}, Size: {style.Font.Size}");
+                result.AppendLine($"  Bold: {style.Font.IsBold}, Italic: {style.Font.IsItalic}");
+                result.AppendLine($"  Underline: {style.Font.Underline}, Strikethrough: {style.Font.IsStrikeout}");
+                result.AppendLine($"  Font color: {style.Font.Color}");
+                result.AppendLine($"  Background color: {style.BackgroundColor}");
+                result.AppendLine($"  Number format: {style.Number}");
+                result.AppendLine($"  Horizontal alignment: {style.HorizontalAlignment}");
+                result.AppendLine($"  Vertical alignment: {style.VerticalAlignment}");
+
+                // Add border information
+                result.AppendLine("  Border information:");
+                var topBorder = style.Borders[BorderType.TopBorder];
+                var bottomBorder = style.Borders[BorderType.BottomBorder];
+                var leftBorder = style.Borders[BorderType.LeftBorder];
+                var rightBorder = style.Borders[BorderType.RightBorder];
+
+                result.AppendLine($"    Top border: {topBorder.LineStyle} ({topBorder.Color})");
+                result.AppendLine($"    Bottom border: {bottomBorder.LineStyle} ({bottomBorder.Color})");
+                result.AppendLine($"    Left border: {leftBorder.LineStyle} ({leftBorder.Color})");
+                result.AppendLine($"    Right border: {rightBorder.LineStyle} ({rightBorder.Color})");
+                result.AppendLine();
             }
         }
         catch
@@ -399,7 +379,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Copies format from source sheet to destination sheet
+    ///     Copies format from source sheet to destination sheet
     /// </summary>
     /// <param name="arguments">JSON arguments containing sourceSheetIndex and destSheetIndex</param>
     /// <param name="path">Excel file path</param>
@@ -417,23 +397,15 @@ Usage examples:
         var targetSheet = ExcelHelper.GetWorksheet(workbook, targetSheetIndex);
 
         if (copyColumnWidths)
-        {
-            for (int i = 0; i <= sourceSheet.Cells.MaxDataColumn; i++)
-            {
+            for (var i = 0; i <= sourceSheet.Cells.MaxDataColumn; i++)
                 targetSheet.Cells.SetColumnWidth(i, sourceSheet.Cells.GetColumnWidth(i));
-            }
-        }
 
         if (copyRowHeights)
-        {
-            for (int i = 0; i <= sourceSheet.Cells.MaxDataRow; i++)
-            {
+            for (var i = 0; i <= sourceSheet.Cells.MaxDataRow; i++)
                 targetSheet.Cells.SetRowHeight(i, sourceSheet.Cells.GetRowHeight(i));
-            }
-        }
 
         workbook.Save(outputPath);
-        return await Task.FromResult($"Sheet format copied from sheet {sourceSheetIndex} to sheet {targetSheetIndex}: {outputPath}");
+        return await Task.FromResult(
+            $"Sheet format copied from sheet {sourceSheetIndex} to sheet {targetSheetIndex}: {outputPath}");
     }
 }
-

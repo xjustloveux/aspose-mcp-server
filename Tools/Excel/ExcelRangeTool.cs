@@ -1,18 +1,21 @@
-﻿using System.Text.Json.Nodes;
+﻿using System.Globalization;
 using System.Text;
+using System.Text.Json.Nodes;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
+using Range = Aspose.Cells.Range;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Excel;
 
 /// <summary>
-/// Unified tool for managing Excel ranges (write, edit, get, clear, copy, move, copy_format)
-/// Merges: ExcelWriteRangeTool, ExcelEditRangeTool, ExcelGetRangeTool, ExcelClearRangeTool, 
-/// ExcelCopyRangeTool, ExcelMoveRangeTool, ExcelCopyFormatTool
+///     Unified tool for managing Excel ranges (write, edit, get, clear, copy, move, copy_format)
+///     Merges: ExcelWriteRangeTool, ExcelEditRangeTool, ExcelGetRangeTool, ExcelClearRangeTool,
+///     ExcelCopyRangeTool, ExcelMoveRangeTool, ExcelCopyFormatTool
 /// </summary>
 public class ExcelRangeTool : IAsposeTool
 {
-    public string Description => @"Manage Excel ranges. Supports 7 operations: write, edit, get, clear, copy, move, copy_format.
+    public string Description =>
+        @"Manage Excel ranges. Supports 7 operations: write, edit, get, clear, copy, move, copy_format.
 
 Usage examples:
 - Write range: excel_range(operation='write', path='book.xlsx', startCell='A1', data=[['A','B'],['C','D']])
@@ -69,27 +72,32 @@ Usage examples:
             range = new
             {
                 type = "string",
-                description = "Source cell range (e.g., 'A1:C5', required for edit/get/clear operations, optional for copy_format - can use sourceRange instead)"
+                description =
+                    "Source cell range (e.g., 'A1:C5', required for edit/get/clear operations, optional for copy_format - can use sourceRange instead)"
             },
             sourceRange = new
             {
                 type = "string",
-                description = "Source range (e.g., 'A1:C5', required for copy/move, optional for copy_format as alternative to range)"
+                description =
+                    "Source range (e.g., 'A1:C5', required for copy/move, optional for copy_format as alternative to range)"
             },
             destCell = new
             {
                 type = "string",
-                description = "Destination cell (top-left cell, e.g., 'E1', required for copy/move, optional for copy_format as alternative to destRange)"
+                description =
+                    "Destination cell (top-left cell, e.g., 'E1', required for copy/move, optional for copy_format as alternative to destRange)"
             },
             destRange = new
             {
                 type = "string",
-                description = "Destination range (e.g., 'E1:G5', required for copy_format, or use destCell for single cell)"
+                description =
+                    "Destination range (e.g., 'E1:G5', required for copy_format, or use destCell for single cell)"
             },
             data = new
             {
                 type = "array",
-                description = "2D array of data to write",
+                description =
+                    "Data to write. Supports two formats: 1) 2D array: [[\"value1\", \"value2\"], [\"value3\", \"value4\"]], or 2) Object array: [{\"cell\": \"A1\", \"value\": \"10\"}, {\"cell\": \"B1\", \"value\": \"20\"}]",
                 items = new
                 {
                     type = "array",
@@ -114,7 +122,8 @@ Usage examples:
             clearContent = new
             {
                 type = "boolean",
-                description = "Clear cell content (required for clear operation, default: true). Set clearContent=true to clear cell content, or clearContent=false to keep content."
+                description =
+                    "Clear cell content (required for clear operation, default: true). Set clearContent=true to clear cell content, or clearContent=false to keep content."
             },
             clearFormat = new
             {
@@ -124,7 +133,8 @@ Usage examples:
             copyOptions = new
             {
                 type = "string",
-                description = "Copy options: 'All', 'Values', 'Formats', 'Formulas' (optional, for copy, default: 'All')",
+                description =
+                    "Copy options: 'All', 'Values', 'Formats', 'Formulas' (optional, for copy, default: 'All')",
                 @enum = new[] { "All", "Values", "Formats", "Formulas" }
             },
             copyValue = new
@@ -135,7 +145,8 @@ Usage examples:
             outputPath = new
             {
                 type = "string",
-                description = "Output file path (optional, for write/edit/clear/copy/move/copy_format operations, defaults to input path)"
+                description =
+                    "Output file path (optional, for write/edit/clear/copy/move/copy_format operations, defaults to input path)"
             }
         },
         required = new[] { "operation", "path" }
@@ -161,7 +172,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Writes data to a range starting at the specified cell
+    ///     Writes data to a range starting at the specified cell
     /// </summary>
     /// <param name="arguments">JSON arguments containing startCell and data array</param>
     /// <param name="path">Excel file path</param>
@@ -175,33 +186,58 @@ Usage examples:
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
         var startCellObj = worksheet.Cells[startCell];
-        int startRow = startCellObj.Row;
-        int startCol = startCellObj.Column;
+        var startRow = startCellObj.Row;
+        var startCol = startCellObj.Column;
 
-        for (int i = 0; i < dataArray.Count; i++)
+        for (var i = 0; i < dataArray.Count; i++)
         {
-            var rowArray = dataArray[i]?.AsArray();
-            if (rowArray != null)
+            var item = dataArray[i];
+
+            // Support both formats:
+            // 1. 2D array format: [["value1", "value2"], ["value3", "value4"]]
+            // 2. Object array format: [{"cell": "A1", "value": "10"}, {"cell": "B1", "value": "20"}]
+            if (item is JsonObject itemObj)
             {
-                for (int j = 0; j < rowArray.Count; j++)
+                // Object format: {"cell": "A1", "value": "10"}
+                var cellRef = itemObj["cell"]?.GetValue<string>();
+                var cellValue = itemObj["value"]?.GetValue<string>() ?? "";
+
+                if (!string.IsNullOrEmpty(cellRef))
+                {
+                    var cellObj = worksheet.Cells[cellRef];
+
+                    // Parse value as number, boolean, or string
+                    if (double.TryParse(cellValue, NumberStyles.Any, CultureInfo.InvariantCulture, out var numValue))
+                        cellObj.PutValue(numValue);
+                    else if (bool.TryParse(cellValue, out var boolValue))
+                        cellObj.PutValue(boolValue);
+                    else
+                        cellObj.PutValue(cellValue);
+                }
+            }
+            else if (item is JsonArray rowArray)
+            {
+                // 2D array format: ["value1", "value2"]
+                for (var j = 0; j < rowArray.Count; j++)
                 {
                     var cellValue = rowArray[j]?.GetValue<string>() ?? "";
                     var cellObj = worksheet.Cells[startRow + i, startCol + j];
-                    
+
                     // Parse value as number, boolean, or string
-                    if (double.TryParse(cellValue, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double numValue))
-                    {
+                    // Ensures formulas can correctly identify numeric values (same as excel_cell write)
+                    if (double.TryParse(cellValue, NumberStyles.Any, CultureInfo.InvariantCulture, out var numValue))
+                        // Use PutValue with number to ensure Excel recognizes it as numeric type
                         cellObj.PutValue(numValue);
-                    }
-                    else if (bool.TryParse(cellValue, out bool boolValue))
-                    {
+                    else if (bool.TryParse(cellValue, out var boolValue))
                         cellObj.PutValue(boolValue);
-                    }
                     else
-                    {
                         cellObj.PutValue(cellValue);
-                    }
                 }
+            }
+            else
+            {
+                throw new ArgumentException(
+                    $"Invalid data format at index {i}. Expected array of arrays (2D) or array of objects with 'cell' and 'value' properties. Got: {item?.GetType().Name ?? "null"}");
             }
         }
 
@@ -211,7 +247,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Edits data in an existing range
+    ///     Edits data in an existing range
     /// </summary>
     /// <param name="arguments">JSON arguments containing range, data array, and optional clearRange</param>
     /// <param name="path">Excel file path</param>
@@ -226,48 +262,36 @@ Usage examples:
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
         var cells = worksheet.Cells;
-        
+
         var cellRange = ExcelHelper.CreateRange(cells, range);
 
         if (clearRange)
-        {
-            for (int i = cellRange.FirstRow; i <= cellRange.FirstRow + cellRange.RowCount - 1; i++)
-            {
-                for (int j = cellRange.FirstColumn; j <= cellRange.FirstColumn + cellRange.ColumnCount - 1; j++)
-                {
-                    cells[i, j].PutValue("");
-                }
-            }
-        }
+            for (var i = cellRange.FirstRow; i <= cellRange.FirstRow + cellRange.RowCount - 1; i++)
+            for (var j = cellRange.FirstColumn; j <= cellRange.FirstColumn + cellRange.ColumnCount - 1; j++)
+                cells[i, j].PutValue("");
 
         var startRow = cellRange.FirstRow;
         var startCol = cellRange.FirstColumn;
 
-        for (int i = 0; i < dataArray.Count; i++)
+        for (var i = 0; i < dataArray.Count; i++)
         {
             var rowArray = dataArray[i]?.AsArray();
             if (rowArray != null)
-            {
-                for (int j = 0; j < rowArray.Count; j++)
+                for (var j = 0; j < rowArray.Count; j++)
                 {
                     var value = rowArray[j]?.GetValue<string>() ?? "";
                     var cellObj = cells[startRow + i, startCol + j];
-                    
+
                     // Parse value as number, boolean, or string
-                    if (double.TryParse(value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double numValue))
-                    {
+                    // Ensures formulas can correctly identify numeric values (same as excel_cell write)
+                    if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var numValue))
+                        // Use PutValue with number to ensure Excel recognizes it as numeric type
                         cellObj.PutValue(numValue);
-                    }
-                    else if (bool.TryParse(value, out bool boolValue))
-                    {
+                    else if (bool.TryParse(value, out var boolValue))
                         cellObj.PutValue(boolValue);
-                    }
                     else
-                    {
                         cellObj.PutValue(value);
-                    }
                 }
-            }
         }
 
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
@@ -276,7 +300,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Gets data from a range
+    ///     Gets data from a range
     /// </summary>
     /// <param name="arguments">JSON arguments containing range and optional includeFormulas, includeFormat</param>
     /// <param name="path">Excel file path</param>
@@ -290,15 +314,13 @@ Usage examples:
 
         using var workbook = new Workbook(path);
         if (sheetIndex < 0 || sheetIndex >= workbook.Worksheets.Count)
-        {
             throw new ArgumentException($"sheetIndex must be between 0 and {workbook.Worksheets.Count - 1}");
-        }
 
         workbook.CalculateFormula();
 
         var worksheet = workbook.Worksheets[sheetIndex];
         var cells = worksheet.Cells;
-        
+
         var cellRange = ExcelHelper.CreateRange(cells, range);
 
         var sb = new StringBuilder();
@@ -306,13 +328,13 @@ Usage examples:
         sb.AppendLine($"Rows: {cellRange.RowCount}, Columns: {cellRange.ColumnCount}");
         sb.AppendLine();
 
-        for (int i = 0; i < cellRange.RowCount; i++)
+        for (var i = 0; i < cellRange.RowCount; i++)
         {
-            for (int j = 0; j < cellRange.ColumnCount; j++)
+            for (var j = 0; j < cellRange.ColumnCount; j++)
             {
                 var cell = cells[cellRange.FirstRow + i, cellRange.FirstColumn + j];
                 var cellRef = CellsHelper.CellIndexToName(cellRange.FirstRow + i, cellRange.FirstColumn + j);
-                
+
                 if (includeFormulas && !string.IsNullOrEmpty(cell.Formula))
                 {
                     sb.Append($"{cellRef}: {cell.Formula}");
@@ -323,24 +345,19 @@ Usage examples:
                     if (!string.IsNullOrEmpty(cell.Formula))
                     {
                         displayValue = cell.Value;
-                        if (displayValue is CellValueType cellType && cellType == CellValueType.IsError)
-                        {
+                        if (displayValue is CellValueType.IsError)
                             displayValue = cell.DisplayStringValue;
-                        }
                         if (displayValue == null || (displayValue is string str && string.IsNullOrEmpty(str)))
                         {
                             displayValue = cell.DisplayStringValue;
-                            if (string.IsNullOrEmpty(displayValue?.ToString()))
-                            {
-                                displayValue = cell.Formula;
-                            }
+                            if (string.IsNullOrEmpty(displayValue?.ToString())) displayValue = cell.Formula;
                         }
                     }
                     else
                     {
                         displayValue = cell.Value ?? cell.DisplayStringValue;
                     }
-                    
+
                     sb.Append($"{cellRef}: {displayValue ?? "(empty)"}");
                 }
 
@@ -350,11 +367,9 @@ Usage examples:
                     sb.Append($" [Font: {style.Font.Name}, Size: {style.Font.Size}]");
                 }
 
-                if (j < cellRange.ColumnCount - 1)
-                {
-                    sb.Append(" | ");
-                }
+                if (j < cellRange.ColumnCount - 1) sb.Append(" | ");
             }
+
             sb.AppendLine();
         }
 
@@ -362,7 +377,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Clears content and/or format from a range
+    ///     Clears content and/or format from a range
     /// </summary>
     /// <param name="arguments">JSON arguments containing range and optional clearContent, clearFormat</param>
     /// <param name="path">Excel file path</param>
@@ -377,30 +392,24 @@ Usage examples:
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
         var cells = worksheet.Cells;
-        
+
         var cellRange = ExcelHelper.CreateRange(cells, range);
 
         if (clearContent && clearFormat)
         {
-            for (int i = cellRange.FirstRow; i <= cellRange.FirstRow + cellRange.RowCount - 1; i++)
+            for (var i = cellRange.FirstRow; i <= cellRange.FirstRow + cellRange.RowCount - 1; i++)
+            for (var j = cellRange.FirstColumn; j <= cellRange.FirstColumn + cellRange.ColumnCount - 1; j++)
             {
-                for (int j = cellRange.FirstColumn; j <= cellRange.FirstColumn + cellRange.ColumnCount - 1; j++)
-                {
-                    cells[i, j].PutValue("");
-                    var defaultStyle = workbook.CreateStyle();
-                    cells[i, j].SetStyle(defaultStyle);
-                }
+                cells[i, j].PutValue("");
+                var defaultStyle = workbook.CreateStyle();
+                cells[i, j].SetStyle(defaultStyle);
             }
         }
         else if (clearContent)
         {
-            for (int i = cellRange.FirstRow; i <= cellRange.FirstRow + cellRange.RowCount - 1; i++)
-            {
-                for (int j = cellRange.FirstColumn; j <= cellRange.FirstColumn + cellRange.ColumnCount - 1; j++)
-                {
-                    cells[i, j].PutValue("");
-                }
-            }
+            for (var i = cellRange.FirstRow; i <= cellRange.FirstRow + cellRange.RowCount - 1; i++)
+            for (var j = cellRange.FirstColumn; j <= cellRange.FirstColumn + cellRange.ColumnCount - 1; j++)
+                cells[i, j].PutValue("");
         }
         else if (clearFormat)
         {
@@ -414,9 +423,12 @@ Usage examples:
     }
 
     /// <summary>
-    /// Copies a range to another location
+    ///     Copies a range to another location
     /// </summary>
-    /// <param name="arguments">JSON arguments containing sourceRange, destCell, optional sourceSheetIndex, destSheetIndex, copyOptions</param>
+    /// <param name="arguments">
+    ///     JSON arguments containing sourceRange, destCell, optional sourceSheetIndex, destSheetIndex,
+    ///     copyOptions
+    /// </param>
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message with copy details</returns>
@@ -433,8 +445,8 @@ Usage examples:
         var destSheetIdx = destSheetIndex ?? sourceSheetIndex;
         var destSheet = ExcelHelper.GetWorksheet(workbook, destSheetIdx);
 
-        Aspose.Cells.Range sourceRangeObj;
-        Aspose.Cells.Range destRangeObj;
+        Range sourceRangeObj;
+        Range destRangeObj;
         try
         {
             sourceRangeObj = sourceSheet.Cells.CreateRange(sourceRange);
@@ -442,7 +454,8 @@ Usage examples:
         }
         catch (Exception ex)
         {
-            throw new ArgumentException($"Invalid range format. Source range: '{sourceRange}', Destination cell: '{destCell}'. Range exceeds Excel limits (valid range: A1:XFD1048576). Error: {ex.Message}");
+            throw new ArgumentException(
+                $"Invalid range format. Source range: '{sourceRange}', Destination cell: '{destCell}'. Range exceeds Excel limits (valid range: A1:XFD1048576). Error: {ex.Message}");
         }
 
         var copyOptionsEnum = copyOptions switch
@@ -461,7 +474,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Moves a range to another location
+    ///     Moves a range to another location
     /// </summary>
     /// <param name="arguments">JSON arguments containing sourceRange, destCell, optional sourceSheetIndex, destSheetIndex</param>
     /// <param name="path">Excel file path</param>
@@ -484,13 +497,9 @@ Usage examples:
 
         destRangeObj.Copy(sourceRangeObj, new PasteOptions { PasteType = PasteType.All });
 
-        for (int i = sourceRangeObj.FirstRow; i <= sourceRangeObj.FirstRow + sourceRangeObj.RowCount - 1; i++)
-        {
-            for (int j = sourceRangeObj.FirstColumn; j <= sourceRangeObj.FirstColumn + sourceRangeObj.ColumnCount - 1; j++)
-            {
-                sourceSheet.Cells[i, j].PutValue("");
-            }
-        }
+        for (var i = sourceRangeObj.FirstRow; i <= sourceRangeObj.FirstRow + sourceRangeObj.RowCount - 1; i++)
+        for (var j = sourceRangeObj.FirstColumn; j <= sourceRangeObj.FirstColumn + sourceRangeObj.ColumnCount - 1; j++)
+            sourceSheet.Cells[i, j].PutValue("");
 
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         workbook.Save(outputPath);
@@ -498,7 +507,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Copies format (and optionally values) from source range to destination
+    ///     Copies format (and optionally values) from source range to destination
     /// </summary>
     /// <param name="arguments">JSON arguments containing range or sourceRange, destRange or destCell, optional copyValue</param>
     /// <param name="path">Excel file path</param>
@@ -510,25 +519,26 @@ Usage examples:
         var range = ArgumentHelper.GetString(arguments, "range", "sourceRange", "range or sourceRange");
         var destRange = ArgumentHelper.GetString(arguments, "destRange", false);
         var destCell = ArgumentHelper.GetString(arguments, "destCell", false);
-        
+
         if (string.IsNullOrEmpty(destRange) && string.IsNullOrEmpty(destCell))
-        {
-            throw new ArgumentException("Either destRange or destCell is required for copy_format operation. Example: range='A1:C5', destRange='E1:G5' or destCell='E1'");
-        }
-        
+            throw new ArgumentException(
+                "Either destRange or destCell is required for copy_format operation. Example: range='A1:C5', destRange='E1:G5' or destCell='E1'");
+
         var copyValue = ArgumentHelper.GetBool(arguments, "copyValue", false);
 
         using var workbook = new Workbook(path);
-        
+
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
         var cells = worksheet.Cells;
-        
+
         var destTarget = destRange ?? destCell!;
         var sourceCellRange = ExcelHelper.CreateRange(cells, range, "source range");
         var destCellRange = ExcelHelper.CreateRange(cells, destTarget, "destination");
 
-        var pasteOptions = new PasteOptions();
-        pasteOptions.PasteType = copyValue ? PasteType.All : PasteType.Formats;
+        var pasteOptions = new PasteOptions
+        {
+            PasteType = copyValue ? PasteType.All : PasteType.Formats
+        };
 
         destCellRange.Copy(sourceCellRange, pasteOptions);
 
@@ -536,13 +546,9 @@ Usage examples:
         workbook.Save(outputPath);
 
         var result = "Format copied";
-        if (copyValue)
-        {
-            result += " with values";
-        }
+        if (copyValue) result += " with values";
         result += $"\nSource range: {range}\nDestination: {destTarget}\nOutput: {outputPath}";
 
         return await Task.FromResult(result);
     }
 }
-

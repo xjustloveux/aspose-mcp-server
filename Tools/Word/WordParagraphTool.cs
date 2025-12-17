@@ -1,18 +1,21 @@
-﻿using System.Text;
+﻿using System.Drawing;
+using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Words;
+using Aspose.Words.Drawing;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Word;
 
 /// <summary>
-/// Unified tool for paragraph operations in Word documents
-/// Merges: WordInsertParagraphTool, WordDeleteParagraphTool, WordEditParagraphTool,
-/// WordGetParagraphsTool, WordGetParagraphFormatTool, WordCopyParagraphFormatTool, WordMergeParagraphsTool
+///     Unified tool for paragraph operations in Word documents
+///     Merges: WordInsertParagraphTool, WordDeleteParagraphTool, WordEditParagraphTool,
+///     WordGetParagraphsTool, WordGetParagraphFormatTool, WordCopyParagraphFormatTool, WordMergeParagraphsTool
 /// </summary>
 public class WordParagraphTool : IAsposeTool
 {
-    public string Description => @"Manage paragraphs in Word documents. Supports 7 operations: insert, delete, edit, get, get_format, copy_format, merge.
+    public string Description =>
+        @"Manage paragraphs in Word documents. Supports 7 operations: insert, delete, edit, get, get_format, copy_format, merge.
 
 Usage examples:
 - Insert paragraph: word_paragraph(operation='insert', path='doc.docx', paragraphIndex=0, text='New paragraph')
@@ -61,7 +64,8 @@ Important notes for 'get' operation:
             paragraphIndex = new
             {
                 type = "number",
-                description = "Paragraph index (0-based, required for delete, edit, get_format operations, optional for insert/get operations). Valid range: 0 to (total paragraphs - 1), or -1 for last paragraph. Note: After delete operations, subsequent paragraph indices will shift automatically."
+                description =
+                    "Paragraph index (0-based, required for delete, edit, get_format operations, optional for insert/get operations). Valid range: 0 to (total paragraphs - 1), or -1 for last paragraph. Note: After delete operations, subsequent paragraph indices will shift automatically."
             },
             // Insert parameters
             text = new
@@ -99,18 +103,21 @@ Important notes for 'get' operation:
             includeCommentParagraphs = new
             {
                 type = "boolean",
-                description = "Include paragraphs inside Comment objects (optional, default: true, for get operation). Set to false to get only Body paragraphs (visible in document body). Note: This returns the document's underlying structure, including Comment content that is not visible in the body."
+                description =
+                    "Include paragraphs inside Comment objects (optional, default: true, for get operation). Set to false to get only Body paragraphs (visible in document body). Note: This returns the document's underlying structure, including Comment content that is not visible in the body."
             },
             includeTextboxParagraphs = new
             {
                 type = "boolean",
-                description = "Include paragraphs inside TextBox/Shape objects (optional, default: true, for get operation). Set to false to exclude textbox paragraphs. Note: Textbox paragraphs are marked with [TextBox] in the location field."
+                description =
+                    "Include paragraphs inside TextBox/Shape objects (optional, default: true, for get operation). Set to false to exclude textbox paragraphs. Note: Textbox paragraphs are marked with [TextBox] in the location field."
             },
             // Get format parameters
             includeRunDetails = new
             {
                 type = "boolean",
-                description = "Include detailed run-level formatting (optional, default: true, for get_format operation)"
+                description =
+                    "Include detailed run-level formatting (optional, default: true, for get_format operation)"
             },
             // Edit parameters
             fontName = new
@@ -126,7 +133,8 @@ Important notes for 'get' operation:
             fontNameFarEast = new
             {
                 type = "string",
-                description = "Font name for Far East characters (Chinese/Japanese/Korean, optional, for edit operation)"
+                description =
+                    "Font name for Far East characters (Chinese/Japanese/Korean, optional, for edit operation)"
             },
             fontSize = new
             {
@@ -166,7 +174,8 @@ Important notes for 'get' operation:
             firstLineIndent = new
             {
                 type = "number",
-                description = "First line indent in points (positive for indent, negative for hanging, optional, for insert/edit operations)"
+                description =
+                    "First line indent in points (positive for indent, negative for hanging, optional, for insert/edit operations)"
             },
             spaceBefore = new
             {
@@ -181,12 +190,14 @@ Important notes for 'get' operation:
             lineSpacing = new
             {
                 type = "number",
-                description = "Line spacing (points or multiplier depending on lineSpacingRule, optional, for edit operation)"
+                description =
+                    "Line spacing (points or multiplier depending on lineSpacingRule, optional, for edit operation)"
             },
             lineSpacingRule = new
             {
                 type = "string",
-                description = "Line spacing rule: single, oneAndHalf, double, atLeast, exactly, multiple (optional, for edit operation)",
+                description =
+                    "Line spacing rule: single, oneAndHalf, double, atLeast, exactly, multiple (optional, for edit operation)",
                 @enum = new[] { "single", "oneAndHalf", "double", "atLeast", "exactly", "multiple" }
             },
             tabStops = new
@@ -199,8 +210,12 @@ Important notes for 'get' operation:
                     properties = new
                     {
                         position = new { type = "number" },
-                        alignment = new { type = "string", @enum = new[] { "left", "center", "right", "decimal", "bar", "clear" } },
-                        leader = new { type = "string", @enum = new[] { "none", "dots", "dashes", "line", "heavy", "middleDot" } }
+                        alignment = new
+                            { type = "string", @enum = new[] { "left", "center", "right", "decimal", "bar", "clear" } },
+                        leader = new
+                        {
+                            type = "string", @enum = new[] { "none", "dots", "dashes", "line", "heavy", "middleDot" }
+                        }
                     }
                 }
             },
@@ -251,7 +266,7 @@ Important notes for 'get' operation:
     }
 
     /// <summary>
-    /// Inserts a paragraph into the document
+    ///     Inserts a paragraph into the document
     /// </summary>
     /// <param name="arguments">JSON arguments containing text, optional paragraphIndex, styleName, formatting options</param>
     /// <param name="path">Word document file path</param>
@@ -271,10 +286,10 @@ Important notes for 'get' operation:
 
         var doc = new Document(path);
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
-        
+
         Paragraph? targetPara = null;
-        string insertPosition = "end of document";
-        
+        var insertPosition = "end of document";
+
         if (paragraphIndex.HasValue)
         {
             if (paragraphIndex.Value == -1)
@@ -292,7 +307,8 @@ Important notes for 'get' operation:
             }
             else
             {
-                throw new ArgumentException($"Paragraph index {paragraphIndex.Value} is out of range (document has {paragraphs.Count} paragraphs)");
+                throw new ArgumentException(
+                    $"Paragraph index {paragraphIndex.Value} is out of range (document has {paragraphs.Count} paragraphs)");
             }
         }
 
@@ -301,18 +317,14 @@ Important notes for 'get' operation:
         para.AppendChild(run);
 
         if (!string.IsNullOrEmpty(styleName))
-        {
             try
             {
                 var style = doc.Styles[styleName];
                 if (style != null)
-                {
                     para.ParagraphFormat.StyleName = styleName;
-                }
                 else
-                {
-                    throw new ArgumentException($"Style '{styleName}' not found. Use word_get_styles tool to view available styles");
-                }
+                    throw new ArgumentException(
+                        $"Style '{styleName}' not found. Use word_get_styles tool to view available styles");
             }
             catch (ArgumentException)
             {
@@ -320,12 +332,12 @@ Important notes for 'get' operation:
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"Unable to apply style '{styleName}': {ex.Message}. Use word_get_styles tool to view available styles", ex);
+                throw new InvalidOperationException(
+                    $"Unable to apply style '{styleName}': {ex.Message}. Use word_get_styles tool to view available styles",
+                    ex);
             }
-        }
 
         if (!string.IsNullOrEmpty(alignment))
-        {
             para.ParagraphFormat.Alignment = alignment.ToLower() switch
             {
                 "left" => ParagraphAlignment.Left,
@@ -334,44 +346,24 @@ Important notes for 'get' operation:
                 "justify" => ParagraphAlignment.Justify,
                 _ => ParagraphAlignment.Left
             };
-        }
-        
+
         // Apply indentation and spacing
-        if (indentLeft.HasValue)
-        {
-            para.ParagraphFormat.LeftIndent = indentLeft.Value;
-        }
-        
-        if (indentRight.HasValue)
-        {
-            para.ParagraphFormat.RightIndent = indentRight.Value;
-        }
-        
-        if (firstLineIndent.HasValue)
-        {
-            para.ParagraphFormat.FirstLineIndent = firstLineIndent.Value;
-        }
-        
-        if (spaceBefore.HasValue)
-        {
-            para.ParagraphFormat.SpaceBefore = spaceBefore.Value;
-        }
-        
-        if (spaceAfter.HasValue)
-        {
-            para.ParagraphFormat.SpaceAfter = spaceAfter.Value;
-        }
+        if (indentLeft.HasValue) para.ParagraphFormat.LeftIndent = indentLeft.Value;
+
+        if (indentRight.HasValue) para.ParagraphFormat.RightIndent = indentRight.Value;
+
+        if (firstLineIndent.HasValue) para.ParagraphFormat.FirstLineIndent = firstLineIndent.Value;
+
+        if (spaceBefore.HasValue) para.ParagraphFormat.SpaceBefore = spaceBefore.Value;
+
+        if (spaceAfter.HasValue) para.ParagraphFormat.SpaceAfter = spaceAfter.Value;
 
         if (targetPara != null)
         {
             if (paragraphIndex!.Value == -1)
-            {
                 targetPara.ParentNode.InsertBefore(para, targetPara);
-            }
             else
-            {
                 targetPara.ParentNode.InsertAfter(para, targetPara);
-            }
         }
         else
         {
@@ -381,33 +373,29 @@ Important notes for 'get' operation:
 
         doc.Save(outputPath);
 
-        var result = $"Paragraph inserted successfully\n";
+        var result = "Paragraph inserted successfully\n";
         result += $"Insert position: {insertPosition}\n";
-        if (!string.IsNullOrEmpty(styleName))
-        {
-            result += $"Applied style: {styleName}\n";
-        }
-        if (!string.IsNullOrEmpty(alignment))
-        {
-            result += $"Alignment: {alignment}\n";
-        }
+        if (!string.IsNullOrEmpty(styleName)) result += $"Applied style: {styleName}\n";
+        if (!string.IsNullOrEmpty(alignment)) result += $"Alignment: {alignment}\n";
         if (indentLeft.HasValue || indentRight.HasValue || firstLineIndent.HasValue)
         {
-            result += $"Indent: ";
+            result += "Indent: ";
             var indentParts = new List<string>();
             if (indentLeft.HasValue) indentParts.Add($"Left={indentLeft.Value}pt");
             if (indentRight.HasValue) indentParts.Add($"Right={indentRight.Value}pt");
             if (firstLineIndent.HasValue) indentParts.Add($"First line={firstLineIndent.Value}pt");
             result += string.Join(", ", indentParts) + "\n";
         }
+
         if (spaceBefore.HasValue || spaceAfter.HasValue)
         {
-            result += $"Spacing: ";
+            result += "Spacing: ";
             var spaceParts = new List<string>();
             if (spaceBefore.HasValue) spaceParts.Add($"Before={spaceBefore.Value}pt");
             if (spaceAfter.HasValue) spaceParts.Add($"After={spaceAfter.Value}pt");
             result += string.Join(", ", spaceParts) + "\n";
         }
+
         result += $"Document paragraph count: {doc.GetChildNodes(NodeType.Paragraph, true).Count}\n";
         result += $"Output: {outputPath}";
 
@@ -415,7 +403,7 @@ Important notes for 'get' operation:
     }
 
     /// <summary>
-    /// Deletes a paragraph from the document
+    ///     Deletes a paragraph from the document
     /// </summary>
     /// <param name="arguments">JSON arguments containing paragraphIndex, optional sectionIndex</param>
     /// <param name="path">Word document file path</param>
@@ -427,43 +415,32 @@ Important notes for 'get' operation:
 
         var doc = new Document(path);
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
-        
+
         // Handle paragraphIndex=-1 (delete last paragraph)
         if (paragraphIndex == -1)
         {
             if (paragraphs.Count == 0)
-            {
                 throw new ArgumentException("Cannot delete paragraph: document has no paragraphs");
-            }
             paragraphIndex = paragraphs.Count - 1;
         }
-        
+
         if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
-        {
-            throw new ArgumentException($"Paragraph index {paragraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
-        }
+            throw new ArgumentException(
+                $"Paragraph index {paragraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
 
         var paragraphToDelete = paragraphs[paragraphIndex] as Paragraph;
         if (paragraphToDelete == null)
-        {
             throw new InvalidOperationException($"Unable to get paragraph at index {paragraphIndex}");
-        }
 
         var textPreview = paragraphToDelete.GetText().Trim();
-        if (textPreview.Length > 50)
-        {
-            textPreview = textPreview.Substring(0, 50) + "...";
-        }
-        
+        if (textPreview.Length > 50) textPreview = textPreview.Substring(0, 50) + "...";
+
         paragraphToDelete.Remove();
 
         doc.Save(outputPath);
 
         var result = $"Paragraph #{paragraphIndex} deleted successfully\n";
-        if (!string.IsNullOrEmpty(textPreview))
-        {
-            result += $"Content preview: {textPreview}\n";
-        }
+        if (!string.IsNullOrEmpty(textPreview)) result += $"Content preview: {textPreview}\n";
         result += $"Remaining paragraphs: {doc.GetChildNodes(NodeType.Paragraph, true).Count}\n";
         result += $"Output: {outputPath}";
 
@@ -471,7 +448,7 @@ Important notes for 'get' operation:
     }
 
     /// <summary>
-    /// Edits paragraph properties
+    ///     Edits paragraph properties
     /// </summary>
     /// <param name="arguments">JSON arguments containing paragraphIndex, optional text, formatting options, sectionIndex</param>
     /// <param name="path">Word document file path</param>
@@ -483,7 +460,7 @@ Important notes for 'get' operation:
         var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
 
         var doc = new Document(path);
-        
+
         // Handle paragraphIndex=-1 (document end)
         if (paragraphIndex == -1)
         {
@@ -496,123 +473,97 @@ Important notes for 'get' operation:
             }
             else
             {
-                throw new ArgumentException("Cannot edit paragraph: document has no paragraphs. Use insert operation to add paragraphs first.");
+                throw new ArgumentException(
+                    "Cannot edit paragraph: document has no paragraphs. Use insert operation to add paragraphs first.");
             }
         }
-        
+
         if (sectionIndex < 0 || sectionIndex >= doc.Sections.Count)
-            throw new ArgumentException($"Section index {sectionIndex} out of range (total sections: {doc.Sections.Count}, valid range: 0-{doc.Sections.Count - 1})");
-        
+            throw new ArgumentException(
+                $"Section index {sectionIndex} out of range (total sections: {doc.Sections.Count}, valid range: 0-{doc.Sections.Count - 1})");
+
         var section = doc.Sections[sectionIndex];
         var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
-        
+
         if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
-            throw new ArgumentException($"Paragraph index {paragraphIndex} out of range (total paragraphs: {paragraphs.Count}, valid range: 0-{paragraphs.Count - 1})");
-        
+            throw new ArgumentException(
+                $"Paragraph index {paragraphIndex} out of range (total paragraphs: {paragraphs.Count}, valid range: 0-{paragraphs.Count - 1})");
+
         var para = paragraphs[paragraphIndex];
         var builder = new DocumentBuilder(doc);
-        
-        if (para.FirstChild != null)
-        {
-            builder.MoveTo(para.FirstChild);
-        }
-        else
-        {
-            // Paragraph is empty, move to the paragraph and we'll add content if text parameter is provided
-            builder.MoveTo(para);
-        }
-        
-        // Apply font properties
+
+        // Move to first child if exists, otherwise move to paragraph itself
+        builder.MoveTo(para.FirstChild ?? para);
+
+        // Apply font properties using FontHelper
         var fontName = ArgumentHelper.GetStringNullable(arguments, "fontName");
-        if (!string.IsNullOrEmpty(fontName))
-            builder.Font.Name = fontName;
-        
         var fontNameAscii = ArgumentHelper.GetStringNullable(arguments, "fontNameAscii");
-        if (!string.IsNullOrEmpty(fontNameAscii))
-            builder.Font.NameAscii = fontNameAscii;
-        
         var fontNameFarEast = ArgumentHelper.GetStringNullable(arguments, "fontNameFarEast");
-        if (!string.IsNullOrEmpty(fontNameFarEast))
-            builder.Font.NameFarEast = fontNameFarEast;
-        
         var fontSize = ArgumentHelper.GetDoubleNullable(arguments, "fontSize");
-        if (fontSize.HasValue)
-            builder.Font.Size = fontSize.Value;
-        
         var bold = ArgumentHelper.GetBoolNullable(arguments, "bold");
-        if (bold.HasValue)
-            builder.Font.Bold = bold.Value;
-        
         var italic = ArgumentHelper.GetBoolNullable(arguments, "italic");
-        if (italic.HasValue)
-            builder.Font.Italic = italic.Value;
-        
         var underline = ArgumentHelper.GetBoolNullable(arguments, "underline");
-        if (underline.HasValue)
-            builder.Font.Underline = underline.Value ? Underline.Single : Underline.None;
-        
         var colorStr = ArgumentHelper.GetStringNullable(arguments, "color");
-        if (!string.IsNullOrEmpty(colorStr))
-        {
-            builder.Font.Color = ColorHelper.ParseColor(colorStr);
-        }
-        
+        var underlineStr = underline.HasValue ? underline.Value ? "single" : "none" : null;
+
+        FontHelper.Word.ApplyFontSettings(
+            builder,
+            fontName,
+            fontNameAscii,
+            fontNameFarEast,
+            fontSize,
+            bold,
+            italic,
+            underlineStr,
+            colorStr
+        );
+
         // Apply paragraph properties
         var paraFormat = para.ParagraphFormat;
-        
+
         var alignment = ArgumentHelper.GetStringNullable(arguments, "alignment") ?? "left";
         if (!string.IsNullOrEmpty(alignment))
             paraFormat.Alignment = GetAlignment(alignment);
-        
+
         var indentLeft = ArgumentHelper.GetDoubleNullable(arguments, "indentLeft");
         if (indentLeft.HasValue)
             paraFormat.LeftIndent = indentLeft.Value;
-        
+
         var indentRight = ArgumentHelper.GetDoubleNullable(arguments, "indentRight");
         if (indentRight.HasValue)
             paraFormat.RightIndent = indentRight.Value;
-        
+
         var firstLineIndent = ArgumentHelper.GetDoubleNullable(arguments, "firstLineIndent");
         if (firstLineIndent.HasValue)
             paraFormat.FirstLineIndent = firstLineIndent.Value;
-        
+
         var spaceBefore = ArgumentHelper.GetDoubleNullable(arguments, "spaceBefore");
         if (spaceBefore.HasValue)
             paraFormat.SpaceBefore = spaceBefore.Value;
-        
+
         var spaceAfter = ArgumentHelper.GetDoubleNullable(arguments, "spaceAfter");
         if (spaceAfter.HasValue)
             paraFormat.SpaceAfter = spaceAfter.Value;
-        
+
         if (arguments?["lineSpacing"] != null || arguments?["lineSpacingRule"] != null)
         {
             var lineSpacing = ArgumentHelper.GetDoubleNullable(arguments, "lineSpacing");
             var lineSpacingRule = ArgumentHelper.GetString(arguments, "lineSpacingRule", "single");
-            
+
             var rule = GetLineSpacingRule(lineSpacingRule);
             paraFormat.LineSpacingRule = rule;
-            
+
             if (lineSpacing.HasValue)
-            {
                 paraFormat.LineSpacing = lineSpacing.Value;
-            }
             else if (lineSpacingRule == "single")
-            {
                 paraFormat.LineSpacing = 12;
-            }
             else if (lineSpacingRule == "oneAndHalf")
-            {
                 paraFormat.LineSpacing = 18;
-            }
-            else if (lineSpacingRule == "double")
-            {
-                paraFormat.LineSpacing = 24;
-            }
+            else if (lineSpacingRule == "double") paraFormat.LineSpacing = 24;
         }
-        
+
         var styleName = ArgumentHelper.GetStringNullable(arguments, "styleName");
         if (!string.IsNullOrEmpty(styleName))
-        {
             try
             {
                 paraFormat.Style = doc.Styles[styleName];
@@ -621,11 +572,10 @@ Important notes for 'get' operation:
             {
                 // Style not found, ignore
             }
-        }
-        
+
         // Apply tab stops
         var tabStops = ArgumentHelper.GetArray(arguments, "tabStops", false);
-        if (tabStops != null && tabStops.Count > 0)
+        if (tabStops is { Count: > 0 })
         {
             paraFormat.TabStops.Clear();
             foreach (var ts in tabStops)
@@ -636,7 +586,7 @@ Important notes for 'get' operation:
                     var position = tsObj["position"]?.GetValue<double>() ?? 0;
                     var tabAlignment = tsObj["alignment"]?.GetValue<string>() ?? "left";
                     var leader = tsObj["leader"]?.GetValue<string>() ?? "none";
-                    
+
                     paraFormat.TabStops.Add(new TabStop(
                         position,
                         GetTabAlignment(tabAlignment),
@@ -645,32 +595,27 @@ Important notes for 'get' operation:
                 }
             }
         }
-        
+
         var textParam = ArgumentHelper.GetStringNullable(arguments, "text");
         if (!string.IsNullOrEmpty(textParam))
         {
             // Clear existing content and add new text
             para.RemoveAllChildren();
             var newRun = new Run(doc, textParam);
-            
-            // Apply font settings to the new run (reuse variables from outer scope)
-            if (!string.IsNullOrEmpty(fontName))
-                newRun.Font.Name = fontName;
-            if (!string.IsNullOrEmpty(fontNameAscii))
-                newRun.Font.NameAscii = fontNameAscii;
-            if (!string.IsNullOrEmpty(fontNameFarEast))
-                newRun.Font.NameFarEast = fontNameFarEast;
-            if (fontSize.HasValue)
-                newRun.Font.Size = fontSize.Value;
-            if (bold.HasValue)
-                newRun.Font.Bold = bold.Value;
-            if (italic.HasValue)
-                newRun.Font.Italic = italic.Value;
-            if (underline.HasValue)
-                newRun.Font.Underline = underline.Value ? Underline.Single : Underline.None;
-            if (!string.IsNullOrEmpty(colorStr))
-                newRun.Font.Color = ColorHelper.ParseColor(colorStr);
-            
+
+            // Apply font settings to the new run using FontHelper (reuse underlineStr from outer scope)
+            FontHelper.Word.ApplyFontSettings(
+                newRun,
+                fontName,
+                fontNameAscii,
+                fontNameFarEast,
+                fontSize,
+                bold,
+                italic,
+                underlineStr,
+                colorStr
+            );
+
             para.AppendChild(newRun);
         }
         else
@@ -684,41 +629,37 @@ Important notes for 'get' operation:
             }
             else
             {
-                foreach (Run run in runs)
-                {
-                    // Apply font settings (reuse variables from outer scope)
-                    if (!string.IsNullOrEmpty(fontName))
-                        run.Font.Name = fontName;
-                    if (!string.IsNullOrEmpty(fontNameAscii))
-                        run.Font.NameAscii = fontNameAscii;
-                    if (!string.IsNullOrEmpty(fontNameFarEast))
-                        run.Font.NameFarEast = fontNameFarEast;
-                    if (fontSize.HasValue)
-                        run.Font.Size = fontSize.Value;
-                    if (bold.HasValue)
-                        run.Font.Bold = bold.Value;
-                    if (italic.HasValue)
-                        run.Font.Italic = italic.Value;
-                    if (underline.HasValue)
-                        run.Font.Underline = underline.Value ? Underline.Single : Underline.None;
-                    if (!string.IsNullOrEmpty(colorStr))
-                        run.Font.Color = ColorHelper.ParseColor(colorStr);
-                }
+                foreach (var run in runs)
+                    // Apply font settings using FontHelper (reuse underlineStr from outer scope)
+                    FontHelper.Word.ApplyFontSettings(
+                        run,
+                        fontName,
+                        fontNameAscii,
+                        fontNameFarEast,
+                        fontSize,
+                        bold,
+                        italic,
+                        underlineStr,
+                        colorStr
+                    );
             }
         }
-        
+
         doc.Save(outputPath);
-        
+
         var resultMsg = $"Paragraph {paragraphIndex} format edited successfully";
         if (!string.IsNullOrEmpty(textParam))
-            resultMsg += $", text content updated";
+            resultMsg += ", text content updated";
         return await Task.FromResult(resultMsg);
     }
 
     /// <summary>
-    /// Gets all paragraphs from the document
+    ///     Gets all paragraphs from the document
     /// </summary>
-    /// <param name="arguments">JSON arguments containing optional sectionIndex, includeCommentParagraphs, includeTextboxParagraphs</param>
+    /// <param name="arguments">
+    ///     JSON arguments containing optional sectionIndex, includeCommentParagraphs,
+    ///     includeTextboxParagraphs
+    /// </param>
     /// <param name="path">Word document file path</param>
     /// <returns>Formatted string with all paragraphs</returns>
     private async Task<string> GetParagraphsAsync(JsonObject? arguments, string path)
@@ -736,11 +677,10 @@ Important notes for 'get' operation:
         if (sectionIndex.HasValue)
         {
             if (sectionIndex.Value < 0 || sectionIndex.Value >= doc.Sections.Count)
-            {
                 throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
-            }
             // When sectionIndex is specified, only get paragraphs from that section's Body
-            paragraphs = doc.Sections[sectionIndex.Value].Body.GetChildNodes(NodeType.Paragraph, includeCommentParagraphs).Cast<Paragraph>().ToList();
+            paragraphs = doc.Sections[sectionIndex.Value].Body
+                .GetChildNodes(NodeType.Paragraph, includeCommentParagraphs).Cast<Paragraph>().ToList();
         }
         else
         {
@@ -753,103 +693,76 @@ Important notes for 'get' operation:
             {
                 // Get only paragraphs from document Body (visible in document body)
                 paragraphs = new List<Paragraph>();
-                foreach (Section section in doc.Sections)
+                foreach (var section in doc.Sections.Cast<Section>())
                 {
-                    var bodyParagraphs = section.Body.GetChildNodes(NodeType.Paragraph, false).Cast<Paragraph>().ToList();
+                    var bodyParagraphs = section.Body.GetChildNodes(NodeType.Paragraph, false).Cast<Paragraph>()
+                        .ToList();
                     paragraphs.AddRange(bodyParagraphs);
                 }
             }
         }
 
-        if (!includeEmpty)
-        {
-            paragraphs = paragraphs.Where(p => !string.IsNullOrWhiteSpace(p.GetText())).ToList();
-        }
+        if (!includeEmpty) paragraphs = paragraphs.Where(p => !string.IsNullOrWhiteSpace(p.GetText())).ToList();
 
         if (!string.IsNullOrEmpty(styleFilter))
-        {
             paragraphs = paragraphs.Where(p => p.ParagraphFormat.Style?.Name == styleFilter).ToList();
-        }
-        
+
         // Filter out textbox paragraphs if includeTextboxParagraphs is false
         if (!includeTextboxParagraphs)
-        {
             paragraphs = paragraphs.Where(p =>
             {
                 // Check if paragraph is inside a Shape (including nested structures)
                 var shapeAncestor = p.GetAncestor(NodeType.Shape);
-                if (shapeAncestor != null)
-                {
-                    var shape = shapeAncestor as Aspose.Words.Drawing.Shape;
-                    if (shape != null && shape.ShapeType == Aspose.Words.Drawing.ShapeType.TextBox)
-                    {
-                        return false; // Exclude textbox paragraphs
-                    }
-                }
-                
+                if (shapeAncestor is Shape { ShapeType: ShapeType.TextBox }) return false; // Exclude textbox paragraphs
+
                 // Also check if paragraph's parent node chain contains a Shape
                 // This handles cases where textbox content might be structured differently
                 var currentNode = p.ParentNode;
                 while (currentNode != null)
                 {
                     if (currentNode.NodeType == NodeType.Shape)
-                    {
-                        var shape = currentNode as Aspose.Words.Drawing.Shape;
-                        if (shape != null && shape.ShapeType == Aspose.Words.Drawing.ShapeType.TextBox)
-                        {
+                        if (currentNode is Shape { ShapeType: ShapeType.TextBox })
                             return false; // Exclude textbox paragraphs
-                        }
-                    }
+
                     currentNode = currentNode.ParentNode;
                 }
-                
+
                 return true;
             }).ToList();
-        }
 
         sb.AppendLine($"=== Paragraphs ({paragraphs.Count}) ===");
         if (!includeCommentParagraphs && !includeTextboxParagraphs)
-        {
-            sb.AppendLine("(Only Body paragraphs - visible in document body, excluding Comment and TextBox paragraphs)");
-        }
+            sb.AppendLine(
+                "(Only Body paragraphs - visible in document body, excluding Comment and TextBox paragraphs)");
         else if (!includeCommentParagraphs)
-        {
             sb.AppendLine("(Only Body paragraphs - visible in document body, excluding Comment paragraphs)");
-        }
         else if (!includeTextboxParagraphs)
-        {
             sb.AppendLine("(Includes all paragraphs in document structure, excluding TextBox paragraphs)");
-        }
         else
-        {
             sb.AppendLine("(Includes all paragraphs in document structure, including Comment objects and TextBoxes)");
-        }
         sb.AppendLine();
 
-        for (int i = 0; i < paragraphs.Count; i++)
+        for (var i = 0; i < paragraphs.Count; i++)
         {
             var para = paragraphs[i];
             var text = para.GetText().Trim();
-            
+
             // Determine paragraph location
-            string location = "Body";
-            string parentNodeInfo = "";
-            
+            var location = "Body";
+            var parentNodeInfo = "";
+
             if (para.ParentNode != null)
             {
                 var parentNodeType = para.ParentNode.NodeType;
                 parentNodeInfo = $"ParentNode: {parentNodeType}";
-                
+
                 // Check if paragraph is inside a Comment object
                 var commentAncestor = para.GetAncestor(NodeType.Comment);
                 if (commentAncestor != null)
                 {
                     location = "[Comment]";
-                    var comment = commentAncestor as Comment;
-                    if (comment != null)
-                    {
+                    if (commentAncestor is Comment comment)
                         parentNodeInfo += $" (Comment ID: {comment.Id}, Author: {comment.Author})";
-                    }
                 }
                 else
                 {
@@ -857,15 +770,14 @@ Important notes for 'get' operation:
                     var shapeAncestor = para.GetAncestor(NodeType.Shape);
                     if (shapeAncestor != null)
                     {
-                        var shape = shapeAncestor as Aspose.Words.Drawing.Shape;
-                        if (shape != null && shape.ShapeType == Aspose.Words.Drawing.ShapeType.TextBox)
+                        if (shapeAncestor is Shape { ShapeType: ShapeType.TextBox })
                         {
                             location = "[TextBox]";
-                            parentNodeInfo += $" (TextBox)";
+                            parentNodeInfo += " (TextBox)";
                         }
                         else
                         {
-                            location = $"[Shape]";
+                            location = "[Shape]";
                         }
                     }
                     else
@@ -873,28 +785,20 @@ Important notes for 'get' operation:
                         // Check if paragraph is directly in Body
                         var bodyAncestor = para.GetAncestor(NodeType.Body);
                         if (bodyAncestor != null && para.ParentNode.NodeType == NodeType.Body)
-                        {
                             location = "Body";
-                        }
                         else if (para.ParentNode.NodeType == NodeType.Body)
-                        {
                             location = "Body";
-                        }
                         else
-                        {
                             location = $"[{parentNodeType}]";
-                        }
                     }
                 }
             }
-            
+
             sb.AppendLine($"[{i}] Location: {location}");
             sb.AppendLine($"    Style: {para.ParagraphFormat.Style?.Name ?? "(none)"}");
-            if (!string.IsNullOrEmpty(parentNodeInfo))
-            {
-                sb.AppendLine($"    {parentNodeInfo}");
-            }
-            sb.AppendLine($"    Text: {text.Substring(0, Math.Min(100, text.Length))}{(text.Length > 100 ? "..." : "")}");
+            if (!string.IsNullOrEmpty(parentNodeInfo)) sb.AppendLine($"    {parentNodeInfo}");
+            sb.AppendLine(
+                $"    Text: {text.Substring(0, Math.Min(100, text.Length))}{(text.Length > 100 ? "..." : "")}");
             sb.AppendLine();
         }
 
@@ -902,7 +806,7 @@ Important notes for 'get' operation:
     }
 
     /// <summary>
-    /// Gets format information for a paragraph
+    ///     Gets format information for a paragraph
     /// </summary>
     /// <param name="arguments">JSON arguments containing paragraphIndex, optional sectionIndex</param>
     /// <param name="path">Word document file path</param>
@@ -914,17 +818,13 @@ Important notes for 'get' operation:
 
         var doc = new Document(path);
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
-        
+
         if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
-        {
-            throw new ArgumentException($"Paragraph index {paragraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
-        }
-        
+            throw new ArgumentException(
+                $"Paragraph index {paragraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
+
         var para = paragraphs[paragraphIndex] as Paragraph;
-        if (para == null)
-        {
-            throw new InvalidOperationException($"Unable to find paragraph at index {paragraphIndex}");
-        }
+        if (para == null) throw new InvalidOperationException($"Unable to find paragraph at index {paragraphIndex}");
 
         var result = new StringBuilder();
         result.AppendLine($"=== Paragraph #{paragraphIndex} Format Information ===\n");
@@ -941,22 +841,20 @@ Important notes for 'get' operation:
         result.AppendLine($"Alignment: {format.Alignment}");
         result.AppendLine($"Left indent: {format.LeftIndent:F2} pt ({format.LeftIndent / 28.35:F2} cm)");
         result.AppendLine($"Right indent: {format.RightIndent:F2} pt ({format.RightIndent / 28.35:F2} cm)");
-        result.AppendLine($"First line indent: {format.FirstLineIndent:F2} pt ({format.FirstLineIndent / 28.35:F2} cm)");
+        result.AppendLine(
+            $"First line indent: {format.FirstLineIndent:F2} pt ({format.FirstLineIndent / 28.35:F2} cm)");
         result.AppendLine($"Space before: {format.SpaceBefore:F2} pt");
         result.AppendLine($"Space after: {format.SpaceAfter:F2} pt");
         result.AppendLine($"Line spacing: {format.LineSpacing:F2} pt");
         result.AppendLine($"Line spacing rule: {format.LineSpacingRule}");
         result.AppendLine();
 
-        if (para.ListFormat != null && para.ListFormat.IsListItem)
+        if (para.ListFormat is { IsListItem: true })
         {
             result.AppendLine("[List Format]");
-            result.AppendLine($"Is list item: Yes");
+            result.AppendLine("Is list item: Yes");
             result.AppendLine($"List level: {para.ListFormat.ListLevelNumber}");
-            if (para.ListFormat.List != null)
-            {
-                result.AppendLine($"List ID: {para.ListFormat.List.ListId}");
-            }
+            if (para.ListFormat.List != null) result.AppendLine($"List ID: {para.ListFormat.List.ListId}");
             result.AppendLine();
         }
 
@@ -964,17 +862,21 @@ Important notes for 'get' operation:
         {
             result.AppendLine("[Borders]");
             if (format.Borders.Top.LineStyle != LineStyle.None)
-                result.AppendLine($"Top border: {format.Borders.Top.LineStyle}, {format.Borders.Top.LineWidth} pt, Color: {format.Borders.Top.Color.Name}");
+                result.AppendLine(
+                    $"Top border: {format.Borders.Top.LineStyle}, {format.Borders.Top.LineWidth} pt, Color: {format.Borders.Top.Color.Name}");
             if (format.Borders.Bottom.LineStyle != LineStyle.None)
-                result.AppendLine($"Bottom border: {format.Borders.Bottom.LineStyle}, {format.Borders.Bottom.LineWidth} pt, Color: {format.Borders.Bottom.Color.Name}");
+                result.AppendLine(
+                    $"Bottom border: {format.Borders.Bottom.LineStyle}, {format.Borders.Bottom.LineWidth} pt, Color: {format.Borders.Bottom.Color.Name}");
             if (format.Borders.Left.LineStyle != LineStyle.None)
-                result.AppendLine($"Left border: {format.Borders.Left.LineStyle}, {format.Borders.Left.LineWidth} pt, Color: {format.Borders.Left.Color.Name}");
+                result.AppendLine(
+                    $"Left border: {format.Borders.Left.LineStyle}, {format.Borders.Left.LineWidth} pt, Color: {format.Borders.Left.Color.Name}");
             if (format.Borders.Right.LineStyle != LineStyle.None)
-                result.AppendLine($"Right border: {format.Borders.Right.LineStyle}, {format.Borders.Right.LineWidth} pt, Color: {format.Borders.Right.Color.Name}");
+                result.AppendLine(
+                    $"Right border: {format.Borders.Right.LineStyle}, {format.Borders.Right.LineWidth} pt, Color: {format.Borders.Right.Color.Name}");
             result.AppendLine();
         }
 
-        if (format.Shading.BackgroundPatternColor.ToArgb() != System.Drawing.Color.Empty.ToArgb())
+        if (format.Shading.BackgroundPatternColor.ToArgb() != Color.Empty.ToArgb())
         {
             result.AppendLine("[Background Color]");
             var color = format.Shading.BackgroundPatternColor;
@@ -985,11 +887,13 @@ Important notes for 'get' operation:
         if (format.TabStops.Count > 0)
         {
             result.AppendLine("[Tab Stops]");
-            for (int i = 0; i < format.TabStops.Count; i++)
+            for (var i = 0; i < format.TabStops.Count; i++)
             {
                 var tab = format.TabStops[i];
-                result.AppendLine($"  Tab {i + 1}: Position={tab.Position:F2} pt, Alignment={tab.Alignment}, Leader={tab.Leader}");
+                result.AppendLine(
+                    $"  Tab {i + 1}: Position={tab.Position:F2} pt, Alignment={tab.Alignment}, Leader={tab.Leader}");
             }
+
             result.AppendLine();
         }
 
@@ -997,7 +901,7 @@ Important notes for 'get' operation:
         {
             var firstRun = para.Runs[0];
             result.AppendLine("[Font Format (First Run)]");
-            
+
             if (firstRun.Font.NameAscii != firstRun.Font.NameFarEast)
             {
                 result.AppendLine($"Font (ASCII): {firstRun.Font.NameAscii}");
@@ -1007,26 +911,24 @@ Important notes for 'get' operation:
             {
                 result.AppendLine($"Font: {firstRun.Font.Name}");
             }
-            
+
             result.AppendLine($"Font size: {firstRun.Font.Size} pt");
-            
+
             if (firstRun.Font.Bold) result.AppendLine("Bold: Yes");
             if (firstRun.Font.Italic) result.AppendLine("Italic: Yes");
             if (firstRun.Font.Underline != Underline.None) result.AppendLine($"Underline: {firstRun.Font.Underline}");
             if (firstRun.Font.StrikeThrough) result.AppendLine("Strikethrough: Yes");
             if (firstRun.Font.Superscript) result.AppendLine("Superscript: Yes");
             if (firstRun.Font.Subscript) result.AppendLine("Subscript: Yes");
-            
-            if (firstRun.Font.Color.ToArgb() != System.Drawing.Color.Empty.ToArgb())
+
+            if (firstRun.Font.Color.ToArgb() != Color.Empty.ToArgb())
             {
                 var color = firstRun.Font.Color;
                 result.AppendLine($"Color: #{color.R:X2}{color.G:X2}{color.B:X2}");
             }
-            
-            if (firstRun.Font.HighlightColor != System.Drawing.Color.Empty)
-            {
+
+            if (firstRun.Font.HighlightColor != Color.Empty)
                 result.AppendLine($"Highlight: {firstRun.Font.HighlightColor.Name}");
-            }
             result.AppendLine();
         }
 
@@ -1034,13 +936,13 @@ Important notes for 'get' operation:
         {
             result.AppendLine("[Run Details]");
             result.AppendLine($"Total {para.Runs.Count} Runs:");
-            
-            for (int i = 0; i < Math.Min(para.Runs.Count, 10); i++)
+
+            for (var i = 0; i < Math.Min(para.Runs.Count, 10); i++)
             {
                 var run = para.Runs[i];
                 result.AppendLine($"\n  Run #{i}:");
                 result.AppendLine($"    Text: {run.Text.Replace("\r", "\\r").Replace("\n", "\\n")}");
-                
+
                 if (run.Font.NameAscii != run.Font.NameFarEast)
                 {
                     result.AppendLine($"    Font (ASCII): {run.Font.NameAscii}");
@@ -1050,9 +952,9 @@ Important notes for 'get' operation:
                 {
                     result.AppendLine($"    Font: {run.Font.Name}");
                 }
-                
+
                 result.AppendLine($"    Font size: {run.Font.Size} pt");
-                
+
                 var styles = new List<string>();
                 if (run.Font.Bold) styles.Add("Bold");
                 if (run.Font.Italic) styles.Add("Italic");
@@ -1060,11 +962,8 @@ Important notes for 'get' operation:
                 if (styles.Count > 0)
                     result.AppendLine($"    Styles: {string.Join(", ", styles)}");
             }
-            
-            if (para.Runs.Count > 10)
-            {
-                result.AppendLine($"\n  ... {para.Runs.Count - 10} more Runs (omitted)");
-            }
+
+            if (para.Runs.Count > 10) result.AppendLine($"\n  ... {para.Runs.Count - 10} more Runs (omitted)");
             result.AppendLine();
         }
 
@@ -1077,7 +976,7 @@ Important notes for 'get' operation:
         result.AppendLine($"  \"spaceBefore\": {format.SpaceBefore:F2},");
         result.AppendLine($"  \"spaceAfter\": {format.SpaceAfter:F2},");
         result.AppendLine($"  \"lineSpacing\": {format.LineSpacing:F2}");
-        
+
         if (para.Runs.Count > 0)
         {
             var run = para.Runs[0];
@@ -1087,14 +986,14 @@ Important notes for 'get' operation:
             result.AppendLine($"  \"bold\": {run.Font.Bold.ToString().ToLower()},");
             result.AppendLine($"  \"italic\": {run.Font.Italic.ToString().ToLower()}");
         }
-        
+
         result.AppendLine("}");
 
         return await Task.FromResult(result.ToString());
     }
 
     /// <summary>
-    /// Copies paragraph format from source to target
+    ///     Copies paragraph format from source to target
     /// </summary>
     /// <param name="arguments">JSON arguments containing sourceIndex, targetIndex, optional sectionIndex</param>
     /// <param name="path">Word document file path</param>
@@ -1107,25 +1006,20 @@ Important notes for 'get' operation:
 
         var doc = new Document(path);
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
-        
+
         if (sourceParagraphIndex < 0 || sourceParagraphIndex >= paragraphs.Count)
-        {
-            throw new ArgumentException($"Source paragraph index {sourceParagraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
-        }
-        
+            throw new ArgumentException(
+                $"Source paragraph index {sourceParagraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
+
         if (targetParagraphIndex < 0 || targetParagraphIndex >= paragraphs.Count)
-        {
-            throw new ArgumentException($"Target paragraph index {targetParagraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
-        }
-        
+            throw new ArgumentException(
+                $"Target paragraph index {targetParagraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
+
         var sourcePara = paragraphs[sourceParagraphIndex] as Paragraph;
         var targetPara = paragraphs[targetParagraphIndex] as Paragraph;
-        
-        if (sourcePara == null || targetPara == null)
-        {
-            throw new InvalidOperationException("Unable to get paragraphs");
-        }
-        
+
+        if (sourcePara == null || targetPara == null) throw new InvalidOperationException("Unable to get paragraphs");
+
         targetPara.ParagraphFormat.StyleName = sourcePara.ParagraphFormat.StyleName;
         targetPara.ParagraphFormat.Alignment = sourcePara.ParagraphFormat.Alignment;
         targetPara.ParagraphFormat.LeftIndent = sourcePara.ParagraphFormat.LeftIndent;
@@ -1135,26 +1029,26 @@ Important notes for 'get' operation:
         targetPara.ParagraphFormat.SpaceAfter = sourcePara.ParagraphFormat.SpaceAfter;
         targetPara.ParagraphFormat.LineSpacing = sourcePara.ParagraphFormat.LineSpacing;
         targetPara.ParagraphFormat.LineSpacingRule = sourcePara.ParagraphFormat.LineSpacingRule;
-        
+
         targetPara.ParagraphFormat.TabStops.Clear();
-        for (int i = 0; i < sourcePara.ParagraphFormat.TabStops.Count; i++)
+        for (var i = 0; i < sourcePara.ParagraphFormat.TabStops.Count; i++)
         {
             var tabStop = sourcePara.ParagraphFormat.TabStops[i];
             targetPara.ParagraphFormat.TabStops.Add(tabStop.Position, tabStop.Alignment, tabStop.Leader);
         }
-        
+
         doc.Save(outputPath);
-        
-        var result = $"Paragraph format copied successfully\n";
+
+        var result = "Paragraph format copied successfully\n";
         result += $"Source paragraph: #{sourceParagraphIndex}\n";
         result += $"Target paragraph: #{targetParagraphIndex}\n";
         result += $"Output: {outputPath}";
-        
+
         return await Task.FromResult(result);
     }
 
     /// <summary>
-    /// Merges multiple paragraphs into one
+    ///     Merges multiple paragraphs into one
     /// </summary>
     /// <param name="arguments">JSON arguments containing startIndex, endIndex, optional sectionIndex</param>
     /// <param name="path">Word document file path</param>
@@ -1167,62 +1061,48 @@ Important notes for 'get' operation:
 
         var doc = new Document(path);
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
-        
+
         if (startParagraphIndex < 0 || startParagraphIndex >= paragraphs.Count)
-        {
-            throw new ArgumentException($"Start paragraph index {startParagraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
-        }
-        
+            throw new ArgumentException(
+                $"Start paragraph index {startParagraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
+
         if (endParagraphIndex < 0 || endParagraphIndex >= paragraphs.Count)
-        {
-            throw new ArgumentException($"End paragraph index {endParagraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
-        }
-        
+            throw new ArgumentException(
+                $"End paragraph index {endParagraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
+
         if (startParagraphIndex > endParagraphIndex)
-        {
-            throw new ArgumentException($"Start paragraph index {startParagraphIndex} cannot be greater than end paragraph index {endParagraphIndex}");
-        }
-        
+            throw new ArgumentException(
+                $"Start paragraph index {startParagraphIndex} cannot be greater than end paragraph index {endParagraphIndex}");
+
         if (startParagraphIndex == endParagraphIndex)
-        {
             throw new ArgumentException("Start and end paragraph indices are the same, no merge needed");
-        }
-        
+
         var startPara = paragraphs[startParagraphIndex] as Paragraph;
-        if (startPara == null)
-        {
-            throw new InvalidOperationException("Unable to get start paragraph");
-        }
-        
-        for (int i = startParagraphIndex + 1; i <= endParagraphIndex; i++)
-        {
-            var para = paragraphs[i] as Paragraph;
-            if (para != null)
+        if (startPara == null) throw new InvalidOperationException("Unable to get start paragraph");
+
+        for (var i = startParagraphIndex + 1; i <= endParagraphIndex; i++)
+            if (paragraphs[i] is Paragraph para)
             {
                 if (startPara.Runs.Count > 0)
                 {
                     var spaceRun = new Run(doc, " ");
                     startPara.AppendChild(spaceRun);
                 }
-                
+
                 var runsToMove = para.Runs.ToArray();
-                foreach (var run in runsToMove)
-                {
-                    startPara.AppendChild(run);
-                }
-                
+                foreach (var run in runsToMove) startPara.AppendChild(run);
+
                 para.Remove();
             }
-        }
-        
+
         doc.Save(outputPath);
-        
-        var result = $"Paragraphs merged successfully\n";
+
+        var result = "Paragraphs merged successfully\n";
         result += $"Merge range: Paragraph #{startParagraphIndex} to #{endParagraphIndex}\n";
         result += $"Merged paragraphs: {endParagraphIndex - startParagraphIndex + 1}\n";
         result += $"Remaining paragraphs: {doc.GetChildNodes(NodeType.Paragraph, true).Count}\n";
         result += $"Output: {outputPath}";
-        
+
         return await Task.FromResult(result);
     }
 
@@ -1237,7 +1117,7 @@ Important notes for 'get' operation:
             _ => ParagraphAlignment.Left
         };
     }
-    
+
     private LineSpacingRule GetLineSpacingRule(string rule)
     {
         return rule.ToLower() switch
@@ -1251,7 +1131,7 @@ Important notes for 'get' operation:
             _ => LineSpacingRule.Exactly
         };
     }
-    
+
     private TabAlignment GetTabAlignment(string alignment)
     {
         return alignment.ToLower() switch
@@ -1265,7 +1145,7 @@ Important notes for 'get' operation:
             _ => TabAlignment.Left
         };
     }
-    
+
     private TabLeader GetTabLeader(string leader)
     {
         return leader.ToLower() switch
@@ -1279,6 +1159,4 @@ Important notes for 'get' operation:
             _ => TabLeader.None
         };
     }
-    
 }
-

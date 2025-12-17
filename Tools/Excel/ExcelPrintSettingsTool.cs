@@ -2,15 +2,16 @@
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Excel;
 
 /// <summary>
-/// Unified tool for managing Excel print settings (print area, titles, page setup, etc.)
-/// Merges: ExcelSetPrintAreaTool, ExcelSetPrintTitlesTool, ExcelSetPrintSettingsTool, ExcelSetPageSetupTool
+///     Unified tool for managing Excel print settings (print area, titles, page setup, etc.)
+///     Merges: ExcelSetPrintAreaTool, ExcelSetPrintTitlesTool, ExcelSetPrintSettingsTool, ExcelSetPageSetupTool
 /// </summary>
 public class ExcelPrintSettingsTool : IAsposeTool
 {
-    public string Description => @"Manage Excel print settings. Supports 4 operations: set_print_area, set_print_titles, set_page_setup, set_all.
+    /// <summary>    ///     Gets the description of the tool and its usage examples    /// </summary>    public string Description =>
+        @"Manage Excel print settings. Supports 4 operations: set_print_area, set_print_titles, set_page_setup, set_all.
 
 Usage examples:
 - Set print area: excel_print_settings(operation='set_print_area', path='book.xlsx', range='A1:D10')
@@ -18,6 +19,9 @@ Usage examples:
 - Set page setup: excel_print_settings(operation='set_page_setup', path='book.xlsx', orientation='landscape', paperSize='A4')
 - Set all: excel_print_settings(operation='set_all', path='book.xlsx', range='A1:D10', orientation='portrait')";
 
+    /// <summary>
+    ///     Gets the JSON schema defining the input parameters for the tool
+    /// </summary>
     public object InputSchema => new
     {
         type = "object",
@@ -150,7 +154,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Sets print area for the worksheet
+    ///     Sets print area for the worksheet
     /// </summary>
     /// <param name="arguments">JSON arguments containing optional range, clearPrintArea</param>
     /// <param name="path">Excel file path</param>
@@ -165,17 +169,11 @@ Usage examples:
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
 
         if (clearPrintArea)
-        {
             worksheet.PageSetup.PrintArea = "";
-        }
         else if (!string.IsNullOrEmpty(range))
-        {
             worksheet.PageSetup.PrintArea = range;
-        }
         else
-        {
             throw new ArgumentException("Either range or clearPrintArea must be provided");
-        }
 
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         workbook.Save(outputPath);
@@ -185,7 +183,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Sets print titles (rows/columns to repeat on each page)
+    ///     Sets print titles (rows/columns to repeat on each page)
     /// </summary>
     /// <param name="arguments">JSON arguments containing optional rowsToRepeatAtTop, columnsToRepeatAtLeft</param>
     /// <param name="path">Excel file path</param>
@@ -207,14 +205,8 @@ Usage examples:
         }
         else
         {
-            if (!string.IsNullOrEmpty(rows))
-            {
-                worksheet.PageSetup.PrintTitleRows = rows;
-            }
-            if (!string.IsNullOrEmpty(columns))
-            {
-                worksheet.PageSetup.PrintTitleColumns = columns;
-            }
+            if (!string.IsNullOrEmpty(rows)) worksheet.PageSetup.PrintTitleRows = rows;
+            if (!string.IsNullOrEmpty(columns)) worksheet.PageSetup.PrintTitleColumns = columns;
         }
 
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
@@ -223,7 +215,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Sets page setup options
+    ///     Sets page setup options
     /// </summary>
     /// <param name="arguments">JSON arguments containing various page setup properties</param>
     /// <param name="path">Excel file path</param>
@@ -245,9 +237,8 @@ Usage examples:
         var pageSetup = worksheet.PageSetup;
 
         if (!string.IsNullOrEmpty(orientation))
-        {
-            pageSetup.Orientation = orientation == "Landscape" ? PageOrientationType.Landscape : PageOrientationType.Portrait;
-        }
+            pageSetup.Orientation =
+                orientation == "Landscape" ? PageOrientationType.Landscape : PageOrientationType.Portrait;
 
         if (!string.IsNullOrEmpty(paperSize))
         {
@@ -270,15 +261,9 @@ Usage examples:
         if (topMargin.HasValue) pageSetup.TopMargin = topMargin.Value;
         if (bottomMargin.HasValue) pageSetup.BottomMargin = bottomMargin.Value;
 
-        if (!string.IsNullOrEmpty(header))
-        {
-            pageSetup.SetHeader(0, header);
-        }
+        if (!string.IsNullOrEmpty(header)) pageSetup.SetHeader(0, header);
 
-        if (!string.IsNullOrEmpty(footer))
-        {
-            pageSetup.SetFooter(0, footer);
-        }
+        if (!string.IsNullOrEmpty(footer)) pageSetup.SetFooter(0, footer);
 
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         workbook.Save(outputPath);
@@ -295,7 +280,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Sets all print settings at once
+    ///     Sets all print settings at once
     /// </summary>
     /// <param name="arguments">JSON arguments containing all print settings</param>
     /// <param name="path">Excel file path</param>
@@ -316,20 +301,11 @@ Usage examples:
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
         var pageSetup = worksheet.PageSetup;
 
-        if (!string.IsNullOrEmpty(printArea))
-        {
-            pageSetup.PrintArea = printArea;
-        }
+        if (!string.IsNullOrEmpty(printArea)) pageSetup.PrintArea = printArea;
 
-        if (!string.IsNullOrEmpty(printTitleRows))
-        {
-            pageSetup.PrintTitleRows = printTitleRows;
-        }
+        if (!string.IsNullOrEmpty(printTitleRows)) pageSetup.PrintTitleRows = printTitleRows;
 
-        if (!string.IsNullOrEmpty(printTitleColumns))
-        {
-            pageSetup.PrintTitleColumns = printTitleColumns;
-        }
+        if (!string.IsNullOrEmpty(printTitleColumns)) pageSetup.PrintTitleColumns = printTitleColumns;
 
         if (fitToPage.HasValue)
         {
@@ -338,9 +314,9 @@ Usage examples:
         }
 
         if (!string.IsNullOrEmpty(orientation))
-        {
-            pageSetup.Orientation = orientation.ToLower() == "landscape" ? PageOrientationType.Landscape : PageOrientationType.Portrait;
-        }
+            pageSetup.Orientation = orientation.ToLower() == "landscape"
+                ? PageOrientationType.Landscape
+                : PageOrientationType.Portrait;
 
         if (!string.IsNullOrEmpty(paperSize))
         {
@@ -361,4 +337,3 @@ Usage examples:
         return await Task.FromResult($"Print settings updated for sheet {sheetIndex}: {outputPath}");
     }
 }
-

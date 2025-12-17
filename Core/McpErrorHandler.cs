@@ -4,13 +4,13 @@ using AsposeMcpServer.Models;
 namespace AsposeMcpServer.Core;
 
 /// <summary>
-/// Centralized error handler for MCP server errors
-/// Provides consistent error handling and prevents information leakage
+///     Centralized error handler for MCP server errors
+///     Provides consistent error handling and prevents information leakage
 /// </summary>
 public static class McpErrorHandler
 {
     /// <summary>
-    /// Handles an exception and returns an appropriate MCP error response
+    ///     Handles an exception and returns an appropriate MCP error response
     /// </summary>
     /// <param name="ex">The exception to handle</param>
     /// <param name="includeStackTrace">Whether to include stack trace in error message (for debugging)</param>
@@ -24,50 +24,50 @@ public static class McpErrorHandler
                 Code = -32602, // Invalid params
                 Message = "Required parameter is missing or null"
             },
-            
+
             ArgumentException argEx => new McpError
             {
                 Code = -32602, // Invalid params
                 // Preserve ArgumentException details (parameter names, format examples) but remove file paths
-                Message = SanitizeErrorMessage(argEx.Message, preserveDetails: true)
+                Message = SanitizeErrorMessage(argEx.Message, true)
             },
-            
+
             FileNotFoundException => new McpError
             {
                 Code = -32602, // Invalid params
                 Message = "File not found"
             },
-            
+
             DirectoryNotFoundException => new McpError
             {
                 Code = -32602, // Invalid params
                 Message = "Directory not found"
             },
-            
+
             UnauthorizedAccessException => new McpError
             {
                 Code = -32603, // Internal error
                 Message = "Access denied to file or directory"
             },
-            
-            IOException ioEx => new McpError
+
+            IOException => new McpError
             {
                 Code = -32603, // Internal error
                 Message = "I/O error occurred while processing the request"
             },
-            
+
             InvalidOperationException opEx => new McpError
             {
                 Code = -32603, // Internal error
                 Message = SanitizeErrorMessage(opEx.Message)
             },
-            
+
             NotSupportedException => new McpError
             {
                 Code = -32603, // Internal error
                 Message = "Operation not supported"
             },
-            
+
             _ => new McpError
             {
                 Code = -32603, // Internal error
@@ -75,9 +75,9 @@ public static class McpErrorHandler
             }
         };
     }
-    
+
     /// <summary>
-    /// Creates a method not found error
+    ///     Creates a method not found error
     /// </summary>
     public static McpError MethodNotFound(string method)
     {
@@ -87,9 +87,9 @@ public static class McpErrorHandler
             Message = $"Unknown method: {method}"
         };
     }
-    
+
     /// <summary>
-    /// Creates a tool not found error
+    ///     Creates a tool not found error
     /// </summary>
     public static McpError ToolNotFound(string toolName)
     {
@@ -99,9 +99,9 @@ public static class McpErrorHandler
             Message = $"Unknown tool: {toolName}"
         };
     }
-    
+
     /// <summary>
-    /// Creates a parse error
+    ///     Creates a parse error
     /// </summary>
     public static McpError ParseError(string message)
     {
@@ -111,46 +111,43 @@ public static class McpErrorHandler
             Message = $"Parse error: {message}"
         };
     }
-    
+
     /// <summary>
-    /// Creates an invalid params error
+    ///     Creates an invalid params error
     /// </summary>
     public static McpError InvalidParams(string message)
     {
         return new McpError
         {
             Code = -32602, // Invalid params
-            Message = SanitizeErrorMessage(message, preserveDetails: true)
+            Message = SanitizeErrorMessage(message, true)
         };
     }
 
     /// <summary>
-    /// Sanitizes error messages to prevent information leakage
-    /// Removes file paths, stack traces, and other sensitive information
+    ///     Sanitizes error messages to prevent information leakage
+    ///     Removes file paths, stack traces, and other sensitive information
     /// </summary>
     /// <param name="message">Error message to sanitize</param>
     /// <param name="preserveDetails">If true, preserves detailed error messages (for ArgumentException)</param>
     /// <returns>Sanitized error message</returns>
     private static string SanitizeErrorMessage(string message, bool preserveDetails = false)
     {
-        if (string.IsNullOrWhiteSpace(message))
-        {
-            return "An error occurred";
-        }
+        if (string.IsNullOrWhiteSpace(message)) return "An error occurred";
 
         var sanitized = message;
-        
+
         if (!preserveDetails)
         {
             // Remove absolute file paths
             sanitized = Regex.Replace(sanitized, @"[A-Za-z]:\\[^\s]+", "[path removed]");
             sanitized = Regex.Replace(sanitized, @"/[^\s]+", "[path removed]");
-            
+
             // Remove stack trace indicators
             sanitized = Regex.Replace(sanitized, @"at\s+[^\r\n]+", "");
             sanitized = Regex.Replace(sanitized, @"in\s+[^\r\n]+", "");
             sanitized = Regex.Replace(sanitized, @"line\s+\d+", "");
-            
+
             // Remove exception type names that might leak implementation details
             sanitized = Regex.Replace(sanitized, @"\w+\.\w+Exception", "Error");
         }
@@ -160,15 +157,11 @@ public static class McpErrorHandler
             sanitized = Regex.Replace(sanitized, @"[A-Za-z]:\\[^\s]+", "[path removed]");
             sanitized = Regex.Replace(sanitized, @"\/[^\s]+", "[path removed]");
         }
-        
+
         // Limit message length (allow longer messages for detailed errors)
         var maxLength = preserveDetails ? 2000 : 500;
-        if (sanitized.Length > maxLength)
-        {
-            sanitized = sanitized.Substring(0, maxLength - 3) + "...";
-        }
+        if (sanitized.Length > maxLength) sanitized = sanitized.Substring(0, maxLength - 3) + "...";
 
         return sanitized.Trim();
     }
 }
-

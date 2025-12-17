@@ -1,19 +1,21 @@
-﻿using System.Text.Json.Nodes;
+﻿using System.Drawing;
 using System.Drawing.Imaging;
-using System.Diagnostics.CodeAnalysis;
+using System.Text.Json.Nodes;
 using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.PowerPoint;
 
 /// <summary>
-/// Unified tool for PowerPoint image operations (export slides as images, extract images, replace image with compression)
-/// Merges: PptExportSlidesAsImagesTool, PptExtractImagesTool, PptReplaceImageWithCompressionTool
+///     Unified tool for PowerPoint image operations (export slides as images, extract images, replace image with
+///     compression)
+///     Merges: PptExportSlidesAsImagesTool, PptExtractImagesTool, PptReplaceImageWithCompressionTool
 /// </summary>
 public class PptImageOperationsTool : IAsposeTool
 {
-    public string Description => @"PowerPoint image operations. Supports 3 operations: export_slides, extract_images, replace_with_compression.
+    public string Description =>
+        @"PowerPoint image operations. Supports 3 operations: export_slides, extract_images, replace_with_compression.
 
 Usage examples:
 - Export slides as images: ppt_image_operations(operation='export_slides', path='presentation.pptx', outputDir='images/', format='png')
@@ -72,7 +74,8 @@ Usage examples:
             jpegQuality = new
             {
                 type = "number",
-                description = "JPEG quality 10-100 (optional, for replace_with_compression, re-encode as JPEG if provided)"
+                description =
+                    "JPEG quality 10-100 (optional, for replace_with_compression, re-encode as JPEG if provided)"
             },
             outputPath = new
             {
@@ -98,7 +101,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Exports slides as images
+    ///     Exports slides as images
     /// </summary>
     /// <param name="arguments">JSON arguments containing outputDirectory, optional slideIndexes, format, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -115,13 +118,13 @@ Usage examples:
             "jpeg" or "jpg" => ImageFormat.Jpeg,
             _ => ImageFormat.Png
         };
-        var extension = format == ImageFormat.Png ? "png" : "jpg";
+        var extension = format.Equals(ImageFormat.Png) ? "png" : "jpg";
 #pragma warning restore CA1416 // Validate platform compatibility
 
         Directory.CreateDirectory(outputDir);
 
         using var presentation = new Presentation(path);
-        for (int i = 0; i < presentation.Slides.Count; i++)
+        for (var i = 0; i < presentation.Slides.Count; i++)
         {
             var bmp = presentation.Slides[i].GetThumbnail(scale, scale);
             var fileName = Path.Combine(outputDir, $"slide_{i + 1}.{extension}");
@@ -134,7 +137,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Extracts images from the presentation
+    ///     Extracts images from the presentation
     /// </summary>
     /// <param name="arguments">JSON arguments containing outputDirectory, optional slideIndex</param>
     /// <param name="path">PowerPoint file path</param>
@@ -150,7 +153,7 @@ Usage examples:
             "jpeg" or "jpg" => ImageFormat.Jpeg,
             _ => ImageFormat.Png
         };
-        var extension = format == ImageFormat.Png ? "png" : "jpg";
+        var extension = format.Equals(ImageFormat.Png) ? "png" : "jpg";
 #pragma warning restore CA1416 // Validate platform compatibility
 
         Directory.CreateDirectory(outputDir);
@@ -158,30 +161,34 @@ Usage examples:
         using var presentation = new Presentation(path);
         var count = 0;
 
-        for (int i = 0; i < presentation.Slides.Count; i++)
+        var slideIndex = 0;
+        foreach (var slide in presentation.Slides)
         {
-            var slide = presentation.Slides[i];
-            for (int j = 0; j < slide.Shapes.Count; j++)
-            {
-                if (slide.Shapes[j] is PictureFrame pic && pic.PictureFormat?.Picture?.Image != null)
+            slideIndex++;
+            foreach (var shape in slide.Shapes)
+                if (shape is PictureFrame { PictureFormat.Picture.Image: not null } pic)
                 {
                     var image = pic.PictureFormat.Picture.Image;
-                    var fileName = Path.Combine(outputDir, $"slide{i + 1}_img{++count}.{extension}");
+                    var fileName = Path.Combine(outputDir, $"slide{slideIndex}_img{++count}.{extension}");
                     var systemImage = image.SystemImage;
-#pragma warning disable CA1416 // Validate platform compatibility
+#pragma warning disable CA1416
+                    // Validate platform compatibility
                     systemImage.Save(fileName, format);
-#pragma warning restore CA1416 // Validate platform compatibility
+#pragma warning restore CA1416
+                    // Validate platform compatibility
                 }
-            }
         }
 
         return await Task.FromResult($"Exported {count} images to: {Path.GetFullPath(outputDir)}");
     }
 
     /// <summary>
-    /// Replaces image with compression
+    ///     Replaces image with compression
     /// </summary>
-    /// <param name="arguments">JSON arguments containing slideIndex, imageIndex, newImagePath, optional compressionLevel, outputPath</param>
+    /// <param name="arguments">
+    ///     JSON arguments containing slideIndex, imageIndex, newImagePath, optional compressionLevel,
+    ///     outputPath
+    /// </param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Success message</returns>
     private async Task<string> ReplaceImageWithCompressionAsync(JsonObject? arguments, string path)
@@ -193,27 +200,21 @@ Usage examples:
 
         using var presentation = new Presentation(path);
         if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
-        {
             throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
-        }
 
         var slide = presentation.Slides[slideIndex];
         if (shapeIndex < 0 || shapeIndex >= slide.Shapes.Count)
-        {
             throw new ArgumentException($"shapeIndex must be between 0 and {slide.Shapes.Count - 1}");
-        }
 
         if (slide.Shapes[shapeIndex] is not PictureFrame pic)
-        {
             throw new ArgumentException("The specified shape is not a PictureFrame");
-        }
 
         byte[] imageBytes;
         if (jpegQuality.HasValue)
         {
             var quality = Math.Clamp(jpegQuality.Value, 10, 100);
 #pragma warning disable CA1416 // Validate platform compatibility
-            using var src = System.Drawing.Image.FromFile(imagePath);
+            using var src = Image.FromFile(imagePath);
             var encoder = ImageCodecInfo.GetImageEncoders().First(c => c.FormatID == ImageFormat.Jpeg.Guid);
             var encParams = new EncoderParameters(1);
             encParams.Param[0] = new EncoderParameter(Encoder.Quality, quality);
@@ -224,7 +225,7 @@ Usage examples:
         }
         else
         {
-            imageBytes = File.ReadAllBytes(imagePath);
+            imageBytes = await File.ReadAllBytesAsync(imagePath);
         }
 
         var newImage = presentation.Images.AddImage(imageBytes);
@@ -232,7 +233,7 @@ Usage examples:
 
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         presentation.Save(outputPath, SaveFormat.Pptx);
-        return await Task.FromResult($"Image replaced with compression applied (quality={jpegQuality?.ToString() ?? "original"})");
+        return await Task.FromResult(
+            $"Image replaced with compression applied (quality={jpegQuality?.ToString() ?? "original"})");
     }
 }
-

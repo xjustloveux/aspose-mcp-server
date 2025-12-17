@@ -1,14 +1,13 @@
-﻿using System.Text.Json.Nodes;
-using System.Text;
+﻿using System.Text;
+using System.Text.Json.Nodes;
 using Aspose.Words;
-using Aspose.Words.Properties;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Word;
 
 /// <summary>
-/// Unified tool for managing Word document properties (get, set)
-/// Merges: WordGetDocumentPropertiesTool, WordSetDocumentPropertiesTool, WordSetPropertiesTool
+///     Unified tool for managing Word document properties (get, set)
+///     Merges: WordGetDocumentPropertiesTool, WordSetDocumentPropertiesTool, WordSetPropertiesTool
 /// </summary>
 public class WordPropertiesTool : IAsposeTool
 {
@@ -104,12 +103,12 @@ Usage examples:
     }
 
     /// <summary>
-    /// Gets document properties
+    ///     Gets document properties
     /// </summary>
-    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="_">Unused parameter</param>
     /// <param name="path">Word document file path</param>
     /// <returns>Formatted string with document properties</returns>
-    private async Task<string> GetPropertiesAsync(JsonObject? arguments, string path)
+    private async Task<string> GetPropertiesAsync(JsonObject? _, string path)
     {
         var doc = new Document(path);
         var props = doc.BuiltInDocumentProperties;
@@ -139,17 +138,14 @@ Usage examples:
         {
             sb.AppendLine();
             sb.AppendLine("Custom Properties:");
-            foreach (DocumentProperty prop in customProps)
-            {
-                sb.AppendLine($"  {prop.Name}: {prop.Value}");
-            }
+            foreach (var prop in customProps) sb.AppendLine($"  {prop.Name}: {prop.Value}");
         }
 
         return await Task.FromResult(sb.ToString());
     }
 
     /// <summary>
-    /// Sets document properties
+    ///     Sets document properties
     /// </summary>
     /// <param name="arguments">JSON arguments containing various property values, optional outputPath</param>
     /// <param name="path">Word document file path</param>
@@ -182,15 +178,10 @@ Usage examples:
         if (!string.IsNullOrEmpty(manager)) props.Manager = manager;
 
         if (customProps != null)
-        {
             foreach (var kvp in customProps)
-            {
                 doc.CustomDocumentProperties.Add(kvp.Key, kvp.Value?.GetValue<string>() ?? "");
-            }
-        }
 
         doc.Save(outputPath);
         return await Task.FromResult($"Document properties updated: {outputPath}");
     }
 }
-

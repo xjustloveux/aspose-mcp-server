@@ -2,11 +2,11 @@
 using Aspose.Words;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Word;
 
 /// <summary>
-/// Unified tool for managing Word document protection (protect, unprotect)
-/// Merges: WordProtectTool, WordUnprotectTool
+///     Unified tool for managing Word document protection (protect, unprotect)
+///     Merges: WordProtectTool, WordUnprotectTool
 /// </summary>
 public class WordProtectionTool : IAsposeTool
 {
@@ -47,7 +47,8 @@ Usage examples:
             protectionType = new
             {
                 type = "string",
-                description = "Protection type: 'ReadOnly', 'AllowOnlyComments', 'AllowOnlyFormFields', 'AllowOnlyRevisions' (required for protect operation)",
+                description =
+                    "Protection type: 'ReadOnly', 'AllowOnlyComments', 'AllowOnlyFormFields', 'AllowOnlyRevisions' (required for protect operation)",
                 @enum = new[] { "ReadOnly", "AllowOnlyComments", "AllowOnlyFormFields", "AllowOnlyRevisions" }
             }
         },
@@ -68,7 +69,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Protects the document with password
+    ///     Protects the document with password
     /// </summary>
     /// <param name="arguments">JSON arguments containing password, optional protectionType, outputPath</param>
     /// <param name="path">Word document file path</param>
@@ -99,7 +100,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Removes protection from the document
+    ///     Removes protection from the document
     /// </summary>
     /// <param name="arguments">JSON arguments containing password, optional outputPath</param>
     /// <param name="path">Word document file path</param>
@@ -128,12 +129,10 @@ Usage examples:
         doc.Unprotect(password);
 
         if (doc.ProtectionType != ProtectionType.NoProtection)
-        {
-            throw new InvalidOperationException("Unprotect failed, password may be incorrect or document is restricted");
-        }
+            throw new InvalidOperationException(
+                "Unprotect failed, password may be incorrect or document is restricted");
 
         doc.Save(outputPath);
         return await Task.FromResult($"Protection removed successfully\nOutput: {outputPath}");
     }
 }
-

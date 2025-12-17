@@ -1,13 +1,18 @@
 ﻿using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Words;
+using Aspose.Words.Tables;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Word;
 
+/// <summary>
+///     Tool for managing styles in Word documents (get, create, apply, copy)
+/// </summary>
 public class WordStyleTool : IAsposeTool
 {
-    public string Description => @"Manage styles in Word documents. Supports 4 operations: get_styles, create_style, apply_style, copy_styles.
+    public string Description =>
+        @"Manage styles in Word documents. Supports 4 operations: get_styles, create_style, apply_style, copy_styles.
 
 Usage examples:
 - Get styles: word_style(operation='get_styles', path='doc.docx', includeBuiltIn=true)
@@ -183,7 +188,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Gets all styles from the document
+    ///     Gets all styles from the document
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, optional includeBuiltIn</param>
     /// <returns>Formatted string with all styles</returns>
@@ -195,15 +200,15 @@ Usage examples:
 
         var doc = new Document(path);
         var result = new StringBuilder();
-        
+
         result.AppendLine("=== Document Styles ===\n");
 
         List<Style> paraStyles;
-        
+
         if (includeBuiltIn)
         {
             // Include all styles (built-in and custom)
-            paraStyles = doc.Styles.Cast<Style>()
+            paraStyles = doc.Styles
                 .Where(s => s.Type == StyleType.Paragraph)
                 .OrderBy(s => s.Name)
                 .ToList();
@@ -213,15 +218,11 @@ Usage examples:
             var usedStyleNames = new HashSet<string>();
             var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>();
             foreach (var para in paragraphs)
-            {
                 if (para.ParagraphFormat.Style != null && !string.IsNullOrEmpty(para.ParagraphFormat.Style.Name))
-                {
                     usedStyleNames.Add(para.ParagraphFormat.Style.Name);
-                }
-            }
-            
+
             // Return styles that are either custom (not built-in) OR are built-in but actually used in the document
-            paraStyles = doc.Styles.Cast<Style>()
+            paraStyles = doc.Styles
                 .Where(s => s.Type == StyleType.Paragraph && (!s.BuiltIn || usedStyleNames.Contains(s.Name)))
                 .OrderBy(s => s.Name)
                 .ToList();
@@ -229,18 +230,15 @@ Usage examples:
 
         result.AppendLine("【Paragraph Styles】");
         if (paraStyles.Count == 0)
-        {
             result.AppendLine("(No paragraph styles found)");
-        }
         else
-        {
             foreach (var style in paraStyles)
             {
                 result.AppendLine($"\nStyle Name: {style.Name}");
                 result.AppendLine($"  Built-in: {(style.BuiltIn ? "Yes" : "No")}");
                 if (!string.IsNullOrEmpty(style.BaseStyleName))
                     result.AppendLine($"  Based on: {style.BaseStyleName}");
-                
+
                 var font = style.Font;
                 if (font.NameAscii != font.NameFarEast)
                 {
@@ -248,12 +246,14 @@ Usage examples:
                     result.AppendLine($"  Font (Far East): {font.NameFarEast}");
                 }
                 else
+                {
                     result.AppendLine($"  Font: {font.Name}");
-                
+                }
+
                 result.AppendLine($"  Size: {font.Size} pt");
                 if (font.Bold) result.AppendLine("  Bold: Yes");
                 if (font.Italic) result.AppendLine("  Italic: Yes");
-                
+
                 var paraFormat = style.ParagraphFormat;
                 result.AppendLine($"  Alignment: {paraFormat.Alignment}");
                 if (paraFormat.SpaceBefore != 0)
@@ -261,21 +261,21 @@ Usage examples:
                 if (paraFormat.SpaceAfter != 0)
                     result.AppendLine($"  Space After: {paraFormat.SpaceAfter} pt");
             }
-        }
 
         result.AppendLine($"\n\nTotal Paragraph Styles: {paraStyles.Count}");
         if (!includeBuiltIn)
-        {
             result.AppendLine("(Showing custom styles and built-in styles actually used in the document)");
-        }
 
         return await Task.FromResult(result.ToString());
     }
 
     /// <summary>
-    /// Creates a new style
+    ///     Creates a new style
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, styleName, styleType, optional baseStyleName, formatting options, outputPath</param>
+    /// <param name="arguments">
+    ///     JSON arguments containing path, styleName, styleType, optional baseStyleName, formatting
+    ///     options, outputPath
+    /// </param>
     /// <returns>Success message</returns>
     private async Task<string> CreateStyle(JsonObject? arguments)
     {
@@ -323,14 +323,16 @@ Usage examples:
 
         if (!string.IsNullOrEmpty(fontNameAscii))
             style.Font.NameAscii = fontNameAscii;
-        
+
         if (!string.IsNullOrEmpty(fontNameFarEast))
             style.Font.NameFarEast = fontNameFarEast;
-        
+
         if (!string.IsNullOrEmpty(fontName))
         {
             if (string.IsNullOrEmpty(fontNameAscii) && string.IsNullOrEmpty(fontNameFarEast))
+            {
                 style.Font.Name = fontName;
+            }
             else
             {
                 if (string.IsNullOrEmpty(fontNameAscii))
@@ -353,21 +355,12 @@ Usage examples:
             style.Font.Underline = underline.Value ? Underline.Single : Underline.None;
 
         if (!string.IsNullOrEmpty(color))
-        {
-            try
-            {
-                style.Font.Color = ColorHelper.ParseColor(color);
-            }
-            catch (Exception colorEx)
-            {
-                throw new ArgumentException($"Unable to parse color '{color}': {colorEx.Message}. Please use a valid color format (e.g., #FF0000 or red)");
-            }
-        }
+            // Parse color with error handling - throws ArgumentException on failure
+            style.Font.Color = ColorHelper.ParseColor(color, true);
 
         if (styleType == StyleType.Paragraph || styleType == StyleType.List)
         {
             if (!string.IsNullOrEmpty(alignment))
-            {
                 style.ParagraphFormat.Alignment = alignment.ToLower() switch
                 {
                     "center" => ParagraphAlignment.Center,
@@ -375,7 +368,6 @@ Usage examples:
                     "justify" => ParagraphAlignment.Justify,
                     _ => ParagraphAlignment.Left
                 };
-            }
 
             if (spaceBefore.HasValue)
                 style.ParagraphFormat.SpaceBefore = spaceBefore.Value;
@@ -395,7 +387,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Applies a style to paragraphs or runs
+    ///     Applies a style to paragraphs or runs
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, styleName, optional paragraphIndex, runIndex, outputPath</param>
     /// <returns>Success message</returns>
@@ -417,11 +409,11 @@ Usage examples:
         if (style == null)
             throw new ArgumentException($"Style '{styleName}' not found");
 
-        int appliedCount = 0;
+        var appliedCount = 0;
 
         if (tableIndex.HasValue)
         {
-            var tables = doc.GetChildNodes(NodeType.Table, true).Cast<Aspose.Words.Tables.Table>().ToList();
+            var tables = doc.GetChildNodes(NodeType.Table, true).Cast<Table>().ToList();
             if (tableIndex.Value < 0 || tableIndex.Value >= tables.Count)
                 throw new ArgumentException($"tableIndex must be between 0 and {tables.Count - 1}");
             tables[tableIndex.Value].Style = style;
@@ -436,19 +428,19 @@ Usage examples:
                 appliedCount++;
             }
         }
-        else if (paragraphIndicesArray != null && paragraphIndicesArray.Count > 0)
+        else if (paragraphIndicesArray is { Count: > 0 })
         {
-            var sectionIdx = sectionIndex.HasValue ? sectionIndex.Value : 0;
+            var sectionIdx = sectionIndex ?? 0;
             if (sectionIdx < 0 || sectionIdx >= doc.Sections.Count)
                 throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
 
             var section = doc.Sections[sectionIdx];
             var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
-            
+
             foreach (var idxObj in paragraphIndicesArray)
             {
                 var idx = idxObj?.GetValue<int>();
-                if (idx.HasValue && idx.Value >= 0 && idx.Value < paragraphs.Count)
+                if (idx is >= 0 && idx.Value < paragraphs.Count)
                 {
                     paragraphs[idx.Value].ParagraphFormat.Style = style;
                     appliedCount++;
@@ -457,22 +449,24 @@ Usage examples:
         }
         else if (paragraphIndex.HasValue)
         {
-            var sectionIdx = sectionIndex.HasValue ? sectionIndex.Value : 0;
+            var sectionIdx = sectionIndex ?? 0;
             if (sectionIdx < 0 || sectionIdx >= doc.Sections.Count)
                 throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
 
             var section = doc.Sections[sectionIdx];
             var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
-            
+
             if (paragraphIndex.Value < 0 || paragraphIndex.Value >= paragraphs.Count)
-                throw new ArgumentException($"paragraphIndex must be between 0 and {paragraphs.Count - 1} (section {sectionIdx} has {paragraphs.Count} paragraphs, total document paragraphs: {doc.GetChildNodes(NodeType.Paragraph, true).Count})");
+                throw new ArgumentException(
+                    $"paragraphIndex must be between 0 and {paragraphs.Count - 1} (section {sectionIdx} has {paragraphs.Count} paragraphs, total document paragraphs: {doc.GetChildNodes(NodeType.Paragraph, true).Count})");
 
             paragraphs[paragraphIndex.Value].ParagraphFormat.Style = style;
             appliedCount = 1;
         }
         else
         {
-            throw new ArgumentException("Either paragraphIndex, paragraphIndices, tableIndex, or applyToAllParagraphs must be provided");
+            throw new ArgumentException(
+                "Either paragraphIndex, paragraphIndices, tableIndex, or applyToAllParagraphs must be provided");
         }
 
         doc.Save(outputPath);
@@ -480,7 +474,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Copies styles from source document to destination document
+    ///     Copies styles from source document to destination document
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, sourcePath, optional outputPath</param>
     /// <returns>Success message</returns>
@@ -505,27 +499,25 @@ Usage examples:
         {
             var stylesArray = arguments["styleNames"]?.AsArray();
             if (stylesArray != null)
-            {
                 foreach (var item in stylesArray)
                 {
                     var name = item?.GetValue<string>();
                     if (!string.IsNullOrEmpty(name))
                         styleNames.Add(name);
                 }
-            }
         }
 
-        bool copyAll = styleNames.Count == 0;
+        var copyAll = styleNames.Count == 0;
         var copiedCount = 0;
         var skippedCount = 0;
 
-        foreach (Style sourceStyle in sourceDoc.Styles)
+        foreach (var sourceStyle in sourceDoc.Styles)
         {
             if (!copyAll && !styleNames.Contains(sourceStyle.Name))
                 continue;
 
             var existingStyle = targetDoc.Styles[sourceStyle.Name];
-            
+
             if (existingStyle != null && !overwriteExisting)
             {
                 skippedCount++;
@@ -553,7 +545,8 @@ Usage examples:
         }
 
         targetDoc.Save(outputPath);
-        return await Task.FromResult($"Copied {copiedCount} style(s) from {Path.GetFileName(sourceDocument)}. Skipped: {skippedCount}. Output: {outputPath}");
+        return await Task.FromResult(
+            $"Copied {copiedCount} style(s) from {Path.GetFileName(sourceDocument)}. Skipped: {skippedCount}. Output: {outputPath}");
     }
 
     private void CopyStyleProperties(Style sourceStyle, Style targetStyle)
@@ -566,7 +559,7 @@ Usage examples:
         targetStyle.Font.Italic = sourceStyle.Font.Italic;
         targetStyle.Font.Color = sourceStyle.Font.Color;
         targetStyle.Font.Underline = sourceStyle.Font.Underline;
-        
+
         if (sourceStyle.Type == StyleType.Paragraph)
         {
             targetStyle.ParagraphFormat.Alignment = sourceStyle.ParagraphFormat.Alignment;
@@ -579,6 +572,4 @@ Usage examples:
             targetStyle.ParagraphFormat.FirstLineIndent = sourceStyle.ParagraphFormat.FirstLineIndent;
         }
     }
-
 }
-

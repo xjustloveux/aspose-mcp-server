@@ -1,13 +1,12 @@
 ﻿using System.Text.Json.Nodes;
-using System.Text;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Excel;
 
 /// <summary>
-/// Unified tool for Excel file operations (create, convert, merge workbooks, split workbook)
-/// Merges: ExcelCreateTool, ExcelConvertTool, ExcelMergeWorkbooksTool, ExcelSplitWorkbookTool
+///     Unified tool for Excel file operations (create, convert, merge workbooks, split workbook)
+///     Merges: ExcelCreateTool, ExcelConvertTool, ExcelMergeWorkbooksTool, ExcelSplitWorkbookTool
 /// </summary>
 public class ExcelFileOperationsTool : IAsposeTool
 {
@@ -37,7 +36,8 @@ Usage examples:
             path = new
             {
                 type = "string",
-                description = "File path (output path for create/merge operations, input path for split operation, can be used instead of inputPath/outputPath)"
+                description =
+                    "File path (output path for create/merge operations, input path for split operation, can be used instead of inputPath/outputPath)"
             },
             outputPath = new
             {
@@ -84,7 +84,8 @@ Usage examples:
             outputFileNamePattern = new
             {
                 type = "string",
-                description = "Output file name pattern, use {index} for sheet index, {name} for sheet name (optional, for split, default: 'sheet_{name}.xlsx')"
+                description =
+                    "Output file name pattern, use {index} for sheet index, {name} for sheet name (optional, for split, default: 'sheet_{name}.xlsx')"
             }
         },
         required = new[] { "operation" }
@@ -105,21 +106,18 @@ Usage examples:
     }
 
     /// <summary>
-    /// Creates a new workbook
+    ///     Creates a new workbook
     /// </summary>
     /// <param name="arguments">JSON arguments containing path or outputPath, optional sheetName</param>
     /// <returns>Success message with file path</returns>
     private async Task<string> CreateWorkbookAsync(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetString(arguments, "path", "outputPath", "path or outputPath", true);
+        var path = ArgumentHelper.GetString(arguments, "path", "outputPath", "path or outputPath");
         var sheetName = ArgumentHelper.GetStringNullable(arguments, "sheetName");
 
         using var workbook = new Workbook();
-        
-        if (!string.IsNullOrEmpty(sheetName))
-        {
-            workbook.Worksheets[0].Name = sheetName;
-        }
+
+        if (!string.IsNullOrEmpty(sheetName)) workbook.Worksheets[0].Name = sheetName;
 
         // For create operation, path is the output path
         SecurityHelper.ValidateFilePath(path);
@@ -128,7 +126,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Converts workbook to another format
+    ///     Converts workbook to another format
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, outputPath, format</param>
     /// <returns>Success message with output path</returns>
@@ -158,63 +156,58 @@ Usage examples:
     }
 
     /// <summary>
-    /// Merges multiple workbooks into one
+    ///     Merges multiple workbooks into one
     /// </summary>
     /// <param name="arguments">JSON arguments containing sourcePaths array and outputPath</param>
     /// <returns>Success message with merged file path</returns>
     private async Task<string> MergeWorkbooksAsync(JsonObject? arguments)
     {
-        var outputPath = ArgumentHelper.GetString(arguments, "path", "outputPath", "path or outputPath", true);
+        var outputPath = ArgumentHelper.GetString(arguments, "path", "outputPath", "path or outputPath");
         var inputPathsArray = ArgumentHelper.GetArray(arguments, "inputPaths");
         var mergeSheets = ArgumentHelper.GetBool(arguments, "mergeSheets", false);
 
         // Validate array size
         SecurityHelper.ValidateArraySize(inputPathsArray, "inputPaths");
 
-        if (inputPathsArray.Count == 0)
-        {
-            throw new ArgumentException("At least one input path is required");
-        }
+        if (inputPathsArray.Count == 0) throw new ArgumentException("At least one input path is required");
 
-        var inputPaths = inputPathsArray.Select(p => p?.GetValue<string>()).Where(p => !string.IsNullOrEmpty(p)).ToList();
-        if (inputPaths.Count == 0)
-        {
-            throw new ArgumentException("No valid input paths provided");
-        }
+        var inputPaths = inputPathsArray.Select(p => p?.GetValue<string>()).Where(p => !string.IsNullOrEmpty(p))
+            .ToList();
+        if (inputPaths.Count == 0) throw new ArgumentException("No valid input paths provided");
 
         // Validate all input paths
-        foreach (var inputPath in inputPaths)
-        {
-            SecurityHelper.ValidateFilePath(inputPath!, "inputPaths");
-        }
+        foreach (var inputPath in inputPaths) SecurityHelper.ValidateFilePath(inputPath!, "inputPaths");
 
         // Validate output path
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         using var targetWorkbook = new Workbook(inputPaths[0]);
 
-        for (int i = 1; i < inputPaths.Count; i++)
+        for (var i = 1; i < inputPaths.Count; i++)
         {
             using var sourceWorkbook = new Workbook(inputPaths[i]);
-            
-            foreach (Worksheet sourceSheet in sourceWorkbook.Worksheets)
-            {
+
+            foreach (var sourceSheet in sourceWorkbook.Worksheets)
                 if (mergeSheets)
                 {
                     var existingSheet = targetWorkbook.Worksheets[sourceSheet.Name];
                     if (existingSheet != null)
                     {
                         var lastRow = existingSheet.Cells.MaxDataRow + 1;
-                        var sourceRange = sourceSheet.Cells.CreateRange(0, 0, sourceSheet.Cells.MaxDataRow + 1, sourceSheet.Cells.MaxDataColumn + 1);
-                        var destRange = existingSheet.Cells.CreateRange(lastRow, 0, sourceSheet.Cells.MaxDataRow + 1, sourceSheet.Cells.MaxDataColumn + 1);
+                        var sourceRange = sourceSheet.Cells.CreateRange(0, 0, sourceSheet.Cells.MaxDataRow + 1,
+                            sourceSheet.Cells.MaxDataColumn + 1);
+                        var destRange = existingSheet.Cells.CreateRange(lastRow, 0, sourceSheet.Cells.MaxDataRow + 1,
+                            sourceSheet.Cells.MaxDataColumn + 1);
                         destRange.Copy(sourceRange, new PasteOptions { PasteType = PasteType.All });
                     }
                     else
                     {
                         targetWorkbook.Worksheets.Add(sourceSheet.Name);
-                        var newSheet = targetWorkbook.Worksheets[targetWorkbook.Worksheets.Count - 1];
-                        var sourceRange = sourceSheet.Cells.CreateRange(0, 0, sourceSheet.Cells.MaxDataRow + 1, sourceSheet.Cells.MaxDataColumn + 1);
-                        var destRange = newSheet.Cells.CreateRange(0, 0, sourceSheet.Cells.MaxDataRow + 1, sourceSheet.Cells.MaxDataColumn + 1);
+                        var newSheet = targetWorkbook.Worksheets[^1];
+                        var sourceRange = sourceSheet.Cells.CreateRange(0, 0, sourceSheet.Cells.MaxDataRow + 1,
+                            sourceSheet.Cells.MaxDataColumn + 1);
+                        var destRange = newSheet.Cells.CreateRange(0, 0, sourceSheet.Cells.MaxDataRow + 1,
+                            sourceSheet.Cells.MaxDataColumn + 1);
                         destRange.Copy(sourceRange, new PasteOptions { PasteType = PasteType.All });
                     }
                 }
@@ -222,11 +215,12 @@ Usage examples:
                 {
                     targetWorkbook.Worksheets.Add(sourceSheet.Name);
                     var newSheet = targetWorkbook.Worksheets[targetWorkbook.Worksheets.Count - 1];
-                    var sourceRange = sourceSheet.Cells.CreateRange(0, 0, sourceSheet.Cells.MaxDataRow + 1, sourceSheet.Cells.MaxDataColumn + 1);
-                    var destRange = newSheet.Cells.CreateRange(0, 0, sourceSheet.Cells.MaxDataRow + 1, sourceSheet.Cells.MaxDataColumn + 1);
+                    var sourceRange = sourceSheet.Cells.CreateRange(0, 0, sourceSheet.Cells.MaxDataRow + 1,
+                        sourceSheet.Cells.MaxDataColumn + 1);
+                    var destRange = newSheet.Cells.CreateRange(0, 0, sourceSheet.Cells.MaxDataRow + 1,
+                        sourceSheet.Cells.MaxDataColumn + 1);
                     destRange.Copy(sourceRange, new PasteOptions { PasteType = PasteType.All });
                 }
-            }
         }
 
         targetWorkbook.Save(outputPath);
@@ -234,24 +228,24 @@ Usage examples:
     }
 
     /// <summary>
-    /// Splits workbook into multiple files (one file per sheet)
+    ///     Splits workbook into multiple files (one file per sheet)
     /// </summary>
-    /// <param name="arguments">JSON arguments containing inputPath, outputDirectory, optional sheetIndices and outputFileNamePattern</param>
+    /// <param name="arguments">
+    ///     JSON arguments containing inputPath, outputDirectory, optional sheetIndices and
+    ///     outputFileNamePattern
+    /// </param>
     /// <returns>Success message with split file count</returns>
     private async Task<string> SplitWorkbookAsync(JsonObject? arguments)
     {
-        var inputPath = ArgumentHelper.GetString(arguments, "inputPath", "path", "inputPath or path", true);
+        var inputPath = ArgumentHelper.GetString(arguments, "inputPath", "path", "inputPath or path");
         var outputDirectory = ArgumentHelper.GetString(arguments, "outputDirectory");
         var sheetIndicesArray = ArgumentHelper.GetArray(arguments, "sheetIndices", false);
         var fileNamePattern = ArgumentHelper.GetString(arguments, "outputFileNamePattern", "sheet_{name}.xlsx");
 
-        if (!Directory.Exists(outputDirectory))
-        {
-            Directory.CreateDirectory(outputDirectory);
-        }
+        if (!Directory.Exists(outputDirectory)) Directory.CreateDirectory(outputDirectory);
 
         using var sourceWorkbook = new Workbook(inputPath);
-        var sheetIndices = sheetIndicesArray != null 
+        var sheetIndices = sheetIndicesArray != null
             ? sheetIndicesArray.Select(s => s?.GetValue<int>()).Where(s => s.HasValue).Select(s => s!.Value).ToList()
             : Enumerable.Range(0, sourceWorkbook.Worksheets.Count).ToList();
 
@@ -259,10 +253,7 @@ Usage examples:
 
         foreach (var sheetIndex in sheetIndices)
         {
-            if (sheetIndex < 0 || sheetIndex >= sourceWorkbook.Worksheets.Count)
-            {
-                continue;
-            }
+            if (sheetIndex < 0 || sheetIndex >= sourceWorkbook.Worksheets.Count) continue;
 
             var worksheet = sourceWorkbook.Worksheets[sheetIndex];
             var fileName = fileNamePattern
@@ -273,8 +264,10 @@ Usage examples:
             using var newWorkbook = new Workbook();
             newWorkbook.Worksheets.RemoveAt(0);
             var newSheet = newWorkbook.Worksheets.Add(worksheet.Name);
-            var sourceRange = worksheet.Cells.CreateRange(0, 0, worksheet.Cells.MaxDataRow + 1, worksheet.Cells.MaxDataColumn + 1);
-            var destRange = newSheet.Cells.CreateRange(0, 0, worksheet.Cells.MaxDataRow + 1, worksheet.Cells.MaxDataColumn + 1);
+            var sourceRange = worksheet.Cells.CreateRange(0, 0, worksheet.Cells.MaxDataRow + 1,
+                worksheet.Cells.MaxDataColumn + 1);
+            var destRange =
+                newSheet.Cells.CreateRange(0, 0, worksheet.Cells.MaxDataRow + 1, worksheet.Cells.MaxDataColumn + 1);
             destRange.Copy(sourceRange, new PasteOptions { PasteType = PasteType.All });
             newWorkbook.Save(outputPath);
             splitFiles.Add(outputPath);
@@ -283,4 +276,3 @@ Usage examples:
         return await Task.FromResult($"Split workbook into {splitFiles.Count} files:\n{string.Join("\n", splitFiles)}");
     }
 }
-

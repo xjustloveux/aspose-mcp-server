@@ -1,14 +1,17 @@
 ﻿using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Words;
-using System.Linq;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Word;
 
+/// <summary>
+///     Tool for formatting text and paragraphs in Word documents
+/// </summary>
 public class WordFormatTool : IAsposeTool
 {
-    public string Description => @"Manage formatting in Word documents. Supports 4 operations: get_run_format, set_run_format, get_tab_stops, set_paragraph_border.
+    public string Description =>
+        @"Manage formatting in Word documents. Supports 4 operations: get_run_format, set_run_format, get_tab_stops, set_paragraph_border.
 
 Usage examples:
 - Get run format: word_format(operation='get_run_format', path='doc.docx', paragraphIndex=0, runIndex=0)
@@ -135,7 +138,8 @@ Usage examples:
             lineStyle = new
             {
                 type = "string",
-                description = "Border line style: none, single, double, dotted, dashed, thick (for set_paragraph_border)",
+                description =
+                    "Border line style: none, single, double, dotted, dashed, thick (for set_paragraph_border)",
                 @enum = new[] { "none", "single", "double", "dotted", "dashed", "thick" }
             },
             lineWidth = new
@@ -167,7 +171,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Gets run format information
+    ///     Gets run format information
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, paragraphIndex, runIndex, optional sectionIndex</param>
     /// <returns>Formatted string with run format details</returns>
@@ -179,7 +183,7 @@ Usage examples:
         var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
 
         var doc = new Document(path);
-        
+
         // Handle paragraphIndex=-1 (document end)
         if (paragraphIndex == -1)
         {
@@ -195,7 +199,7 @@ Usage examples:
                 throw new ArgumentException("Cannot get run format: document has no paragraphs.");
             }
         }
-        
+
         var sectionIdx = sectionIndex ?? 0;
         if (sectionIdx < 0 || sectionIdx >= doc.Sections.Count)
             throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
@@ -204,7 +208,8 @@ Usage examples:
         var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
 
         if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
-            throw new ArgumentException($"paragraphIndex must be between 0 and {paragraphs.Count - 1}, or use -1 for document end");
+            throw new ArgumentException(
+                $"paragraphIndex must be between 0 and {paragraphs.Count - 1}, or use -1 for document end");
 
         var para = paragraphs[paragraphIndex];
         var runs = para.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
@@ -213,7 +218,8 @@ Usage examples:
         if (runIndex.HasValue)
         {
             if (runIndex.Value < 0 || runIndex.Value >= runs.Count)
-                throw new ArgumentException($"runIndex {runIndex.Value} is out of range (paragraph #{paragraphIndex} has {runs.Count} Runs, valid range: 0-{runs.Count - 1})");
+                throw new ArgumentException(
+                    $"runIndex {runIndex.Value} is out of range (paragraph #{paragraphIndex} has {runs.Count} Runs, valid range: 0-{runs.Count - 1})");
 
             var run = runs[runIndex.Value];
             sb.AppendLine($"=== Run {runIndex.Value} Format ===");
@@ -233,16 +239,16 @@ Usage examples:
         else
         {
             sb.AppendLine($"=== Runs in Paragraph {paragraphIndex} ({runs.Count}) ===");
-            for (int i = 0; i < runs.Count; i++)
+            for (var i = 0; i < runs.Count; i++)
             {
                 var run = runs[i];
                 sb.AppendLine($"\n[{i}] Text: {run.Text}");
                 sb.AppendLine($"    Font: {run.Font.NameAscii}/{run.Font.NameFarEast}, Size: {run.Font.Size}pt");
                 sb.AppendLine($"    Bold: {run.Font.Bold}, Italic: {run.Font.Italic}");
                 sb.AppendLine($"    Underline: {run.Font.Underline}");
-                if (run.Font.StrikeThrough) sb.AppendLine($"    StrikeThrough: True");
-                if (run.Font.Superscript) sb.AppendLine($"    Superscript: True");
-                if (run.Font.Subscript) sb.AppendLine($"    Subscript: True");
+                if (run.Font.StrikeThrough) sb.AppendLine("    StrikeThrough: True");
+                if (run.Font.Superscript) sb.AppendLine("    Superscript: True");
+                if (run.Font.Subscript) sb.AppendLine("    Subscript: True");
             }
         }
 
@@ -250,9 +256,12 @@ Usage examples:
     }
 
     /// <summary>
-    /// Sets run format properties
+    ///     Sets run format properties
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, paragraphIndex, runIndex, optional formatting options, sectionIndex, outputPath</param>
+    /// <param name="arguments">
+    ///     JSON arguments containing path, paragraphIndex, runIndex, optional formatting options,
+    ///     sectionIndex, outputPath
+    /// </param>
     /// <returns>Success message</returns>
     private async Task<string> SetRunFormat(JsonObject? arguments)
     {
@@ -272,7 +281,7 @@ Usage examples:
         var color = ArgumentHelper.GetStringNullable(arguments, "color");
 
         var doc = new Document(path);
-        
+
         // Handle paragraphIndex=-1 (document end)
         if (paragraphIndex == -1)
         {
@@ -288,7 +297,7 @@ Usage examples:
                 throw new ArgumentException("Cannot get run format: document has no paragraphs.");
             }
         }
-        
+
         var sectionIdx = sectionIndex ?? 0;
         if (sectionIdx < 0 || sectionIdx >= doc.Sections.Count)
             throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
@@ -297,7 +306,8 @@ Usage examples:
         var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
 
         if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
-            throw new ArgumentException($"paragraphIndex must be between 0 and {paragraphs.Count - 1}, or use -1 for document end");
+            throw new ArgumentException(
+                $"paragraphIndex must be between 0 and {paragraphs.Count - 1}, or use -1 for document end");
 
         var para = paragraphs[paragraphIndex];
         var runs = para.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
@@ -306,9 +316,7 @@ Usage examples:
         if (runs.Count == 0 && runIndex.HasValue)
         {
             if (runIndex.Value != 0)
-            {
-                throw new ArgumentException($"Paragraph has no Run nodes, runIndex must be 0 to create a new Run");
-            }
+                throw new ArgumentException("Paragraph has no Run nodes, runIndex must be 0 to create a new Run");
             // Create a new run with empty text
             var newRun = new Run(doc);
             para.AppendChild(newRun);
@@ -326,8 +334,9 @@ Usage examples:
         if (runIndex.HasValue)
         {
             if (runIndex.Value < 0 || runIndex.Value >= runs.Count)
-                throw new ArgumentException($"runIndex must be between 0 and {runs.Count - 1} (paragraph has {runs.Count} Runs)");
-            runsToFormat = new List<Run> { runs[runIndex.Value] };
+                throw new ArgumentException(
+                    $"runIndex must be between 0 and {runs.Count - 1} (paragraph has {runs.Count} Runs)");
+            runsToFormat = [runs[runIndex.Value]];
         }
         else
         {
@@ -336,24 +345,19 @@ Usage examples:
 
         foreach (var run in runsToFormat)
         {
-            if (!string.IsNullOrEmpty(fontName)) run.Font.Name = fontName;
-            if (!string.IsNullOrEmpty(fontNameAscii)) run.Font.NameAscii = fontNameAscii;
-            if (!string.IsNullOrEmpty(fontNameFarEast)) run.Font.NameFarEast = fontNameFarEast;
-            if (fontSize.HasValue) run.Font.Size = fontSize.Value;
-            if (bold.HasValue) run.Font.Bold = bold.Value;
-            if (italic.HasValue) run.Font.Italic = italic.Value;
-            if (underline.HasValue) run.Font.Underline = underline.Value ? Underline.Single : Underline.None;
-            if (!string.IsNullOrEmpty(color))
-            {
-                try
-                {
-                    run.Font.Color = ColorHelper.ParseColor(color);
-                }
-                catch
-                {
-                    // Ignore invalid color
-                }
-            }
+            // Apply font settings using FontHelper
+            var underlineStr = underline.HasValue ? underline.Value ? "single" : "none" : null;
+            FontHelper.Word.ApplyFontSettings(
+                run,
+                fontName,
+                fontNameAscii,
+                fontNameFarEast,
+                fontSize,
+                bold,
+                italic,
+                underlineStr,
+                color
+            );
         }
 
         doc.Save(outputPath);
@@ -361,7 +365,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Gets tab stops for a paragraph
+    ///     Gets tab stops for a paragraph
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, paragraphIndex, optional sectionIndex</param>
     /// <returns>Formatted string with tab stops</returns>
@@ -375,22 +379,23 @@ Usage examples:
         var includeStyle = ArgumentHelper.GetBool(arguments, "includeStyle");
 
         var doc = new Document(path);
-        
+
         if (sectionIndex >= doc.Sections.Count)
-            throw new ArgumentException($"Section index {sectionIndex} out of range (total sections: {doc.Sections.Count})");
-        
+            throw new ArgumentException(
+                $"Section index {sectionIndex} out of range (total sections: {doc.Sections.Count})");
+
         var section = doc.Sections[sectionIndex];
         var result = new StringBuilder();
-        
-        result.AppendLine($"=== Tab Stops Information ===");
+
+        result.AppendLine("=== Tab Stops Information ===");
         result.AppendLine($"Location: {location}");
         if (location == "body")
             result.AppendLine($"Paragraph Index: {paragraphIndex}");
         result.AppendLine($"Section Index: {sectionIndex}");
         result.AppendLine();
 
-        List<Paragraph> targetParagraphs = new List<Paragraph>();
-        string locationDesc = "";
+        List<Paragraph> targetParagraphs;
+        string locationDesc;
 
         switch (location.ToLower())
         {
@@ -399,11 +404,15 @@ Usage examples:
                 if (header != null)
                 {
                     var headerParas = header.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
-                    targetParagraphs = allParagraphs ? headerParas : (headerParas.Count > 0 ? new List<Paragraph> { headerParas[0] } : new List<Paragraph>());
+                    targetParagraphs = allParagraphs ? headerParas :
+                        headerParas.Count > 0 ? new List<Paragraph> { headerParas[0] } : new List<Paragraph>();
                     locationDesc = "Header";
                 }
                 else
+                {
                     throw new InvalidOperationException("Header not found");
+                }
+
                 break;
 
             case "footer":
@@ -411,24 +420,31 @@ Usage examples:
                 if (footer != null)
                 {
                     var footerParas = footer.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
-                    targetParagraphs = allParagraphs ? footerParas : (footerParas.Count > 0 ? new List<Paragraph> { footerParas[0] } : new List<Paragraph>());
+                    targetParagraphs = allParagraphs ? footerParas :
+                        footerParas.Count > 0 ? new List<Paragraph> { footerParas[0] } : new List<Paragraph>();
                     locationDesc = "Footer";
                 }
                 else
+                {
                     throw new InvalidOperationException("Footer not found");
+                }
+
                 break;
 
-            case "body":
             default:
                 var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
                 if (allParagraphs)
+                {
                     targetParagraphs = paragraphs;
+                }
                 else
                 {
                     if (paragraphIndex >= paragraphs.Count)
-                        throw new ArgumentException($"Paragraph index {paragraphIndex} out of range (total paragraphs: {paragraphs.Count})");
-                    targetParagraphs = new List<Paragraph> { paragraphs[paragraphIndex] };
+                        throw new ArgumentException(
+                            $"Paragraph index {paragraphIndex} out of range (total paragraphs: {paragraphs.Count})");
+                    targetParagraphs = [paragraphs[paragraphIndex]];
                 }
+
                 locationDesc = allParagraphs ? "Body" : $"Body Paragraph {paragraphIndex}";
                 break;
         }
@@ -436,15 +452,16 @@ Usage examples:
         if (targetParagraphs.Count == 0)
             throw new InvalidOperationException("No target paragraphs found");
 
-        var allTabStops = new Dictionary<string, (double position, TabAlignment alignment, TabLeader leader, string source)>();
-        
-        for (int paraIdx = 0; paraIdx < targetParagraphs.Count; paraIdx++)
+        var allTabStops =
+            new Dictionary<string, (double position, TabAlignment alignment, TabLeader leader, string source)>();
+
+        for (var paraIdx = 0; paraIdx < targetParagraphs.Count; paraIdx++)
         {
             var para = targetParagraphs[paraIdx];
             var paraSource = allParagraphs ? $"Paragraph {paraIdx}" : "Paragraph";
-            
+
             var paraTabStops = para.ParagraphFormat.TabStops;
-            for (int i = 0; i < paraTabStops.Count; i++)
+            for (var i = 0; i < paraTabStops.Count; i++)
             {
                 var tab = paraTabStops[i];
                 var position = Math.Round(tab.Position, 2);
@@ -452,17 +469,16 @@ Usage examples:
                 if (!allTabStops.ContainsKey(key))
                     allTabStops[key] = (position, tab.Alignment, tab.Leader, $"{paraSource} (Custom)");
             }
-            
+
             if (includeStyle && para.ParagraphFormat.Style != null)
             {
                 var currentStyle = para.ParagraphFormat.Style;
                 var styleChain = new List<Style>();
-                
+
                 while (currentStyle != null)
                 {
                     styleChain.Add(currentStyle);
                     if (!string.IsNullOrEmpty(currentStyle.BaseStyleName))
-                    {
                         try
                         {
                             var baseStyle = para.Document.Styles[currentStyle.BaseStyleName];
@@ -475,42 +491,40 @@ Usage examples:
                         {
                             currentStyle = null;
                         }
-                    }
                     else
                         currentStyle = null;
                 }
-                
+
                 foreach (var chainStyle in styleChain)
-                {
                     if (chainStyle.ParagraphFormat != null)
                     {
                         var styleTabStops = chainStyle.ParagraphFormat.TabStops;
-                        for (int i = 0; i < styleTabStops.Count; i++)
+                        for (var i = 0; i < styleTabStops.Count; i++)
                         {
                             var tab = styleTabStops[i];
                             var position = Math.Round(tab.Position, 2);
                             var key = $"{position}_{tab.Alignment}";
-                            
+
                             if (!allTabStops.ContainsKey(key))
                             {
-                                var styleName = chainStyle == para.ParagraphFormat.Style 
-                                    ? chainStyle.Name 
+                                var styleName = chainStyle == para.ParagraphFormat.Style
+                                    ? chainStyle.Name
                                     : $"{para.ParagraphFormat.Style.Name} (Base: {chainStyle.Name})";
-                                allTabStops[key] = (position, tab.Alignment, tab.Leader, $"{paraSource} (Style: {styleName})");
+                                allTabStops[key] = (position, tab.Alignment, tab.Leader,
+                                    $"{paraSource} (Style: {styleName})");
                             }
                         }
                     }
-                }
             }
         }
-        
+
         result.AppendLine($"【Tab Stops in {locationDesc}】");
         if (allParagraphs)
             result.AppendLine($"Read Range: All paragraphs ({targetParagraphs.Count})");
         if (includeStyle)
-            result.AppendLine($"Include Style Tab Stops: Yes");
+            result.AppendLine("Include Style Tab Stops: Yes");
         result.AppendLine();
-        
+
         if (allTabStops.Count == 0)
         {
             result.AppendLine("  No Tab Stops");
@@ -519,8 +533,8 @@ Usage examples:
         {
             result.AppendLine($"  Total {allTabStops.Count} Tab Stop(s):");
             result.AppendLine();
-            
-            int idx = 1;
+
+            var idx = 1;
             foreach (var kvp in allTabStops.OrderBy(x => x.Value.position))
             {
                 var (position, alignment, leader, source) = kvp.Value;
@@ -538,9 +552,12 @@ Usage examples:
     }
 
     /// <summary>
-    /// Sets paragraph border properties
+    ///     Sets paragraph border properties
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, paragraphIndex, optional border properties, sectionIndex, outputPath</param>
+    /// <param name="arguments">
+    ///     JSON arguments containing path, paragraphIndex, optional border properties, sectionIndex,
+    ///     outputPath
+    /// </param>
     /// <returns>Success message</returns>
     private async Task<string> SetParagraphBorder(JsonObject? arguments)
     {
@@ -550,23 +567,25 @@ Usage examples:
         var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
 
         var doc = new Document(path);
-        
+
         if (sectionIndex >= doc.Sections.Count)
-            throw new ArgumentException($"Section index {sectionIndex} out of range (total sections: {doc.Sections.Count})");
-        
+            throw new ArgumentException(
+                $"Section index {sectionIndex} out of range (total sections: {doc.Sections.Count})");
+
         var section = doc.Sections[sectionIndex];
         var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
-        
+
         if (paragraphIndex >= paragraphs.Count)
-            throw new ArgumentException($"Paragraph index {paragraphIndex} out of range (total paragraphs: {paragraphs.Count})");
-        
+            throw new ArgumentException(
+                $"Paragraph index {paragraphIndex} out of range (total paragraphs: {paragraphs.Count})");
+
         var para = paragraphs[paragraphIndex];
         var borders = para.ParagraphFormat.Borders;
-        
+
         var defaultLineStyle = ArgumentHelper.GetString(arguments, "lineStyle", "single");
         var defaultLineWidth = ArgumentHelper.GetDouble(arguments, "lineWidth", "lineWidth", 0.5);
         var defaultLineColor = ArgumentHelper.GetString(arguments, "lineColor", "000000");
-        
+
         if (ArgumentHelper.GetBool(arguments, "borderTop", false))
         {
             borders.Top.LineStyle = GetLineStyle(defaultLineStyle);
@@ -574,8 +593,10 @@ Usage examples:
             borders.Top.Color = ColorHelper.ParseColor(defaultLineColor);
         }
         else
+        {
             borders.Top.LineStyle = LineStyle.None;
-        
+        }
+
         if (ArgumentHelper.GetBool(arguments, "borderBottom", false))
         {
             borders.Bottom.LineStyle = GetLineStyle(defaultLineStyle);
@@ -583,8 +604,10 @@ Usage examples:
             borders.Bottom.Color = ColorHelper.ParseColor(defaultLineColor);
         }
         else
+        {
             borders.Bottom.LineStyle = LineStyle.None;
-        
+        }
+
         if (ArgumentHelper.GetBool(arguments, "borderLeft", false))
         {
             borders.Left.LineStyle = GetLineStyle(defaultLineStyle);
@@ -592,8 +615,10 @@ Usage examples:
             borders.Left.Color = ColorHelper.ParseColor(defaultLineColor);
         }
         else
+        {
             borders.Left.LineStyle = LineStyle.None;
-        
+        }
+
         if (ArgumentHelper.GetBool(arguments, "borderRight", false))
         {
             borders.Right.LineStyle = GetLineStyle(defaultLineStyle);
@@ -601,18 +626,20 @@ Usage examples:
             borders.Right.Color = ColorHelper.ParseColor(defaultLineColor);
         }
         else
+        {
             borders.Right.LineStyle = LineStyle.None;
-        
+        }
+
         doc.Save(outputPath);
-        
+
         var enabledBorders = new List<string>();
         if (ArgumentHelper.GetBool(arguments, "borderTop", false)) enabledBorders.Add("Top");
         if (ArgumentHelper.GetBool(arguments, "borderBottom", false)) enabledBorders.Add("Bottom");
         if (ArgumentHelper.GetBool(arguments, "borderLeft", false)) enabledBorders.Add("Left");
         if (ArgumentHelper.GetBool(arguments, "borderRight", false)) enabledBorders.Add("Right");
-        
+
         var bordersDesc = enabledBorders.Count > 0 ? string.Join(", ", enabledBorders) : "None";
-        
+
         return await Task.FromResult($"Successfully set paragraph {paragraphIndex} borders: {bordersDesc}");
     }
 
@@ -629,6 +656,4 @@ Usage examples:
             _ => LineStyle.Single
         };
     }
-
 }
-

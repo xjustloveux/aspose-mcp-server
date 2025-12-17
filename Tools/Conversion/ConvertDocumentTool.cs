@@ -1,13 +1,21 @@
 ﻿using System.Text.Json.Nodes;
-using Aspose.Words;
 using Aspose.Cells;
 using Aspose.Slides;
+using Aspose.Words;
 using AsposeMcpServer.Core;
+using SaveFormat = Aspose.Words.SaveFormat;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Conversion;
 
+/// <summary>
+///     Tool for converting documents between various formats with automatic source type detection
+///     Supports Word, Excel, and PowerPoint documents
+/// </summary>
 public class ConvertDocumentTool : IAsposeTool
 {
+    /// <summary>
+    ///     Gets the description of the tool and its usage examples
+    /// </summary>
     public string Description => @"Convert documents between various formats (auto-detect source type).
 
 Usage examples:
@@ -16,6 +24,9 @@ Usage examples:
 - Convert PowerPoint to PDF: convert_document(inputPath='presentation.pptx', outputPath='presentation.pdf')
 - Convert PDF to Word: convert_document(inputPath='doc.pdf', outputPath='doc.docx')";
 
+    /// <summary>
+    ///     Gets the JSON schema defining the input parameters for the tool
+    /// </summary>
     public object InputSchema => new
     {
         type = "object",
@@ -35,6 +46,11 @@ Usage examples:
         required = new[] { "inputPath", "outputPath" }
     };
 
+    /// <summary>
+    ///     Executes the tool operation with the provided JSON arguments
+    /// </summary>
+    /// <param name="arguments">JSON arguments object containing operation parameters</param>
+    /// <returns>Result message as a string</returns>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var inputPath = ArgumentHelper.GetString(arguments, "inputPath");
@@ -88,17 +104,17 @@ Usage examples:
         return extension is ".ppt" or ".pptx" or ".odp";
     }
 
-    private Aspose.Words.SaveFormat GetWordSaveFormat(string extension)
+    private SaveFormat GetWordSaveFormat(string extension)
     {
         return extension switch
         {
-            ".pdf" => Aspose.Words.SaveFormat.Pdf,
-            ".docx" => Aspose.Words.SaveFormat.Docx,
-            ".doc" => Aspose.Words.SaveFormat.Doc,
-            ".rtf" => Aspose.Words.SaveFormat.Rtf,
-            ".html" => Aspose.Words.SaveFormat.Html,
-            ".txt" => Aspose.Words.SaveFormat.Text,
-            ".odt" => Aspose.Words.SaveFormat.Odt,
+            ".pdf" => SaveFormat.Pdf,
+            ".docx" => SaveFormat.Docx,
+            ".doc" => SaveFormat.Doc,
+            ".rtf" => SaveFormat.Rtf,
+            ".html" => SaveFormat.Html,
+            ".txt" => SaveFormat.Text,
+            ".odt" => SaveFormat.Odt,
             _ => throw new ArgumentException($"Unsupported output format: {extension}")
         };
     }
@@ -130,4 +146,3 @@ Usage examples:
         };
     }
 }
-

@@ -1,16 +1,17 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
 
 namespace AsposeMcpServer.Core;
 
 /// <summary>
-/// Helper class for argument parsing, type conversion, and path validation
+///     Helper class for argument parsing, type conversion, and path validation
 /// </summary>
 public static class ArgumentHelper
 {
     #region GetInt - Integer Methods
 
     /// <summary>
-    /// Gets a required integer from JSON arguments (simplified version where key is used as paramName)
+    ///     Gets a required integer from JSON arguments (simplified version where key is used as paramName)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key (also used as paramName in error messages)</param>
@@ -22,7 +23,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets an optional integer from JSON arguments (simplified version where key is used as paramName)
+    ///     Gets an optional integer from JSON arguments (simplified version where key is used as paramName)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key (also used as paramName in error messages)</param>
@@ -37,7 +38,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets an integer from JSON arguments with default value
+    ///     Gets an integer from JSON arguments with default value
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key</param>
@@ -50,7 +51,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets a required integer from JSON arguments (full version with custom paramName)
+    ///     Gets a required integer from JSON arguments (full version with custom paramName)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key</param>
@@ -59,11 +60,11 @@ public static class ArgumentHelper
     /// <exception cref="ArgumentException">Thrown if parameter is missing or value is invalid</exception>
     public static int GetInt(JsonObject? arguments, string key, string paramName)
     {
-        return GetInt(arguments, key, null, paramName, true);
+        return GetInt(arguments, key, null, paramName);
     }
 
     /// <summary>
-    /// Gets an optional integer from JSON arguments (full version with custom paramName)
+    ///     Gets an optional integer from JSON arguments (full version with custom paramName)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key</param>
@@ -77,7 +78,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets an integer from JSON arguments, checking multiple parameter names (full version)
+    ///     Gets an integer from JSON arguments, checking multiple parameter names (full version)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="primaryName">Primary parameter name to check</param>
@@ -87,12 +88,13 @@ public static class ArgumentHelper
     /// <param name="defaultValue">Default value to return if key is missing (only used when required is false)</param>
     /// <returns>Integer value</returns>
     /// <exception cref="ArgumentException">Thrown if required parameter is missing or value is invalid</exception>
-    public static int GetInt(JsonObject? arguments, string primaryName, string? alternateName, string paramName, bool required = true, int? defaultValue = null)
+    public static int GetInt(JsonObject? arguments, string primaryName, string? alternateName, string paramName,
+        bool required = true, int? defaultValue = null)
     {
         var result = GetIntNullable(arguments, primaryName, alternateName, paramName);
         if (result.HasValue)
             return result.Value;
-        
+
         if (required)
             throw new ArgumentException($"{paramName} is required");
         if (defaultValue.HasValue)
@@ -101,7 +103,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets a nullable integer from JSON arguments (simplified version where key is used as paramName)
+    ///     Gets a nullable integer from JSON arguments (simplified version where key is used as paramName)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key (also used as paramName in error messages)</param>
@@ -113,7 +115,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets a nullable integer from JSON arguments
+    ///     Gets a nullable integer from JSON arguments
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key</param>
@@ -126,7 +128,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets a nullable integer from JSON arguments, checking multiple parameter names (full version)
+    ///     Gets a nullable integer from JSON arguments, checking multiple parameter names (full version)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="primaryName">Primary parameter name to check</param>
@@ -134,32 +136,27 @@ public static class ArgumentHelper
     /// <param name="paramName">Parameter name for error messages</param>
     /// <returns>Nullable integer value, or null if both keys are missing</returns>
     /// <exception cref="ArgumentException">Thrown if value is invalid (but not missing)</exception>
-    public static int? GetIntNullable(JsonObject? arguments, string primaryName, string? alternateName, string paramName)
+    public static int? GetIntNullable(JsonObject? arguments, string primaryName, string? alternateName,
+        string paramName)
     {
         JsonNode? node = null;
         if (arguments != null)
-        {
             node = arguments[primaryName] ?? (alternateName != null ? arguments[alternateName] : null);
-        }
 
         if (node == null)
             return null;
 
-        if (node.GetValueKind() == System.Text.Json.JsonValueKind.String)
+        if (node.GetValueKind() == JsonValueKind.String)
         {
             var str = node.GetValue<string>();
-            if (string.IsNullOrEmpty(str) || !int.TryParse(str, out int result))
+            if (string.IsNullOrEmpty(str) || !int.TryParse(str, out var result))
                 throw new ArgumentException($"{paramName} must be a valid integer");
             return result;
         }
-        else if (node.GetValueKind() == System.Text.Json.JsonValueKind.Number)
-        {
-            return node.GetValue<int>();
-        }
-        else
-        {
-            throw new ArgumentException($"{paramName} must be a valid integer");
-        }
+
+        if (node.GetValueKind() == JsonValueKind.Number) return node.GetValue<int>();
+
+        throw new ArgumentException($"{paramName} must be a valid integer");
     }
 
     #endregion
@@ -167,7 +164,7 @@ public static class ArgumentHelper
     #region GetDouble - Double Methods
 
     /// <summary>
-    /// Gets a required double from JSON arguments (simplified version where key is used as paramName)
+    ///     Gets a required double from JSON arguments (simplified version where key is used as paramName)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key (also used as paramName in error messages)</param>
@@ -179,7 +176,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets an optional double from JSON arguments (simplified version where key is used as paramName)
+    ///     Gets an optional double from JSON arguments (simplified version where key is used as paramName)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key (also used as paramName in error messages)</param>
@@ -194,7 +191,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets a double from JSON arguments with default value
+    ///     Gets a double from JSON arguments with default value
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key</param>
@@ -207,7 +204,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets a double from JSON arguments with default value
+    ///     Gets a double from JSON arguments with default value
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key</param>
@@ -221,7 +218,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets a required double from JSON arguments (full version with custom paramName)
+    ///     Gets a required double from JSON arguments (full version with custom paramName)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key</param>
@@ -234,7 +231,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets an optional double from JSON arguments (full version with custom paramName)
+    ///     Gets an optional double from JSON arguments (full version with custom paramName)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key</param>
@@ -243,12 +240,13 @@ public static class ArgumentHelper
     /// <param name="defaultValue">Default value to return if key is missing (only used when required is false)</param>
     /// <returns>Double value</returns>
     /// <exception cref="ArgumentException">Thrown if required parameter is missing or value is invalid</exception>
-    public static double GetDouble(JsonObject? arguments, string key, string paramName, bool required, double? defaultValue = null)
+    public static double GetDouble(JsonObject? arguments, string key, string paramName, bool required,
+        double? defaultValue = null)
     {
         var result = GetDoubleNullable(arguments, key, null, paramName);
         if (result.HasValue)
             return result.Value;
-        
+
         if (required)
             throw new ArgumentException($"{paramName} is required");
         if (defaultValue.HasValue)
@@ -257,7 +255,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets a nullable double from JSON arguments (simplified version where key is used as paramName)
+    ///     Gets a nullable double from JSON arguments (simplified version where key is used as paramName)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key (also used as paramName in error messages)</param>
@@ -269,7 +267,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets a nullable double from JSON arguments
+    ///     Gets a nullable double from JSON arguments
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key</param>
@@ -282,7 +280,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets a nullable double from JSON arguments, checking multiple parameter names (full version)
+    ///     Gets a nullable double from JSON arguments, checking multiple parameter names (full version)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="primaryName">Primary parameter name to check</param>
@@ -290,44 +288,35 @@ public static class ArgumentHelper
     /// <param name="paramName">Parameter name for error messages</param>
     /// <returns>Nullable double value, or null if both keys are missing</returns>
     /// <exception cref="ArgumentException">Thrown if value is invalid (but not missing)</exception>
-    public static double? GetDoubleNullable(JsonObject? arguments, string primaryName, string? alternateName, string paramName)
+    public static double? GetDoubleNullable(JsonObject? arguments, string primaryName, string? alternateName,
+        string paramName)
     {
         JsonNode? node = null;
         if (arguments != null)
-        {
             node = arguments[primaryName] ?? (alternateName != null ? arguments[alternateName] : null);
-        }
 
         if (node == null)
             return null;
 
-        if (node.GetValueKind() == System.Text.Json.JsonValueKind.String)
+        if (node.GetValueKind() == JsonValueKind.String)
         {
             var str = node.GetValue<string>();
-            if (string.IsNullOrEmpty(str) || !double.TryParse(str, out double result))
+            if (string.IsNullOrEmpty(str) || !double.TryParse(str, out var result))
                 throw new ArgumentException($"{paramName} must be a valid number");
             return result;
         }
-        else if (node.GetValueKind() == System.Text.Json.JsonValueKind.Number)
+
+        if (node.GetValueKind() == JsonValueKind.Number)
         {
             // Try double first, then int (for compatibility with JSON numbers)
-            if (node.AsValue().TryGetValue<double>(out var doubleValue))
-            {
-                return doubleValue;
-            }
-            else if (node.AsValue().TryGetValue<int>(out var intValue))
-            {
-                return intValue;
-            }
-            else
-            {
-                return node.GetValue<double>();
-            }
+            if (node.AsValue().TryGetValue<double>(out var doubleValue)) return doubleValue;
+
+            if (node.AsValue().TryGetValue<int>(out var intValue)) return intValue;
+
+            return node.GetValue<double>();
         }
-        else
-        {
-            throw new ArgumentException($"{paramName} must be a valid number");
-        }
+
+        throw new ArgumentException($"{paramName} must be a valid number");
     }
 
     #endregion
@@ -335,7 +324,7 @@ public static class ArgumentHelper
     #region GetFloat - Float Methods
 
     /// <summary>
-    /// Gets a required float from JSON arguments (simplified version where key is used as paramName)
+    ///     Gets a required float from JSON arguments (simplified version where key is used as paramName)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key (also used as paramName in error messages)</param>
@@ -347,7 +336,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets an optional float from JSON arguments (simplified version where key is used as paramName)
+    ///     Gets an optional float from JSON arguments (simplified version where key is used as paramName)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key (also used as paramName in error messages)</param>
@@ -362,7 +351,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets a float from JSON arguments with default value
+    ///     Gets a float from JSON arguments with default value
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key</param>
@@ -375,7 +364,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets a float from JSON arguments with default value
+    ///     Gets a float from JSON arguments with default value
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key</param>
@@ -389,7 +378,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets a required float from JSON arguments (full version with custom paramName)
+    ///     Gets a required float from JSON arguments (full version with custom paramName)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key</param>
@@ -402,7 +391,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets an optional float from JSON arguments (full version with custom paramName)
+    ///     Gets an optional float from JSON arguments (full version with custom paramName)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key</param>
@@ -411,12 +400,13 @@ public static class ArgumentHelper
     /// <param name="defaultValue">Default value to return if key is missing (only used when required is false)</param>
     /// <returns>Float value</returns>
     /// <exception cref="ArgumentException">Thrown if required parameter is missing or value is invalid</exception>
-    public static float GetFloat(JsonObject? arguments, string key, string paramName, bool required, float? defaultValue = null)
+    public static float GetFloat(JsonObject? arguments, string key, string paramName, bool required,
+        float? defaultValue = null)
     {
         var result = GetFloatNullable(arguments, key, null, paramName);
         if (result.HasValue)
             return result.Value;
-        
+
         if (required)
             throw new ArgumentException($"{paramName} is required");
         if (defaultValue.HasValue)
@@ -425,7 +415,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets a nullable float from JSON arguments (simplified version where key is used as paramName)
+    ///     Gets a nullable float from JSON arguments (simplified version where key is used as paramName)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key (also used as paramName in error messages)</param>
@@ -437,7 +427,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets a nullable float from JSON arguments
+    ///     Gets a nullable float from JSON arguments
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key</param>
@@ -450,7 +440,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets a nullable float from JSON arguments, checking multiple parameter names (full version)
+    ///     Gets a nullable float from JSON arguments, checking multiple parameter names (full version)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="primaryName">Primary parameter name to check</param>
@@ -458,47 +448,36 @@ public static class ArgumentHelper
     /// <param name="paramName">Parameter name for error messages</param>
     /// <returns>Nullable float value, or null if both keys are missing</returns>
     /// <exception cref="ArgumentException">Thrown if value is invalid (but not missing)</exception>
-    public static float? GetFloatNullable(JsonObject? arguments, string primaryName, string? alternateName, string paramName)
+    public static float? GetFloatNullable(JsonObject? arguments, string primaryName, string? alternateName,
+        string paramName)
     {
         JsonNode? node = null;
         if (arguments != null)
-        {
             node = arguments[primaryName] ?? (alternateName != null ? arguments[alternateName] : null);
-        }
 
         if (node == null)
             return null;
 
-        if (node.GetValueKind() == System.Text.Json.JsonValueKind.String)
+        if (node.GetValueKind() == JsonValueKind.String)
         {
             var str = node.GetValue<string>();
-            if (string.IsNullOrEmpty(str) || !float.TryParse(str, out float result))
+            if (string.IsNullOrEmpty(str) || !float.TryParse(str, out var result))
                 throw new ArgumentException($"{paramName} must be a valid number");
             return result;
         }
-        else if (node.GetValueKind() == System.Text.Json.JsonValueKind.Number)
+
+        if (node.GetValueKind() == JsonValueKind.Number)
         {
-            if (node.AsValue().TryGetValue<float>(out var floatValue))
-            {
-                return floatValue;
-            }
-            else if (node.AsValue().TryGetValue<double>(out var doubleValue))
-            {
-                return (float)doubleValue;
-            }
-            else if (node.AsValue().TryGetValue<int>(out var intValue))
-            {
-                return intValue;
-            }
-            else
-            {
-                return node.GetValue<float>();
-            }
+            if (node.AsValue().TryGetValue<float>(out var floatValue)) return floatValue;
+
+            if (node.AsValue().TryGetValue<double>(out var doubleValue)) return (float)doubleValue;
+
+            if (node.AsValue().TryGetValue<int>(out var intValue)) return intValue;
+
+            return node.GetValue<float>();
         }
-        else
-        {
-            throw new ArgumentException($"{paramName} must be a valid number");
-        }
+
+        throw new ArgumentException($"{paramName} must be a valid number");
     }
 
     #endregion
@@ -506,7 +485,7 @@ public static class ArgumentHelper
     #region GetString - String Methods
 
     /// <summary>
-    /// Gets a required string value from JSON arguments (simplified version where key is used as paramName)
+    ///     Gets a required string value from JSON arguments (simplified version where key is used as paramName)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key (also used as paramName in error messages)</param>
@@ -518,7 +497,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets an optional string value from JSON arguments (simplified version where key is used as paramName)
+    ///     Gets an optional string value from JSON arguments (simplified version where key is used as paramName)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key (also used as paramName in error messages)</param>
@@ -532,7 +511,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets a string value from JSON arguments with a default value
+    ///     Gets a string value from JSON arguments with a default value
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key</param>
@@ -544,7 +523,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets an optional string value from JSON arguments (full version with custom paramName)
+    ///     Gets an optional string value from JSON arguments (full version with custom paramName)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key</param>
@@ -553,13 +532,14 @@ public static class ArgumentHelper
     /// <param name="defaultValue">Default value to return if key is missing or empty (only used when required is false)</param>
     /// <returns>String value, or empty string/defaultValue if not required and missing</returns>
     /// <exception cref="ArgumentException">Thrown if required parameter is missing or empty</exception>
-    public static string GetString(JsonObject? arguments, string key, string paramName, bool required, string? defaultValue = null)
+    public static string GetString(JsonObject? arguments, string key, string paramName, bool required,
+        string? defaultValue = null)
     {
         return GetString(arguments, key, null, paramName, required, defaultValue);
     }
 
     /// <summary>
-    /// Gets a string value from JSON arguments, checking multiple parameter names (full version)
+    ///     Gets a string value from JSON arguments, checking multiple parameter names (full version)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="primaryName">Primary parameter name to check</param>
@@ -569,7 +549,8 @@ public static class ArgumentHelper
     /// <param name="defaultValue">Default value to return if key is missing or empty (only used when required is false)</param>
     /// <returns>String value, or empty string/defaultValue if not required and missing</returns>
     /// <exception cref="ArgumentException">Thrown if required parameter is missing or empty</exception>
-    public static string GetString(JsonObject? arguments, string primaryName, string? alternateName, string paramName, bool required = true, string? defaultValue = null)
+    public static string GetString(JsonObject? arguments, string primaryName, string? alternateName, string paramName,
+        bool required = true, string? defaultValue = null)
     {
         var result = GetStringNullable(arguments, primaryName, alternateName, paramName);
         if (!string.IsNullOrEmpty(result))
@@ -581,7 +562,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets a nullable string value from JSON arguments
+    ///     Gets a nullable string value from JSON arguments
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key</param>
@@ -592,7 +573,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets a nullable string value from JSON arguments
+    ///     Gets a nullable string value from JSON arguments
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key</param>
@@ -604,20 +585,19 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets a nullable string value from JSON arguments, checking multiple parameter names (full version)
+    ///     Gets a nullable string value from JSON arguments, checking multiple parameter names (full version)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="primaryName">Primary parameter name to check</param>
     /// <param name="alternateName">Alternate parameter name to check (can be null)</param>
     /// <param name="paramName">Parameter name for error messages</param>
     /// <returns>Nullable string value, or null if both keys are missing</returns>
-    public static string? GetStringNullable(JsonObject? arguments, string primaryName, string? alternateName, string paramName)
+    public static string? GetStringNullable(JsonObject? arguments, string primaryName, string? alternateName,
+        string paramName)
     {
         JsonNode? node = null;
         if (arguments != null)
-        {
             node = arguments[primaryName] ?? (alternateName != null ? arguments[alternateName] : null);
-        }
 
         return node?.GetValue<string>();
     }
@@ -627,7 +607,7 @@ public static class ArgumentHelper
     #region GetBool - Boolean Methods
 
     /// <summary>
-    /// Gets a required boolean value from JSON arguments (simplified version where key is used as paramName)
+    ///     Gets a required boolean value from JSON arguments (simplified version where key is used as paramName)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key (also used as paramName in error messages)</param>
@@ -639,7 +619,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets a boolean value from JSON arguments with default value
+    ///     Gets a boolean value from JSON arguments with default value
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key</param>
@@ -652,7 +632,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets a required boolean value from JSON arguments (full version with custom paramName)
+    ///     Gets a required boolean value from JSON arguments (full version with custom paramName)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key</param>
@@ -668,7 +648,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets a boolean value from JSON arguments with default value
+    ///     Gets a boolean value from JSON arguments with default value
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key</param>
@@ -683,7 +663,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets a nullable boolean value from JSON arguments (simplified version where key is used as paramName)
+    ///     Gets a nullable boolean value from JSON arguments (simplified version where key is used as paramName)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key (also used as paramName in error messages)</param>
@@ -695,7 +675,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets a nullable boolean value from JSON arguments
+    ///     Gets a nullable boolean value from JSON arguments
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key</param>
@@ -708,7 +688,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets a nullable boolean value from JSON arguments, checking multiple parameter names (full version)
+    ///     Gets a nullable boolean value from JSON arguments, checking multiple parameter names (full version)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="primaryName">Primary parameter name to check</param>
@@ -716,37 +696,34 @@ public static class ArgumentHelper
     /// <param name="paramName">Parameter name for error messages</param>
     /// <returns>Nullable boolean value, or null if both keys are missing</returns>
     /// <exception cref="ArgumentException">Thrown if value is invalid (but not missing)</exception>
-    public static bool? GetBoolNullable(JsonObject? arguments, string primaryName, string? alternateName, string paramName)
+    public static bool? GetBoolNullable(JsonObject? arguments, string primaryName, string? alternateName,
+        string paramName)
     {
         JsonNode? node = null;
         if (arguments != null)
-        {
             node = arguments[primaryName] ?? (alternateName != null ? arguments[alternateName] : null);
-        }
 
         if (node == null)
             return null;
 
-        if (node.GetValueKind() == System.Text.Json.JsonValueKind.True || node.GetValueKind() == System.Text.Json.JsonValueKind.False)
-        {
+        if (node.GetValueKind() == JsonValueKind.True || node.GetValueKind() == JsonValueKind.False)
             return node.GetValue<bool>();
-        }
-        else if (node.GetValueKind() == System.Text.Json.JsonValueKind.String)
+
+        if (node.GetValueKind() == JsonValueKind.String)
         {
             var str = node.GetValue<string>();
-            if (bool.TryParse(str, out bool result))
+            if (bool.TryParse(str, out var result))
                 return result;
             throw new ArgumentException($"{paramName} must be a valid boolean");
         }
-        else if (node.GetValueKind() == System.Text.Json.JsonValueKind.Number)
+
+        if (node.GetValueKind() == JsonValueKind.Number)
         {
             var num = node.GetValue<int>();
             return num != 0;
         }
-        else
-        {
-            throw new ArgumentException($"{paramName} must be a valid boolean");
-        }
+
+        throw new ArgumentException($"{paramName} must be a valid boolean");
     }
 
     #endregion
@@ -754,7 +731,7 @@ public static class ArgumentHelper
     #region GetArray - Array Methods
 
     /// <summary>
-    /// Gets a required JSON array from arguments (simplified version where key is used as paramName)
+    ///     Gets a required JSON array from arguments (simplified version where key is used as paramName)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key (also used as paramName in error messages)</param>
@@ -766,7 +743,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets an optional JSON array from arguments (simplified version where key is used as paramName)
+    ///     Gets an optional JSON array from arguments (simplified version where key is used as paramName)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key (also used as paramName in error messages)</param>
@@ -781,7 +758,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets a required JSON array from arguments (full version with custom paramName)
+    ///     Gets a required JSON array from arguments (full version with custom paramName)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key</param>
@@ -790,11 +767,11 @@ public static class ArgumentHelper
     /// <exception cref="ArgumentException">Thrown if parameter is missing or value is not an array</exception>
     public static JsonArray GetArray(JsonObject? arguments, string key, string paramName)
     {
-        return GetArray(arguments, key, null, paramName, true) ?? throw new ArgumentException($"{paramName} is required");
+        return GetArray(arguments, key, null, paramName) ?? throw new ArgumentException($"{paramName} is required");
     }
 
     /// <summary>
-    /// Gets an optional JSON array from arguments (full version with custom paramName)
+    ///     Gets an optional JSON array from arguments (full version with custom paramName)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key</param>
@@ -808,7 +785,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets a JSON array from arguments, checking multiple parameter names (full version)
+    ///     Gets a JSON array from arguments, checking multiple parameter names (full version)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="primaryName">Primary parameter name to check</param>
@@ -817,13 +794,12 @@ public static class ArgumentHelper
     /// <param name="required">Whether the parameter is required (default: true)</param>
     /// <returns>JsonArray or null if not required and missing</returns>
     /// <exception cref="ArgumentException">Thrown if required parameter is missing or value is not an array</exception>
-    public static JsonArray? GetArray(JsonObject? arguments, string primaryName, string? alternateName, string paramName, bool required = true)
+    public static JsonArray? GetArray(JsonObject? arguments, string primaryName, string? alternateName,
+        string paramName, bool required = true)
     {
         JsonNode? node = null;
         if (arguments != null)
-        {
             node = arguments[primaryName] ?? (alternateName != null ? arguments[alternateName] : null);
-        }
 
         if (node == null)
         {
@@ -832,18 +808,13 @@ public static class ArgumentHelper
             return null;
         }
 
-        if (node is JsonArray array)
-        {
-            return array;
-        }
-        else
-        {
-            throw new ArgumentException($"{paramName} must be an array");
-        }
+        if (node is JsonArray array) return array;
+
+        throw new ArgumentException($"{paramName} must be an array");
     }
 
     /// <summary>
-    /// Gets an array of integers from JSON arguments
+    ///     Gets an array of integers from JSON arguments
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key</param>
@@ -859,7 +830,9 @@ public static class ArgumentHelper
 
         try
         {
-            return array.Select(x => x?.GetValue<int>() ?? throw new ArgumentException($"{paramName} contains invalid integer value")).ToArray();
+            return array.Select(x =>
+                    x?.GetValue<int>() ?? throw new ArgumentException($"{paramName} contains invalid integer value"))
+                .ToArray();
         }
         catch (Exception ex) when (ex is not ArgumentException)
         {
@@ -868,7 +841,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets an array of strings from JSON arguments
+    ///     Gets an array of strings from JSON arguments
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key</param>
@@ -884,7 +857,10 @@ public static class ArgumentHelper
 
         try
         {
-            return array.Select(x => x?.GetValue<string>() ?? throw new ArgumentException($"{paramName} contains invalid string value")).Where(s => s != null).ToArray()!;
+            return array
+                .Select(x =>
+                    x?.GetValue<string>() ?? throw new ArgumentException($"{paramName} contains invalid string value"))
+                .ToArray();
         }
         catch (Exception ex) when (ex is not ArgumentException)
         {
@@ -897,7 +873,7 @@ public static class ArgumentHelper
     #region GetObject - Object Methods
 
     /// <summary>
-    /// Gets a required JSON object from arguments (simplified version where key is used as paramName)
+    ///     Gets a required JSON object from arguments (simplified version where key is used as paramName)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key (also used as paramName in error messages)</param>
@@ -909,7 +885,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets an optional JSON object from arguments (simplified version where key is used as paramName)
+    ///     Gets an optional JSON object from arguments (simplified version where key is used as paramName)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key (also used as paramName in error messages)</param>
@@ -924,7 +900,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets a required JSON object from arguments (full version with custom paramName)
+    ///     Gets a required JSON object from arguments (full version with custom paramName)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key</param>
@@ -933,11 +909,11 @@ public static class ArgumentHelper
     /// <exception cref="ArgumentException">Thrown if parameter is missing or value is not an object</exception>
     public static JsonObject GetObject(JsonObject? arguments, string key, string paramName)
     {
-        return GetObject(arguments, key, null, paramName, true) ?? throw new ArgumentException($"{paramName} is required");
+        return GetObject(arguments, key, null, paramName) ?? throw new ArgumentException($"{paramName} is required");
     }
 
     /// <summary>
-    /// Gets an optional JSON object from arguments (full version with custom paramName)
+    ///     Gets an optional JSON object from arguments (full version with custom paramName)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="key">JSON property key</param>
@@ -951,7 +927,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets a JSON object from arguments, checking multiple parameter names (full version)
+    ///     Gets a JSON object from arguments, checking multiple parameter names (full version)
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="primaryName">Primary parameter name to check</param>
@@ -960,13 +936,12 @@ public static class ArgumentHelper
     /// <param name="required">Whether the parameter is required (default: true)</param>
     /// <returns>JsonObject or null if not required and missing</returns>
     /// <exception cref="ArgumentException">Thrown if required parameter is missing or value is not an object</exception>
-    public static JsonObject? GetObject(JsonObject? arguments, string primaryName, string? alternateName, string paramName, bool required = true)
+    public static JsonObject? GetObject(JsonObject? arguments, string primaryName, string? alternateName,
+        string paramName, bool required = true)
     {
         JsonNode? node = null;
         if (arguments != null)
-        {
             node = arguments[primaryName] ?? (alternateName != null ? arguments[alternateName] : null);
-        }
 
         if (node == null)
         {
@@ -975,20 +950,16 @@ public static class ArgumentHelper
             return null;
         }
 
-        if (node is JsonObject obj)
-        {
-            return obj;
-        }
-        else if (node is JsonValue value && value.GetValueKind() == System.Text.Json.JsonValueKind.Null)
+        if (node is JsonObject obj) return obj;
+
+        if (node is JsonValue value && value.GetValueKind() == JsonValueKind.Null)
         {
             if (required)
                 throw new ArgumentException($"{paramName} is required");
             return null;
         }
-        else
-        {
-            throw new ArgumentException($"{paramName} must be an object");
-        }
+
+        throw new ArgumentException($"{paramName} must be an object");
     }
 
     #endregion
@@ -996,7 +967,7 @@ public static class ArgumentHelper
     #region Path Validation Methods
 
     /// <summary>
-    /// Gets output path from arguments, defaulting to input path if not specified
+    ///     Gets output path from arguments, defaulting to input path if not specified
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="inputPath">Input file path to use as default</param>
@@ -1007,7 +978,7 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets and validates input path from arguments
+    ///     Gets and validates input path from arguments
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="paramName">Parameter name for error messages (default: "path")</param>
@@ -1023,14 +994,15 @@ public static class ArgumentHelper
     }
 
     /// <summary>
-    /// Gets and validates output path from arguments, defaulting to input path if not specified
+    ///     Gets and validates output path from arguments, defaulting to input path if not specified
     /// </summary>
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="inputPath">Input file path</param>
     /// <param name="paramName">Parameter name for error messages (default: "outputPath")</param>
     /// <returns>Validated output path</returns>
     /// <exception cref="ArgumentException">Thrown if output path is invalid</exception>
-    public static string GetAndValidateOutputPath(JsonObject? arguments, string inputPath, string paramName = "outputPath")
+    public static string GetAndValidateOutputPath(JsonObject? arguments, string inputPath,
+        string paramName = "outputPath")
     {
         var outputPath = arguments?[paramName]?.GetValue<string>() ?? inputPath;
         SecurityHelper.ValidateFilePath(outputPath, paramName);

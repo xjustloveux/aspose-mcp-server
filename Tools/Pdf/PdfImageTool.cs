@@ -1,11 +1,13 @@
-﻿using System.Text;
+﻿using System.Drawing.Imaging;
 using System.Text.Json.Nodes;
 using Aspose.Pdf;
-using Aspose.Pdf.Devices;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Pdf;
 
+/// <summary>
+///     Tool for managing images in PDF documents (add, delete, edit, extract)
+/// </summary>
 public class PdfImageTool : IAsposeTool
 {
     public string Description => @"Manage images in PDF documents. Supports 4 operations: add, delete, edit, extract.
@@ -39,7 +41,8 @@ Usage examples:
             outputPath = new
             {
                 type = "string",
-                description = "Output file path (optional, defaults to overwrite input for add/delete/edit, required for extract)"
+                description =
+                    "Output file path (optional, defaults to overwrite input for add/delete/edit, required for extract)"
             },
             pageIndex = new
             {
@@ -100,7 +103,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Adds an image to a PDF page
+    ///     Adds an image to a PDF page
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, pageIndex, imagePath, x, y, optional width, height, outputPath</param>
     /// <returns>Success message</returns>
@@ -127,13 +130,15 @@ Usage examples:
             throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
 
         var page = document.Pages[pageIndex];
-        page.AddImage(imagePath, new Aspose.Pdf.Rectangle(x, y, width.HasValue ? x + width.Value : x + 200, height.HasValue ? y + height.Value : y + 200));
+        page.AddImage(imagePath,
+            new Rectangle(x, y, width.HasValue ? x + width.Value : x + 200,
+                height.HasValue ? y + height.Value : y + 200));
         document.Save(outputPath);
         return await Task.FromResult($"Successfully added image to page {pageIndex}. Output: {outputPath}");
     }
 
     /// <summary>
-    /// Deletes an image from a PDF page
+    ///     Deletes an image from a PDF page
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, pageIndex, imageIndex, optional outputPath</param>
     /// <returns>Success message</returns>
@@ -153,16 +158,19 @@ Usage examples:
 
         var page = document.Pages[pageIndex];
         var images = page.Resources?.Images;
-        if (images == null || imageIndex < 0 || imageIndex >= images!.Count)
-            throw new ArgumentException($"imageIndex must be between 0 and {images!.Count - 1}");
+        if (images == null)
+            throw new ArgumentException("No images found on the page");
+        if (imageIndex < 0 || imageIndex >= images.Count)
+            throw new ArgumentException($"imageIndex must be between 0 and {images.Count - 1}");
 
         images.Delete(imageIndex);
         document.Save(outputPath);
-        return await Task.FromResult($"Successfully deleted image {imageIndex} from page {pageIndex}. Output: {outputPath}");
+        return await Task.FromResult(
+            $"Successfully deleted image {imageIndex} from page {pageIndex}. Output: {outputPath}");
     }
 
     /// <summary>
-    /// Edits image properties in a PDF
+    ///     Edits image properties in a PDF
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, pageIndex, imageIndex, optional x, y, width, height, outputPath</param>
     /// <returns>Success message</returns>
@@ -191,19 +199,24 @@ Usage examples:
 
         var page = document.Pages[pageIndex];
         var images = page.Resources?.Images;
-        if (images == null || imageIndex < 0 || imageIndex >= images!.Count)
-            throw new ArgumentException($"imageIndex must be between 0 and {images!.Count - 1}");
+        if (images == null)
+            throw new ArgumentException("No images found on the page");
+        if (imageIndex < 0 || imageIndex >= images.Count)
+            throw new ArgumentException($"imageIndex must be between 0 and {images.Count - 1}");
 
         images.Delete(imageIndex);
         var newX = x ?? 100;
         var newY = y ?? 600;
-        page.AddImage(imagePath, new Aspose.Pdf.Rectangle(newX, newY, width.HasValue ? newX + width.Value : newX + 200, height.HasValue ? newY + height.Value : newY + 200));
+        page.AddImage(imagePath,
+            new Rectangle(newX, newY, width.HasValue ? newX + width.Value : newX + 200,
+                height.HasValue ? newY + height.Value : newY + 200));
         document.Save(outputPath);
-        return await Task.FromResult($"Successfully edited image {imageIndex} on page {pageIndex}. Output: {outputPath}");
+        return await Task.FromResult(
+            $"Successfully edited image {imageIndex} on page {pageIndex}. Output: {outputPath}");
     }
 
     /// <summary>
-    /// Extracts images from a PDF
+    ///     Extracts images from a PDF
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, outputDirectory, optional pageIndex</param>
     /// <returns>Success message with extracted image count</returns>
@@ -235,32 +248,30 @@ Usage examples:
 
         if (imageIndex.HasValue)
         {
-            if (imageIndex.Value < 0 || imageIndex.Value >= images!.Count)
-                throw new ArgumentException($"imageIndex must be between 0 and {images!.Count - 1}");
+            if (imageIndex.Value < 0 || imageIndex.Value >= images.Count)
+                throw new ArgumentException($"imageIndex must be between 0 and {images.Count - 1}");
 
             var image = images[imageIndex.Value];
             var fileName = outputPath ?? Path.Combine(targetDir, $"page_{pageIndex}_image_{imageIndex.Value}.png");
-            using var imageStream = new FileStream(fileName, FileMode.Create);
+            await using var imageStream = new FileStream(fileName, FileMode.Create);
 #pragma warning disable CA1416 // Validate platform compatibility
-            image.Save(imageStream, System.Drawing.Imaging.ImageFormat.Png);
+            image.Save(imageStream, ImageFormat.Png);
 #pragma warning restore CA1416
             return await Task.FromResult($"Extracted image {imageIndex.Value} from page {pageIndex} to: {fileName}");
         }
-        else
+
+        var count = 0;
+        for (var i = 0; i < images.Count; i++)
         {
-            int count = 0;
-            for (int i = 0; i < images.Count; i++)
-            {
-                var image = images[i];
-                var fileName = Path.Combine(targetDir, $"page_{pageIndex}_image_{i}.png");
-                using var imageStream = new FileStream(fileName, FileMode.Create);
+            var image = images[i];
+            var fileName = Path.Combine(targetDir, $"page_{pageIndex}_image_{i}.png");
+            await using var imageStream = new FileStream(fileName, FileMode.Create);
 #pragma warning disable CA1416 // Validate platform compatibility
-                image.Save(imageStream, System.Drawing.Imaging.ImageFormat.Png);
+            image.Save(imageStream, ImageFormat.Png);
 #pragma warning restore CA1416
-                count++;
-            }
-            return await Task.FromResult($"Extracted {count} image(s) from page {pageIndex} to: {targetDir}");
+            count++;
         }
+
+        return await Task.FromResult($"Extracted {count} image(s) from page {pageIndex} to: {targetDir}");
     }
 }
-

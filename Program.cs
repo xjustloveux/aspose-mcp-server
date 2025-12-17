@@ -1,5 +1,4 @@
 using System.Text;
-using AsposeMcpServer;
 using AsposeMcpServer.Core;
 
 try
@@ -7,10 +6,10 @@ try
     // Set console encoding to UTF-8 for proper Chinese character support
     Console.OutputEncoding = Encoding.UTF8;
     Console.InputEncoding = Encoding.UTF8;
-    
+
     // Load configuration from command line arguments
     var config = ServerConfig.LoadFromArgs(args);
-    
+
     // Validate configuration
     try
     {
@@ -21,10 +20,10 @@ try
         Console.Error.WriteLine($"[ERROR] Configuration error: {ex.Message}");
         Environment.Exit(1);
     }
-    
+
     Console.Error.WriteLine($"[INFO] Aspose MCP Server - Enabled tools: {config.GetEnabledToolsInfo()}");
     await Console.Error.FlushAsync();
-    
+
     // Initialize Aspose License (with stdout suppression)
     LicenseManager.SetLicense(config);
 
@@ -45,4 +44,3 @@ catch (Exception ex)
 #endif
     Environment.Exit(1);
 }
-

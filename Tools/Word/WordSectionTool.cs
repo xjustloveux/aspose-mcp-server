@@ -1,13 +1,13 @@
-﻿using System.Text.Json.Nodes;
-using System.Text;
+﻿using System.Text;
+using System.Text.Json.Nodes;
 using Aspose.Words;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Word;
 
 /// <summary>
-/// Unified tool for managing Word sections (insert, delete, get info)
-/// Merges: WordInsertSectionTool, WordDeleteSectionTool, WordGetSectionsTool, WordGetSectionsInfoTool
+///     Unified tool for managing Word sections (insert, delete, get info)
+///     Merges: WordInsertSectionTool, WordDeleteSectionTool, WordGetSectionsTool, WordGetSectionsInfoTool
 /// </summary>
 public class WordSectionTool : IAsposeTool
 {
@@ -45,13 +45,15 @@ Usage examples:
             sectionBreakType = new
             {
                 type = "string",
-                description = "Section break type: 'NextPage', 'Continuous', 'EvenPage', 'OddPage' (required for insert operation)",
+                description =
+                    "Section break type: 'NextPage', 'Continuous', 'EvenPage', 'OddPage' (required for insert operation)",
                 @enum = new[] { "NextPage", "Continuous", "EvenPage", "OddPage" }
             },
             insertAtParagraphIndex = new
             {
                 type = "number",
-                description = "Paragraph index to insert section break after (0-based, optional, default: end of document, for insert operation)"
+                description =
+                    "Paragraph index to insert section break after (0-based, optional, default: end of document, for insert operation)"
             },
             sectionIndex = new
             {
@@ -62,7 +64,8 @@ Usage examples:
             {
                 type = "array",
                 items = new { type = "number" },
-                description = "Array of section indices to delete (0-based, optional, overrides sectionIndex, for delete operation)"
+                description =
+                    "Array of section indices to delete (0-based, optional, overrides sectionIndex, for delete operation)"
             }
         },
         required = new[] { "operation", "path" }
@@ -85,7 +88,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Inserts a section break into the document
+    ///     Inserts a section break into the document
     /// </summary>
     /// <param name="arguments">JSON arguments containing sectionBreakType, optional insertAtParagraphIndex, outputPath</param>
     /// <param name="path">Word document file path</param>
@@ -123,18 +126,14 @@ Usage examples:
             else
             {
                 var actualSectionIndex = sectionIndex ?? 0;
-                if (actualSectionIndex < 0 || actualSectionIndex >= doc.Sections.Count)
-                {
-                    actualSectionIndex = 0;
-                }
+                if (actualSectionIndex < 0 || actualSectionIndex >= doc.Sections.Count) actualSectionIndex = 0;
 
                 var section = doc.Sections[actualSectionIndex];
                 var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
-                
+
                 if (insertAtParagraphIndex.Value < 0 || insertAtParagraphIndex.Value >= paragraphs.Count)
-                {
-                    throw new ArgumentException($"insertAtParagraphIndex must be between 0 and {paragraphs.Count - 1}, or use -1 for document end");
-                }
+                    throw new ArgumentException(
+                        $"insertAtParagraphIndex must be between 0 and {paragraphs.Count - 1}, or use -1 for document end");
 
                 var para = paragraphs[insertAtParagraphIndex.Value];
                 builder.MoveTo(para);
@@ -154,7 +153,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Deletes a section from the document
+    ///     Deletes a section from the document
     /// </summary>
     /// <param name="arguments">JSON arguments containing sectionIndex, optional outputPath</param>
     /// <param name="path">Word document file path</param>
@@ -169,43 +168,31 @@ Usage examples:
 
         var doc = new Document(path);
         if (doc.Sections.Count <= 1)
-        {
             throw new ArgumentException("Cannot delete the last section. Document must have at least one section.");
-        }
 
         List<int> sectionsToDelete;
-        if (sectionIndicesArray != null && sectionIndicesArray.Count > 0)
-        {
-            sectionsToDelete = sectionIndicesArray.Select(s => s?.GetValue<int>()).Where(s => s.HasValue).Select(s => s!.Value).OrderByDescending(s => s).ToList();
-        }
+        if (sectionIndicesArray is { Count: > 0 })
+            sectionsToDelete = sectionIndicesArray.Select(s => s?.GetValue<int>()).Where(s => s.HasValue)
+                .Select(s => s!.Value).OrderByDescending(s => s).ToList();
         else if (sectionIndex.HasValue)
-        {
-            sectionsToDelete = new List<int> { sectionIndex.Value };
-        }
+            sectionsToDelete = [sectionIndex.Value];
         else
-        {
             throw new ArgumentException("Either sectionIndex or sectionIndices must be provided for delete operation");
-        }
 
         foreach (var idx in sectionsToDelete)
         {
-            if (idx < 0 || idx >= doc.Sections.Count)
-            {
-                continue;
-            }
-            if (doc.Sections.Count <= 1)
-            {
-                break; // Don't delete the last section
-            }
+            if (idx < 0 || idx >= doc.Sections.Count) continue;
+            if (doc.Sections.Count <= 1) break; // Don't delete the last section
             doc.Sections.RemoveAt(idx);
         }
 
         doc.Save(outputPath);
-        return await Task.FromResult($"Deleted {sectionsToDelete.Count} section(s). Remaining sections: {doc.Sections.Count}. Output: {outputPath}");
+        return await Task.FromResult(
+            $"Deleted {sectionsToDelete.Count} section(s). Remaining sections: {doc.Sections.Count}. Output: {outputPath}");
     }
 
     /// <summary>
-    /// Gets all sections from the document
+    ///     Gets all sections from the document
     /// </summary>
     /// <param name="arguments">JSON arguments (no specific parameters required)</param>
     /// <param name="path">Word document file path</param>
@@ -223,23 +210,19 @@ Usage examples:
         if (sectionIndex.HasValue)
         {
             if (sectionIndex.Value < 0 || sectionIndex.Value >= doc.Sections.Count)
-            {
-                throw new ArgumentException($"Section index {sectionIndex.Value} is out of range (document has {doc.Sections.Count} sections)");
-            }
-            
+                throw new ArgumentException(
+                    $"Section index {sectionIndex.Value} is out of range (document has {doc.Sections.Count} sections)");
+
             var section = doc.Sections[sectionIndex.Value];
             AppendSectionInfo(result, section, sectionIndex.Value);
         }
         else
         {
-            for (int i = 0; i < doc.Sections.Count; i++)
+            for (var i = 0; i < doc.Sections.Count; i++)
             {
                 var section = doc.Sections[i];
                 AppendSectionInfo(result, section, i);
-                if (i < doc.Sections.Count - 1)
-                {
-                    result.AppendLine();
-                }
+                if (i < doc.Sections.Count - 1) result.AppendLine();
             }
         }
 
@@ -249,9 +232,9 @@ Usage examples:
     private void AppendSectionInfo(StringBuilder result, Section section, int index)
     {
         result.AppendLine($"[Section {index}]");
-        
+
         var pageSetup = section.PageSetup;
-        result.AppendLine($"Page setup:");
+        result.AppendLine("Page setup:");
         result.AppendLine($"  Paper size: {pageSetup.PaperSize}");
         result.AppendLine($"  Orientation: {pageSetup.Orientation}");
         result.AppendLine($"  Top margin: {pageSetup.TopMargin} points");
@@ -260,26 +243,26 @@ Usage examples:
         result.AppendLine($"  Right margin: {pageSetup.RightMargin} points");
         result.AppendLine($"  Header distance: {pageSetup.HeaderDistance} points");
         result.AppendLine($"  Footer distance: {pageSetup.FooterDistance} points");
-        result.AppendLine($"  Page number start: {(pageSetup.RestartPageNumbering ? pageSetup.PageStartingNumber.ToString() : "Inherit from previous section")}");
+        result.AppendLine(
+            $"  Page number start: {(pageSetup.RestartPageNumbering ? pageSetup.PageStartingNumber.ToString() : "Inherit from previous section")}");
         result.AppendLine($"  Different first page: {pageSetup.DifferentFirstPageHeaderFooter}");
         result.AppendLine($"  Different odd/even pages: {pageSetup.OddAndEvenPagesHeaderFooter}");
         result.AppendLine($"  Column count: {pageSetup.TextColumns.Count}");
-        
+
         result.AppendLine();
-        result.AppendLine($"Content statistics:");
+        result.AppendLine("Content statistics:");
         var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true);
         var tables = section.Body.GetChildNodes(NodeType.Table, true);
         var shapes = section.Body.GetChildNodes(NodeType.Shape, true);
         result.AppendLine($"  Paragraphs: {paragraphs.Count}");
         result.AppendLine($"  Tables: {tables.Count}");
         result.AppendLine($"  Shapes: {shapes.Count}");
-        
+
         result.AppendLine();
-        result.AppendLine($"Headers and footers:");
+        result.AppendLine("Headers and footers:");
         var headerCount = 0;
         var footerCount = 0;
-        foreach (HeaderFooter hf in section.HeadersFooters)
-        {
+        foreach (var hf in section.HeadersFooters.Cast<HeaderFooter>())
             if (hf.HeaderFooterType == HeaderFooterType.HeaderPrimary ||
                 hf.HeaderFooterType == HeaderFooterType.HeaderFirst ||
                 hf.HeaderFooterType == HeaderFooterType.HeaderEven)
@@ -294,9 +277,8 @@ Usage examples:
                 if (!string.IsNullOrWhiteSpace(hf.GetText()))
                     footerCount++;
             }
-        }
+
         result.AppendLine($"  Headers: {headerCount}");
         result.AppendLine($"  Footers: {footerCount}");
     }
 }
-

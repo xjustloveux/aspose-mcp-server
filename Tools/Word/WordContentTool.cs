@@ -2,13 +2,16 @@
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using Aspose.Words.Drawing;
+using Aspose.Words.Fields;
+using Aspose.Words.Tables;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Word;
 
 public class WordContentTool : IAsposeTool
 {
-    public string Description => @"Get content and information from Word documents. Supports 4 operations: get_content, get_content_detailed, get_statistics, get_document_info.
+    public string Description =>
+        @"Get content and information from Word documents. Supports 4 operations: get_content, get_content_detailed, get_statistics, get_document_info.
 
 Usage examples:
 - Get content: word_content(operation='get_content', path='doc.docx')
@@ -95,7 +98,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Gets document content as plain text
+    ///     Gets document content as plain text
     /// </summary>
     /// <param name="arguments">JSON arguments containing path</param>
     /// <returns>Document content as string</returns>
@@ -104,14 +107,14 @@ Usage examples:
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var doc = new Document(path);
         doc.UpdateFields();
-        
+
         // Get text content - this will show field results (like hyperlink display text) instead of field codes
         var text = doc.Range.Text;
         return await Task.FromResult(text);
     }
 
     /// <summary>
-    /// Gets detailed document content with structure information
+    ///     Gets detailed document content with structure information
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, optional includeFormatting</param>
     /// <returns>Formatted string with detailed content</returns>
@@ -137,7 +140,7 @@ Usage examples:
         if (includeHeaders)
         {
             result.AppendLine("=== Headers ===");
-            foreach (Section section in doc.Sections)
+            foreach (var section in doc.Sections.Cast<Section>())
             {
                 var headerFooter = section.HeadersFooters[HeaderFooterType.HeaderPrimary];
                 if (headerFooter != null && !string.IsNullOrWhiteSpace(headerFooter.ToString(SaveFormat.Text)))
@@ -152,7 +155,7 @@ Usage examples:
         if (includeFooters)
         {
             result.AppendLine("=== Footers ===");
-            foreach (Section section in doc.Sections)
+            foreach (var section in doc.Sections.Cast<Section>())
             {
                 var headerFooter = section.HeadersFooters[HeaderFooterType.FooterPrimary];
                 if (headerFooter != null && !string.IsNullOrWhiteSpace(headerFooter.ToString(SaveFormat.Text)))
@@ -168,11 +171,9 @@ Usage examples:
         {
             result.AppendLine("=== Styles ===");
             var usedStyles = new HashSet<string>();
-            foreach (Paragraph para in doc.GetChildNodes(NodeType.Paragraph, true))
-            {
+            foreach (var para in doc.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>())
                 if (para.ParagraphFormat.Style != null)
                     usedStyles.Add(para.ParagraphFormat.Style.Name);
-            }
             result.AppendLine($"Used Styles: {string.Join(", ", usedStyles)}");
             result.AppendLine();
         }
@@ -180,11 +181,9 @@ Usage examples:
         if (includeTables)
         {
             result.AppendLine("=== Tables ===");
-            var tables = doc.GetChildNodes(NodeType.Table, true).Cast<Aspose.Words.Tables.Table>().ToList();
-            for (int i = 0; i < tables.Count; i++)
-            {
+            var tables = doc.GetChildNodes(NodeType.Table, true).Cast<Table>().ToList();
+            for (var i = 0; i < tables.Count; i++)
                 result.AppendLine($"Table {i}: {tables[i].Rows.Count} rows x {tables[i].Rows[0].Cells.Count} columns");
-            }
             result.AppendLine();
         }
 
@@ -200,15 +199,15 @@ Usage examples:
     }
 
     /// <summary>
-    /// Gets document statistics
+    ///     Gets document statistics
     /// </summary>
     /// <param name="arguments">JSON arguments containing path</param>
     /// <returns>Formatted string with document statistics</returns>
     private async Task<string> GetStatistics(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var includeFootnotes = ArgumentHelper.GetBool(arguments, "includeFootnotes");
-        var includeTextboxes = ArgumentHelper.GetBool(arguments, "includeTextboxes");
+        _ = ArgumentHelper.GetBool(arguments, "includeFootnotes");
+        _ = ArgumentHelper.GetBool(arguments, "includeTextboxes");
 
         var doc = new Document(path);
         doc.UpdateWordCount(true);
@@ -230,25 +229,25 @@ Usage examples:
         result.AppendLine($"Sections: {doc.Sections.Count}");
         result.AppendLine($"Actual Paragraphs: {doc.GetChildNodes(NodeType.Paragraph, true).Count}");
         result.AppendLine($"Tables: {doc.GetChildNodes(NodeType.Table, true).Count}");
-        
+
         var shapes = doc.GetChildNodes(NodeType.Shape, true);
         var imageCount = shapes.Cast<Shape>().Count(s => s.HasImage);
-        var textboxCount = shapes.Cast<Shape>().Count(s => s.ShapeType == Aspose.Words.Drawing.ShapeType.TextBox);
-        
+        var textboxCount = shapes.Cast<Shape>().Count(s => s.ShapeType == ShapeType.TextBox);
+
         result.AppendLine($"Images: {imageCount}");
         result.AppendLine($"Textboxes: {textboxCount}");
         result.AppendLine();
 
         result.AppendLine("【Content Elements】");
-        result.AppendLine($"Hyperlinks: {doc.Range.Fields.Count(f => f.Type == Aspose.Words.Fields.FieldType.FieldHyperlink)}");
+        result.AppendLine($"Hyperlinks: {doc.Range.Fields.Count(f => f.Type == FieldType.FieldHyperlink)}");
         result.AppendLine($"Bookmarks: {doc.Range.Bookmarks.Count}");
         result.AppendLine($"Comments: {doc.GetChildNodes(NodeType.Comment, true).Count}");
         result.AppendLine($"Fields: {doc.Range.Fields.Count}");
         result.AppendLine();
 
-        if (System.IO.File.Exists(path))
+        if (File.Exists(path))
         {
-            var fileInfo = new System.IO.FileInfo(path);
+            var fileInfo = new FileInfo(path);
             result.AppendLine("【File Information】");
             result.AppendLine($"File Size: {FormatFileSize(fileInfo.Length)}");
             result.AppendLine($"Last Modified: {fileInfo.LastWriteTime:yyyy-MM-dd HH:mm:ss}");
@@ -258,18 +257,18 @@ Usage examples:
     }
 
     /// <summary>
-    /// Gets document information
+    ///     Gets document information
     /// </summary>
     /// <param name="arguments">JSON arguments containing path</param>
     /// <returns>Formatted string with document information</returns>
     private async Task<string> GetDocumentInfo(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var includeTabStops = ArgumentHelper.GetBool(arguments, "includeTabStops");
+        _ = ArgumentHelper.GetBool(arguments, "includeTabStops");
 
         var doc = new Document(path);
         var result = new StringBuilder();
-        
+
         result.AppendLine("=== Word Document Detailed Information ===\n");
 
         result.AppendLine("【File Information】");
@@ -282,30 +281,34 @@ Usage examples:
         if (section != null)
         {
             var pageSetup = section.PageSetup;
-            
+
             result.AppendLine("【Page Setup】(First Section)");
             result.AppendLine($"Page Width: {pageSetup.PageWidth:F2} pt ({pageSetup.PageWidth / 28.35:F2} cm)");
             result.AppendLine($"Page Height: {pageSetup.PageHeight:F2} pt ({pageSetup.PageHeight / 28.35:F2} cm)");
             result.AppendLine($"Orientation: {pageSetup.Orientation}");
             result.AppendLine();
-            
+
             result.AppendLine("【Margins】");
             result.AppendLine($"Top: {pageSetup.TopMargin:F2} pt ({pageSetup.TopMargin / 28.35:F2} cm)");
             result.AppendLine($"Bottom: {pageSetup.BottomMargin:F2} pt ({pageSetup.BottomMargin / 28.35:F2} cm)");
             result.AppendLine($"Left: {pageSetup.LeftMargin:F2} pt ({pageSetup.LeftMargin / 28.35:F2} cm)");
             result.AppendLine($"Right: {pageSetup.RightMargin:F2} pt ({pageSetup.RightMargin / 28.35:F2} cm)");
             result.AppendLine();
-            
+
             result.AppendLine("【Header/Footer Distance】");
-            result.AppendLine($"Header Distance: {pageSetup.HeaderDistance:F2} pt ({pageSetup.HeaderDistance / 28.35:F2} cm)");
-            result.AppendLine($"Footer Distance: {pageSetup.FooterDistance:F2} pt ({pageSetup.FooterDistance / 28.35:F2} cm)");
+            result.AppendLine(
+                $"Header Distance: {pageSetup.HeaderDistance:F2} pt ({pageSetup.HeaderDistance / 28.35:F2} cm)");
+            result.AppendLine(
+                $"Footer Distance: {pageSetup.FooterDistance:F2} pt ({pageSetup.FooterDistance / 28.35:F2} cm)");
             result.AppendLine();
 
             var contentWidth = pageSetup.PageWidth - pageSetup.LeftMargin - pageSetup.RightMargin;
             result.AppendLine("【Calculated Information】");
             result.AppendLine($"Content Area Width: {contentWidth:F2} pt ({contentWidth / 28.35:F2} cm)");
-            result.AppendLine($"Center Position: {pageSetup.PageWidth / 2:F2} pt ({pageSetup.PageWidth / 2 / 28.35:F2} cm)");
-            result.AppendLine($"Right Position: {pageSetup.PageWidth - pageSetup.RightMargin:F2} pt ({(pageSetup.PageWidth - pageSetup.RightMargin) / 28.35:F2} cm)");
+            result.AppendLine(
+                $"Center Position: {pageSetup.PageWidth / 2:F2} pt ({pageSetup.PageWidth / 2 / 28.35:F2} cm)");
+            result.AppendLine(
+                $"Right Position: {pageSetup.PageWidth - pageSetup.RightMargin:F2} pt ({(pageSetup.PageWidth - pageSetup.RightMargin) / 28.35:F2} cm)");
         }
 
         return await Task.FromResult(result.ToString());
@@ -313,17 +316,16 @@ Usage examples:
 
     private string FormatFileSize(long bytes)
     {
-        string[] sizes = { "B", "KB", "MB", "GB" };
+        string[] sizes = ["B", "KB", "MB", "GB"];
         double len = bytes;
-        int order = 0;
-        
+        var order = 0;
+
         while (len >= 1024 && order < sizes.Length - 1)
         {
             order++;
             len = len / 1024;
         }
-        
+
         return $"{len:0.##} {sizes[order]}";
     }
 }
-

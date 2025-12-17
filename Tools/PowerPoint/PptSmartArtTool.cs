@@ -1,14 +1,14 @@
 ﻿using System.Text.Json.Nodes;
 using Aspose.Slides;
-using Aspose.Slides.SmartArt;
 using Aspose.Slides.Export;
+using Aspose.Slides.SmartArt;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.PowerPoint;
 
 /// <summary>
-/// Unified tool for managing PowerPoint SmartArt (add, manage nodes)
-/// Merges: PptAddSmartArtTool, PptManageSmartArtNodesTool
+///     Unified tool for managing PowerPoint SmartArt (add, manage nodes)
+///     Merges: PptAddSmartArtTool, PptManageSmartArtNodesTool
 /// </summary>
 public class PptSmartArtTool : IAsposeTool
 {
@@ -122,7 +122,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Adds a SmartArt diagram to a slide
+    ///     Adds a SmartArt diagram to a slide
     /// </summary>
     /// <param name="arguments">JSON arguments containing smartArtType, optional x, y, width, height, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -138,7 +138,7 @@ Usage examples:
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-        
+
         var layout = layoutStr.ToLower() switch
         {
             "basicprocess" => SmartArtLayoutType.BasicProcess,
@@ -158,7 +158,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Manages SmartArt nodes (add, edit, delete)
+    ///     Manages SmartArt nodes (add, edit, delete)
     /// </summary>
     /// <param name="arguments">JSON arguments containing smartArtIndex, action, optional nodeIndex, text, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -173,67 +173,66 @@ Usage examples:
         var text = ArgumentHelper.GetStringNullable(arguments, "text");
         var moveParentPathArray = ArgumentHelper.GetArray(arguments, "moveParentPath", false);
         var moveParentPath = moveParentPathArray?.Select(x => x?.GetValue<int>() ?? -1).ToArray();
-        var moveIndex = ArgumentHelper.GetIntNullable(arguments, "moveIndex");
+        _ = ArgumentHelper.GetIntNullable(arguments, "moveIndex");
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
         var shape = PowerPointHelper.GetShape(slide, shapeIndex);
 
-        if (shape is not ISmartArt smartArt)
-        {
-            throw new ArgumentException("The specified shape is not a SmartArt");
-        }
+        if (shape is not ISmartArt smartArt) throw new ArgumentException("The specified shape is not a SmartArt");
 
         SmartArtNode? GetNode(int[]? pathArr)
         {
             if (pathArr == null || pathArr.Length == 0) return null;
             var node = smartArt.AllNodes[pathArr[0]] as SmartArtNode;
-            for (int i = 1; node != null && i < pathArr.Length; i++)
+            for (var i = 1; node != null && i < pathArr.Length; i++)
             {
                 if (pathArr[i] < 0 || pathArr[i] >= node.ChildNodes.Count) return null;
                 node = node.ChildNodes[pathArr[i]] as SmartArtNode;
             }
+
             return node;
         }
 
         switch (action)
         {
             case "add":
-                {
-                    var parent = GetNode(targetPath) ?? smartArt.AllNodes.AddNode();
-                    var newNode = parent.ChildNodes.AddNode();
-                    newNode.TextFrame.Text = string.IsNullOrEmpty(text) ? "New Node" : text;
-                    break;
-                }
+            {
+                var parent = GetNode(targetPath) ?? smartArt.AllNodes.AddNode();
+                var newNode = parent.ChildNodes.AddNode();
+                newNode.TextFrame.Text = string.IsNullOrEmpty(text) ? "New Node" : text;
+                break;
+            }
             case "remove":
-                {
-                    var node = GetNode(targetPath);
-                    if (node == null) throw new ArgumentException("targetPath is invalid");
-                    node.Remove();
-                    break;
-                }
+            {
+                var node = GetNode(targetPath);
+                if (node == null) throw new ArgumentException("targetPath is invalid");
+                node.Remove();
+                break;
+            }
             case "rename":
-                {
-                    var node = GetNode(targetPath);
-                    if (node == null) throw new ArgumentException("targetPath is invalid");
-                    node.TextFrame.Text = text ?? string.Empty;
-                    break;
-                }
+            {
+                var node = GetNode(targetPath);
+                if (node == null) throw new ArgumentException("targetPath is invalid");
+                node.TextFrame.Text = text ?? string.Empty;
+                break;
+            }
             case "move":
+            {
+                var node = GetNode(targetPath);
+                if (node == null) throw new ArgumentException("targetPath is invalid");
+                var parent = GetNode(moveParentPath) ?? smartArt.AllNodes.AddNode();
+                var clone = parent.ChildNodes.AddNode();
+                clone.TextFrame.Text = node.TextFrame.Text;
+                foreach (var child in node.ChildNodes.Cast<SmartArtNode>())
                 {
-                    var node = GetNode(targetPath);
-                    if (node == null) throw new ArgumentException("targetPath is invalid");
-                    var parent = GetNode(moveParentPath) ?? smartArt.AllNodes.AddNode();
-                    var clone = parent.ChildNodes.AddNode();
-                    clone.TextFrame.Text = node.TextFrame.Text;
-                    foreach (SmartArtNode child in node.ChildNodes)
-                    {
-                        var childClone = clone.ChildNodes.AddNode();
-                        childClone.TextFrame.Text = child.TextFrame.Text;
-                    }
-                    node.Remove();
-                    break;
+                    var childClone = clone.ChildNodes.AddNode();
+                    childClone.TextFrame.Text = child.TextFrame.Text;
                 }
+
+                node.Remove();
+                break;
+            }
             default:
                 throw new ArgumentException("action must be one of: add/remove/rename/move");
         }
@@ -243,4 +242,3 @@ Usage examples:
         return await Task.FromResult($"SmartArt {action} completed: slide {slideIndex}, shape {shapeIndex}");
     }
 }
-

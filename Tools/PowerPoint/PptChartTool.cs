@@ -1,19 +1,20 @@
-﻿using System.Text.Json.Nodes;
-using System.Text;
+﻿using System.Text;
+using System.Text.Json.Nodes;
 using Aspose.Slides;
 using Aspose.Slides.Charts;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.PowerPoint;
 
 /// <summary>
-/// Unified tool for managing PowerPoint charts (add, edit, delete, get data, update data)
-/// Merges: PptAddChartTool, PptEditChartTool, PptDeleteChartTool, PptGetChartDataTool, PptUpdateChartDataTool
+///     Unified tool for managing PowerPoint charts (add, edit, delete, get data, update data)
+///     Merges: PptAddChartTool, PptEditChartTool, PptDeleteChartTool, PptGetChartDataTool, PptUpdateChartDataTool
 /// </summary>
 public class PptChartTool : IAsposeTool
 {
-    public string Description => @"Manage PowerPoint charts. Supports 5 operations: add, edit, delete, get_data, update_data.
+    public string Description =>
+        @"Manage PowerPoint charts. Supports 5 operations: add, edit, delete, get_data, update_data.
 
 Usage examples:
 - Add chart: ppt_chart(operation='add', path='presentation.pptx', slideIndex=0, chartType='Column', x=100, y=100, width=400, height=300)
@@ -103,7 +104,8 @@ Usage examples:
             outputPath = new
             {
                 type = "string",
-                description = "Output file path (optional, for add/edit/delete/update_data operations, defaults to input path)"
+                description =
+                    "Output file path (optional, for add/edit/delete/update_data operations, defaults to input path)"
             }
         },
         required = new[] { "operation", "path", "slideIndex" }
@@ -127,7 +129,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Adds a chart to a slide
+    ///     Adds a chart to a slide
     /// </summary>
     /// <param name="arguments">JSON arguments containing chartType, optional title, data, x, y, width, height, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -140,9 +142,7 @@ Usage examples:
 
         using var presentation = new Presentation(path);
         if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
-        {
             throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
-        }
 
         var slide = presentation.Slides[slideIndex];
 
@@ -172,7 +172,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Edits chart properties
+    ///     Edits chart properties
     /// </summary>
     /// <param name="arguments">JSON arguments containing chartIndex, optional title, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -187,23 +187,16 @@ Usage examples:
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
         var shape = PowerPointHelper.GetShape(slide, shapeIndex);
-        if (shape is not IChart chart)
-        {
-            throw new ArgumentException($"Shape at index {shapeIndex} is not a chart");
-        }
+        if (shape is not IChart chart) throw new ArgumentException($"Shape at index {shapeIndex} is not a chart");
 
         if (!string.IsNullOrEmpty(title))
         {
             chart.HasTitle = true;
             var chartTitle = chart.ChartTitle;
             if (chartTitle != null)
-            {
                 chartTitle.TextFrameForOverriding.Text = title;
-            }
             else
-            {
                 chart.ChartTitle.AddTextFrameForOverriding(title);
-            }
         }
 
         if (!string.IsNullOrEmpty(chartTypeStr))
@@ -229,7 +222,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Deletes a chart from a slide
+    ///     Deletes a chart from a slide
     /// </summary>
     /// <param name="arguments">JSON arguments containing chartIndex, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -242,10 +235,7 @@ Usage examples:
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
         var shape = PowerPointHelper.GetShape(slide, shapeIndex);
-        if (shape is not IChart)
-        {
-            throw new ArgumentException($"Shape at index {shapeIndex} is not a chart");
-        }
+        if (shape is not IChart) throw new ArgumentException($"Shape at index {shapeIndex} is not a chart");
 
         slide.Shapes.Remove(shape);
 
@@ -255,7 +245,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Gets chart data
+    ///     Gets chart data
     /// </summary>
     /// <param name="arguments">JSON arguments containing chartIndex</param>
     /// <param name="path">PowerPoint file path</param>
@@ -268,51 +258,45 @@ Usage examples:
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
         var shape = PowerPointHelper.GetShape(slide, shapeIndex);
-        if (shape is not IChart chart)
-        {
-            throw new ArgumentException($"Shape at index {shapeIndex} is not a chart");
-        }
+        if (shape is not IChart chart) throw new ArgumentException($"Shape at index {shapeIndex} is not a chart");
 
         var sb = new StringBuilder();
         sb.AppendLine($"Chart Type: {chart.Type}");
         sb.AppendLine($"Has Title: {chart.HasTitle}");
-        if (chart.HasTitle && chart.ChartTitle != null)
-        {
+        if (chart is { HasTitle: true, ChartTitle: not null })
             sb.AppendLine($"Title: {chart.ChartTitle.TextFrameForOverriding?.Text ?? ""}");
-        }
         sb.AppendLine();
 
         var chartData = chart.ChartData;
         sb.AppendLine($"Categories ({chartData.Categories.Count}):");
-        for (int i = 0; i < chartData.Categories.Count; i++)
+        for (var i = 0; i < chartData.Categories.Count; i++)
         {
             var cat = chartData.Categories[i];
             sb.AppendLine($"  [{i}] {cat.Value}");
         }
+
         sb.AppendLine();
 
         sb.AppendLine($"Series ({chartData.Series.Count}):");
-        for (int i = 0; i < chartData.Series.Count; i++)
+        for (var i = 0; i < chartData.Series.Count; i++)
         {
             var series = chartData.Series[i];
             sb.AppendLine($"  [{i}] {series.Name}");
             sb.AppendLine($"      Data Points: {series.DataPoints.Count}");
-            for (int j = 0; j < Math.Min(series.DataPoints.Count, 10); j++)
+            for (var j = 0; j < Math.Min(series.DataPoints.Count, 10); j++)
             {
                 var point = series.DataPoints[j];
                 sb.AppendLine($"        [{j}] Value: {point.Value}");
             }
-            if (series.DataPoints.Count > 10)
-            {
-                sb.AppendLine($"        ... ({series.DataPoints.Count - 10} more)");
-            }
+
+            if (series.DataPoints.Count > 10) sb.AppendLine($"        ... ({series.DataPoints.Count - 10} more)");
         }
 
         return await Task.FromResult(sb.ToString());
     }
 
     /// <summary>
-    /// Updates chart data
+    ///     Updates chart data
     /// </summary>
     /// <param name="arguments">JSON arguments containing chartIndex, data, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -328,10 +312,7 @@ Usage examples:
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
         var shape = PowerPointHelper.GetShape(slide, shapeIndex);
-        if (shape is not IChart chart)
-        {
-            throw new ArgumentException($"Shape at index {shapeIndex} is not a chart");
-        }
+        if (shape is not IChart chart) throw new ArgumentException($"Shape at index {shapeIndex} is not a chart");
 
         var chartData = chart.ChartData;
 
@@ -340,26 +321,18 @@ Usage examples:
             chartData.Series.Clear();
             chartData.Categories.Clear();
         }
-        // This is a simplified implementation - for production use, proper cell references are needed
-        if (categoriesArray != null && categoriesArray.Count > 0)
-        {
-            if (clearExisting)
-            {
-                chartData.Categories.Clear();
-            }
-        }
 
-        if (seriesArray != null && seriesArray.Count > 0)
-        {
+        // This is a simplified implementation - for production use, proper cell references are needed
+        if (categoriesArray is { Count: > 0 })
             if (clearExisting)
-            {
+                chartData.Categories.Clear();
+
+        if (seriesArray is { Count: > 0 })
+            if (clearExisting)
                 chartData.Series.Clear();
-            }
-        }
 
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         presentation.Save(outputPath, SaveFormat.Pptx);
         return await Task.FromResult($"Chart data updated on slide {slideIndex}, shape {shapeIndex}");
     }
 }
-

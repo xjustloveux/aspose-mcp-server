@@ -1,119 +1,90 @@
 using System.Reflection;
-using System.Linq;
 using AsposeMcpServer.Tools;
 
 namespace AsposeMcpServer.Core;
 
 /// <summary>
-/// Tool registry that automatically discovers and registers tools based on naming conventions
+///     Tool registry that automatically discovers and registers tools based on naming conventions
 /// </summary>
 public static class ToolRegistry
 {
     /// <summary>
-    /// Discovers and registers all tools based on configuration
+    ///     Discovers and registers all tools based on configuration
     /// </summary>
     public static Dictionary<string, IAsposeTool> DiscoverTools(ServerConfig config)
     {
         var tools = new Dictionary<string, IAsposeTool>();
         var assembly = Assembly.GetExecutingAssembly();
-        
+
         // Get all tool types that implement IAsposeTool
         var toolTypes = assembly.GetTypes()
             .Where(t => typeof(IAsposeTool).IsAssignableFrom(t)
-                     && !t.IsInterface
-                     && !t.IsAbstract
-                     && t.Namespace?.StartsWith("AsposeMcpServer.Tools") == true)
+                        && t is { IsInterface: false, IsAbstract: false, Namespace: { } ns } &&
+                        ns.StartsWith("AsposeMcpServer.Tools"))
             .ToList();
-        
+
         foreach (var toolType in toolTypes)
-        {
             try
             {
                 var tool = (IAsposeTool)Activator.CreateInstance(toolType)!;
                 var toolName = GetToolName(toolType);
-                
+
                 if (ShouldRegisterTool(toolName, config))
-                {
-                    if (tools.ContainsKey(toolName))
-                    {
-                        Console.Error.WriteLine($"[WARN] Duplicate tool name detected: {toolName}. Skipping {toolType.Name}");
-                        continue;
-                    }
-                    
-                    tools[toolName] = tool;
-                }
+                    if (!tools.TryAdd(toolName, tool))
+                        Console.Error.WriteLine(
+                            $"[WARN] Duplicate tool name detected: {toolName}. Skipping {toolType.Name}");
             }
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"[ERROR] Failed to instantiate tool {toolType.Name}: {ex.Message}");
             }
-        }
-        
+
         return tools;
     }
-    
+
     /// <summary>
-    /// Extracts tool name from type name using naming convention
-    /// Example: WordCreateTool -> word_create
+    ///     Extracts tool name from type name using naming convention
+    ///     Example: WordCreateTool -> word_create
     /// </summary>
     private static string GetToolName(Type toolType)
     {
         var name = toolType.Name;
-        
+
         // Remove "Tool" suffix if present
-        if (name.EndsWith("Tool"))
-        {
-            name = name.Substring(0, name.Length - 4);
-        }
-        
+        if (name.EndsWith("Tool")) name = name.Substring(0, name.Length - 4);
+
         // Convert PascalCase to snake_case
         // WordCreateTool -> word_create_tool -> word_create
-        var snakeCase = string.Concat(name.Select((c, i) => 
+        var snakeCase = string.Concat(name.Select((c, i) =>
             i > 0 && char.IsUpper(c) ? "_" + c.ToString().ToLowerInvariant() : c.ToString().ToLowerInvariant()));
-        
+
         return snakeCase;
     }
-    
+
     /// <summary>
-    /// Determines if a tool should be registered based on configuration
+    ///     Determines if a tool should be registered based on configuration
     /// </summary>
     private static bool ShouldRegisterTool(string toolName, ServerConfig config)
     {
         // Conversion tools have special logic
-        if (toolName == "convert_to_pdf")
-        {
-            return config.EnableWord || config.EnableExcel || config.EnablePowerPoint;
-        }
-        
+        if (toolName == "convert_to_pdf") return config.EnableWord || config.EnableExcel || config.EnablePowerPoint;
+
         if (toolName == "convert_document")
         {
             var enabledDocTools = new[] { config.EnableWord, config.EnableExcel, config.EnablePowerPoint };
             return enabledDocTools.Count(e => e) >= 2;
         }
-        
+
         // Check tool category based on prefix
-        if (toolName.StartsWith("word_"))
-        {
-            return config.EnableWord;
-        }
-        
-        if (toolName.StartsWith("excel_"))
-        {
-            return config.EnableExcel;
-        }
-        
-        if (toolName.StartsWith("ppt_"))
-        {
-            return config.EnablePowerPoint;
-        }
-        
-        if (toolName.StartsWith("pdf_"))
-        {
-            return config.EnablePdf;
-        }
-        
+        if (toolName.StartsWith("word_")) return config.EnableWord;
+
+        if (toolName.StartsWith("excel_")) return config.EnableExcel;
+
+        if (toolName.StartsWith("ppt_")) return config.EnablePowerPoint;
+
+        if (toolName.StartsWith("pdf_")) return config.EnablePdf;
+
         // Default: register all tools (for future extensibility)
         return true;
     }
 }
-

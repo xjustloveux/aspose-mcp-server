@@ -1,18 +1,19 @@
-﻿using System.Text.Json.Nodes;
-using System.Text;
+﻿using System.Text;
+using System.Text.Json.Nodes;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Excel;
 
 /// <summary>
-/// Unified tool for managing Excel properties (workbook properties, sheet properties, sheet info)
-/// Merges: ExcelGetWorkbookPropertiesTool, ExcelSetWorkbookPropertiesTool, ExcelGetSheetPropertiesTool,
-/// ExcelEditSheetPropertiesTool, ExcelGetSheetInfoTool
+///     Unified tool for managing Excel properties (workbook properties, sheet properties, sheet info)
+///     Merges: ExcelGetWorkbookPropertiesTool, ExcelSetWorkbookPropertiesTool, ExcelGetSheetPropertiesTool,
+///     ExcelEditSheetPropertiesTool, ExcelGetSheetInfoTool
 /// </summary>
 public class ExcelPropertiesTool : IAsposeTool
 {
-    public string Description => @"Manage Excel properties. Supports 5 operations: get_workbook_properties, set_workbook_properties, get_sheet_properties, edit_sheet_properties, get_sheet_info.
+    /// <summary>    ///     Gets the description of the tool and its usage examples    /// </summary>    public string Description =>
+        @"Manage Excel properties. Supports 5 operations: get_workbook_properties, set_workbook_properties, get_sheet_properties, edit_sheet_properties, get_sheet_info.
 
 Usage examples:
 - Get workbook properties: excel_properties(operation='get_workbook_properties', path='book.xlsx')
@@ -21,6 +22,9 @@ Usage examples:
 - Edit sheet properties: excel_properties(operation='edit_sheet_properties', path='book.xlsx', sheetIndex=0, name='New Name')
 - Get sheet info: excel_properties(operation='get_sheet_info', path='book.xlsx')";
 
+    /// <summary>
+    ///     Gets the JSON schema defining the input parameters for the tool
+    /// </summary>
     public object InputSchema => new
     {
         type = "object",
@@ -35,7 +39,11 @@ Usage examples:
 - 'get_sheet_properties': Get sheet properties (required params: path, sheetIndex)
 - 'edit_sheet_properties': Edit sheet properties (required params: path, sheetIndex)
 - 'get_sheet_info': Get sheet info (required params: path)",
-                @enum = new[] { "get_workbook_properties", "set_workbook_properties", "edit_sheet_properties", "get_sheet_properties", "get_sheet_info" }
+                @enum = new[]
+                {
+                    "get_workbook_properties", "set_workbook_properties", "edit_sheet_properties",
+                    "get_sheet_properties", "get_sheet_info"
+                }
             },
             path = new
             {
@@ -115,7 +123,8 @@ Usage examples:
             outputPath = new
             {
                 type = "string",
-                description = "Output file path (optional, for set/edit_sheet_properties operations, defaults to input path)"
+                description =
+                    "Output file path (optional, for set/edit_sheet_properties operations, defaults to input path)"
             }
         },
         required = new[] { "operation", "path" }
@@ -139,12 +148,12 @@ Usage examples:
     }
 
     /// <summary>
-    /// Gets workbook properties
+    ///     Gets workbook properties
     /// </summary>
-    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="_">Unused parameter</param>
     /// <param name="path">Excel file path</param>
     /// <returns>Formatted string with workbook properties</returns>
-    private async Task<string> GetWorkbookPropertiesAsync(JsonObject? arguments, string path)
+    private async Task<string> GetWorkbookPropertiesAsync(JsonObject? _, string path)
     {
         using var workbook = new Workbook(path);
         var props = workbook.BuiltInDocumentProperties;
@@ -168,11 +177,7 @@ Usage examples:
         if (customProps.Count > 0)
         {
             sb.AppendLine("\nCustom Properties:");
-            for (int i = 0; i < customProps.Count; i++)
-            {
-                var prop = customProps[i];
-                sb.AppendLine($"  {prop.Name}: {prop.Value}");
-            }
+            foreach (var prop in customProps) sb.AppendLine($"  {prop.Name}: {prop.Value}");
         }
 
         sb.AppendLine($"\nTotal Sheets: {workbook.Worksheets.Count}");
@@ -181,7 +186,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Sets workbook properties
+    ///     Sets workbook properties
     /// </summary>
     /// <param name="arguments">JSON arguments containing various property values</param>
     /// <param name="path">Excel file path</param>
@@ -212,31 +217,27 @@ Usage examples:
         if (!string.IsNullOrEmpty(manager)) props.Manager = manager;
 
         if (customProps != null)
-        {
             foreach (var kvp in customProps)
-            {
                 workbook.CustomDocumentProperties.Add(kvp.Key, kvp.Value?.GetValue<string>() ?? "");
-            }
-        }
 
         workbook.Save(outputPath);
         return await Task.FromResult($"Workbook properties updated: {outputPath}");
     }
 
     /// <summary>
-    /// Gets worksheet properties
+    ///     Gets worksheet properties
     /// </summary>
-    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="_">Unused parameter</param>
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Formatted string with worksheet properties</returns>
-    private async Task<string> GetSheetPropertiesAsync(JsonObject? arguments, string path, int sheetIndex)
+    private async Task<string> GetSheetPropertiesAsync(JsonObject? _, string path, int sheetIndex)
     {
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
         var sb = new StringBuilder();
 
-        sb.AppendLine($"Sheet Properties:");
+        sb.AppendLine("Sheet Properties:");
         sb.AppendLine($"  Name: {worksheet.Name}");
         sb.AppendLine($"  Index: {sheetIndex}");
         sb.AppendLine($"  Is Visible: {worksheet.IsVisible}");
@@ -251,7 +252,7 @@ Usage examples:
         sb.AppendLine($"  Hyperlinks Count: {worksheet.Hyperlinks.Count}");
 
         var pageSetup = worksheet.PageSetup;
-        sb.AppendLine($"\nPrint Settings:");
+        sb.AppendLine("\nPrint Settings:");
         sb.AppendLine($"  Print Area: {pageSetup.PrintArea ?? "(none)"}");
         sb.AppendLine($"  Print Title Rows: {pageSetup.PrintTitleRows ?? "(none)"}");
         sb.AppendLine($"  Print Title Columns: {pageSetup.PrintTitleColumns ?? "(none)"}");
@@ -264,7 +265,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Edits worksheet properties
+    ///     Edits worksheet properties
     /// </summary>
     /// <param name="arguments">JSON arguments containing various property values</param>
     /// <param name="path">Excel file path</param>
@@ -281,15 +282,9 @@ Usage examples:
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
 
-        if (!string.IsNullOrEmpty(name))
-        {
-            worksheet.Name = name;
-        }
+        if (!string.IsNullOrEmpty(name)) worksheet.Name = name;
 
-        if (isVisible.HasValue)
-        {
-            worksheet.IsVisible = isVisible.Value;
-        }
+        if (isVisible.HasValue) worksheet.IsVisible = isVisible.Value;
 
         if (!string.IsNullOrWhiteSpace(tabColor))
         {
@@ -297,17 +292,14 @@ Usage examples:
             worksheet.TabColor = color;
         }
 
-        if (isSelected.HasValue && isSelected.Value)
-        {
-            workbook.Worksheets.ActiveSheetIndex = sheetIndex;
-        }
+        if (isSelected.HasValue && isSelected.Value) workbook.Worksheets.ActiveSheetIndex = sheetIndex;
 
         workbook.Save(outputPath);
         return await Task.FromResult($"Sheet {sheetIndex} properties updated: {outputPath}");
     }
 
     /// <summary>
-    /// Gets information about all worksheets
+    ///     Gets information about all worksheets
     /// </summary>
     /// <param name="arguments">JSON arguments (no specific parameters required)</param>
     /// <param name="path">Excel file path</param>
@@ -325,16 +317,15 @@ Usage examples:
         if (sheetIndex.HasValue)
         {
             if (sheetIndex.Value < 0 || sheetIndex.Value >= workbook.Worksheets.Count)
-            {
-                throw new ArgumentException($"Worksheet index {sheetIndex.Value} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
-            }
+                throw new ArgumentException(
+                    $"Worksheet index {sheetIndex.Value} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
 
             var worksheet = workbook.Worksheets[sheetIndex.Value];
             AppendSheetInfo(result, worksheet, sheetIndex.Value);
         }
         else
         {
-            for (int i = 0; i < workbook.Worksheets.Count; i++)
+            for (var i = 0; i < workbook.Worksheets.Count; i++)
             {
                 AppendSheetInfo(result, workbook.Worksheets[i], i);
                 if (i < workbook.Worksheets.Count - 1) result.AppendLine();
@@ -356,4 +347,3 @@ Usage examples:
         result.AppendLine($"  Freeze panes: row {worksheet.FirstVisibleRow}, column {worksheet.FirstVisibleColumn}");
     }
 }
-

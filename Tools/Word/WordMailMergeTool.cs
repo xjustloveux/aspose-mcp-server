@@ -1,10 +1,12 @@
 ﻿using System.Text.Json.Nodes;
 using Aspose.Words;
-using Aspose.Words.MailMerging;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Word;
 
+/// <summary>
+///     Tool for performing mail merge operations on Word document templates
+/// </summary>
 public class WordMailMergeTool : IAsposeTool
 {
     public string Description => @"Perform mail merge on a Word document template.
@@ -48,7 +50,7 @@ Usage examples:
         var doc = new Document(templatePath);
 
         var fieldNames = data.Select(kvp => kvp.Key).ToArray();
-        var fieldValues = data.Select(kvp => kvp.Value?.ToString() ?? "").ToArray();
+        var fieldValues = data.Select(kvp => kvp.Value?.ToString() ?? "").Cast<object>().ToArray();
 
         doc.MailMerge.Execute(fieldNames, fieldValues);
         doc.Save(outputPath);
@@ -56,4 +58,3 @@ Usage examples:
         return await Task.FromResult($"Mail merge completed: {outputPath}");
     }
 }
-

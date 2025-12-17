@@ -1,12 +1,16 @@
 ﻿using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Pdf;
-using Aspose.Pdf.Forms;
 using Aspose.Pdf.Facades;
+using Aspose.Pdf.Forms;
 using AsposeMcpServer.Core;
+using Rectangle = System.Drawing.Rectangle;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Pdf;
 
+/// <summary>
+///     Tool for managing digital signatures in PDF documents (sign, delete, get)
+/// </summary>
 public class PdfSignatureTool : IAsposeTool
 {
     public string Description => @"Manage digital signatures in PDF documents. Supports 3 operations: sign, delete, get.
@@ -83,9 +87,12 @@ Usage examples:
     }
 
     /// <summary>
-    /// Signs the PDF document
+    ///     Signs the PDF document
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, certificatePath, password, optional reason, location, outputPath</param>
+    /// <param name="arguments">
+    ///     JSON arguments containing path, certificatePath, password, optional reason, location,
+    ///     outputPath
+    /// </param>
     /// <returns>Success message</returns>
     private async Task<string> SignDocument(JsonObject? arguments)
     {
@@ -105,18 +112,20 @@ Usage examples:
 
         using var document = new Document(path);
         using var pdfSign = new PdfFileSignature(document);
-        var pkcs = new PKCS7(certificatePath, certificatePassword);
-        pkcs.Reason = reason;
-        pkcs.Location = location;
+        var pkcs = new PKCS7(certificatePath, certificatePassword)
+        {
+            Reason = reason,
+            Location = location
+        };
 
-        var rect = new System.Drawing.Rectangle(100, 100, 200, 100);
+        var rect = new Rectangle(100, 100, 200, 100);
         pdfSign.Sign(1, true, rect, pkcs);
         pdfSign.Save(outputPath);
         return await Task.FromResult($"PDF digitally signed. Output: {outputPath}");
     }
 
     /// <summary>
-    /// Deletes a signature from the PDF
+    ///     Deletes a signature from the PDF
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, signatureIndex, optional outputPath</param>
     /// <returns>Success message</returns>
@@ -129,18 +138,19 @@ Usage examples:
         using var document = new Document(path);
         using var pdfSign = new PdfFileSignature(document);
         var signatureNames = pdfSign.GetSignNames();
-        
+
         if (signatureIndex < 0 || signatureIndex >= signatureNames.Count)
             throw new ArgumentException($"signatureIndex must be between 0 and {signatureNames.Count - 1}");
 
         var signatureName = signatureNames[signatureIndex];
         pdfSign.RemoveSignature(signatureName);
         pdfSign.Save(outputPath);
-        return await Task.FromResult($"Successfully deleted signature '{signatureName}' (index {signatureIndex}). Output: {outputPath}");
+        return await Task.FromResult(
+            $"Successfully deleted signature '{signatureName}' (index {signatureIndex}). Output: {outputPath}");
     }
 
     /// <summary>
-    /// Gets all signatures from the PDF
+    ///     Gets all signatures from the PDF
     /// </summary>
     /// <param name="arguments">JSON arguments (no specific parameters required)</param>
     /// <returns>Formatted string with all signatures</returns>
@@ -165,24 +175,24 @@ Usage examples:
         sb.AppendLine($"Total Signatures: {signatureNames.Count}");
         sb.AppendLine();
 
-        for (int i = 0; i < signatureNames.Count; i++)
+        for (var i = 0; i < signatureNames.Count; i++)
         {
             var signatureName = signatureNames[i];
             sb.AppendLine($"[{i}] Name: {signatureName}");
             // Check signature validity - IsValid may not be available, use alternative method
             try
             {
-                var cert = pdfSign.ExtractCertificate(signatureName);
-                sb.AppendLine($"    Valid: Yes (Certificate found)");
+                _ = pdfSign.ExtractCertificate(signatureName);
+                sb.AppendLine("    Valid: Yes (Certificate found)");
             }
             catch
             {
-                sb.AppendLine($"    Valid: Unknown");
+                sb.AppendLine("    Valid: Unknown");
             }
+
             sb.AppendLine();
         }
 
         return await Task.FromResult(sb.ToString());
     }
 }
-

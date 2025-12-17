@@ -1,13 +1,14 @@
-﻿using System.Text.Json.Nodes;
+﻿using System.Text;
+using System.Text.Json.Nodes;
 using Aspose.Words;
 using Aspose.Words.Fields;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Word;
 
 /// <summary>
-/// Unified tool for managing Word hyperlinks (add, edit, delete, get)
-/// Merges: WordAddHyperlinkTool, WordEditHyperlinkTool, WordDeleteHyperlinkTool, WordGetHyperlinksTool
+///     Unified tool for managing Word hyperlinks (add, edit, delete, get)
+///     Merges: WordAddHyperlinkTool, WordEditHyperlinkTool, WordDeleteHyperlinkTool, WordGetHyperlinksTool
 /// </summary>
 public class WordHyperlinkTool : IAsposeTool
 {
@@ -57,7 +58,8 @@ Usage examples:
             paragraphIndex = new
             {
                 type = "number",
-                description = "Paragraph index to insert hyperlink after (0-based, optional, for add operation). When specified, creates a NEW paragraph after the specified paragraph (does not insert into existing paragraph). Valid range: 0 to (total paragraphs - 1), or -1 for document start."
+                description =
+                    "Paragraph index to insert hyperlink after (0-based, optional, for add operation). When specified, creates a NEW paragraph after the specified paragraph (does not insert into existing paragraph). Valid range: 0 to (total paragraphs - 1), or -1 for document start."
             },
             tooltip = new
             {
@@ -94,7 +96,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Adds a hyperlink to the document
+    ///     Adds a hyperlink to the document
     /// </summary>
     /// <param name="arguments">JSON arguments containing text, address, optional displayText, outputPath</param>
     /// <param name="path">Word document file path</param>
@@ -109,7 +111,7 @@ Usage examples:
 
         var doc = new Document(path);
         var builder = new DocumentBuilder(doc);
-        
+
         // Determine insertion position
         if (paragraphIndex.HasValue)
         {
@@ -119,8 +121,7 @@ Usage examples:
                 // Insert at the beginning - create new paragraph
                 if (paragraphs.Count > 0)
                 {
-                    var firstPara = paragraphs[0] as Paragraph;
-                    if (firstPara != null)
+                    if (paragraphs[0] is Paragraph firstPara)
                     {
                         // Insert new paragraph before the first paragraph
                         var newPara = new Paragraph(doc);
@@ -140,8 +141,7 @@ Usage examples:
             else if (paragraphIndex.Value >= 0 && paragraphIndex.Value < paragraphs.Count)
             {
                 // Insert after the specified paragraph - create new paragraph
-                var targetPara = paragraphs[paragraphIndex.Value] as Paragraph;
-                if (targetPara != null)
+                if (paragraphs[paragraphIndex.Value] is Paragraph targetPara)
                 {
                     // Insert new paragraph after the target paragraph
                     var newPara = new Paragraph(doc);
@@ -153,7 +153,8 @@ Usage examples:
                     }
                     else
                     {
-                        throw new InvalidOperationException($"Unable to find parent node of paragraph at index {paragraphIndex.Value}");
+                        throw new InvalidOperationException(
+                            $"Unable to find parent node of paragraph at index {paragraphIndex.Value}");
                     }
                 }
                 else
@@ -163,7 +164,8 @@ Usage examples:
             }
             else
             {
-                throw new ArgumentException($"Paragraph index {paragraphIndex.Value} is out of range (document has {paragraphs.Count} paragraphs)");
+                throw new ArgumentException(
+                    $"Paragraph index {paragraphIndex.Value} is out of range (document has {paragraphs.Count} paragraphs)");
             }
         }
         else
@@ -171,10 +173,10 @@ Usage examples:
             // Default: Move to end of document
             builder.MoveToDocumentEnd();
         }
-        
+
         // Insert hyperlink
         builder.InsertHyperlink(text, url, false);
-        
+
         // Set tooltip if provided
         if (!string.IsNullOrEmpty(tooltip))
         {
@@ -182,45 +184,36 @@ Usage examples:
             var fields = doc.Range.Fields;
             if (fields.Count > 0)
             {
-                var lastField = fields[fields.Count - 1];
-                if (lastField is FieldHyperlink hyperlinkField)
-                {
-                    hyperlinkField.ScreenTip = tooltip;
-                }
+                var lastField = fields[^1];
+                if (lastField is FieldHyperlink hyperlinkField) hyperlinkField.ScreenTip = tooltip;
             }
         }
-        
+
         doc.Save(outputPath);
-        
-        var result = $"Hyperlink added successfully\n";
+
+        var result = "Hyperlink added successfully\n";
         result += $"Display text: {text}\n";
         result += $"URL: {url}\n";
-        if (!string.IsNullOrEmpty(tooltip))
-        {
-            result += $"Tooltip: {tooltip}\n";
-        }
+        if (!string.IsNullOrEmpty(tooltip)) result += $"Tooltip: {tooltip}\n";
         if (paragraphIndex.HasValue)
         {
             if (paragraphIndex.Value == -1)
-            {
                 result += "Insert position: beginning of document\n";
-            }
             else
-            {
                 result += $"Insert position: after paragraph #{paragraphIndex.Value}\n";
-            }
         }
         else
         {
             result += "Insert position: end of document\n";
         }
+
         result += $"Output: {outputPath}";
-        
+
         return await Task.FromResult(result);
     }
 
     /// <summary>
-    /// Edits an existing hyperlink
+    ///     Edits an existing hyperlink
     /// </summary>
     /// <param name="arguments">JSON arguments containing hyperlinkIndex, optional text, address, displayText, outputPath</param>
     /// <param name="path">Word document file path</param>
@@ -234,70 +227,63 @@ Usage examples:
         var tooltip = ArgumentHelper.GetStringNullable(arguments, "tooltip");
 
         var doc = new Document(path);
-        
+
         // Get all hyperlink fields
         var hyperlinkFields = new List<FieldHyperlink>();
-        foreach (Field field in doc.Range.Fields)
-        {
+        foreach (var field in doc.Range.Fields)
             if (field is FieldHyperlink linkField)
-            {
                 hyperlinkFields.Add(linkField);
-            }
-        }
-        
+
         if (hyperlinkIndex < 0 || hyperlinkIndex >= hyperlinkFields.Count)
         {
-            var availableInfo = hyperlinkFields.Count > 0 
+            var availableInfo = hyperlinkFields.Count > 0
                 ? $" (valid index: 0-{hyperlinkFields.Count - 1})"
                 : " (document has no hyperlinks)";
-            throw new ArgumentException($"Hyperlink index {hyperlinkIndex} is out of range (document has {hyperlinkFields.Count} hyperlinks){availableInfo}. Use get operation to view all available hyperlinks");
+            throw new ArgumentException(
+                $"Hyperlink index {hyperlinkIndex} is out of range (document has {hyperlinkFields.Count} hyperlinks){availableInfo}. Use get operation to view all available hyperlinks");
         }
-        
+
         var hyperlinkField = hyperlinkFields[hyperlinkIndex];
         var changes = new List<string>();
-        
+
         // Update URL if provided
         if (!string.IsNullOrEmpty(url))
         {
             hyperlinkField.Address = url;
             changes.Add($"URL: {url}");
         }
-        
+
         // Update display text if provided
         if (!string.IsNullOrEmpty(displayText))
         {
             hyperlinkField.Result = displayText;
             changes.Add($"Display text: {displayText}");
         }
-        
+
         // Update tooltip if provided
         if (!string.IsNullOrEmpty(tooltip))
         {
             hyperlinkField.ScreenTip = tooltip;
             changes.Add($"Tooltip: {tooltip}");
         }
-        
+
         // Update the field
         hyperlinkField.Update();
-        
+
         doc.Save(outputPath);
-        
+
         var result = $"Hyperlink #{hyperlinkIndex} edited successfully\n";
         if (changes.Count > 0)
-        {
             result += $"Changes: {string.Join(", ", changes)}\n";
-        }
         else
-        {
             result += "No change parameters provided\n";
-        }
         result += $"Output: {outputPath}";
-        
+
         return await Task.FromResult(result);
     }
 
     /// <summary>
-    /// Deletes a hyperlink from the document
+    ///     Deletes a hyperlink from the document
     /// </summary>
     /// <param name="arguments">JSON arguments containing hyperlinkIndex, optional outputPath</param>
     /// <param name="path">Word document file path</param>
@@ -308,42 +294,36 @@ Usage examples:
         var hyperlinkIndex = ArgumentHelper.GetInt(arguments, "hyperlinkIndex");
 
         var doc = new Document(path);
-        
+
         // Get all hyperlink fields
         var hyperlinkFields = new List<FieldHyperlink>();
-        foreach (Field field in doc.Range.Fields)
-        {
+        foreach (var field in doc.Range.Fields)
             if (field is FieldHyperlink linkField)
-            {
                 hyperlinkFields.Add(linkField);
-            }
-        }
-        
+
         if (hyperlinkIndex < 0 || hyperlinkIndex >= hyperlinkFields.Count)
         {
-            var availableInfo = hyperlinkFields.Count > 0 
+            var availableInfo = hyperlinkFields.Count > 0
                 ? $" (valid index: 0-{hyperlinkFields.Count - 1})"
                 : " (document has no hyperlinks)";
-            throw new ArgumentException($"Hyperlink index {hyperlinkIndex} is out of range (document has {hyperlinkFields.Count} hyperlinks){availableInfo}. Use get operation to view all available hyperlinks");
+            throw new ArgumentException(
+                $"Hyperlink index {hyperlinkIndex} is out of range (document has {hyperlinkFields.Count} hyperlinks){availableInfo}. Use get operation to view all available hyperlinks");
         }
-        
+
         var hyperlinkField = hyperlinkFields[hyperlinkIndex];
-        
+
         // Get hyperlink info before deletion
-        string displayText = hyperlinkField.Result ?? "";
-        string address = hyperlinkField.Address ?? "";
-        
+        var displayText = hyperlinkField.Result ?? "";
+        var address = hyperlinkField.Address ?? "";
+
         // Delete the hyperlink field
         try
         {
             var fieldStart = hyperlinkField.Start;
             var fieldEnd = hyperlinkField.End;
-            
+
             fieldStart.Remove();
-            if (fieldEnd != null)
-            {
-                fieldEnd.Remove();
-            }
+            if (fieldEnd != null) fieldEnd.Remove();
         }
         catch
         {
@@ -356,50 +336,45 @@ Usage examples:
                 throw new InvalidOperationException("Unable to delete hyperlink, please check document structure");
             }
         }
-        
+
         doc.Save(outputPath);
-        
+
         // Count remaining hyperlinks
-        int remainingCount = 0;
-        foreach (Field field in doc.Range.Fields)
-        {
+        var remainingCount = 0;
+        foreach (var field in doc.Range.Fields)
             if (field is FieldHyperlink)
-            {
                 remainingCount++;
-            }
-        }
-        
+
         var result = $"Hyperlink #{hyperlinkIndex} deleted successfully\n";
         result += $"Display text: {displayText}\n";
         result += $"Address: {address}\n";
         result += $"Remaining hyperlinks in document: {remainingCount}\n";
         result += $"Output: {outputPath}";
-        
+
         return await Task.FromResult(result);
     }
 
     /// <summary>
-    /// Gets all hyperlinks from the document
+    ///     Gets all hyperlinks from the document
     /// </summary>
-    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="_">Unused parameter</param>
     /// <param name="path">Word document file path</param>
     /// <returns>Formatted string with all hyperlinks</returns>
-    private async Task<string> GetHyperlinksAsync(JsonObject? arguments, string path)
+    private async Task<string> GetHyperlinksAsync(JsonObject? _, string path)
     {
         var doc = new Document(path);
-        
+
         // Get all hyperlink fields
         var hyperlinks = new List<(int index, string displayText, string address, string tooltip)>();
-        int index = 0;
-        
-        foreach (Field field in doc.Range.Fields)
-        {
+        var index = 0;
+
+        foreach (var field in doc.Range.Fields)
             if (field is FieldHyperlink hyperlinkField)
             {
-                string displayText = "";
-                string address = "";
-                string tooltip = "";
-                
+                var displayText = "";
+                var address = "";
+                var tooltip = "";
+
                 try
                 {
                     displayText = field.Result ?? "";
@@ -410,34 +385,25 @@ Usage examples:
                 {
                     // Ignore errors
                 }
-                
+
                 hyperlinks.Add((index, displayText, address, tooltip));
                 index++;
             }
-        }
-        
-        if (hyperlinks.Count == 0)
-        {
-            return await Task.FromResult("No hyperlinks found in document");
-        }
-        
-        var result = new System.Text.StringBuilder();
+
+        if (hyperlinks.Count == 0) return await Task.FromResult("No hyperlinks found in document");
+
+        var result = new StringBuilder();
         result.AppendLine($"Found {hyperlinks.Count} hyperlinks:\n");
-        
-        for (int i = 0; i < hyperlinks.Count; i++)
+
+        foreach (var (idx, displayText, address, tooltip) in hyperlinks)
         {
-            var (idx, displayText, address, tooltip) = hyperlinks[i];
             result.AppendLine($"Hyperlink #{idx}:");
             result.AppendLine($"  Display text: {displayText}");
             result.AppendLine($"  Address: {address}");
-            if (!string.IsNullOrEmpty(tooltip))
-            {
-                result.AppendLine($"  Tooltip: {tooltip}");
-            }
+            if (!string.IsNullOrEmpty(tooltip)) result.AppendLine($"  Tooltip: {tooltip}");
             result.AppendLine();
         }
-        
+
         return await Task.FromResult(result.ToString().TrimEnd());
     }
 }
-

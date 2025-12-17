@@ -2,8 +2,11 @@
 using Aspose.Words;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Word;
 
+/// <summary>
+///     Tool for managing watermarks in Word documents
+/// </summary>
 public class WordWatermarkTool : IAsposeTool
 {
     public string Description => @"Manage watermarks in Word documents. Supports 1 operation: add.
@@ -75,7 +78,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Adds a watermark to the document
+    ///     Adds a watermark to the document
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, optional text, imagePath, outputPath</param>
     /// <returns>Success message</returns>
@@ -91,7 +94,7 @@ Usage examples:
         var layout = ArgumentHelper.GetString(arguments, "layout", "Diagonal");
 
         var doc = new Document(path);
-        
+
         var watermarkOptions = new TextWatermarkOptions
         {
             FontFamily = fontFamily,
@@ -106,4 +109,3 @@ Usage examples:
         return await Task.FromResult($"Watermark added to document. Output: {outputPath}");
     }
 }
-

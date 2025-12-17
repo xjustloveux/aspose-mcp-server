@@ -1,14 +1,14 @@
-﻿using System.Text.Json.Nodes;
-using System.Text;
+﻿using System.Text;
+using System.Text.Json.Nodes;
 using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.PowerPoint;
 
 /// <summary>
-/// Unified tool for managing PowerPoint sections (add, rename, delete, get)
-/// Merges: PptAddSectionTool, PptRenameSectionTool, PptDeleteSectionTool, PptGetSectionsTool
+///     Unified tool for managing PowerPoint sections (add, rename, delete, get)
+///     Merges: PptAddSectionTool, PptRenameSectionTool, PptDeleteSectionTool, PptGetSectionsTool
 /// </summary>
 public class PptSectionTool : IAsposeTool
 {
@@ -90,7 +90,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Adds a section to the presentation
+    ///     Adds a section to the presentation
     /// </summary>
     /// <param name="arguments">JSON arguments containing sectionName, slideIndex, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -109,7 +109,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Renames a section
+    ///     Renames a section
     /// </summary>
     /// <param name="arguments">JSON arguments containing sectionIndex, newName, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -121,9 +121,7 @@ Usage examples:
 
         using var presentation = new Presentation(path);
         if (sectionIndex < 0 || sectionIndex >= presentation.Sections.Count)
-        {
             throw new ArgumentException($"sectionIndex must be between 0 and {presentation.Sections.Count - 1}");
-        }
 
         presentation.Sections[sectionIndex].Name = newName;
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
@@ -132,7 +130,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Deletes a section from the presentation
+    ///     Deletes a section from the presentation
     /// </summary>
     /// <param name="arguments">JSON arguments containing sectionIndex, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -146,35 +144,31 @@ Usage examples:
         PowerPointHelper.ValidateCollectionIndex(sectionIndex, presentation.Sections.Count, "section");
         var section = presentation.Sections[sectionIndex];
         if (keepSlides)
-        {
             presentation.Sections.RemoveSection(section);
-        }
         else
-        {
             presentation.Sections.RemoveSectionWithSlides(section);
-        }
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         presentation.Save(outputPath, SaveFormat.Pptx);
         return await Task.FromResult($"Section {sectionIndex} removed, keep slides: {keepSlides}");
     }
 
     /// <summary>
-    /// Gets all sections from the presentation
+    ///     Gets all sections from the presentation
     /// </summary>
-    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="_">Unused parameter</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Formatted string with all sections</returns>
-    private async Task<string> GetSectionsAsync(JsonObject? arguments, string path)
+    private async Task<string> GetSectionsAsync(JsonObject? _, string path)
     {
         using var presentation = new Presentation(path);
         var sb = new StringBuilder();
         sb.AppendLine($"Sections: {presentation.Sections.Count}");
-        for (int i = 0; i < presentation.Sections.Count; i++)
+        for (var i = 0; i < presentation.Sections.Count; i++)
         {
             var sec = presentation.Sections[i];
             sb.AppendLine($"[{i}] {sec.Name}");
         }
+
         return await Task.FromResult(sb.ToString());
     }
 }
-

@@ -3,11 +3,15 @@ using Aspose.Pdf;
 using Aspose.Pdf.Optimization;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Pdf;
 
+/// <summary>
+///     Tool for performing file operations on PDF documents (create, merge, split, compress, encrypt)
+/// </summary>
 public class PdfFileTool : IAsposeTool
 {
-    public string Description => @"Perform file operations on PDF documents. Supports 5 operations: create, merge, split, compress, encrypt.
+    public string Description =>
+        @"Perform file operations on PDF documents. Supports 5 operations: create, merge, split, compress, encrypt.
 
 Usage examples:
 - Create PDF: pdf_file(operation='create', outputPath='new.pdf')
@@ -103,13 +107,13 @@ Usage examples:
     }
 
     /// <summary>
-    /// Creates a new PDF document
+    ///     Creates a new PDF document
     /// </summary>
     /// <param name="arguments">JSON arguments containing outputPath, optional content</param>
     /// <returns>Success message with file path</returns>
     private async Task<string> CreateDocument(JsonObject? arguments)
     {
-        var outputPath = ArgumentHelper.GetString(arguments, "outputPath", "path", "outputPath", true);
+        var outputPath = ArgumentHelper.GetString(arguments, "outputPath", "path", "outputPath");
 
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
@@ -120,7 +124,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Merges multiple PDF documents into one
+    ///     Merges multiple PDF documents into one
     /// </summary>
     /// <param name="arguments">JSON arguments containing sourcePaths array, outputPath</param>
     /// <returns>Success message with merged file path</returns>
@@ -137,16 +141,13 @@ Usage examples:
             throw new ArgumentException("At least one input path is required");
 
         // Validate all input paths
-        foreach (var inputPath in inputPaths)
-        {
-            SecurityHelper.ValidateFilePath(inputPath!, "inputPaths");
-        }
+        foreach (var inputPath in inputPaths) SecurityHelper.ValidateFilePath(inputPath!, "inputPaths");
 
         // Validate output path
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         using var mergedDocument = new Document(inputPaths[0]);
-        for (int i = 1; i < inputPaths.Count; i++)
+        for (var i = 1; i < inputPaths.Count; i++)
         {
             using var doc = new Document(inputPaths[i]);
             mergedDocument.Pages.Add(doc.Pages);
@@ -157,7 +158,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Splits PDF into multiple files
+    ///     Splits PDF into multiple files
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, outputPath, splitBy (page or range)</param>
     /// <returns>Success message with split file count</returns>
@@ -176,12 +177,12 @@ Usage examples:
         Directory.CreateDirectory(outputDir);
         using var document = new Document(path);
         var fileBaseName = SecurityHelper.SanitizeFileName(Path.GetFileNameWithoutExtension(path));
-        int fileCount = 0;
+        var fileCount = 0;
 
-        for (int i = 0; i < document.Pages.Count; i += pagesPerFile)
+        for (var i = 0; i < document.Pages.Count; i += pagesPerFile)
         {
             using var newDocument = new Document();
-            for (int j = 0; j < pagesPerFile && (i + j) < document.Pages.Count; j++)
+            for (var j = 0; j < pagesPerFile && i + j < document.Pages.Count; j++)
                 newDocument.Pages.Add(document.Pages[i + j + 1]);
 
             var safeFileName = SecurityHelper.SanitizeFileName($"{fileBaseName}_part_{++fileCount}.pdf");
@@ -193,7 +194,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Compresses a PDF document
+    ///     Compresses a PDF document
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, optional compressionLevel, outputPath</param>
     /// <returns>Success message</returns>
@@ -202,7 +203,7 @@ Usage examples:
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var compressImages = ArgumentHelper.GetBool(arguments, "compressImages");
-        var compressFonts = ArgumentHelper.GetBool(arguments, "compressFonts");
+        _ = ArgumentHelper.GetBool(arguments, "compressFonts");
         var removeUnusedObjects = ArgumentHelper.GetBool(arguments, "removeUnusedObjects");
 
         SecurityHelper.ValidateFilePath(path);
@@ -229,13 +230,14 @@ Usage examples:
 
         var originalSize = new FileInfo(path).Length;
         var compressedSize = new FileInfo(outputPath).Length;
-        var reduction = ((double)(originalSize - compressedSize) / originalSize) * 100;
+        var reduction = (double)(originalSize - compressedSize) / originalSize * 100;
 
-        return await Task.FromResult($"PDF compressed. Size reduction: {reduction:F2}% ({originalSize} -> {compressedSize} bytes). Output: {outputPath}");
+        return await Task.FromResult(
+            $"PDF compressed. Size reduction: {reduction:F2}% ({originalSize} -> {compressedSize} bytes). Output: {outputPath}");
     }
 
     /// <summary>
-    /// Encrypts a PDF document
+    ///     Encrypts a PDF document
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, password, optional userPassword, permissions, outputPath</param>
     /// <returns>Success message</returns>
@@ -250,9 +252,9 @@ Usage examples:
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         using var document = new Document(path);
-        document.Encrypt(userPassword, ownerPassword, Permissions.PrintDocument | Permissions.ModifyContent, CryptoAlgorithm.AESx256);
+        document.Encrypt(userPassword, ownerPassword, Permissions.PrintDocument | Permissions.ModifyContent,
+            CryptoAlgorithm.AESx256);
         document.Save(outputPath);
         return await Task.FromResult($"PDF encrypted with password. Output: {outputPath}");
     }
 }
-

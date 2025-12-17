@@ -52,7 +52,7 @@ function Build-Platform {
     
     Write-Host "  Using version: $version" -ForegroundColor Gray
     
-    dotnet publish `
+    dotnet publish AsposeMcpServer.csproj `
         --configuration Release `
         --runtime $Runtime `
         --self-contained true `

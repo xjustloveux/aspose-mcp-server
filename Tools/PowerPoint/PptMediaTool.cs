@@ -3,15 +3,16 @@ using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.PowerPoint;
 
 /// <summary>
-/// Unified tool for managing PowerPoint media (add audio/video, delete, set playback)
-/// Merges: PptAddAudioTool, PptDeleteAudioTool, PptAddVideoTool, PptDeleteVideoTool, PptSetMediaPlaybackTool
+///     Unified tool for managing PowerPoint media (add audio/video, delete, set playback)
+///     Merges: PptAddAudioTool, PptDeleteAudioTool, PptAddVideoTool, PptDeleteVideoTool, PptSetMediaPlaybackTool
 /// </summary>
 public class PptMediaTool : IAsposeTool
 {
-    public string Description => @"Manage PowerPoint media. Supports 5 operations: add_audio, delete_audio, add_video, delete_video, set_playback.
+    public string Description =>
+        @"Manage PowerPoint media. Supports 5 operations: add_audio, delete_audio, add_video, delete_video, set_playback.
 
 Usage examples:
 - Add audio: ppt_media(operation='add_audio', path='presentation.pptx', slideIndex=0, audioPath='audio.mp3', x=100, y=100)
@@ -104,7 +105,8 @@ Usage examples:
             outputPath = new
             {
                 type = "string",
-                description = "Output file path (optional, for add/edit/delete/set_playback operations, defaults to input path)"
+                description =
+                    "Output file path (optional, for add/edit/delete/set_playback operations, defaults to input path)"
             }
         },
         required = new[] { "operation", "path", "slideIndex" }
@@ -128,7 +130,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Adds audio to a slide
+    ///     Adds audio to a slide
     /// </summary>
     /// <param name="arguments">JSON arguments containing audioPath, optional x, y, width, height, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -144,12 +146,10 @@ Usage examples:
 
         using var presentation = new Presentation(path);
         if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
-        {
             throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
-        }
 
         var slide = presentation.Slides[slideIndex];
-        using var audioStream = File.OpenRead(audioPath);
+        await using var audioStream = File.OpenRead(audioPath);
         slide.Shapes.AddAudioFrameEmbedded(x, y, width, height, audioStream);
 
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
@@ -158,7 +158,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Deletes audio from a slide
+    ///     Deletes audio from a slide
     /// </summary>
     /// <param name="arguments">JSON arguments containing audioIndex, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -171,10 +171,7 @@ Usage examples:
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
         var shape = PowerPointHelper.GetShape(slide, shapeIndex);
-        if (shape is not IAudioFrame)
-        {
-            throw new ArgumentException($"Shape at index {shapeIndex} is not an audio frame");
-        }
+        if (shape is not IAudioFrame) throw new ArgumentException($"Shape at index {shapeIndex} is not an audio frame");
 
         slide.Shapes.Remove(shape);
 
@@ -184,7 +181,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Adds video to a slide
+    ///     Adds video to a slide
     /// </summary>
     /// <param name="arguments">JSON arguments containing videoPath, optional x, y, width, height, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -200,12 +197,10 @@ Usage examples:
 
         using var presentation = new Presentation(path);
         if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
-        {
             throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
-        }
 
         var slide = presentation.Slides[slideIndex];
-        var frame = slide.Shapes.AddVideoFrame(x, y, width, height, videoPath);
+        _ = slide.Shapes.AddVideoFrame(x, y, width, height, videoPath);
 
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         presentation.Save(outputPath, SaveFormat.Pptx);
@@ -213,7 +208,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Deletes video from a slide
+    ///     Deletes video from a slide
     /// </summary>
     /// <param name="arguments">JSON arguments containing videoIndex, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -226,10 +221,7 @@ Usage examples:
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
         var shape = PowerPointHelper.GetShape(slide, shapeIndex);
-        if (shape is not IVideoFrame)
-        {
-            throw new ArgumentException($"Shape at index {shapeIndex} is not a video frame");
-        }
+        if (shape is not IVideoFrame) throw new ArgumentException($"Shape at index {shapeIndex} is not a video frame");
 
         slide.Shapes.Remove(shape);
 
@@ -239,7 +231,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Sets media playback options
+    ///     Sets media playback options
     /// </summary>
     /// <param name="arguments">JSON arguments containing mediaIndex, optional playMode, loop, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -255,15 +247,11 @@ Usage examples:
 
         using var presentation = new Presentation(path);
         if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
-        {
             throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
-        }
 
         var slide = presentation.Slides[slideIndex];
         if (shapeIndex < 0 || shapeIndex >= slide.Shapes.Count)
-        {
             throw new ArgumentException($"shapeIndex must be between 0 and {slide.Shapes.Count - 1}");
-        }
 
         var playModeAudio = playModeStr.ToLower() == "onclick" ? AudioPlayModePreset.OnClick : AudioPlayModePreset.Auto;
         var playModeVideo = playModeStr.ToLower() == "onclick" ? VideoPlayModePreset.OnClick : VideoPlayModePreset.Auto;
@@ -299,4 +287,3 @@ Usage examples:
         return await Task.FromResult($"Media playback settings updated: slide {slideIndex}, shape {shapeIndex}");
     }
 }
-

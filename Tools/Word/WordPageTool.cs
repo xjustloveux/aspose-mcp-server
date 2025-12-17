@@ -2,16 +2,17 @@
 using Aspose.Words;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Word;
 
 /// <summary>
-/// Unified tool for page operations in Word documents
-/// Merges: WordSetPageMarginsTool, WordSetPageOrientationTool, WordSetPageSizeTool,
-/// WordSetPageNumberTool, WordSetPageSetupTool, WordDeletePageTool, WordInsertBlankPageTool, WordAddPageBreakTool
+///     Unified tool for page operations in Word documents
+///     Merges: WordSetPageMarginsTool, WordSetPageOrientationTool, WordSetPageSizeTool,
+///     WordSetPageNumberTool, WordSetPageSetupTool, WordDeletePageTool, WordInsertBlankPageTool, WordAddPageBreakTool
 /// </summary>
 public class WordPageTool : IAsposeTool
 {
-    public string Description => @"Manage page settings in Word documents. Supports 8 operations: set_margins, set_orientation, set_size, set_page_number, set_page_setup, delete_page, insert_blank_page, add_page_break.
+    public string Description =>
+        @"Manage page settings in Word documents. Supports 8 operations: set_margins, set_orientation, set_size, set_page_number, set_page_setup, delete_page, insert_blank_page, add_page_break.
 
 Usage examples:
 - Set margins: word_page(operation='set_margins', path='doc.docx', top=72, bottom=72, left=72, right=72)
@@ -39,7 +40,11 @@ Usage examples:
 - 'delete_page': Delete a page (required params: path, pageIndex)
 - 'insert_blank_page': Insert blank page (required params: path, insertAtParagraphIndex)
 - 'add_page_break': Add page break (required params: path, paragraphIndex)",
-                @enum = new[] { "set_margins", "set_orientation", "set_size", "set_page_number", "set_page_setup", "delete_page", "insert_blank_page", "add_page_break" }
+                @enum = new[]
+                {
+                    "set_margins", "set_orientation", "set_size", "set_page_number", "set_page_setup", "delete_page",
+                    "insert_blank_page", "add_page_break"
+                }
             },
             path = new
             {
@@ -93,7 +98,8 @@ Usage examples:
             paperSize = new
             {
                 type = "string",
-                description = "Predefined paper size: A4, Letter, Legal, A3, A5 (optional, overrides width/height, for set_size operation)",
+                description =
+                    "Predefined paper size: A4, Letter, Legal, A3, A5 (optional, overrides width/height, for set_size operation)",
                 @enum = new[] { "A4", "Letter", "Legal", "A3", "A5" }
             },
             // Set page number parameters
@@ -158,7 +164,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Sets page margins
+    ///     Sets page margins
     /// </summary>
     /// <param name="arguments">JSON arguments containing optional top, bottom, left, right, sectionIndex</param>
     /// <param name="path">Word document file path</param>
@@ -176,17 +182,16 @@ Usage examples:
         var doc = new Document(path);
         List<int> sectionsToUpdate;
 
-        if (sectionIndicesArray != null && sectionIndicesArray.Count > 0)
+        if (sectionIndicesArray is { Count: > 0 })
         {
-            sectionsToUpdate = sectionIndicesArray.Select(s => s?.GetValue<int>()).Where(s => s.HasValue).Select(s => s!.Value).ToList();
+            sectionsToUpdate = sectionIndicesArray.Select(s => s?.GetValue<int>()).Where(s => s.HasValue)
+                .Select(s => s!.Value).ToList();
         }
         else if (sectionIndex.HasValue)
         {
             if (sectionIndex.Value < 0 || sectionIndex.Value >= doc.Sections.Count)
-            {
                 throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
-            }
-            sectionsToUpdate = new List<int> { sectionIndex.Value };
+            sectionsToUpdate = [sectionIndex.Value];
         }
         else
         {
@@ -207,7 +212,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Sets page orientation
+    ///     Sets page orientation
     /// </summary>
     /// <param name="arguments">JSON arguments containing orientation, optional sectionIndex</param>
     /// <param name="path">Word document file path</param>
@@ -223,33 +228,25 @@ Usage examples:
         var orientationEnum = orientation.ToLower() == "landscape" ? Orientation.Landscape : Orientation.Portrait;
 
         List<int> sectionsToUpdate;
-        if (sectionIndicesArray != null && sectionIndicesArray.Count > 0)
-        {
-            sectionsToUpdate = sectionIndicesArray.Select(s => s?.GetValue<int>()).Where(s => s.HasValue).Select(s => s!.Value).ToList();
-        }
+        if (sectionIndicesArray is { Count: > 0 })
+            sectionsToUpdate = sectionIndicesArray.Select(s => s?.GetValue<int>()).Where(s => s.HasValue)
+                .Select(s => s!.Value).ToList();
         else if (sectionIndex.HasValue)
-        {
-            sectionsToUpdate = new List<int> { sectionIndex.Value };
-        }
+            sectionsToUpdate = [sectionIndex.Value];
         else
-        {
             sectionsToUpdate = Enumerable.Range(0, doc.Sections.Count).ToList();
-        }
 
         foreach (var idx in sectionsToUpdate)
-        {
             if (idx >= 0 && idx < doc.Sections.Count)
-            {
                 doc.Sections[idx].PageSetup.Orientation = orientationEnum;
-            }
-        }
 
         doc.Save(outputPath);
-        return await Task.FromResult($"Page orientation set to {orientation} for {sectionsToUpdate.Count} section(s): {outputPath}");
+        return await Task.FromResult(
+            $"Page orientation set to {orientation} for {sectionsToUpdate.Count} section(s): {outputPath}");
     }
 
     /// <summary>
-    /// Sets page size
+    ///     Sets page size
     /// </summary>
     /// <param name="arguments">JSON arguments containing optional width, height, paperSize, sectionIndex</param>
     /// <param name="path">Word document file path</param>
@@ -268,10 +265,8 @@ Usage examples:
         if (sectionIndex.HasValue)
         {
             if (sectionIndex.Value < 0 || sectionIndex.Value >= doc.Sections.Count)
-            {
                 throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
-            }
-            sectionsToUpdate = new List<int> { sectionIndex.Value };
+            sectionsToUpdate = [sectionIndex.Value];
         }
         else
         {
@@ -281,7 +276,7 @@ Usage examples:
         foreach (var idx in sectionsToUpdate)
         {
             var pageSetup = doc.Sections[idx].PageSetup;
-            
+
             if (!string.IsNullOrEmpty(paperSize))
             {
                 pageSetup.PaperSize = paperSize.ToUpper() switch
@@ -310,7 +305,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Sets page numbering
+    ///     Sets page numbering
     /// </summary>
     /// <param name="arguments">JSON arguments containing optional startNumber, numberFormat, sectionIndex</param>
     /// <param name="path">Word document file path</param>
@@ -328,20 +323,18 @@ Usage examples:
         if (sectionIndex.HasValue)
         {
             if (sectionIndex.Value < 0 || sectionIndex.Value >= doc.Sections.Count)
-            {
                 throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
-            }
-            sectionsToUpdate = new List<int> { sectionIndex.Value };
+            sectionsToUpdate = [sectionIndex.Value];
         }
         else
         {
-            sectionsToUpdate = new List<int> { 0 };
+            sectionsToUpdate = [0];
         }
 
         foreach (var idx in sectionsToUpdate)
         {
             var pageSetup = doc.Sections[idx].PageSetup;
-            
+
             if (!string.IsNullOrEmpty(pageNumberFormat))
             {
                 var numStyle = pageNumberFormat.ToLower() switch
@@ -352,7 +345,7 @@ Usage examples:
                 };
                 pageSetup.PageNumberStyle = numStyle;
             }
-            
+
             if (startingPageNumber.HasValue)
             {
                 pageSetup.RestartPageNumbering = true;
@@ -361,11 +354,12 @@ Usage examples:
         }
 
         doc.Save(outputPath);
-        return await Task.FromResult($"Page number settings updated for {sectionsToUpdate.Count} section(s): {outputPath}");
+        return await Task.FromResult(
+            $"Page number settings updated for {sectionsToUpdate.Count} section(s): {outputPath}");
     }
 
     /// <summary>
-    /// Sets page setup properties
+    ///     Sets page setup properties
     /// </summary>
     /// <param name="arguments">JSON arguments containing various page setup options, optional sectionIndex</param>
     /// <param name="path">Word document file path</param>
@@ -376,11 +370,9 @@ Usage examples:
         // This is a combined operation that can set multiple page setup properties
         var doc = new Document(path);
         var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
-        
+
         if (sectionIndex < 0 || sectionIndex >= doc.Sections.Count)
-        {
             throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
-        }
 
         var pageSetup = doc.Sections[sectionIndex].PageSetup;
         var changes = new List<string>();
@@ -426,7 +418,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Deletes a page from the document
+    ///     Deletes a page from the document
     /// </summary>
     /// <param name="arguments">JSON arguments containing pageIndex</param>
     /// <param name="path">Word document file path</param>
@@ -437,22 +429,20 @@ Usage examples:
         var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
 
         var doc = new Document(path);
-        
+
         // Get all paragraphs
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
-        
+
         // Find page breaks and count pages
         // This is a simplified implementation
         var pageBreaks = paragraphs.Cast<Paragraph>()
-            .Where(p => p.ParagraphFormat.PageBreakBefore || 
-                       p.GetChildNodes(NodeType.Run, true).Cast<Run>()
-                           .Any(r => r.Text.Contains("\f")))
+            .Where(p => p.ParagraphFormat.PageBreakBefore ||
+                        p.GetChildNodes(NodeType.Run, true).Cast<Run>()
+                            .Any(r => r.Text.Contains("\f")))
             .ToList();
 
         if (pageIndex < 0 || pageIndex >= pageBreaks.Count + 1)
-        {
             throw new ArgumentException($"Page index {pageIndex} out of range");
-        }
 
         // For now, return a message indicating this operation needs manual implementation
         doc.Save(outputPath);
@@ -460,7 +450,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Inserts a blank page into the document
+    ///     Inserts a blank page into the document
     /// </summary>
     /// <param name="arguments">JSON arguments containing pageIndex</param>
     /// <param name="path">Word document file path</param>
@@ -473,14 +463,11 @@ Usage examples:
         var doc = new Document(path);
         var builder = new DocumentBuilder(doc);
 
-        if (insertAtPageIndex.HasValue && insertAtPageIndex.Value > 0)
+        if (insertAtPageIndex is > 0)
         {
             // Insert page break before specified page
             builder.MoveToDocumentStart();
-            for (int i = 0; i < insertAtPageIndex.Value; i++)
-            {
-                builder.InsertBreak(BreakType.PageBreak);
-            }
+            for (var i = 0; i < insertAtPageIndex.Value; i++) builder.InsertBreak(BreakType.PageBreak);
         }
         else
         {
@@ -493,17 +480,17 @@ Usage examples:
     }
 
     /// <summary>
-    /// Adds a page break to the document
+    ///     Adds a page break to the document
     /// </summary>
-    /// <param name="arguments">JSON arguments containing optional paragraphIndex, sectionIndex</param>
+    /// <param name="_">Unused parameter</param>
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> AddPageBreakAsync(JsonObject? arguments, string path, string outputPath)
+    private async Task<string> AddPageBreakAsync(JsonObject? _, string path, string outputPath)
     {
         var doc = new Document(path);
         var builder = new DocumentBuilder(doc);
-        
+
         builder.MoveToDocumentEnd();
         builder.InsertBreak(BreakType.PageBreak);
 
@@ -511,4 +498,3 @@ Usage examples:
         return await Task.FromResult($"Page break added successfully\nOutput: {outputPath}");
     }
 }
-

@@ -1,13 +1,13 @@
-﻿using System.Text.Json.Nodes;
-using System.Text;
+﻿using System.Text;
+using System.Text.Json.Nodes;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Excel;
 
 /// <summary>
-/// Unified tool for managing Excel named ranges (add, delete, get)
-/// Merges: ExcelAddNamedRangeTool, ExcelDeleteNamedRangeTool, ExcelGetNamedRangesTool
+///     Unified tool for managing Excel named ranges (add, delete, get)
+///     Merges: ExcelAddNamedRangeTool, ExcelDeleteNamedRangeTool, ExcelGetNamedRangesTool
 /// </summary>
 public class ExcelNamedRangeTool : IAsposeTool
 {
@@ -76,7 +76,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Adds a named range to the workbook
+    ///     Adds a named range to the workbook
     /// </summary>
     /// <param name="arguments">JSON arguments containing name and range</param>
     /// <param name="path">Excel file path</param>
@@ -90,11 +90,11 @@ Usage examples:
 
         using var workbook = new Workbook(path);
         var names = workbook.Worksheets.Names;
-        
+
         // Convert range to proper refersTo format (e.g., "Sheet1!A1:A3")
         var worksheet = workbook.Worksheets[0]; // Use first worksheet as default
         string refersTo;
-        
+
         // Check if range already contains sheet reference (e.g., "Sheet1!A1:A3")
         if (range.Contains("!"))
         {
@@ -107,7 +107,7 @@ Usage examples:
             var sheetName = worksheet.Name.Replace("'", "''");
             refersTo = $"'{sheetName}'!{range}";
         }
-        
+
         // Use the correct API: Add(name) first, then set RefersTo
         // According to Aspose.Cells documentation, this is the correct way
         try
@@ -115,16 +115,12 @@ Usage examples:
             // Check if name already exists using get operation's method
             using var checkWorkbook = new Workbook(path);
             var checkNames = checkWorkbook.Worksheets.Names;
-            for (int i = 0; i < checkNames.Count; i++)
-            {
+            foreach (var checkName in checkNames)
                 try
                 {
-                    var checkName = checkNames[i];
                     var checkText = checkName.Text;
                     if (!string.IsNullOrEmpty(checkText) && checkText == name)
-                    {
                         throw new ArgumentException($"Named range '{name}' already exists");
-                    }
                 }
                 catch (ArgumentException)
                 {
@@ -132,27 +128,24 @@ Usage examples:
                 }
                 catch
                 {
-                    continue;
+                    // Ignore if named range creation fails (will be handled by error handling)
                 }
-            }
-            
+
             // Add the name first (without refersTo)
             var nameIndex = names.Add(name);
             var namedRange = names[nameIndex];
-            
+
             // Then set RefersTo property
             namedRange.RefersTo = refersTo;
-            
+
             // Set comment if provided
-            if (!string.IsNullOrEmpty(comment))
-            {
-                namedRange.Comment = comment;
-            }
-            
+            if (!string.IsNullOrEmpty(comment)) namedRange.Comment = comment;
+
             // Save the workbook to persist the changes
             workbook.Save(outputPath);
-            
-            return await Task.FromResult($"Successfully added named range '{name}'\nReference: {refersTo}\nOutput: {outputPath}");
+
+            return await Task.FromResult(
+                $"Successfully added named range '{name}'\nReference: {refersTo}\nOutput: {outputPath}");
         }
         catch (ArgumentException)
         {
@@ -160,12 +153,13 @@ Usage examples:
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException($"Unable to create named range '{name}', reference: {refersTo}. Error: {ex.Message}", ex);
+            throw new InvalidOperationException(
+                $"Unable to create named range '{name}', reference: {refersTo}. Error: {ex.Message}", ex);
         }
     }
 
     /// <summary>
-    /// Deletes a named range from the workbook
+    ///     Deletes a named range from the workbook
     /// </summary>
     /// <param name="arguments">JSON arguments containing name</param>
     /// <param name="path">Excel file path</param>
@@ -177,8 +171,8 @@ Usage examples:
 
         using var workbook = new Workbook(path);
         var names = workbook.Worksheets.Names;
-        
-        Name? namedRange = null;
+
+        Name? namedRange;
         try
         {
             namedRange = names[name];
@@ -187,42 +181,35 @@ Usage examples:
         {
             throw new ArgumentException($"Named range '{name}' does not exist");
         }
-        
-        if (namedRange == null)
-        {
-            throw new ArgumentException($"Named range '{name}' does not exist");
-        }
-        
+
+        if (namedRange == null) throw new ArgumentException($"Named range '{name}' does not exist");
+
         var refersTo = namedRange.RefersTo;
         // Find the index of the named range
-        int indexToRemove = -1;
-        for (int i = 0; i < names.Count; i++)
-        {
+        var indexToRemove = -1;
+        for (var i = 0; i < names.Count; i++)
             if (names[i] == namedRange)
             {
                 indexToRemove = i;
                 break;
             }
-        }
-        
-        if (indexToRemove >= 0)
-        {
-            names.RemoveAt(indexToRemove);
-        }
+
+        if (indexToRemove >= 0) names.RemoveAt(indexToRemove);
         workbook.Save(outputPath);
-        
+
         var remainingCount = names.Count;
-        
-        return await Task.FromResult($"Successfully deleted named range '{name}'\nOriginal reference: {refersTo}\nRemaining named ranges in workbook: {remainingCount}\nOutput: {outputPath}");
+
+        return await Task.FromResult(
+            $"Successfully deleted named range '{name}'\nOriginal reference: {refersTo}\nRemaining named ranges in workbook: {remainingCount}\nOutput: {outputPath}");
     }
 
     /// <summary>
-    /// Gets all named ranges from the workbook
+    ///     Gets all named ranges from the workbook
     /// </summary>
-    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="_">Unused parameter</param>
     /// <param name="path">Excel file path</param>
     /// <returns>Formatted string with all named ranges</returns>
-    private async Task<string> GetNamedRangesAsync(JsonObject? arguments, string path)
+    private async Task<string> GetNamedRangesAsync(JsonObject? _, string path)
     {
         using var workbook = new Workbook(path);
         var names = workbook.Worksheets.Names;
@@ -237,7 +224,7 @@ Usage examples:
             return await Task.FromResult(result.ToString());
         }
 
-        for (int i = 0; i < names.Count; i++)
+        for (var i = 0; i < names.Count; i++)
         {
             var name = names[i];
             result.AppendLine($"[Named range {i}]");
@@ -251,4 +238,3 @@ Usage examples:
         return await Task.FromResult(result.ToString());
     }
 }
-

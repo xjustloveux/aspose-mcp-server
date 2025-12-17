@@ -1,15 +1,14 @@
-﻿using System.Text.Json.Nodes;
-using System.Text;
-using System.Drawing;
+﻿using System.Text;
+using System.Text.Json.Nodes;
 using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.PowerPoint;
 
 /// <summary>
-/// Unified tool for managing PowerPoint backgrounds (set, get)
-/// Merges: PptSetBackgroundTool, PptGetBackgroundTool
+///     Unified tool for managing PowerPoint backgrounds (set, get)
+///     Merges: PptSetBackgroundTool, PptGetBackgroundTool
 /// </summary>
 public class PptBackgroundTool : IAsposeTool
 {
@@ -76,7 +75,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Sets slide background
+    ///     Sets slide background
     /// </summary>
     /// <param name="arguments">JSON arguments containing optional slideIndex, imagePath, color, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -93,7 +92,7 @@ Usage examples:
 
         if (!string.IsNullOrWhiteSpace(imagePath))
         {
-            var img = presentation.Images.AddImage(File.ReadAllBytes(imagePath));
+            var img = presentation.Images.AddImage(await File.ReadAllBytesAsync(imagePath));
             fillFormat.FillType = FillType.Picture;
             fillFormat.PictureFillFormat.PictureFillMode = PictureFillMode.Stretch;
             fillFormat.PictureFillFormat.Picture.Image = img;
@@ -115,7 +114,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Gets background information for a slide
+    ///     Gets background information for a slide
     /// </summary>
     /// <param name="arguments">JSON arguments containing slideIndex</param>
     /// <param name="path">PowerPoint file path</param>
@@ -134,13 +133,8 @@ Usage examples:
         {
             sb.AppendLine($"FillType: {background.FillFormat.FillType}");
             if (background.FillFormat.FillType == FillType.Solid)
-            {
                 sb.AppendLine($"Color: {background.FillFormat.SolidFillColor}");
-            }
-            else if (background.FillFormat.FillType == FillType.Picture)
-            {
-                sb.AppendLine("Picture fill");
-            }
+            else if (background.FillFormat.FillType == FillType.Picture) sb.AppendLine("Picture fill");
         }
         else
         {
@@ -150,4 +144,3 @@ Usage examples:
         return await Task.FromResult(sb.ToString());
     }
 }
-

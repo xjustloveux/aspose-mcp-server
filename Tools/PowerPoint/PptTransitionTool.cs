@@ -1,15 +1,15 @@
-﻿using System.Text.Json.Nodes;
-using System.Text;
+﻿using System.Text;
+using System.Text.Json.Nodes;
 using Aspose.Slides;
 using Aspose.Slides.Export;
 using Aspose.Slides.SlideShow;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.PowerPoint;
 
 /// <summary>
-/// Unified tool for managing PowerPoint transitions (set, get, delete)
-/// Merges: PptSetTransitionTool, PptGetTransitionTool, PptDeleteTransitionTool
+///     Unified tool for managing PowerPoint transitions (set, get, delete)
+///     Merges: PptSetTransitionTool, PptGetTransitionTool, PptDeleteTransitionTool
 /// </summary>
 public class PptTransitionTool : IAsposeTool
 {
@@ -79,7 +79,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Sets slide transition effect
+    ///     Sets slide transition effect
     /// </summary>
     /// <param name="arguments">JSON arguments containing transitionType, optional duration, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -102,24 +102,24 @@ Usage examples:
             "circle" => TransitionType.Circle,
             "plus" => TransitionType.Plus,
             "diamond" => TransitionType.Diamond,
-            "fade" => TransitionType.Fade,
             _ => TransitionType.Fade
         };
         transition.AdvanceAfterTime = (uint)(duration * 1000);
 
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         presentation.Save(outputPath, SaveFormat.Pptx);
-        return await Task.FromResult($"Transition set for slide {slideIndex}: {transition.Type}, duration {duration:0.##}s");
+        return await Task.FromResult(
+            $"Transition set for slide {slideIndex}: {transition.Type}, duration {duration:0.##}s");
     }
 
     /// <summary>
-    /// Gets transition information for a slide
+    ///     Gets transition information for a slide
     /// </summary>
-    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="_">Unused parameter</param>
     /// <param name="path">PowerPoint file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
     /// <returns>Formatted string with transition details</returns>
-    private async Task<string> GetTransitionAsync(JsonObject? arguments, string path, int slideIndex)
+    private async Task<string> GetTransitionAsync(JsonObject? _, string path, int slideIndex)
     {
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
@@ -134,10 +134,7 @@ Usage examples:
             sb.AppendLine($"AdvanceOnClick: {transition.AdvanceOnClick}");
             sb.AppendLine($"AdvanceAfterTime: {transition.AdvanceAfterTime}ms");
             sb.AppendLine($"SoundMode: {transition.SoundMode}");
-            if (transition.Sound != null)
-            {
-                sb.AppendLine($"Sound: {transition.Sound}");
-            }
+            if (transition.Sound != null) sb.AppendLine($"Sound: {transition.Sound}");
         }
         else
         {
@@ -148,7 +145,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Removes transition from a slide
+    ///     Removes transition from a slide
     /// </summary>
     /// <param name="arguments">JSON arguments containing optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -168,4 +165,3 @@ Usage examples:
         return await Task.FromResult($"Transition removed from slide {slideIndex}: {outputPath}");
     }
 }
-

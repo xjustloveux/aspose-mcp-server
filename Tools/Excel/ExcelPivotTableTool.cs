@@ -1,19 +1,21 @@
-﻿using System.Text.Json.Nodes;
-using System.Text;
+﻿using System.Text;
+using System.Text.Json.Nodes;
 using Aspose.Cells;
 using Aspose.Cells.Pivot;
 using AsposeMcpServer.Core;
+using Range = Aspose.Cells.Range;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Excel;
 
 /// <summary>
-/// Unified tool for managing Excel pivot tables (add, edit, delete, get, add_field, delete_field, refresh)
-/// Merges: ExcelAddPivotTableTool, ExcelEditPivotTableTool, ExcelDeletePivotTableTool, 
-/// ExcelGetPivotTablesTool, ExcelAddPivotTableFieldTool, ExcelDeletePivotTableFieldTool, ExcelRefreshPivotTableTool
+///     Unified tool for managing Excel pivot tables (add, edit, delete, get, add_field, delete_field, refresh)
+///     Merges: ExcelAddPivotTableTool, ExcelEditPivotTableTool, ExcelDeletePivotTableTool,
+///     ExcelGetPivotTablesTool, ExcelAddPivotTableFieldTool, ExcelDeletePivotTableFieldTool, ExcelRefreshPivotTableTool
 /// </summary>
 public class ExcelPivotTableTool : IAsposeTool
 {
-    public string Description => @"Manage Excel pivot tables. Supports 7 operations: add, edit, delete, get, add_field, delete_field, refresh.
+    /// <summary>    ///     Gets the description of the tool and its usage examples    /// </summary>    public string Description =>
+        @"Manage Excel pivot tables. Supports 7 operations: add, edit, delete, get, add_field, delete_field, refresh.
 
 Usage examples:
 - Add pivot table: excel_pivot_table(operation='add', path='book.xlsx', sourceRange='A1:D10', destCell='F1')
@@ -24,6 +26,9 @@ Usage examples:
 - Delete field: excel_pivot_table(operation='delete_field', path='book.xlsx', pivotTableIndex=0, fieldName='Column1')
 - Refresh: excel_pivot_table(operation='refresh', path='book.xlsx', pivotTableIndex=0) or excel_pivot_table(operation='refresh', path='book.xlsx') to refresh all";
 
+    /// <summary>
+    ///     Gets the JSON schema defining the input parameters for the tool
+    /// </summary>
     public object InputSchema => new
     {
         type = "object",
@@ -50,7 +55,8 @@ Usage examples:
             outputPath = new
             {
                 type = "string",
-                description = "Output file path (optional, for add/edit/delete/add_field/delete_field/refresh operations, defaults to input path)"
+                description =
+                    "Output file path (optional, for add/edit/delete/add_field/delete_field/refresh operations, defaults to input path)"
             },
             sheetIndex = new
             {
@@ -70,7 +76,8 @@ Usage examples:
             pivotTableIndex = new
             {
                 type = "number",
-                description = "Pivot table index (0-based, required for edit/delete/add_field/delete_field; optional for refresh - if not provided, refreshes all pivot tables)"
+                description =
+                    "Pivot table index (0-based, required for edit/delete/add_field/delete_field; optional for refresh - if not provided, refreshes all pivot tables)"
             },
             name = new
             {
@@ -90,13 +97,22 @@ Usage examples:
             fieldType = new
             {
                 type = "string",
-                description = "Field type: 'Row', 'Column', 'Data', 'Page' (required for add_field and delete_field operations)",
+                description =
+                    "Field type: 'Row', 'Column', 'Data', 'Page' (required for add_field and delete_field operations, also accepts 'area' as alias)",
+                @enum = new[] { "Row", "Column", "Data", "Page" }
+            },
+            area = new
+            {
+                type = "string",
+                description =
+                    "Alias for fieldType: 'Row', 'Column', 'Data', 'Page' (optional, for add_field and delete_field operations, use fieldType or area)",
                 @enum = new[] { "Row", "Column", "Data", "Page" }
             },
             function = new
             {
                 type = "string",
-                description = "Aggregation function for data field: 'Sum', 'Count', 'Average', 'Max', 'Min' (optional, for add_field)",
+                description =
+                    "Aggregation function for data field: 'Sum', 'Count', 'Average', 'Max', 'Min' (optional, for add_field)",
                 @enum = new[] { "Sum", "Count", "Average", "Max", "Min" }
             }
         },
@@ -123,7 +139,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Adds a new pivot table to the worksheet
+    ///     Adds a new pivot table to the worksheet
     /// </summary>
     /// <param name="arguments">JSON arguments containing sourceRange, destCell, and optional name</param>
     /// <param name="path">Excel file path</param>
@@ -140,13 +156,13 @@ Usage examples:
         var worksheet = workbook.Worksheets[sheetIndex];
 
         var pivotTables = worksheet.PivotTables;
-        int pivotIndex = pivotTables.Add($"={worksheet.Name}!{sourceRange}", destCell, name);
+        var pivotIndex = pivotTables.Add($"={worksheet.Name}!{sourceRange}", destCell, name);
         var pivotTable = pivotTables[pivotIndex];
 
         // Add default fields: first column as row field, second column as data field
         pivotTable.AddFieldToArea(PivotFieldType.Row, 0);
         pivotTable.AddFieldToArea(PivotFieldType.Data, 1);
-        
+
         pivotTable.CalculateData();
 
         workbook.Save(outputPath);
@@ -155,7 +171,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Edits an existing pivot table (name, refresh data)
+    ///     Edits an existing pivot table (name, refresh data)
     /// </summary>
     /// <param name="arguments">JSON arguments containing pivotTableIndex and optional name, refreshData</param>
     /// <param name="path">Excel file path</param>
@@ -169,14 +185,13 @@ Usage examples:
         var refreshData = ArgumentHelper.GetBool(arguments, "refreshData", false);
 
         using var workbook = new Workbook(path);
-        
+
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
         var pivotTables = worksheet.PivotTables;
-        
+
         if (pivotTableIndex < 0 || pivotTableIndex >= pivotTables.Count)
-        {
-            throw new ArgumentException($"Pivot table index {pivotTableIndex} is out of range (worksheet has {pivotTables.Count} pivot tables)");
-        }
+            throw new ArgumentException(
+                $"Pivot table index {pivotTableIndex} is out of range (worksheet has {pivotTables.Count} pivot tables)");
 
         var pivotTable = pivotTables[pivotTableIndex];
         var changes = new List<string>();
@@ -199,22 +214,20 @@ Usage examples:
         if (changes.Count > 0)
         {
             result += "Changes:\n";
-            foreach (var change in changes)
-            {
-                result += $"  - {change}\n";
-            }
+            foreach (var change in changes) result += $"  - {change}\n";
         }
         else
         {
             result += "No changes.\n";
         }
+
         result += $"Output: {outputPath}";
 
         return await Task.FromResult(result);
     }
 
     /// <summary>
-    /// Deletes a pivot table from the worksheet
+    ///     Deletes a pivot table from the worksheet
     /// </summary>
     /// <param name="arguments">JSON arguments containing pivotTableIndex</param>
     /// <param name="path">Excel file path</param>
@@ -225,38 +238,38 @@ Usage examples:
         var pivotTableIndex = ArgumentHelper.GetInt(arguments, "pivotTableIndex");
 
         using var workbook = new Workbook(path);
-        
+
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
         var pivotTables = worksheet.PivotTables;
-        
+
         if (pivotTableIndex < 0 || pivotTableIndex >= pivotTables.Count)
-        {
-            throw new ArgumentException($"Pivot table index {pivotTableIndex} is out of range (worksheet has {pivotTables.Count} pivot tables)");
-        }
+            throw new ArgumentException(
+                $"Pivot table index {pivotTableIndex} is out of range (worksheet has {pivotTables.Count} pivot tables)");
 
         var pivotTable = pivotTables[pivotTableIndex];
         var pivotTableName = pivotTable.Name ?? $"PivotTable {pivotTableIndex}";
-        
+
         pivotTables.RemoveAt(pivotTableIndex);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         workbook.Save(outputPath);
-        
+
         var remainingCount = pivotTables.Count;
-        
-        return await Task.FromResult($"Successfully deleted pivot table #{pivotTableIndex} ({pivotTableName})\nRemaining pivot tables in worksheet: {remainingCount}\nOutput: {outputPath}");
+
+        return await Task.FromResult(
+            $"Successfully deleted pivot table #{pivotTableIndex} ({pivotTableName})\nRemaining pivot tables in worksheet: {remainingCount}\nOutput: {outputPath}");
     }
 
     /// <summary>
-    /// Gets information about all pivot tables in the worksheet
+    ///     Gets information about all pivot tables in the worksheet
     /// </summary>
-    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="_">Unused parameter</param>
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Formatted string with pivot table information</returns>
-    private async Task<string> GetPivotTablesAsync(JsonObject? arguments, string path, int sheetIndex)
+    private async Task<string> GetPivotTablesAsync(JsonObject? _, string path, int sheetIndex)
     {
         using var workbook = new Workbook(path);
-        
+
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
         var pivotTables = worksheet.PivotTables;
         var result = new StringBuilder();
@@ -270,7 +283,7 @@ Usage examples:
             return await Task.FromResult(result.ToString());
         }
 
-        for (int i = 0; i < pivotTables.Count; i++)
+        for (var i = 0; i < pivotTables.Count; i++)
         {
             var pivotTable = pivotTables[i];
             result.AppendLine($"【Pivot Table {i}】");
@@ -278,29 +291,20 @@ Usage examples:
             result.AppendLine($"Data source: {pivotTable.DataSource}");
             var dataBodyRange = pivotTable.DataBodyRange;
             if (dataBodyRange.StartRow >= 0)
-            {
-                result.AppendLine($"Location: Rows {dataBodyRange.StartRow}-{dataBodyRange.EndRow}, Columns {dataBodyRange.StartColumn}-{dataBodyRange.EndColumn}");
-            }
+                result.AppendLine(
+                    $"Location: Rows {dataBodyRange.StartRow}-{dataBodyRange.EndRow}, Columns {dataBodyRange.StartColumn}-{dataBodyRange.EndColumn}");
             else
-            {
-                result.AppendLine($"Location: Unknown");
-            }
-            
-            if (pivotTable.RowFields != null && pivotTable.RowFields.Count > 0)
-            {
-                result.AppendLine($"Row fields: {pivotTable.RowFields.Count}");
-            }
-            
-            if (pivotTable.ColumnFields != null && pivotTable.ColumnFields.Count > 0)
-            {
-                result.AppendLine($"Column fields: {pivotTable.ColumnFields.Count}");
-            }
-            
-            if (pivotTable.DataFields != null && pivotTable.DataFields.Count > 0)
-            {
-                result.AppendLine($"Data fields: {pivotTable.DataFields.Count}");
-            }
-            
+                result.AppendLine("Location: Unknown");
+
+            if (pivotTable.RowFields is { Count: > 0 } rowFields)
+                result.AppendLine($"Row fields: {rowFields.Count}");
+
+            if (pivotTable.ColumnFields is { Count: > 0 } columnFields)
+                result.AppendLine($"Column fields: {columnFields.Count}");
+
+            if (pivotTable.DataFields is { Count: > 0 } dataFields)
+                result.AppendLine($"Data fields: {dataFields.Count}");
+
             result.AppendLine();
         }
 
@@ -308,7 +312,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Adds a field to the pivot table
+    ///     Adds a field to the pivot table
     /// </summary>
     /// <param name="arguments">JSON arguments containing pivotTableIndex, fieldName, fieldType, and optional function</param>
     /// <param name="path">Excel file path</param>
@@ -320,7 +324,11 @@ Usage examples:
         {
             var pivotTableIndex = ArgumentHelper.GetInt(arguments, "pivotTableIndex");
             var fieldName = ArgumentHelper.GetString(arguments, "fieldName");
-            var fieldType = ArgumentHelper.GetString(arguments, "fieldType");
+            // Support both "fieldType" and "area" parameter names for compatibility
+            var fieldType = ArgumentHelper.GetStringNullable(arguments, "fieldType")
+                            ?? ArgumentHelper.GetStringNullable(arguments, "area");
+            if (string.IsNullOrEmpty(fieldType))
+                throw new ArgumentException("fieldType (or area) parameter is required for add_field operation");
             var function = ArgumentHelper.GetString(arguments, "function", "Sum");
 
             using var workbook = new Workbook(path);
@@ -330,64 +338,100 @@ Usage examples:
             PowerPointHelper.ValidateCollectionIndex(pivotTableIndex, pivotTables, "Pivot table");
 
             var pivotTable = pivotTables[pivotTableIndex];
-            
+
             // Get data source (supports string or array formats: "=Sheet1!A1:C4", "Sheet1!A1:C4", or "A1:C4")
             string? sourceRangeStr = null;
             var dataSource = pivotTable.DataSource;
-            
-            if (dataSource is Array dataSourceArray && dataSourceArray.Length > 0)
-            {
+
+            if (dataSource is Array { Length: > 0 } dataSourceArray)
                 sourceRangeStr = dataSourceArray.GetValue(0)?.ToString();
-            }
-            else if (dataSource != null)
-            {
-                sourceRangeStr = dataSource.ToString();
-            }
-            
+            else if (dataSource != null) sourceRangeStr = dataSource.ToString();
+
+            if (string.IsNullOrEmpty(sourceRangeStr)) sourceRangeStr = pivotTable.DataSource?.ToString();
+
             if (string.IsNullOrEmpty(sourceRangeStr))
-            {
-                sourceRangeStr = pivotTable.DataSource?.ToString();
-            }
-            
-            if (string.IsNullOrEmpty(sourceRangeStr))
-            {
                 throw new ArgumentException("Pivot table data source is not available");
-            }
-            
+
             var sourceSheet = workbook.Worksheets[sheetIndex];
             var cleanSourceRange = sourceRangeStr.Replace("=", "").Trim();
-            var sourceParts = cleanSourceRange.Split(new[] { '!' }, StringSplitOptions.RemoveEmptyEntries);
+            var sourceParts = cleanSourceRange.Split(['!'], StringSplitOptions.RemoveEmptyEntries);
             var rangeStr = sourceParts.Length > 1 ? sourceParts[1].Trim() : sourceParts[0].Trim();
-            
+
             if (string.IsNullOrEmpty(rangeStr))
-            {
                 throw new ArgumentException($"Invalid data source format: {sourceRangeStr}");
-            }
-            
-            Aspose.Cells.Range sourceRangeObj;
+
+            Range sourceRangeObj;
             try
             {
                 sourceRangeObj = sourceSheet.Cells.CreateRange(rangeStr);
             }
             catch (Exception rangeEx)
             {
-                throw new ArgumentException($"Failed to parse pivot table data source range '{rangeStr}' from source '{sourceRangeStr}': {rangeEx.Message}");
+                throw new ArgumentException(
+                    $"Failed to parse pivot table data source range '{rangeStr}' from source '{sourceRangeStr}': {rangeEx.Message}");
             }
-            
-            int fieldIndex = -1;
-            for (int col = sourceRangeObj.FirstColumn; col < sourceRangeObj.FirstColumn + sourceRangeObj.ColumnCount; col++)
+
+            var fieldIndex = -1;
+            // Check if first row contains headers (common case: first row is header row)
+            var headerRowIndex = sourceRangeObj.FirstRow;
+
+            // Try to find field name in header row
+            for (var col = sourceRangeObj.FirstColumn;
+                 col < sourceRangeObj.FirstColumn + sourceRangeObj.ColumnCount;
+                 col++)
             {
-                var headerCell = sourceSheet.Cells[sourceRangeObj.FirstRow, col];
-                if (headerCell.Value?.ToString() == fieldName)
+                var headerCell = sourceSheet.Cells[headerRowIndex, col];
+                var cellValue = headerCell.Value?.ToString()?.Trim();
+                if (cellValue == fieldName || cellValue == fieldName.Trim())
                 {
                     fieldIndex = col - sourceRangeObj.FirstColumn;
                     break;
                 }
             }
 
+            // If not found in first row, search all rows in the range (for cases where header might be elsewhere)
+            if (fieldIndex < 0)
+                for (var row = sourceRangeObj.FirstRow;
+                     row < sourceRangeObj.FirstRow + sourceRangeObj.RowCount;
+                     row++)
+                {
+                    for (var col = sourceRangeObj.FirstColumn;
+                         col < sourceRangeObj.FirstColumn + sourceRangeObj.ColumnCount;
+                         col++)
+                    {
+                        var cell = sourceSheet.Cells[row, col];
+                        var cellValue = cell.Value?.ToString()?.Trim();
+                        if (cellValue == fieldName || cellValue == fieldName.Trim())
+                        {
+                            // Found the field, calculate its column index relative to range start
+                            fieldIndex = col - sourceRangeObj.FirstColumn;
+                            break;
+                        }
+                    }
+
+                    if (fieldIndex >= 0) break;
+                }
+
             if (fieldIndex < 0)
             {
-                throw new ArgumentException($"Field '{fieldName}' not found in pivot table source data");
+                // Provide more detailed error message with available field names
+                var availableFields = new List<string>();
+                for (var col = sourceRangeObj.FirstColumn;
+                     col < sourceRangeObj.FirstColumn + sourceRangeObj.ColumnCount;
+                     col++)
+                {
+                    var headerCell = sourceSheet.Cells[headerRowIndex, col];
+                    var cellValue = headerCell.Value?.ToString()?.Trim();
+                    if (!string.IsNullOrEmpty(cellValue))
+                        availableFields.Add(cellValue);
+                }
+
+                var availableFieldsStr = availableFields.Count > 0
+                    ? $" Available fields in header row: {string.Join(", ", availableFields)}"
+                    : " No field names found in header row.";
+
+                throw new ArgumentException(
+                    $"Field '{fieldName}' not found in pivot table source data.{availableFieldsStr} Please check that the field name matches exactly (case-sensitive).");
             }
 
             try
@@ -404,7 +448,7 @@ Usage examples:
                         pivotTable.AddFieldToArea(PivotFieldType.Data, fieldIndex);
                         if (pivotTable.DataFields.Count > 0)
                         {
-                            var dataField = pivotTable.DataFields[pivotTable.DataFields.Count - 1];
+                            var dataField = pivotTable.DataFields[^1];
                             var functionType = function switch
                             {
                                 "Count" => ConsolidationFunction.Count,
@@ -415,40 +459,43 @@ Usage examples:
                             };
                             dataField.Function = functionType;
                         }
+
                         break;
                     case "page":
                         pivotTable.AddFieldToArea(PivotFieldType.Page, fieldIndex);
                         break;
                     default:
-                        throw new ArgumentException($"Invalid fieldType: {fieldType}. Valid values are: Row, Column, Data, Page");
+                        throw new ArgumentException(
+                            $"Invalid fieldType: {fieldType}. Valid values are: Row, Column, Data, Page");
                 }
 
                 // CalculateData updates the pivot table (RefreshData may cause issues)
                 string? calcWarning = null;
-            try
-            {
-                pivotTable.CalculateData();
-            }
-            catch (Exception calcEx)
-            {
-                calcWarning = calcEx.Message;
-            }
-
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-            try
-            {
-                workbook.Save(outputPath);
-            }
-            catch (Exception saveEx)
-            {
-                throw new ArgumentException($"Failed to save workbook after adding field '{fieldName}': {saveEx.Message}");
-            }
-            
-                if (!string.IsNullOrEmpty(calcWarning))
+                try
                 {
-                    return await Task.FromResult($"Field '{fieldName}' added as {fieldType} field to pivot table #{pivotTableIndex} (note: CalculateData warning: {calcWarning}): {outputPath}");
+                    pivotTable.CalculateData();
                 }
-                return await Task.FromResult($"Field '{fieldName}' added as {fieldType} field to pivot table #{pivotTableIndex}: {outputPath}");
+                catch (Exception calcEx)
+                {
+                    calcWarning = calcEx.Message;
+                }
+
+                var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+                try
+                {
+                    workbook.Save(outputPath);
+                }
+                catch (Exception saveEx)
+                {
+                    throw new ArgumentException(
+                        $"Failed to save workbook after adding field '{fieldName}': {saveEx.Message}");
+                }
+
+                if (!string.IsNullOrEmpty(calcWarning))
+                    return await Task.FromResult(
+                        $"Field '{fieldName}' added as {fieldType} field to pivot table #{pivotTableIndex} (note: CalculateData warning: {calcWarning}): {outputPath}");
+                return await Task.FromResult(
+                    $"Field '{fieldName}' added as {fieldType} field to pivot table #{pivotTableIndex}: {outputPath}");
             }
             catch (Exception ex)
             {
@@ -458,15 +505,18 @@ Usage examples:
                     try
                     {
                         workbook.Save(outputPath2);
-                        return await Task.FromResult($"Field '{fieldName}' may already exist in {fieldType} area of pivot table #{pivotTableIndex}: {outputPath2}");
+                        return await Task.FromResult(
+                            $"Field '{fieldName}' may already exist in {fieldType} area of pivot table #{pivotTableIndex}: {outputPath2}");
                     }
                     catch (Exception saveEx)
                     {
-                        throw new ArgumentException($"Failed to add field '{fieldName}' to pivot table and save workbook: {ex.Message}. Save error: {saveEx.Message}");
+                        throw new ArgumentException(
+                            $"Failed to add field '{fieldName}' to pivot table and save workbook: {ex.Message}. Save error: {saveEx.Message}");
                     }
                 }
-                
-                throw new ArgumentException($"Failed to add field '{fieldName}' to pivot table: {ex.Message}. Field index: {fieldIndex}, Field type: {fieldType}");
+
+                throw new ArgumentException(
+                    $"Failed to add field '{fieldName}' to pivot table: {ex.Message}. Field index: {fieldIndex}, Field type: {fieldType}");
             }
         }
         catch (Exception outerEx)
@@ -477,7 +527,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Removes a field from the pivot table
+    ///     Removes a field from the pivot table
     /// </summary>
     /// <param name="arguments">JSON arguments containing pivotTableIndex, fieldName, and fieldType</param>
     /// <param name="path">Excel file path</param>
@@ -498,64 +548,100 @@ Usage examples:
             PowerPointHelper.ValidateCollectionIndex(pivotTableIndex, pivotTables, "Pivot table");
 
             var pivotTable = pivotTables[pivotTableIndex];
-            
+
             // Get data source (supports string or array formats: "=Sheet1!A1:C4", "Sheet1!A1:C4", or "A1:C4")
             string? sourceRangeStr = null;
             var dataSource = pivotTable.DataSource;
-            
-            if (dataSource is Array dataSourceArray && dataSourceArray.Length > 0)
-            {
+
+            if (dataSource is Array { Length: > 0 } dataSourceArray)
                 sourceRangeStr = dataSourceArray.GetValue(0)?.ToString();
-            }
-            else if (dataSource != null)
-            {
-                sourceRangeStr = dataSource.ToString();
-            }
-            
+            else if (dataSource != null) sourceRangeStr = dataSource.ToString();
+
+            if (string.IsNullOrEmpty(sourceRangeStr)) sourceRangeStr = pivotTable.DataSource?.ToString();
+
             if (string.IsNullOrEmpty(sourceRangeStr))
-            {
-                sourceRangeStr = pivotTable.DataSource?.ToString();
-            }
-            
-            if (string.IsNullOrEmpty(sourceRangeStr))
-            {
                 throw new ArgumentException("Pivot table data source is not available");
-            }
-            
+
             var sourceSheet = workbook.Worksheets[sheetIndex];
             var cleanSourceRange = sourceRangeStr.Replace("=", "").Trim();
-            var sourceParts = cleanSourceRange.Split(new[] { '!' }, StringSplitOptions.RemoveEmptyEntries);
+            var sourceParts = cleanSourceRange.Split(['!'], StringSplitOptions.RemoveEmptyEntries);
             var rangeStr = sourceParts.Length > 1 ? sourceParts[1].Trim() : sourceParts[0].Trim();
-            
+
             if (string.IsNullOrEmpty(rangeStr))
-            {
                 throw new ArgumentException($"Invalid data source format: {sourceRangeStr}");
-            }
-            
-            Aspose.Cells.Range sourceRangeObj;
+
+            Range sourceRangeObj;
             try
             {
                 sourceRangeObj = sourceSheet.Cells.CreateRange(rangeStr);
             }
             catch (Exception rangeEx)
             {
-                throw new ArgumentException($"Failed to parse pivot table data source range '{rangeStr}' from source '{sourceRangeStr}': {rangeEx.Message}");
+                throw new ArgumentException(
+                    $"Failed to parse pivot table data source range '{rangeStr}' from source '{sourceRangeStr}': {rangeEx.Message}");
             }
-            
-            int fieldIndex = -1;
-            for (int col = sourceRangeObj.FirstColumn; col < sourceRangeObj.FirstColumn + sourceRangeObj.ColumnCount; col++)
+
+            var fieldIndex = -1;
+            // Check if first row contains headers (common case: first row is header row)
+            var headerRowIndex = sourceRangeObj.FirstRow;
+
+            // Try to find field name in header row
+            for (var col = sourceRangeObj.FirstColumn;
+                 col < sourceRangeObj.FirstColumn + sourceRangeObj.ColumnCount;
+                 col++)
             {
-                var headerCell = sourceSheet.Cells[sourceRangeObj.FirstRow, col];
-                if (headerCell.Value?.ToString() == fieldName)
+                var headerCell = sourceSheet.Cells[headerRowIndex, col];
+                var cellValue = headerCell.Value?.ToString()?.Trim();
+                if (cellValue == fieldName || cellValue == fieldName.Trim())
                 {
                     fieldIndex = col - sourceRangeObj.FirstColumn;
                     break;
                 }
             }
 
+            // If not found in first row, search all rows in the range (for cases where header might be elsewhere)
+            if (fieldIndex < 0)
+                for (var row = sourceRangeObj.FirstRow;
+                     row < sourceRangeObj.FirstRow + sourceRangeObj.RowCount;
+                     row++)
+                {
+                    for (var col = sourceRangeObj.FirstColumn;
+                         col < sourceRangeObj.FirstColumn + sourceRangeObj.ColumnCount;
+                         col++)
+                    {
+                        var cell = sourceSheet.Cells[row, col];
+                        var cellValue = cell.Value?.ToString()?.Trim();
+                        if (cellValue == fieldName || cellValue == fieldName.Trim())
+                        {
+                            // Found the field, calculate its column index relative to range start
+                            fieldIndex = col - sourceRangeObj.FirstColumn;
+                            break;
+                        }
+                    }
+
+                    if (fieldIndex >= 0) break;
+                }
+
             if (fieldIndex < 0)
             {
-                throw new ArgumentException($"Field '{fieldName}' not found in pivot table source data");
+                // Provide more detailed error message with available field names
+                var availableFields = new List<string>();
+                for (var col = sourceRangeObj.FirstColumn;
+                     col < sourceRangeObj.FirstColumn + sourceRangeObj.ColumnCount;
+                     col++)
+                {
+                    var headerCell = sourceSheet.Cells[headerRowIndex, col];
+                    var cellValue = headerCell.Value?.ToString()?.Trim();
+                    if (!string.IsNullOrEmpty(cellValue))
+                        availableFields.Add(cellValue);
+                }
+
+                var availableFieldsStr = availableFields.Count > 0
+                    ? $" Available fields in header row: {string.Join(", ", availableFields)}"
+                    : " No field names found in header row.";
+
+                throw new ArgumentException(
+                    $"Field '{fieldName}' not found in pivot table source data.{availableFieldsStr} Please check that the field name matches exactly (case-sensitive).");
             }
 
             var fieldTypeEnum = fieldType.ToLower() switch
@@ -570,7 +656,7 @@ Usage examples:
             try
             {
                 pivotTable.RemoveField(fieldTypeEnum, fieldIndex);
-            
+
                 // CalculateData updates the pivot table (RefreshData may cause issues)
                 string? calcWarning = null;
                 try
@@ -589,14 +675,15 @@ Usage examples:
                 }
                 catch (Exception saveEx)
                 {
-                    throw new ArgumentException($"Failed to save workbook after removing field '{fieldName}': {saveEx.Message}");
+                    throw new ArgumentException(
+                        $"Failed to save workbook after removing field '{fieldName}': {saveEx.Message}");
                 }
-                
+
                 if (!string.IsNullOrEmpty(calcWarning))
-                {
-                    return await Task.FromResult($"Field '{fieldName}' removed from {fieldType} area of pivot table #{pivotTableIndex} (note: CalculateData warning: {calcWarning}): {outputPath}");
-                }
-                return await Task.FromResult($"Field '{fieldName}' removed from {fieldType} area of pivot table #{pivotTableIndex}: {outputPath}");
+                    return await Task.FromResult(
+                        $"Field '{fieldName}' removed from {fieldType} area of pivot table #{pivotTableIndex} (note: CalculateData warning: {calcWarning}): {outputPath}");
+                return await Task.FromResult(
+                    $"Field '{fieldName}' removed from {fieldType} area of pivot table #{pivotTableIndex}: {outputPath}");
             }
             catch (Exception ex)
             {
@@ -606,26 +693,30 @@ Usage examples:
                     try
                     {
                         workbook.Save(outputPath);
-                        return await Task.FromResult($"Field '{fieldName}' may already be removed from {fieldType} area of pivot table #{pivotTableIndex}: {outputPath}");
+                        return await Task.FromResult(
+                            $"Field '{fieldName}' may already be removed from {fieldType} area of pivot table #{pivotTableIndex}: {outputPath}");
                     }
                     catch (Exception saveEx)
                     {
-                        throw new ArgumentException($"Failed to remove field '{fieldName}' from pivot table and save workbook: {ex.Message}. Save error: {saveEx.Message}");
+                        throw new ArgumentException(
+                            $"Failed to remove field '{fieldName}' from pivot table and save workbook: {ex.Message}. Save error: {saveEx.Message}");
                     }
                 }
-                
-                throw new ArgumentException($"Failed to remove field '{fieldName}' from pivot table: {ex.Message}. Field index: {fieldIndex}, Field type: {fieldType}");
+
+                throw new ArgumentException(
+                    $"Failed to remove field '{fieldName}' from pivot table: {ex.Message}. Field index: {fieldIndex}, Field type: {fieldType}");
             }
         }
         catch (Exception outerEx)
         {
             var fieldNameForError = ArgumentHelper.GetString(arguments, "fieldName", "unknown");
-            throw new ArgumentException($"Failed to remove field '{fieldNameForError}' from pivot table: {outerEx.Message}");
+            throw new ArgumentException(
+                $"Failed to remove field '{fieldNameForError}' from pivot table: {outerEx.Message}");
         }
     }
 
     /// <summary>
-    /// Refreshes pivot table data (one or all tables)
+    ///     Refreshes pivot table data (one or all tables)
     /// </summary>
     /// <param name="arguments">JSON arguments containing optional pivotTableIndex (if null, refreshes all)</param>
     /// <param name="path">Excel file path</param>
@@ -637,24 +728,21 @@ Usage examples:
         var pivotTableIndex = ArgumentHelper.GetIntNullable(arguments, "pivotTableIndex");
 
         using var workbook = new Workbook(path);
-        
+
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
         var pivotTables = worksheet.PivotTables;
-        
-        if (pivotTables.Count == 0)
-        {
-            throw new InvalidOperationException($"No pivot tables found in worksheet '{worksheet.Name}'");
-        }
 
-        int refreshedCount = 0;
+        if (pivotTables.Count == 0)
+            throw new InvalidOperationException($"No pivot tables found in worksheet '{worksheet.Name}'");
+
+        var refreshedCount = 0;
 
         if (pivotTableIndex.HasValue)
         {
             if (pivotTableIndex.Value < 0 || pivotTableIndex.Value >= pivotTables.Count)
-            {
-                throw new ArgumentException($"Pivot table index {pivotTableIndex.Value} is out of range (worksheet has {pivotTables.Count} pivot tables)");
-            }
-            
+                throw new ArgumentException(
+                    $"Pivot table index {pivotTableIndex.Value} is out of range (worksheet has {pivotTables.Count} pivot tables)");
+
             pivotTables[pivotTableIndex.Value].CalculateData();
             refreshedCount = 1;
         }
@@ -669,7 +757,7 @@ Usage examples:
 
         workbook.Save(outputPath);
 
-        return await Task.FromResult($"Successfully refreshed {refreshedCount} pivot table(s)\nWorksheet: {worksheet.Name}\nOutput: {outputPath}");
+        return await Task.FromResult(
+            $"Successfully refreshed {refreshedCount} pivot table(s)\nWorksheet: {worksheet.Name}\nOutput: {outputPath}");
     }
 }
-

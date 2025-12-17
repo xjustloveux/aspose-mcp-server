@@ -4,8 +4,11 @@ using Aspose.Pdf;
 using Aspose.Pdf.Text;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Pdf;
 
+/// <summary>
+///     Tool for managing text in PDF documents (add, edit, extract)
+/// </summary>
 public class PdfTextTool : IAsposeTool
 {
     public string Description => @"Manage text in PDF documents. Supports 3 operations: add, edit, extract.
@@ -37,7 +40,8 @@ Usage examples:
             outputPath = new
             {
                 type = "string",
-                description = "Output file path (optional, defaults to overwrite input for add/edit, required for extract)"
+                description =
+                    "Output file path (optional, defaults to overwrite input for add/edit, required for extract)"
             },
             pageIndex = new
             {
@@ -107,9 +111,12 @@ Usage examples:
     }
 
     /// <summary>
-    /// Adds text to a PDF page
+    ///     Adds text to a PDF page
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, pageIndex, text, x, y, optional fontSize, fontName, fontColor, outputPath</param>
+    /// <param name="arguments">
+    ///     JSON arguments containing path, pageIndex, text, x, y, optional fontSize, fontName, fontColor,
+    ///     outputPath
+    /// </param>
     /// <returns>Success message</returns>
     private async Task<string> AddText(JsonObject? arguments)
     {
@@ -130,10 +137,17 @@ Usage examples:
             throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
 
         var page = document.Pages[pageIndex];
-        var textFragment = new TextFragment(text);
-        textFragment.Position = new Position(x, y);
-        textFragment.TextState.FontSize = (float)fontSize;
-        textFragment.TextState.Font = FontRepository.FindFont(fontName);
+        var textFragment = new TextFragment(text)
+        {
+            Position = new Position(x, y)
+        };
+
+        // Apply font settings using FontHelper
+        FontHelper.Pdf.ApplyFontSettings(
+            textFragment.TextState,
+            fontName,
+            fontSize
+        );
 
         var textBuilder = new TextBuilder(page);
         textBuilder.AppendText(textFragment);
@@ -142,7 +156,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Edits text on a PDF page
+    ///     Edits text on a PDF page
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, pageIndex, textIndex, text, optional outputPath</param>
     /// <returns>Success message</returns>
@@ -170,18 +184,16 @@ Usage examples:
         if (fragments.Count == 0)
             return await Task.FromResult($"Text '{oldText}' not found on page {pageIndex}.");
 
-        int replaceCount = replaceAll ? fragments.Count : 1;
-        for (int i = 0; i < replaceCount && i < fragments.Count; i++)
-        {
-            fragments[i].Text = newText;
-        }
+        var replaceCount = replaceAll ? fragments.Count : 1;
+        for (var i = 0; i < replaceCount && i < fragments.Count; i++) fragments[i].Text = newText;
 
         document.Save(outputPath);
-        return await Task.FromResult($"Replaced {replaceCount} occurrence(s) of '{oldText}' with '{newText}' on page {pageIndex}. Output: {outputPath}");
+        return await Task.FromResult(
+            $"Replaced {replaceCount} occurrence(s) of '{oldText}' with '{newText}' on page {pageIndex}. Output: {outputPath}");
     }
 
     /// <summary>
-    /// Extracts text from a PDF
+    ///     Extracts text from a PDF
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, optional pageIndex</param>
     /// <returns>Extracted text as string</returns>
@@ -209,7 +221,7 @@ Usage examples:
         {
             var textFragmentAbsorber = new TextFragmentAbsorber();
             page.Accept(textFragmentAbsorber);
-            foreach (TextFragment fragment in textFragmentAbsorber.TextFragments)
+            foreach (var fragment in textFragmentAbsorber.TextFragments)
             {
                 sb.AppendLine($"Text: {fragment.Text}");
                 sb.AppendLine($"  Font: {fragment.TextState.Font.FontName}, Size: {fragment.TextState.FontSize}");
@@ -224,4 +236,3 @@ Usage examples:
         return await Task.FromResult(sb.ToString());
     }
 }
-

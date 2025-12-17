@@ -3,11 +3,11 @@ using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.PowerPoint;
 
 /// <summary>
-/// Unified tool for managing PowerPoint images (add, edit)
-/// Merges: PptAddImageTool, PptEditImageTool
+///     Unified tool for managing PowerPoint images (add, edit)
+///     Merges: PptAddImageTool, PptEditImageTool
 /// </summary>
 public class PptImageTool : IAsposeTool
 {
@@ -95,7 +95,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Adds an image to a slide
+    ///     Adds an image to a slide
     /// </summary>
     /// <param name="arguments">JSON arguments containing imagePath, optional x, y, width, height, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -109,30 +109,22 @@ Usage examples:
         var width = ArgumentHelper.GetFloatNullable(arguments, "width");
         var height = ArgumentHelper.GetFloatNullable(arguments, "height");
 
-        if (!File.Exists(imagePath))
-        {
-            throw new FileNotFoundException($"Image file not found: {imagePath}");
-        }
+        if (!File.Exists(imagePath)) throw new FileNotFoundException($"Image file not found: {imagePath}");
 
         using var presentation = new Presentation(path);
         if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
-        {
             throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
-        }
 
         var slide = presentation.Slides[slideIndex];
 
-        using var image = File.OpenRead(imagePath);
+        await using var image = File.OpenRead(imagePath);
         var pictureImage = presentation.Images.AddImage(image);
 
         if (width.HasValue && height.HasValue)
-        {
             slide.Shapes.AddPictureFrame(ShapeType.Rectangle, x, y, width.Value, height.Value, pictureImage);
-        }
         else
-        {
-            slide.Shapes.AddPictureFrame(ShapeType.Rectangle, x, y, pictureImage.Width, pictureImage.Height, pictureImage);
-        }
+            slide.Shapes.AddPictureFrame(ShapeType.Rectangle, x, y, pictureImage.Width, pictureImage.Height,
+                pictureImage);
 
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         presentation.Save(outputPath, SaveFormat.Pptx);
@@ -141,7 +133,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Edits image properties
+    ///     Edits image properties
     /// </summary>
     /// <param name="arguments">JSON arguments containing imageIndex, optional x, y, width, height, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -160,13 +152,11 @@ Usage examples:
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
         var shape = PowerPointHelper.GetShape(slide, shapeIndex);
         if (shape is not PictureFrame pictureFrame)
-        {
             throw new ArgumentException($"Shape at index {shapeIndex} is not an image");
-        }
 
         if (!string.IsNullOrEmpty(imagePath) && File.Exists(imagePath))
         {
-            using var imageStream = File.OpenRead(imagePath);
+            await using var imageStream = File.OpenRead(imagePath);
             var newImage = presentation.Images.AddImage(imageStream);
             pictureFrame.PictureFormat.Picture.Image = newImage;
         }
@@ -181,4 +171,3 @@ Usage examples:
         return await Task.FromResult($"Image updated on slide {slideIndex}, shape {shapeIndex}");
     }
 }
-

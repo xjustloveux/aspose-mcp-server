@@ -1,13 +1,18 @@
 ﻿using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Pdf;
+using Aspose.Pdf.Text;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Pdf;
 
+/// <summary>
+///     Tool for getting content and statistics from PDF documents
+/// </summary>
 public class PdfInfoTool : IAsposeTool
 {
-    public string Description => @"Get content and statistics from PDF documents. Supports 2 operations: get_content, get_statistics.
+    public string Description =>
+        @"Get content and statistics from PDF documents. Supports 2 operations: get_content, get_statistics.
 
 Usage examples:
 - Get content: pdf_info(operation='get_content', path='doc.pdf', pageIndex=1)
@@ -53,7 +58,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Gets PDF content as text
+    ///     Gets PDF content as text
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, optional pageIndex</param>
     /// <returns>PDF content as string</returns>
@@ -72,14 +77,14 @@ Usage examples:
             if (pageIndex.Value < 1 || pageIndex.Value > document.Pages.Count)
                 throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
 
-            var textAbsorber = new Aspose.Pdf.Text.TextAbsorber();
+            var textAbsorber = new TextAbsorber();
             document.Pages[pageIndex.Value].Accept(textAbsorber);
             sb.AppendLine($"=== Content from Page {pageIndex.Value} ===");
             sb.AppendLine(textAbsorber.Text);
         }
         else
         {
-            var textAbsorber = new Aspose.Pdf.Text.TextAbsorber();
+            var textAbsorber = new TextAbsorber();
             document.Pages.Accept(textAbsorber);
             sb.AppendLine("=== Full Document Content ===");
             sb.AppendLine(textAbsorber.Text);
@@ -89,7 +94,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Gets PDF statistics
+    ///     Gets PDF statistics
     /// </summary>
     /// <param name="arguments">JSON arguments containing path</param>
     /// <returns>Formatted string with statistics</returns>
@@ -109,17 +114,16 @@ Usage examples:
         sb.AppendLine($"Bookmarks: {document.Outlines.Count}");
         sb.AppendLine($"Form Fields: {document.Form?.Count ?? 0}");
 
-        int totalAnnotations = 0;
-        for (int i = 1; i <= document.Pages.Count; i++)
+        var totalAnnotations = 0;
+        for (var i = 1; i <= document.Pages.Count; i++)
             totalAnnotations += document.Pages[i].Annotations.Count;
         sb.AppendLine($"Total Annotations: {totalAnnotations}");
 
-        int totalParagraphs = 0;
-        for (int i = 1; i <= document.Pages.Count; i++)
+        var totalParagraphs = 0;
+        for (var i = 1; i <= document.Pages.Count; i++)
             totalParagraphs += document.Pages[i].Paragraphs.Count;
         sb.AppendLine($"Total Paragraphs: {totalParagraphs}");
 
         return await Task.FromResult(sb.ToString());
     }
 }
-

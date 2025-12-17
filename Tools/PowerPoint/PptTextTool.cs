@@ -1,14 +1,14 @@
-﻿using System.Text.Json.Nodes;
-using System.Text;
+﻿using System.Text;
+using System.Text.Json.Nodes;
 using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.PowerPoint;
 
 /// <summary>
-/// Unified tool for managing PowerPoint text (add, edit, replace)
-/// Merges: PptAddTextTool, PptEditTextTool, PptReplaceTextTool
+///     Unified tool for managing PowerPoint text (add, edit, replace)
+///     Merges: PptAddTextTool, PptEditTextTool, PptReplaceTextTool
 /// </summary>
 public class PptTextTool : IAsposeTool
 {
@@ -112,9 +112,12 @@ Usage examples:
     }
 
     /// <summary>
-    /// Adds text to a slide
+    ///     Adds text to a slide
     /// </summary>
-    /// <param name="arguments">JSON arguments containing slideIndex, text, optional x, y, width, height, fontSize, fontName, fontColor, outputPath</param>
+    /// <param name="arguments">
+    ///     JSON arguments containing slideIndex, text, optional x, y, width, height, fontSize, fontName,
+    ///     fontColor, outputPath
+    /// </param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Success message</returns>
     private async Task<string> AddTextAsync(JsonObject? arguments, string path)
@@ -128,9 +131,7 @@ Usage examples:
 
         using var presentation = new Presentation(path);
         if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
-        {
             throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
-        }
 
         var slide = presentation.Slides[slideIndex];
         var textBox = slide.Shapes.AddAutoShape(ShapeType.Rectangle, x, y, width, height);
@@ -143,7 +144,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Edits text on a slide
+    ///     Edits text on a slide
     /// </summary>
     /// <param name="arguments">JSON arguments containing slideIndex, shapeIndex, text, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -157,14 +158,10 @@ Usage examples:
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
         var shape = PowerPointHelper.GetShape(slide, shapeIndex);
-        if (shape is IAutoShape autoShape && autoShape.TextFrame != null)
-        {
+        if (shape is IAutoShape { TextFrame: not null } autoShape)
             autoShape.TextFrame.Text = text;
-        }
         else
-        {
             throw new ArgumentException($"Shape at index {shapeIndex} does not support text editing");
-        }
 
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         presentation.Save(outputPath, SaveFormat.Pptx);
@@ -172,7 +169,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Replaces text in the presentation
+    ///     Replaces text in the presentation
     /// </summary>
     /// <param name="arguments">JSON arguments containing searchText, replaceText, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -188,33 +185,26 @@ Usage examples:
         var replacements = 0;
 
         foreach (var slide in presentation.Slides)
-        {
-            foreach (var shape in slide.Shapes)
-            {
-                if (shape is IAutoShape autoShape && autoShape.TextFrame != null)
+        foreach (var shape in slide.Shapes)
+            if (shape is IAutoShape { TextFrame: not null } autoShape)
+                foreach (var paragraph in autoShape.TextFrame.Paragraphs)
+                foreach (var portion in paragraph.Portions)
                 {
-                    foreach (var paragraph in autoShape.TextFrame.Paragraphs)
-                    {
-                        foreach (var portion in paragraph.Portions)
-                        {
-                            var text = portion.Text;
-                            if (string.IsNullOrEmpty(text)) continue;
+                    var text = portion.Text;
+                    if (string.IsNullOrEmpty(text)) continue;
 
-                            var newText = ReplaceAll(text, findText, replaceText, comparison);
-                            if (!ReferenceEquals(text, newText) && newText != text)
-                            {
-                                portion.Text = newText;
-                                replacements++;
-                            }
-                        }
+                    var newText = ReplaceAll(text, findText, replaceText, comparison);
+                    if (!ReferenceEquals(text, newText) && newText != text)
+                    {
+                        portion.Text = newText;
+                        replacements++;
                     }
                 }
-            }
-        }
 
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         presentation.Save(outputPath, SaveFormat.Pptx);
-        return await Task.FromResult($"Text replacement completed: {replacements} occurrences\nFind: {findText}\nReplace with: {replaceText}\nOutput: {outputPath}");
+        return await Task.FromResult(
+            $"Text replacement completed: {replacements} occurrences\nFind: {findText}\nReplace with: {replaceText}\nOutput: {outputPath}");
     }
 
     private static string ReplaceAll(string source, string find, string replace, StringComparison comparison)
@@ -240,4 +230,3 @@ Usage examples:
         return sb.ToString();
     }
 }
-

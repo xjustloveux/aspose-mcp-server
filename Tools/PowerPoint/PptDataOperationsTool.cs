@@ -1,20 +1,20 @@
-﻿using System.Text.Json.Nodes;
-using System.Text;
+﻿using System.Text;
+using System.Text.Json.Nodes;
 using Aspose.Slides;
 using Aspose.Slides.Charts;
 using Aspose.Slides.SmartArt;
-using Aspose.Slides.Export;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.PowerPoint;
 
 /// <summary>
-/// Unified tool for PowerPoint data operations (get statistics, get content, get slide details)
-/// Merges: PptGetStatisticsTool, PptGetContentTool, PptGetSlideDetailsTool
+///     Unified tool for PowerPoint data operations (get statistics, get content, get slide details)
+///     Merges: PptGetStatisticsTool, PptGetContentTool, PptGetSlideDetailsTool
 /// </summary>
 public class PptDataOperationsTool : IAsposeTool
 {
-    public string Description => @"PowerPoint data operations. Supports 3 operations: get_statistics, get_content, get_slide_details.
+    public string Description =>
+        @"PowerPoint data operations. Supports 3 operations: get_statistics, get_content, get_slide_details.
 
 Usage examples:
 - Get statistics: ppt_data_operations(operation='get_statistics', path='presentation.pptx')
@@ -64,12 +64,12 @@ Usage examples:
     }
 
     /// <summary>
-    /// Gets presentation statistics
+    ///     Gets presentation statistics
     /// </summary>
-    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="_">Unused parameter</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Formatted string with statistics</returns>
-    private async Task<string> GetStatisticsAsync(JsonObject? arguments, string path)
+    private async Task<string> GetStatisticsAsync(JsonObject? _, string path)
     {
         using var presentation = new Presentation(path);
         var sb = new StringBuilder();
@@ -80,16 +80,16 @@ Usage examples:
         sb.AppendLine($"  Total Masters: {presentation.Masters.Count}");
         sb.AppendLine($"  Slide Size: {presentation.SlideSize.Size.Width} x {presentation.SlideSize.Size.Height}");
 
-        int totalShapes = 0;
-        int totalText = 0;
-        int totalImages = 0;
-        int totalTables = 0;
-        int totalCharts = 0;
-        int totalSmartArt = 0;
-        int totalAudio = 0;
-        int totalVideo = 0;
-        int totalAnimations = 0;
-        int totalHyperlinks = 0;
+        var totalShapes = 0;
+        var totalText = 0;
+        var totalImages = 0;
+        var totalTables = 0;
+        var totalCharts = 0;
+        var totalSmartArt = 0;
+        var totalAudio = 0;
+        var totalVideo = 0;
+        var totalAnimations = 0;
+        var totalHyperlinks = 0;
 
         foreach (var slide in presentation.Slides)
         {
@@ -98,13 +98,11 @@ Usage examples:
 
             foreach (var shape in slide.Shapes)
             {
-                if (shape is IAutoShape autoShape && autoShape.TextFrame != null)
+                if (shape is IAutoShape { TextFrame: not null } autoShape)
                 {
                     totalText++;
                     if (!string.IsNullOrWhiteSpace(autoShape.TextFrame.Text))
-                    {
                         totalText += autoShape.TextFrame.Text.Length;
-                    }
                 }
                 else if (shape is PictureFrame)
                 {
@@ -131,10 +129,7 @@ Usage examples:
                     totalVideo++;
                 }
 
-                if (shape.HyperlinkClick != null)
-                {
-                    totalHyperlinks++;
-                }
+                if (shape.HyperlinkClick != null) totalHyperlinks++;
             }
         }
 
@@ -153,37 +148,34 @@ Usage examples:
     }
 
     /// <summary>
-    /// Gets presentation content
+    ///     Gets presentation content
     /// </summary>
-    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="_">Unused parameter</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Formatted string with content</returns>
-    private async Task<string> GetContentAsync(JsonObject? arguments, string path)
+    private async Task<string> GetContentAsync(JsonObject? _, string path)
     {
         using var presentation = new Presentation(path);
         var sb = new StringBuilder();
 
         sb.AppendLine($"Total slides: {presentation.Slides.Count}");
-        
-        for (int i = 0; i < presentation.Slides.Count; i++)
+
+        var slideIndex = 0;
+        foreach (var slide in presentation.Slides)
         {
-            var slide = presentation.Slides[i];
-            sb.AppendLine($"\n--- Slide {i + 1} ---");
-            
+            slideIndex++;
+            sb.AppendLine($"\n--- Slide {slideIndex} ---");
+
             foreach (var shape in slide.Shapes)
-            {
-                if (shape is IAutoShape autoShape && autoShape.TextFrame != null)
-                {
-                    sb.AppendLine(autoShape.TextFrame.Text);
-                }
-            }
+                if (shape is IAutoShape { TextFrame.Text: var text })
+                    sb.AppendLine(text);
         }
 
         return await Task.FromResult(sb.ToString());
     }
 
     /// <summary>
-    /// Gets detailed information about a slide
+    ///     Gets detailed information about a slide
     /// </summary>
     /// <param name="arguments">JSON arguments containing slideIndex</param>
     /// <param name="path">PowerPoint file path</param>
@@ -205,7 +197,7 @@ Usage examples:
         var transition = slide.SlideShowTransition;
         if (transition != null)
         {
-            sb.AppendLine($"\nTransition:");
+            sb.AppendLine("\nTransition:");
             sb.AppendLine($"  Type: {transition.Type}");
             sb.AppendLine($"  Speed: {transition.Speed}");
             sb.AppendLine($"  AdvanceOnClick: {transition.AdvanceOnClick}");
@@ -215,7 +207,7 @@ Usage examples:
         // Animations
         var animations = slide.Timeline.MainSequence;
         sb.AppendLine($"\nAnimations: {animations.Count}");
-        for (int i = 0; i < animations.Count; i++)
+        for (var i = 0; i < animations.Count; i++)
         {
             var anim = animations[i];
             sb.AppendLine($"  [{i}] Type: {anim.Type}, Shape: {anim.TargetShape?.GetType().Name}");
@@ -225,9 +217,10 @@ Usage examples:
         var background = slide.Background;
         if (background != null)
         {
-            sb.AppendLine($"\nBackground:");
+            sb.AppendLine("\nBackground:");
             sb.AppendLine($"  FillType: {background.FillFormat.FillType}");
         }
+
         var notesSlide = slide.NotesSlideManager.NotesSlide;
         if (notesSlide != null)
         {
@@ -238,4 +231,3 @@ Usage examples:
         return await Task.FromResult(sb.ToString());
     }
 }
-

@@ -1,20 +1,21 @@
-﻿using System.Text.Json.Nodes;
-using System.Text;
-using System.Linq;
+﻿using System.Text;
+using System.Text.Json.Nodes;
 using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.PowerPoint;
 
 /// <summary>
-/// Unified tool for managing PowerPoint layouts (set, get layouts, get masters, apply master, apply layout range, apply theme)
-/// Merges: PptSetLayoutTool, PptGetLayoutsTool, PptGetMasterSlidesTool, PptApplyMasterTool, 
-/// PptApplyLayoutRangeTool, PptApplyThemeTool
+///     Unified tool for managing PowerPoint layouts (set, get layouts, get masters, apply master, apply layout range,
+///     apply theme)
+///     Merges: PptSetLayoutTool, PptGetLayoutsTool, PptGetMasterSlidesTool, PptApplyMasterTool,
+///     PptApplyLayoutRangeTool, PptApplyThemeTool
 /// </summary>
 public class PptLayoutTool : IAsposeTool
 {
-    public string Description => @"Manage PowerPoint layouts. Supports 6 operations: set, get_layouts, get_masters, apply_master, apply_layout_range, apply_theme.
+    public string Description =>
+        @"Manage PowerPoint layouts. Supports 6 operations: set, get_layouts, get_masters, apply_master, apply_layout_range, apply_theme.
 
 Usage examples:
 - Set layout: ppt_layout(operation='set', path='presentation.pptx', slideIndex=0, layout='Title')
@@ -39,7 +40,8 @@ Usage examples:
 - 'apply_master': Apply master to slide (required params: path, slideIndex, masterIndex, layoutIndex)
 - 'apply_layout_range': Apply layout to multiple slides (required params: path, slideIndices, layout)
 - 'apply_theme': Apply theme template (required params: path, themePath)",
-                @enum = new[] { "set", "get_layouts", "get_masters", "apply_master", "apply_layout_range", "apply_theme" }
+                @enum = new[]
+                    { "set", "get_layouts", "get_masters", "apply_master", "apply_layout_range", "apply_theme" }
             },
             path = new
             {
@@ -54,7 +56,8 @@ Usage examples:
             layout = new
             {
                 type = "string",
-                description = "Layout type (Title, TitleOnly, Blank, TwoColumn, SectionHeader, etc., required for set/apply_layout_range)"
+                description =
+                    "Layout type (Title, TitleOnly, Blank, TwoColumn, SectionHeader, etc., required for set/apply_layout_range)"
             },
             masterIndex = new
             {
@@ -104,7 +107,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Sets layout for a slide
+    ///     Sets layout for a slide
     /// </summary>
     /// <param name="arguments">JSON arguments containing slideIndex, layoutType, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -116,9 +119,7 @@ Usage examples:
 
         using var presentation = new Presentation(path);
         if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
-        {
             throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
-        }
 
         var layoutType = layoutStr.ToLower() switch
         {
@@ -130,7 +131,8 @@ Usage examples:
             _ => SlideLayoutType.Custom
         };
 
-        var layout = presentation.LayoutSlides.FirstOrDefault(ls => ls.LayoutType == layoutType) ?? presentation.LayoutSlides[0];
+        var layout = presentation.LayoutSlides.FirstOrDefault(ls => ls.LayoutType == layoutType) ??
+                     presentation.LayoutSlides[0];
         presentation.Slides[slideIndex].LayoutSlide = layout;
 
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
@@ -139,7 +141,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Gets available layouts
+    ///     Gets available layouts
     /// </summary>
     /// <param name="arguments">JSON arguments (no specific parameters required)</param>
     /// <param name="path">PowerPoint file path</param>
@@ -154,13 +156,11 @@ Usage examples:
         if (masterIndex.HasValue)
         {
             if (masterIndex.Value < 0 || masterIndex.Value >= presentation.Masters.Count)
-            {
                 throw new ArgumentException($"masterIndex must be between 0 and {presentation.Masters.Count - 1}");
-            }
             var master = presentation.Masters[masterIndex.Value];
             sb.AppendLine($"=== Master {masterIndex.Value} Layouts ===");
             sb.AppendLine($"Total: {master.LayoutSlides.Count}");
-            for (int i = 0; i < master.LayoutSlides.Count; i++)
+            for (var i = 0; i < master.LayoutSlides.Count; i++)
             {
                 var layout = master.LayoutSlides[i];
                 sb.AppendLine($"  [{i}] {layout.Name ?? "(unnamed)"}");
@@ -169,11 +169,11 @@ Usage examples:
         else
         {
             sb.AppendLine("=== All Layouts ===");
-            for (int i = 0; i < presentation.Masters.Count; i++)
+            for (var i = 0; i < presentation.Masters.Count; i++)
             {
                 var master = presentation.Masters[i];
                 sb.AppendLine($"\nMaster {i}: {master.LayoutSlides.Count} layout(s)");
-                for (int j = 0; j < master.LayoutSlides.Count; j++)
+                for (var j = 0; j < master.LayoutSlides.Count; j++)
                 {
                     var layout = master.LayoutSlides[j];
                     sb.AppendLine($"  [{j}] {layout.Name ?? "(unnamed)"}");
@@ -185,26 +185,26 @@ Usage examples:
     }
 
     /// <summary>
-    /// Gets master slides information
+    ///     Gets master slides information
     /// </summary>
-    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="_">Unused parameter</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Formatted string with master slides</returns>
-    private async Task<string> GetMastersAsync(JsonObject? arguments, string path)
+    private async Task<string> GetMastersAsync(JsonObject? _, string path)
     {
         using var presentation = new Presentation(path);
         var sb = new StringBuilder();
 
-        sb.AppendLine($"=== Master Slides ===");
+        sb.AppendLine("=== Master Slides ===");
         sb.AppendLine($"Total: {presentation.Masters.Count}");
 
-        for (int i = 0; i < presentation.Masters.Count; i++)
+        for (var i = 0; i < presentation.Masters.Count; i++)
         {
             var master = presentation.Masters[i];
             sb.AppendLine($"\nMaster {i}:");
             sb.AppendLine($"  Name: {master.Name ?? "(unnamed)"}");
             sb.AppendLine($"  Layouts: {master.LayoutSlides.Count}");
-            for (int j = 0; j < master.LayoutSlides.Count; j++)
+            for (var j = 0; j < master.LayoutSlides.Count; j++)
             {
                 var layout = master.LayoutSlides[j];
                 sb.AppendLine($"    [{j}] {layout.Name ?? "(unnamed)"}");
@@ -215,7 +215,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Applies a master slide to slides
+    ///     Applies a master slide to slides
     /// </summary>
     /// <param name="arguments">JSON arguments containing masterIndex, optional slideIndexes, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -238,18 +238,11 @@ Usage examples:
             : Enumerable.Range(0, presentation.Slides.Count).ToArray();
 
         foreach (var idx in targets)
-        {
             if (idx < 0 || idx >= presentation.Slides.Count)
-            {
                 throw new ArgumentException($"slide index {idx} out of range");
-            }
-        }
 
         var layout = master.LayoutSlides[layoutIndex];
-        foreach (var idx in targets)
-        {
-            presentation.Slides[idx].LayoutSlide = layout;
-        }
+        foreach (var idx in targets) presentation.Slides[idx].LayoutSlide = layout;
 
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         presentation.Save(outputPath, SaveFormat.Pptx);
@@ -257,7 +250,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Applies layout to a range of slides
+    ///     Applies layout to a range of slides
     /// </summary>
     /// <param name="arguments">JSON arguments containing layoutType, startIndex, endIndex, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -272,12 +265,8 @@ Usage examples:
         using var presentation = new Presentation(path);
 
         foreach (var idx in slideIndices)
-        {
             if (idx < 0 || idx >= presentation.Slides.Count)
-            {
                 throw new ArgumentException($"slide index {idx} out of range");
-            }
-        }
 
         var layoutType = layoutStr.ToLower() switch
         {
@@ -289,12 +278,10 @@ Usage examples:
             _ => SlideLayoutType.Custom
         };
 
-        var layout = presentation.LayoutSlides.FirstOrDefault(ls => ls.LayoutType == layoutType) ?? presentation.LayoutSlides[0];
+        var layout = presentation.LayoutSlides.FirstOrDefault(ls => ls.LayoutType == layoutType) ??
+                     presentation.LayoutSlides[0];
 
-        foreach (var idx in slideIndices)
-        {
-            presentation.Slides[idx].LayoutSlide = layout;
-        }
+        foreach (var idx in slideIndices) presentation.Slides[idx].LayoutSlide = layout;
 
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         presentation.Save(outputPath, SaveFormat.Pptx);
@@ -302,7 +289,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Applies a theme to the presentation
+    ///     Applies a theme to the presentation
     /// </summary>
     /// <param name="arguments">JSON arguments containing themePath, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -323,4 +310,3 @@ Usage examples:
         return await Task.FromResult($"Theme applied to presentation: {outputPath}");
     }
 }
-

@@ -3,8 +3,11 @@ using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Pdf;
 
+/// <summary>
+///     Tool for managing document properties in PDF files (get, set)
+/// </summary>
 public class PdfPropertiesTool : IAsposeTool
 {
     public string Description => @"Manage document properties in PDF files. Supports 2 operations: get, set.
@@ -83,7 +86,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Gets PDF properties
+    ///     Gets PDF properties
     /// </summary>
     /// <param name="arguments">JSON arguments (no specific parameters required)</param>
     /// <returns>Formatted string with properties</returns>
@@ -113,7 +116,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Sets PDF properties
+    ///     Sets PDF properties
     /// </summary>
     /// <param name="arguments">JSON arguments containing various property values, optional outputPath</param>
     /// <returns>Success message</returns>
@@ -145,4 +148,3 @@ Usage examples:
         return await Task.FromResult($"Document properties updated. Output: {outputPath}");
     }
 }
-

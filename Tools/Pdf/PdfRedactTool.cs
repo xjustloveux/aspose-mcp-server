@@ -1,11 +1,14 @@
 ﻿using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
-using Aspose.Pdf.Text;
 using AsposeMcpServer.Core;
+using Color = System.Drawing.Color;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Pdf;
 
+/// <summary>
+///     Tool for redacting (blacking out) text or areas on PDF pages
+/// </summary>
 public class PdfRedactTool : IAsposeTool
 {
     public string Description => @"Redact (black out) text or area on PDF page.
@@ -75,28 +78,19 @@ Usage examples:
 
         using var document = new Document(path);
         if (pageIndex < 1 || pageIndex > document.Pages.Count)
-        {
             throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
-        }
 
         var page = document.Pages[pageIndex];
         var rect = new Rectangle(x, y, x + width, y + height);
 
         var redactionAnnotation = new RedactionAnnotation(page, rect);
-        
+
         // Set fill color
         if (!string.IsNullOrEmpty(fillColor))
         {
-            try
-            {
-                var systemColor = ColorHelper.ParseColor(fillColor);
-                redactionAnnotation.FillColor = ColorHelper.ToPdfColor(systemColor);
-            }
-            catch
-            {
-                // Fallback to black if parsing fails
-                redactionAnnotation.FillColor = Aspose.Pdf.Color.Black;
-            }
+            // Parse color with fallback to black if parsing fails
+            var systemColor = ColorHelper.ParseColor(fillColor, Color.Black);
+            redactionAnnotation.FillColor = ColorHelper.ToPdfColor(systemColor);
         }
         else
         {
@@ -105,11 +99,10 @@ Usage examples:
 
         page.Annotations.Add(redactionAnnotation);
         // The annotation is added and will be visible
-        
+
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         document.Save(outputPath);
 
         return await Task.FromResult($"Redaction applied to page {pageIndex}: {outputPath}");
     }
 }
-

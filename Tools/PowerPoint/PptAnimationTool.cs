@@ -1,15 +1,14 @@
 ﻿using System.Text.Json.Nodes;
-using System.Linq;
 using Aspose.Slides;
 using Aspose.Slides.Animation;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.PowerPoint;
 
 /// <summary>
-/// Unified tool for managing PowerPoint animations (add, edit, delete)
-/// Merges: PptAddAnimationTool, PptEditAnimationTool, PptDeleteAnimationTool
+///     Unified tool for managing PowerPoint animations (add, edit, delete)
+///     Merges: PptAddAnimationTool, PptEditAnimationTool, PptDeleteAnimationTool
 /// </summary>
 public class PptAnimationTool : IAsposeTool
 {
@@ -52,7 +51,8 @@ Usage examples:
             effectType = new
             {
                 type = "string",
-                description = "Animation effect type (Fade, Fly, Appear, Bounce, Zoom, etc., required for add, optional for edit)"
+                description =
+                    "Animation effect type (Fade, Fly, Appear, Bounce, Zoom, etc., required for add, optional for edit)"
             },
             triggerType = new
             {
@@ -72,7 +72,8 @@ Usage examples:
             animationIndex = new
             {
                 type = "number",
-                description = "Animation index (0-based, optional, for delete, if not provided deletes all animations for the shape)"
+                description =
+                    "Animation index (0-based, optional, for delete, if not provided deletes all animations for the shape)"
             },
             outputPath = new
             {
@@ -99,7 +100,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Adds animation to a shape
+    ///     Adds animation to a shape
     /// </summary>
     /// <param name="arguments">JSON arguments containing shapeIndex, animationType, optional effectType, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -133,7 +134,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Edits animation properties
+    ///     Edits animation properties
     /// </summary>
     /// <param name="arguments">JSON arguments containing shapeIndex, optional animationType, effectType, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -150,21 +151,15 @@ Usage examples:
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
         if (shapeIndex < 0 || shapeIndex >= slide.Shapes.Count)
-        {
             throw new ArgumentException($"shapeIndex must be between 0 and {slide.Shapes.Count - 1}");
-        }
 
         var shape = slide.Shapes[shapeIndex];
         var sequence = slide.Timeline.MainSequence;
 
         // Remove existing animations for this shape
-        for (int i = sequence.Count - 1; i >= 0; i--)
-        {
+        for (var i = sequence.Count - 1; i >= 0; i--)
             if (sequence[i].TargetShape == shape)
-            {
                 sequence.Remove(sequence[i]);
-            }
-        }
 
         // Add new animation if specified
         if (!string.IsNullOrEmpty(effectTypeStr))
@@ -187,21 +182,14 @@ Usage examples:
             {
                 "afterprevious" => EffectTriggerType.AfterPrevious,
                 "withprevious" => EffectTriggerType.WithPrevious,
-                "onclick" => EffectTriggerType.OnClick,
                 _ => EffectTriggerType.OnClick
             };
 
             var effect = sequence.AddEffect(shape, effectType, EffectSubtype.None, triggerType);
 
-            if (duration.HasValue)
-            {
-                effect.Timing.Duration = duration.Value;
-            }
+            if (duration.HasValue) effect.Timing.Duration = duration.Value;
 
-            if (delay.HasValue)
-            {
-                effect.Timing.TriggerDelayTime = delay.Value;
-            }
+            if (delay.HasValue) effect.Timing.TriggerDelayTime = delay.Value;
         }
 
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
@@ -210,7 +198,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Deletes animation from a shape
+    ///     Deletes animation from a shape
     /// </summary>
     /// <param name="arguments">JSON arguments containing shapeIndex, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -228,9 +216,7 @@ Usage examples:
         if (shapeIndex.HasValue)
         {
             if (shapeIndex.Value < 0 || shapeIndex.Value >= slide.Shapes.Count)
-            {
                 throw new ArgumentException($"shapeIndex must be between 0 and {slide.Shapes.Count - 1}");
-            }
 
             var shape = slide.Shapes[shapeIndex.Value];
             var animations = sequence.Where(e => e.TargetShape == shape).ToList();
@@ -238,17 +224,12 @@ Usage examples:
             if (animationIndex.HasValue)
             {
                 if (animationIndex.Value < 0 || animationIndex.Value >= animations.Count)
-                {
                     throw new ArgumentException($"animationIndex must be between 0 and {animations.Count - 1}");
-                }
                 sequence.Remove(animations[animationIndex.Value]);
             }
             else
             {
-                foreach (var anim in animations)
-                {
-                    sequence.Remove(anim);
-                }
+                foreach (var anim in animations) sequence.Remove(anim);
             }
         }
         else
@@ -262,4 +243,3 @@ Usage examples:
         return await Task.FromResult($"Animation(s) deleted from slide {slideIndex}");
     }
 }
-

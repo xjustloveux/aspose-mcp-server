@@ -1,18 +1,18 @@
 ﻿using System.Text.Json.Nodes;
-using System.Linq;
 using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.PowerPoint;
 
 /// <summary>
-/// Unified tool for managing PowerPoint headers and footers (set header, set footer, batch set, set slide numbering)
-/// Merges: PptSetHeaderTool, PptSetFooterTool, PptBatchSetHeaderFooterTool, PptSetSlideNumberingTool
+///     Unified tool for managing PowerPoint headers and footers (set header, set footer, batch set, set slide numbering)
+///     Merges: PptSetHeaderTool, PptSetFooterTool, PptBatchSetHeaderFooterTool, PptSetSlideNumberingTool
 /// </summary>
 public class PptHeaderFooterTool : IAsposeTool
 {
-    public string Description => @"Manage PowerPoint headers and footers. Supports 4 operations: set_header, set_footer, batch_set, set_slide_numbering.
+    public string Description =>
+        @"Manage PowerPoint headers and footers. Supports 4 operations: set_header, set_footer, batch_set, set_slide_numbering.
 
 Usage examples:
 - Set header: ppt_header_footer(operation='set_header', path='presentation.pptx', headerText='Header Text')
@@ -54,7 +54,8 @@ Usage examples:
             {
                 type = "array",
                 items = new { type = "number" },
-                description = "Slide indices (0-based, optional, for set_header/batch_set, if not provided applies to all slides)"
+                description =
+                    "Slide indices (0-based, optional, for set_header/batch_set, if not provided applies to all slides)"
             },
             showSlideNumber = new
             {
@@ -96,7 +97,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Sets header text for slides
+    ///     Sets header text for slides
     /// </summary>
     /// <param name="arguments">JSON arguments containing headerText, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -105,12 +106,13 @@ Usage examples:
     {
         var headerText = ArgumentHelper.GetString(arguments, "headerText");
         var slideIndicesArray = ArgumentHelper.GetArray(arguments, "slideIndices", false);
-        var slideIndices = slideIndicesArray?.Select(x => x?.GetValue<int>()).Where(x => x.HasValue).Select(x => x!.Value).ToArray();
+        var slideIndices = slideIndicesArray?.Select(x => x?.GetValue<int>()).Where(x => x.HasValue)
+            .Select(x => x!.Value).ToArray();
 
         using var presentation = new Presentation(path);
         var slides = slideIndices?.Length > 0
             ? slideIndices.Select(i => presentation.Slides[i]).ToList()
-            : presentation.Slides.Cast<ISlide>().ToList();
+            : presentation.Slides.ToList();
 
         foreach (var slide in slides)
         {
@@ -126,7 +128,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Sets footer text for slides
+    ///     Sets footer text for slides
     /// </summary>
     /// <param name="arguments">JSON arguments containing footerText, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -171,7 +173,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Sets header and footer for multiple slides
+    ///     Sets header and footer for multiple slides
     /// </summary>
     /// <param name="arguments">JSON arguments containing headerText, footerText, optional slideIndexes, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -190,12 +192,8 @@ Usage examples:
             : Enumerable.Range(0, presentation.Slides.Count).ToArray();
 
         foreach (var idx in targets)
-        {
             if (idx < 0 || idx >= presentation.Slides.Count)
-            {
                 throw new ArgumentException($"slide index {idx} out of range");
-            }
-        }
 
         foreach (var idx in targets)
         {
@@ -230,7 +228,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Sets slide numbering
+    ///     Sets slide numbering
     /// </summary>
     /// <param name="arguments">JSON arguments containing isVisible, optional startNumber, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -247,4 +245,3 @@ Usage examples:
         return await Task.FromResult($"Starting page number set to {firstNumber}");
     }
 }
-

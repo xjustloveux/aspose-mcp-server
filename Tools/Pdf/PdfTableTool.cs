@@ -1,12 +1,13 @@
-﻿using System.Text.Json.Nodes;
+﻿using System.Text.Json;
+using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using Aspose.Pdf.Text;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Pdf;
 
 /// <summary>
-/// Unified tool for managing PDF tables (add, edit)
+///     Unified tool for managing PDF tables (add, edit)
 /// </summary>
 public class PdfTableTool : IAsposeTool
 {
@@ -111,7 +112,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Adds a table to a PDF page
+    ///     Adds a table to a PDF page
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, pageIndex, rows, columns, data, x, y, optional outputPath</param>
     /// <returns>Success message</returns>
@@ -122,55 +123,55 @@ Usage examples:
         var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
         var rows = ArgumentHelper.GetInt(arguments, "rows");
         var columns = ArgumentHelper.GetInt(arguments, "columns");
-        var x = ArgumentHelper.GetDouble(arguments, "x", "x", false, 100);
-        var y = ArgumentHelper.GetDouble(arguments, "y", "y", false, 600);
+        _ = ArgumentHelper.GetDouble(arguments, "x", "x", false, 100);
+        _ = ArgumentHelper.GetDouble(arguments, "y", "y", false, 600);
 
         using var document = new Document(path);
         if (pageIndex < 1 || pageIndex > document.Pages.Count)
             throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
 
         var page = document.Pages[pageIndex];
-        var table = new Table();
-        table.ColumnWidths = string.Join(" ", Enumerable.Repeat("100", columns));
-        table.DefaultCellBorder = new BorderInfo(BorderSide.All, 0.5F);
+        var table = new Table
+        {
+            ColumnWidths = string.Join(" ", Enumerable.Repeat("100", columns)),
+            DefaultCellBorder = new BorderInfo(BorderSide.All, 0.5F)
+        };
 
         string[][]? data = null;
         if (arguments?.ContainsKey("data") == true)
-        {
             try
             {
                 var dataJson = arguments["data"]?.ToJsonString();
                 if (!string.IsNullOrEmpty(dataJson))
-                    data = System.Text.Json.JsonSerializer.Deserialize<string[][]>(dataJson);
+                    data = JsonSerializer.Deserialize<string[][]>(dataJson);
             }
             catch (Exception jsonEx)
             {
-                throw new ArgumentException($"Unable to parse data parameter: {jsonEx.Message}. Please ensure data is a valid 2D string array format, e.g.: [[\"A1\",\"B1\"],[\"A2\",\"B2\"]]");
+                throw new ArgumentException(
+                    $"Unable to parse data parameter: {jsonEx.Message}. Please ensure data is a valid 2D string array format, e.g.: [[\"A1\",\"B1\"],[\"A2\",\"B2\"]]");
             }
-        }
 
-        for (int i = 0; i < rows; i++)
+        for (var i = 0; i < rows; i++)
         {
             var row = table.Rows.Add();
-            for (int j = 0; j < columns; j++)
+            for (var j = 0; j < columns; j++)
             {
                 var cell = row.Cells.Add();
-                string cellText = "";
-                if (data != null && i < data.Length && j < data[i].Length)
-                    cellText = data[i][j];
-                else
-                    cellText = $"Cell {i + 1},{j + 1}";
+                var cellText = data != null && i < data.Length && j < data[i].Length
+                    ? data[i][j]
+                    : $"Cell {i + 1},{j + 1}";
                 cell.Paragraphs.Add(new TextFragment(cellText));
             }
         }
 
         page.Paragraphs.Add(table);
         document.Save(outputPath);
-        return await Task.FromResult($"Successfully added table ({rows} rows x {columns} columns) to page {pageIndex}. Output: {outputPath}");
+        return await Task.FromResult(
+            $"Successfully added table ({rows} rows x {columns} columns) to page {pageIndex}. Output: {outputPath}");
     }
 
     /// <summary>
-    /// Edits table data in a PDF
+    ///     Edits table data in a PDF
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, pageIndex, tableIndex, data, optional outputPath</param>
     /// <returns>Success message</returns>
@@ -187,7 +188,7 @@ Usage examples:
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         using var document = new Document(path);
-        var tables = document.Pages.Cast<Page>()
+        var tables = document.Pages
             .SelectMany(p => p.Paragraphs.OfType<Table>())
             .ToList();
 
@@ -195,13 +196,14 @@ Usage examples:
             throw new ArgumentException($"tableIndex must be between 0 and {tables.Count - 1}");
 
         var table = tables[tableIndex];
-        
+
         if (cellRow.HasValue && cellColumn.HasValue && !string.IsNullOrEmpty(cellValue))
         {
             if (cellRow.Value < 0 || cellRow.Value >= table.Rows.Count)
                 throw new ArgumentException($"cellRow must be between 0 and {table.Rows.Count - 1}");
             if (cellColumn.Value < 0 || cellColumn.Value >= table.Rows[cellRow.Value].Cells.Count)
-                throw new ArgumentException($"cellColumn must be between 0 and {table.Rows[cellRow.Value].Cells.Count - 1}");
+                throw new ArgumentException(
+                    $"cellColumn must be between 0 and {table.Rows[cellRow.Value].Cells.Count - 1}");
 
             var cell = table.Rows[cellRow.Value].Cells[cellColumn.Value];
             cell.Paragraphs.Clear();
@@ -212,4 +214,3 @@ Usage examples:
         return await Task.FromResult($"Successfully edited table {tableIndex}. Output: {outputPath}");
     }
 }
-

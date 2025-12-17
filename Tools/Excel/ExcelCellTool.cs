@@ -1,16 +1,20 @@
-﻿using System.Text.Json.Nodes;
+﻿using System.Globalization;
 using System.Text;
+using System.Text.Json.Nodes;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Excel;
 
 /// <summary>
-/// Unified tool for managing Excel cells (write, edit, get, clear)
-/// Merges: ExcelWriteCellTool, ExcelEditCellTool, ExcelGetCellValueTool, ExcelClearCellTool
+///     Unified tool for managing Excel cells (write, edit, get, clear)
+///     Merges: ExcelWriteCellTool, ExcelEditCellTool, ExcelGetCellValueTool, ExcelClearCellTool
 /// </summary>
 public class ExcelCellTool : IAsposeTool
 {
+    /// <summary>
+    ///     Gets the description of the tool and its usage examples
+    /// </summary>
     public string Description => @"Manage Excel cells. Supports 4 operations: write, edit, get, clear.
 
 Usage examples:
@@ -19,6 +23,9 @@ Usage examples:
 - Get cell: excel_cell(operation='get', path='book.xlsx', cell='A1')
 - Clear cell: excel_cell(operation='clear', path='book.xlsx', cell='A1')";
 
+    /// <summary>
+    ///     Gets the JSON schema defining the input parameters for the tool
+    /// </summary>
     public object InputSchema => new
     {
         type = "object",
@@ -93,6 +100,11 @@ Usage examples:
         required = new[] { "operation", "path", "cell" }
     };
 
+    /// <summary>
+    ///     Executes the tool operation with the provided JSON arguments
+    /// </summary>
+    /// <param name="arguments">JSON arguments object containing operation parameters</param>
+    /// <returns>Result message as a string</returns>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
@@ -110,14 +122,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Writes a value to a cell
-    /// </summary>
-    /// <param name="arguments">JSON arguments containing cell and value</param>
-    /// <param name="path">Excel file path</param>
-    /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <returns>Success message with cell reference</returns>
-    /// <summary>
-    /// Writes a value to a cell
+    ///     Writes a value to a cell
     /// </summary>
     /// <param name="arguments">JSON arguments containing cell address and value</param>
     /// <param name="path">Excel file path</param>
@@ -132,36 +137,23 @@ Usage examples:
         using var workbook = new Workbook(path);
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
         var cellObj = worksheet.Cells[cell];
-        
+
         // Parse value as number, boolean, or string
         // Ensures formulas can correctly identify numeric values
-        if (double.TryParse(value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double numValue))
-        {
+        if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var numValue))
             cellObj.PutValue(numValue);
-        }
-        else if (bool.TryParse(value, out bool boolValue))
-        {
+        else if (bool.TryParse(value, out var boolValue))
             cellObj.PutValue(boolValue);
-        }
         else
-        {
             cellObj.PutValue(value);
-        }
-        
+
         workbook.Save(outputPath);
 
         return await Task.FromResult($"Cell {cell} updated in sheet {sheetIndex}: {outputPath}");
     }
 
     /// <summary>
-    /// Edits a cell value
-    /// </summary>
-    /// <param name="arguments">JSON arguments containing cell and value</param>
-    /// <param name="path">Excel file path</param>
-    /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <returns>Success message with cell reference</returns>
-    /// <summary>
-    /// Edits a cell value
+    ///     Edits a cell value
     /// </summary>
     /// <param name="arguments">JSON arguments containing cell address and new value</param>
     /// <param name="path">Excel file path</param>
@@ -191,18 +183,12 @@ Usage examples:
         {
             // Parse value as number, boolean, or string
             // Ensures formulas can correctly identify numeric values
-            if (double.TryParse(value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double numValue))
-            {
+            if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var numValue))
                 cellObj.PutValue(numValue);
-            }
-            else if (bool.TryParse(value, out bool boolValue))
-            {
+            else if (bool.TryParse(value, out var boolValue))
                 cellObj.PutValue(boolValue);
-            }
             else
-            {
                 cellObj.PutValue(value);
-            }
         }
         else
         {
@@ -214,23 +200,16 @@ Usage examples:
     }
 
     /// <summary>
-    /// Gets a cell value
+    ///     Gets a cell value
     /// </summary>
     /// <param name="arguments">JSON arguments containing cell and optional includeFormat</param>
-    /// <param name="path">Excel file path</param>
-    /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <returns>Cell value and optional format information</returns>
-    /// <summary>
-    /// Gets a cell value
-    /// </summary>
-    /// <param name="arguments">JSON arguments containing cell address</param>
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Formatted string with cell information</returns>
     private async Task<string> GetCellAsync(JsonObject? arguments, string path, int sheetIndex)
     {
         var cell = ArgumentHelper.GetString(arguments, "cell");
-        var includeFormula = ArgumentHelper.GetBool(arguments, "includeFormula");
+        var includeFormula = ArgumentHelper.GetBool(arguments, "includeFormula", true);
         var includeFormat = ArgumentHelper.GetBool(arguments, "includeFormat", false);
 
         using var workbook = new Workbook(path);
@@ -242,15 +221,12 @@ Usage examples:
         result.AppendLine($"Value: {cellObj.Value ?? "(empty)"}");
         result.AppendLine($"Value Type: {cellObj.Type}");
 
-        if (includeFormula && !string.IsNullOrEmpty(cellObj.Formula))
-        {
-            result.AppendLine($"Formula: {cellObj.Formula}");
-        }
+        if (includeFormula && !string.IsNullOrEmpty(cellObj.Formula)) result.AppendLine($"Formula: {cellObj.Formula}");
 
         if (includeFormat)
         {
             var style = cellObj.GetStyle();
-            result.AppendLine($"Format:");
+            result.AppendLine("Format:");
             result.AppendLine($"  Font: {style.Font.Name}, Size: {style.Font.Size}");
             result.AppendLine($"  Bold: {style.Font.IsBold}, Italic: {style.Font.IsItalic}");
             result.AppendLine($"  Background Color: {style.ForegroundColor}");
@@ -261,19 +237,12 @@ Usage examples:
     }
 
     /// <summary>
-    /// Clears a cell (content and/or format)
+    ///     Clears a cell (content and/or format)
     /// </summary>
     /// <param name="arguments">JSON arguments containing cell and optional clearContent, clearFormat</param>
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    /// <summary>
-    /// Clears a cell value
-    /// </summary>
-    /// <param name="arguments">JSON arguments containing cell address</param>
-    /// <param name="path">Excel file path</param>
-    /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <returns>Success message with cell location</returns>
     private async Task<string> ClearCellAsync(JsonObject? arguments, string path, int sheetIndex)
     {
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
@@ -305,4 +274,3 @@ Usage examples:
         return await Task.FromResult($"Cell {cell} cleared in sheet {sheetIndex}: {outputPath}");
     }
 }
-

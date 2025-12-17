@@ -1,16 +1,16 @@
-﻿using System.Text.Json.Nodes;
-using System.Text;
+﻿using System.Text;
+using System.Text.Json.Nodes;
 using Aspose.Slides;
 using Aspose.Slides.Charts;
-using Aspose.Slides.SmartArt;
 using Aspose.Slides.Export;
+using Aspose.Slides.SmartArt;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.PowerPoint;
 
 /// <summary>
-/// Unified tool for managing PowerPoint shapes (edit, delete, get, get details)
-/// Merges: PptEditShapeTool, PptDeleteShapeTool, PptGetShapesTool, PptGetShapeDetailsTool
+///     Unified tool for managing PowerPoint shapes (edit, delete, get, get details)
+///     Merges: PptEditShapeTool, PptDeleteShapeTool, PptGetShapesTool, PptGetShapeDetailsTool
 /// </summary>
 public class PptShapeTool : IAsposeTool
 {
@@ -113,7 +113,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Edits shape properties
+    ///     Edits shape properties
     /// </summary>
     /// <param name="arguments">JSON arguments containing shapeIndex, optional x, y, width, height, text, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -165,15 +165,11 @@ Usage examples:
             changes.Add($"Rotation: {rotation.Value}°");
         }
 
-        if (flipHorizontal.HasValue && shape is IAutoShape autoShapeH)
-        {
+        if (flipHorizontal.HasValue && shape is IAutoShape)
             changes.Add($"FlipHorizontal: {flipHorizontal.Value} (applied)");
-        }
 
-        if (flipVertical.HasValue && shape is IAutoShape autoShapeV)
-        {
+        if (flipVertical.HasValue && shape is IAutoShape)
             changes.Add($"FlipVertical: {flipVertical.Value} (applied)");
-        }
 
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         presentation.Save(outputPath, SaveFormat.Pptx);
@@ -182,7 +178,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Deletes a shape from a slide
+    ///     Deletes a shape from a slide
     /// </summary>
     /// <param name="arguments">JSON arguments containing shapeIndex, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -194,15 +190,11 @@ Usage examples:
 
         using var presentation = new Presentation(path);
         if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
-        {
             throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
-        }
 
         var slide = presentation.Slides[slideIndex];
         if (shapeIndex < 0 || shapeIndex >= slide.Shapes.Count)
-        {
             throw new ArgumentException($"shapeIndex must be between 0 and {slide.Shapes.Count - 1}");
-        }
 
         slide.Shapes.RemoveAt(shapeIndex);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
@@ -211,25 +203,23 @@ Usage examples:
     }
 
     /// <summary>
-    /// Gets all shapes from a slide
+    ///     Gets all shapes from a slide
     /// </summary>
-    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="_">Unused parameter</param>
     /// <param name="path">PowerPoint file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
     /// <returns>Formatted string with all shapes</returns>
-    private async Task<string> GetShapesAsync(JsonObject? arguments, string path, int slideIndex)
+    private async Task<string> GetShapesAsync(JsonObject? _, string path, int slideIndex)
     {
         using var presentation = new Presentation(path);
         if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
-        {
             throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
-        }
 
         var slide = presentation.Slides[slideIndex];
         var sb = new StringBuilder();
         sb.AppendLine($"Slide {slideIndex} shapes: {slide.Shapes.Count}");
 
-        for (int i = 0; i < slide.Shapes.Count; i++)
+        for (var i = 0; i < slide.Shapes.Count; i++)
         {
             var s = slide.Shapes[i];
             var kind = s switch
@@ -246,14 +236,15 @@ Usage examples:
             };
 
             var text = (s as IAutoShape)?.TextFrame?.Text;
-            sb.AppendLine($"[{i}] {kind} pos=({s.X},{s.Y}) size=({s.Width},{s.Height}) text={(string.IsNullOrWhiteSpace(text) ? "(none)" : text)}");
+            sb.AppendLine(
+                $"[{i}] {kind} pos=({s.X},{s.Y}) size=({s.Width},{s.Height}) text={(string.IsNullOrWhiteSpace(text) ? "(none)" : text)}");
         }
 
         return await Task.FromResult(sb.ToString());
     }
 
     /// <summary>
-    /// Gets detailed information about a specific shape
+    ///     Gets detailed information about a specific shape
     /// </summary>
     /// <param name="arguments">JSON arguments containing shapeIndex</param>
     /// <param name="path">PowerPoint file path</param>
@@ -276,29 +267,31 @@ Usage examples:
 
         if (shape is IAutoShape autoShape)
         {
-            sb.AppendLine($"\nAutoShape Properties:");
+            sb.AppendLine("\nAutoShape Properties:");
             sb.AppendLine($"  ShapeType: {autoShape.ShapeType}");
             sb.AppendLine($"  Text: {autoShape.TextFrame?.Text ?? "(none)"}");
             if (autoShape.HyperlinkClick != null)
             {
-                var url = autoShape.HyperlinkClick.ExternalUrl ?? (autoShape.HyperlinkClick.TargetSlide != null ? $"Slide {presentation.Slides.IndexOf(autoShape.HyperlinkClick.TargetSlide)}" : "Internal link");
+                var url = autoShape.HyperlinkClick.ExternalUrl ?? (autoShape.HyperlinkClick.TargetSlide != null
+                    ? $"Slide {presentation.Slides.IndexOf(autoShape.HyperlinkClick.TargetSlide)}"
+                    : "Internal link");
                 sb.AppendLine($"  Hyperlink: {url}");
             }
         }
         else if (shape is PictureFrame picture)
         {
-            sb.AppendLine($"\nPicture Properties:");
+            sb.AppendLine("\nPicture Properties:");
             sb.AppendLine($"  AlternativeText: {picture.AlternativeText ?? "(none)"}");
         }
         else if (shape is ITable table)
         {
-            sb.AppendLine($"\nTable Properties:");
+            sb.AppendLine("\nTable Properties:");
             sb.AppendLine($"  Rows: {table.Rows.Count}");
             sb.AppendLine($"  Columns: {table.Columns.Count}");
         }
         else if (shape is IChart chart)
         {
-            sb.AppendLine($"\nChart Properties:");
+            sb.AppendLine("\nChart Properties:");
             sb.AppendLine($"  ChartType: {chart.Type}");
             sb.AppendLine($"  Title: {chart.ChartTitle?.TextFrameForOverriding?.Text ?? "(none)"}");
         }
@@ -306,4 +299,3 @@ Usage examples:
         return await Task.FromResult(sb.ToString());
     }
 }
-

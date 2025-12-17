@@ -1,11 +1,13 @@
 ﻿using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Pdf;
-using Aspose.Pdf.Annotations;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Pdf;
 
+/// <summary>
+///     Tool for managing attachments in PDF documents (add, delete, get)
+/// </summary>
 public class PdfAttachmentTool : IAsposeTool
 {
     public string Description => @"Manage attachments in PDF documents. Supports 3 operations: add, delete, get.
@@ -72,7 +74,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Adds an attachment to the PDF
+    ///     Adds an attachment to the PDF
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, filePath, optional description, outputPath</param>
     /// <returns>Success message</returns>
@@ -88,7 +90,7 @@ Usage examples:
         SecurityHelper.ValidateFilePath(path);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
         SecurityHelper.ValidateFilePath(attachmentPath, "attachmentPath");
-        
+
         // Validate attachment name length
         SecurityHelper.ValidateStringLength(attachmentName, "attachmentName", 255);
         if (description != null)
@@ -108,7 +110,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Deletes an attachment from the PDF
+    ///     Deletes an attachment from the PDF
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, attachmentName, optional outputPath</param>
     /// <returns>Success message</returns>
@@ -120,22 +122,21 @@ Usage examples:
 
         using var document = new Document(path);
         var embeddedFiles = document.EmbeddedFiles;
-        
-        for (int i = embeddedFiles.Count - 1; i >= 0; i--)
-        {
+
+        for (var i = embeddedFiles.Count - 1; i >= 0; i--)
             if (embeddedFiles[i].Name == attachmentName)
             {
                 embeddedFiles.Delete(attachmentName);
                 document.Save(outputPath);
-                return await Task.FromResult($"Successfully deleted attachment '{attachmentName}'. Output: {outputPath}");
+                return await Task.FromResult(
+                    $"Successfully deleted attachment '{attachmentName}'. Output: {outputPath}");
             }
-        }
 
         throw new ArgumentException($"Attachment '{attachmentName}' not found");
     }
 
     /// <summary>
-    /// Gets all attachments from the PDF
+    ///     Gets all attachments from the PDF
     /// </summary>
     /// <param name="arguments">JSON arguments (no specific parameters required)</param>
     /// <returns>Formatted string with all attachments</returns>
@@ -158,7 +159,7 @@ Usage examples:
         sb.AppendLine($"Total Attachments: {embeddedFiles.Count}");
         sb.AppendLine();
 
-        for (int i = 0; i < embeddedFiles.Count; i++)
+        for (var i = 0; i < embeddedFiles.Count; i++)
         {
             var file = embeddedFiles[i];
             sb.AppendLine($"[{i}] Name: {file.Name}");
@@ -172,4 +173,3 @@ Usage examples:
         return await Task.FromResult(sb.ToString());
     }
 }
-

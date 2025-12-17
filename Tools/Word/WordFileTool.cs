@@ -1,15 +1,18 @@
 ﻿using System.Text.Json.Nodes;
 using Aspose.Words;
+using Aspose.Words.Replacing;
+using Aspose.Words.Settings;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Word;
 
 /// <summary>
-/// Unified tool for Word file operations (create, create_from_template, convert, merge, split)
+///     Unified tool for Word file operations (create, create_from_template, convert, merge, split)
 /// </summary>
 public class WordFileTool : IAsposeTool
 {
-    public string Description => @"Perform file operations on Word documents. Supports 5 operations: create, create_from_template, convert, merge, split.
+    public string Description =>
+        @"Perform file operations on Word documents. Supports 5 operations: create, create_from_template, convert, merge, split.
 
 Usage examples:
 - Create document: word_file(operation='create', outputPath='new.docx')
@@ -42,7 +45,8 @@ Usage examples:
             outputPath = new
             {
                 type = "string",
-                description = "Output file path (required for create, create_from_template, convert, and merge operations)"
+                description =
+                    "Output file path (required for create, create_from_template, convert, and merge operations)"
             },
             templatePath = new
             {
@@ -121,28 +125,33 @@ Usage examples:
             paperSize = new
             {
                 type = "string",
-                description = "Predefined paper size: A4, Letter, A3, Legal (for create, default: A4). Overrides pageWidth/pageHeight if specified.",
+                description =
+                    "Predefined paper size: A4, Letter, A3, Legal (for create, default: A4). Overrides pageWidth/pageHeight if specified.",
                 @enum = new[] { "A4", "Letter", "A3", "Legal" }
             },
             pageWidth = new
             {
                 type = "number",
-                description = "Page width in points (for create, e.g., 595.3 for A4, 612 for Letter). Default: 595.3 (A4)"
+                description =
+                    "Page width in points (for create, e.g., 595.3 for A4, 612 for Letter). Default: 595.3 (A4)"
             },
             pageHeight = new
             {
                 type = "number",
-                description = "Page height in points (for create, e.g., 841.9 for A4, 792 for Letter). Default: 841.9 (A4)"
+                description =
+                    "Page height in points (for create, e.g., 841.9 for A4, 792 for Letter). Default: 841.9 (A4)"
             },
             headerDistance = new
             {
                 type = "number",
-                description = "Header distance from page top in points (for create, e.g., 45.35 pt = 1.6 cm). Default: 35.4"
+                description =
+                    "Header distance from page top in points (for create, e.g., 45.35 pt = 1.6 cm). Default: 35.4"
             },
             footerDistance = new
             {
                 type = "number",
-                description = "Footer distance from page bottom in points (for create, e.g., 45.35 pt = 1.6 cm). Default: 35.4"
+                description =
+                    "Footer distance from page bottom in points (for create, e.g., 45.35 pt = 1.6 cm). Default: 35.4"
             }
         },
         required = new[] { "operation" }
@@ -164,7 +173,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Creates a new Word document
+    ///     Creates a new Word document
     /// </summary>
     /// <param name="arguments">JSON arguments containing outputPath, optional content</param>
     /// <returns>Success message with file path</returns>
@@ -186,23 +195,23 @@ Usage examples:
         var footerDistance = ArgumentHelper.GetDouble(arguments, "footerDistance", 35.4);
 
         var doc = new Document();
-        
+
         var wordVersion = compatibilityMode switch
         {
-            "Word2019" => Aspose.Words.Settings.MsWordVersion.Word2019,
-            "Word2016" => Aspose.Words.Settings.MsWordVersion.Word2016,
-            "Word2013" => Aspose.Words.Settings.MsWordVersion.Word2013,
-            "Word2010" => Aspose.Words.Settings.MsWordVersion.Word2010,
-            "Word2007" => Aspose.Words.Settings.MsWordVersion.Word2007,
-            _ => Aspose.Words.Settings.MsWordVersion.Word2019
+            "Word2019" => MsWordVersion.Word2019,
+            "Word2016" => MsWordVersion.Word2016,
+            "Word2013" => MsWordVersion.Word2013,
+            "Word2010" => MsWordVersion.Word2010,
+            "Word2007" => MsWordVersion.Word2007,
+            _ => MsWordVersion.Word2019
         };
         doc.CompatibilityOptions.OptimizeFor(wordVersion);
-        
+
         var section = doc.FirstSection;
         if (section != null)
         {
             var pageSetup = section.PageSetup;
-            
+
             // Set page size (paper size or custom dimensions)
             if (!string.IsNullOrEmpty(paperSize) && pageWidth == null && pageHeight == null)
             {
@@ -210,23 +219,23 @@ Usage examples:
                 switch (paperSize.ToUpper())
                 {
                     case "A4":
-                        pageSetup.PageWidth = 595.3;  // 21.0 cm
+                        pageSetup.PageWidth = 595.3; // 21.0 cm
                         pageSetup.PageHeight = 841.9; // 29.7 cm
                         break;
                     case "LETTER":
-                        pageSetup.PageWidth = 612;    // 8.5 inch
-                        pageSetup.PageHeight = 792;   // 11 inch
+                        pageSetup.PageWidth = 612; // 8.5 inch
+                        pageSetup.PageHeight = 792; // 11 inch
                         break;
                     case "A3":
-                        pageSetup.PageWidth = 841.9;  // 29.7 cm
+                        pageSetup.PageWidth = 841.9; // 29.7 cm
                         pageSetup.PageHeight = 1190.55; // 42.0 cm
                         break;
                     case "LEGAL":
-                        pageSetup.PageWidth = 612;    // 8.5 inch
-                        pageSetup.PageHeight = 1008;  // 14 inch
+                        pageSetup.PageWidth = 612; // 8.5 inch
+                        pageSetup.PageHeight = 1008; // 14 inch
                         break;
                     default:
-                        pageSetup.PageWidth = 595.3;  // Default to A4
+                        pageSetup.PageWidth = 595.3; // Default to A4
                         pageSetup.PageHeight = 841.9;
                         break;
                 }
@@ -234,17 +243,11 @@ Usage examples:
             else
             {
                 // Use custom dimensions if specified
-                if (pageWidth.HasValue)
-                    pageSetup.PageWidth = pageWidth.Value;
-                else
-                    pageSetup.PageWidth = 595.3; // Default to A4 width
+                pageSetup.PageWidth = pageWidth ?? 595.3; // Default to A4 width
 
-                if (pageHeight.HasValue)
-                    pageSetup.PageHeight = pageHeight.Value;
-                else
-                    pageSetup.PageHeight = 841.9; // Default to A4 height
+                pageSetup.PageHeight = pageHeight ?? 841.9; // Default to A4 height
             }
-            
+
             // Set margins
             pageSetup.TopMargin = marginTop;
             pageSetup.BottomMargin = marginBottom;
@@ -255,18 +258,23 @@ Usage examples:
             pageSetup.HeaderDistance = headerDistance;
             pageSetup.FooterDistance = footerDistance;
         }
-        
+
         var builder = new DocumentBuilder(doc);
-        
+
         if (skipInitialContent)
         {
-            if (doc.FirstSection != null && doc.FirstSection.Body != null)
+            if (doc.FirstSection is { Body: not null })
             {
                 doc.FirstSection.Body.RemoveAllChildren();
-                var firstPara = new Paragraph(doc);
-                firstPara.ParagraphFormat.SpaceBefore = 0;
-                firstPara.ParagraphFormat.SpaceAfter = 0;
-                firstPara.ParagraphFormat.LineSpacing = 12;
+                var firstPara = new Paragraph(doc)
+                {
+                    ParagraphFormat =
+                    {
+                        SpaceBefore = 0,
+                        SpaceAfter = 0,
+                        LineSpacing = 12
+                    }
+                };
                 doc.FirstSection.Body.AppendChild(firstPara);
             }
         }
@@ -280,7 +288,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Creates a document from a template
+    ///     Creates a document from a template
     /// </summary>
     /// <param name="arguments">JSON arguments containing templatePath, outputPath, optional data</param>
     /// <returns>Success message with output path</returns>
@@ -301,18 +309,16 @@ Usage examples:
         {
             var replacementsObj = arguments["replacements"]?.AsObject();
             if (replacementsObj != null)
-            {
                 foreach (var kvp in replacementsObj)
                 {
                     var key = kvp.Key;
                     var value = kvp.Value?.GetValue<string>() ?? "";
-                    
+
                     if (!IsValidPlaceholder(key, placeholderStyle))
                         key = FormatPlaceholder(key, placeholderStyle);
-                    
+
                     replacements[key] = value;
                 }
-            }
         }
 
         if (replacements.Count == 0)
@@ -321,14 +327,15 @@ Usage examples:
         var doc = new Document(templatePath);
 
         foreach (var kvp in replacements)
-            doc.Range.Replace(kvp.Key, kvp.Value, new Aspose.Words.Replacing.FindReplaceOptions());
+            doc.Range.Replace(kvp.Key, kvp.Value, new FindReplaceOptions());
 
         doc.Save(outputPath);
-        return await Task.FromResult($"Document created from template: {outputPath} (replaced {replacements.Count} placeholders)");
+        return await Task.FromResult(
+            $"Document created from template: {outputPath} (replaced {replacements.Count} placeholders)");
     }
 
     /// <summary>
-    /// Converts document to another format
+    ///     Converts document to another format
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, outputPath, format</param>
     /// <returns>Success message with output path</returns>
@@ -362,7 +369,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Merges multiple documents into one
+    ///     Merges multiple documents into one
     /// </summary>
     /// <param name="arguments">JSON arguments containing sourcePaths array, outputPath</param>
     /// <returns>Success message with merged file path</returns>
@@ -375,18 +382,15 @@ Usage examples:
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         var inputPaths = inputPathsArray.Select(p => p?.GetValue<string>()).Where(p => p != null).ToList();
-        
+
         if (inputPaths.Count == 0)
             throw new ArgumentException("At least one input path is required");
 
-        foreach (var inputPath in inputPaths)
-        {
-            SecurityHelper.ValidateFilePath(inputPath!, "inputPaths");
-        }
+        foreach (var inputPath in inputPaths) SecurityHelper.ValidateFilePath(inputPath!, "inputPaths");
 
         var mergedDoc = new Document(inputPaths[0]);
 
-        for (int i = 1; i < inputPaths.Count; i++)
+        for (var i = 1; i < inputPaths.Count; i++)
         {
             var doc = new Document(inputPaths[i]);
             mergedDoc.AppendDocument(doc, ImportFormatMode.KeepSourceFormatting);
@@ -397,7 +401,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Splits document into multiple files
+    ///     Splits document into multiple files
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, outputPath, splitBy (page or section)</param>
     /// <returns>Success message with split file count</returns>
@@ -417,7 +421,7 @@ Usage examples:
 
         if (splitBy.ToLower() == "section")
         {
-            for (int i = 0; i < doc.Sections.Count; i++)
+            for (var i = 0; i < doc.Sections.Count; i++)
             {
                 var sectionDoc = new Document();
                 sectionDoc.FirstSection.Remove();
@@ -430,22 +434,20 @@ Usage examples:
 
             return await Task.FromResult($"Document split into {doc.Sections.Count} sections in: {outputDir}");
         }
-        else
-        {
-            var pageCount = doc.PageCount;
-            for (int i = 0; i < pageCount; i++)
-            {
-                var pageDoc = doc.ExtractPages(i, 1);
-                var outputPath = Path.Combine(outputDir, $"{fileBaseName}_page_{i + 1}.docx");
-                pageDoc.Save(outputPath);
-            }
 
-            return await Task.FromResult($"Document split into {pageCount} pages in: {outputDir}");
+        var pageCount = doc.PageCount;
+        for (var i = 0; i < pageCount; i++)
+        {
+            var pageDoc = doc.ExtractPages(i, 1);
+            var outputPath = Path.Combine(outputDir, $"{fileBaseName}_page_{i + 1}.docx");
+            pageDoc.Save(outputPath);
         }
+
+        return await Task.FromResult($"Document split into {pageCount} pages in: {outputDir}");
     }
 
     /// <summary>
-    /// Checks if a placeholder key matches the expected format for the given style
+    ///     Checks if a placeholder key matches the expected format for the given style
     /// </summary>
     /// <param name="key">Placeholder key to validate</param>
     /// <param name="style">Placeholder style (doubleCurly, singleCurly, square)</param>
@@ -461,7 +463,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Formats a placeholder key according to the specified style
+    ///     Formats a placeholder key according to the specified style
     /// </summary>
     /// <param name="key">Placeholder key (may already contain brackets)</param>
     /// <param name="style">Placeholder style (doubleCurly, singleCurly, square)</param>
@@ -477,4 +479,3 @@ Usage examples:
         };
     }
 }
-

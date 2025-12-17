@@ -1,16 +1,19 @@
-﻿using System.Text.Json.Nodes;
-using System.Text;
+﻿using System.Text;
+using System.Text.Json.Nodes;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Excel;
 
 /// <summary>
-/// Unified tool for managing Excel comments (add, edit, delete, get)
-/// Merges: ExcelAddCommentTool, ExcelEditCommentTool, ExcelDeleteCommentTool, ExcelGetCommentsTool
+///     Unified tool for managing Excel comments (add, edit, delete, get)
+///     Merges: ExcelAddCommentTool, ExcelEditCommentTool, ExcelDeleteCommentTool, ExcelGetCommentsTool
 /// </summary>
 public class ExcelCommentTool : IAsposeTool
 {
+    /// <summary>
+    ///     Gets the description of the tool and its usage examples
+    /// </summary>
     public string Description => @"Manage Excel comments. Supports 4 operations: add, edit, delete, get.
 
 Usage examples:
@@ -19,6 +22,9 @@ Usage examples:
 - Delete comment: excel_comment(operation='delete', path='book.xlsx', cell='A1')
 - Get comments: excel_comment(operation='get', path='book.xlsx')";
 
+    /// <summary>
+    ///     Gets the JSON schema defining the input parameters for the tool
+    /// </summary>
     public object InputSchema => new
     {
         type = "object",
@@ -68,6 +74,11 @@ Usage examples:
         required = new[] { "operation", "path" }
     };
 
+    /// <summary>
+    ///     Executes the tool operation with the provided JSON arguments
+    /// </summary>
+    /// <param name="arguments">JSON arguments object containing operation parameters</param>
+    /// <returns>Result message as a string</returns>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
@@ -85,7 +96,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Adds a comment to a cell
+    ///     Adds a comment to a cell
     /// </summary>
     /// <param name="arguments">JSON arguments containing cell address and comment text</param>
     /// <param name="path">Excel file path</param>
@@ -110,24 +121,14 @@ Usage examples:
         }
 
         commentObj.Note = comment;
-        if (!string.IsNullOrEmpty(author))
-        {
-            commentObj.Author = author;
-        }
+        if (!string.IsNullOrEmpty(author)) commentObj.Author = author;
 
         workbook.Save(outputPath);
         return await Task.FromResult($"Comment added to cell {cell} in sheet {sheetIndex}: {outputPath}");
     }
 
     /// <summary>
-    /// Edits an existing cell comment
-    /// </summary>
-    /// <param name="arguments">JSON arguments containing cell, comment, and optional author</param>
-    /// <param name="path">Excel file path</param>
-    /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <returns>Success message with cell reference</returns>
-    /// <summary>
-    /// Edits an existing comment
+    ///     Edits an existing cell comment
     /// </summary>
     /// <param name="arguments">JSON arguments containing cell address and new comment text</param>
     /// <param name="path">Excel file path</param>
@@ -145,30 +146,17 @@ Usage examples:
         var cellObj = worksheet.Cells[cell];
         var commentObj = worksheet.Comments[cellObj.Name];
 
-        if (commentObj == null)
-        {
-            throw new ArgumentException($"No comment found on cell {cell}");
-        }
+        if (commentObj == null) throw new ArgumentException($"No comment found on cell {cell}");
 
         commentObj.Note = comment;
-        if (!string.IsNullOrEmpty(author))
-        {
-            commentObj.Author = author;
-        }
+        if (!string.IsNullOrEmpty(author)) commentObj.Author = author;
 
         workbook.Save(outputPath);
         return await Task.FromResult($"Comment edited on cell {cell} in sheet {sheetIndex}: {outputPath}");
     }
 
     /// <summary>
-    /// Deletes a comment from a cell
-    /// </summary>
-    /// <param name="arguments">JSON arguments containing cell</param>
-    /// <param name="path">Excel file path</param>
-    /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <returns>Success message</returns>
-    /// <summary>
-    /// Deletes a comment from a cell
+    ///     Deletes a comment from a cell
     /// </summary>
     /// <param name="arguments">JSON arguments containing cell address</param>
     /// <param name="path">Excel file path</param>
@@ -183,24 +171,14 @@ Usage examples:
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
         var comment = worksheet.Comments[cell];
 
-        if (comment != null)
-        {
-            worksheet.Comments.RemoveAt(cell);
-        }
+        if (comment != null) worksheet.Comments.RemoveAt(cell);
 
         workbook.Save(outputPath);
         return await Task.FromResult($"Comment deleted from cell {cell} in sheet {sheetIndex}: {outputPath}");
     }
 
     /// <summary>
-    /// Gets all comments from the worksheet
-    /// </summary>
-    /// <param name="arguments">JSON arguments containing optional cell filter</param>
-    /// <param name="path">Excel file path</param>
-    /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <returns>Formatted string with all comments</returns>
-    /// <summary>
-    /// Gets all comments or comments for a specific cell
+    ///     Gets all comments or comments for a specific cell
     /// </summary>
     /// <param name="arguments">JSON arguments optionally containing cell address</param>
     /// <param name="path">Excel file path</param>
@@ -232,24 +210,18 @@ Usage examples:
         {
             sb.AppendLine($"Comments in sheet {sheetIndex}:");
             if (worksheet.Comments.Count > 0)
-            {
-                for (int i = 0; i < worksheet.Comments.Count; i++)
+                foreach (var comment in worksheet.Comments)
                 {
-                    var comment = worksheet.Comments[i];
                     var cellName = CellsHelper.CellIndexToName(comment.Row, comment.Column);
                     sb.AppendLine($"  Cell {cellName}:");
                     sb.AppendLine($"    Author: {comment.Author}");
                     sb.AppendLine($"    Note: {comment.Note}");
                     sb.AppendLine();
                 }
-            }
             else
-            {
                 sb.AppendLine("  No comments found");
-            }
         }
 
         return await Task.FromResult(sb.ToString());
     }
 }
-

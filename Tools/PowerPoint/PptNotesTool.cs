@@ -1,15 +1,14 @@
-﻿using System.Text.Json.Nodes;
-using System.Text;
-using System.Linq;
+﻿using System.Text;
+using System.Text.Json.Nodes;
 using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.PowerPoint;
 
 /// <summary>
-/// Unified tool for managing PowerPoint notes (add, edit, get, clear)
-/// Merges: PptAddNotesTool, PptEditNotesTool, PptGetNotesTool, PptClearNotesTool
+///     Unified tool for managing PowerPoint notes (add, edit, get, clear)
+///     Merges: PptAddNotesTool, PptEditNotesTool, PptGetNotesTool, PptClearNotesTool
 /// </summary>
 public class PptNotesTool : IAsposeTool
 {
@@ -82,7 +81,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Adds notes to a slide
+    ///     Adds notes to a slide
     /// </summary>
     /// <param name="arguments">JSON arguments containing slideIndex, notesText, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -97,9 +96,8 @@ Usage examples:
         var notesSlide = slide.NotesSlideManager.NotesSlide ?? slide.NotesSlideManager.AddNotesSlide();
         var textFrame = notesSlide.NotesTextFrame;
         if (textFrame == null)
-        {
-            throw new InvalidOperationException("Unable to get NotesTextFrame, file may be corrupted or format not supported");
-        }
+            throw new InvalidOperationException(
+                "Unable to get NotesTextFrame, file may be corrupted or format not supported");
         textFrame.Paragraphs.Clear();
         var para = new Paragraph();
         para.Portions.Add(new Portion(notes));
@@ -111,7 +109,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Edits slide notes
+    ///     Edits slide notes
     /// </summary>
     /// <param name="arguments">JSON arguments containing slideIndex, notesText, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -123,11 +121,7 @@ Usage examples:
 
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-        var notesSlide = slide.NotesSlideManager.NotesSlide;
-        if (notesSlide == null)
-        {
-            notesSlide = slide.NotesSlideManager.AddNotesSlide();
-        }
+        var notesSlide = slide.NotesSlideManager.NotesSlide ?? slide.NotesSlideManager.AddNotesSlide();
         notesSlide.NotesTextFrame.Text = notes;
 
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
@@ -137,7 +131,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Gets notes from a slide
+    ///     Gets notes from a slide
     /// </summary>
     /// <param name="arguments">JSON arguments containing optional slideIndex (if null, gets all)</param>
     /// <param name="path">PowerPoint file path</param>
@@ -152,14 +146,11 @@ Usage examples:
         if (slideIndex.HasValue)
         {
             if (slideIndex.Value < 0 || slideIndex.Value >= presentation.Slides.Count)
-            {
                 throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
-            }
 
-            var slide = presentation.Slides[slideIndex.Value];
             var notesSlide = presentation.Slides[slideIndex.Value].NotesSlideManager.NotesSlide;
-            
-            if (notesSlide != null && notesSlide.NotesTextFrame != null)
+
+            if (notesSlide is { NotesTextFrame: not null })
             {
                 sb.AppendLine($"Slide {slideIndex.Value} Notes:");
                 sb.AppendLine(notesSlide.NotesTextFrame.Text);
@@ -172,10 +163,10 @@ Usage examples:
         else
         {
             sb.AppendLine("All Speaker Notes:");
-            for (int i = 0; i < presentation.Slides.Count; i++)
+            for (var i = 0; i < presentation.Slides.Count; i++)
             {
                 var notesSlide = presentation.Slides[i].NotesSlideManager.NotesSlide;
-                if (notesSlide != null && notesSlide.NotesTextFrame != null && !string.IsNullOrWhiteSpace(notesSlide.NotesTextFrame.Text))
+                if (notesSlide is { NotesTextFrame.Text: var text } && !string.IsNullOrWhiteSpace(text))
                 {
                     sb.AppendLine($"\n--- Slide {i} ---");
                     sb.AppendLine(notesSlide.NotesTextFrame.Text);
@@ -187,7 +178,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Clears notes from a slide
+    ///     Clears notes from a slide
     /// </summary>
     /// <param name="arguments">JSON arguments containing slideIndex, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -203,21 +194,14 @@ Usage examples:
             : Enumerable.Range(0, presentation.Slides.Count).ToArray();
 
         foreach (var idx in targets)
-        {
             if (idx < 0 || idx >= presentation.Slides.Count)
-            {
                 throw new ArgumentException($"slide index {idx} out of range");
-            }
-        }
 
         foreach (var idx in targets)
         {
             var slide = presentation.Slides[idx];
             var notes = slide.NotesSlideManager.NotesSlide;
-            if (notes != null && notes.NotesTextFrame != null)
-            {
-                notes.NotesTextFrame.Text = string.Empty;
-            }
+            if (notes is { NotesTextFrame: not null } notesSlide) notesSlide.NotesTextFrame.Text = string.Empty;
         }
 
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
@@ -225,4 +209,3 @@ Usage examples:
         return await Task.FromResult($"Cleared speaker notes for {targets.Length} slides");
     }
 }
-

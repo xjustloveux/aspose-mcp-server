@@ -1,14 +1,14 @@
-﻿using System.Text.Json.Nodes;
-using System.Text;
+﻿using System.Text;
+using System.Text.Json.Nodes;
 using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.PowerPoint;
 
 /// <summary>
-/// Unified tool for managing PowerPoint document properties (get, set)
-/// Merges: PptGetDocumentPropertiesTool, PptSetDocumentPropertiesTool, PptSetPropertiesTool
+///     Unified tool for managing PowerPoint document properties (get, set)
+///     Merges: PptGetDocumentPropertiesTool, PptSetDocumentPropertiesTool, PptSetPropertiesTool
 /// </summary>
 public class PptPropertiesTool : IAsposeTool
 {
@@ -104,12 +104,12 @@ Usage examples:
     }
 
     /// <summary>
-    /// Gets presentation properties
+    ///     Gets presentation properties
     /// </summary>
-    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="_">Unused parameter</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Formatted string with properties</returns>
-    private async Task<string> GetPropertiesAsync(JsonObject? arguments, string path)
+    private async Task<string> GetPropertiesAsync(JsonObject? _, string path)
     {
         using var presentation = new Presentation(path);
         var props = presentation.DocumentProperties;
@@ -132,7 +132,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Sets presentation properties
+    ///     Sets presentation properties
     /// </summary>
     /// <param name="arguments">JSON arguments containing various property values, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -158,36 +158,43 @@ Usage examples:
             props.Title = title;
             changes.Add("Title");
         }
+
         if (!string.IsNullOrEmpty(subject))
         {
             props.Subject = subject;
             changes.Add("Subject");
         }
+
         if (!string.IsNullOrEmpty(author))
         {
             props.Author = author;
             changes.Add("Author");
         }
+
         if (!string.IsNullOrEmpty(keywords))
         {
             props.Keywords = keywords;
             changes.Add("Keywords");
         }
+
         if (!string.IsNullOrEmpty(comments))
         {
             props.Comments = comments;
             changes.Add("Comments");
         }
+
         if (!string.IsNullOrEmpty(category))
         {
             props.Category = category;
             changes.Add("Category");
         }
+
         if (!string.IsNullOrEmpty(company))
         {
             props.Company = company;
             changes.Add("Company");
         }
+
         if (!string.IsNullOrEmpty(manager))
         {
             props.Manager = manager;
@@ -196,10 +203,7 @@ Usage examples:
 
         if (customProps != null)
         {
-            foreach (var kvp in customProps)
-            {
-                props[kvp.Key] = kvp.Value?.GetValue<string>() ?? "";
-            }
+            foreach (var kvp in customProps) props[kvp.Key] = kvp.Value?.GetValue<string>() ?? "";
             changes.Add("CustomProperties");
         }
 
@@ -209,4 +213,3 @@ Usage examples:
         return await Task.FromResult($"Document properties updated: {string.Join(", ", changes)} - {outputPath}");
     }
 }
-

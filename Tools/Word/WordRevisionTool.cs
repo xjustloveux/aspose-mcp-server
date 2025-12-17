@@ -1,14 +1,17 @@
 ﻿using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Words;
-using Aspose.Words.Comparing;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.Word;
 
+/// <summary>
+///     Tool for managing revision tracking in Word documents
+/// </summary>
 public class WordRevisionTool : IAsposeTool
 {
-    public string Description => @"Manage revisions in Word documents. Supports 5 operations: get_revisions, accept_all, reject_all, manage, compare.
+    public string Description =>
+        @"Manage revisions in Word documents. Supports 5 operations: get_revisions, accept_all, reject_all, manage, compare.
 
 Usage examples:
 - Get revisions: word_revision(operation='get_revisions', path='doc.docx')
@@ -84,7 +87,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Gets all revisions from the document
+    ///     Gets all revisions from the document
     /// </summary>
     /// <param name="arguments">JSON arguments containing path</param>
     /// <returns>Formatted string with all revisions</returns>
@@ -99,7 +102,7 @@ Usage examples:
         sb.AppendLine();
 
         var revisions = doc.Revisions.ToList();
-        for (int i = 0; i < revisions.Count; i++)
+        for (var i = 0; i < revisions.Count; i++)
         {
             var revision = revisions[i];
             sb.AppendLine($"[{i + 1}] Type: {revision.RevisionType}");
@@ -115,7 +118,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Accepts all revisions in the document
+    ///     Accepts all revisions in the document
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, optional outputPath</param>
     /// <returns>Success message</returns>
@@ -130,12 +133,12 @@ Usage examples:
         var doc = new Document(path);
         doc.AcceptAllRevisions();
         doc.Save(outputPath);
-        
+
         return await Task.FromResult($"All revisions accepted: {outputPath}");
     }
 
     /// <summary>
-    /// Rejects all revisions in the document
+    ///     Rejects all revisions in the document
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, optional outputPath</param>
     /// <returns>Success message</returns>
@@ -148,17 +151,14 @@ Usage examples:
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         var doc = new Document(path);
-        foreach (var revision in doc.Revisions)
-        {
-            revision.Reject();
-        }
+        foreach (var revision in doc.Revisions) revision.Reject();
         doc.Save(outputPath);
-        
+
         return await Task.FromResult($"All revisions rejected: {outputPath}");
     }
 
     /// <summary>
-    /// Manages individual revisions (accept/reject specific revisions)
+    ///     Manages individual revisions (accept/reject specific revisions)
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, revisionIndex, action (accept/reject), optional outputPath</param>
     /// <returns>Success message</returns>
@@ -181,6 +181,7 @@ Usage examples:
                 doc.Save(outputPath);
                 return await Task.FromResult($"Document has no revisions, saved to: {outputPath}");
             }
+
             return await Task.FromResult("Document has no revisions");
         }
 
@@ -197,11 +198,12 @@ Usage examples:
         }
 
         doc.Save(outputPath);
-        return await Task.FromResult($"Processed revisions\nOriginal revisions: {revisionsCount}\nAction: {action}\nOutput: {outputPath}");
+        return await Task.FromResult(
+            $"Processed revisions\nOriginal revisions: {revisionsCount}\nAction: {action}\nOutput: {outputPath}");
     }
 
     /// <summary>
-    /// Compares two documents and shows differences
+    ///     Compares two documents and shows differences
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, comparePath, optional outputPath</param>
     /// <returns>Success message with comparison result</returns>
@@ -221,8 +223,7 @@ Usage examples:
 
         originalDoc.Compare(revisedDoc, authorName, DateTime.Now);
         originalDoc.Save(outputPath);
-        
+
         return await Task.FromResult($"Comparison document created: {outputPath}");
     }
 }
-

@@ -1,15 +1,14 @@
-﻿using System.Text.Json.Nodes;
-using System.Text;
-using System.Drawing;
+﻿using System.Text;
+using System.Text.Json.Nodes;
 using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Core;
 
-namespace AsposeMcpServer.Tools;
+namespace AsposeMcpServer.Tools.PowerPoint;
 
 /// <summary>
-/// Unified tool for managing PowerPoint shape format (set, get)
-/// Merges: PptSetShapeFormatTool, PptGetShapeFormatTool
+///     Unified tool for managing PowerPoint shape format (set, get)
+///     Merges: PptSetShapeFormatTool, PptGetShapeFormatTool
 /// </summary>
 public class PptShapeFormatTool : IAsposeTool
 {
@@ -107,7 +106,7 @@ Usage examples:
     }
 
     /// <summary>
-    /// Sets shape format properties
+    ///     Sets shape format properties
     /// </summary>
     /// <param name="arguments">JSON arguments containing optional fillColor, lineColor, lineWidth, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
@@ -154,14 +153,14 @@ Usage examples:
     }
 
     /// <summary>
-    /// Gets shape format information
+    ///     Gets shape format information
     /// </summary>
-    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <param name="_">Unused parameter</param>
     /// <param name="path">PowerPoint file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
     /// <param name="shapeIndex">Shape index (0-based)</param>
     /// <returns>Formatted string with shape format details</returns>
-    private async Task<string> GetShapeFormatAsync(JsonObject? arguments, string path, int slideIndex, int shapeIndex)
+    private async Task<string> GetShapeFormatAsync(JsonObject? _, string path, int slideIndex, int shapeIndex)
     {
         using var presentation = new Presentation(path);
         var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
@@ -179,7 +178,8 @@ Usage examples:
         if (shape.FillFormat.FillType == FillType.Solid)
         {
             var color = shape.FillFormat.SolidFillColor.Color;
-            sb.AppendLine($"  Fill Color: RGB({color.R}, {color.G}, {color.B}), Hex: #{color.R:X2}{color.G:X2}{color.B:X2}");
+            sb.AppendLine(
+                $"  Fill Color: RGB({color.R}, {color.G}, {color.B}), Hex: #{color.R:X2}{color.G:X2}{color.B:X2}");
         }
 
         // Line format
@@ -187,11 +187,12 @@ Usage examples:
         if (shape.LineFormat.FillFormat.FillType == FillType.Solid)
         {
             var color = shape.LineFormat.FillFormat.SolidFillColor.Color;
-            sb.AppendLine($"  Line Color: RGB({color.R}, {color.G}, {color.B}), Hex: #{color.R:X2}{color.G:X2}{color.B:X2}");
+            sb.AppendLine(
+                $"  Line Color: RGB({color.R}, {color.G}, {color.B}), Hex: #{color.R:X2}{color.G:X2}{color.B:X2}");
         }
 
         // Text format (if applicable)
-        if (shape is IAutoShape autoShape && autoShape.TextFrame != null)
+        if (shape is IAutoShape { TextFrame: not null } autoShape)
         {
             sb.AppendLine($"  Text: {autoShape.TextFrame.Text}");
             if (autoShape.TextFrame.Paragraphs.Count > 0)
@@ -202,7 +203,8 @@ Usage examples:
                     var portion = firstPara.Portions[0];
                     sb.AppendLine($"  Font: {portion.PortionFormat.LatinFont?.FontName ?? "(default)"}");
                     sb.AppendLine($"  Font Size: {portion.PortionFormat.FontHeight}");
-                    sb.AppendLine($"  Bold: {portion.PortionFormat.FontBold}, Italic: {portion.PortionFormat.FontItalic}");
+                    sb.AppendLine(
+                        $"  Bold: {portion.PortionFormat.FontBold}, Italic: {portion.PortionFormat.FontItalic}");
                 }
             }
         }
@@ -210,11 +212,12 @@ Usage examples:
         // Hyperlink
         if (shape.HyperlinkClick != null)
         {
-            var url = shape.HyperlinkClick.ExternalUrl ?? (shape.HyperlinkClick.TargetSlide != null ? $"Slide {presentation.Slides.IndexOf(shape.HyperlinkClick.TargetSlide)}" : "Internal link");
+            var url = shape.HyperlinkClick.ExternalUrl ?? (shape.HyperlinkClick.TargetSlide != null
+                ? $"Slide {presentation.Slides.IndexOf(shape.HyperlinkClick.TargetSlide)}"
+                : "Internal link");
             sb.AppendLine($"  Hyperlink: {url}");
         }
 
         return await Task.FromResult(sb.ToString());
     }
 }
-
