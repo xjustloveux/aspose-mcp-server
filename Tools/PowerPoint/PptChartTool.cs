@@ -185,45 +185,74 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> EditChartAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
-        var title = ArgumentHelper.GetStringNullable(arguments, "title");
-        var chartTypeStr = ArgumentHelper.GetStringNullable(arguments, "chartType");
-
-        using var presentation = new Presentation(path);
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-        var shape = PowerPointHelper.GetShape(slide, shapeIndex);
-        if (shape is not IChart chart) throw new ArgumentException($"Shape at index {shapeIndex} is not a chart");
-
-        if (!string.IsNullOrEmpty(title))
+        try
         {
-            chart.HasTitle = true;
-            var chartTitle = chart.ChartTitle;
-            if (chartTitle != null)
-                chartTitle.TextFrameForOverriding.Text = title;
-            else
-                chart.ChartTitle.AddTextFrameForOverriding(title);
-        }
+            var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
+            var title = ArgumentHelper.GetStringNullable(arguments, "title");
+            var chartTypeStr = ArgumentHelper.GetStringNullable(arguments, "chartType");
 
-        if (!string.IsNullOrEmpty(chartTypeStr))
+            using var presentation = new Presentation(path);
+            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+            var shape = PowerPointHelper.GetShape(slide, shapeIndex);
+            if (shape is not IChart chart) throw new ArgumentException($"Shape at index {shapeIndex} is not a chart");
+
+            if (!string.IsNullOrEmpty(title))
+                try
+                {
+                    chart.HasTitle = true;
+                    var chartTitle = chart.ChartTitle;
+                    if (chartTitle != null)
+                    {
+                        // Check if TextFrameForOverriding exists, if not create it
+                        if (chartTitle.TextFrameForOverriding != null)
+                            chartTitle.TextFrameForOverriding.Text = title;
+                        else
+                            chartTitle.AddTextFrameForOverriding(title);
+                    }
+                    else
+                    {
+                        chart.ChartTitle.AddTextFrameForOverriding(title);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException($"Failed to set chart title: {ex.Message}", ex);
+                }
+
+            if (!string.IsNullOrEmpty(chartTypeStr))
+                try
+                {
+                    var chartType = chartTypeStr.ToLower() switch
+                    {
+                        "column" => ChartType.ClusteredColumn,
+                        "bar" => ChartType.ClusteredBar,
+                        "line" => ChartType.Line,
+                        "pie" => ChartType.Pie,
+                        "area" => ChartType.Area,
+                        "scatter" => ChartType.ScatterWithSmoothLines,
+                        "doughnut" => ChartType.Doughnut,
+                        "bubble" => ChartType.Bubble,
+                        _ => chart.Type
+                    };
+                    chart.Type = chartType;
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException($"Failed to change chart type: {ex.Message}", ex);
+                }
+
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
+            return await Task.FromResult($"Chart updated on slide {slideIndex}, shape {shapeIndex}");
+        }
+        catch (ArgumentException)
         {
-            var chartType = chartTypeStr.ToLower() switch
-            {
-                "column" => ChartType.ClusteredColumn,
-                "bar" => ChartType.ClusteredBar,
-                "line" => ChartType.Line,
-                "pie" => ChartType.Pie,
-                "area" => ChartType.Area,
-                "scatter" => ChartType.ScatterWithSmoothLines,
-                "doughnut" => ChartType.Doughnut,
-                "bubble" => ChartType.Bubble,
-                _ => chart.Type
-            };
-            chart.Type = chartType;
+            throw; // Re-throw ArgumentException as-is
         }
-
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        presentation.Save(outputPath, SaveFormat.Pptx);
-        return await Task.FromResult($"Chart updated on slide {slideIndex}, shape {shapeIndex}");
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Error editing chart: {ex.Message}", ex);
+        }
     }
 
     /// <summary>

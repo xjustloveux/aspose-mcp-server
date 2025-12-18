@@ -137,37 +137,81 @@ Usage examples:
     /// <returns>Success message</returns>
     private async Task<string> GroupShapesAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndicesArray = ArgumentHelper.GetArray(arguments, "shapeIndices");
-
-        var shapeIndices = shapeIndicesArray.Select(s => s?.GetValue<int>()).Where(s => s.HasValue)
-            .Select(s => s!.Value).OrderByDescending(s => s).ToList();
-
-        if (shapeIndices.Count < 2) throw new ArgumentException("At least 2 shapes are required for grouping");
-
-        using var presentation = new Presentation(path);
-        if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
-            throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
-
-        var slide = presentation.Slides[slideIndex];
-        var shapesToGroup = new List<IShape>();
-
-        foreach (var idx in shapeIndices)
+        try
         {
-            if (idx < 0 || idx >= slide.Shapes.Count) throw new ArgumentException($"shapeIndex {idx} is out of range");
-            shapesToGroup.Add(slide.Shapes[idx]);
-        }
+            var shapeIndicesArray = ArgumentHelper.GetArray(arguments, "shapeIndices");
 
-        // Group shapes - create a group shape and add shapes to it
-        var groupShape = slide.Shapes.AddGroupShape();
-        foreach (var shape in shapesToGroup)
+            var shapeIndices = shapeIndicesArray.Select(s => s?.GetValue<int>()).Where(s => s.HasValue)
+                .Select(s => s!.Value).OrderByDescending(s => s).ToList();
+
+            if (shapeIndices.Count < 2) throw new ArgumentException("At least 2 shapes are required for grouping");
+
+            using var presentation = new Presentation(path);
+            if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
+                throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
+
+            var slide = presentation.Slides[slideIndex];
+            var shapesToGroup = new List<(IShape shape, int originalIndex)>();
+
+            // Collect shapes with their original indices (in descending order for safe removal)
+            foreach (var idx in shapeIndices.OrderByDescending(x => x))
+            {
+                if (idx < 0 || idx >= slide.Shapes.Count)
+                    throw new ArgumentException($"shapeIndex {idx} is out of range");
+                shapesToGroup.Add((slide.Shapes[idx], idx));
+            }
+
+            // Calculate bounding box for all shapes
+            var minX = shapesToGroup.Min(s => s.shape.X);
+            var minY = shapesToGroup.Min(s => s.shape.Y);
+            var maxX = shapesToGroup.Max(s => s.shape.X + s.shape.Width);
+            var maxY = shapesToGroup.Max(s => s.shape.Y + s.shape.Height);
+            var groupWidth = maxX - minX;
+            var groupHeight = maxY - minY;
+
+            try
+            {
+                // Group shapes - create a group shape with calculated bounds and add shapes to it
+                // AddGroupShape() creates an empty group shape that we can populate
+                var groupShape = slide.Shapes.AddGroupShape();
+                groupShape.X = minX;
+                groupShape.Y = minY;
+                groupShape.Width = groupWidth;
+                groupShape.Height = groupHeight;
+
+                // Remove shapes from slide (in reverse order to maintain indices) and add to group
+                foreach (var (shape, originalIndex) in shapesToGroup)
+                {
+                    // Calculate relative position within the group
+                    var relativeX = shape.X - minX;
+                    var relativeY = shape.Y - minY;
+
+                    // Clone shape to group
+                    var clonedShape = groupShape.Shapes.AddClone(shape);
+                    clonedShape.X = relativeX;
+                    clonedShape.Y = relativeY;
+
+                    // Remove original shape from slide (using originalIndex which is already in descending order)
+                    slide.Shapes.RemoveAt(originalIndex);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Failed to group shapes: {ex.Message}", ex);
+            }
+
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
+            return await Task.FromResult($"Grouped {shapeIndices.Count} shapes on slide {slideIndex}");
+        }
+        catch (ArgumentException)
         {
-            slide.Shapes.Remove(shape);
-            groupShape.Shapes.AddClone(shape);
+            throw; // Re-throw ArgumentException as-is
         }
-
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        presentation.Save(outputPath, SaveFormat.Pptx);
-        return await Task.FromResult($"Grouped {shapeIndices.Count} shapes on slide {slideIndex}");
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Error grouping shapes: {ex.Message}", ex);
+        }
     }
 
     /// <summary>
