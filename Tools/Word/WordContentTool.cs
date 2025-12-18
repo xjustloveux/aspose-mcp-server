@@ -126,9 +126,9 @@ Usage examples:
     private async Task<string> GetContentDetailed(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var includeHeaders = ArgumentHelper.GetBool(arguments, "includeHeaders");
+        var includeHeaders = ArgumentHelper.GetBool(arguments, "includeHeaders", true);
         var includeFooters = ArgumentHelper.GetBool(arguments, "includeFooters");
-        var includeStyles = ArgumentHelper.GetBool(arguments, "includeStyles");
+        var includeStyles = ArgumentHelper.GetBool(arguments, "includeStyles", true);
         var includeTables = ArgumentHelper.GetBool(arguments, "includeTables");
         var includeImages = ArgumentHelper.GetBool(arguments, "includeImages");
 
@@ -211,8 +211,8 @@ Usage examples:
     private async Task<string> GetStatistics(JsonObject? arguments)
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        _ = ArgumentHelper.GetBool(arguments, "includeFootnotes");
-        _ = ArgumentHelper.GetBool(arguments, "includeTextboxes");
+        _ = ArgumentHelper.GetBool(arguments, "includeFootnotes", true);
+        _ = ArgumentHelper.GetBool(arguments, "includeTextboxes", true);
 
         var doc = new Document(path);
         doc.UpdateWordCount(true);

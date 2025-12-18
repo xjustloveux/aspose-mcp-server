@@ -234,7 +234,7 @@ Usage examples:
         var fontNameFarEast = ArgumentHelper.GetStringNullable(arguments, "fontNameFarEast");
         var fontSize = ArgumentHelper.GetDoubleNullable(arguments, "fontSize");
         var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
-        var clearExisting = ArgumentHelper.GetBool(arguments, "clearExisting");
+        var clearExisting = ArgumentHelper.GetBool(arguments, "clearExisting", true);
 
         var doc = new Document(path);
 
@@ -317,7 +317,7 @@ Usage examples:
         var fontNameFarEast = ArgumentHelper.GetStringNullable(arguments, "fontNameFarEast");
         var fontSize = ArgumentHelper.GetDoubleNullable(arguments, "fontSize");
         var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
-        var clearExisting = ArgumentHelper.GetBool(arguments, "clearExisting");
+        var clearExisting = ArgumentHelper.GetBool(arguments, "clearExisting", true);
 
         var doc = new Document(path);
 
@@ -398,7 +398,7 @@ Usage examples:
         var imageWidth = ArgumentHelper.GetDoubleNullable(arguments, "imageWidth");
         var imageHeight = ArgumentHelper.GetDoubleNullable(arguments, "imageHeight");
         var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
-        var removeExisting = ArgumentHelper.GetBool(arguments, "removeExisting");
+        var removeExisting = ArgumentHelper.GetBool(arguments, "removeExisting", true);
 
         if (!File.Exists(imagePath))
             throw new FileNotFoundException($"Image file not found: {imagePath}");
@@ -469,7 +469,7 @@ Usage examples:
         var imageWidth = ArgumentHelper.GetDoubleNullable(arguments, "imageWidth");
         var imageHeight = ArgumentHelper.GetDoubleNullable(arguments, "imageHeight");
         var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
-        var removeExisting = ArgumentHelper.GetBool(arguments, "removeExisting");
+        var removeExisting = ArgumentHelper.GetBool(arguments, "removeExisting", true);
 
         if (!File.Exists(imagePath))
             throw new FileNotFoundException($"Image file not found: {imagePath}");

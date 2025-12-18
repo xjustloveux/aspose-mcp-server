@@ -381,7 +381,7 @@ Usage examples:
         var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex", 0);
         var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
         var allParagraphs = ArgumentHelper.GetBool(arguments, "allParagraphs", false);
-        var includeStyle = ArgumentHelper.GetBool(arguments, "includeStyle");
+        var includeStyle = ArgumentHelper.GetBool(arguments, "includeStyle", true);
 
         var doc = new Document(path);
 

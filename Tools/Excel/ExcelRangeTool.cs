@@ -259,8 +259,8 @@ Usage examples:
                             // Check if value looks like a cell reference
                             var looksLikeCellRef = cellValue.Length >= 2 &&
                                                    char.IsLetter(cellValue[0]) &&
-                                                   ((cellValue.Length == 2 && char.IsDigit(cellValue[1])) ||
-                                                    (cellValue.Length > 2 && cellValue.Length <= 5 &&
+                                                   ((cellValue.Length is 2 && char.IsDigit(cellValue[1])) ||
+                                                    (cellValue.Length is > 2 and <= 5 &&
                                                      cellValue.Skip(1).All(char.IsLetterOrDigit) &&
                                                      cellValue.Substring(1).Any(char.IsDigit) &&
                                                      !cellValue.Contains(" ") &&

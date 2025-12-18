@@ -667,7 +667,7 @@ Usage examples:
         var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
         var textboxIndex = ArgumentHelper.GetInt(arguments, "textboxIndex");
-        var borderVisible = ArgumentHelper.GetBool(arguments, "borderVisible");
+        var borderVisible = ArgumentHelper.GetBool(arguments, "borderVisible", true);
         var borderColor = ArgumentHelper.GetString(arguments, "borderColor", "000000");
         var borderWidth = ArgumentHelper.GetDouble(arguments, "borderWidth", "borderWidth", false, 1.0);
 

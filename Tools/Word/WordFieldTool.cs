@@ -669,8 +669,8 @@ Usage examples:
     private async Task<string> GetFieldsAsync(JsonObject? arguments, string path)
     {
         var fieldTypeFilter = ArgumentHelper.GetStringNullable(arguments, "fieldType");
-        var includeCode = ArgumentHelper.GetBool(arguments, "includeCode");
-        var includeResult = ArgumentHelper.GetBool(arguments, "includeResult");
+        var includeCode = ArgumentHelper.GetBool(arguments, "includeCode", true);
+        var includeResult = ArgumentHelper.GetBool(arguments, "includeResult", true);
 
         var doc = new Document(path);
         var fields = new List<FieldInfo>();

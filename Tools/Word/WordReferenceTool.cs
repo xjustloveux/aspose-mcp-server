@@ -169,9 +169,9 @@ Usage examples:
         var position = ArgumentHelper.GetString(arguments, "position", "start");
         var title = ArgumentHelper.GetString(arguments, "title", "Table of Contents");
         var maxLevel = ArgumentHelper.GetInt(arguments, "maxLevel", 3);
-        var hyperlinks = ArgumentHelper.GetBool(arguments, "hyperlinks");
-        var pageNumbers = ArgumentHelper.GetBool(arguments, "pageNumbers");
-        var rightAlignPageNumbers = ArgumentHelper.GetBool(arguments, "rightAlignPageNumbers");
+        var hyperlinks = ArgumentHelper.GetBool(arguments, "hyperlinks", true);
+        var pageNumbers = ArgumentHelper.GetBool(arguments, "pageNumbers", true);
+        var rightAlignPageNumbers = ArgumentHelper.GetBool(arguments, "rightAlignPageNumbers", true);
 
         var doc = new Document(path);
         var builder = new DocumentBuilder(doc);

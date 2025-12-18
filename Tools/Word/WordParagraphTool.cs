@@ -819,7 +819,7 @@ Important notes for 'get' operation:
     private async Task<string> GetParagraphFormatAsync(JsonObject? arguments, string path)
     {
         var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex");
-        var includeRunDetails = ArgumentHelper.GetBool(arguments, "includeRunDetails");
+        var includeRunDetails = ArgumentHelper.GetBool(arguments, "includeRunDetails", true);
 
         var doc = new Document(path);
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
