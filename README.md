@@ -199,149 +199,149 @@ pwsh publish.ps1 -All
 ### Word 文檔處理 (24 個工具)
 
 **檔案操作 (1)**
-- `word_file` - 創建、讀取、轉換、合併、拆分、從範本創建
+- `word_file` - 創建、讀取、轉換、合併、拆分、從範本創建（5個操作：create, create_from_template, convert, merge, split）
 
 **內容編輯 (6)**
-- `word_text` - 添加、刪除、替換、搜尋、格式化文字
-- `word_paragraph` - 插入、刪除、編輯段落格式
-- `word_table` - 添加、編輯、刪除表格，插入/刪除行列，合併/拆分單元格
-- `word_image` - 添加、編輯、刪除、替換圖片，提取圖片
-- `word_shape` - 添加線條、文字框、圖表
-- `word_list` - 添加、編輯、刪除清單項目
+- `word_text` - 添加、刪除、替換、搜尋、格式化文字（8個操作：add, delete, replace, search, format, insert_at_position, delete_range, add_with_style）
+- `word_paragraph` - 插入、刪除、編輯段落格式（7個操作：insert, delete, edit, get, get_format, copy_format, merge）
+- `word_table` - 添加、編輯、刪除表格，插入/刪除行列，合併/拆分單元格（17個操作：add_table, edit_table_format, delete_table, get_tables, insert_row, delete_row, insert_column, delete_column, merge_cells, split_cell, edit_cell_format, move_table, copy_table, get_table_structure, set_table_border, set_column_width, set_row_height）
+- `word_image` - 添加、編輯、刪除、替換圖片，提取圖片（6個操作：add, edit, delete, get, replace, extract）
+- `word_shape` - 添加線條、文字框、圖表（6個操作：add_line, add_textbox, get_textboxes, edit_textbox_content, set_textbox_border, add_chart）
+- `word_list` - 添加、編輯、刪除清單項目（6個操作：add_list, add_item, delete_item, edit_item, set_format, get_format）
 
 **格式設定 (4)**
-- `word_format` - 獲取/設定 Run 格式，獲取定位點，設定段落邊框
-- `word_style` - 獲取、創建、應用樣式，從其他文檔複製樣式
-- `word_page` - 設定頁邊距、方向、大小、頁碼、刪除頁面、插入空白頁、添加分頁符
-- `word_header_footer` - 設定頁首頁尾文字、圖片、線條、定位點
+- `word_format` - 獲取/設定 Run 格式，獲取定位點，設定段落邊框（4個操作：get_run_format, set_run_format, get_tab_stops, set_paragraph_border）
+- `word_style` - 獲取、創建、應用樣式，從其他文檔複製樣式（4個操作：get_styles, create_style, apply_style, copy_styles）
+- `word_page` - 設定頁邊距、方向、大小、頁碼、刪除頁面、插入空白頁、添加分頁符（8個操作：set_margins, set_orientation, set_size, set_page_number, set_page_setup, delete_page, insert_blank_page, add_page_break）
+- `word_header_footer` - 設定頁首頁尾文字、圖片、線條、定位點（10個操作：set_header_text, set_footer_text, set_header_image, set_footer_image, set_header_line, set_footer_line, set_header_tabs, set_footer_tabs, set_header_footer, get）
 
-**高級功能 (9)**
-- `word_bookmark` - 添加、編輯、刪除、獲取書籤，跳轉到書籤
-- `word_hyperlink` - 添加、編輯、刪除、獲取超連結
-- `word_comment` - 添加、刪除、獲取註釋，回覆註釋
-- `word_field` - 插入、編輯、刪除、更新、獲取欄位
-- `word_note` - 添加、編輯、刪除腳註和尾註
-- `word_reference` - 添加目錄、更新目錄、添加索引、添加交叉引用
-- `word_properties` - 獲取、設定文檔屬性
-- `word_protection` - 保護、解除保護文檔
-- `word_revision` - 獲取、接受、拒絕修訂，比較文檔
-- `word_section` - 插入、刪除、獲取節資訊
-- `word_watermark` - 添加水印
+**高級功能 (13)**
+- `word_bookmark` - 添加、編輯、刪除、獲取書籤，跳轉到書籤（5個操作：add, edit, delete, get, goto）
+- `word_hyperlink` - 添加、編輯、刪除、獲取超連結（4個操作：add, edit, delete, get）
+- `word_comment` - 添加、刪除、獲取註釋，回覆註釋（4個操作：add, delete, get, reply）
+- `word_field` - 插入、編輯、刪除、更新、獲取欄位（11個操作：insert_field, edit_field, delete_field, update_field, update_all, get_fields, get_field_detail, add_form_field, edit_form_field, delete_form_field, get_form_fields）
+- `word_note` - 添加、編輯、刪除腳註和尾註（8個操作：add_footnote, add_endnote, delete_footnote, delete_endnote, edit_footnote, edit_endnote, get_footnotes, get_endnotes）
+- `word_reference` - 添加目錄、更新目錄、添加索引、添加交叉引用（4個操作：add_table_of_contents, update_table_of_contents, add_index, add_cross_reference）
+- `word_properties` - 獲取、設定文檔屬性（2個操作：get, set）
+- `word_protection` - 保護、解除保護文檔（2個操作：protect, unprotect）
+- `word_revision` - 獲取、接受、拒絕修訂，比較文檔（5個操作：get_revisions, accept_all, reject_all, manage, compare）
+- `word_section` - 插入、刪除、獲取節資訊（3個操作：insert, delete, get）
+- `word_watermark` - 添加水印（1個操作：add）
 - `word_mail_merge` - 郵件合併
-- `word_content` - 獲取內容、詳細內容、統計資訊、文檔資訊
+- `word_content` - 獲取內容、詳細內容、統計資訊、文檔資訊（4個操作：get_content, get_content_detailed, get_statistics, get_document_info）
 
 ### Excel 表格處理 (25 個工具)
 
 **檔案操作 (1)**
-- `excel_file_operations` - 創建、轉換、合併工作簿、拆分工作簿
+- `excel_file_operations` - 創建、轉換、合併工作簿、拆分工作簿（4個操作：create, convert, merge, split）
 
 **工作表操作 (1)**
-- `excel_sheet` - 添加、刪除、獲取、重新命名、移動、複製、隱藏工作表
+- `excel_sheet` - 添加、刪除、獲取、重新命名、移動、複製、隱藏工作表（7個操作：add, delete, get, rename, move, copy, hide）
 
 **單元格操作 (2)**
-- `excel_cell` - 寫入、編輯、獲取、清空單元格
-- `excel_range` - 寫入、編輯、獲取、清空範圍，複製、移動範圍，複製格式
+- `excel_cell` - 寫入、編輯、獲取、清空單元格（4個操作：write, edit, get, clear）
+- `excel_range` - 寫入、編輯、獲取、清空範圍，複製、移動範圍，複製格式（7個操作：write, edit, get, clear, copy, move, copy_format）
 
 **行列操作 (1)**
-- `excel_row_column` - 插入/刪除行/列，插入/刪除單元格
+- `excel_row_column` - 插入/刪除行/列，插入/刪除單元格（6個操作：insert_row, delete_row, insert_column, delete_column, insert_cells, delete_cells）
 
 **資料操作 (1)**
-- `excel_data_operations` - 排序、查找替換、批次寫入、獲取內容、統計資訊、獲取已使用範圍
+- `excel_data_operations` - 排序、查找替換、批次寫入、獲取內容、統計資訊、獲取已使用範圍（6個操作：sort, find_replace, batch_write, get_content, get_statistics, get_used_range）
 
 **格式與樣式 (2)**
-- `excel_style` - 格式化單元格、獲取格式、複製工作表格式
-- `excel_conditional_formatting` - 添加、編輯、刪除、獲取條件格式
+- `excel_style` - 格式化單元格、獲取格式、複製工作表格式（3個操作：format, get_format, copy_sheet_format）
+- `excel_conditional_formatting` - 添加、編輯、刪除、獲取條件格式（4個操作：add, edit, delete, get）
 
 **高級功能 (8)**
-- `excel_chart` - 添加、編輯、刪除、獲取圖表，更新圖表資料，設定圖表屬性
-- `excel_formula` - 添加、獲取公式，獲取公式結果，計算公式，設定/獲取陣列公式
-- `excel_pivot_table` - 添加、編輯、刪除、獲取資料透視表，添加/刪除欄位，重新整理
-- `excel_data_validation` - 添加、編輯、刪除、獲取資料驗證，設定輸入/錯誤訊息
-- `excel_image` - 添加、刪除、獲取圖片
-- `excel_hyperlink` - 添加、編輯、刪除、獲取超連結
-- `excel_comment` - 添加、編輯、刪除、獲取批註
-- `excel_named_range` - 添加、刪除、獲取命名範圍
+- `excel_chart` - 添加、編輯、刪除、獲取圖表，更新圖表資料，設定圖表屬性（6個操作：add, edit, delete, get, update_data, set_properties）
+- `excel_formula` - 添加、獲取公式，獲取公式結果，計算公式，設定/獲取陣列公式（6個操作：add, get, get_result, calculate, set_array, get_array）
+- `excel_pivot_table` - 添加、編輯、刪除、獲取資料透視表，添加/刪除欄位，重新整理（7個操作：add, edit, delete, get, add_field, delete_field, refresh）
+- `excel_data_validation` - 添加、編輯、刪除、獲取資料驗證，設定輸入/錯誤訊息（5個操作：add, edit, delete, get, set_messages）
+- `excel_image` - 添加、刪除、獲取圖片（3個操作：add, delete, get）
+- `excel_hyperlink` - 添加、編輯、刪除、獲取超連結（4個操作：add, edit, delete, get）
+- `excel_comment` - 添加、編輯、刪除、獲取批註（4個操作：add, edit, delete, get）
+- `excel_named_range` - 添加、刪除、獲取命名範圍（3個操作：add, delete, get）
 
 **保護與設定 (4)**
-- `excel_protect` - 保護、解除保護工作簿/工作表，獲取保護資訊，設定單元格鎖定
-- `excel_filter` - 應用、移除自動篩選，獲取篩選狀態
-- `excel_freeze_panes` - 凍結、解凍窗格，獲取凍結狀態
-- `excel_merge_cells` - 合併、取消合併單元格，獲取合併單元格資訊
+- `excel_protect` - 保護、解除保護工作簿/工作表，獲取保護資訊，設定單元格鎖定（4個操作：protect, unprotect, get, set_cell_locked）
+- `excel_filter` - 應用、移除自動篩選，獲取篩選狀態（3個操作：apply, remove, get_status）
+- `excel_freeze_panes` - 凍結、解凍窗格，獲取凍結狀態（3個操作：freeze, unfreeze, get）
+- `excel_merge_cells` - 合併、取消合併單元格，獲取合併單元格資訊（3個操作：merge, unmerge, get）
 
 **外觀與視圖 (3)**
-- `excel_view_settings` - 設定工作表視圖（縮放、網格線、標題、零值、背景、標籤顏色、視窗分割）
-- `excel_print_settings` - 設定列印區域、標題行、頁面設定
-- `excel_group` - 分組/取消分組行/列
+- `excel_view_settings` - 設定工作表視圖（縮放、網格線、標題、零值、背景、標籤顏色、視窗分割）（10個操作：set_zoom, set_gridlines, set_headers, set_zero_values, set_column_width, set_row_height, set_background, set_tab_color, set_all, split_window）
+- `excel_print_settings` - 設定列印區域、標題行、頁面設定（4個操作：set_print_area, set_print_titles, set_page_setup, set_all）
+- `excel_group` - 分組/取消分組行/列（4個操作：group_rows, ungroup_rows, group_columns, ungroup_columns）
 
 **屬性與工具 (2)**
-- `excel_properties` - 獲取、設定工作簿/工作表屬性
+- `excel_properties` - 獲取、設定工作簿/工作表屬性（5個操作：get_workbook_properties, set_workbook_properties, get_sheet_properties, edit_sheet_properties, get_sheet_info）
 - `excel_get_cell_address` - 單元格地址格式轉換（A1 ↔ 行列索引）
 
 ### PowerPoint 演示文稿處理 (24 個工具)
 
 **檔案操作 (1)**
-- `ppt_file_operations` - 創建、轉換、合併演示文稿、拆分演示文稿
+- `ppt_file_operations` - 創建、轉換、合併演示文稿、拆分演示文稿（4個操作：create, convert, merge, split）
 
 **投影片管理 (1)**
-- `ppt_slide` - 添加、刪除、獲取投影片資訊、移動、複製、隱藏投影片
+- `ppt_slide` - 添加、刪除、獲取投影片資訊、移動、複製、隱藏投影片（8個操作：add, delete, get_info, move, duplicate, hide, clear, edit）
 
 **內容編輯 (5)**
-- `ppt_text` - 添加、編輯、替換文字
-- `ppt_image` - 添加、編輯、刪除圖片
-- `ppt_table` - 添加、編輯、刪除表格，插入/刪除行列
-- `ppt_chart` - 添加、編輯、刪除、獲取圖表，更新圖表資料
-- `ppt_shape` - 添加、編輯、刪除、獲取形狀，設定形狀格式
+- `ppt_text` - 添加、編輯、替換文字（3個操作：add, edit, replace）
+- `ppt_image` - 添加、編輯、刪除圖片（2個操作：add, edit）
+- `ppt_table` - 添加、編輯、刪除表格，插入/刪除行列（9個操作：add, edit, delete, get_content, insert_row, insert_column, delete_row, delete_column, edit_cell）
+- `ppt_chart` - 添加、編輯、刪除、獲取圖表，更新圖表資料（5個操作：add, edit, delete, get_data, update_data）
+- `ppt_shape` - 添加、編輯、刪除、獲取形狀，設定形狀格式（4個操作：edit, delete, get, get_details）
 
 **格式設定 (4)**
 - `ppt_text_format` - 批次格式化文字
-- `ppt_shape_format` - 設定形狀位置、尺寸、旋轉、填充、線條
-- `ppt_background` - 設定投影片背景（顏色/圖片）
-- `ppt_header_footer` - 設定頁眉頁尾、頁碼、日期
+- `ppt_shape_format` - 設定形狀位置、尺寸、旋轉、填充、線條（2個操作：set, get）
+- `ppt_background` - 設定投影片背景（顏色/圖片）（2個操作：set, get）
+- `ppt_header_footer` - 設定頁眉頁尾、頁碼、日期（4個操作：set_header, set_footer, batch_set, set_slide_numbering）
 
 **高級功能 (8)**
-- `ppt_animation` - 添加、編輯、刪除動畫
-- `ppt_transition` - 設定、刪除、獲取轉場效果
-- `ppt_hyperlink` - 添加、編輯、刪除、獲取超連結
-- `ppt_media` - 添加、刪除音訊/影片，設定播放設定
-- `ppt_smart_art` - 添加、管理 SmartArt 節點
-- `ppt_section` - 添加、重新命名、刪除章節
-- `ppt_notes` - 添加、編輯、獲取、清空講者備註
-- `ppt_layout` - 設定投影片版面配置，批次應用版面配置
+- `ppt_animation` - 添加、編輯、刪除動畫（3個操作：add, edit, delete）
+- `ppt_transition` - 設定、刪除、獲取轉場效果（3個操作：set, get, delete）
+- `ppt_hyperlink` - 添加、編輯、刪除、獲取超連結（4個操作：add, edit, delete, get）
+- `ppt_media` - 添加、刪除音訊/影片，設定播放設定（5個操作：add_audio, delete_audio, add_video, delete_video, set_playback）
+- `ppt_smart_art` - 添加、管理 SmartArt 節點（2個操作：add, manage_nodes）
+- `ppt_section` - 添加、重新命名、刪除章節（4個操作：add, rename, delete, get）
+- `ppt_notes` - 添加、編輯、獲取、清空講者備註（4個操作：add, edit, get, clear）
+- `ppt_layout` - 設定投影片版面配置，批次應用版面配置（6個操作：set, get_layouts, get_masters, apply_master, apply_layout_range, apply_theme）
 
 **操作與設定 (5)**
-- `ppt_shape_operations` - 對齊形狀、調整順序、組合/取消組合、翻轉形狀、複製形狀
-- `ppt_image_operations` - 替換圖片、提取圖片、匯出投影片為圖片
-- `ppt_data_operations` - 批次替換文字、批次設定頁眉頁尾
-- `ppt_slide_settings` - 設定投影片大小、方向、編號
-- `ppt_properties` - 獲取、設定文檔屬性
+- `ppt_shape_operations` - 對齊形狀、調整順序、組合/取消組合、翻轉形狀、複製形狀（6個操作：group, ungroup, copy, reorder, align, flip）
+- `ppt_image_operations` - 替換圖片、提取圖片、匯出投影片為圖片（3個操作：export_slides, extract_images, replace_with_compression）
+- `ppt_data_operations` - 批次替換文字、批次設定頁眉頁尾（3個操作：get_statistics, get_content, get_slide_details）
+- `ppt_slide_settings` - 設定投影片大小、方向、編號（2個操作：set_size, set_orientation）
+- `ppt_properties` - 獲取、設定文檔屬性（2個操作：get, set）
 
 ### PDF 檔案處理 (15 個工具)
 
 **檔案操作 (1)**
-- `pdf_file` - 創建、合併、拆分、壓縮、加密PDF
+- `pdf_file` - 創建、合併、拆分、壓縮、加密PDF（5個操作：create, merge, split, compress, encrypt）
 
 **內容添加 (5)**
-- `pdf_text` - 添加、編輯文字，提取文字
-- `pdf_image` - 添加、編輯、刪除圖片，提取圖片
-- `pdf_table` - 添加、編輯表格
+- `pdf_text` - 添加、編輯文字，提取文字（3個操作：add, edit, extract）
+- `pdf_image` - 添加、編輯、刪除圖片，提取圖片（5個操作：add, delete, edit, extract, get）
+- `pdf_table` - 添加、編輯表格（2個操作：add, edit）
 - `pdf_watermark` - 添加水印
-- `pdf_page` - 添加、刪除頁面，旋轉頁面，獲取頁面資訊
+- `pdf_page` - 添加、刪除頁面，旋轉頁面，獲取頁面資訊（5個操作：add, delete, rotate, get_details, get_info）
 
 **書籤與註釋 (2)**
-- `pdf_bookmark` - 添加、編輯、刪除、獲取書籤
-- `pdf_annotation` - 添加、編輯、刪除、獲取註釋
+- `pdf_bookmark` - 添加、編輯、刪除、獲取書籤（4個操作：add, delete, edit, get）
+- `pdf_annotation` - 添加、編輯、刪除、獲取註釋（4個操作：add, delete, edit, get）
 
 **連結與表單 (2)**
-- `pdf_link` - 添加、編輯、刪除、獲取超連結
-- `pdf_form_field` - 添加、編輯、刪除、獲取表單欄位
+- `pdf_link` - 添加、編輯、刪除、獲取超連結（4個操作：add, delete, edit, get）
+- `pdf_form_field` - 添加、編輯、刪除、獲取表單欄位（4個操作：add, delete, edit, get）
 
 **附件與簽名 (2)**
-- `pdf_attachment` - 添加、刪除、獲取附件
-- `pdf_signature` - 簽名、刪除簽名、獲取簽名
+- `pdf_attachment` - 添加、刪除、獲取附件（3個操作：add, delete, get）
+- `pdf_signature` - 簽名、刪除簽名、獲取簽名（3個操作：sign, delete, get）
 
 **讀取與屬性 (3)**
-- `pdf_info` - 獲取PDF內容和統計資訊
-- `pdf_properties` - 獲取、設定文檔屬性
+- `pdf_info` - 獲取PDF內容和統計資訊（2個操作：get_content, get_statistics）
+- `pdf_properties` - 獲取、設定文檔屬性（2個操作：get, set）
 - `pdf_redact` - 編輯（塗黑）文字或區域
 
 ## 🎉 主要特性

@@ -149,32 +149,53 @@ Usage examples:
     {
         var path = ArgumentHelper.GetAndValidatePath(arguments);
 
-        using var document = new Document(path);
-        var sb = new StringBuilder();
-        sb.AppendLine("=== PDF Attachments ===");
-        sb.AppendLine();
-
-        var embeddedFiles = document.EmbeddedFiles;
-        if (embeddedFiles.Count == 0)
+        try
         {
-            sb.AppendLine("No attachments found.");
+            using var document = new Document(path);
+            var sb = new StringBuilder();
+            sb.AppendLine("=== PDF Attachments ===");
+            sb.AppendLine();
+
+            var embeddedFiles = document.EmbeddedFiles;
+            if (embeddedFiles == null || embeddedFiles.Count == 0)
+            {
+                sb.AppendLine("No attachments found.");
+                return await Task.FromResult(sb.ToString());
+            }
+
+            sb.AppendLine($"Total Attachments: {embeddedFiles.Count}");
+            sb.AppendLine();
+
+            for (var i = 1; i <= embeddedFiles.Count; i++)
+                try
+                {
+                    var file = embeddedFiles[i];
+                    sb.AppendLine($"[{i}] Name: {file.Name ?? "(unnamed)"}");
+                    if (!string.IsNullOrEmpty(file.Description))
+                        sb.AppendLine($"    Description: {file.Description}");
+                    try
+                    {
+                        if (file.Contents != null)
+                            sb.AppendLine($"    Size: {file.Contents.Length} bytes");
+                    }
+                    catch
+                    {
+                        sb.AppendLine("    Size: (unavailable)");
+                    }
+
+                    sb.AppendLine();
+                }
+                catch (Exception ex)
+                {
+                    sb.AppendLine($"[{i}] Error reading attachment: {ex.Message}");
+                    sb.AppendLine();
+                }
+
             return await Task.FromResult(sb.ToString());
         }
-
-        sb.AppendLine($"Total Attachments: {embeddedFiles.Count}");
-        sb.AppendLine();
-
-        for (var i = 0; i < embeddedFiles.Count; i++)
+        catch (Exception ex)
         {
-            var file = embeddedFiles[i];
-            sb.AppendLine($"[{i}] Name: {file.Name}");
-            if (!string.IsNullOrEmpty(file.Description))
-                sb.AppendLine($"    Description: {file.Description}");
-            if (file.Contents != null)
-                sb.AppendLine($"    Size: {file.Contents.Length} bytes");
-            sb.AppendLine();
+            throw new ArgumentException($"Failed to get attachments: {ex.Message}");
         }
-
-        return await Task.FromResult(sb.ToString());
     }
 }

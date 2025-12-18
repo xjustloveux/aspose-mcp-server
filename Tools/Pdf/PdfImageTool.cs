@@ -1,4 +1,5 @@
 ﻿using System.Drawing.Imaging;
+using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using AsposeMcpServer.Core;
@@ -10,13 +11,15 @@ namespace AsposeMcpServer.Tools.Pdf;
 /// </summary>
 public class PdfImageTool : IAsposeTool
 {
-    public string Description => @"Manage images in PDF documents. Supports 4 operations: add, delete, edit, extract.
+    public string Description =>
+        @"Manage images in PDF documents. Supports 5 operations: add, delete, edit, extract, get.
 
 Usage examples:
 - Add image: pdf_image(operation='add', path='doc.pdf', pageIndex=1, imagePath='image.png', x=100, y=100)
-- Delete image: pdf_image(operation='delete', path='doc.pdf', pageIndex=1, imageIndex=0)
-- Edit image: pdf_image(operation='edit', path='doc.pdf', pageIndex=1, imageIndex=0, x=200, y=200)
-- Extract image: pdf_image(operation='extract', path='doc.pdf', pageIndex=1, imageIndex=0, outputPath='image.png')";
+- Delete image: pdf_image(operation='delete', path='doc.pdf', pageIndex=1, imageIndex=1)
+- Edit image: pdf_image(operation='edit', path='doc.pdf', pageIndex=1, imageIndex=1, x=200, y=200)
+- Extract image: pdf_image(operation='extract', path='doc.pdf', pageIndex=1, imageIndex=1, outputPath='image.png')
+- Get images: pdf_image(operation='get', path='doc.pdf', pageIndex=1)";
 
     public object InputSchema => new
     {
@@ -30,8 +33,9 @@ Usage examples:
 - 'add': Add an image (required params: path, pageIndex, imagePath)
 - 'delete': Delete an image (required params: path, pageIndex, imageIndex)
 - 'edit': Edit image position/size (required params: path, pageIndex, imageIndex)
-- 'extract': Extract an image (required params: path, pageIndex, imageIndex, outputPath)",
-                @enum = new[] { "add", "delete", "edit", "extract" }
+- 'extract': Extract an image (required params: path, pageIndex, imageIndex, outputPath)
+- 'get': Get all images on a page (required params: path, pageIndex)",
+                @enum = new[] { "add", "delete", "edit", "extract", "get" }
             },
             path = new
             {
@@ -47,7 +51,7 @@ Usage examples:
             pageIndex = new
             {
                 type = "number",
-                description = "Page index (1-based, required for add, delete, edit, extract)"
+                description = "Page index (1-based, required for add, delete, edit, extract, get)"
             },
             imagePath = new
             {
@@ -57,7 +61,7 @@ Usage examples:
             imageIndex = new
             {
                 type = "number",
-                description = "Image index (0-based, required for delete, edit, extract)"
+                description = "Image index (1-based, required for delete, edit, extract)"
             },
             x = new
             {
@@ -103,6 +107,7 @@ Usage examples:
             "delete" => await DeleteImage(arguments),
             "edit" => await EditImage(arguments),
             "extract" => await ExtractImages(arguments),
+            "get" => await GetImages(arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -165,8 +170,8 @@ Usage examples:
         var images = page.Resources?.Images;
         if (images == null)
             throw new ArgumentException("No images found on the page");
-        if (imageIndex < 0 || imageIndex >= images.Count)
-            throw new ArgumentException($"imageIndex must be between 0 and {images.Count - 1}");
+        if (imageIndex < 1 || imageIndex > images.Count)
+            throw new ArgumentException($"imageIndex must be between 1 and {images.Count}");
 
         images.Delete(imageIndex);
         document.Save(outputPath);
@@ -206,8 +211,8 @@ Usage examples:
         var images = page.Resources?.Images;
         if (images == null)
             throw new ArgumentException("No images found on the page");
-        if (imageIndex < 0 || imageIndex >= images.Count)
-            throw new ArgumentException($"imageIndex must be between 0 and {images.Count - 1}");
+        if (imageIndex < 1 || imageIndex > images.Count)
+            throw new ArgumentException($"imageIndex must be between 1 and {images.Count}");
 
         images.Delete(imageIndex);
         var newX = x ?? 100;
@@ -253,8 +258,8 @@ Usage examples:
 
         if (imageIndex.HasValue)
         {
-            if (imageIndex.Value < 0 || imageIndex.Value >= images.Count)
-                throw new ArgumentException($"imageIndex must be between 0 and {images.Count - 1}");
+            if (imageIndex.Value < 1 || imageIndex.Value > images.Count)
+                throw new ArgumentException($"imageIndex must be between 1 and {images.Count}");
 
             var image = images[imageIndex.Value];
             var fileName = outputPath ?? Path.Combine(targetDir, $"page_{pageIndex}_image_{imageIndex.Value}.png");
@@ -266,7 +271,7 @@ Usage examples:
         }
 
         var count = 0;
-        for (var i = 0; i < images.Count; i++)
+        for (var i = 1; i <= images.Count; i++)
         {
             var image = images[i];
             var fileName = Path.Combine(targetDir, $"page_{pageIndex}_image_{i}.png");
@@ -278,5 +283,63 @@ Usage examples:
         }
 
         return await Task.FromResult($"Extracted {count} image(s) from page {pageIndex} to: {targetDir}");
+    }
+
+    /// <summary>
+    ///     Gets all images from a PDF page
+    /// </summary>
+    /// <param name="arguments">JSON arguments containing path, pageIndex</param>
+    /// <returns>Formatted string with all images</returns>
+    private async Task<string> GetImages(JsonObject? arguments)
+    {
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
+
+        SecurityHelper.ValidateFilePath(path);
+
+        using var document = new Document(path);
+        if (pageIndex < 1 || pageIndex > document.Pages.Count)
+            throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
+
+        var page = document.Pages[pageIndex];
+        var images = page.Resources?.Images;
+
+        var sb = new StringBuilder();
+        sb.AppendLine("=== PDF Images ===");
+        sb.AppendLine();
+
+        if (images == null || images.Count == 0)
+        {
+            sb.AppendLine($"No images found on page {pageIndex}.");
+            return await Task.FromResult(sb.ToString());
+        }
+
+        sb.AppendLine($"Page {pageIndex} Images ({images.Count}):");
+        sb.AppendLine();
+
+        for (var i = 1; i <= images.Count; i++)
+            try
+            {
+                var image = images[i];
+                sb.AppendLine($"[{i}] Image Index: {i}");
+                try
+                {
+                    if (image.Width > 0 && image.Height > 0)
+                        sb.AppendLine($"    Size: {image.Width} x {image.Height} pixels");
+                }
+                catch
+                {
+                    sb.AppendLine("    Size: (unavailable)");
+                }
+
+                sb.AppendLine();
+            }
+            catch (Exception ex)
+            {
+                sb.AppendLine($"[{i}] Error reading image: {ex.Message}");
+                sb.AppendLine();
+            }
+
+        return await Task.FromResult(sb.ToString());
     }
 }

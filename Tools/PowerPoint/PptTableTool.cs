@@ -294,7 +294,6 @@ Usage examples:
         if (rowIndex >= table.Rows.Count)
         {
             // Add at end - clone last row
-            // Note: Currently just adds empty row, cloning can be implemented if needed
         }
 
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);

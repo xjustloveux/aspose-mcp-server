@@ -361,9 +361,6 @@ Usage examples:
             return await Task.FromResult(result.ToString());
         }
 
-        // Return all conditional formattings with detailed information
-        // Note: Range filtering is not supported by Aspose.Cells API directly
-        // All conditional formatting rules are returned regardless of the range parameter
         if (!string.IsNullOrEmpty(range))
             result.AppendLine($"Note: Range '{range}' specified, but all conditional formatting rules are returned.\n");
 
@@ -374,7 +371,6 @@ Usage examples:
             var fcs = conditionalFormattings[i];
             result.AppendLine($"[Conditional formatting {i}]");
 
-            // Note: Range information is not directly accessible via FormatConditionCollection API
             // The range was specified when the conditional formatting was added
             result.AppendLine($"Number of conditions: {fcs.Count}");
 

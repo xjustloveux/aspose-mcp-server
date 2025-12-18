@@ -57,7 +57,7 @@ Usage examples:
             bookmarkIndex = new
             {
                 type = "number",
-                description = "Bookmark index (0-based, required for delete, edit)"
+                description = "Bookmark index (1-based, required for delete, edit, optional for get)"
             }
         },
         required = new[] { "operation", "path" }
@@ -128,8 +128,8 @@ Usage examples:
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         using var document = new Document(path);
-        if (bookmarkIndex < 0 || bookmarkIndex >= document.Outlines.Count)
-            throw new ArgumentException($"bookmarkIndex must be between 0 and {document.Outlines.Count - 1}");
+        if (bookmarkIndex < 1 || bookmarkIndex > document.Outlines.Count)
+            throw new ArgumentException($"bookmarkIndex must be between 1 and {document.Outlines.Count}");
 
         var bookmark = document.Outlines[bookmarkIndex];
         var title = bookmark.Title;
@@ -156,8 +156,8 @@ Usage examples:
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         using var document = new Document(path);
-        if (bookmarkIndex < 0 || bookmarkIndex >= document.Outlines.Count)
-            throw new ArgumentException($"bookmarkIndex must be between 0 and {document.Outlines.Count - 1}");
+        if (bookmarkIndex < 1 || bookmarkIndex > document.Outlines.Count)
+            throw new ArgumentException($"bookmarkIndex must be between 1 and {document.Outlines.Count}");
 
         var bookmark = document.Outlines[bookmarkIndex];
 
@@ -198,7 +198,7 @@ Usage examples:
         sb.AppendLine($"Total Bookmarks: {document.Outlines.Count}");
         sb.AppendLine();
 
-        for (var i = 0; i < document.Outlines.Count; i++)
+        for (var i = 1; i <= document.Outlines.Count; i++)
         {
             var bookmark = document.Outlines[i];
             sb.AppendLine($"[{i}] Title: {bookmark.Title}");

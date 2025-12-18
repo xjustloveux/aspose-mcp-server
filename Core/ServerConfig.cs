@@ -8,28 +8,28 @@ public class ServerConfig
     /// <summary>
     ///     Enable Word document tools
     /// </summary>
-    public bool EnableWord { get; set; } = true;
+    public bool EnableWord { get; private set; } = true;
 
     /// <summary>
     ///     Enable Excel spreadsheet tools
     /// </summary>
-    public bool EnableExcel { get; set; } = true;
+    public bool EnableExcel { get; private set; } = true;
 
     /// <summary>
     ///     Enable PowerPoint presentation tools
     /// </summary>
-    public bool EnablePowerPoint { get; set; } = true;
+    public bool EnablePowerPoint { get; private set; } = true;
 
     /// <summary>
     ///     Enable PDF document tools
     /// </summary>
-    public bool EnablePdf { get; set; } = true;
+    public bool EnablePdf { get; private set; } = true;
 
     /// <summary>
     ///     License file path or filename. Can be absolute path, relative path, or just filename.
     ///     If not specified, will search for common license file names.
     /// </summary>
-    public string? LicensePath { get; set; }
+    public string? LicensePath { get; private set; }
 
     /// <summary>
     ///     Loads configuration from command line arguments

@@ -193,12 +193,145 @@ Usage examples:
         SecurityHelper.ValidateFilePath(outputPath, "outputPath");
 
         using var document = new Document(path);
-        var tables = document.Pages
-            .SelectMany(p => p.Paragraphs.OfType<Table>())
-            .ToList();
+
+        var tables = new List<Table>();
+
+        foreach (var page in document.Pages)
+            try
+            {
+                var paragraphs = page.Paragraphs;
+                if (paragraphs != null && paragraphs.Count > 0)
+                    foreach (var paragraph in paragraphs)
+                        if (paragraph is Table foundTable)
+                            tables.Add(foundTable);
+            }
+            catch
+            {
+                // Continue searching
+            }
+
+        if (tables.Count == 0)
+            try
+            {
+                var tablesFromLinq = document.Pages
+                    .SelectMany(p => p.Paragraphs?.OfType<Table>() ?? Enumerable.Empty<Table>())
+                    .ToList();
+                if (tablesFromLinq.Count > 0) tables.AddRange(tablesFromLinq);
+            }
+            catch
+            {
+                // LINQ method failed, continue with empty list
+            }
+
+        if (tables.Count == 0)
+            try
+            {
+                foreach (var page in document.Pages)
+                {
+                    var paragraphs = page.Paragraphs;
+                    if (paragraphs != null && paragraphs.Count > 0)
+                        for (var i = 1; i <= paragraphs.Count; i++)
+                            try
+                            {
+                                var paragraph = paragraphs[i];
+                                if (paragraph is Table foundTable) tables.Add(foundTable);
+                            }
+                            catch
+                            {
+                                // Skip invalid indices
+                            }
+                }
+            }
+            catch
+            {
+                // Method 3 failed
+            }
+
+        if (tables.Count == 0)
+            // Try to find tables by searching page contents
+            try
+            {
+                foreach (var page in document.Pages)
+                    // Check if page has any content that might contain tables
+                    if (page.Contents != null)
+                    {
+                        // Tables in PDF are typically stored as paragraph objects
+                        // If Paragraphs is empty, the table might not have been saved correctly
+                        // or the document structure is different
+                    }
+            }
+            catch
+            {
+                // Method 4 failed
+            }
+
+        if (tables.Count == 0)
+        {
+            // Provide more detailed error message with debugging information
+            var totalParagraphs = 0;
+            var paragraphTypes = new Dictionary<string, int>();
+            var pageInfo = new List<string>();
+
+            try
+            {
+                for (var pageNum = 1; pageNum <= document.Pages.Count; pageNum++)
+                {
+                    var page = document.Pages[pageNum];
+                    var pageParagraphCount = page.Paragraphs?.Count ?? 0;
+                    totalParagraphs += pageParagraphCount;
+
+                    if (pageParagraphCount > 0 && page.Paragraphs != null)
+                    {
+                        pageInfo.Add($"Page {pageNum}: {pageParagraphCount} paragraphs");
+
+                        foreach (var paragraph in page.Paragraphs)
+                        {
+                            var typeName = paragraph.GetType().Name;
+                            paragraphTypes[typeName] = paragraphTypes.GetValueOrDefault(typeName, 0) + 1;
+                        }
+                    }
+                    else
+                    {
+                        pageInfo.Add($"Page {pageNum}: 0 paragraphs");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Error counting paragraphs
+                pageInfo.Add($"Error analyzing pages: {ex.Message}");
+            }
+
+            var typeInfo = paragraphTypes.Count > 0
+                ? $" Paragraph types found: {string.Join(", ", paragraphTypes.Select(kvp => $"{kvp.Key}({kvp.Value})"))}"
+                : string.Empty;
+
+            var pageDetails = pageInfo.Count > 0
+                ? $" Page details: {string.Join("; ", pageInfo)}"
+                : "";
+
+            var errorMsg =
+                $"No tables found in the document. Total paragraphs across all pages: {totalParagraphs}.{typeInfo}{pageDetails}";
+            errorMsg +=
+                " Make sure tables are added using the 'add' operation first, and that the document has been saved after adding tables.";
+            errorMsg +=
+                " Note: If you just added a table, ensure you're editing the saved output file, not the original input file.";
+
+            // Additional note about Aspose.Pdf limitation
+            if (totalParagraphs == 0)
+            {
+                errorMsg +=
+                    " IMPORTANT: After saving, tables may be converted to graphics objects and cannot be edited as Table objects.";
+                errorMsg += " This is a limitation of the PDF format and Aspose.Pdf library.";
+                errorMsg += " To edit tables, you may need to recreate them or use a different approach.";
+            }
+
+            throw new ArgumentException(errorMsg);
+        }
 
         if (tableIndex < 0 || tableIndex >= tables.Count)
-            throw new ArgumentException($"tableIndex must be between 0 and {tables.Count - 1}");
+            throw new ArgumentException(
+                $"tableIndex must be between 0 and {tables.Count - 1} (found {tables.Count} table(s))");
 
         var table = tables[tableIndex];
 

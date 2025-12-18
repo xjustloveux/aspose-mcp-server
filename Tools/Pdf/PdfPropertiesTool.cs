@@ -142,12 +142,104 @@ Usage examples:
         using var document = new Document(path);
         var metadata = document.Metadata;
 
-        if (!string.IsNullOrEmpty(title)) metadata["Title"] = title;
-        if (!string.IsNullOrEmpty(author)) metadata["Author"] = author;
-        if (!string.IsNullOrEmpty(subject)) metadata["Subject"] = subject;
-        if (!string.IsNullOrEmpty(keywords)) metadata["Keywords"] = keywords;
-        if (!string.IsNullOrEmpty(creator)) metadata["Creator"] = creator;
-        if (!string.IsNullOrEmpty(producer)) metadata["Producer"] = producer;
+        try
+        {
+            // Set standard PDF metadata properties
+            // Aspose.Pdf Metadata dictionary may have restrictions on which keys can be set
+            // Try using the indexer directly, which should work for standard PDF metadata keys
+            if (!string.IsNullOrEmpty(title))
+                try
+                {
+                    // Try direct assignment
+                    metadata["Title"] = title;
+                }
+                catch (Exception ex) when (ex.Message.Contains("not valid") || ex.Message.Contains("Key"))
+                {
+                    // If "Key is not valid" error, the metadata dictionary may not support this key
+                    // This could be a limitation of the PDF file or Aspose.Pdf API
+                    throw new ArgumentException(
+                        $"Cannot set Title property: The PDF metadata dictionary does not support setting this key. This may be a limitation of the PDF file format or the document's security settings. Original error: {ex.Message}");
+                }
+                catch (Exception ex)
+                {
+                    throw new ArgumentException($"Failed to set Title property: {ex.Message}");
+                }
+
+            if (!string.IsNullOrEmpty(author))
+                try
+                {
+                    metadata["Author"] = author;
+                }
+                catch (Exception ex) when (ex.Message.Contains("not valid") || ex.Message.Contains("Key"))
+                {
+                    throw new ArgumentException(
+                        $"Cannot set Author property: The PDF metadata dictionary does not support setting this key. This may be a limitation of the PDF file format or the document's security settings. Original error: {ex.Message}");
+                }
+                catch (Exception ex)
+                {
+                    throw new ArgumentException($"Failed to set Author property: {ex.Message}");
+                }
+
+            if (!string.IsNullOrEmpty(subject))
+                try
+                {
+                    metadata["Subject"] = subject;
+                }
+                catch (Exception ex) when (ex.Message.Contains("not valid") || ex.Message.Contains("Key"))
+                {
+                    throw new ArgumentException(
+                        $"Cannot set Subject property: The PDF metadata dictionary does not support setting this key. Original error: {ex.Message}");
+                }
+                catch (Exception ex)
+                {
+                    throw new ArgumentException($"Failed to set Subject property: {ex.Message}");
+                }
+
+            if (!string.IsNullOrEmpty(keywords))
+                try
+                {
+                    metadata["Keywords"] = keywords;
+                }
+                catch (Exception ex) when (ex.Message.Contains("not valid") || ex.Message.Contains("Key"))
+                {
+                    throw new ArgumentException(
+                        $"Cannot set Keywords property: The PDF metadata dictionary does not support setting this key. Original error: {ex.Message}");
+                }
+                catch (Exception ex)
+                {
+                    throw new ArgumentException($"Failed to set Keywords property: {ex.Message}");
+                }
+
+            if (!string.IsNullOrEmpty(creator))
+                try
+                {
+                    metadata["Creator"] = creator;
+                }
+                catch
+                {
+                    // Creator may be read-only, skip if it fails
+                }
+
+            if (!string.IsNullOrEmpty(producer))
+                try
+                {
+                    metadata["Producer"] = producer;
+                }
+                catch
+                {
+                    // Producer may be read-only, skip if it fails
+                }
+        }
+        catch (ArgumentException)
+        {
+            // Re-throw ArgumentException as-is
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw new ArgumentException(
+                $"Failed to set document properties: {ex.Message}. Note: Some PDF files may have restrictions on modifying metadata, or the document may be encrypted/protected.");
+        }
 
         document.Save(outputPath);
         return await Task.FromResult($"Document properties updated. Output: {outputPath}");

@@ -15,8 +15,8 @@ public class PdfAnnotationTool : IAsposeTool
 
 Usage examples:
 - Add annotation: pdf_annotation(operation='add', path='doc.pdf', pageIndex=1, text='Note', x=100, y=100)
-- Delete annotation: pdf_annotation(operation='delete', path='doc.pdf', pageIndex=1, annotationIndex=0)
-- Edit annotation: pdf_annotation(operation='edit', path='doc.pdf', pageIndex=1, annotationIndex=0, text='Updated Note')
+- Delete annotation: pdf_annotation(operation='delete', path='doc.pdf', pageIndex=1, annotationIndex=1)
+- Edit annotation: pdf_annotation(operation='edit', path='doc.pdf', pageIndex=1, annotationIndex=1, text='Updated Note')
 - Get annotations: pdf_annotation(operation='get', path='doc.pdf', pageIndex=1)";
 
     public object InputSchema => new
@@ -52,7 +52,7 @@ Usage examples:
             annotationIndex = new
             {
                 type = "number",
-                description = "Annotation index (0-based, required for delete, edit)"
+                description = "Annotation index (1-based, required for delete, edit)"
             },
             text = new
             {
@@ -148,8 +148,8 @@ Usage examples:
             throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
 
         var page = document.Pages[pageIndex];
-        if (annotationIndex < 0 || annotationIndex >= page.Annotations.Count)
-            throw new ArgumentException($"annotationIndex must be between 0 and {page.Annotations.Count - 1}");
+        if (annotationIndex < 1 || annotationIndex > page.Annotations.Count)
+            throw new ArgumentException($"annotationIndex must be between 1 and {page.Annotations.Count}");
 
         page.Annotations.Delete(annotationIndex);
         document.Save(outputPath);
@@ -183,15 +183,27 @@ Usage examples:
             throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
 
         var page = document.Pages[pageIndex];
-        if (annotationIndex < 0 || annotationIndex >= page.Annotations.Count)
-            throw new ArgumentException($"annotationIndex must be between 0 and {page.Annotations.Count - 1}");
+        if (annotationIndex < 1 || annotationIndex > page.Annotations.Count)
+            throw new ArgumentException($"annotationIndex must be between 1 and {page.Annotations.Count}");
 
-        var annotation = page.Annotations[annotationIndex];
-        if (annotation is TextAnnotation textAnnotation)
+        try
         {
-            textAnnotation.Contents = text;
-            if (x.HasValue && y.HasValue)
-                textAnnotation.Rect = new Rectangle(x.Value, y.Value, x.Value + 200, y.Value + 50);
+            var annotation = page.Annotations[annotationIndex];
+            if (annotation is TextAnnotation textAnnotation)
+            {
+                textAnnotation.Contents = text;
+                if (x.HasValue && y.HasValue)
+                    textAnnotation.Rect = new Rectangle(x.Value, y.Value, x.Value + 200, y.Value + 50);
+            }
+            else
+            {
+                throw new ArgumentException(
+                    $"Annotation at index {annotationIndex} is not a TextAnnotation and cannot be edited");
+            }
+        }
+        catch (Exception ex)
+        {
+            throw new ArgumentException($"Failed to edit annotation: {ex.Message}");
         }
 
         document.Save(outputPath);
@@ -211,53 +223,78 @@ Usage examples:
 
         SecurityHelper.ValidateFilePath(path);
 
-        using var document = new Document(path);
-        var sb = new StringBuilder();
-        sb.AppendLine("=== PDF Annotations ===");
-        sb.AppendLine();
-
-        if (pageIndex.HasValue)
+        try
         {
-            if (pageIndex.Value < 1 || pageIndex.Value > document.Pages.Count)
-                throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
+            using var document = new Document(path);
+            var sb = new StringBuilder();
+            sb.AppendLine("=== PDF Annotations ===");
+            sb.AppendLine();
 
-            var page = document.Pages[pageIndex.Value];
-            sb.AppendLine($"Page {pageIndex.Value} Annotations ({page.Annotations.Count}):");
-            for (var i = 0; i < page.Annotations.Count; i++)
+            if (pageIndex.HasValue)
             {
-                var annotation = page.Annotations[i];
-                sb.AppendLine($"  [{i}] Type: {annotation.GetType().Name}");
-                if (annotation is TextAnnotation textAnnotation)
-                    sb.AppendLine($"      Text: {textAnnotation.Contents}");
-                sb.AppendLine($"      Position: ({annotation.Rect.LLX}, {annotation.Rect.LLY})");
-                sb.AppendLine();
-            }
-        }
-        else
-        {
-            var totalCount = 0;
-            for (var i = 1; i <= document.Pages.Count; i++)
-            {
-                var page = document.Pages[i];
-                if (page.Annotations.Count > 0)
-                {
-                    sb.AppendLine($"Page {i} ({page.Annotations.Count} annotations):");
-                    for (var j = 0; j < page.Annotations.Count; j++)
+                if (pageIndex.Value < 1 || pageIndex.Value > document.Pages.Count)
+                    throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
+
+                var page = document.Pages[pageIndex.Value];
+                sb.AppendLine($"Page {pageIndex.Value} Annotations ({page.Annotations.Count}):");
+                for (var i = 1; i <= page.Annotations.Count; i++)
+                    try
                     {
-                        var annotation = page.Annotations[j];
-                        sb.AppendLine($"  [{j}] Type: {annotation.GetType().Name}");
+                        var annotation = page.Annotations[i];
+                        sb.AppendLine($"  [{i}] Type: {annotation.GetType().Name}");
                         if (annotation is TextAnnotation textAnnotation)
-                            sb.AppendLine($"      Text: {textAnnotation.Contents}");
+                            sb.AppendLine($"      Text: {textAnnotation.Contents ?? "(empty)"}");
+                        if (annotation.Rect != null)
+                            sb.AppendLine($"      Position: ({annotation.Rect.LLX}, {annotation.Rect.LLY})");
+                        sb.AppendLine();
+                    }
+                    catch (Exception ex)
+                    {
+                        sb.AppendLine($"  [{i}] Error reading annotation: {ex.Message}");
+                        sb.AppendLine();
+                    }
+            }
+            else
+            {
+                var totalCount = 0;
+                for (var i = 1; i <= document.Pages.Count; i++)
+                    try
+                    {
+                        var page = document.Pages[i];
+                        if (page.Annotations.Count > 0)
+                        {
+                            sb.AppendLine($"Page {i} ({page.Annotations.Count} annotations):");
+                            for (var j = 1; j <= page.Annotations.Count; j++)
+                                try
+                                {
+                                    var annotation = page.Annotations[j];
+                                    sb.AppendLine($"  [{j}] Type: {annotation.GetType().Name}");
+                                    if (annotation is TextAnnotation textAnnotation)
+                                        sb.AppendLine($"      Text: {textAnnotation.Contents ?? "(empty)"}");
+                                }
+                                catch (Exception ex)
+                                {
+                                    sb.AppendLine($"  [{j}] Error reading annotation: {ex.Message}");
+                                }
+
+                            sb.AppendLine();
+                            totalCount += page.Annotations.Count;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        sb.AppendLine($"Page {i}: Error reading annotations: {ex.Message}");
+                        sb.AppendLine();
                     }
 
-                    sb.AppendLine();
-                    totalCount += page.Annotations.Count;
-                }
+                sb.AppendLine($"Total Annotations: {totalCount}");
             }
 
-            sb.AppendLine($"Total Annotations: {totalCount}");
+            return await Task.FromResult(sb.ToString());
         }
-
-        return await Task.FromResult(sb.ToString());
+        catch (Exception ex)
+        {
+            throw new ArgumentException($"Failed to get annotations: {ex.Message}");
+        }
     }
 }
