@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>常見問答 - Aspose MCP Server</title>
+    <meta name="description" content="Aspose MCP Server 常見問答：索引行為、授權配置、參數使用等問題解答。">
+    <meta name="keywords" content="Aspose, MCP, 常見問答, FAQ, 索引行為, 授權配置, 問題解答">
+    <link rel="canonical" href="https://xjustloveux.github.io/aspose-mcp-server/faq.html">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://xjustloveux.github.io/aspose-mcp-server/faq.html">
+    <meta property="og:title" content="常見問答 - Aspose MCP Server">
+    <meta property="og:description" content="Aspose MCP Server 常見問答：索引行為、授權配置、參數使用等問題解答。">
+    <meta property="og:site_name" content="Aspose MCP Server">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary">
+    <meta property="twitter:url" content="https://xjustloveux.github.io/aspose-mcp-server/faq.html">
+    <meta property="twitter:title" content="常見問答 - Aspose MCP Server">
+    <meta property="twitter:description" content="Aspose MCP Server 常見問答：索引行為、授權配置、參數使用等問題解答。">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        nav {
+            background: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            margin-bottom: 40px;
+        }
+        
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        .nav-menu {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            list-style: none;
+            padding: 15px 0;
+        }
+        
+        .nav-menu li {
+            margin: 0 10px;
+        }
+        
+        .nav-menu a {
+            color: #333;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            transition: background 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .nav-menu a:hover {
+            background: #f0f0f0;
+        }
+        
+        .nav-menu a.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .nav-logo {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #667eea;
+            margin-right: 30px;
+        }
+        
+        .page-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .page-header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .section {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .faq-item {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .faq-item:last-child {
+            border-bottom: none;
+        }
+        
+        .faq-question {
+            color: #764ba2;
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .faq-answer {
+            color: #666;
+            line-height: 1.8;
+        }
+        
+        .faq-answer ul {
+            margin-top: 10px;
+            padding-left: 25px;
+        }
+        
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            white-space: pre;
+        }
+        
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+            border-top: 1px solid #ddd;
+            margin-top: 40px;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <ul class="nav-menu">
+                <li><a href="index.html" class="nav-logo">🚀 Aspose MCP Server</a></li>
+                <li><a href="index.html">首頁</a></li>
+                <li><a href="features.html">功能特性</a></li>
+                <li><a href="tools.html">工具列表</a></li>
+                <li><a href="getting-started.html">快速開始</a></li>
+                <li><a href="developers.html">開發者指南</a></li>
+                <li><a href="faq.html" class="active">常見問答</a></li>
+            </ul>
+        </div>
+    </nav>
+    
+    <div class="page-header">
+        <div class="container">
+            <h1>❓ 常見問答</h1>
+            <p>常見問題解答</p>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="section">
+            <h2>🔢 索引行為相關</h2>
+            
+            <div class="faq-item">
+                <div class="faq-question">Q: 為什麼刪除操作後索引會變化？</div>
+                <div class="faq-answer">
+                    <p>當執行刪除操作（如刪除段落、表格、圖片等）後，後續元素的索引會自動調整。這是正常行為，因為索引是基於當前文檔狀態的。</p>
+                    <div class="info-box">
+                        <strong>建議</strong>：在執行刪除操作後，重新使用 <code>get</code> 操作獲取最新的索引列表。
+                    </div>
+                    <p><strong>範例：</strong></p>
+                    <div class="code-block">1. word_image(operation='get', path='doc.docx')  # 返回圖片索引: 0, 1, 2
+2. word_image(operation='delete', path='doc.docx', imageIndex=1)  # 刪除索引1的圖片
+3. word_image(operation='get', path='doc.docx')  # 現在返回: 0, 1 (原索引2變成1)</div>
+                </div>
+            </div>
+            
+            <div class="faq-item">
+                <div class="faq-question">Q: paragraphIndex 的有效範圍是什麼？</div>
+                <div class="faq-answer">
+                    <p>有效範圍：<code>0</code> 到 <code>段落總數-1</code>，或使用 <code>-1</code> 表示最後一個段落。</p>
+                    <ul>
+                        <li>使用 <code>get</code> 操作可以獲取當前文檔的段落總數</li>
+                        <li>某些操作（如 <code>word_hyperlink</code> 的 <code>add</code>）會在指定段落<strong>之後</strong>創建新段落，而不是插入到段落內部</li>
+                        <li>刪除段落後，後續段落的索引會自動調整</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>🔑 授權配置相關</h2>
+            
+            <div class="faq-item">
+                <div class="faq-question">Q: 找不到授權檔案會怎樣？</div>
+                <div class="faq-answer">
+                    <p>如果找不到授權檔案，系統會以<strong>試用模式</strong>運行，生成的文檔會有試用版標記。</p>
+                </div>
+            </div>
+            
+            <div class="faq-item">
+                <div class="faq-question">Q: 支援哪些授權類型？</div>
+                <div class="faq-answer">
+                    <ul>
+                        <li><strong>總授權</strong>：<code>Aspose.Total.lic</code>（包含所有組件）</li>
+                        <li><strong>單一組件授權</strong>：<code>Aspose.Words.lic</code>、<code>Aspose.Cells.lic</code>、<code>Aspose.Slides.lic</code>、<code>Aspose.Pdf.lic</code></li>
+                        <li><strong>自訂檔案名稱</strong>：可透過環境變數或命令列參數指定</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="faq-item">
+                <div class="faq-question">Q: 如何配置授權檔案？</div>
+                <div class="faq-answer">
+                    <p>有三種方式：</p>
+                    <ol style="margin-top: 10px; padding-left: 25px;">
+                        <li><strong>自動搜尋</strong>（推薦）：將授權檔案放在可執行檔案同一目錄</li>
+                        <li><strong>環境變數</strong>：設定 <code>ASPOSE_LICENSE_PATH</code> 環境變數</li>
+                        <li><strong>命令列參數</strong>：使用 <code>--license:路徑</code> 或 <code>--license=路徑</code></li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>⚙️ 功能使用相關</h2>
+            
+            <div class="faq-item">
+                <div class="faq-question">Q: 轉換功能什麼時候自動可用？</div>
+                <div class="faq-answer">
+                    <ul>
+                        <li>啟用任何文檔工具（<code>--word</code>、<code>--excel</code>、<code>--ppt</code>）時，自動包含 <code>convert_to_pdf</code>（轉換為PDF）</li>
+                        <li>啟用兩個或以上文檔工具時，自動包含 <code>convert_document</code>（跨格式轉換，如Word轉Excel）</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="faq-item">
+                <div class="faq-question">Q: 參數命名有哪些兼容方式？</div>
+                <div class="faq-answer">
+                    <p>為了向後兼容，某些參數支援多種命名方式：</p>
+                    <ul>
+                        <li><code>startColumn</code> / <code>startCol</code></li>
+                        <li><code>columnIndex</code> / <code>colIndex</code></li>
+                        <li><code>tableIndex</code> / <code>sourceTableIndex</code></li>
+                        <li><code>text</code> / <code>replyText</code> (用於評論回覆)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>🔒 安全限制相關</h2>
+            
+            <div class="faq-item">
+                <div class="faq-question">Q: 有哪些安全限制？</div>
+                <div class="faq-answer">
+                    <ul>
+                        <li><strong>最大路徑長度</strong>：260 字元</li>
+                        <li><strong>最大檔案名稱長度</strong>：255 字元</li>
+                        <li><strong>最大陣列大小</strong>：1000 項</li>
+                        <li><strong>最大字串長度</strong>：10000 字元</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="faq-item">
+                <div class="faq-question">Q: 為什麼會出現路徑驗證錯誤？</div>
+                <div class="faq-answer">
+                    <p>系統會驗證所有檔案路徑，防止路徑遍歷攻擊（<code>../</code>、<code>..\</code>）。如果路徑不符合安全規範，會返回驗證錯誤。</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>❌ 常見錯誤相關</h2>
+            
+            <div class="faq-item">
+                <div class="faq-question">Q: 為什麼會出現 "Invalid index" 錯誤？</div>
+                <div class="faq-answer">
+                    <p>這通常是因為索引超出範圍。請注意：</p>
+                    <ul>
+                        <li>PDF 相關的集合通常使用 <strong>1-based 索引</strong>（從 1 開始）</li>
+                        <li>Word/Excel/PowerPoint 相關的集合通常使用 <strong>0-based 索引</strong>（從 0 開始）</li>
+                        <li>在執行刪除操作後，索引會自動調整，建議重新獲取索引列表</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="faq-item">
+                <div class="faq-question">Q: 為什麼文本匹配會失敗？</div>
+                <div class="faq-answer">
+                    <p>文本匹配失敗可能的原因：</p>
+                    <ul>
+                        <li>文本中包含不可見字符（如 <code>\u0000</code>）</li>
+                        <li>空白字符格式不同（多個空格、換行符等）</li>
+                        <li>大小寫不匹配（某些操作支援大小寫不敏感匹配）</li>
+                    </ul>
+                    <div class="info-box">
+                        <strong>建議</strong>：使用 <code>get</code> 操作先獲取實際的文本內容，然後使用完全匹配的文本進行操作。
+                    </div>
+                </div>
+            </div>
+            
+            <div class="faq-item">
+                <div class="faq-question">Q: 為什麼找不到表格？</div>
+                <div class="faq-answer">
+                    <p>可能的原因：</p>
+                    <ul>
+                        <li>表格在保存後可能被轉換為圖形對象（Aspose.Pdf 的限制）</li>
+                        <li>表格是通過其他方式添加的，不在 <code>Paragraphs</code> 集合中</li>
+                        <li>文檔結構複雜，需要多次嘗試不同的查找方法</li>
+                    </ul>
+                    <div class="info-box">
+                        <strong>建議</strong>：在添加表格後立即進行編輯操作，避免保存後再編輯。
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <footer>
+        <div class="container">
+            <p>基於 .NET 8.0 和 Aspose 構建</p>
+            <p style="margin-top: 10px;">
+                <a href="https://github.com/xjustloveux/aspose-mcp-server" style="color: #667eea; text-decoration: none;" target="_blank">GitHub</a> | 
+                <a href="https://www.aspose.com/" style="color: #667eea; text-decoration: none;" target="_blank">Aspose</a> | 
+                <a href="https://modelcontextprotocol.io/" style="color: #667eea; text-decoration: none;" target="_blank">MCP Protocol</a>
+            </p>
+            <p style="margin-top: 20px; color: #999; font-size: 0.9em;">
+                © 2025 JaJa. All rights reserved.
+            </p>
+        </div>
+    </footer>
+</body>
+</html>
+

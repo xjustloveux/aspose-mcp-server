@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>開發者指南 - Aspose MCP Server</title>
+    <meta name="description" content="Aspose MCP Server 開發者指南：倉庫結構、本地開發、多平台構建。">
+    <meta name="keywords" content="Aspose, MCP, 開發者指南, 本地開發, 多平台構建, GitHub Actions">
+    <link rel="canonical" href="https://xjustloveux.github.io/aspose-mcp-server/developers.html">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://xjustloveux.github.io/aspose-mcp-server/developers.html">
+    <meta property="og:title" content="開發者指南 - Aspose MCP Server">
+    <meta property="og:description" content="Aspose MCP Server 開發者指南：倉庫結構、本地開發、多平台構建。">
+    <meta property="og:site_name" content="Aspose MCP Server">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary">
+    <meta property="twitter:url" content="https://xjustloveux.github.io/aspose-mcp-server/developers.html">
+    <meta property="twitter:title" content="開發者指南 - Aspose MCP Server">
+    <meta property="twitter:description" content="Aspose MCP Server 開發者指南：倉庫結構、本地開發、多平台構建。">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        nav {
+            background: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            margin-bottom: 40px;
+        }
+        
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        .nav-menu {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            list-style: none;
+            padding: 15px 0;
+        }
+        
+        .nav-menu li {
+            margin: 0 10px;
+        }
+        
+        .nav-menu a {
+            color: #333;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            transition: background 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .nav-menu a:hover {
+            background: #f0f0f0;
+        }
+        
+        .nav-menu a.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .nav-logo {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #667eea;
+            margin-right: 30px;
+        }
+        
+        .page-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .page-header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .section {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .section h3 {
+            color: #764ba2;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        
+        .code-wrapper {
+            position: relative;
+            margin: 15px 0;
+        }
+        
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            white-space: pre;
+        }
+        
+        .code-wrapper .code-block {
+            margin: 0;
+            padding-top: 50px;
+        }
+        
+        .code-block code {
+            color: #f8f8f2;
+        }
+        
+        .copy-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.85em;
+            transition: background 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            z-index: 10;
+        }
+        
+        .copy-button:hover {
+            background: #5568d3;
+        }
+        
+        .copy-button:active {
+            background: #4457b8;
+        }
+        
+        .copy-button.copied {
+            background: #4caf50;
+        }
+        
+        .structure-tree {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            margin: 15px 0;
+            border-left: 4px solid #667eea;
+            white-space: pre;
+            overflow-x: auto;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+            border-top: 1px solid #ddd;
+            margin-top: 40px;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <ul class="nav-menu">
+                <li><a href="index.html" class="nav-logo">🚀 Aspose MCP Server</a></li>
+                <li><a href="index.html">首頁</a></li>
+                <li><a href="features.html">功能特性</a></li>
+                <li><a href="tools.html">工具列表</a></li>
+                <li><a href="getting-started.html">快速開始</a></li>
+                <li><a href="developers.html" class="active">開發者指南</a></li>
+                <li><a href="faq.html">常見問答</a></li>
+            </ul>
+        </div>
+    </nav>
+    
+    <div class="page-header">
+        <div class="container">
+            <h1>🛠️ 開發者指南</h1>
+            <p>了解項目結構和開發流程</p>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="section">
+            <h2>📁 倉庫結構</h2>
+            <div class="structure-tree">aspose-mcp-server/
+├── Tools/            📁 工具原始碼
+│   ├── Word/         24 個工具
+│   ├── Excel/        25 個工具
+│   ├── PowerPoint/   24 個工具
+│   ├── PDF/          15 個工具
+│   └── Conversion/   2 個工具
+├── Core/             🔧 MCP 伺服器核心
+│   ├── SecurityHelper.cs      - 安全驗證工具
+│   ├── McpErrorHandler.cs     - 錯誤處理
+│   ├── ToolRegistry.cs        - 工具註冊
+│   └── ServerConfig.cs        - 伺服器配置
+├── .github/
+│   └── workflows/    🔄 GitHub Actions 工作流程
+└── bin/              ❌ 本地編譯輸出（不在版本控制）</div>
+        </div>
+        
+        <div class="section">
+            <h2>💻 本地開發</h2>
+            
+            <h3>1. 複製倉庫</h3>
+            <div class="code-wrapper">
+                <div class="code-block" data-code="git clone https://github.com/xjustloveux/aspose-mcp-server.git
+cd aspose-mcp-server">git clone https://github.com/xjustloveux/aspose-mcp-server.git
+cd aspose-mcp-server</div>
+                <button class="copy-button" onclick="copyCode(this)" title="複製指令">
+                    <span>📋</span>
+                    <span>複製</span>
+                </button>
+            </div>
+            
+            <h3>2. 編譯 Release 版本</h3>
+            <div class="code-wrapper">
+                <div class="code-block" data-code="pwsh build.ps1 --configuration Release">pwsh build.ps1 --configuration Release</div>
+                <button class="copy-button" onclick="copyCode(this)" title="複製指令">
+                    <span>📋</span>
+                    <span>複製</span>
+                </button>
+            </div>
+            
+            <h3>3. 發布版本</h3>
+            <p>發布 Windows 版本：</p>
+            <div class="code-wrapper">
+                <div class="code-block" data-code="pwsh publish.ps1 -Windows">pwsh publish.ps1 -Windows</div>
+                <button class="copy-button" onclick="copyCode(this)" title="複製指令">
+                    <span>📋</span>
+                    <span>複製</span>
+                </button>
+            </div>
+            
+            <p>發布所有平台：</p>
+            <div class="code-wrapper">
+                <div class="code-block" data-code="pwsh publish.ps1 -All">pwsh publish.ps1 -All</div>
+                <button class="copy-button" onclick="copyCode(this)" title="複製指令">
+                    <span>📋</span>
+                    <span>複製</span>
+                </button>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>🌍 多平台構建</h2>
+            <p>所有平台由 <strong>GitHub Actions</strong> 自動構建：</p>
+            <ul style="margin-top: 15px; padding-left: 25px;">
+                <li>推送到 main/master 分支時自動觸發</li>
+                <li>構建產物：從 Actions 頁面或 Releases 頁面下載</li>
+            </ul>
+            
+            <h3>支援的平台</h3>
+            <ul style="margin-top: 15px; padding-left: 25px;">
+                <li>✅ Windows (x64)</li>
+                <li>✅ Linux (x64)</li>
+                <li>✅ macOS Intel (x64)</li>
+                <li>✅ macOS ARM (arm64 - M1/M2/M3)</li>
+            </ul>
+        </div>
+        
+        <div class="section">
+            <h2>🔧 核心組件</h2>
+            
+            <h3>SecurityHelper.cs</h3>
+            <p>安全驗證工具，提供路徑驗證、輸入驗證等功能。</p>
+            
+            <h3>McpErrorHandler.cs</h3>
+            <p>錯誤處理機制，清理錯誤訊息，防止資訊洩露。</p>
+            
+            <h3>ToolRegistry.cs</h3>
+            <p>工具註冊系統，管理所有可用工具的註冊和查找。</p>
+            
+            <h3>ServerConfig.cs</h3>
+            <p>伺服器配置管理，處理命令行參數和環境變數。</p>
+        </div>
+    </div>
+    
+    <footer>
+        <div class="container">
+            <p>基於 .NET 8.0 和 Aspose 構建</p>
+            <p style="margin-top: 10px;">
+                <a href="https://github.com/xjustloveux/aspose-mcp-server" style="color: #667eea; text-decoration: none;" target="_blank">GitHub</a> | 
+                <a href="https://www.aspose.com/" style="color: #667eea; text-decoration: none;" target="_blank">Aspose</a> | 
+                <a href="https://modelcontextprotocol.io/" style="color: #667eea; text-decoration: none;" target="_blank">MCP Protocol</a>
+            </p>
+            <p style="margin-top: 20px; color: #999; font-size: 0.9em;">
+                © 2025 JaJa. All rights reserved.
+            </p>
+        </div>
+    </footer>
+    
+    <script>
+        function copyCode(button) {
+            const codeBlock = button.previousElementSibling;
+            const text = codeBlock.getAttribute('data-code') || codeBlock.textContent.trim();
+            
+            navigator.clipboard.writeText(text).then(function() {
+                const spans = button.querySelectorAll('span');
+                button.classList.add('copied');
+                if (spans.length > 1) {
+                    spans[0].textContent = '✓';
+                    spans[1].textContent = '已複製！';
+                }
+                
+                setTimeout(function() {
+                    button.classList.remove('copied');
+                    if (spans.length > 1) {
+                        spans[0].textContent = '📋';
+                        spans[1].textContent = '複製';
+                    }
+                }, 2000);
+            }).catch(function(err) {
+                console.error('複製失敗:', err);
+                alert('複製失敗，請手動複製');
+            });
+        }
+    </script>
+</body>
+</html>
+

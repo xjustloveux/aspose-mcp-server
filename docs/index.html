@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aspose MCP Server - MCP 辦公文檔處理服務器</title>
+    <meta name="description" content="為 MCP 客戶端提供 90 個辦公文檔處理工具。支援 Word、Excel、PowerPoint、PDF 及跨格式轉換。">
+    <meta name="keywords" content="Aspose, MCP, Model Context Protocol, Word, Excel, PowerPoint, PDF, 文檔處理, 辦公文檔">
+    <link rel="canonical" href="https://xjustloveux.github.io/aspose-mcp-server/">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://xjustloveux.github.io/aspose-mcp-server/">
+    <meta property="og:title" content="Aspose MCP Server - MCP 辦公文檔處理服務器">
+    <meta property="og:description" content="為 MCP 客戶端提供 90 個辦公文檔處理工具。支援 Word、Excel、PowerPoint、PDF 及跨格式轉換。">
+    <meta property="og:site_name" content="Aspose MCP Server">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://xjustloveux.github.io/aspose-mcp-server/">
+    <meta property="twitter:title" content="Aspose MCP Server - MCP 辦公文檔處理服務器">
+    <meta property="twitter:description" content="為 MCP 客戶端提供 90 個辦公文檔處理工具。支援 Word、Excel、PowerPoint、PDF 及跨格式轉換。">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 60px 20px;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .feature-card {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .feature-card h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        
+        .stats {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 40px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 30px;
+            text-align: center;
+        }
+        
+        .stat-item {
+            padding: 20px;
+        }
+        
+        .stat-number {
+            font-size: 3em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 1.1em;
+        }
+        
+        .cta {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 15px 30px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 1.1em;
+            margin: 10px;
+            transition: background 0.3s ease;
+        }
+        
+        .btn:hover {
+            background: #5568d3;
+        }
+        
+        .btn-secondary {
+            background: #764ba2;
+        }
+        
+        .btn-secondary:hover {
+            background: #5d3a7a;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+            border-top: 1px solid #ddd;
+            margin-top: 40px;
+        }
+        
+        .tool-categories {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .category-card {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+        }
+        
+        .category-card h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+        
+        .category-card ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .category-card li {
+            padding: 5px 0;
+            color: #666;
+        }
+        
+        .category-card li:before {
+            content: "✓ ";
+            color: #667eea;
+            font-weight: bold;
+        }
+        
+        nav {
+            background: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            margin-bottom: 40px;
+        }
+        
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        .nav-menu {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            list-style: none;
+            padding: 15px 0;
+        }
+        
+        .nav-menu li {
+            margin: 0 10px;
+        }
+        
+        .nav-menu a {
+            color: #333;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            transition: background 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .nav-menu a:hover {
+            background: #f0f0f0;
+        }
+        
+        .nav-menu a.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .nav-logo {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #667eea;
+            margin-right: 30px;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <ul class="nav-menu">
+                <li><a href="index.html" class="nav-logo">🚀 Aspose MCP Server</a></li>
+                <li><a href="index.html" class="active">首頁</a></li>
+                <li><a href="features.html">功能特性</a></li>
+                <li><a href="tools.html">工具列表</a></li>
+                <li><a href="getting-started.html">快速開始</a></li>
+                <li><a href="developers.html">開發者指南</a></li>
+                <li><a href="faq.html">常見問答</a></li>
+            </ul>
+        </div>
+    </nav>
+    
+    <header>
+        <div class="container">
+            <h1>🚀 Aspose MCP Server</h1>
+            <p>MCP 辦公文檔處理服務器</p>
+            <p style="margin-top: 20px; font-size: 1em;">為 MCP 客戶端提供強大的辦公文檔處理能力</p>
+        </div>
+    </header>
+    
+    <div class="container">
+        <div class="stats">
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-number">90</div>
+                    <div class="stat-label">統一工具</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">4</div>
+                    <div class="stat-label">文檔類型</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">4</div>
+                    <div class="stat-label">支援平台</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">100%</div>
+                    <div class="stat-label">開源免費</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="features">
+            <div class="feature-card">
+                <h3>📄 90 個統一工具</h3>
+                <p>Word(24)、Excel(25)、PowerPoint(24)、PDF(15)、轉換工具(2)已整合，提供完整的文檔處理能力。</p>
+            </div>
+            
+            <div class="feature-card">
+                <h3>⚙️ 按需啟用</h3>
+                <p>只啟用需要的文檔類型，節省資源並提高效率。支援單一組件或全部組件授權。</p>
+            </div>
+            
+            <div class="feature-card">
+                <h3>🌍 跨平台支援</h3>
+                <p>Windows、Linux、macOS (Intel + ARM) 全平台支援，從 Releases 下載預編譯版本即可使用。</p>
+            </div>
+            
+            <div class="feature-card">
+                <h3>🔒 安全加固</h3>
+                <p>全面的路徑驗證、輸入驗證和錯誤處理，確保系統安全穩定運行。</p>
+            </div>
+            
+            <div class="feature-card">
+                <h3>📋 完整讀寫</h3>
+                <p>支援從A文檔讀取格式應用到B文檔，實現文檔格式的完整遷移和複製。</p>
+            </div>
+            
+            <div class="feature-card">
+                <h3>🔄 跨格式轉換</h3>
+                <p>支援 Word、Excel、PowerPoint、PDF 之間的跨格式轉換，滿足各種文檔處理需求。</p>
+            </div>
+        </div>
+        
+        <div class="tool-categories">
+            <div class="category-card">
+                <h3>📝 Word (24個工具)</h3>
+                <ul>
+                    <li>檔案操作（創建、轉換、合併、拆分）</li>
+                    <li>內容編輯（文字、段落、表格、圖片）</li>
+                    <li>格式設定（樣式、頁首頁尾、頁面設定）</li>
+                    <li>高級功能（書籤、超連結、註釋、目錄）</li>
+                </ul>
+            </div>
+            
+            <div class="category-card">
+                <h3>📊 Excel (25個工具)</h3>
+                <ul>
+                    <li>檔案操作（創建、轉換、合併、拆分）</li>
+                    <li>工作表操作（添加、刪除、重新命名）</li>
+                    <li>資料操作（排序、篩選、資料驗證）</li>
+                    <li>高級功能（圖表、公式、資料透視表）</li>
+                </ul>
+            </div>
+            
+            <div class="category-card">
+                <h3>📽️ PowerPoint (24個工具)</h3>
+                <ul>
+                    <li>檔案操作（創建、轉換、合併、拆分）</li>
+                    <li>投影片管理（添加、刪除、移動、複製）</li>
+                    <li>內容編輯（文字、圖片、表格、圖表）</li>
+                    <li>高級功能（動畫、轉場、媒體、SmartArt）</li>
+                </ul>
+            </div>
+            
+            <div class="category-card">
+                <h3>📑 PDF (15個工具)</h3>
+                <ul>
+                    <li>檔案操作（創建、合併、拆分、壓縮、加密）</li>
+                    <li>內容添加（文字、圖片、表格、水印）</li>
+                    <li>編輯操作（編輯文字、表格、書籤、註釋）</li>
+                    <li>高級功能（簽名、頁面旋轉、編輯）</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="cta">
+            <h2 style="margin-bottom: 20px; color: #333;">開始使用</h2>
+            <p style="margin-bottom: 30px; color: #666;">從 GitHub Releases 下載預編譯版本，配置授權檔案即可開始使用。</p>
+            <a href="https://github.com/xjustloveux/aspose-mcp-server/releases" class="btn" target="_blank">📦 下載 Releases</a>
+            <a href="https://github.com/xjustloveux/aspose-mcp-server/blob/master/README.md" class="btn btn-secondary" target="_blank">📚 查看文檔</a>
+        </div>
+    </div>
+    
+    <footer>
+        <div class="container">
+            <p>基於 .NET 8.0 和 Aspose 構建</p>
+            <p style="margin-top: 10px;">
+                <a href="https://github.com/xjustloveux/aspose-mcp-server" style="color: #667eea; text-decoration: none;" target="_blank">GitHub</a> | 
+                <a href="https://www.aspose.com/" style="color: #667eea; text-decoration: none;" target="_blank">Aspose</a> | 
+                <a href="https://modelcontextprotocol.io/" style="color: #667eea; text-decoration: none;" target="_blank">MCP Protocol</a>
+            </p>
+            <p style="margin-top: 20px; color: #999; font-size: 0.9em;">
+                © 2025 JaJa. All rights reserved.
+            </p>
+        </div>
+    </footer>
+</body>
+</html>
+

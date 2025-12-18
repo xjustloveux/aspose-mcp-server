@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>快速開始 - Aspose MCP Server</title>
+    <meta name="description" content="Aspose MCP Server 快速開始指南：下載、配置、使用。">
+    <meta name="keywords" content="Aspose, MCP, 快速開始, 安裝指南, 配置, 使用教學">
+    <link rel="canonical" href="https://xjustloveux.github.io/aspose-mcp-server/getting-started.html">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://xjustloveux.github.io/aspose-mcp-server/getting-started.html">
+    <meta property="og:title" content="快速開始 - Aspose MCP Server">
+    <meta property="og:description" content="Aspose MCP Server 快速開始指南：下載、配置、使用。">
+    <meta property="og:site_name" content="Aspose MCP Server">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary">
+    <meta property="twitter:url" content="https://xjustloveux.github.io/aspose-mcp-server/getting-started.html">
+    <meta property="twitter:title" content="快速開始 - Aspose MCP Server">
+    <meta property="twitter:description" content="Aspose MCP Server 快速開始指南：下載、配置、使用。">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        nav {
+            background: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            margin-bottom: 40px;
+        }
+        
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        .nav-menu {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            list-style: none;
+            padding: 15px 0;
+        }
+        
+        .nav-menu li {
+            margin: 0 10px;
+        }
+        
+        .nav-menu a {
+            color: #333;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            transition: background 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .nav-menu a:hover {
+            background: #f0f0f0;
+        }
+        
+        .nav-menu a.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .nav-logo {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #667eea;
+            margin-right: 30px;
+        }
+        
+        .page-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .page-header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .section {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .section h3 {
+            color: #764ba2;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        
+        .step {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            border-radius: 5px;
+        }
+        
+        .step-number {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            font-weight: bold;
+            margin-right: 15px;
+        }
+        
+        .code-wrapper {
+            position: relative;
+            margin: 15px 0;
+        }
+        
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            white-space: pre;
+        }
+        
+        .code-wrapper .code-block {
+            margin: 0;
+            padding-top: 50px;
+        }
+        
+        .code-block code {
+            color: #f8f8f2;
+        }
+        
+        .copy-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.85em;
+            transition: background 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            z-index: 10;
+        }
+        
+        .copy-button:hover {
+            background: #5568d3;
+        }
+        
+        .copy-button:active {
+            background: #4457b8;
+        }
+        
+        .copy-button.copied {
+            background: #4caf50;
+        }
+        
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        
+        .warning-box {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        
+        .param-list {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .param-list li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+        
+        .param-list li:before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: #667eea;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+            border-top: 1px solid #ddd;
+            margin-top: 40px;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <ul class="nav-menu">
+                <li><a href="index.html" class="nav-logo">🚀 Aspose MCP Server</a></li>
+                <li><a href="index.html">首頁</a></li>
+                <li><a href="features.html">功能特性</a></li>
+                <li><a href="tools.html">工具列表</a></li>
+                <li><a href="getting-started.html" class="active">快速開始</a></li>
+                <li><a href="developers.html">開發者指南</a></li>
+                <li><a href="faq.html">常見問答</a></li>
+            </ul>
+        </div>
+    </nav>
+    
+    <div class="page-header">
+        <div class="container">
+            <h1>🚀 快速開始</h1>
+            <p>幾分鐘內開始使用 Aspose MCP Server</p>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="section">
+            <h2>步驟 1：下載預編譯版本</h2>
+            
+            <div class="step">
+                <span class="step-number">1</span>
+                <strong>從 GitHub Releases 下載</strong>
+                <p style="margin-top: 10px;">訪問 <a href="https://github.com/xjustloveux/aspose-mcp-server/releases" target="_blank" style="color: #667eea;">GitHub Releases</a> 下載對應平台的版本：</p>
+                <ul class="param-list" style="margin-top: 10px;">
+                    <li>Windows: <code>aspose-mcp-server-windows-x64.zip</code></li>
+                    <li>Linux: <code>aspose-mcp-server-linux-x64.zip</code></li>
+                    <li>macOS Intel: <code>aspose-mcp-server-macos-x64.zip</code></li>
+                    <li>macOS ARM: <code>aspose-mcp-server-macos-arm64.zip</code></li>
+                </ul>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">2</span>
+                <strong>解壓到任意目錄</strong>
+                <p style="margin-top: 10px;">解壓縮下載的檔案到任意目錄，例如：</p>
+                <ul class="param-list" style="margin-top: 10px;">
+                    <li>Windows: <code>C:\Tools\aspose-mcp-server\</code></li>
+                    <li>macOS/Linux: <code>~/tools/aspose-mcp-server/</code></li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>步驟 2：配置授權檔案</h2>
+            
+            <div class="info-box">
+                <strong>📋 授權檔案類型</strong>
+                <ul class="param-list" style="margin-top: 10px;">
+                    <li><strong>總授權</strong>：<code>Aspose.Total.lic</code>（包含所有組件）</li>
+                    <li><strong>單一組件授權</strong>：<code>Aspose.Words.lic</code>、<code>Aspose.Cells.lic</code>、<code>Aspose.Slides.lic</code>、<code>Aspose.Pdf.lic</code></li>
+                    <li><strong>自訂檔案名稱</strong>：可透過環境變數或命令列參數指定</li>
+                </ul>
+            </div>
+            
+            <h3>配置方式（三選一）</h3>
+            
+            <div class="step">
+                <span class="step-number">1</span>
+                <strong>自動搜尋（推薦）</strong>
+                <p style="margin-top: 10px;">將授權檔案放在可執行檔案同一目錄，系統會自動搜尋。</p>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">2</span>
+                <strong>環境變數</strong>
+                <p style="margin-top: 10px;">設定 <code>ASPOSE_LICENSE_PATH</code> 環境變數指向授權檔案路徑。</p>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">3</span>
+                <strong>命令列參數</strong>
+                <p style="margin-top: 10px;">使用 <code>--license:路徑</code> 或 <code>--license=路徑</code> 指定授權檔案。</p>
+            </div>
+            
+            <div class="warning-box">
+                <strong>⚠️ 注意</strong>：如果找不到授權檔案，系統會以試用模式運行（會有試用版標記）。
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>步驟 3：配置 MCP 客戶端</h2>
+            
+            <div class="step">
+                <span class="step-number">1</span>
+                <strong>編輯配置檔案</strong>
+                <p style="margin-top: 10px;">根據您使用的 MCP 客戶端，編輯對應的配置檔案。配置檔案通常位於應用程式的設定目錄中，請參考您使用的客戶端文檔以確認具體路徑。</p>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">2</span>
+                <strong>添加配置</strong>
+                <p style="margin-top: 10px;">在配置檔案中添加以下內容：</p>
+                <div class="code-wrapper">
+                    <div class="code-block" id="config-code">{
+  "mcpServers": {
+    "aspose-word": {
+      "command": "C:/Tools/aspose-mcp-server/AsposeMcpServer.exe",
+      "args": ["--word"]
+    }
+  }
+}</div>
+                    <button class="copy-button" onclick="copyConfigCode()" title="複製配置">
+                        <span id="copy-icon">📋</span>
+                        <span id="copy-text">複製</span>
+                    </button>
+                </div>
+            </div>
+            
+            <h3>可用參數</h3>
+            <ul class="param-list">
+                <li><code>--word</code> - Word 工具（自動包含轉換功能）</li>
+                <li><code>--excel</code> - Excel 工具（自動包含轉換功能）</li>
+                <li><code>--powerpoint</code> / <code>--ppt</code> - PowerPoint 工具（自動包含轉換功能）</li>
+                <li><code>--pdf</code> - PDF 工具</li>
+                <li><code>--all</code> - 所有工具</li>
+                <li><code>--license:路徑</code> 或 <code>--license=路徑</code> - 指定授權檔案路徑（可選）</li>
+            </ul>
+            
+            <div class="info-box">
+                <strong>💡 轉換功能說明</strong>
+                <ul class="param-list" style="margin-top: 10px;">
+                    <li>啟用任何文檔工具（<code>--word</code>、<code>--excel</code>、<code>--ppt</code>）時，自動包含 <code>convert_to_pdf</code>（轉換為PDF）</li>
+                    <li>啟用兩個或以上文檔工具時，自動包含 <code>convert_document</code>（跨格式轉換，如Word轉Excel）</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>步驟 4：重啟 MCP 客戶端</h2>
+            <p>完成配置後，重啟您使用的 MCP 客戶端即可開始使用。</p>
+            <div class="info-box" style="margin-top: 20px;">
+                <strong>✅ 完成！</strong> 現在您可以在 MCP 客戶端中使用 Aspose MCP Server 的所有工具了。
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>📝 使用範例</h2>
+            
+            <h3>從A文檔複製格式到B文檔</h3>
+            
+            <h4>複製段落格式：</h4>
+            <div class="code-block">
+1. word_paragraph(path="A.docx", operation="get_format", paragraphIndex=0)
+2. 使用返回的格式資訊
+3. word_paragraph(path="B.docx", operation="edit", paragraphIndex=0, ...)
+            </div>
+            
+            <h4>複製表格結構：</h4>
+            <div class="code-block">
+1. word_table(path="A.docx", operation="get_table_structure", tableIndex=0)
+2. 參考返回的結構資訊
+3. word_table(path="B.docx", operation="add_table", ...) 創建相同結構
+            </div>
+            
+            <h4>複製樣式：</h4>
+            <div class="code-block">
+word_style(path="B.docx", operation="copy_styles", sourceDocument="A.docx")
+            </div>
+        </div>
+    </div>
+    
+    <footer>
+        <div class="container">
+            <p>基於 .NET 8.0 和 Aspose 構建</p>
+            <p style="margin-top: 10px;">
+                <a href="https://github.com/xjustloveux/aspose-mcp-server" style="color: #667eea; text-decoration: none;" target="_blank">GitHub</a> | 
+                <a href="https://www.aspose.com/" style="color: #667eea; text-decoration: none;" target="_blank">Aspose</a> | 
+                <a href="https://modelcontextprotocol.io/" style="color: #667eea; text-decoration: none;" target="_blank">MCP Protocol</a>
+            </p>
+            <p style="margin-top: 20px; color: #999; font-size: 0.9em;">
+                © 2025 JaJa. All rights reserved.
+            </p>
+        </div>
+    </footer>
+    
+    <script>
+        function copyConfigCode() {
+            const codeBlock = document.getElementById('config-code');
+            const button = codeBlock.querySelector('.copy-button');
+            const copyText = document.getElementById('copy-text');
+            const copyIcon = document.getElementById('copy-icon');
+            
+            // 获取代码内容，排除按钮文本
+            const codeText = `{
+  "mcpServers": {
+    "aspose-word": {
+      "command": "C:/Tools/aspose-mcp-server/AsposeMcpServer.exe",
+      "args": ["--word"]
+    }
+  }
+}`;
+            
+            navigator.clipboard.writeText(codeText).then(function() {
+                button.classList.add('copied');
+                copyText.textContent = '已複製！';
+                copyIcon.textContent = '✓';
+                
+                setTimeout(function() {
+                    button.classList.remove('copied');
+                    copyText.textContent = '複製';
+                    copyIcon.textContent = '📋';
+                }, 2000);
+            }).catch(function(err) {
+                console.error('複製失敗:', err);
+                alert('複製失敗，請手動複製');
+            });
+        }
+    </script>
+</body>
+</html>
+

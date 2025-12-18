@@ -1,6 +1,6 @@
 # Aspose MCP Server
 
-基於 .NET 8.0 和 Aspose.Total 的 Model Context Protocol (MCP) 伺服器，為 AI 助手提供強大的辦公文檔處理能力。
+基於 .NET 8.0 和 Aspose.Total 的 Model Context Protocol (MCP) 伺服器，為 MCP 客戶端提供強大的辦公文檔處理能力。
 
 ## ✨ 特性
 
@@ -51,12 +51,11 @@
 
 **注意**：如果找不到授權檔案，系統會以試用模式運行（會有試用版標記）。
 
-### 2. 配置 Claude Desktop
+### 2. 配置 MCP 客戶端
 
-編輯配置檔案：
-- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
-- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+根據您使用的 MCP 客戶端，編輯對應的配置檔案。配置檔案通常位於應用程式的設定目錄中，請參考您使用的客戶端文檔以確認具體路徑。
 
+**配置範例：**
 ```json
 {
   "mcpServers": {
@@ -80,11 +79,11 @@
 - 啟用任何文檔工具（`--word`、`--excel`、`--ppt`）時，自動包含 `convert_to_pdf`（轉換為PDF）
 - 啟用兩個或以上文檔工具時，自動包含 `convert_document`（跨格式轉換，如Word轉Excel）
 
-📋 **更多配置範例：** `claude_desktop_config_example.json`
+📋 **更多配置範例：** `claude_desktop_config_example.json`（配置格式適用於所有 MCP 客戶端）
 
-### 3. 重啟 Claude Desktop
+### 3. 重啟 MCP 客戶端
 
-完成！
+完成配置後，重啟您使用的 MCP 客戶端（如 Claude Desktop、Cursor 等）即可開始使用。
 
 ## 📦 功能概覽
 
@@ -175,7 +174,7 @@ aspose-mcp-server/
 
 ```bash
 # 複製倉庫
-git clone <repository-url>
+git clone https://github.com/xjustloveux/aspose-mcp-server.git
 cd aspose-mcp-server
 
 # 編譯 Release 版本
@@ -438,4 +437,4 @@ word_style(path="B.docx", operation="copy_styles", sourceDocument="A.docx")
 
 - [Aspose.Total for .NET](https://products.aspose.com/total/net/)
 - [Model Context Protocol](https://modelcontextprotocol.io/)
-- [Claude Desktop](https://claude.ai/desktop)
+- [Claude Desktop](https://claude.ai/desktop)、[Cursor](https://cursor.sh/) - MCP 客戶端
