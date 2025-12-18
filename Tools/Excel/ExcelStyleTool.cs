@@ -375,9 +375,10 @@ Usage examples:
                 result.AppendLine();
             }
         }
-        catch
+        catch (Exception ex)
         {
-            throw new ArgumentException($"Invalid cell range: {cellOrRange}");
+            throw new ArgumentException(
+                $"Invalid cell range: '{cellOrRange}'. Expected format: single cell (e.g., 'A1') or range (e.g., 'A1:C5'). Error: {ex.Message}");
         }
 
         return await Task.FromResult(result.ToString());

@@ -245,10 +245,7 @@ Usage examples:
             if (startRun.ParentNode != startPara)
             {
                 var actualParent = startRun.ParentNode;
-                if (actualParent is Paragraph parentPara)
-                {
-                    startPara = parentPara;
-                }
+                if (actualParent is Paragraph parentPara) startPara = parentPara;
             }
 
             // Insert CommentRangeStart before startRun

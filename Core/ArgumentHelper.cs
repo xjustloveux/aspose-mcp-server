@@ -591,10 +591,10 @@ public static class ArgumentHelper
     /// <param name="arguments">JSON arguments object</param>
     /// <param name="primaryName">Primary parameter name to check</param>
     /// <param name="alternateName">Alternate parameter name to check (can be null)</param>
-    /// <param name="paramName">Parameter name for error messages</param>
+    /// <param name="_">Unused parameter (kept for API compatibility)</param>
     /// <returns>Nullable string value, or null if both keys are missing</returns>
     public static string? GetStringNullable(JsonObject? arguments, string primaryName, string? alternateName,
-        string paramName)
+        string _)
     {
         JsonNode? node = null;
         if (arguments != null)
@@ -990,7 +990,7 @@ public static class ArgumentHelper
         var path = arguments?[paramName]?.GetValue<string>();
         if (string.IsNullOrEmpty(path))
             throw new ArgumentException($"{paramName} is required");
-        SecurityHelper.ValidateFilePath(path, paramName);
+        _ = SecurityHelper.ValidateFilePath(path, paramName);
         return path;
     }
 
@@ -1006,7 +1006,7 @@ public static class ArgumentHelper
         string paramName = "outputPath")
     {
         var outputPath = arguments?[paramName]?.GetValue<string>() ?? inputPath;
-        SecurityHelper.ValidateFilePath(outputPath, paramName);
+        _ = SecurityHelper.ValidateFilePath(outputPath, paramName);
         return outputPath;
     }
 

@@ -296,22 +296,81 @@ Usage examples:
             var pivotTable = pivotTables[i];
             result.AppendLine($"【Pivot Table {i}】");
             result.AppendLine($"Name: {pivotTable.Name ?? "(no name)"}");
-            result.AppendLine($"Data source: {pivotTable.DataSource}");
+
+            // Format data source information
+            string dataSourceInfo;
+            if (pivotTable.DataSource is Array { Length: > 0 } dataSourceArray)
+            {
+                var sourceParts = new List<string>();
+                foreach (var item in dataSourceArray)
+                    if (item != null)
+                        sourceParts.Add(item.ToString() ?? "");
+                dataSourceInfo = string.Join(", ", sourceParts);
+            }
+            else if (pivotTable.DataSource != null)
+            {
+                dataSourceInfo = pivotTable.DataSource.ToString() ?? "Unknown";
+            }
+            else
+            {
+                dataSourceInfo = "Unknown";
+            }
+
+            result.AppendLine($"Data source: {dataSourceInfo}");
+
+            // Format location information
             var dataBodyRange = pivotTable.DataBodyRange;
             if (dataBodyRange.StartRow >= 0)
+            {
+                var startCell = CellsHelper.CellIndexToName(dataBodyRange.StartRow, dataBodyRange.StartColumn);
+                var endCell = CellsHelper.CellIndexToName(dataBodyRange.EndRow, dataBodyRange.EndColumn);
                 result.AppendLine(
-                    $"Location: Rows {dataBodyRange.StartRow}-{dataBodyRange.EndRow}, Columns {dataBodyRange.StartColumn}-{dataBodyRange.EndColumn}");
+                    $"Location: {startCell}:{endCell} (Rows {dataBodyRange.StartRow}-{dataBodyRange.EndRow}, Columns {dataBodyRange.StartColumn}-{dataBodyRange.EndColumn})");
+            }
             else
+            {
                 result.AppendLine("Location: Unknown");
+            }
 
+            // Format row fields information
             if (pivotTable.RowFields is { Count: > 0 } rowFields)
-                result.AppendLine($"Row fields: {rowFields.Count}");
+            {
+                var rowFieldNames = new List<string>();
+                foreach (PivotField field in rowFields)
+                {
+                    var fieldName = field.Name ?? $"Field {field.Position}";
+                    rowFieldNames.Add(fieldName);
+                }
 
+                result.AppendLine($"Row fields ({rowFields.Count}): {string.Join(", ", rowFieldNames)}");
+            }
+
+            // Format column fields information
             if (pivotTable.ColumnFields is { Count: > 0 } columnFields)
-                result.AppendLine($"Column fields: {columnFields.Count}");
+            {
+                var columnFieldNames = new List<string>();
+                foreach (PivotField field in columnFields)
+                {
+                    var fieldName = field.Name ?? $"Field {field.Position}";
+                    columnFieldNames.Add(fieldName);
+                }
 
+                result.AppendLine($"Column fields ({columnFields.Count}): {string.Join(", ", columnFieldNames)}");
+            }
+
+            // Format data fields information with aggregation functions
             if (pivotTable.DataFields is { Count: > 0 } dataFields)
-                result.AppendLine($"Data fields: {dataFields.Count}");
+            {
+                var dataFieldInfo = new List<string>();
+                foreach (PivotField field in dataFields)
+                {
+                    var fieldName = field.Name ?? $"Field {field.Position}";
+                    var function = field.Function.ToString();
+                    dataFieldInfo.Add($"{fieldName} ({function})");
+                }
+
+                result.AppendLine($"Data fields ({dataFields.Count}): {string.Join(", ", dataFieldInfo)}");
+            }
 
             result.AppendLine();
         }
@@ -358,7 +417,8 @@ Usage examples:
             if (string.IsNullOrEmpty(sourceRangeStr)) sourceRangeStr = pivotTable.DataSource?.ToString();
 
             if (string.IsNullOrEmpty(sourceRangeStr))
-                throw new ArgumentException("Pivot table data source is not available");
+                throw new ArgumentException(
+                    $"Pivot table data source is not available. Pivot table index: {pivotTableIndex}, Worksheet: '{worksheet.Name}'");
 
             var sourceSheet = workbook.Worksheets[sheetIndex];
             var cleanSourceRange = sourceRangeStr.Replace("=", "").Trim();
@@ -366,7 +426,8 @@ Usage examples:
             var rangeStr = sourceParts.Length > 1 ? sourceParts[1].Trim() : sourceParts[0].Trim();
 
             if (string.IsNullOrEmpty(rangeStr))
-                throw new ArgumentException($"Invalid data source format: {sourceRangeStr}");
+                throw new ArgumentException(
+                    $"Invalid data source format: '{sourceRangeStr}'. Unable to parse range from data source. Pivot table index: {pivotTableIndex}, Worksheet: '{worksheet.Name}'");
 
             Range sourceRangeObj;
             try
@@ -568,7 +629,8 @@ Usage examples:
             if (string.IsNullOrEmpty(sourceRangeStr)) sourceRangeStr = pivotTable.DataSource?.ToString();
 
             if (string.IsNullOrEmpty(sourceRangeStr))
-                throw new ArgumentException("Pivot table data source is not available");
+                throw new ArgumentException(
+                    $"Pivot table data source is not available. Pivot table index: {pivotTableIndex}, Worksheet: '{worksheet.Name}'");
 
             var sourceSheet = workbook.Worksheets[sheetIndex];
             var cleanSourceRange = sourceRangeStr.Replace("=", "").Trim();
@@ -576,7 +638,8 @@ Usage examples:
             var rangeStr = sourceParts.Length > 1 ? sourceParts[1].Trim() : sourceParts[0].Trim();
 
             if (string.IsNullOrEmpty(rangeStr))
-                throw new ArgumentException($"Invalid data source format: {sourceRangeStr}");
+                throw new ArgumentException(
+                    $"Invalid data source format: '{sourceRangeStr}'. Unable to parse range from data source. Pivot table index: {pivotTableIndex}, Worksheet: '{worksheet.Name}'");
 
             Range sourceRangeObj;
             try

@@ -97,7 +97,19 @@ Usage examples:
             {
                 type = "array",
                 description =
-                    "Data to write. Supports two formats: 1) 2D array: [[\"value1\", \"value2\"], [\"value3\", \"value4\"]], or 2) Object array: [{\"cell\": \"A1\", \"value\": \"10\"}, {\"cell\": \"B1\", \"value\": \"20\"}]",
+                    @"Data to write. Supports two formats:
+1) 2D array format:
+   - Structure: [[row1_col1, row1_col2, row1_col3, ...], [row2_col1, row2_col2, ...], ...]
+   - Each sub-array represents one row, starting from startCell
+   - Example: [[""A"", ""B"", ""C""], [""1"", ""2"", ""3""]] writes:
+     * Row 1: A, B, C
+     * Row 2: 1, 2, 3
+   - For text values that look like cell references (e.g., ""A2""), use single quote prefix: ""'A2""
+   - Example with single quote: [[""'A2"", ""10"", ""20"", ""30""]] writes one row: A2 (text), 10, 20, 30
+2) Object array format:
+   - Structure: [{""cell"": ""A1"", ""value"": ""10""}, {""cell"": ""B1"", ""value"": ""20""}]
+   - Each object specifies exact cell location and value
+   - startCell parameter is not needed when using object array format",
                 items = new
                 {
                     type = "array",
@@ -194,55 +206,112 @@ Usage examples:
         var startRow = startCellObj.Row;
         var startCol = startCellObj.Column;
 
-        for (var i = 0; i < dataArray.Count; i++)
+        // Check if all items are arrays (2D array format) to use ImportTwoDimensionArray
+        var is2DArrayFormat = dataArray.All(item => item is JsonArray);
+
+        if (is2DArrayFormat && dataArray.Count > 0)
         {
-            var item = dataArray[i];
+            // 2D array format: [["value1", "value2"], ["value3", "value4"]]
+            // Use ImportTwoDimensionArray method - this is the official way to import 2D arrays
+            // According to Aspose.Cells documentation, this method avoids cell reference interpretation issues
 
-            // Support both formats:
-            // 1. 2D array format: [["value1", "value2"], ["value3", "value4"]]
-            // 2. Object array format: [{"cell": "A1", "value": "10"}, {"cell": "B1", "value": "20"}]
-            if (item is JsonObject itemObj)
+            // Determine dimensions
+            var rowCount = dataArray.Count;
+            var colCount = dataArray.Max(item => item is JsonArray arr ? arr.Count : 0);
+
+            if (colCount > 0)
             {
-                // Object format: {"cell": "A1", "value": "10"}
-                var cellRef = itemObj["cell"]?.GetValue<string>();
-                var cellValue = itemObj["value"]?.GetValue<string>() ?? "";
+                // Create 2D object array
+                var data2D = new object[rowCount, colCount];
 
-                if (!string.IsNullOrEmpty(cellRef))
-                {
-                    var cellObj = worksheet.Cells[cellRef];
+                for (var i = 0; i < rowCount; i++)
+                    if (dataArray[i] is JsonArray rowArray)
+                        for (var j = 0; j < colCount; j++)
+                            if (j < rowArray.Count)
+                            {
+                                var cellValue = rowArray[j]?.GetValue<string>() ?? "";
 
-                    // Parse value as number, boolean, or string
-                    if (double.TryParse(cellValue, NumberStyles.Any, CultureInfo.InvariantCulture, out var numValue))
-                        cellObj.PutValue(numValue);
-                    else if (bool.TryParse(cellValue, out var boolValue))
-                        cellObj.PutValue(boolValue);
-                    else
-                        cellObj.PutValue(cellValue);
-                }
+                                // Parse value as number, boolean, or string
+                                if (double.TryParse(cellValue, NumberStyles.Any, CultureInfo.InvariantCulture,
+                                        out var numValue))
+                                    data2D[i, j] = numValue;
+                                else if (bool.TryParse(cellValue, out var boolValue))
+                                    data2D[i, j] = boolValue;
+                                else
+                                    data2D[i, j] = cellValue;
+                            }
+                            else
+                            {
+                                data2D[i, j] = "";
+                            }
+
+                // Import the 2D array using official method
+                worksheet.Cells.ImportTwoDimensionArray(data2D, startRow, startCol);
+
+                // After importing, set text format for values that look like cell references
+                // This ensures they are stored as text, not interpreted as cell references
+                for (var i = 0; i < rowCount; i++)
+                    if (dataArray[i] is JsonArray rowArray)
+                        for (var j = 0; j < rowArray.Count; j++)
+                        {
+                            var cellValue = rowArray[j]?.GetValue<string>() ?? "";
+
+                            // Check if value looks like a cell reference
+                            var looksLikeCellRef = cellValue.Length >= 2 &&
+                                                   char.IsLetter(cellValue[0]) &&
+                                                   ((cellValue.Length == 2 && char.IsDigit(cellValue[1])) ||
+                                                    (cellValue.Length > 2 && cellValue.Length <= 5 &&
+                                                     cellValue.Skip(1).All(char.IsLetterOrDigit) &&
+                                                     cellValue.Substring(1).Any(char.IsDigit) &&
+                                                     !cellValue.Contains(" ") &&
+                                                     !cellValue.Contains(":") &&
+                                                     !cellValue.Contains("$")));
+
+                            // If it's not a number or boolean and looks like a cell reference, force text format
+                            if (looksLikeCellRef &&
+                                !double.TryParse(cellValue, NumberStyles.Any, CultureInfo.InvariantCulture, out _) &&
+                                !bool.TryParse(cellValue, out _))
+                            {
+                                var cellObj = worksheet.Cells[startRow + i, startCol + j];
+                                var style = workbook.CreateStyle();
+                                style.Number = 49; // Text format
+                                cellObj.SetStyle(style);
+                                cellObj.PutValue(cellValue, true);
+                            }
+                        }
             }
-            else if (item is JsonArray rowArray)
+        }
+        else
+        {
+            // Object format: [{"cell": "A1", "value": "10"}, {"cell": "B1", "value": "20"}]
+            for (var i = 0; i < dataArray.Count; i++)
             {
-                // 2D array format: ["value1", "value2"]
-                for (var j = 0; j < rowArray.Count; j++)
-                {
-                    var cellValue = rowArray[j]?.GetValue<string>() ?? "";
-                    var cellObj = worksheet.Cells[startRow + i, startCol + j];
+                var item = dataArray[i];
 
-                    // Parse value as number, boolean, or string
-                    // Ensures formulas can correctly identify numeric values (same as excel_cell write)
-                    if (double.TryParse(cellValue, NumberStyles.Any, CultureInfo.InvariantCulture, out var numValue))
-                        // Use PutValue with number to ensure Excel recognizes it as numeric type
-                        cellObj.PutValue(numValue);
-                    else if (bool.TryParse(cellValue, out var boolValue))
-                        cellObj.PutValue(boolValue);
-                    else
-                        cellObj.PutValue(cellValue);
+                if (item is JsonObject itemObj)
+                {
+                    var cellRef = itemObj["cell"]?.GetValue<string>();
+                    var cellValue = itemObj["value"]?.GetValue<string>() ?? "";
+
+                    if (!string.IsNullOrEmpty(cellRef))
+                    {
+                        var cellObj = worksheet.Cells[cellRef];
+
+                        // Parse value as number, boolean, or string
+                        if (double.TryParse(cellValue, NumberStyles.Any, CultureInfo.InvariantCulture,
+                                out var numValue))
+                            cellObj.PutValue(numValue);
+                        else if (bool.TryParse(cellValue, out var boolValue))
+                            cellObj.PutValue(boolValue);
+                        else
+                            cellObj.PutValue(cellValue);
+                    }
                 }
-            }
-            else
-            {
-                throw new ArgumentException(
-                    $"Invalid data format at index {i}. Expected array of arrays (2D) or array of objects with 'cell' and 'value' properties. Got: {item?.GetType().Name ?? "null"}");
+                else
+                {
+                    throw new ArgumentException(
+                        $"Invalid data format at index {i}. Expected array of arrays (2D) or array of objects with 'cell' and 'value' properties. Got: {item?.GetType().Name ?? "null"}");
+                }
             }
         }
 
