@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>開發者指南 - Aspose MCP Server</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="alternate icon" href="favicon.ico">
     <meta name="description" content="Aspose MCP Server 開發者指南：倉庫結構、本地開發、多平台構建。">
     <meta name="keywords" content="Aspose, MCP, 開發者指南, 本地開發, 多平台構建, GitHub Actions">
     <link rel="canonical" href="https://xjustloveux.github.io/aspose-mcp-server/developers.html">
@@ -55,26 +57,41 @@
             padding: 0 20px;
         }
         
+        .nav-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            gap: 20px;
+        }
+        
         .nav-menu {
             display: flex;
-            justify-content: center;
+            justify-content: flex-end;
             align-items: center;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
             list-style: none;
-            padding: 15px 0;
+            padding: 0;
+            margin: 0;
+            gap: 5px;
+            flex: 1;
         }
         
         .nav-menu li {
-            margin: 0 10px;
+            margin: 0;
+            white-space: nowrap;
         }
         
         .nav-menu a {
             color: #333;
             text-decoration: none;
-            padding: 8px 16px;
+            padding: 8px 12px;
             border-radius: 5px;
             transition: background 0.3s ease;
             font-weight: 500;
+            display: block;
+            white-space: nowrap;
+            font-size: 0.95em;
         }
         
         .nav-menu a:hover {
@@ -90,7 +107,52 @@
             font-size: 1.2em;
             font-weight: bold;
             color: #667eea;
-            margin-right: 30px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+            flex-shrink: 0;
+            text-decoration: none;
+        }
+        
+        .nav-logo img {
+            width: 24px;
+            height: 24px;
+            vertical-align: middle;
+        }
+        
+        /* 中等屏幕优化 */
+        @media (max-width: 1024px) and (min-width: 769px) {
+            .nav-menu a {
+                padding: 8px 10px;
+                font-size: 0.9em;
+            }
+            
+            .nav-logo {
+                font-size: 1.1em;
+            }
+            
+            .nav-menu {
+                gap: 3px;
+            }
+            
+            .nav-header {
+                gap: 15px;
+            }
+        }
+        
+        .menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #667eea;
+            padding: 5px 10px;
+        }
+        
+        .menu-toggle:hover {
+            color: #5568d3;
         }
         
         .page-header {
@@ -204,20 +266,145 @@
             border-top: 1px solid #ddd;
             margin-top: 40px;
         }
+        
+        /* 响应式设计 - 移动端 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .nav-container {
+                padding: 0 15px;
+            }
+            
+            .nav-header {
+                padding: 10px 0;
+                flex-wrap: wrap;
+            }
+            
+            .menu-toggle {
+                display: block;
+            }
+            
+            .nav-menu {
+                display: none;
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 10px 0;
+                width: 100%;
+                order: 3;
+                flex: 1 1 100%;
+            }
+            
+            .nav-menu.active {
+                display: flex;
+            }
+            
+            .nav-menu li {
+                width: 100%;
+                margin: 5px 0;
+            }
+            
+            .nav-menu a {
+                display: block;
+                width: 100%;
+                padding: 12px 16px;
+            }
+            
+            .nav-logo {
+                flex: 1;
+                font-size: 1.1em;
+            }
+            
+            .page-header {
+                padding: 30px 15px;
+                margin-bottom: 30px;
+            }
+            
+            .page-header h1 {
+                font-size: 1.8em;
+            }
+            
+            .section {
+                padding: 25px 15px;
+                margin-bottom: 20px;
+            }
+            
+            .section h2 {
+                font-size: 1.4em;
+            }
+            
+            .section h3 {
+                font-size: 1.1em;
+            }
+            
+            .code-wrapper {
+                margin: 10px -15px;
+            }
+            
+            .code-block {
+                padding: 15px;
+                font-size: 0.85em;
+            }
+            
+            .copy-button {
+                top: 5px;
+                right: 5px;
+                padding: 6px 10px;
+                font-size: 0.8em;
+            }
+            
+            .structure-tree {
+                padding: 15px;
+                font-size: 0.85em;
+                margin: 10px -15px;
+            }
+            
+            footer {
+                padding: 30px 15px;
+                font-size: 0.9em;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .page-header h1 {
+                font-size: 1.5em;
+            }
+            
+            .nav-logo {
+                font-size: 1em;
+            }
+            
+            .nav-logo img {
+                width: 20px;
+                height: 20px;
+            }
+            
+            .code-block {
+                font-size: 0.75em;
+            }
+            
+            .structure-tree {
+                font-size: 0.75em;
+            }
+        }
     </style>
 </head>
 <body>
     <nav>
         <div class="nav-container">
-            <ul class="nav-menu">
-                <li><a href="index.html" class="nav-logo">🚀 Aspose MCP Server</a></li>
-                <li><a href="index.html">首頁</a></li>
-                <li><a href="features.html">功能特性</a></li>
-                <li><a href="tools.html">工具列表</a></li>
-                <li><a href="getting-started.html">快速開始</a></li>
-                <li><a href="developers.html" class="active">開發者指南</a></li>
-                <li><a href="faq.html">常見問答</a></li>
-            </ul>
+            <div class="nav-header">
+                <a href="index.html" class="nav-logo"><img src="favicon.svg" alt="Aspose MCP Server"> Aspose MCP Server</a>
+                <ul class="nav-menu" id="navMenu">
+                    <li><a href="index.html">首頁</a></li>
+                    <li><a href="features.html">功能特性</a></li>
+                    <li><a href="tools.html">工具列表</a></li>
+                    <li><a href="getting-started.html">快速開始</a></li>
+                    <li><a href="developers.html" class="active">開發者指南</a></li>
+                    <li><a href="faq.html">常見問答</a></li>
+                </ul>
+                <button class="menu-toggle" aria-label="Toggle menu">☰</button>
+            </div>
         </div>
     </nav>
     
@@ -364,6 +551,37 @@ cd aspose-mcp-server</div>
                 alert('複製失敗，請手動複製');
             });
         }
+    </script>
+    
+    <script>
+        // 移动端菜单切换
+        document.addEventListener('DOMContentLoaded', function() {
+            const menuToggle = document.querySelector('.menu-toggle');
+            const navMenu = document.getElementById('navMenu');
+            
+            if (menuToggle && navMenu) {
+                menuToggle.addEventListener('click', function() {
+                    navMenu.classList.toggle('active');
+                    // 切换按钮图标
+                    if (navMenu.classList.contains('active')) {
+                        menuToggle.textContent = '✕';
+                    } else {
+                        menuToggle.textContent = '☰';
+                    }
+                });
+                
+                // 点击菜单项后关闭菜单（移动端）
+                const menuLinks = navMenu.querySelectorAll('a');
+                menuLinks.forEach(link => {
+                    link.addEventListener('click', function() {
+                        if (window.innerWidth <= 768) {
+                            navMenu.classList.remove('active');
+                            menuToggle.textContent = '☰';
+                        }
+                    });
+                });
+            }
+        });
     </script>
 </body>
 </html>

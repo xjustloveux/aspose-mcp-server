@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aspose MCP Server - MCP 辦公文檔處理服務器</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="alternate icon" href="favicon.ico">
     <meta name="description" content="為 MCP 客戶端提供 90 個辦公文檔處理工具。支援 Word、Excel、PowerPoint、PDF 及跨格式轉換。">
     <meta name="keywords" content="Aspose, MCP, Model Context Protocol, Word, Excel, PowerPoint, PDF, 文檔處理, 辦公文檔">
     <link rel="canonical" href="https://xjustloveux.github.io/aspose-mcp-server/">
@@ -51,6 +53,16 @@
         header h1 {
             font-size: 2.5em;
             margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+        
+        header h1 img {
+            width: 40px;
+            height: 40px;
+            flex-shrink: 0;
         }
         
         header p {
@@ -206,26 +218,41 @@
             padding: 0 20px;
         }
         
+        .nav-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            gap: 20px;
+        }
+        
         .nav-menu {
             display: flex;
-            justify-content: center;
+            justify-content: flex-end;
             align-items: center;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
             list-style: none;
-            padding: 15px 0;
+            padding: 0;
+            margin: 0;
+            gap: 5px;
+            flex: 1;
         }
         
         .nav-menu li {
-            margin: 0 10px;
+            margin: 0;
+            white-space: nowrap;
         }
         
         .nav-menu a {
             color: #333;
             text-decoration: none;
-            padding: 8px 16px;
+            padding: 8px 12px;
             border-radius: 5px;
             transition: background 0.3s ease;
             font-weight: 500;
+            display: block;
+            white-space: nowrap;
+            font-size: 0.95em;
         }
         
         .nav-menu a:hover {
@@ -241,28 +268,223 @@
             font-size: 1.2em;
             font-weight: bold;
             color: #667eea;
-            margin-right: 30px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+            flex-shrink: 0;
+            text-decoration: none;
+        }
+        
+        .nav-logo img {
+            width: 24px;
+            height: 24px;
+            vertical-align: middle;
+        }
+        
+        /* 中等屏幕优化 */
+        @media (max-width: 1024px) and (min-width: 769px) {
+            .nav-menu a {
+                padding: 8px 10px;
+                font-size: 0.9em;
+            }
+            
+            .nav-logo {
+                font-size: 1.1em;
+            }
+            
+            .nav-menu {
+                gap: 3px;
+            }
+            
+            .nav-header {
+                gap: 15px;
+            }
+        }
+        
+        .menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #667eea;
+            padding: 5px 10px;
+        }
+        
+        .menu-toggle:hover {
+            color: #5568d3;
+        }
+        
+        /* 响应式设计 - 移动端 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            header {
+                padding: 40px 15px;
+            }
+            
+            header h1 {
+                font-size: 1.8em;
+            }
+            
+            header h1 img {
+                width: 32px;
+                height: 32px;
+            }
+            
+            header p {
+                font-size: 1em;
+            }
+            
+            .nav-container {
+                padding: 0 15px;
+            }
+            
+            .nav-header {
+                padding: 10px 0;
+                flex-wrap: wrap;
+            }
+            
+            .menu-toggle {
+                display: block;
+            }
+            
+            .nav-menu {
+                display: none;
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 10px 0;
+                width: 100%;
+                order: 3;
+                flex: 1 1 100%;
+            }
+            
+            .nav-menu.active {
+                display: flex;
+            }
+            
+            .nav-menu li {
+                width: 100%;
+                margin: 5px 0;
+            }
+            
+            .nav-menu a {
+                display: block;
+                width: 100%;
+                padding: 12px 16px;
+            }
+            
+            .nav-logo {
+                flex: 1;
+                font-size: 1.1em;
+            }
+            
+            .features {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            
+            .feature-card {
+                padding: 20px;
+            }
+            
+            .stats {
+                padding: 25px 15px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 20px;
+            }
+            
+            .stat-number {
+                font-size: 2em;
+            }
+            
+            .stat-label {
+                font-size: 0.9em;
+            }
+            
+            .tool-categories {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            
+            .category-card {
+                padding: 20px;
+            }
+            
+            .cta {
+                padding: 25px 15px;
+            }
+            
+            .btn {
+                display: block;
+                width: 100%;
+                margin: 10px 0;
+                padding: 12px 20px;
+                font-size: 1em;
+            }
+            
+            footer {
+                padding: 30px 15px;
+                font-size: 0.9em;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            header h1 {
+                font-size: 1.5em;
+            }
+            
+            header h1 img {
+                width: 28px;
+                height: 28px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stat-number {
+                font-size: 2.5em;
+            }
+            
+            .nav-logo {
+                font-size: 1em;
+            }
+            
+            .nav-logo img {
+                width: 20px;
+                height: 20px;
+            }
         }
     </style>
 </head>
 <body>
     <nav>
         <div class="nav-container">
-            <ul class="nav-menu">
-                <li><a href="index.html" class="nav-logo">🚀 Aspose MCP Server</a></li>
-                <li><a href="index.html" class="active">首頁</a></li>
-                <li><a href="features.html">功能特性</a></li>
-                <li><a href="tools.html">工具列表</a></li>
-                <li><a href="getting-started.html">快速開始</a></li>
-                <li><a href="developers.html">開發者指南</a></li>
-                <li><a href="faq.html">常見問答</a></li>
-            </ul>
+            <div class="nav-header">
+                <a href="index.html" class="nav-logo"><img src="favicon.svg" alt="Aspose MCP Server"> Aspose MCP Server</a>
+                <ul class="nav-menu" id="navMenu">
+                    <li><a href="index.html" class="active">首頁</a></li>
+                    <li><a href="features.html">功能特性</a></li>
+                    <li><a href="tools.html">工具列表</a></li>
+                    <li><a href="getting-started.html">快速開始</a></li>
+                    <li><a href="developers.html">開發者指南</a></li>
+                    <li><a href="faq.html">常見問答</a></li>
+                </ul>
+                <button class="menu-toggle" aria-label="Toggle menu">☰</button>
+            </div>
         </div>
     </nav>
     
     <header>
         <div class="container">
-            <h1>🚀 Aspose MCP Server</h1>
+            <h1><img src="favicon.svg" alt="Aspose MCP Server"> Aspose MCP Server</h1>
             <p>MCP 辦公文檔處理服務器</p>
             <p style="margin-top: 20px; font-size: 1em;">為 MCP 客戶端提供強大的辦公文檔處理能力</p>
         </div>
@@ -385,6 +607,37 @@
             </p>
         </div>
     </footer>
+    
+    <script>
+        // 移动端菜单切换
+        document.addEventListener('DOMContentLoaded', function() {
+            const menuToggle = document.querySelector('.menu-toggle');
+            const navMenu = document.getElementById('navMenu');
+            
+            if (menuToggle && navMenu) {
+                menuToggle.addEventListener('click', function() {
+                    navMenu.classList.toggle('active');
+                    // 切换按钮图标
+                    if (navMenu.classList.contains('active')) {
+                        menuToggle.textContent = '✕';
+                    } else {
+                        menuToggle.textContent = '☰';
+                    }
+                });
+                
+                // 点击菜单项后关闭菜单（移动端）
+                const menuLinks = navMenu.querySelectorAll('a');
+                menuLinks.forEach(link => {
+                    link.addEventListener('click', function() {
+                        if (window.innerWidth <= 768) {
+                            navMenu.classList.remove('active');
+                            menuToggle.textContent = '☰';
+                        }
+                    });
+                });
+            }
+        });
+    </script>
 </body>
 </html>
 

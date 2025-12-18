@@ -1,0 +1,209 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <!-- 主背景渐变 - 深蓝紫色科技感 -->
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a0e27;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#1a1f3a;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2d1b4e;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- 文档形状渐变 -->
+    <linearGradient id="docGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4facfe;stop-opacity:0.95" />
+      <stop offset="50%" style="stop-color:#00f2fe;stop-opacity:0.9" />
+      <stop offset="100%" style="stop-color:#667eea;stop-opacity:0.85" />
+    </linearGradient>
+    
+    <!-- AI节点发光渐变 -->
+    <radialGradient id="nodeGlow" cx="50%" cy="50%">
+      <stop offset="0%" style="stop-color:#00f2fe;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#4facfe;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#667eea;stop-opacity:0.3" />
+    </radialGradient>
+    
+    <!-- 核心节点特殊发光 -->
+    <radialGradient id="coreNodeGlow" cx="50%" cy="50%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="30%" style="stop-color:#00f2fe;stop-opacity:0.9" />
+      <stop offset="70%" style="stop-color:#4facfe;stop-opacity:0.6" />
+      <stop offset="100%" style="stop-color:#667eea;stop-opacity:0.2" />
+    </radialGradient>
+    
+    <!-- 连接线渐变 -->
+    <linearGradient id="connectionGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00f2fe;stop-opacity:0.8" />
+      <stop offset="50%" style="stop-color:#4facfe;stop-opacity:0.6" />
+      <stop offset="100%" style="stop-color:#667eea;stop-opacity:0.4" />
+    </linearGradient>
+    
+    <!-- 数据流粒子效果 -->
+    <radialGradient id="particleGlow" cx="50%" cy="50%">
+      <stop offset="0%" style="stop-color:#00f2fe;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00f2fe;stop-opacity:0" />
+    </radialGradient>
+    
+    <!-- 发光滤镜效果 -->
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="1.5" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <filter id="strongGlow">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- 背景圆形 -->
+  <circle cx="32" cy="32" r="31" fill="url(#bgGradient)"/>
+  
+  <!-- 抽象文档形状 - 多层叠加创造深度 -->
+  <!-- 底层文档 -->
+  <path d="M 16 18 L 48 18 L 48 46 L 16 46 Z" 
+        fill="url(#docGradient)" opacity="0.3" transform="rotate(-2 32 32)"/>
+  
+  <!-- 中层文档 -->
+  <path d="M 18 16 L 46 16 L 46 44 L 18 44 Z" 
+        fill="url(#docGradient)" opacity="0.5" transform="rotate(1 32 32)"/>
+  
+  <!-- 顶层文档 - 主要形状 -->
+  <path d="M 20 14 L 44 14 L 44 42 L 20 42 Z" 
+        fill="url(#docGradient)" opacity="0.85"/>
+  
+  <!-- 文档折角细节 -->
+  <path d="M 20 14 L 28 14 L 20 22 Z" 
+        fill="#ffffff" opacity="0.4"/>
+  
+  <!-- 文档内部网格线（代表数据处理） -->
+  <line x1="24" y1="20" x2="40" y2="20" stroke="#ffffff" stroke-width="0.5" opacity="0.2"/>
+  <line x1="24" y1="26" x2="40" y2="26" stroke="#ffffff" stroke-width="0.5" opacity="0.2"/>
+  <line x1="24" y1="32" x2="40" y2="32" stroke="#ffffff" stroke-width="0.5" opacity="0.2"/>
+  <line x1="24" y1="38" x2="40" y2="38" stroke="#ffffff" stroke-width="0.5" opacity="0.2"/>
+  
+  <!-- 深层神经网络结构 -->
+  <!-- 输入层节点 -->
+  <circle cx="26" cy="22" r="2" fill="url(#nodeGlow)" filter="url(#glow)"/>
+  <circle cx="32" cy="20" r="2" fill="url(#nodeGlow)" filter="url(#glow)"/>
+  <circle cx="38" cy="22" r="2" fill="url(#nodeGlow)" filter="url(#glow)"/>
+  
+  <!-- 隐藏层1节点 -->
+  <circle cx="24" cy="26" r="2" fill="url(#nodeGlow)" filter="url(#glow)"/>
+  <circle cx="30" cy="25" r="2.2" fill="url(#nodeGlow)" filter="url(#glow)"/>
+  <circle cx="36" cy="25" r="2.5" fill="url(#nodeGlow)" filter="url(#glow)"/>
+  <circle cx="40" cy="26" r="2" fill="url(#nodeGlow)" filter="url(#glow)"/>
+  
+  <!-- 隐藏层2节点（核心处理层） -->
+  <circle cx="26" cy="30" r="2.2" fill="url(#nodeGlow)" filter="url(#glow)"/>
+  <circle cx="32" cy="29" r="3.5" fill="url(#coreNodeGlow)" filter="url(#strongGlow)"/>
+  <circle cx="38" cy="30" r="2.2" fill="url(#nodeGlow)" filter="url(#glow)"/>
+  
+  <!-- 隐藏层3节点 -->
+  <circle cx="24" cy="34" r="2" fill="url(#nodeGlow)" filter="url(#glow)"/>
+  <circle cx="32" cy="33" r="2.8" fill="url(#nodeGlow)" filter="url(#glow)"/>
+  <circle cx="40" cy="34" r="2" fill="url(#nodeGlow)" filter="url(#glow)"/>
+  
+  <!-- 输出层节点 -->
+  <circle cx="28" cy="38" r="2" fill="url(#nodeGlow)" filter="url(#glow)"/>
+  <circle cx="36" cy="38" r="2" fill="url(#nodeGlow)" filter="url(#glow)"/>
+  
+  <!-- 神经网络连接线 - 密集连接显示AI处理能力 -->
+  <!-- 输入层到隐藏层1 -->
+  <line x1="26" y1="22" x2="24" y2="26" stroke="url(#connectionGradient)" stroke-width="1" opacity="0.5"/>
+  <line x1="26" y1="22" x2="30" y2="25" stroke="url(#connectionGradient)" stroke-width="1.2" opacity="0.6"/>
+  <line x1="26" y1="22" x2="36" y2="25" stroke="url(#connectionGradient)" stroke-width="1" opacity="0.5"/>
+  <line x1="32" y1="20" x2="30" y2="25" stroke="url(#connectionGradient)" stroke-width="1.5" opacity="0.7"/>
+  <line x1="32" y1="20" x2="36" y2="25" stroke="url(#connectionGradient)" stroke-width="1.5" opacity="0.7"/>
+  <line x1="38" y1="22" x2="36" y2="25" stroke="url(#connectionGradient)" stroke-width="1.2" opacity="0.6"/>
+  <line x1="38" y1="22" x2="40" y2="26" stroke="url(#connectionGradient)" stroke-width="1" opacity="0.5"/>
+  
+  <!-- 隐藏层1到隐藏层2 -->
+  <line x1="24" y1="26" x2="26" y2="30" stroke="url(#connectionGradient)" stroke-width="1.2" opacity="0.6"/>
+  <line x1="30" y1="25" x2="26" y2="30" stroke="url(#connectionGradient)" stroke-width="1.5" opacity="0.7"/>
+  <line x1="30" y1="25" x2="32" y2="29" stroke="url(#connectionGradient)" stroke-width="2" opacity="0.8"/>
+  <line x1="36" y1="25" x2="32" y2="29" stroke="url(#connectionGradient)" stroke-width="2.5" opacity="0.9"/>
+  <line x1="36" y1="25" x2="38" y2="30" stroke="url(#connectionGradient)" stroke-width="1.5" opacity="0.7"/>
+  <line x1="40" y1="26" x2="38" y2="30" stroke="url(#connectionGradient)" stroke-width="1.2" opacity="0.6"/>
+  
+  <!-- 隐藏层2到隐藏层3（核心层连接） -->
+  <line x1="26" y1="30" x2="24" y2="34" stroke="url(#connectionGradient)" stroke-width="1.5" opacity="0.7"/>
+  <line x1="26" y1="30" x2="32" y2="33" stroke="url(#connectionGradient)" stroke-width="1.5" opacity="0.7"/>
+  <line x1="32" y1="29" x2="24" y2="34" stroke="url(#connectionGradient)" stroke-width="2" opacity="0.8"/>
+  <line x1="32" y1="29" x2="32" y2="33" stroke="url(#connectionGradient)" stroke-width="3" opacity="0.95"/>
+  <line x1="32" y1="29" x2="40" y2="34" stroke="url(#connectionGradient)" stroke-width="2" opacity="0.8"/>
+  <line x1="38" y1="30" x2="32" y2="33" stroke="url(#connectionGradient)" stroke-width="1.5" opacity="0.7"/>
+  <line x1="38" y1="30" x2="40" y2="34" stroke="url(#connectionGradient)" stroke-width="1.5" opacity="0.7"/>
+  
+  <!-- 隐藏层3到输出层 -->
+  <line x1="24" y1="34" x2="28" y2="38" stroke="url(#connectionGradient)" stroke-width="1.5" opacity="0.7"/>
+  <line x1="32" y1="33" x2="28" y2="38" stroke="url(#connectionGradient)" stroke-width="2" opacity="0.8"/>
+  <line x1="32" y1="33" x2="36" y2="38" stroke="url(#connectionGradient)" stroke-width="2" opacity="0.8"/>
+  <line x1="40" y1="34" x2="36" y2="38" stroke="url(#connectionGradient)" stroke-width="1.5" opacity="0.7"/>
+  
+  <!-- 数据流粒子效果 - 在连接线上流动 -->
+  <circle cx="29" cy="24" r="0.8" fill="url(#particleGlow)" opacity="0.9"/>
+  <circle cx="34" cy="27" r="1" fill="url(#particleGlow)" opacity="0.9"/>
+  <circle cx="30" cy="31" r="0.8" fill="url(#particleGlow)" opacity="0.9"/>
+  <circle cx="34" cy="35" r="0.8" fill="url(#particleGlow)" opacity="0.9"/>
+  
+  <!-- 外部科技感装饰元素 - 能量环和几何结构（确保在圆形范围内） -->
+  
+  <!-- 左上角：六边形能量环 -->
+  <polygon points="12,12 14.5,10.5 17,12 17,14.5 14.5,16 12,14.5" 
+           fill="none" stroke="#00f2fe" stroke-width="0.8" opacity="0.5" filter="url(#glow)"/>
+  <circle cx="14.5" cy="13.25" r="1" fill="#00f2fe" opacity="0.7" filter="url(#glow)"/>
+  <!-- 连接到文档 -->
+  <line x1="14.5" y1="13.25" x2="20" y2="16" stroke="#00f2fe" stroke-width="0.6" opacity="0.4" stroke-dasharray="2,2"/>
+  
+  <!-- 右上角：三角形能量节点 -->
+  <polygon points="49.5,12 52,14.5 47,14.5" 
+           fill="none" stroke="#4facfe" stroke-width="0.8" opacity="0.5" filter="url(#glow)"/>
+  <circle cx="49.5" cy="13.25" r="0.9" fill="#4facfe" opacity="0.7" filter="url(#glow)"/>
+  <!-- 连接到文档 -->
+  <line x1="49.5" y1="13.25" x2="44" y2="16" stroke="#4facfe" stroke-width="0.6" opacity="0.4" stroke-dasharray="2,2"/>
+  
+  <!-- 左下角：电路板风格连接点 -->
+  <rect x="10" y="51" width="2" height="2" fill="none" stroke="#667eea" stroke-width="0.6" opacity="0.5" transform="rotate(45 11 52)"/>
+  <circle cx="11" cy="52" r="0.7" fill="#667eea" opacity="0.6" filter="url(#glow)"/>
+  <line x1="11" y1="52" x2="18" y2="42" stroke="#667eea" stroke-width="0.6" opacity="0.3" stroke-dasharray="1.5,1.5"/>
+  
+  <!-- 右下角：电路板风格连接点 -->
+  <rect x="52" y="51" width="2" height="2" fill="none" stroke="#667eea" stroke-width="0.6" opacity="0.5" transform="rotate(45 53 52)"/>
+  <circle cx="53" cy="52" r="0.7" fill="#667eea" opacity="0.6" filter="url(#glow)"/>
+  <line x1="53" y1="52" x2="46" y2="42" stroke="#667eea" stroke-width="0.6" opacity="0.3" stroke-dasharray="1.5,1.5"/>
+  
+  <!-- 顶部：能量轨道 -->
+  <path d="M 20 12 Q 32 8, 44 12" 
+        fill="none" stroke="#00f2fe" stroke-width="0.7" opacity="0.4" filter="url(#glow)"/>
+  <circle cx="20" cy="12" r="0.6" fill="#00f2fe" opacity="0.7"/>
+  <circle cx="32" cy="8" r="0.8" fill="#00f2fe" opacity="0.8" filter="url(#glow)"/>
+  <circle cx="44" cy="12" r="0.6" fill="#00f2fe" opacity="0.7"/>
+  
+  <!-- 底部：数据传输路径 -->
+  <path d="M 20 52 L 24 53.5 L 32 54 L 40 53.5 L 44 52" 
+        fill="none" stroke="#4facfe" stroke-width="0.7" opacity="0.4" filter="url(#glow)"/>
+  <circle cx="20" cy="52" r="0.6" fill="#4facfe" opacity="0.6"/>
+  <circle cx="24" cy="53.5" r="0.5" fill="#4facfe" opacity="0.5"/>
+  <circle cx="32" cy="54" r="0.8" fill="#4facfe" opacity="0.7" filter="url(#glow)"/>
+  <circle cx="40" cy="53.5" r="0.5" fill="#4facfe" opacity="0.5"/>
+  <circle cx="44" cy="52" r="0.6" fill="#4facfe" opacity="0.6"/>
+  <!-- 连接到文档输出 -->
+  <line x1="32" y1="54" x2="32" y2="42" stroke="#4facfe" stroke-width="0.6" opacity="0.3" stroke-dasharray="2,2"/>
+  
+  <!-- 左侧：垂直能量流 -->
+  <line x1="12" y1="20" x2="12" y2="44" stroke="#00f2fe" stroke-width="0.6" opacity="0.3"/>
+  <circle cx="12" cy="20" r="0.6" fill="#00f2fe" opacity="0.5"/>
+  <circle cx="12" cy="32" r="0.8" fill="#00f2fe" opacity="0.6" filter="url(#glow)"/>
+  <circle cx="12" cy="44" r="0.6" fill="#00f2fe" opacity="0.5"/>
+  
+  <!-- 右侧：垂直能量流 -->
+  <line x1="52" y1="20" x2="52" y2="44" stroke="#4facfe" stroke-width="0.6" opacity="0.3"/>
+  <circle cx="52" cy="20" r="0.6" fill="#4facfe" opacity="0.5"/>
+  <circle cx="52" cy="32" r="0.8" fill="#4facfe" opacity="0.6" filter="url(#glow)"/>
+  <circle cx="52" cy="44" r="0.6" fill="#4facfe" opacity="0.5"/>
+</svg>
