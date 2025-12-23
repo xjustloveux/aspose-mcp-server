@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Nodes;
+using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using Aspose.Pdf.Optimization;
 using AsposeMcpServer.Core;
@@ -116,16 +116,19 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments containing outputPath, optional content</param>
     /// <returns>Success message with file path</returns>
-    private async Task<string> CreateDocument(JsonObject? arguments)
+    private Task<string> CreateDocument(JsonObject? arguments)
     {
-        var outputPath = ArgumentHelper.GetString(arguments, "outputPath", "path", "outputPath");
+        return Task.Run(() =>
+        {
+            var outputPath = ArgumentHelper.GetString(arguments, "outputPath", "path", "outputPath");
 
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
-        using var document = new Document();
-        document.Pages.Add();
-        document.Save(outputPath);
-        return await Task.FromResult($"PDF document created successfully at: {outputPath}");
+            using var document = new Document();
+            document.Pages.Add();
+            document.Save(outputPath);
+            return $"PDF document created successfully at: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -133,33 +136,36 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments containing sourcePaths array, outputPath</param>
     /// <returns>Success message with merged file path</returns>
-    private async Task<string> MergeDocuments(JsonObject? arguments)
+    private Task<string> MergeDocuments(JsonObject? arguments)
     {
-        var inputPathsArray = ArgumentHelper.GetArray(arguments, "inputPaths");
-        var outputPath = ArgumentHelper.GetString(arguments, "outputPath");
-
-        // Validate array size
-        SecurityHelper.ValidateArraySize(inputPathsArray, "inputPaths");
-
-        var inputPaths = inputPathsArray.Select(p => p?.GetValue<string>()).Where(p => p != null).ToList();
-        if (inputPaths.Count == 0)
-            throw new ArgumentException("At least one input path is required");
-
-        // Validate all input paths
-        foreach (var inputPath in inputPaths) SecurityHelper.ValidateFilePath(inputPath!, "inputPaths");
-
-        // Validate output path
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-
-        using var mergedDocument = new Document(inputPaths[0]);
-        for (var i = 1; i < inputPaths.Count; i++)
+        return Task.Run(() =>
         {
-            using var doc = new Document(inputPaths[i]);
-            mergedDocument.Pages.Add(doc.Pages);
-        }
+            var inputPathsArray = ArgumentHelper.GetArray(arguments, "inputPaths");
+            var outputPath = ArgumentHelper.GetString(arguments, "outputPath");
 
-        mergedDocument.Save(outputPath);
-        return await Task.FromResult($"Merged {inputPaths.Count} PDF documents into: {outputPath}");
+            // Validate array size
+            SecurityHelper.ValidateArraySize(inputPathsArray, "inputPaths");
+
+            var inputPaths = inputPathsArray.Select(p => p?.GetValue<string>()).Where(p => p != null).ToList();
+            if (inputPaths.Count == 0)
+                throw new ArgumentException("At least one input path is required");
+
+            // Validate all input paths
+            foreach (var inputPath in inputPaths) SecurityHelper.ValidateFilePath(inputPath!, "inputPaths", true);
+
+            // Validate output path
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+
+            using var mergedDocument = new Document(inputPaths[0]);
+            for (var i = 1; i < inputPaths.Count; i++)
+            {
+                using var doc = new Document(inputPaths[i]);
+                mergedDocument.Pages.Add(doc.Pages);
+            }
+
+            mergedDocument.Save(outputPath);
+            return $"Merged {inputPaths.Count} PDF documents into: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -167,35 +173,38 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, outputPath, splitBy (page or range)</param>
     /// <returns>Success message with split file count</returns>
-    private async Task<string> SplitDocument(JsonObject? arguments)
+    private Task<string> SplitDocument(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputDir = ArgumentHelper.GetString(arguments, "outputDir");
-        var pagesPerFile = ArgumentHelper.GetInt(arguments, "pagesPerFile", 1);
-
-        SecurityHelper.ValidateFilePath(path);
-        SecurityHelper.ValidateFilePath(outputDir, "outputDir");
-
-        if (pagesPerFile < 1 || pagesPerFile > 1000)
-            throw new ArgumentException("pagesPerFile must be between 1 and 1000");
-
-        Directory.CreateDirectory(outputDir);
-        using var document = new Document(path);
-        var fileBaseName = SecurityHelper.SanitizeFileName(Path.GetFileNameWithoutExtension(path));
-        var fileCount = 0;
-
-        for (var i = 0; i < document.Pages.Count; i += pagesPerFile)
+        return Task.Run(() =>
         {
-            using var newDocument = new Document();
-            for (var j = 0; j < pagesPerFile && i + j < document.Pages.Count; j++)
-                newDocument.Pages.Add(document.Pages[i + j + 1]);
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            var outputDir = ArgumentHelper.GetString(arguments, "outputDir");
+            var pagesPerFile = ArgumentHelper.GetInt(arguments, "pagesPerFile", 1);
 
-            var safeFileName = SecurityHelper.SanitizeFileName($"{fileBaseName}_part_{++fileCount}.pdf");
-            var outputPath = Path.Combine(outputDir, safeFileName);
-            newDocument.Save(outputPath);
-        }
+            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
+            SecurityHelper.ValidateFilePath(outputDir, "outputDir", true);
 
-        return await Task.FromResult($"PDF split into {fileCount} files in: {outputDir}");
+            if (pagesPerFile < 1 || pagesPerFile > 1000)
+                throw new ArgumentException("pagesPerFile must be between 1 and 1000");
+
+            Directory.CreateDirectory(outputDir);
+            using var document = new Document(path);
+            var fileBaseName = SecurityHelper.SanitizeFileName(Path.GetFileNameWithoutExtension(path));
+            var fileCount = 0;
+
+            for (var i = 0; i < document.Pages.Count; i += pagesPerFile)
+            {
+                using var newDocument = new Document();
+                for (var j = 0; j < pagesPerFile && i + j < document.Pages.Count; j++)
+                    newDocument.Pages.Add(document.Pages[i + j + 1]);
+
+                var safeFileName = SecurityHelper.SanitizeFileName($"{fileBaseName}_part_{++fileCount}.pdf");
+                var outputPath = Path.Combine(outputDir, safeFileName);
+                newDocument.Save(outputPath);
+            }
+
+            return $"PDF split into {fileCount} files in: {outputDir}";
+        });
     }
 
     /// <summary>
@@ -203,42 +212,45 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, optional compressionLevel, outputPath</param>
     /// <returns>Success message</returns>
-    private async Task<string> CompressDocument(JsonObject? arguments)
+    private Task<string> CompressDocument(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var compressImages = ArgumentHelper.GetBool(arguments, "compressImages");
-        _ = ArgumentHelper.GetBool(arguments, "compressFonts");
-        var removeUnusedObjects = ArgumentHelper.GetBool(arguments, "removeUnusedObjects");
-
-        SecurityHelper.ValidateFilePath(path);
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-
-        var document = new Document(path);
-        var optimizationOptions = new OptimizationOptions();
-
-        if (compressImages)
+        return Task.Run(() =>
         {
-            optimizationOptions.ImageCompressionOptions.CompressImages = true;
-            optimizationOptions.ImageCompressionOptions.ImageQuality = 75;
-        }
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var compressImages = ArgumentHelper.GetBool(arguments, "compressImages", true);
+            ArgumentHelper.GetBool(arguments, "compressFonts", true); // Parameter read but not used in current implementation
+            var removeUnusedObjects = ArgumentHelper.GetBool(arguments, "removeUnusedObjects", true);
 
-        if (removeUnusedObjects)
-        {
-            optimizationOptions.LinkDuplcateStreams = true;
-            optimizationOptions.RemoveUnusedObjects = true;
-        }
+            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
-        document.OptimizeResources(optimizationOptions);
-        document.Save(outputPath);
-        document.Dispose();
+            var document = new Document(path);
+            var optimizationOptions = new OptimizationOptions();
 
-        var originalSize = new FileInfo(path).Length;
-        var compressedSize = new FileInfo(outputPath).Length;
-        var reduction = (double)(originalSize - compressedSize) / originalSize * 100;
+            if (compressImages)
+            {
+                optimizationOptions.ImageCompressionOptions.CompressImages = true;
+                optimizationOptions.ImageCompressionOptions.ImageQuality = 75;
+            }
 
-        return await Task.FromResult(
-            $"PDF compressed. Size reduction: {reduction:F2}% ({originalSize} -> {compressedSize} bytes). Output: {outputPath}");
+            if (removeUnusedObjects)
+            {
+                optimizationOptions.LinkDuplcateStreams = true;
+                optimizationOptions.RemoveUnusedObjects = true;
+            }
+
+            document.OptimizeResources(optimizationOptions);
+            document.Save(outputPath);
+            document.Dispose();
+
+            var originalSize = new FileInfo(path).Length;
+            var compressedSize = new FileInfo(outputPath).Length;
+            var reduction = (double)(originalSize - compressedSize) / originalSize * 100;
+
+            return
+                $"PDF compressed. Size reduction: {reduction:F2}% ({originalSize} -> {compressedSize} bytes). Output: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -246,20 +258,23 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, password, optional userPassword, permissions, outputPath</param>
     /// <returns>Success message</returns>
-    private async Task<string> EncryptDocument(JsonObject? arguments)
+    private Task<string> EncryptDocument(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var userPassword = ArgumentHelper.GetString(arguments, "userPassword");
-        var ownerPassword = ArgumentHelper.GetString(arguments, "ownerPassword");
+        return Task.Run(() =>
+        {
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var userPassword = ArgumentHelper.GetString(arguments, "userPassword");
+            var ownerPassword = ArgumentHelper.GetString(arguments, "ownerPassword");
 
-        SecurityHelper.ValidateFilePath(path);
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
-        using var document = new Document(path);
-        document.Encrypt(userPassword, ownerPassword, Permissions.PrintDocument | Permissions.ModifyContent,
-            CryptoAlgorithm.AESx256);
-        document.Save(outputPath);
-        return await Task.FromResult($"PDF encrypted with password. Output: {outputPath}");
+            using var document = new Document(path);
+            document.Encrypt(userPassword, ownerPassword, Permissions.PrintDocument | Permissions.ModifyContent,
+                CryptoAlgorithm.AESx256);
+            document.Save(outputPath);
+            return $"PDF encrypted with password. Output: {outputPath}";
+        });
     }
 }

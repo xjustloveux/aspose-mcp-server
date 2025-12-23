@@ -111,31 +111,34 @@ Usage examples:
     /// <param name="path">PowerPoint file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> AddAnimationAsync(JsonObject? arguments, string path, int slideIndex)
+    private Task<string> AddAnimationAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
-        var effectTypeStr = ArgumentHelper.GetString(arguments, "effectType", "Fade");
-
-        using var presentation = new Presentation(path);
-        var slide = presentation.Slides[slideIndex];
-        var shape = slide.Shapes[shapeIndex];
-
-        var effectType = effectTypeStr.ToLower() switch
+        return Task.Run(() =>
         {
-            "fade" => EffectType.Fade,
-            "fly" => EffectType.Fly,
-            "appear" => EffectType.Appear,
-            "bounce" => EffectType.Bounce,
-            "zoom" => EffectType.Zoom,
-            _ => EffectType.Fade
-        };
+            var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
+            var effectTypeStr = ArgumentHelper.GetString(arguments, "effectType", "Fade");
 
-        slide.Timeline.MainSequence.AddEffect(shape, effectType, EffectSubtype.None, EffectTriggerType.OnClick);
+            using var presentation = new Presentation(path);
+            var slide = presentation.Slides[slideIndex];
+            var shape = slide.Shapes[shapeIndex];
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        presentation.Save(outputPath, SaveFormat.Pptx);
+            var effectType = effectTypeStr.ToLower() switch
+            {
+                "fade" => EffectType.Fade,
+                "fly" => EffectType.Fly,
+                "appear" => EffectType.Appear,
+                "bounce" => EffectType.Bounce,
+                "zoom" => EffectType.Zoom,
+                _ => EffectType.Fade
+            };
 
-        return await Task.FromResult($"Animation added to shape on slide {slideIndex}: {outputPath}");
+            slide.Timeline.MainSequence.AddEffect(shape, effectType, EffectSubtype.None, EffectTriggerType.OnClick);
+
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
+
+            return $"Animation added to shape on slide {slideIndex}: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -145,61 +148,64 @@ Usage examples:
     /// <param name="path">PowerPoint file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> EditAnimationAsync(JsonObject? arguments, string path, int slideIndex)
+    private Task<string> EditAnimationAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
-        var effectTypeStr = ArgumentHelper.GetStringNullable(arguments, "effectType");
-        var triggerTypeStr = ArgumentHelper.GetStringNullable(arguments, "triggerType");
-        var duration = ArgumentHelper.GetFloatNullable(arguments, "duration");
-        var delay = ArgumentHelper.GetFloatNullable(arguments, "delay");
-
-        using var presentation = new Presentation(path);
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-        if (shapeIndex < 0 || shapeIndex >= slide.Shapes.Count)
-            throw new ArgumentException($"shapeIndex must be between 0 and {slide.Shapes.Count - 1}");
-
-        var shape = slide.Shapes[shapeIndex];
-        var sequence = slide.Timeline.MainSequence;
-
-        // Remove existing animations for this shape
-        for (var i = sequence.Count - 1; i >= 0; i--)
-            if (sequence[i].TargetShape == shape)
-                sequence.Remove(sequence[i]);
-
-        // Add new animation if specified
-        if (!string.IsNullOrEmpty(effectTypeStr))
+        return Task.Run(() =>
         {
-            var effectType = effectTypeStr.ToLower() switch
+            var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
+            var effectTypeStr = ArgumentHelper.GetStringNullable(arguments, "effectType");
+            var triggerTypeStr = ArgumentHelper.GetStringNullable(arguments, "triggerType");
+            var duration = ArgumentHelper.GetFloatNullable(arguments, "duration");
+            var delay = ArgumentHelper.GetFloatNullable(arguments, "delay");
+
+            using var presentation = new Presentation(path);
+            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+            if (shapeIndex < 0 || shapeIndex >= slide.Shapes.Count)
+                throw new ArgumentException($"shapeIndex must be between 0 and {slide.Shapes.Count - 1}");
+
+            var shape = slide.Shapes[shapeIndex];
+            var sequence = slide.Timeline.MainSequence;
+
+            // Remove existing animations for this shape
+            for (var i = sequence.Count - 1; i >= 0; i--)
+                if (sequence[i].TargetShape == shape)
+                    sequence.Remove(sequence[i]);
+
+            // Add new animation if specified
+            if (!string.IsNullOrEmpty(effectTypeStr))
             {
-                "fade" => EffectType.Fade,
-                "fly" => EffectType.Fly,
-                "appear" => EffectType.Appear,
-                "bounce" => EffectType.Bounce,
-                "zoom" => EffectType.Zoom,
-                "wipe" => EffectType.Wipe,
-                "dissolve" => EffectType.Dissolve,
-                "randombars" => EffectType.RandomBars,
-                "randomeffects" => EffectType.RandomEffects,
-                _ => EffectType.Fade
-            };
+                var effectType = effectTypeStr.ToLower() switch
+                {
+                    "fade" => EffectType.Fade,
+                    "fly" => EffectType.Fly,
+                    "appear" => EffectType.Appear,
+                    "bounce" => EffectType.Bounce,
+                    "zoom" => EffectType.Zoom,
+                    "wipe" => EffectType.Wipe,
+                    "dissolve" => EffectType.Dissolve,
+                    "randombars" => EffectType.RandomBars,
+                    "randomeffects" => EffectType.RandomEffects,
+                    _ => EffectType.Fade
+                };
 
-            var triggerType = triggerTypeStr?.ToLower() switch
-            {
-                "afterprevious" => EffectTriggerType.AfterPrevious,
-                "withprevious" => EffectTriggerType.WithPrevious,
-                _ => EffectTriggerType.OnClick
-            };
+                var triggerType = triggerTypeStr?.ToLower() switch
+                {
+                    "afterprevious" => EffectTriggerType.AfterPrevious,
+                    "withprevious" => EffectTriggerType.WithPrevious,
+                    _ => EffectTriggerType.OnClick
+                };
 
-            var effect = sequence.AddEffect(shape, effectType, EffectSubtype.None, triggerType);
+                var effect = sequence.AddEffect(shape, effectType, EffectSubtype.None, triggerType);
 
-            if (duration.HasValue) effect.Timing.Duration = duration.Value;
+                if (duration.HasValue) effect.Timing.Duration = duration.Value;
 
-            if (delay.HasValue) effect.Timing.TriggerDelayTime = delay.Value;
-        }
+                if (delay.HasValue) effect.Timing.TriggerDelayTime = delay.Value;
+            }
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        presentation.Save(outputPath, SaveFormat.Pptx);
-        return await Task.FromResult($"Animation updated on slide {slideIndex}, shape {shapeIndex}");
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
+            return $"Animation updated on slide {slideIndex}, shape {shapeIndex}";
+        });
     }
 
     /// <summary>
@@ -209,42 +215,45 @@ Usage examples:
     /// <param name="path">PowerPoint file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> DeleteAnimationAsync(JsonObject? arguments, string path, int slideIndex)
+    private Task<string> DeleteAnimationAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = ArgumentHelper.GetIntNullable(arguments, "shapeIndex");
-        var animationIndex = ArgumentHelper.GetIntNullable(arguments, "animationIndex");
-
-        using var presentation = new Presentation(path);
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-        var sequence = slide.Timeline.MainSequence;
-
-        if (shapeIndex.HasValue)
+        return Task.Run(() =>
         {
-            if (shapeIndex.Value < 0 || shapeIndex.Value >= slide.Shapes.Count)
-                throw new ArgumentException($"shapeIndex must be between 0 and {slide.Shapes.Count - 1}");
+            var shapeIndex = ArgumentHelper.GetIntNullable(arguments, "shapeIndex");
+            var animationIndex = ArgumentHelper.GetIntNullable(arguments, "animationIndex");
 
-            var shape = slide.Shapes[shapeIndex.Value];
-            var animations = sequence.Where(e => e.TargetShape == shape).ToList();
+            using var presentation = new Presentation(path);
+            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+            var sequence = slide.Timeline.MainSequence;
 
-            if (animationIndex.HasValue)
+            if (shapeIndex.HasValue)
             {
-                if (animationIndex.Value < 0 || animationIndex.Value >= animations.Count)
-                    throw new ArgumentException($"animationIndex must be between 0 and {animations.Count - 1}");
-                sequence.Remove(animations[animationIndex.Value]);
+                if (shapeIndex.Value < 0 || shapeIndex.Value >= slide.Shapes.Count)
+                    throw new ArgumentException($"shapeIndex must be between 0 and {slide.Shapes.Count - 1}");
+
+                var shape = slide.Shapes[shapeIndex.Value];
+                var animations = sequence.Where(e => e.TargetShape == shape).ToList();
+
+                if (animationIndex.HasValue)
+                {
+                    if (animationIndex.Value < 0 || animationIndex.Value >= animations.Count)
+                        throw new ArgumentException($"animationIndex must be between 0 and {animations.Count - 1}");
+                    sequence.Remove(animations[animationIndex.Value]);
+                }
+                else
+                {
+                    foreach (var anim in animations) sequence.Remove(anim);
+                }
             }
             else
             {
-                foreach (var anim in animations) sequence.Remove(anim);
+                // Delete all animations from the slide
+                sequence.Clear();
             }
-        }
-        else
-        {
-            // Delete all animations from the slide
-            sequence.Clear();
-        }
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        presentation.Save(outputPath, SaveFormat.Pptx);
-        return await Task.FromResult($"Animation(s) deleted from slide {slideIndex}");
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
+            return $"Animation(s) deleted from slide {slideIndex}";
+        });
     }
 }

@@ -12,6 +12,9 @@ namespace AsposeMcpServer.Tools.Excel;
 /// </summary>
 public class ExcelViewSettingsTool : IAsposeTool
 {
+    /// <summary>
+    ///     Gets the description of the tool and its usage examples
+    /// </summary>
     public string Description =>
         @"Manage Excel view settings. Supports 10 operations: set_zoom, set_gridlines, set_headers, set_zero_values, set_column_width, set_row_height, set_background, set_tab_color, set_all, split_window.
 
@@ -22,6 +25,9 @@ Usage examples:
 - Set row height: excel_view_settings(operation='set_row_height', path='book.xlsx', rowIndex=0, height=30)
 - Set all: excel_view_settings(operation='set_all', path='book.xlsx', zoom=150, gridlinesVisible=true)";
 
+    /// <summary>
+    ///     Gets the JSON schema defining the input parameters for the tool
+    /// </summary>
     public object InputSchema => new
     {
         type = "object",
@@ -37,10 +43,10 @@ Usage examples:
 - 'set_zero_values': Set zero values visibility (required params: path, visible)
 - 'set_column_width': Set column width (required params: path, columnIndex, width)
 - 'set_row_height': Set row height (required params: path, rowIndex, height)
-- 'set_background': Set sheet background (required params: path, imagePath)
-- 'set_tab_color': Set tab color (required params: path, sheetIndex, color)
+- 'set_background': Set sheet background (required params: path, imagePath OR removeBackground)
+- 'set_tab_color': Set tab color (required params: path, color; optional: sheetIndex, default: 0)
 - 'set_all': Set multiple settings (required params: path)
-- 'split_window': Split window (required params: path, rowIndex, columnIndex)",
+- 'split_window': Split window (required params: path, splitRow OR splitColumn OR removeSplit)",
                 @enum = new[]
                 {
                     "set_zoom", "set_gridlines", "set_headers", "set_zero_values", "set_column_width", "set_row_height",
@@ -180,19 +186,22 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetZoomAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> SetZoomAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var zoom = ArgumentHelper.GetInt(arguments, "zoom");
+        return Task.Run(() =>
+        {
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var zoom = ArgumentHelper.GetInt(arguments, "zoom");
 
-        if (zoom < 10 || zoom > 400) throw new ArgumentException("Zoom must be between 10 and 400");
+            if (zoom < 10 || zoom > 400) throw new ArgumentException("Zoom must be between 10 and 400");
 
-        using var workbook = new Workbook(path);
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        worksheet.Zoom = zoom;
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            worksheet.Zoom = zoom;
 
-        workbook.Save(outputPath);
-        return await Task.FromResult($"Zoom level set to {zoom}% for sheet {sheetIndex}: {outputPath}");
+            workbook.Save(outputPath);
+            return $"Zoom level set to {zoom}% for sheet {sheetIndex}: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -202,17 +211,20 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetGridlinesAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> SetGridlinesAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var visible = ArgumentHelper.GetBool(arguments, "visible", false);
+        return Task.Run(() =>
+        {
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var visible = ArgumentHelper.GetBool(arguments, "visible", false);
 
-        using var workbook = new Workbook(path);
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        worksheet.IsGridlinesVisible = visible;
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            worksheet.IsGridlinesVisible = visible;
 
-        workbook.Save(outputPath);
-        return await Task.FromResult($"Gridlines visibility set to {(visible ? "visible" : "hidden")}: {outputPath}");
+            workbook.Save(outputPath);
+            return $"Gridlines visibility set to {(visible ? "visible" : "hidden")}: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -222,18 +234,20 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetHeadersAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> SetHeadersAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var visible = ArgumentHelper.GetBool(arguments, "visible", false);
+        return Task.Run(() =>
+        {
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var visible = ArgumentHelper.GetBool(arguments, "visible", false);
 
-        using var workbook = new Workbook(path);
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        worksheet.IsRowColumnHeadersVisible = visible;
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            worksheet.IsRowColumnHeadersVisible = visible;
 
-        workbook.Save(outputPath);
-        return await Task.FromResult(
-            $"RowColumnHeaders visibility set to {(visible ? "visible" : "hidden")}: {outputPath}");
+            workbook.Save(outputPath);
+            return $"RowColumnHeaders visibility set to {(visible ? "visible" : "hidden")}: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -243,17 +257,20 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetZeroValuesAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> SetZeroValuesAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var visible = ArgumentHelper.GetBool(arguments, "visible", false);
+        return Task.Run(() =>
+        {
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var visible = ArgumentHelper.GetBool(arguments, "visible", false);
 
-        using var workbook = new Workbook(path);
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        worksheet.DisplayZeros = visible;
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            worksheet.DisplayZeros = visible;
 
-        workbook.Save(outputPath);
-        return await Task.FromResult($"Zero values visibility set to {(visible ? "visible" : "hidden")}: {outputPath}");
+            workbook.Save(outputPath);
+            return $"Zero values visibility set to {(visible ? "visible" : "hidden")}: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -263,19 +280,22 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetColumnWidthAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> SetColumnWidthAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var columnIndex = ArgumentHelper.GetInt(arguments, "columnIndex");
-        var width = ArgumentHelper.GetDouble(arguments, "width");
+        return Task.Run(() =>
+        {
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var columnIndex = ArgumentHelper.GetInt(arguments, "columnIndex");
+            var width = ArgumentHelper.GetDouble(arguments, "width");
 
-        using var workbook = new Workbook(path);
-        var worksheet = workbook.Worksheets[sheetIndex];
+            using var workbook = new Workbook(path);
+            var worksheet = workbook.Worksheets[sheetIndex];
 
-        worksheet.Cells.SetColumnWidth(columnIndex, width);
-        workbook.Save(outputPath);
+            worksheet.Cells.SetColumnWidth(columnIndex, width);
+            workbook.Save(outputPath);
 
-        return await Task.FromResult($"Column {columnIndex} width set to {width} characters: {outputPath}");
+            return $"Column {columnIndex} width set to {width} characters: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -285,19 +305,22 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetRowHeightAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> SetRowHeightAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex");
-        var height = ArgumentHelper.GetDouble(arguments, "height");
+        return Task.Run(() =>
+        {
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex");
+            var height = ArgumentHelper.GetDouble(arguments, "height");
 
-        using var workbook = new Workbook(path);
-        var worksheet = workbook.Worksheets[sheetIndex];
+            using var workbook = new Workbook(path);
+            var worksheet = workbook.Worksheets[sheetIndex];
 
-        worksheet.Cells.SetRowHeight(rowIndex, height);
-        workbook.Save(outputPath);
+            worksheet.Cells.SetRowHeight(rowIndex, height);
+            workbook.Save(outputPath);
 
-        return await Task.FromResult($"Row {rowIndex} height set to {height} points: {outputPath}");
+            return $"Row {rowIndex} height set to {height} points: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -307,34 +330,37 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetBackgroundAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> SetBackgroundAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var imagePath = ArgumentHelper.GetStringNullable(arguments, "imagePath");
-        var removeBackground = ArgumentHelper.GetBool(arguments, "removeBackground", false);
-
-        using var workbook = new Workbook(path);
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-
-        if (removeBackground)
+        return Task.Run(() =>
         {
-            worksheet.BackgroundImage = null;
-        }
-        else if (!string.IsNullOrEmpty(imagePath))
-        {
-            if (!File.Exists(imagePath)) throw new FileNotFoundException($"Image file not found: {imagePath}");
-            var imageBytes = await File.ReadAllBytesAsync(imagePath);
-            worksheet.BackgroundImage = imageBytes;
-        }
-        else
-        {
-            throw new ArgumentException("Either imagePath or removeBackground must be provided");
-        }
+            var imagePath = ArgumentHelper.GetStringNullable(arguments, "imagePath");
+            var removeBackground = ArgumentHelper.GetBool(arguments, "removeBackground", false);
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        workbook.Save(outputPath);
-        return await Task.FromResult(removeBackground
-            ? $"Background image removed from sheet {sheetIndex}: {outputPath}"
-            : $"Background image set for sheet {sheetIndex}: {outputPath}");
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+
+            if (removeBackground)
+            {
+                worksheet.BackgroundImage = null;
+            }
+            else if (!string.IsNullOrEmpty(imagePath))
+            {
+                if (!File.Exists(imagePath)) throw new FileNotFoundException($"Image file not found: {imagePath}");
+                var imageBytes = File.ReadAllBytes(imagePath);
+                worksheet.BackgroundImage = imageBytes;
+            }
+            else
+            {
+                throw new ArgumentException("Either imagePath or removeBackground must be provided");
+            }
+
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            workbook.Save(outputPath);
+            return removeBackground
+                ? $"Background image removed from sheet {sheetIndex}: {outputPath}"
+                : $"Background image set for sheet {sheetIndex}: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -344,20 +370,23 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetTabColorAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> SetTabColorAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var colorStr = ArgumentHelper.GetString(arguments, "color");
+        return Task.Run(() =>
+        {
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var colorStr = ArgumentHelper.GetString(arguments, "color");
 
-        using var workbook = new Workbook(path);
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
 
-        var color = ColorHelper.ParseColor(colorStr);
+            var color = ColorHelper.ParseColor(colorStr);
 
-        worksheet.TabColor = color;
+            worksheet.TabColor = color;
 
-        workbook.Save(outputPath);
-        return await Task.FromResult($"Sheet tab color set to {colorStr}: {outputPath}");
+            workbook.Save(outputPath);
+            return $"Sheet tab color set to {colorStr}: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -367,34 +396,37 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetAllAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> SetAllAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var zoom = ArgumentHelper.GetIntNullable(arguments, "zoom");
-        var showGridlines = ArgumentHelper.GetBoolNullable(arguments, "showGridlines");
-        var showRowColumnHeaders = ArgumentHelper.GetBoolNullable(arguments, "showRowColumnHeaders");
-        var showZeroValues = ArgumentHelper.GetBoolNullable(arguments, "showZeroValues");
-        var displayRightToLeft = ArgumentHelper.GetBoolNullable(arguments, "displayRightToLeft");
-
-        using var workbook = new Workbook(path);
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-
-        if (zoom.HasValue)
+        return Task.Run(() =>
         {
-            if (zoom.Value < 10 || zoom.Value > 400) throw new ArgumentException("Zoom must be between 10 and 400");
-            worksheet.Zoom = zoom.Value;
-        }
+            var zoom = ArgumentHelper.GetIntNullable(arguments, "zoom");
+            var showGridlines = ArgumentHelper.GetBoolNullable(arguments, "showGridlines");
+            var showRowColumnHeaders = ArgumentHelper.GetBoolNullable(arguments, "showRowColumnHeaders");
+            var showZeroValues = ArgumentHelper.GetBoolNullable(arguments, "showZeroValues");
+            var displayRightToLeft = ArgumentHelper.GetBoolNullable(arguments, "displayRightToLeft");
 
-        if (showGridlines.HasValue) worksheet.IsGridlinesVisible = showGridlines.Value;
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
 
-        if (showRowColumnHeaders.HasValue) worksheet.IsRowColumnHeadersVisible = showRowColumnHeaders.Value;
+            if (zoom.HasValue)
+            {
+                if (zoom.Value < 10 || zoom.Value > 400) throw new ArgumentException("Zoom must be between 10 and 400");
+                worksheet.Zoom = zoom.Value;
+            }
 
-        if (showZeroValues.HasValue) worksheet.DisplayZeros = showZeroValues.Value;
+            if (showGridlines.HasValue) worksheet.IsGridlinesVisible = showGridlines.Value;
 
-        if (displayRightToLeft.HasValue) worksheet.DisplayRightToLeft = displayRightToLeft.Value;
+            if (showRowColumnHeaders.HasValue) worksheet.IsRowColumnHeadersVisible = showRowColumnHeaders.Value;
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        workbook.Save(outputPath);
-        return await Task.FromResult($"View settings updated for sheet {sheetIndex}: {outputPath}");
+            if (showZeroValues.HasValue) worksheet.DisplayZeros = showZeroValues.Value;
+
+            if (displayRightToLeft.HasValue) worksheet.DisplayRightToLeft = displayRightToLeft.Value;
+
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            workbook.Save(outputPath);
+            return $"View settings updated for sheet {sheetIndex}: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -404,37 +436,40 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> SplitWindowAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> SplitWindowAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var splitRow = ArgumentHelper.GetIntNullable(arguments, "splitRow");
-        var splitColumn = ArgumentHelper.GetIntNullable(arguments, "splitColumn");
-        var removeSplit = ArgumentHelper.GetBool(arguments, "removeSplit", false);
-
-        using var workbook = new Workbook(path);
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-
-        if (removeSplit)
+        return Task.Run(() =>
         {
-            worksheet.RemoveSplit();
-        }
-        else if (splitRow.HasValue || splitColumn.HasValue)
-        {
-            // Split window - Use FreezePanes as alternative (requires 4 parameters)
-            if (splitRow.HasValue && splitColumn.HasValue)
-                worksheet.FreezePanes(splitRow.Value + 1, splitColumn.Value + 1, splitRow.Value + 1,
-                    splitColumn.Value + 1);
-            else if (splitRow.HasValue)
-                worksheet.FreezePanes(splitRow.Value + 1, 0, splitRow.Value + 1, 0);
-            else if (splitColumn.HasValue) worksheet.FreezePanes(0, splitColumn.Value + 1, 0, splitColumn.Value + 1);
-        }
-        else
-        {
-            throw new ArgumentException("Either splitRow, splitColumn, or removeSplit must be provided");
-        }
+            var splitRow = ArgumentHelper.GetIntNullable(arguments, "splitRow");
+            var splitColumn = ArgumentHelper.GetIntNullable(arguments, "splitColumn");
+            var removeSplit = ArgumentHelper.GetBool(arguments, "removeSplit", false);
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        workbook.Save(outputPath);
-        return await Task.FromResult(
-            $"Window split {(removeSplit ? "removed" : "applied")} for sheet {sheetIndex}: {outputPath}");
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+
+            if (removeSplit)
+            {
+                worksheet.RemoveSplit();
+            }
+            else if (splitRow.HasValue || splitColumn.HasValue)
+            {
+                // Split window - Use FreezePanes as alternative (requires 4 parameters)
+                if (splitRow.HasValue && splitColumn.HasValue)
+                    worksheet.FreezePanes(splitRow.Value + 1, splitColumn.Value + 1, splitRow.Value + 1,
+                        splitColumn.Value + 1);
+                else if (splitRow.HasValue)
+                    worksheet.FreezePanes(splitRow.Value + 1, 0, splitRow.Value + 1, 0);
+                else if (splitColumn.HasValue)
+                    worksheet.FreezePanes(0, splitColumn.Value + 1, 0, splitColumn.Value + 1);
+            }
+            else
+            {
+                throw new ArgumentException("Either splitRow, splitColumn, or removeSplit must be provided");
+            }
+
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            workbook.Save(outputPath);
+            return $"Window split {(removeSplit ? "removed" : "applied")} for sheet {sheetIndex}: {outputPath}";
+        });
     }
 }

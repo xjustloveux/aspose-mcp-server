@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Nodes;
+using System.Text.Json.Nodes;
 using Aspose.Cells;
 using Aspose.Slides;
 using Aspose.Words;
@@ -49,51 +49,54 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments object containing operation parameters</param>
     /// <returns>Result message as a string</returns>
-    public async Task<string> ExecuteAsync(JsonObject? arguments)
+    public Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var inputPath = ArgumentHelper.GetString(arguments, "inputPath");
-        var outputPath = ArgumentHelper.GetString(arguments, "outputPath");
-
-        SecurityHelper.ValidateFilePath(inputPath, "inputPath");
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-
-        var extension = Path.GetExtension(inputPath).ToLower();
-
-        switch (extension)
+        return Task.Run(() =>
         {
-            case ".doc":
-            case ".docx":
-            case ".rtf":
-            case ".odt":
-                var wordDoc = new Document(inputPath);
-                wordDoc.Save(outputPath, SaveFormat.Pdf);
-                break;
+            var inputPath = ArgumentHelper.GetString(arguments, "inputPath");
+            var outputPath = ArgumentHelper.GetString(arguments, "outputPath");
 
-            case ".xls":
-            case ".xlsx":
-            case ".csv":
-            case ".ods":
-                using (var workbook = new Workbook(inputPath))
-                {
-                    workbook.Save(outputPath, Aspose.Cells.SaveFormat.Pdf);
-                }
+            SecurityHelper.ValidateFilePath(inputPath, "inputPath", true);
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
-                break;
+            var extension = Path.GetExtension(inputPath).ToLower();
 
-            case ".ppt":
-            case ".pptx":
-            case ".odp":
-                using (var presentation = new Presentation(inputPath))
-                {
-                    presentation.Save(outputPath, Aspose.Slides.Export.SaveFormat.Pdf);
-                }
+            switch (extension)
+            {
+                case ".doc":
+                case ".docx":
+                case ".rtf":
+                case ".odt":
+                    var wordDoc = new Document(inputPath);
+                    wordDoc.Save(outputPath, SaveFormat.Pdf);
+                    break;
 
-                break;
+                case ".xls":
+                case ".xlsx":
+                case ".csv":
+                case ".ods":
+                    using (var workbook = new Workbook(inputPath))
+                    {
+                        workbook.Save(outputPath, Aspose.Cells.SaveFormat.Pdf);
+                    }
 
-            default:
-                throw new ArgumentException($"Unsupported file format: {extension}");
-        }
+                    break;
 
-        return await Task.FromResult($"Document converted to PDF: {outputPath}");
+                case ".ppt":
+                case ".pptx":
+                case ".odp":
+                    using (var presentation = new Presentation(inputPath))
+                    {
+                        presentation.Save(outputPath, Aspose.Slides.Export.SaveFormat.Pdf);
+                    }
+
+                    break;
+
+                default:
+                    throw new ArgumentException($"Unsupported file format: {extension}");
+            }
+
+            return $"Document converted to PDF: {outputPath}";
+        });
     }
 }

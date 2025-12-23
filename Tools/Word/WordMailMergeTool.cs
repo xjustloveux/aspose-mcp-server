@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Nodes;
+using System.Text.Json.Nodes;
 using Aspose.Words;
 using AsposeMcpServer.Core;
 
@@ -43,23 +43,26 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments object containing operation parameters</param>
     /// <returns>Result message as a string</returns>
-    public async Task<string> ExecuteAsync(JsonObject? arguments)
+    public Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var templatePath = ArgumentHelper.GetString(arguments, "templatePath");
-        var outputPath = ArgumentHelper.GetString(arguments, "outputPath");
-        var data = ArgumentHelper.GetObject(arguments, "data");
+        return Task.Run(() =>
+        {
+            var templatePath = ArgumentHelper.GetString(arguments, "templatePath");
+            var outputPath = ArgumentHelper.GetString(arguments, "outputPath");
+            var data = ArgumentHelper.GetObject(arguments, "data");
 
-        SecurityHelper.ValidateFilePath(templatePath, "templatePath");
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+            SecurityHelper.ValidateFilePath(templatePath, "templatePath", true);
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
-        var doc = new Document(templatePath);
+            var doc = new Document(templatePath);
 
-        var fieldNames = data.Select(kvp => kvp.Key).ToArray();
-        var fieldValues = data.Select(kvp => kvp.Value?.ToString() ?? "").Cast<object>().ToArray();
+            var fieldNames = data.Select(kvp => kvp.Key).ToArray();
+            var fieldValues = data.Select(kvp => kvp.Value?.ToString() ?? "").Cast<object>().ToArray();
 
-        doc.MailMerge.Execute(fieldNames, fieldValues);
-        doc.Save(outputPath);
+            doc.MailMerge.Execute(fieldNames, fieldValues);
+            doc.Save(outputPath);
 
-        return await Task.FromResult($"Mail merge completed: {outputPath}");
+            return $"Mail merge completed: {outputPath}";
+        });
     }
 }

@@ -89,57 +89,63 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> ApplyFilterAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> ApplyFilterAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var range = ArgumentHelper.GetString(arguments, "range");
-
-        using var workbook = new Workbook(path);
-        var worksheet = workbook.Worksheets[sheetIndex];
-        var cells = worksheet.Cells;
-
-        var cellRange = ExcelHelper.CreateRange(cells, range);
-
-        // Set auto filter range
-        // Try multiple methods to ensure filter is applied
-
-        // Method 1: Set Range property using range name
-        worksheet.AutoFilter.Range = cellRange.Name;
-
-        // Method 2: Also try setting using the range address directly
-        // Sometimes the Name property might not work, so try the address
-        try
+        return Task.Run(() =>
         {
-            worksheet.AutoFilter.Range = range;
-        }
-        catch
-        {
-            // If that fails, keep using Name
-        }
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var range = ArgumentHelper.GetString(arguments, "range");
 
-        // Method 3: Try to refresh or reapply the filter
-        try
-        {
-            // Refresh the auto filter to ensure it's applied
-            worksheet.AutoFilter.Refresh();
-        }
-        catch
-        {
-            // If Refresh is not available, try removing and re-adding
+            using var workbook = new Workbook(path);
+            var worksheet = workbook.Worksheets[sheetIndex];
+            var cells = worksheet.Cells;
+
+            var cellRange = ExcelHelper.CreateRange(cells, range);
+
+            // Set auto filter range
+            // Try multiple methods to ensure filter is applied
+
+            // Method 1: Set Range property using range name
+            worksheet.AutoFilter.Range = cellRange.Name;
+
+            // Method 2: Also try setting using the range address directly
+            // Sometimes the Name property might not work, so try the address
             try
             {
-                worksheet.AutoFilter.Range = "";
-                worksheet.AutoFilter.Range = cellRange.Name;
+                worksheet.AutoFilter.Range = range;
             }
-            catch
+            catch (Exception ex)
             {
-                // If that also fails, continue with what we have
+                // If that fails, keep using Name
+                Console.Error.WriteLine($"[WARN] Failed to set filter range directly: {ex.Message}");
             }
-        }
 
-        workbook.Save(outputPath);
+            // Method 3: Try to refresh or reapply the filter
+            try
+            {
+                // Refresh the auto filter to ensure it's applied
+                worksheet.AutoFilter.Refresh();
+            }
+            catch (Exception ex)
+            {
+                // If Refresh is not available, try removing and re-adding
+                Console.Error.WriteLine($"[WARN] Filter refresh failed, trying alternative method: {ex.Message}");
+                try
+                {
+                    worksheet.AutoFilter.Range = "";
+                    worksheet.AutoFilter.Range = cellRange.Name;
+                }
+                catch (Exception ex2)
+                {
+                    // If that also fails, continue with what we have
+                    Console.Error.WriteLine($"[WARN] Alternative filter method also failed: {ex2.Message}");
+                }
+            }
 
-        return await Task.FromResult($"Auto filter applied to range {range} in sheet {sheetIndex}: {outputPath}");
+            workbook.Save(outputPath);
+
+            return $"Auto filter applied to range {range} in sheet {sheetIndex}: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -149,17 +155,20 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> RemoveFilterAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> RemoveFilterAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        return Task.Run(() =>
+        {
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
 
-        using var workbook = new Workbook(path);
-        var worksheet = workbook.Worksheets[sheetIndex];
+            using var workbook = new Workbook(path);
+            var worksheet = workbook.Worksheets[sheetIndex];
 
-        worksheet.AutoFilter.Range = "";
+            worksheet.AutoFilter.Range = "";
 
-        workbook.Save(outputPath);
-        return await Task.FromResult($"Auto filter removed from sheet {sheetIndex}: {outputPath}");
+            workbook.Save(outputPath);
+            return $"Auto filter removed from sheet {sheetIndex}: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -169,66 +178,70 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Formatted string with filter status</returns>
-    private async Task<string> GetFilterStatusAsync(JsonObject? _, string path, int sheetIndex)
+    private Task<string> GetFilterStatusAsync(JsonObject? _, string path, int sheetIndex)
     {
-        using var workbook = new Workbook(path);
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var autoFilter = worksheet.AutoFilter;
-        var result = new StringBuilder();
-
-        result.AppendLine($"=== Auto filter status for worksheet '{worksheet.Name}' ===\n");
-
-        // Check if auto filter is enabled
-        // Check multiple indicators to determine filter status
-
-        var isFilterEnabled = false;
-        var filterRange = "";
-
-        // Method 1: Check AutoFilter.Range property
-        var rangeProperty = autoFilter.Range;
-        if (!string.IsNullOrEmpty(rangeProperty) && rangeProperty.Trim() != "")
+        return Task.Run(() =>
         {
-            isFilterEnabled = true;
-            filterRange = rangeProperty;
-        }
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            var autoFilter = worksheet.AutoFilter;
+            var result = new StringBuilder();
 
-        // Method 2: Check if there are filter columns
-        // Filter columns exist when auto filter is applied
-        var filterColumns = autoFilter.FilterColumns;
-        if (filterColumns is { Count: > 0 })
-        {
-            // If filter columns exist, filter is likely enabled
-            isFilterEnabled = true;
-            // Try to get range from filter columns if Range property is empty
-            if (string.IsNullOrEmpty(filterRange))
-                // Filter columns exist but Range is empty - filter might still be enabled
-                filterRange = "Range not specified";
-        }
+            result.AppendLine($"=== Auto filter status for worksheet '{worksheet.Name}' ===\n");
 
-        // Method 3: Check if auto filter is actually applied by examining the worksheet
-        // Sometimes Range property might be empty but filter is still applied
-        // We can check if there are filter indicators in the header row
+            // Check if auto filter is enabled
+            // Check multiple indicators to determine filter status
 
-        if (!isFilterEnabled)
-        {
-            result.AppendLine("Status: Auto filter not enabled");
-        }
-        else
-        {
-            result.AppendLine("Status: Auto filter enabled");
-            if (!string.IsNullOrEmpty(filterRange) && filterRange != "Range not specified")
-                result.AppendLine($"Filter range: {filterRange}");
-            else if (filterColumns is { Count: > 0 })
-                result.AppendLine($"Filter range: Not specified (but detected {filterColumns.Count} filter columns)");
+            var isFilterEnabled = false;
+            var filterRange = "";
 
+            // Method 1: Check AutoFilter.Range property
+            var rangeProperty = autoFilter.Range;
+            if (!string.IsNullOrEmpty(rangeProperty) && rangeProperty.Trim() != "")
+            {
+                isFilterEnabled = true;
+                filterRange = rangeProperty;
+            }
+
+            // Method 2: Check if there are filter columns
+            // Filter columns exist when auto filter is applied
+            var filterColumns = autoFilter.FilterColumns;
             if (filterColumns is { Count: > 0 })
             {
-                result.AppendLine($"Filter columns count: {filterColumns.Count}");
-                for (var i = 0; i < filterColumns.Count; i++)
-                    result.AppendLine($"  Column {i}: Filter applied");
+                // If filter columns exist, filter is likely enabled
+                isFilterEnabled = true;
+                // Try to get range from filter columns if Range property is empty
+                if (string.IsNullOrEmpty(filterRange))
+                    // Filter columns exist but Range is empty - filter might still be enabled
+                    filterRange = "Range not specified";
             }
-        }
 
-        return await Task.FromResult(result.ToString());
+            // Method 3: Check if auto filter is actually applied by examining the worksheet
+            // Sometimes Range property might be empty but filter is still applied
+            // We can check if there are filter indicators in the header row
+
+            if (!isFilterEnabled)
+            {
+                result.AppendLine("Status: Auto filter not enabled");
+            }
+            else
+            {
+                result.AppendLine("Status: Auto filter enabled");
+                if (!string.IsNullOrEmpty(filterRange) && filterRange != "Range not specified")
+                    result.AppendLine($"Filter range: {filterRange}");
+                else if (filterColumns is { Count: > 0 })
+                    result.AppendLine(
+                        $"Filter range: Not specified (but detected {filterColumns.Count} filter columns)");
+
+                if (filterColumns is { Count: > 0 })
+                {
+                    result.AppendLine($"Filter columns count: {filterColumns.Count}");
+                    for (var i = 0; i < filterColumns.Count; i++)
+                        result.AppendLine($"  Column {i}: Filter applied");
+                }
+            }
+
+            return result.ToString();
+        });
     }
 }

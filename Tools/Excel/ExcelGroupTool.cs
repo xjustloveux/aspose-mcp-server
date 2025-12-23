@@ -112,19 +112,22 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> GroupRowsAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> GroupRowsAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var startRow = ArgumentHelper.GetInt(arguments, "startRow");
-        var endRow = ArgumentHelper.GetInt(arguments, "endRow");
-        var isCollapsed = ArgumentHelper.GetBool(arguments, "isCollapsed", false);
+        return Task.Run(() =>
+        {
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var startRow = ArgumentHelper.GetInt(arguments, "startRow");
+            var endRow = ArgumentHelper.GetInt(arguments, "endRow");
+            var isCollapsed = ArgumentHelper.GetBool(arguments, "isCollapsed", false);
 
-        using var workbook = new Workbook(path);
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        worksheet.Cells.GroupRows(startRow, endRow, isCollapsed);
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            worksheet.Cells.GroupRows(startRow, endRow, isCollapsed);
 
-        workbook.Save(outputPath);
-        return await Task.FromResult($"Rows {startRow}-{endRow} grouped in sheet {sheetIndex}: {outputPath}");
+            workbook.Save(outputPath);
+            return $"Rows {startRow}-{endRow} grouped in sheet {sheetIndex}: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -134,18 +137,21 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> UngroupRowsAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> UngroupRowsAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var startRow = ArgumentHelper.GetInt(arguments, "startRow");
-        var endRow = ArgumentHelper.GetInt(arguments, "endRow");
+        return Task.Run(() =>
+        {
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var startRow = ArgumentHelper.GetInt(arguments, "startRow");
+            var endRow = ArgumentHelper.GetInt(arguments, "endRow");
 
-        using var workbook = new Workbook(path);
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        worksheet.Cells.UngroupRows(startRow, endRow);
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            worksheet.Cells.UngroupRows(startRow, endRow);
 
-        workbook.Save(outputPath);
-        return await Task.FromResult($"Rows {startRow}-{endRow} ungrouped in sheet {sheetIndex}: {outputPath}");
+            workbook.Save(outputPath);
+            return $"Rows {startRow}-{endRow} ungrouped in sheet {sheetIndex}: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -155,19 +161,22 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> GroupColumnsAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> GroupColumnsAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var startColumn = ArgumentHelper.GetInt(arguments, "startColumn");
-        var endColumn = ArgumentHelper.GetInt(arguments, "endColumn");
-        var isCollapsed = ArgumentHelper.GetBool(arguments, "isCollapsed", false);
+        return Task.Run(() =>
+        {
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var startColumn = ArgumentHelper.GetInt(arguments, "startColumn");
+            var endColumn = ArgumentHelper.GetInt(arguments, "endColumn");
+            var isCollapsed = ArgumentHelper.GetBool(arguments, "isCollapsed", false);
 
-        using var workbook = new Workbook(path);
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        worksheet.Cells.GroupColumns(startColumn, endColumn, isCollapsed);
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            worksheet.Cells.GroupColumns(startColumn, endColumn, isCollapsed);
 
-        workbook.Save(outputPath);
-        return await Task.FromResult($"Columns {startColumn}-{endColumn} grouped in sheet {sheetIndex}: {outputPath}");
+            workbook.Save(outputPath);
+            return $"Columns {startColumn}-{endColumn} grouped in sheet {sheetIndex}: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -177,18 +186,20 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> UngroupColumnsAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> UngroupColumnsAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var startColumn = ArgumentHelper.GetInt(arguments, "startColumn");
-        var endColumn = ArgumentHelper.GetInt(arguments, "endColumn");
+        return Task.Run(() =>
+        {
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var startColumn = ArgumentHelper.GetInt(arguments, "startColumn");
+            var endColumn = ArgumentHelper.GetInt(arguments, "endColumn");
 
-        using var workbook = new Workbook(path);
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        worksheet.Cells.UngroupColumns(startColumn, endColumn);
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            worksheet.Cells.UngroupColumns(startColumn, endColumn);
 
-        workbook.Save(outputPath);
-        return await Task.FromResult(
-            $"Columns {startColumn}-{endColumn} ungrouped in sheet {sheetIndex}: {outputPath}");
+            workbook.Save(outputPath);
+            return $"Columns {startColumn}-{endColumn} ungrouped in sheet {sheetIndex}: {outputPath}";
+        });
     }
 }

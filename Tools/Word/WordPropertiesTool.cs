@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using AsposeMcpServer.Core;
@@ -113,40 +113,43 @@ Usage examples:
     /// <param name="_">Unused parameter</param>
     /// <param name="path">Word document file path</param>
     /// <returns>Formatted string with document properties</returns>
-    private async Task<string> GetPropertiesAsync(JsonObject? _, string path)
+    private Task<string> GetPropertiesAsync(JsonObject? _, string path)
     {
-        var doc = new Document(path);
-        var props = doc.BuiltInDocumentProperties;
-        var customProps = doc.CustomDocumentProperties;
-        var sb = new StringBuilder();
-
-        sb.AppendLine("=== Document Properties ===");
-        sb.AppendLine();
-        sb.AppendLine("Built-in Properties:");
-        sb.AppendLine($"  Title: {props.Title ?? "(none)"}");
-        sb.AppendLine($"  Subject: {props.Subject ?? "(none)"}");
-        sb.AppendLine($"  Author: {props.Author ?? "(none)"}");
-        sb.AppendLine($"  Keywords: {props.Keywords ?? "(none)"}");
-        sb.AppendLine($"  Comments: {props.Comments ?? "(none)"}");
-        sb.AppendLine($"  Category: {props.Category ?? "(none)"}");
-        sb.AppendLine($"  Company: {props.Company ?? "(none)"}");
-        sb.AppendLine($"  Manager: {props.Manager ?? "(none)"}");
-        sb.AppendLine($"  Created: {props.CreatedTime}");
-        sb.AppendLine($"  Modified: {props.LastSavedTime}");
-        sb.AppendLine($"  Last Saved By: {props.LastSavedBy ?? "(none)"}");
-        sb.AppendLine($"  Revision: {props.RevisionNumber}");
-        sb.AppendLine($"  Word Count: {props.Words}");
-        sb.AppendLine($"  Character Count: {props.Characters}");
-        sb.AppendLine($"  Page Count: {props.Pages}");
-
-        if (customProps.Count > 0)
+        return Task.Run(() =>
         {
-            sb.AppendLine();
-            sb.AppendLine("Custom Properties:");
-            foreach (var prop in customProps) sb.AppendLine($"  {prop.Name}: {prop.Value}");
-        }
+            var doc = new Document(path);
+            var props = doc.BuiltInDocumentProperties;
+            var customProps = doc.CustomDocumentProperties;
+            var sb = new StringBuilder();
 
-        return await Task.FromResult(sb.ToString());
+            sb.AppendLine("=== Document Properties ===");
+            sb.AppendLine();
+            sb.AppendLine("Built-in Properties:");
+            sb.AppendLine($"  Title: {props.Title ?? "(none)"}");
+            sb.AppendLine($"  Subject: {props.Subject ?? "(none)"}");
+            sb.AppendLine($"  Author: {props.Author ?? "(none)"}");
+            sb.AppendLine($"  Keywords: {props.Keywords ?? "(none)"}");
+            sb.AppendLine($"  Comments: {props.Comments ?? "(none)"}");
+            sb.AppendLine($"  Category: {props.Category ?? "(none)"}");
+            sb.AppendLine($"  Company: {props.Company ?? "(none)"}");
+            sb.AppendLine($"  Manager: {props.Manager ?? "(none)"}");
+            sb.AppendLine($"  Created: {props.CreatedTime}");
+            sb.AppendLine($"  Modified: {props.LastSavedTime}");
+            sb.AppendLine($"  Last Saved By: {props.LastSavedBy ?? "(none)"}");
+            sb.AppendLine($"  Revision: {props.RevisionNumber}");
+            sb.AppendLine($"  Word Count: {props.Words}");
+            sb.AppendLine($"  Character Count: {props.Characters}");
+            sb.AppendLine($"  Page Count: {props.Pages}");
+
+            if (customProps.Count > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine("Custom Properties:");
+                foreach (var prop in customProps) sb.AppendLine($"  {prop.Name}: {prop.Value}");
+            }
+
+            return sb.ToString();
+        });
     }
 
     /// <summary>
@@ -155,38 +158,41 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing various property values, optional outputPath</param>
     /// <param name="path">Word document file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetPropertiesAsync(JsonObject? arguments, string path)
+    private Task<string> SetPropertiesAsync(JsonObject? arguments, string path)
     {
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var title = ArgumentHelper.GetStringNullable(arguments, "title");
-        var subject = ArgumentHelper.GetStringNullable(arguments, "subject");
-        var author = ArgumentHelper.GetStringNullable(arguments, "author");
-        var keywords = ArgumentHelper.GetStringNullable(arguments, "keywords");
-        var comments = ArgumentHelper.GetStringNullable(arguments, "comments");
-        var category = ArgumentHelper.GetStringNullable(arguments, "category");
-        var company = ArgumentHelper.GetStringNullable(arguments, "company");
-        var manager = ArgumentHelper.GetStringNullable(arguments, "manager");
-        var customProps = ArgumentHelper.GetObject(arguments, "customProperties", false);
+        return Task.Run(() =>
+        {
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var title = ArgumentHelper.GetStringNullable(arguments, "title");
+            var subject = ArgumentHelper.GetStringNullable(arguments, "subject");
+            var author = ArgumentHelper.GetStringNullable(arguments, "author");
+            var keywords = ArgumentHelper.GetStringNullable(arguments, "keywords");
+            var comments = ArgumentHelper.GetStringNullable(arguments, "comments");
+            var category = ArgumentHelper.GetStringNullable(arguments, "category");
+            var company = ArgumentHelper.GetStringNullable(arguments, "company");
+            var manager = ArgumentHelper.GetStringNullable(arguments, "manager");
+            var customProps = ArgumentHelper.GetObject(arguments, "customProperties", false);
 
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
-        var doc = new Document(path);
-        var props = doc.BuiltInDocumentProperties;
+            var doc = new Document(path);
+            var props = doc.BuiltInDocumentProperties;
 
-        if (!string.IsNullOrEmpty(title)) props.Title = title;
-        if (!string.IsNullOrEmpty(subject)) props.Subject = subject;
-        if (!string.IsNullOrEmpty(author)) props.Author = author;
-        if (!string.IsNullOrEmpty(keywords)) props.Keywords = keywords;
-        if (!string.IsNullOrEmpty(comments)) props.Comments = comments;
-        if (!string.IsNullOrEmpty(category)) props.Category = category;
-        if (!string.IsNullOrEmpty(company)) props.Company = company;
-        if (!string.IsNullOrEmpty(manager)) props.Manager = manager;
+            if (!string.IsNullOrEmpty(title)) props.Title = title;
+            if (!string.IsNullOrEmpty(subject)) props.Subject = subject;
+            if (!string.IsNullOrEmpty(author)) props.Author = author;
+            if (!string.IsNullOrEmpty(keywords)) props.Keywords = keywords;
+            if (!string.IsNullOrEmpty(comments)) props.Comments = comments;
+            if (!string.IsNullOrEmpty(category)) props.Category = category;
+            if (!string.IsNullOrEmpty(company)) props.Company = company;
+            if (!string.IsNullOrEmpty(manager)) props.Manager = manager;
 
-        if (customProps != null)
-            foreach (var kvp in customProps)
-                doc.CustomDocumentProperties.Add(kvp.Key, kvp.Value?.GetValue<string>() ?? "");
+            if (customProps != null)
+                foreach (var kvp in customProps)
+                    doc.CustomDocumentProperties.Add(kvp.Key, kvp.Value?.GetValue<string>() ?? "");
 
-        doc.Save(outputPath);
-        return await Task.FromResult($"Document properties updated: {outputPath}");
+            doc.Save(outputPath);
+            return $"Document properties updated: {outputPath}";
+        });
     }
 }

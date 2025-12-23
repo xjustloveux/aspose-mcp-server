@@ -118,19 +118,22 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> InsertRowAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> InsertRowAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex");
-        var count = ArgumentHelper.GetInt(arguments, "count", 1);
+        return Task.Run(() =>
+        {
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex");
+            var count = ArgumentHelper.GetInt(arguments, "count", 1);
 
-        using var workbook = new Workbook(path);
-        var worksheet = workbook.Worksheets[sheetIndex];
+            using var workbook = new Workbook(path);
+            var worksheet = workbook.Worksheets[sheetIndex];
 
-        for (var i = 0; i < count; i++) worksheet.Cells.InsertRow(rowIndex);
-        workbook.Save(outputPath);
+            for (var i = 0; i < count; i++) worksheet.Cells.InsertRow(rowIndex);
+            workbook.Save(outputPath);
 
-        return await Task.FromResult($"Inserted {count} rows at row {rowIndex}: {outputPath}");
+            return $"Inserted {count} rows at row {rowIndex}: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -140,19 +143,22 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> DeleteRowAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> DeleteRowAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex");
-        var count = ArgumentHelper.GetInt(arguments, "count", 1);
+        return Task.Run(() =>
+        {
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex");
+            var count = ArgumentHelper.GetInt(arguments, "count", 1);
 
-        using var workbook = new Workbook(path);
-        var worksheet = workbook.Worksheets[sheetIndex];
+            using var workbook = new Workbook(path);
+            var worksheet = workbook.Worksheets[sheetIndex];
 
-        for (var i = 0; i < count; i++) worksheet.Cells.DeleteRow(rowIndex);
-        workbook.Save(outputPath);
+            for (var i = 0; i < count; i++) worksheet.Cells.DeleteRow(rowIndex);
+            workbook.Save(outputPath);
 
-        return await Task.FromResult($"Deleted {count} rows starting from row {rowIndex}: {outputPath}");
+            return $"Deleted {count} rows starting from row {rowIndex}: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -162,19 +168,22 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> InsertColumnAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> InsertColumnAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var columnIndex = ArgumentHelper.GetInt(arguments, "columnIndex");
-        var count = ArgumentHelper.GetInt(arguments, "count", 1);
+        return Task.Run(() =>
+        {
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var columnIndex = ArgumentHelper.GetInt(arguments, "columnIndex");
+            var count = ArgumentHelper.GetInt(arguments, "count", 1);
 
-        using var workbook = new Workbook(path);
-        var worksheet = workbook.Worksheets[sheetIndex];
+            using var workbook = new Workbook(path);
+            var worksheet = workbook.Worksheets[sheetIndex];
 
-        for (var i = 0; i < count; i++) worksheet.Cells.InsertColumn(columnIndex);
-        workbook.Save(outputPath);
+            for (var i = 0; i < count; i++) worksheet.Cells.InsertColumn(columnIndex);
+            workbook.Save(outputPath);
 
-        return await Task.FromResult($"Inserted {count} columns at column {columnIndex}: {outputPath}");
+            return $"Inserted {count} columns at column {columnIndex}: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -184,19 +193,22 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> DeleteColumnAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> DeleteColumnAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var columnIndex = ArgumentHelper.GetInt(arguments, "columnIndex");
-        var count = ArgumentHelper.GetInt(arguments, "count", 1);
+        return Task.Run(() =>
+        {
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var columnIndex = ArgumentHelper.GetInt(arguments, "columnIndex");
+            var count = ArgumentHelper.GetInt(arguments, "count", 1);
 
-        using var workbook = new Workbook(path);
-        var worksheet = workbook.Worksheets[sheetIndex];
+            using var workbook = new Workbook(path);
+            var worksheet = workbook.Worksheets[sheetIndex];
 
-        for (var i = 0; i < count; i++) worksheet.Cells.DeleteColumn(columnIndex);
-        workbook.Save(outputPath);
+            for (var i = 0; i < count; i++) worksheet.Cells.DeleteColumn(columnIndex);
+            workbook.Save(outputPath);
 
-        return await Task.FromResult($"Deleted {count} columns starting from column {columnIndex}: {outputPath}");
+            return $"Deleted {count} columns starting from column {columnIndex}: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -206,28 +218,31 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> InsertCellsAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> InsertCellsAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var range = ArgumentHelper.GetString(arguments, "range");
-        var shiftDirection = ArgumentHelper.GetString(arguments, "shiftDirection");
+        return Task.Run(() =>
+        {
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var range = ArgumentHelper.GetString(arguments, "range");
+            var shiftDirection = ArgumentHelper.GetString(arguments, "shiftDirection");
 
-        using var workbook = new Workbook(path);
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
 
-        var rangeObj = ExcelHelper.CreateRange(worksheet.Cells, range);
+            var rangeObj = ExcelHelper.CreateRange(worksheet.Cells, range);
 
-        var shiftType = shiftDirection.ToLower() == "right" ? ShiftType.Right : ShiftType.Down;
+            var shiftType = shiftDirection.ToLower() == "right" ? ShiftType.Right : ShiftType.Down;
 
-        if (shiftType == ShiftType.Down)
-            for (var i = 0; i < rangeObj.RowCount; i++)
-                worksheet.Cells.InsertRow(rangeObj.FirstRow);
-        else
-            for (var i = 0; i < rangeObj.ColumnCount; i++)
-                worksheet.Cells.InsertColumn(rangeObj.FirstColumn);
+            if (shiftType == ShiftType.Down)
+                for (var i = 0; i < rangeObj.RowCount; i++)
+                    worksheet.Cells.InsertRow(rangeObj.FirstRow);
+            else
+                for (var i = 0; i < rangeObj.ColumnCount; i++)
+                    worksheet.Cells.InsertColumn(rangeObj.FirstColumn);
 
-        workbook.Save(outputPath);
-        return await Task.FromResult($"Cells inserted in range {range}, shifted {shiftDirection}: {outputPath}");
+            workbook.Save(outputPath);
+            return $"Cells inserted in range {range}, shifted {shiftDirection}: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -237,38 +252,41 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> DeleteCellsAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> DeleteCellsAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var range = ArgumentHelper.GetString(arguments, "range");
-        var shiftDirection = ArgumentHelper.GetString(arguments, "shiftDirection");
-
-        using var workbook = new Workbook(path);
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-
-        // Convert single cell to range format (e.g., "B27" -> "B27:B27") for proper deletion handling
-        var normalizedRange = range;
-        if (!range.Contains(':')) normalizedRange = $"{range}:{range}";
-
-        Range rangeObj;
-        try
+        return Task.Run(() =>
         {
-            rangeObj = ExcelHelper.CreateRange(worksheet.Cells, normalizedRange);
-        }
-        catch (Exception ex)
-        {
-            throw new ArgumentException(
-                $"Invalid range format: '{range}'. Single cell format (e.g., 'B2') or range format (e.g., 'B3:B3') is expected. Error: {ex.Message}");
-        }
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var range = ArgumentHelper.GetString(arguments, "range");
+            var shiftDirection = ArgumentHelper.GetString(arguments, "shiftDirection");
 
-        // Ensure RowCount and ColumnCount are at least 1 for DeleteRange
-        var rowCount = Math.Max(1, rangeObj.RowCount);
-        var columnCount = Math.Max(1, rangeObj.ColumnCount);
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
 
-        var shiftType = shiftDirection.ToLower() == "left" ? ShiftType.Left : ShiftType.Up;
-        worksheet.Cells.DeleteRange(rangeObj.FirstRow, rangeObj.FirstColumn, rowCount, columnCount, shiftType);
+            // Convert single cell to range format (e.g., "B27" -> "B27:B27") for proper deletion handling
+            var normalizedRange = range;
+            if (!range.Contains(':')) normalizedRange = $"{range}:{range}";
 
-        workbook.Save(outputPath);
-        return await Task.FromResult($"Cells deleted in range {range}, shifted {shiftDirection}: {outputPath}");
+            Range rangeObj;
+            try
+            {
+                rangeObj = ExcelHelper.CreateRange(worksheet.Cells, normalizedRange);
+            }
+            catch (Exception ex)
+            {
+                throw new ArgumentException(
+                    $"Invalid range format: '{range}'. Single cell format (e.g., 'B2') or range format (e.g., 'B3:B3') is expected. Error: {ex.Message}");
+            }
+
+            // Ensure RowCount and ColumnCount are at least 1 for DeleteRange
+            var rowCount = Math.Max(1, rangeObj.RowCount);
+            var columnCount = Math.Max(1, rangeObj.ColumnCount);
+
+            var shiftType = shiftDirection.ToLower() == "left" ? ShiftType.Left : ShiftType.Up;
+            worksheet.Cells.DeleteRange(rangeObj.FirstRow, rangeObj.FirstColumn, rowCount, columnCount, shiftType);
+
+            workbook.Save(outputPath);
+            return $"Cells deleted in range {range}, shifted {shiftDirection}: {outputPath}";
+        });
     }
 }

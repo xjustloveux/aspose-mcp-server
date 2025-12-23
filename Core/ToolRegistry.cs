@@ -18,7 +18,6 @@ public static class ToolRegistry
         var tools = new Dictionary<string, IAsposeTool>();
         var assembly = Assembly.GetExecutingAssembly();
 
-        // Get all tool types that implement IAsposeTool
         var toolTypes = assembly.GetTypes()
             .Where(t => typeof(IAsposeTool).IsAssignableFrom(t)
                         && t is { IsInterface: false, IsAbstract: false, Namespace: { } ns } &&
@@ -52,11 +51,8 @@ public static class ToolRegistry
     {
         var name = toolType.Name;
 
-        // Remove "Tool" suffix if present
         if (name.EndsWith("Tool")) name = name.Substring(0, name.Length - 4);
 
-        // Convert PascalCase to snake_case
-        // WordCreateTool -> word_create_tool -> word_create
         var snakeCase = string.Concat(name.Select((c, i) =>
             i > 0 && char.IsUpper(c) ? "_" + c.ToString().ToLowerInvariant() : c.ToString().ToLowerInvariant()));
 
@@ -68,7 +64,6 @@ public static class ToolRegistry
     /// </summary>
     private static bool ShouldRegisterTool(string toolName, ServerConfig config)
     {
-        // Conversion tools have special logic
         if (toolName == "convert_to_pdf") return config.EnableWord || config.EnableExcel || config.EnablePowerPoint;
 
         if (toolName == "convert_document")
@@ -77,7 +72,6 @@ public static class ToolRegistry
             return enabledDocTools.Count(e => e) >= 2;
         }
 
-        // Check tool category based on prefix
         if (toolName.StartsWith("word_")) return config.EnableWord;
 
         if (toolName.StartsWith("excel_")) return config.EnableExcel;
@@ -86,7 +80,6 @@ public static class ToolRegistry
 
         if (toolName.StartsWith("pdf_")) return config.EnablePdf;
 
-        // Default: register all tools (for future extensibility)
         return true;
     }
 }

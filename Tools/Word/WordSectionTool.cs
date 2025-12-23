@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using AsposeMcpServer.Core;
@@ -81,7 +81,7 @@ Usage examples:
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
 
-        SecurityHelper.ValidateFilePath(path);
+        SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
 
         return operation.ToLower() switch
         {
@@ -98,63 +98,66 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing sectionBreakType, optional insertAtParagraphIndex, outputPath</param>
     /// <param name="path">Word document file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> InsertSectionAsync(JsonObject? arguments, string path)
+    private Task<string> InsertSectionAsync(JsonObject? arguments, string path)
     {
-        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
-        var sectionBreakType = ArgumentHelper.GetString(arguments, "sectionBreakType");
-        var insertAtParagraphIndex = ArgumentHelper.GetIntNullable(arguments, "insertAtParagraphIndex");
-        var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
-
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-
-        var doc = new Document(path);
-        var builder = new DocumentBuilder(doc);
-
-        var breakType = sectionBreakType switch
+        return Task.Run(() =>
         {
-            "NextPage" => SectionStart.NewPage,
-            "Continuous" => SectionStart.Continuous,
-            "EvenPage" => SectionStart.EvenPage,
-            "OddPage" => SectionStart.OddPage,
-            _ => SectionStart.NewPage
-        };
+            var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
+            var sectionBreakType = ArgumentHelper.GetString(arguments, "sectionBreakType");
+            var insertAtParagraphIndex = ArgumentHelper.GetIntNullable(arguments, "insertAtParagraphIndex");
+            var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
 
-        if (insertAtParagraphIndex.HasValue)
-        {
-            if (insertAtParagraphIndex.Value == -1)
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+
+            var doc = new Document(path);
+            var builder = new DocumentBuilder(doc);
+
+            var breakType = sectionBreakType switch
             {
-                // insertAtParagraphIndex=-1 means document end
+                "NextPage" => SectionStart.NewPage,
+                "Continuous" => SectionStart.Continuous,
+                "EvenPage" => SectionStart.EvenPage,
+                "OddPage" => SectionStart.OddPage,
+                _ => SectionStart.NewPage
+            };
+
+            if (insertAtParagraphIndex.HasValue)
+            {
+                if (insertAtParagraphIndex.Value == -1)
+                {
+                    // insertAtParagraphIndex=-1 means document end
+                    builder.MoveToDocumentEnd();
+                    builder.InsertBreak(BreakType.SectionBreakContinuous);
+                    builder.CurrentSection.PageSetup.SectionStart = breakType;
+                }
+                else
+                {
+                    var actualSectionIndex = sectionIndex ?? 0;
+                    if (actualSectionIndex < 0 || actualSectionIndex >= doc.Sections.Count) actualSectionIndex = 0;
+
+                    var section = doc.Sections[actualSectionIndex];
+                    var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
+
+                    if (insertAtParagraphIndex.Value < 0 || insertAtParagraphIndex.Value >= paragraphs.Count)
+                        throw new ArgumentException(
+                            $"insertAtParagraphIndex must be between 0 and {paragraphs.Count - 1}, or use -1 for document end");
+
+                    var para = paragraphs[insertAtParagraphIndex.Value];
+                    builder.MoveTo(para);
+                    builder.InsertBreak(BreakType.SectionBreakContinuous);
+                    builder.CurrentSection.PageSetup.SectionStart = breakType;
+                }
+            }
+            else
+            {
                 builder.MoveToDocumentEnd();
                 builder.InsertBreak(BreakType.SectionBreakContinuous);
                 builder.CurrentSection.PageSetup.SectionStart = breakType;
             }
-            else
-            {
-                var actualSectionIndex = sectionIndex ?? 0;
-                if (actualSectionIndex < 0 || actualSectionIndex >= doc.Sections.Count) actualSectionIndex = 0;
 
-                var section = doc.Sections[actualSectionIndex];
-                var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
-
-                if (insertAtParagraphIndex.Value < 0 || insertAtParagraphIndex.Value >= paragraphs.Count)
-                    throw new ArgumentException(
-                        $"insertAtParagraphIndex must be between 0 and {paragraphs.Count - 1}, or use -1 for document end");
-
-                var para = paragraphs[insertAtParagraphIndex.Value];
-                builder.MoveTo(para);
-                builder.InsertBreak(BreakType.SectionBreakContinuous);
-                builder.CurrentSection.PageSetup.SectionStart = breakType;
-            }
-        }
-        else
-        {
-            builder.MoveToDocumentEnd();
-            builder.InsertBreak(BreakType.SectionBreakContinuous);
-            builder.CurrentSection.PageSetup.SectionStart = breakType;
-        }
-
-        doc.Save(outputPath);
-        return await Task.FromResult($"Section break inserted ({sectionBreakType}): {outputPath}");
+            doc.Save(outputPath);
+            return $"Section break inserted ({sectionBreakType}): {outputPath}";
+        });
     }
 
     /// <summary>
@@ -163,37 +166,41 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing sectionIndex, optional outputPath</param>
     /// <param name="path">Word document file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> DeleteSectionAsync(JsonObject? arguments, string path)
+    private Task<string> DeleteSectionAsync(JsonObject? arguments, string path)
     {
-        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
-        var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
-        var sectionIndicesArray = ArgumentHelper.GetArray(arguments, "sectionIndices", false);
-
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-
-        var doc = new Document(path);
-        if (doc.Sections.Count <= 1)
-            throw new ArgumentException("Cannot delete the last section. Document must have at least one section.");
-
-        List<int> sectionsToDelete;
-        if (sectionIndicesArray is { Count: > 0 })
-            sectionsToDelete = sectionIndicesArray.Select(s => s?.GetValue<int>()).Where(s => s.HasValue)
-                .Select(s => s!.Value).OrderByDescending(s => s).ToList();
-        else if (sectionIndex.HasValue)
-            sectionsToDelete = [sectionIndex.Value];
-        else
-            throw new ArgumentException("Either sectionIndex or sectionIndices must be provided for delete operation");
-
-        foreach (var idx in sectionsToDelete)
+        return Task.Run(() =>
         {
-            if (idx < 0 || idx >= doc.Sections.Count) continue;
-            if (doc.Sections.Count <= 1) break; // Don't delete the last section
-            doc.Sections.RemoveAt(idx);
-        }
+            var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
+            var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
+            var sectionIndicesArray = ArgumentHelper.GetArray(arguments, "sectionIndices", false);
 
-        doc.Save(outputPath);
-        return await Task.FromResult(
-            $"Deleted {sectionsToDelete.Count} section(s). Remaining sections: {doc.Sections.Count}. Output: {outputPath}");
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+
+            var doc = new Document(path);
+            if (doc.Sections.Count <= 1)
+                throw new ArgumentException("Cannot delete the last section. Document must have at least one section.");
+
+            List<int> sectionsToDelete;
+            if (sectionIndicesArray is { Count: > 0 })
+                sectionsToDelete = sectionIndicesArray.Select(s => s?.GetValue<int>()).Where(s => s.HasValue)
+                    .Select(s => s!.Value).OrderByDescending(s => s).ToList();
+            else if (sectionIndex.HasValue)
+                sectionsToDelete = [sectionIndex.Value];
+            else
+                throw new ArgumentException(
+                    "Either sectionIndex or sectionIndices must be provided for delete operation");
+
+            foreach (var idx in sectionsToDelete)
+            {
+                if (idx < 0 || idx >= doc.Sections.Count) continue;
+                if (doc.Sections.Count <= 1) break; // Don't delete the last section
+                doc.Sections.RemoveAt(idx);
+            }
+
+            doc.Save(outputPath);
+            return
+                $"Deleted {sectionsToDelete.Count} section(s). Remaining sections: {doc.Sections.Count}. Output: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -202,36 +209,39 @@ Usage examples:
     /// <param name="arguments">JSON arguments (no specific parameters required)</param>
     /// <param name="path">Word document file path</param>
     /// <returns>Formatted string with all sections</returns>
-    private async Task<string> GetSectionsAsync(JsonObject? arguments, string path)
+    private Task<string> GetSectionsAsync(JsonObject? arguments, string path)
     {
-        var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
-
-        var doc = new Document(path);
-        var result = new StringBuilder();
-
-        result.AppendLine("=== Document Section Information ===\n");
-        result.AppendLine($"Total sections: {doc.Sections.Count}\n");
-
-        if (sectionIndex.HasValue)
+        return Task.Run(() =>
         {
-            if (sectionIndex.Value < 0 || sectionIndex.Value >= doc.Sections.Count)
-                throw new ArgumentException(
-                    $"Section index {sectionIndex.Value} is out of range (document has {doc.Sections.Count} sections)");
+            var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
 
-            var section = doc.Sections[sectionIndex.Value];
-            AppendSectionInfo(result, section, sectionIndex.Value);
-        }
-        else
-        {
-            for (var i = 0; i < doc.Sections.Count; i++)
+            var doc = new Document(path);
+            var result = new StringBuilder();
+
+            result.AppendLine("=== Document Section Information ===\n");
+            result.AppendLine($"Total sections: {doc.Sections.Count}\n");
+
+            if (sectionIndex.HasValue)
             {
-                var section = doc.Sections[i];
-                AppendSectionInfo(result, section, i);
-                if (i < doc.Sections.Count - 1) result.AppendLine();
-            }
-        }
+                if (sectionIndex.Value < 0 || sectionIndex.Value >= doc.Sections.Count)
+                    throw new ArgumentException(
+                        $"Section index {sectionIndex.Value} is out of range (document has {doc.Sections.Count} sections)");
 
-        return await Task.FromResult(result.ToString());
+                var section = doc.Sections[sectionIndex.Value];
+                AppendSectionInfo(result, section, sectionIndex.Value);
+            }
+            else
+            {
+                for (var i = 0; i < doc.Sections.Count; i++)
+                {
+                    var section = doc.Sections[i];
+                    AppendSectionInfo(result, section, i);
+                    if (i < doc.Sections.Count - 1) result.AppendLine();
+                }
+            }
+
+            return result.ToString();
+        });
     }
 
     private void AppendSectionInfo(StringBuilder result, Section section, int index)

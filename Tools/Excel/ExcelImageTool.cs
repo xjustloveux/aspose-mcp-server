@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
@@ -109,33 +109,36 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> AddImageAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> AddImageAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var imagePath = ArgumentHelper.GetString(arguments, "imagePath");
-        SecurityHelper.ValidateFilePath(imagePath, "imagePath");
-        var cell = ArgumentHelper.GetString(arguments, "cell");
-        var width = ArgumentHelper.GetIntNullable(arguments, "width");
-        var height = ArgumentHelper.GetIntNullable(arguments, "height");
-
-        if (!File.Exists(imagePath)) throw new FileNotFoundException($"Image file not found: {imagePath}");
-
-        using var workbook = new Workbook(path);
-        var worksheet = workbook.Worksheets[sheetIndex];
-        var cellObj = worksheet.Cells[cell];
-
-        var pictureIndex = worksheet.Pictures.Add(cellObj.Row, cellObj.Column, imagePath);
-
-        if (width.HasValue || height.HasValue)
+        return Task.Run(() =>
         {
-            var picture = worksheet.Pictures[pictureIndex];
-            if (width.HasValue) picture.Width = width.Value;
-            if (height.HasValue) picture.Height = height.Value;
-        }
+            var imagePath = ArgumentHelper.GetString(arguments, "imagePath");
+            SecurityHelper.ValidateFilePath(imagePath, "imagePath", true);
+            var cell = ArgumentHelper.GetString(arguments, "cell");
+            var width = ArgumentHelper.GetIntNullable(arguments, "width");
+            var height = ArgumentHelper.GetIntNullable(arguments, "height");
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        workbook.Save(outputPath);
+            if (!File.Exists(imagePath)) throw new FileNotFoundException($"Image file not found: {imagePath}");
 
-        return await Task.FromResult($"Image added to cell {cell}: {outputPath}");
+            using var workbook = new Workbook(path);
+            var worksheet = workbook.Worksheets[sheetIndex];
+            var cellObj = worksheet.Cells[cell];
+
+            var pictureIndex = worksheet.Pictures.Add(cellObj.Row, cellObj.Column, imagePath);
+
+            if (width.HasValue || height.HasValue)
+            {
+                var picture = worksheet.Pictures[pictureIndex];
+                if (width.HasValue) picture.Width = width.Value;
+                if (height.HasValue) picture.Height = height.Value;
+            }
+
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            workbook.Save(outputPath);
+
+            return $"Image added to cell {cell}: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -145,26 +148,29 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> DeleteImageAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> DeleteImageAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var imageIndex = ArgumentHelper.GetInt(arguments, "imageIndex");
+        return Task.Run(() =>
+        {
+            var imageIndex = ArgumentHelper.GetInt(arguments, "imageIndex");
 
-        using var workbook = new Workbook(path);
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var pictures = worksheet.Pictures;
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            var pictures = worksheet.Pictures;
 
-        if (imageIndex < 0 || imageIndex >= pictures.Count)
-            throw new ArgumentException(
-                $"Image index {imageIndex} is out of range (worksheet has {pictures.Count} images)");
+            if (imageIndex < 0 || imageIndex >= pictures.Count)
+                throw new ArgumentException(
+                    $"Image index {imageIndex} is out of range (worksheet has {pictures.Count} images)");
 
-        pictures.RemoveAt(imageIndex);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        workbook.Save(outputPath);
+            pictures.RemoveAt(imageIndex);
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            workbook.Save(outputPath);
 
-        var remainingCount = pictures.Count;
+            var remainingCount = pictures.Count;
 
-        return await Task.FromResult(
-            $"Successfully deleted image #{imageIndex}\nRemaining images in worksheet: {remainingCount}\nOutput: {outputPath}");
+            return
+                $"Successfully deleted image #{imageIndex}\nRemaining images in worksheet: {remainingCount}\nOutput: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -174,33 +180,36 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Formatted string with all images</returns>
-    private async Task<string> GetImagesAsync(JsonObject? _, string path, int sheetIndex)
+    private Task<string> GetImagesAsync(JsonObject? _, string path, int sheetIndex)
     {
-        using var workbook = new Workbook(path);
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var pictures = worksheet.Pictures;
-        var result = new StringBuilder();
-
-        result.AppendLine($"=== Image information for worksheet '{worksheet.Name}' ===\n");
-        result.AppendLine($"Total images: {pictures.Count}\n");
-
-        if (pictures.Count == 0)
+        return Task.Run(() =>
         {
-            result.AppendLine("No images found");
-            return await Task.FromResult(result.ToString());
-        }
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            var pictures = worksheet.Pictures;
+            var result = new StringBuilder();
 
-        for (var i = 0; i < pictures.Count; i++)
-        {
-            var picture = pictures[i];
-            result.AppendLine($"[Image {i}]");
-            result.AppendLine(
-                $"Location: rows {picture.UpperLeftRow}-{picture.LowerRightRow}, columns {picture.UpperLeftColumn}-{picture.LowerRightColumn}");
-            result.AppendLine($"Width: {picture.Width} pixels");
-            result.AppendLine($"Height: {picture.Height} pixels");
-            result.AppendLine();
-        }
+            result.AppendLine($"=== Image information for worksheet '{worksheet.Name}' ===\n");
+            result.AppendLine($"Total images: {pictures.Count}\n");
 
-        return await Task.FromResult(result.ToString());
+            if (pictures.Count == 0)
+            {
+                result.AppendLine("No images found");
+                return result.ToString();
+            }
+
+            for (var i = 0; i < pictures.Count; i++)
+            {
+                var picture = pictures[i];
+                result.AppendLine($"[Image {i}]");
+                result.AppendLine(
+                    $"Location: rows {picture.UpperLeftRow}-{picture.LowerRightRow}, columns {picture.UpperLeftColumn}-{picture.LowerRightColumn}");
+                result.AppendLine($"Width: {picture.Width} pixels");
+                result.AppendLine($"Height: {picture.Height} pixels");
+                result.AppendLine();
+            }
+
+            return result.ToString();
+        });
     }
 }

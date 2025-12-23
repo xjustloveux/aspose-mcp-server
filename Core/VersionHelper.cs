@@ -32,7 +32,7 @@ public static class VersionHelper
         }
         catch
         {
-            // Ignore errors and fall back to default
+            // Ignore exceptions when reading version from assembly - fallback to default version
         }
 
         _version = "1.0.0";

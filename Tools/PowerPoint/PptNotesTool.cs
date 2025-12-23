@@ -91,26 +91,29 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing slideIndex, notesText, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> AddNotesAsync(JsonObject? arguments, string path)
+    private Task<string> AddNotesAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
-        var notes = ArgumentHelper.GetString(arguments, "notes");
+        return Task.Run(() =>
+        {
+            var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
+            var notes = ArgumentHelper.GetString(arguments, "notes");
 
-        using var presentation = new Presentation(path);
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-        var notesSlide = slide.NotesSlideManager.NotesSlide ?? slide.NotesSlideManager.AddNotesSlide();
-        var textFrame = notesSlide.NotesTextFrame;
-        if (textFrame == null)
-            throw new InvalidOperationException(
-                "Unable to get NotesTextFrame, file may be corrupted or format not supported");
-        textFrame.Paragraphs.Clear();
-        var para = new Paragraph();
-        para.Portions.Add(new Portion(notes));
-        textFrame.Paragraphs.Add(para);
+            using var presentation = new Presentation(path);
+            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+            var notesSlide = slide.NotesSlideManager.NotesSlide ?? slide.NotesSlideManager.AddNotesSlide();
+            var textFrame = notesSlide.NotesTextFrame;
+            if (textFrame == null)
+                throw new InvalidOperationException(
+                    "Unable to get NotesTextFrame, file may be corrupted or format not supported");
+            textFrame.Paragraphs.Clear();
+            var para = new Paragraph();
+            para.Portions.Add(new Portion(notes));
+            textFrame.Paragraphs.Add(para);
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        presentation.Save(outputPath, SaveFormat.Pptx);
-        return await Task.FromResult($"Speaker notes updated for slide {slideIndex}: {outputPath}");
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
+            return $"Speaker notes updated for slide {slideIndex}: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -119,20 +122,23 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing slideIndex, notesText, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> EditNotesAsync(JsonObject? arguments, string path)
+    private Task<string> EditNotesAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
-        var notes = ArgumentHelper.GetString(arguments, "notes");
+        return Task.Run(() =>
+        {
+            var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
+            var notes = ArgumentHelper.GetString(arguments, "notes");
 
-        using var presentation = new Presentation(path);
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-        var notesSlide = slide.NotesSlideManager.NotesSlide ?? slide.NotesSlideManager.AddNotesSlide();
-        notesSlide.NotesTextFrame.Text = notes;
+            using var presentation = new Presentation(path);
+            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+            var notesSlide = slide.NotesSlideManager.NotesSlide ?? slide.NotesSlideManager.AddNotesSlide();
+            notesSlide.NotesTextFrame.Text = notes;
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        presentation.Save(outputPath, SaveFormat.Pptx);
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
 
-        return await Task.FromResult($"Notes updated for slide {slideIndex}: {outputPath}");
+            return $"Notes updated for slide {slideIndex}: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -141,45 +147,48 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing optional slideIndex (if null, gets all)</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Formatted string with notes</returns>
-    private async Task<string> GetNotesAsync(JsonObject? arguments, string path)
+    private Task<string> GetNotesAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = ArgumentHelper.GetIntNullable(arguments, "slideIndex");
-
-        using var presentation = new Presentation(path);
-        var sb = new StringBuilder();
-
-        if (slideIndex.HasValue)
+        return Task.Run(() =>
         {
-            if (slideIndex.Value < 0 || slideIndex.Value >= presentation.Slides.Count)
-                throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
+            var slideIndex = ArgumentHelper.GetIntNullable(arguments, "slideIndex");
 
-            var notesSlide = presentation.Slides[slideIndex.Value].NotesSlideManager.NotesSlide;
+            using var presentation = new Presentation(path);
+            var sb = new StringBuilder();
 
-            if (notesSlide is { NotesTextFrame: not null })
+            if (slideIndex.HasValue)
             {
-                sb.AppendLine($"Slide {slideIndex.Value} Notes:");
-                sb.AppendLine(notesSlide.NotesTextFrame.Text);
+                if (slideIndex.Value < 0 || slideIndex.Value >= presentation.Slides.Count)
+                    throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
+
+                var notesSlide = presentation.Slides[slideIndex.Value].NotesSlideManager.NotesSlide;
+
+                if (notesSlide is { NotesTextFrame: not null })
+                {
+                    sb.AppendLine($"Slide {slideIndex.Value} Notes:");
+                    sb.AppendLine(notesSlide.NotesTextFrame.Text);
+                }
+                else
+                {
+                    sb.AppendLine($"Slide {slideIndex.Value} has no notes.");
+                }
             }
             else
             {
-                sb.AppendLine($"Slide {slideIndex.Value} has no notes.");
-            }
-        }
-        else
-        {
-            sb.AppendLine("All Speaker Notes:");
-            for (var i = 0; i < presentation.Slides.Count; i++)
-            {
-                var notesSlide = presentation.Slides[i].NotesSlideManager.NotesSlide;
-                if (notesSlide is { NotesTextFrame.Text: var text } && !string.IsNullOrWhiteSpace(text))
+                sb.AppendLine("All Speaker Notes:");
+                for (var i = 0; i < presentation.Slides.Count; i++)
                 {
-                    sb.AppendLine($"\n--- Slide {i} ---");
-                    sb.AppendLine(notesSlide.NotesTextFrame.Text);
+                    var notesSlide = presentation.Slides[i].NotesSlideManager.NotesSlide;
+                    if (notesSlide is { NotesTextFrame.Text: var text } && !string.IsNullOrWhiteSpace(text))
+                    {
+                        sb.AppendLine($"\n--- Slide {i} ---");
+                        sb.AppendLine(notesSlide.NotesTextFrame.Text);
+                    }
                 }
             }
-        }
 
-        return await Task.FromResult(sb.ToString());
+            return sb.ToString();
+        });
     }
 
     /// <summary>
@@ -188,29 +197,32 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing slideIndex, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> ClearNotesAsync(JsonObject? arguments, string path)
+    private Task<string> ClearNotesAsync(JsonObject? arguments, string path)
     {
-        var slideIndicesArray = ArgumentHelper.GetArray(arguments, "slideIndices", false);
-        var slideIndices = slideIndicesArray?.Select(x => x?.GetValue<int>() ?? -1).ToArray();
-
-        using var presentation = new Presentation(path);
-        var targets = slideIndices?.Length > 0
-            ? slideIndices
-            : Enumerable.Range(0, presentation.Slides.Count).ToArray();
-
-        foreach (var idx in targets)
-            if (idx < 0 || idx >= presentation.Slides.Count)
-                throw new ArgumentException($"slide index {idx} out of range");
-
-        foreach (var idx in targets)
+        return Task.Run(() =>
         {
-            var slide = presentation.Slides[idx];
-            var notes = slide.NotesSlideManager.NotesSlide;
-            if (notes is { NotesTextFrame: not null } notesSlide) notesSlide.NotesTextFrame.Text = string.Empty;
-        }
+            var slideIndicesArray = ArgumentHelper.GetArray(arguments, "slideIndices", false);
+            var slideIndices = slideIndicesArray?.Select(x => x?.GetValue<int>() ?? -1).ToArray();
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        presentation.Save(outputPath, SaveFormat.Pptx);
-        return await Task.FromResult($"Cleared speaker notes for {targets.Length} slides");
+            using var presentation = new Presentation(path);
+            var targets = slideIndices?.Length > 0
+                ? slideIndices
+                : Enumerable.Range(0, presentation.Slides.Count).ToArray();
+
+            foreach (var idx in targets)
+                if (idx < 0 || idx >= presentation.Slides.Count)
+                    throw new ArgumentException($"slide index {idx} out of range");
+
+            foreach (var idx in targets)
+            {
+                var slide = presentation.Slides[idx];
+                var notesSlide = slide.NotesSlideManager.NotesSlide ?? slide.NotesSlideManager.AddNotesSlide();
+                if (notesSlide.NotesTextFrame != null) notesSlide.NotesTextFrame.Text = string.Empty;
+            }
+
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
+            return $"Cleared speaker notes for {targets.Length} slides";
+        });
     }
 }

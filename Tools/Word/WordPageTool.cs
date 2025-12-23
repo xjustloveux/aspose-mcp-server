@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Nodes;
+using System.Text.Json.Nodes;
 using Aspose.Words;
 using AsposeMcpServer.Core;
 
@@ -152,7 +152,7 @@ Usage examples:
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
         return operation switch
         {
@@ -175,45 +175,48 @@ Usage examples:
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetMarginsAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> SetMarginsAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var top = ArgumentHelper.GetDoubleNullable(arguments, "top");
-        var bottom = ArgumentHelper.GetDoubleNullable(arguments, "bottom");
-        var left = ArgumentHelper.GetDoubleNullable(arguments, "left");
-        var right = ArgumentHelper.GetDoubleNullable(arguments, "right");
-        var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
-        var sectionIndicesArray = ArgumentHelper.GetArray(arguments, "sectionIndices", false);
-
-        var doc = new Document(path);
-        List<int> sectionsToUpdate;
-
-        if (sectionIndicesArray is { Count: > 0 })
+        return Task.Run(() =>
         {
-            sectionsToUpdate = sectionIndicesArray.Select(s => s?.GetValue<int>()).Where(s => s.HasValue)
-                .Select(s => s!.Value).ToList();
-        }
-        else if (sectionIndex.HasValue)
-        {
-            if (sectionIndex.Value < 0 || sectionIndex.Value >= doc.Sections.Count)
-                throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
-            sectionsToUpdate = [sectionIndex.Value];
-        }
-        else
-        {
-            sectionsToUpdate = Enumerable.Range(0, doc.Sections.Count).ToList();
-        }
+            var top = ArgumentHelper.GetDoubleNullable(arguments, "top");
+            var bottom = ArgumentHelper.GetDoubleNullable(arguments, "bottom");
+            var left = ArgumentHelper.GetDoubleNullable(arguments, "left");
+            var right = ArgumentHelper.GetDoubleNullable(arguments, "right");
+            var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
+            var sectionIndicesArray = ArgumentHelper.GetArray(arguments, "sectionIndices", false);
 
-        foreach (var idx in sectionsToUpdate)
-        {
-            var pageSetup = doc.Sections[idx].PageSetup;
-            if (top.HasValue) pageSetup.TopMargin = top.Value;
-            if (bottom.HasValue) pageSetup.BottomMargin = bottom.Value;
-            if (left.HasValue) pageSetup.LeftMargin = left.Value;
-            if (right.HasValue) pageSetup.RightMargin = right.Value;
-        }
+            var doc = new Document(path);
+            List<int> sectionsToUpdate;
 
-        doc.Save(outputPath);
-        return await Task.FromResult($"Page margins updated for {sectionsToUpdate.Count} section(s): {outputPath}");
+            if (sectionIndicesArray is { Count: > 0 })
+            {
+                sectionsToUpdate = sectionIndicesArray.Select(s => s?.GetValue<int>()).Where(s => s.HasValue)
+                    .Select(s => s!.Value).ToList();
+            }
+            else if (sectionIndex.HasValue)
+            {
+                if (sectionIndex.Value < 0 || sectionIndex.Value >= doc.Sections.Count)
+                    throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
+                sectionsToUpdate = [sectionIndex.Value];
+            }
+            else
+            {
+                sectionsToUpdate = Enumerable.Range(0, doc.Sections.Count).ToList();
+            }
+
+            foreach (var idx in sectionsToUpdate)
+            {
+                var pageSetup = doc.Sections[idx].PageSetup;
+                if (top.HasValue) pageSetup.TopMargin = top.Value;
+                if (bottom.HasValue) pageSetup.BottomMargin = bottom.Value;
+                if (left.HasValue) pageSetup.LeftMargin = left.Value;
+                if (right.HasValue) pageSetup.RightMargin = right.Value;
+            }
+
+            doc.Save(outputPath);
+            return $"Page margins updated for {sectionsToUpdate.Count} section(s): {outputPath}";
+        });
     }
 
     /// <summary>
@@ -223,31 +226,33 @@ Usage examples:
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetOrientationAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> SetOrientationAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var orientation = ArgumentHelper.GetString(arguments, "orientation");
-        var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
-        var sectionIndicesArray = ArgumentHelper.GetArray(arguments, "sectionIndices", false);
+        return Task.Run(() =>
+        {
+            var orientation = ArgumentHelper.GetString(arguments, "orientation");
+            var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
+            var sectionIndicesArray = ArgumentHelper.GetArray(arguments, "sectionIndices", false);
 
-        var doc = new Document(path);
-        var orientationEnum = orientation.ToLower() == "landscape" ? Orientation.Landscape : Orientation.Portrait;
+            var doc = new Document(path);
+            var orientationEnum = orientation.ToLower() == "landscape" ? Orientation.Landscape : Orientation.Portrait;
 
-        List<int> sectionsToUpdate;
-        if (sectionIndicesArray is { Count: > 0 })
-            sectionsToUpdate = sectionIndicesArray.Select(s => s?.GetValue<int>()).Where(s => s.HasValue)
-                .Select(s => s!.Value).ToList();
-        else if (sectionIndex.HasValue)
-            sectionsToUpdate = [sectionIndex.Value];
-        else
-            sectionsToUpdate = Enumerable.Range(0, doc.Sections.Count).ToList();
+            List<int> sectionsToUpdate;
+            if (sectionIndicesArray is { Count: > 0 })
+                sectionsToUpdate = sectionIndicesArray.Select(s => s?.GetValue<int>()).Where(s => s.HasValue)
+                    .Select(s => s!.Value).ToList();
+            else if (sectionIndex.HasValue)
+                sectionsToUpdate = [sectionIndex.Value];
+            else
+                sectionsToUpdate = Enumerable.Range(0, doc.Sections.Count).ToList();
 
-        foreach (var idx in sectionsToUpdate)
-            if (idx >= 0 && idx < doc.Sections.Count)
-                doc.Sections[idx].PageSetup.Orientation = orientationEnum;
+            foreach (var idx in sectionsToUpdate)
+                if (idx >= 0 && idx < doc.Sections.Count)
+                    doc.Sections[idx].PageSetup.Orientation = orientationEnum;
 
-        doc.Save(outputPath);
-        return await Task.FromResult(
-            $"Page orientation set to {orientation} for {sectionsToUpdate.Count} section(s): {outputPath}");
+            doc.Save(outputPath);
+            return $"Page orientation set to {orientation} for {sectionsToUpdate.Count} section(s): {outputPath}";
+        });
     }
 
     /// <summary>
@@ -257,56 +262,59 @@ Usage examples:
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetSizeAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> SetSizeAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var width = ArgumentHelper.GetDoubleNullable(arguments, "width");
-        var height = ArgumentHelper.GetDoubleNullable(arguments, "height");
-        var paperSize = ArgumentHelper.GetStringNullable(arguments, "paperSize");
-        var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
-
-        var doc = new Document(path);
-        List<int> sectionsToUpdate;
-
-        if (sectionIndex.HasValue)
+        return Task.Run(() =>
         {
-            if (sectionIndex.Value < 0 || sectionIndex.Value >= doc.Sections.Count)
-                throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
-            sectionsToUpdate = [sectionIndex.Value];
-        }
-        else
-        {
-            sectionsToUpdate = Enumerable.Range(0, doc.Sections.Count).ToList();
-        }
+            var width = ArgumentHelper.GetDoubleNullable(arguments, "width");
+            var height = ArgumentHelper.GetDoubleNullable(arguments, "height");
+            var paperSize = ArgumentHelper.GetStringNullable(arguments, "paperSize");
+            var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
 
-        foreach (var idx in sectionsToUpdate)
-        {
-            var pageSetup = doc.Sections[idx].PageSetup;
+            var doc = new Document(path);
+            List<int> sectionsToUpdate;
 
-            if (!string.IsNullOrEmpty(paperSize))
+            if (sectionIndex.HasValue)
             {
-                pageSetup.PaperSize = paperSize.ToUpper() switch
-                {
-                    "A4" => PaperSize.A4,
-                    "LETTER" => PaperSize.Letter,
-                    "LEGAL" => PaperSize.Legal,
-                    "A3" => PaperSize.A3,
-                    "A5" => PaperSize.A5,
-                    _ => PaperSize.A4
-                };
-            }
-            else if (width.HasValue && height.HasValue)
-            {
-                pageSetup.PageWidth = width.Value;
-                pageSetup.PageHeight = height.Value;
+                if (sectionIndex.Value < 0 || sectionIndex.Value >= doc.Sections.Count)
+                    throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
+                sectionsToUpdate = [sectionIndex.Value];
             }
             else
             {
-                throw new ArgumentException("Either paperSize or both width and height must be provided");
+                sectionsToUpdate = Enumerable.Range(0, doc.Sections.Count).ToList();
             }
-        }
 
-        doc.Save(outputPath);
-        return await Task.FromResult($"Page size updated for {sectionsToUpdate.Count} section(s): {outputPath}");
+            foreach (var idx in sectionsToUpdate)
+            {
+                var pageSetup = doc.Sections[idx].PageSetup;
+
+                if (!string.IsNullOrEmpty(paperSize))
+                {
+                    pageSetup.PaperSize = paperSize.ToUpper() switch
+                    {
+                        "A4" => PaperSize.A4,
+                        "LETTER" => PaperSize.Letter,
+                        "LEGAL" => PaperSize.Legal,
+                        "A3" => PaperSize.A3,
+                        "A5" => PaperSize.A5,
+                        _ => PaperSize.A4
+                    };
+                }
+                else if (width.HasValue && height.HasValue)
+                {
+                    pageSetup.PageWidth = width.Value;
+                    pageSetup.PageHeight = height.Value;
+                }
+                else
+                {
+                    throw new ArgumentException("Either paperSize or both width and height must be provided");
+                }
+            }
+
+            doc.Save(outputPath);
+            return $"Page size updated for {sectionsToUpdate.Count} section(s): {outputPath}";
+        });
     }
 
     /// <summary>
@@ -316,51 +324,53 @@ Usage examples:
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetPageNumberAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> SetPageNumberAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var pageNumberFormat = ArgumentHelper.GetStringNullable(arguments, "pageNumberFormat");
-        var startingPageNumber = ArgumentHelper.GetIntNullable(arguments, "startingPageNumber");
-        var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
-
-        var doc = new Document(path);
-        List<int> sectionsToUpdate;
-
-        if (sectionIndex.HasValue)
+        return Task.Run(() =>
         {
-            if (sectionIndex.Value < 0 || sectionIndex.Value >= doc.Sections.Count)
-                throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
-            sectionsToUpdate = [sectionIndex.Value];
-        }
-        else
-        {
-            sectionsToUpdate = [0];
-        }
+            var pageNumberFormat = ArgumentHelper.GetStringNullable(arguments, "pageNumberFormat");
+            var startingPageNumber = ArgumentHelper.GetIntNullable(arguments, "startingPageNumber");
+            var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
 
-        foreach (var idx in sectionsToUpdate)
-        {
-            var pageSetup = doc.Sections[idx].PageSetup;
+            var doc = new Document(path);
+            List<int> sectionsToUpdate;
 
-            if (!string.IsNullOrEmpty(pageNumberFormat))
+            if (sectionIndex.HasValue)
             {
-                var numStyle = pageNumberFormat.ToLower() switch
+                if (sectionIndex.Value < 0 || sectionIndex.Value >= doc.Sections.Count)
+                    throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
+                sectionsToUpdate = [sectionIndex.Value];
+            }
+            else
+            {
+                sectionsToUpdate = [0];
+            }
+
+            foreach (var idx in sectionsToUpdate)
+            {
+                var pageSetup = doc.Sections[idx].PageSetup;
+
+                if (!string.IsNullOrEmpty(pageNumberFormat))
                 {
-                    "roman" => NumberStyle.UppercaseRoman,
-                    "letter" => NumberStyle.UppercaseLetter,
-                    _ => NumberStyle.Arabic
-                };
-                pageSetup.PageNumberStyle = numStyle;
+                    var numStyle = pageNumberFormat.ToLower() switch
+                    {
+                        "roman" => NumberStyle.UppercaseRoman,
+                        "letter" => NumberStyle.UppercaseLetter,
+                        _ => NumberStyle.Arabic
+                    };
+                    pageSetup.PageNumberStyle = numStyle;
+                }
+
+                if (startingPageNumber.HasValue)
+                {
+                    pageSetup.RestartPageNumbering = true;
+                    pageSetup.PageStartingNumber = startingPageNumber.Value;
+                }
             }
 
-            if (startingPageNumber.HasValue)
-            {
-                pageSetup.RestartPageNumbering = true;
-                pageSetup.PageStartingNumber = startingPageNumber.Value;
-            }
-        }
-
-        doc.Save(outputPath);
-        return await Task.FromResult(
-            $"Page number settings updated for {sectionsToUpdate.Count} section(s): {outputPath}");
+            doc.Save(outputPath);
+            return $"Page number settings updated for {sectionsToUpdate.Count} section(s): {outputPath}";
+        });
     }
 
     /// <summary>
@@ -370,56 +380,60 @@ Usage examples:
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetPageSetupAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> SetPageSetupAsync(JsonObject? arguments, string path, string outputPath)
     {
-        // This is a combined operation that can set multiple page setup properties
-        var doc = new Document(path);
-        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
-
-        if (sectionIndex < 0 || sectionIndex >= doc.Sections.Count)
-            throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
-
-        var pageSetup = doc.Sections[sectionIndex].PageSetup;
-        var changes = new List<string>();
-
-        // Apply all page setup parameters
-        var top = ArgumentHelper.GetDoubleNullable(arguments, "top");
-        if (top.HasValue)
+        return Task.Run(() =>
         {
-            pageSetup.TopMargin = top.Value;
-            changes.Add($"Top margin: {top.Value}");
-        }
+            // This is a combined operation that can set multiple page setup properties
+            var doc = new Document(path);
+            var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
 
-        var bottom = ArgumentHelper.GetDoubleNullable(arguments, "bottom");
-        if (bottom.HasValue)
-        {
-            pageSetup.BottomMargin = bottom.Value;
-            changes.Add($"Bottom margin: {bottom.Value}");
-        }
+            if (sectionIndex < 0 || sectionIndex >= doc.Sections.Count)
+                throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
 
-        var left = ArgumentHelper.GetDoubleNullable(arguments, "left");
-        if (left.HasValue)
-        {
-            pageSetup.LeftMargin = left.Value;
-            changes.Add($"Left margin: {left.Value}");
-        }
+            var pageSetup = doc.Sections[sectionIndex].PageSetup;
+            var changes = new List<string>();
 
-        var right = ArgumentHelper.GetDoubleNullable(arguments, "right");
-        if (right.HasValue)
-        {
-            pageSetup.RightMargin = right.Value;
-            changes.Add($"Right margin: {right.Value}");
-        }
+            // Apply all page setup parameters
+            var top = ArgumentHelper.GetDoubleNullable(arguments, "top");
+            if (top.HasValue)
+            {
+                pageSetup.TopMargin = top.Value;
+                changes.Add($"Top margin: {top.Value}");
+            }
 
-        var orientation = ArgumentHelper.GetStringNullable(arguments, "orientation");
-        if (!string.IsNullOrEmpty(orientation))
-        {
-            pageSetup.Orientation = orientation.ToLower() == "landscape" ? Orientation.Landscape : Orientation.Portrait;
-            changes.Add($"Orientation: {orientation}");
-        }
+            var bottom = ArgumentHelper.GetDoubleNullable(arguments, "bottom");
+            if (bottom.HasValue)
+            {
+                pageSetup.BottomMargin = bottom.Value;
+                changes.Add($"Bottom margin: {bottom.Value}");
+            }
 
-        doc.Save(outputPath);
-        return await Task.FromResult($"Page setup updated: {string.Join(", ", changes)}");
+            var left = ArgumentHelper.GetDoubleNullable(arguments, "left");
+            if (left.HasValue)
+            {
+                pageSetup.LeftMargin = left.Value;
+                changes.Add($"Left margin: {left.Value}");
+            }
+
+            var right = ArgumentHelper.GetDoubleNullable(arguments, "right");
+            if (right.HasValue)
+            {
+                pageSetup.RightMargin = right.Value;
+                changes.Add($"Right margin: {right.Value}");
+            }
+
+            var orientation = ArgumentHelper.GetStringNullable(arguments, "orientation");
+            if (!string.IsNullOrEmpty(orientation))
+            {
+                pageSetup.Orientation =
+                    orientation.ToLower() == "landscape" ? Orientation.Landscape : Orientation.Portrait;
+                changes.Add($"Orientation: {orientation}");
+            }
+
+            doc.Save(outputPath);
+            return $"Page setup updated: {string.Join(", ", changes)}";
+        });
     }
 
     /// <summary>
@@ -429,29 +443,32 @@ Usage examples:
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> DeletePageAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> DeletePageAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
+        return Task.Run(() =>
+        {
+            var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
 
-        var doc = new Document(path);
+            var doc = new Document(path);
 
-        // Get all paragraphs
-        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
+            // Get all paragraphs
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
 
-        // Find page breaks and count pages
-        // This is a simplified implementation
-        var pageBreaks = paragraphs.Cast<Paragraph>()
-            .Where(p => p.ParagraphFormat.PageBreakBefore ||
-                        p.GetChildNodes(NodeType.Run, true).Cast<Run>()
-                            .Any(r => r.Text.Contains("\f")))
-            .ToList();
+            // Find page breaks and count pages
+            // This is a simplified implementation
+            var pageBreaks = paragraphs.Cast<Paragraph>()
+                .Where(p => p.ParagraphFormat.PageBreakBefore ||
+                            p.GetChildNodes(NodeType.Run, true).Cast<Run>()
+                                .Any(r => r.Text.Contains("\f")))
+                .ToList();
 
-        if (pageIndex < 0 || pageIndex >= pageBreaks.Count + 1)
-            throw new ArgumentException($"Page index {pageIndex} out of range");
+            if (pageIndex < 0 || pageIndex >= pageBreaks.Count + 1)
+                throw new ArgumentException($"Page index {pageIndex} out of range");
 
-        // For now, return a message indicating this operation needs manual implementation
-        doc.Save(outputPath);
-        return await Task.FromResult($"Page deletion operation completed (simplified implementation): {outputPath}");
+            // For now, return a message indicating this operation needs manual implementation
+            doc.Save(outputPath);
+            return $"Page deletion operation completed (simplified implementation): {outputPath}";
+        });
     }
 
     /// <summary>
@@ -461,27 +478,30 @@ Usage examples:
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> InsertBlankPageAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> InsertBlankPageAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var insertAtPageIndex = ArgumentHelper.GetIntNullable(arguments, "insertAtPageIndex");
-
-        var doc = new Document(path);
-        var builder = new DocumentBuilder(doc);
-
-        if (insertAtPageIndex is > 0)
+        return Task.Run(() =>
         {
-            // Insert page break before specified page
-            builder.MoveToDocumentStart();
-            for (var i = 0; i < insertAtPageIndex.Value; i++) builder.InsertBreak(BreakType.PageBreak);
-        }
-        else
-        {
-            builder.MoveToDocumentEnd();
-            builder.InsertBreak(BreakType.PageBreak);
-        }
+            var insertAtPageIndex = ArgumentHelper.GetIntNullable(arguments, "insertAtPageIndex");
 
-        doc.Save(outputPath);
-        return await Task.FromResult($"Blank page inserted: {outputPath}");
+            var doc = new Document(path);
+            var builder = new DocumentBuilder(doc);
+
+            if (insertAtPageIndex is > 0)
+            {
+                // Insert page break before specified page
+                builder.MoveToDocumentStart();
+                for (var i = 0; i < insertAtPageIndex.Value; i++) builder.InsertBreak(BreakType.PageBreak);
+            }
+            else
+            {
+                builder.MoveToDocumentEnd();
+                builder.InsertBreak(BreakType.PageBreak);
+            }
+
+            doc.Save(outputPath);
+            return $"Blank page inserted: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -491,15 +511,18 @@ Usage examples:
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> AddPageBreakAsync(JsonObject? _, string path, string outputPath)
+    private Task<string> AddPageBreakAsync(JsonObject? _, string path, string outputPath)
     {
-        var doc = new Document(path);
-        var builder = new DocumentBuilder(doc);
+        return Task.Run(() =>
+        {
+            var doc = new Document(path);
+            var builder = new DocumentBuilder(doc);
 
-        builder.MoveToDocumentEnd();
-        builder.InsertBreak(BreakType.PageBreak);
+            builder.MoveToDocumentEnd();
+            builder.InsertBreak(BreakType.PageBreak);
 
-        doc.Save(outputPath);
-        return await Task.FromResult($"Page break added successfully\nOutput: {outputPath}");
+            doc.Save(outputPath);
+            return $"Page break added successfully\nOutput: {outputPath}";
+        });
     }
 }

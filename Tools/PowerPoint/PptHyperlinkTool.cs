@@ -1,5 +1,4 @@
-﻿using System.Drawing;
-using System.Text;
+﻿using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Slides;
 using Aspose.Slides.Export;
@@ -126,34 +125,52 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing slideIndex, shapeIndex, address, optional text, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> AddHyperlinkAsync(JsonObject? arguments, string path)
+    private Task<string> AddHyperlinkAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
-        var text = ArgumentHelper.GetString(arguments, "text");
-        var url = ArgumentHelper.GetString(arguments, "url");
-        var x = ArgumentHelper.GetFloat(arguments, "x", 50);
-        var y = ArgumentHelper.GetFloat(arguments, "y", 50);
-        var width = ArgumentHelper.GetFloat(arguments, "width", 300);
-        var height = ArgumentHelper.GetFloat(arguments, "height", 50);
+        return Task.Run(() =>
+        {
+            var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
+            var url = ArgumentHelper.GetString(arguments, "url");
+            var displayText = ArgumentHelper.GetStringNullable(arguments, "displayText");
+            var shapeIndex = ArgumentHelper.GetIntNullable(arguments, "shapeIndex");
+            var x = ArgumentHelper.GetFloatNullable(arguments, "x");
+            var y = ArgumentHelper.GetFloatNullable(arguments, "y");
+            var width = ArgumentHelper.GetFloatNullable(arguments, "width");
+            var height = ArgumentHelper.GetFloatNullable(arguments, "height");
 
-        using var presentation = new Presentation(path);
-        if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
-            throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
+            using var presentation = new Presentation(path);
+            if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
+                throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
 
-        var slide = presentation.Slides[slideIndex];
-        var shape = slide.Shapes.AddAutoShape(ShapeType.Rectangle, x, y, width, height);
-        var textFrame = shape.TextFrame;
-        textFrame.Text = text;
+            var slide = presentation.Slides[slideIndex];
+            IShape shape;
 
-        var portion = textFrame.Paragraphs[0].Portions[0];
-        portion.PortionFormat.HyperlinkClick = new Hyperlink(url);
-        portion.PortionFormat.FontHeight = 14;
-        portion.PortionFormat.FillFormat.FillType = FillType.Solid;
-        portion.PortionFormat.FillFormat.SolidFillColor.Color = Color.Blue;
+            if (shapeIndex.HasValue && shapeIndex.Value >= 0 && shapeIndex.Value < slide.Shapes.Count)
+            {
+                // Use existing shape
+                shape = slide.Shapes[shapeIndex.Value];
+            }
+            else
+            {
+                // Create new shape
+                var defaultX = x ?? 50;
+                var defaultY = y ?? 50;
+                var defaultWidth = width ?? 300;
+                var defaultHeight = height ?? 50;
+                shape = slide.Shapes.AddAutoShape(ShapeType.Rectangle, defaultX, defaultY, defaultWidth, defaultHeight);
+            }
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        presentation.Save(outputPath, SaveFormat.Pptx);
-        return await Task.FromResult($"Hyperlink added to slide {slideIndex}: {url}");
+            // Set hyperlink on shape
+            shape.HyperlinkClick = new Hyperlink(url);
+
+            // Also set display text if provided
+            if (!string.IsNullOrEmpty(displayText) && shape is IAutoShape autoShape && autoShape.TextFrame != null)
+                autoShape.TextFrame.Text = displayText;
+
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
+            return $"Hyperlink added to slide {slideIndex}: {url}";
+        });
     }
 
     /// <summary>
@@ -162,45 +179,49 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing slideIndex, shapeIndex, optional address, text, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> EditHyperlinkAsync(JsonObject? arguments, string path)
+    private Task<string> EditHyperlinkAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
-        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
-        var url = ArgumentHelper.GetStringNullable(arguments, "url");
-        var slideTargetIndex = ArgumentHelper.GetIntNullable(arguments, "slideTargetIndex");
-        var removeHyperlink = ArgumentHelper.GetBool(arguments, "removeHyperlink", false);
-
-        using var presentation = new Presentation(path);
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-        var shape = PowerPointHelper.GetShape(slide, shapeIndex);
-
-        if (removeHyperlink)
+        return Task.Run(() =>
         {
-            if (shape is IAutoShape { TextFrame: not null } autoShape)
-                foreach (var paragraph in autoShape.TextFrame.Paragraphs)
-                foreach (var portion in paragraph.Portions)
-                    portion.PortionFormat.HyperlinkClick = null;
+            var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
+            var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
+            var url = ArgumentHelper.GetStringNullable(arguments, "url");
+            var slideTargetIndex = ArgumentHelper.GetIntNullable(arguments, "slideTargetIndex");
+            var removeHyperlink = ArgumentHelper.GetBool(arguments, "removeHyperlink", false);
 
-            shape.HyperlinkClick = null;
-        }
-        else if (!string.IsNullOrEmpty(url))
-        {
-            shape.HyperlinkClick = new Hyperlink(url);
-        }
-        else if (slideTargetIndex.HasValue)
-        {
-            if (slideTargetIndex.Value < 0 || slideTargetIndex.Value >= presentation.Slides.Count)
-                throw new ArgumentException($"slideTargetIndex must be between 0 and {presentation.Slides.Count - 1}");
-            shape.HyperlinkClick = new Hyperlink(presentation.Slides[slideTargetIndex.Value]);
-        }
-        else
-        {
-            throw new ArgumentException("Either url, slideTargetIndex, or removeHyperlink must be provided");
-        }
+            using var presentation = new Presentation(path);
+            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+            var shape = PowerPointHelper.GetShape(slide, shapeIndex);
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        presentation.Save(outputPath, SaveFormat.Pptx);
-        return await Task.FromResult($"Hyperlink updated on slide {slideIndex}, shape {shapeIndex}");
+            if (removeHyperlink)
+            {
+                if (shape is IAutoShape { TextFrame: not null } autoShape)
+                    foreach (var paragraph in autoShape.TextFrame.Paragraphs)
+                    foreach (var portion in paragraph.Portions)
+                        portion.PortionFormat.HyperlinkClick = null;
+
+                shape.HyperlinkClick = null;
+            }
+            else if (!string.IsNullOrEmpty(url))
+            {
+                shape.HyperlinkClick = new Hyperlink(url);
+            }
+            else if (slideTargetIndex.HasValue)
+            {
+                if (slideTargetIndex.Value < 0 || slideTargetIndex.Value >= presentation.Slides.Count)
+                    throw new ArgumentException(
+                        $"slideTargetIndex must be between 0 and {presentation.Slides.Count - 1}");
+                shape.HyperlinkClick = new Hyperlink(presentation.Slides[slideTargetIndex.Value]);
+            }
+            else
+            {
+                throw new ArgumentException("Either url, slideTargetIndex, or removeHyperlink must be provided");
+            }
+
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
+            return $"Hyperlink updated on slide {slideIndex}, shape {shapeIndex}";
+        });
     }
 
     /// <summary>
@@ -209,24 +230,27 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing slideIndex, shapeIndex, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> DeleteHyperlinkAsync(JsonObject? arguments, string path)
+    private Task<string> DeleteHyperlinkAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
-        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
+        return Task.Run(() =>
+        {
+            var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
+            var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
 
-        using var presentation = new Presentation(path);
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-        var shape = PowerPointHelper.GetShape(slide, shapeIndex);
-        shape.HyperlinkClick = null;
+            using var presentation = new Presentation(path);
+            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+            var shape = PowerPointHelper.GetShape(slide, shapeIndex);
+            shape.HyperlinkClick = null;
 
-        if (shape is IAutoShape { TextFrame: not null } autoShape)
-            foreach (var paragraph in autoShape.TextFrame.Paragraphs)
-            foreach (var portion in paragraph.Portions)
-                portion.PortionFormat.HyperlinkClick = null;
+            if (shape is IAutoShape { TextFrame: not null } autoShape)
+                foreach (var paragraph in autoShape.TextFrame.Paragraphs)
+                foreach (var portion in paragraph.Portions)
+                    portion.PortionFormat.HyperlinkClick = null;
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        presentation.Save(outputPath, SaveFormat.Pptx);
-        return await Task.FromResult($"Hyperlink deleted from slide {slideIndex}, shape {shapeIndex}");
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
+            return $"Hyperlink deleted from slide {slideIndex}, shape {shapeIndex}";
+        });
     }
 
     /// <summary>
@@ -235,37 +259,40 @@ Usage examples:
     /// <param name="arguments">JSON arguments (no specific parameters required)</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Formatted string with all hyperlinks</returns>
-    private async Task<string> GetHyperlinksAsync(JsonObject? arguments, string path)
+    private Task<string> GetHyperlinksAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = ArgumentHelper.GetIntNullable(arguments, "slideIndex");
-
-        using var presentation = new Presentation(path);
-        var sb = new StringBuilder();
-
-        if (slideIndex.HasValue)
+        return Task.Run(() =>
         {
-            if (slideIndex.Value < 0 || slideIndex.Value >= presentation.Slides.Count)
-                throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
-            var slide = presentation.Slides[slideIndex.Value];
-            sb.AppendLine($"=== Slide {slideIndex.Value} Hyperlinks ===");
-            GetHyperlinksFromSlide(presentation, slide, sb);
-        }
-        else
-        {
-            sb.AppendLine("=== All Hyperlinks ===");
-            for (var i = 0; i < presentation.Slides.Count; i++)
+            var slideIndex = ArgumentHelper.GetIntNullable(arguments, "slideIndex");
+
+            using var presentation = new Presentation(path);
+            var sb = new StringBuilder();
+
+            if (slideIndex.HasValue)
             {
-                var slide = presentation.Slides[i];
-                var hyperlinks = GetHyperlinksFromSlide(presentation, slide, null);
-                if (hyperlinks > 0)
+                if (slideIndex.Value < 0 || slideIndex.Value >= presentation.Slides.Count)
+                    throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
+                var slide = presentation.Slides[slideIndex.Value];
+                sb.AppendLine($"=== Slide {slideIndex.Value} Hyperlinks ===");
+                GetHyperlinksFromSlide(presentation, slide, sb);
+            }
+            else
+            {
+                sb.AppendLine("=== All Hyperlinks ===");
+                for (var i = 0; i < presentation.Slides.Count; i++)
                 {
-                    sb.AppendLine($"\nSlide {i}: {hyperlinks} hyperlink(s)");
-                    GetHyperlinksFromSlide(presentation, slide, sb);
+                    var slide = presentation.Slides[i];
+                    var hyperlinks = GetHyperlinksFromSlide(presentation, slide, null);
+                    if (hyperlinks > 0)
+                    {
+                        sb.AppendLine($"\nSlide {i}: {hyperlinks} hyperlink(s)");
+                        GetHyperlinksFromSlide(presentation, slide, sb);
+                    }
                 }
             }
-        }
 
-        return await Task.FromResult(sb.ToString());
+            return sb.ToString();
+        });
     }
 
     private int GetHyperlinksFromSlide(IPresentation presentation, ISlide slide, StringBuilder? sb)

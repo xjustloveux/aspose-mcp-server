@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Nodes;
+using System.Text.Json.Nodes;
 using Aspose.Cells;
 using Aspose.Slides;
 using Aspose.Words;
@@ -51,42 +51,45 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments object containing operation parameters</param>
     /// <returns>Result message as a string</returns>
-    public async Task<string> ExecuteAsync(JsonObject? arguments)
+    public Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var inputPath = ArgumentHelper.GetString(arguments, "inputPath");
-        var outputPath = ArgumentHelper.GetString(arguments, "outputPath");
-
-        SecurityHelper.ValidateFilePath(inputPath, "inputPath");
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-
-        var inputExtension = Path.GetExtension(inputPath).ToLower();
-        var outputExtension = Path.GetExtension(outputPath).ToLower();
-
-        // Detect document type and convert
-        if (IsWordDocument(inputExtension))
+        return Task.Run(() =>
         {
-            var doc = new Document(inputPath);
-            var saveFormat = GetWordSaveFormat(outputExtension);
-            doc.Save(outputPath, saveFormat);
-        }
-        else if (IsExcelDocument(inputExtension))
-        {
-            using var workbook = new Workbook(inputPath);
-            var saveFormat = GetExcelSaveFormat(outputExtension);
-            workbook.Save(outputPath, saveFormat);
-        }
-        else if (IsPresentationDocument(inputExtension))
-        {
-            using var presentation = new Presentation(inputPath);
-            var saveFormat = GetPresentationSaveFormat(outputExtension);
-            presentation.Save(outputPath, saveFormat);
-        }
-        else
-        {
-            throw new ArgumentException($"Unsupported input format: {inputExtension}");
-        }
+            var inputPath = ArgumentHelper.GetString(arguments, "inputPath");
+            var outputPath = ArgumentHelper.GetString(arguments, "outputPath");
 
-        return await Task.FromResult($"Document converted from {inputPath} to {outputPath}");
+            SecurityHelper.ValidateFilePath(inputPath, "inputPath", true);
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+
+            var inputExtension = Path.GetExtension(inputPath).ToLower();
+            var outputExtension = Path.GetExtension(outputPath).ToLower();
+
+            // Detect document type and convert
+            if (IsWordDocument(inputExtension))
+            {
+                var doc = new Document(inputPath);
+                var saveFormat = GetWordSaveFormat(outputExtension);
+                doc.Save(outputPath, saveFormat);
+            }
+            else if (IsExcelDocument(inputExtension))
+            {
+                using var workbook = new Workbook(inputPath);
+                var saveFormat = GetExcelSaveFormat(outputExtension);
+                workbook.Save(outputPath, saveFormat);
+            }
+            else if (IsPresentationDocument(inputExtension))
+            {
+                using var presentation = new Presentation(inputPath);
+                var saveFormat = GetPresentationSaveFormat(outputExtension);
+                presentation.Save(outputPath, saveFormat);
+            }
+            else
+            {
+                throw new ArgumentException($"Unsupported input format: {inputExtension}");
+            }
+
+            return $"Document converted from {inputPath} to {outputPath}";
+        });
     }
 
     private bool IsWordDocument(string extension)

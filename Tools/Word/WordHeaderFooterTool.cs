@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Aspose.Words;
@@ -194,9 +194,9 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        SecurityHelper.ValidateFilePath(path);
+        SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
         var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
         return operation switch
         {
@@ -224,77 +224,80 @@ Usage examples:
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetHeaderTextAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> SetHeaderTextAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var headerLeft = ArgumentHelper.GetStringNullable(arguments, "headerLeft");
-        var headerCenter = ArgumentHelper.GetStringNullable(arguments, "headerCenter");
-        var headerRight = ArgumentHelper.GetStringNullable(arguments, "headerRight");
-        var fontName = ArgumentHelper.GetStringNullable(arguments, "fontName");
-        var fontNameAscii = ArgumentHelper.GetStringNullable(arguments, "fontNameAscii");
-        var fontNameFarEast = ArgumentHelper.GetStringNullable(arguments, "fontNameFarEast");
-        var fontSize = ArgumentHelper.GetDoubleNullable(arguments, "fontSize");
-        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
-        var clearExisting = ArgumentHelper.GetBool(arguments, "clearExisting", true);
-
-        var doc = new Document(path);
-
-        var hasContent = !string.IsNullOrEmpty(headerLeft) || !string.IsNullOrEmpty(headerCenter) ||
-                         !string.IsNullOrEmpty(headerRight);
-        if (!hasContent)
-            return await Task.FromResult("Warning: No header text content provided");
-
-        var sections = sectionIndex == -1 ? doc.Sections.Cast<Section>() : [doc.Sections[sectionIndex]];
-
-        foreach (var section in sections)
+        return Task.Run(() =>
         {
-            var header = section.HeadersFooters[HeaderFooterType.HeaderPrimary];
-            if (header == null)
+            var headerLeft = ArgumentHelper.GetStringNullable(arguments, "headerLeft");
+            var headerCenter = ArgumentHelper.GetStringNullable(arguments, "headerCenter");
+            var headerRight = ArgumentHelper.GetStringNullable(arguments, "headerRight");
+            var fontName = ArgumentHelper.GetStringNullable(arguments, "fontName");
+            var fontNameAscii = ArgumentHelper.GetStringNullable(arguments, "fontNameAscii");
+            var fontNameFarEast = ArgumentHelper.GetStringNullable(arguments, "fontNameFarEast");
+            var fontSize = ArgumentHelper.GetDoubleNullable(arguments, "fontSize");
+            var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
+            var clearExisting = ArgumentHelper.GetBool(arguments, "clearExisting", true);
+
+            var doc = new Document(path);
+
+            var hasContent = !string.IsNullOrEmpty(headerLeft) || !string.IsNullOrEmpty(headerCenter) ||
+                             !string.IsNullOrEmpty(headerRight);
+            if (!hasContent)
+                return "Warning: No header text content provided";
+
+            var sections = sectionIndex == -1 ? doc.Sections.Cast<Section>() : [doc.Sections[sectionIndex]];
+
+            foreach (var section in sections)
             {
-                header = new HeaderFooter(doc, HeaderFooterType.HeaderPrimary);
-                section.HeadersFooters.Add(header);
-            }
-            else if (clearExisting)
-            {
-                header.RemoveAllChildren();
-            }
-
-            if (hasContent)
-            {
-                header.RemoveAllChildren();
-                var headerPara = new Paragraph(doc);
-                header.AppendChild(headerPara);
-
-                var builder = new DocumentBuilder(doc);
-                builder.MoveTo(headerPara);
-
-                if (!string.IsNullOrEmpty(headerLeft))
-                    InsertTextOrField(builder, headerLeft, fontName, fontNameAscii, fontNameFarEast, fontSize);
-
-                if (!string.IsNullOrEmpty(headerCenter))
+                var header = section.HeadersFooters[HeaderFooterType.HeaderPrimary];
+                if (header == null)
                 {
-                    builder.Write("\t");
-                    InsertTextOrField(builder, headerCenter, fontName, fontNameAscii, fontNameFarEast, fontSize);
+                    header = new HeaderFooter(doc, HeaderFooterType.HeaderPrimary);
+                    section.HeadersFooters.Add(header);
+                }
+                else if (clearExisting)
+                {
+                    header.RemoveAllChildren();
                 }
 
-                if (!string.IsNullOrEmpty(headerRight))
+                if (hasContent)
                 {
-                    builder.Write("\t");
-                    InsertTextOrField(builder, headerRight, fontName, fontNameAscii, fontNameFarEast, fontSize);
+                    header.RemoveAllChildren();
+                    var headerPara = new Paragraph(doc);
+                    header.AppendChild(headerPara);
+
+                    var builder = new DocumentBuilder(doc);
+                    builder.MoveTo(headerPara);
+
+                    if (!string.IsNullOrEmpty(headerLeft))
+                        InsertTextOrField(builder, headerLeft, fontName, fontNameAscii, fontNameFarEast, fontSize);
+
+                    if (!string.IsNullOrEmpty(headerCenter))
+                    {
+                        builder.Write("\t");
+                        InsertTextOrField(builder, headerCenter, fontName, fontNameAscii, fontNameFarEast, fontSize);
+                    }
+
+                    if (!string.IsNullOrEmpty(headerRight))
+                    {
+                        builder.Write("\t");
+                        InsertTextOrField(builder, headerRight, fontName, fontNameAscii, fontNameFarEast, fontSize);
+                    }
                 }
             }
-        }
 
-        doc.Save(outputPath);
+            doc.Save(outputPath);
 
-        var contentParts = new List<string>();
-        if (!string.IsNullOrEmpty(headerLeft)) contentParts.Add("left");
-        if (!string.IsNullOrEmpty(headerCenter)) contentParts.Add("center");
-        if (!string.IsNullOrEmpty(headerRight)) contentParts.Add("right");
+            var contentParts = new List<string>();
+            if (!string.IsNullOrEmpty(headerLeft)) contentParts.Add("left");
+            if (!string.IsNullOrEmpty(headerCenter)) contentParts.Add("center");
+            if (!string.IsNullOrEmpty(headerRight)) contentParts.Add("right");
 
-        var contentDesc = string.Join(", ", contentParts);
-        var sectionsDesc = sectionIndex == -1 ? "all sections" : $"section {sectionIndex}";
+            var contentDesc = string.Join(", ", contentParts);
+            var sectionsDesc = sectionIndex == -1 ? "all sections" : $"section {sectionIndex}";
 
-        return await Task.FromResult($"Header text set successfully ({contentDesc}) in {sectionsDesc}");
+            return $"Header text set successfully ({contentDesc}) in {sectionsDesc}";
+        });
     }
 
     /// <summary>
@@ -307,77 +310,80 @@ Usage examples:
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetFooterTextAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> SetFooterTextAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var footerLeft = ArgumentHelper.GetStringNullable(arguments, "footerLeft");
-        var footerCenter = ArgumentHelper.GetStringNullable(arguments, "footerCenter");
-        var footerRight = ArgumentHelper.GetStringNullable(arguments, "footerRight");
-        var fontName = ArgumentHelper.GetStringNullable(arguments, "fontName");
-        var fontNameAscii = ArgumentHelper.GetStringNullable(arguments, "fontNameAscii");
-        var fontNameFarEast = ArgumentHelper.GetStringNullable(arguments, "fontNameFarEast");
-        var fontSize = ArgumentHelper.GetDoubleNullable(arguments, "fontSize");
-        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
-        var clearExisting = ArgumentHelper.GetBool(arguments, "clearExisting", true);
-
-        var doc = new Document(path);
-
-        var hasContent = !string.IsNullOrEmpty(footerLeft) || !string.IsNullOrEmpty(footerCenter) ||
-                         !string.IsNullOrEmpty(footerRight);
-        if (!hasContent)
-            return await Task.FromResult("Warning: No footer text content provided");
-
-        var sections = sectionIndex == -1 ? doc.Sections.Cast<Section>() : [doc.Sections[sectionIndex]];
-
-        foreach (var section in sections)
+        return Task.Run(() =>
         {
-            var footer = section.HeadersFooters[HeaderFooterType.FooterPrimary];
-            if (footer == null)
+            var footerLeft = ArgumentHelper.GetStringNullable(arguments, "footerLeft");
+            var footerCenter = ArgumentHelper.GetStringNullable(arguments, "footerCenter");
+            var footerRight = ArgumentHelper.GetStringNullable(arguments, "footerRight");
+            var fontName = ArgumentHelper.GetStringNullable(arguments, "fontName");
+            var fontNameAscii = ArgumentHelper.GetStringNullable(arguments, "fontNameAscii");
+            var fontNameFarEast = ArgumentHelper.GetStringNullable(arguments, "fontNameFarEast");
+            var fontSize = ArgumentHelper.GetDoubleNullable(arguments, "fontSize");
+            var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
+            var clearExisting = ArgumentHelper.GetBool(arguments, "clearExisting", true);
+
+            var doc = new Document(path);
+
+            var hasContent = !string.IsNullOrEmpty(footerLeft) || !string.IsNullOrEmpty(footerCenter) ||
+                             !string.IsNullOrEmpty(footerRight);
+            if (!hasContent)
+                return "Warning: No footer text content provided";
+
+            var sections = sectionIndex == -1 ? doc.Sections.Cast<Section>() : [doc.Sections[sectionIndex]];
+
+            foreach (var section in sections)
             {
-                footer = new HeaderFooter(doc, HeaderFooterType.FooterPrimary);
-                section.HeadersFooters.Add(footer);
-            }
-            else if (clearExisting)
-            {
-                footer.RemoveAllChildren();
-            }
-
-            if (hasContent)
-            {
-                footer.RemoveAllChildren();
-                var footerPara = new Paragraph(doc);
-                footer.AppendChild(footerPara);
-
-                var builder = new DocumentBuilder(doc);
-                builder.MoveTo(footerPara);
-
-                if (!string.IsNullOrEmpty(footerLeft))
-                    InsertTextOrField(builder, footerLeft, fontName, fontNameAscii, fontNameFarEast, fontSize);
-
-                if (!string.IsNullOrEmpty(footerCenter))
+                var footer = section.HeadersFooters[HeaderFooterType.FooterPrimary];
+                if (footer == null)
                 {
-                    builder.Write("\t");
-                    InsertTextOrField(builder, footerCenter, fontName, fontNameAscii, fontNameFarEast, fontSize);
+                    footer = new HeaderFooter(doc, HeaderFooterType.FooterPrimary);
+                    section.HeadersFooters.Add(footer);
+                }
+                else if (clearExisting)
+                {
+                    footer.RemoveAllChildren();
                 }
 
-                if (!string.IsNullOrEmpty(footerRight))
+                if (hasContent)
                 {
-                    builder.Write("\t");
-                    InsertTextOrField(builder, footerRight, fontName, fontNameAscii, fontNameFarEast, fontSize);
+                    footer.RemoveAllChildren();
+                    var footerPara = new Paragraph(doc);
+                    footer.AppendChild(footerPara);
+
+                    var builder = new DocumentBuilder(doc);
+                    builder.MoveTo(footerPara);
+
+                    if (!string.IsNullOrEmpty(footerLeft))
+                        InsertTextOrField(builder, footerLeft, fontName, fontNameAscii, fontNameFarEast, fontSize);
+
+                    if (!string.IsNullOrEmpty(footerCenter))
+                    {
+                        builder.Write("\t");
+                        InsertTextOrField(builder, footerCenter, fontName, fontNameAscii, fontNameFarEast, fontSize);
+                    }
+
+                    if (!string.IsNullOrEmpty(footerRight))
+                    {
+                        builder.Write("\t");
+                        InsertTextOrField(builder, footerRight, fontName, fontNameAscii, fontNameFarEast, fontSize);
+                    }
                 }
             }
-        }
 
-        doc.Save(outputPath);
+            doc.Save(outputPath);
 
-        var contentParts = new List<string>();
-        if (!string.IsNullOrEmpty(footerLeft)) contentParts.Add("left");
-        if (!string.IsNullOrEmpty(footerCenter)) contentParts.Add("center");
-        if (!string.IsNullOrEmpty(footerRight)) contentParts.Add("right");
+            var contentParts = new List<string>();
+            if (!string.IsNullOrEmpty(footerLeft)) contentParts.Add("left");
+            if (!string.IsNullOrEmpty(footerCenter)) contentParts.Add("center");
+            if (!string.IsNullOrEmpty(footerRight)) contentParts.Add("right");
 
-        var contentDesc = string.Join(", ", contentParts);
-        var sectionsDesc = sectionIndex == -1 ? "all sections" : $"section {sectionIndex}";
+            var contentDesc = string.Join(", ", contentParts);
+            var sectionsDesc = sectionIndex == -1 ? "all sections" : $"section {sectionIndex}";
 
-        return await Task.FromResult($"Footer text set successfully ({contentDesc}) in {sectionsDesc}");
+            return $"Footer text set successfully ({contentDesc}) in {sectionsDesc}";
+        });
     }
 
     /// <summary>
@@ -390,65 +396,68 @@ Usage examples:
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetHeaderImageAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> SetHeaderImageAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var imagePath = ArgumentHelper.GetString(arguments, "imagePath");
-        SecurityHelper.ValidateFilePath(imagePath, "imagePath");
-        var alignment = ArgumentHelper.GetString(arguments, "alignment", "left");
-        var imageWidth = ArgumentHelper.GetDoubleNullable(arguments, "imageWidth");
-        var imageHeight = ArgumentHelper.GetDoubleNullable(arguments, "imageHeight");
-        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
-        var removeExisting = ArgumentHelper.GetBool(arguments, "removeExisting", true);
-
-        if (!File.Exists(imagePath))
-            throw new FileNotFoundException($"Image file not found: {imagePath}");
-
-        var doc = new Document(path);
-        var sections = sectionIndex == -1 ? doc.Sections.Cast<Section>() : [doc.Sections[sectionIndex]];
-
-        foreach (var section in sections)
+        return Task.Run(() =>
         {
-            var header = section.HeadersFooters[HeaderFooterType.HeaderPrimary];
-            if (header == null)
+            var imagePath = ArgumentHelper.GetString(arguments, "imagePath");
+            SecurityHelper.ValidateFilePath(imagePath, "imagePath", true);
+            var alignment = ArgumentHelper.GetString(arguments, "alignment", "left");
+            var imageWidth = ArgumentHelper.GetDoubleNullable(arguments, "imageWidth");
+            var imageHeight = ArgumentHelper.GetDoubleNullable(arguments, "imageHeight");
+            var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
+            var removeExisting = ArgumentHelper.GetBool(arguments, "removeExisting", true);
+
+            if (!File.Exists(imagePath))
+                throw new FileNotFoundException($"Image file not found: {imagePath}");
+
+            var doc = new Document(path);
+            var sections = sectionIndex == -1 ? doc.Sections.Cast<Section>() : [doc.Sections[sectionIndex]];
+
+            foreach (var section in sections)
             {
-                header = new HeaderFooter(doc, HeaderFooterType.HeaderPrimary);
-                section.HeadersFooters.Add(header);
+                var header = section.HeadersFooters[HeaderFooterType.HeaderPrimary];
+                if (header == null)
+                {
+                    header = new HeaderFooter(doc, HeaderFooterType.HeaderPrimary);
+                    section.HeadersFooters.Add(header);
+                }
+
+                if (removeExisting)
+                {
+                    var existingShapes = header.GetChildNodes(NodeType.Shape, true).Cast<Shape>()
+                        .Where(s => s.HasImage).ToList();
+                    foreach (var existingShape in existingShapes) existingShape.Remove();
+                }
+
+                // Create a new paragraph for the image (similar to SetHeaderTextAsync)
+                var headerPara = new Paragraph(doc);
+                header.AppendChild(headerPara);
+
+                var builder = new DocumentBuilder(doc);
+                builder.MoveTo(headerPara);
+
+                // Set paragraph alignment before inserting image (for inline images)
+                var paraAlignment = alignment.ToLower() switch
+                {
+                    "center" => ParagraphAlignment.Center,
+                    "right" => ParagraphAlignment.Right,
+                    _ => ParagraphAlignment.Left
+                };
+                builder.ParagraphFormat.Alignment = paraAlignment;
+
+                // Insert image (InsertImage creates inline image by default)
+                var shape = builder.InsertImage(imagePath);
+                if (imageWidth.HasValue) shape.Width = imageWidth.Value;
+                if (imageHeight.HasValue) shape.Height = imageHeight.Value;
+
+                // Ensure the paragraph containing the shape has correct alignment
+                headerPara.ParagraphFormat.Alignment = paraAlignment;
             }
 
-            if (removeExisting)
-            {
-                var existingShapes = header.GetChildNodes(NodeType.Shape, true).Cast<Shape>()
-                    .Where(s => s.HasImage).ToList();
-                foreach (var existingShape in existingShapes) existingShape.Remove();
-            }
-
-            // Create a new paragraph for the image (similar to SetHeaderTextAsync)
-            var headerPara = new Paragraph(doc);
-            header.AppendChild(headerPara);
-
-            var builder = new DocumentBuilder(doc);
-            builder.MoveTo(headerPara);
-
-            // Set paragraph alignment before inserting image (for inline images)
-            var paraAlignment = alignment.ToLower() switch
-            {
-                "center" => ParagraphAlignment.Center,
-                "right" => ParagraphAlignment.Right,
-                _ => ParagraphAlignment.Left
-            };
-            builder.ParagraphFormat.Alignment = paraAlignment;
-
-            // Insert image (InsertImage creates inline image by default)
-            var shape = builder.InsertImage(imagePath);
-            if (imageWidth.HasValue) shape.Width = imageWidth.Value;
-            if (imageHeight.HasValue) shape.Height = imageHeight.Value;
-
-            // Ensure the paragraph containing the shape has correct alignment
-            headerPara.ParagraphFormat.Alignment = paraAlignment;
-        }
-
-        doc.Save(outputPath);
-        return await Task.FromResult($"Header image set: {outputPath}");
+            doc.Save(outputPath);
+            return $"Header image set: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -461,65 +470,68 @@ Usage examples:
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetFooterImageAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> SetFooterImageAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var imagePath = ArgumentHelper.GetString(arguments, "imagePath");
-        SecurityHelper.ValidateFilePath(imagePath, "imagePath");
-        var alignment = ArgumentHelper.GetString(arguments, "alignment", "left");
-        var imageWidth = ArgumentHelper.GetDoubleNullable(arguments, "imageWidth");
-        var imageHeight = ArgumentHelper.GetDoubleNullable(arguments, "imageHeight");
-        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
-        var removeExisting = ArgumentHelper.GetBool(arguments, "removeExisting", true);
-
-        if (!File.Exists(imagePath))
-            throw new FileNotFoundException($"Image file not found: {imagePath}");
-
-        var doc = new Document(path);
-        var sections = sectionIndex == -1 ? doc.Sections.Cast<Section>() : [doc.Sections[sectionIndex]];
-
-        foreach (var section in sections)
+        return Task.Run(() =>
         {
-            var footer = section.HeadersFooters[HeaderFooterType.FooterPrimary];
-            if (footer == null)
+            var imagePath = ArgumentHelper.GetString(arguments, "imagePath");
+            SecurityHelper.ValidateFilePath(imagePath, "imagePath", true);
+            var alignment = ArgumentHelper.GetString(arguments, "alignment", "left");
+            var imageWidth = ArgumentHelper.GetDoubleNullable(arguments, "imageWidth");
+            var imageHeight = ArgumentHelper.GetDoubleNullable(arguments, "imageHeight");
+            var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
+            var removeExisting = ArgumentHelper.GetBool(arguments, "removeExisting", true);
+
+            if (!File.Exists(imagePath))
+                throw new FileNotFoundException($"Image file not found: {imagePath}");
+
+            var doc = new Document(path);
+            var sections = sectionIndex == -1 ? doc.Sections.Cast<Section>() : [doc.Sections[sectionIndex]];
+
+            foreach (var section in sections)
             {
-                footer = new HeaderFooter(doc, HeaderFooterType.FooterPrimary);
-                section.HeadersFooters.Add(footer);
+                var footer = section.HeadersFooters[HeaderFooterType.FooterPrimary];
+                if (footer == null)
+                {
+                    footer = new HeaderFooter(doc, HeaderFooterType.FooterPrimary);
+                    section.HeadersFooters.Add(footer);
+                }
+
+                if (removeExisting)
+                {
+                    var existingShapes = footer.GetChildNodes(NodeType.Shape, true).Cast<Shape>()
+                        .Where(s => s.HasImage).ToList();
+                    foreach (var existingShape in existingShapes) existingShape.Remove();
+                }
+
+                // Create a new paragraph for the image (similar to SetFooterTextAsync)
+                var footerPara = new Paragraph(doc);
+                footer.AppendChild(footerPara);
+
+                var builder = new DocumentBuilder(doc);
+                builder.MoveTo(footerPara);
+
+                // Set paragraph alignment before inserting image (for inline images)
+                var paraAlignment = alignment.ToLower() switch
+                {
+                    "center" => ParagraphAlignment.Center,
+                    "right" => ParagraphAlignment.Right,
+                    _ => ParagraphAlignment.Left
+                };
+                builder.ParagraphFormat.Alignment = paraAlignment;
+
+                // Insert image (InsertImage creates inline image by default)
+                var shape = builder.InsertImage(imagePath);
+                if (imageWidth.HasValue) shape.Width = imageWidth.Value;
+                if (imageHeight.HasValue) shape.Height = imageHeight.Value;
+
+                // Ensure the paragraph containing the shape has correct alignment
+                footerPara.ParagraphFormat.Alignment = paraAlignment;
             }
 
-            if (removeExisting)
-            {
-                var existingShapes = footer.GetChildNodes(NodeType.Shape, true).Cast<Shape>()
-                    .Where(s => s.HasImage).ToList();
-                foreach (var existingShape in existingShapes) existingShape.Remove();
-            }
-
-            // Create a new paragraph for the image (similar to SetFooterTextAsync)
-            var footerPara = new Paragraph(doc);
-            footer.AppendChild(footerPara);
-
-            var builder = new DocumentBuilder(doc);
-            builder.MoveTo(footerPara);
-
-            // Set paragraph alignment before inserting image (for inline images)
-            var paraAlignment = alignment.ToLower() switch
-            {
-                "center" => ParagraphAlignment.Center,
-                "right" => ParagraphAlignment.Right,
-                _ => ParagraphAlignment.Left
-            };
-            builder.ParagraphFormat.Alignment = paraAlignment;
-
-            // Insert image (InsertImage creates inline image by default)
-            var shape = builder.InsertImage(imagePath);
-            if (imageWidth.HasValue) shape.Width = imageWidth.Value;
-            if (imageHeight.HasValue) shape.Height = imageHeight.Value;
-
-            // Ensure the paragraph containing the shape has correct alignment
-            footerPara.ParagraphFormat.Alignment = paraAlignment;
-        }
-
-        doc.Save(outputPath);
-        return await Task.FromResult($"Footer image set: {outputPath}");
+            doc.Save(outputPath);
+            return $"Footer image set: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -532,39 +544,42 @@ Usage examples:
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetHeaderLineAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> SetHeaderLineAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var lineStyle = ArgumentHelper.GetString(arguments, "lineStyle", "single");
-        var lineWidth = ArgumentHelper.GetDoubleNullable(arguments, "lineWidth");
-        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
-
-        var doc = new Document(path);
-        var sections = sectionIndex == -1 ? doc.Sections.Cast<Section>() : [doc.Sections[sectionIndex]];
-
-        foreach (var section in sections)
+        return Task.Run(() =>
         {
-            var header = section.HeadersFooters[HeaderFooterType.HeaderPrimary];
-            if (header == null)
+            var lineStyle = ArgumentHelper.GetString(arguments, "lineStyle", "single");
+            var lineWidth = ArgumentHelper.GetDoubleNullable(arguments, "lineWidth");
+            var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
+
+            var doc = new Document(path);
+            var sections = sectionIndex == -1 ? doc.Sections.Cast<Section>() : [doc.Sections[sectionIndex]];
+
+            foreach (var section in sections)
             {
-                header = new HeaderFooter(doc, HeaderFooterType.HeaderPrimary);
-                section.HeadersFooters.Add(header);
+                var header = section.HeadersFooters[HeaderFooterType.HeaderPrimary];
+                if (header == null)
+                {
+                    header = new HeaderFooter(doc, HeaderFooterType.HeaderPrimary);
+                    section.HeadersFooters.Add(header);
+                }
+
+                var para = new Paragraph(doc);
+                para.ParagraphFormat.Borders.Bottom.LineStyle = lineStyle.ToLower() switch
+                {
+                    "double" => LineStyle.Double,
+                    "thick" => LineStyle.Thick,
+                    _ => LineStyle.Single
+                };
+
+                if (lineWidth.HasValue) para.ParagraphFormat.Borders.Bottom.LineWidth = lineWidth.Value;
+
+                header.AppendChild(para);
             }
 
-            var para = new Paragraph(doc);
-            para.ParagraphFormat.Borders.Bottom.LineStyle = lineStyle.ToLower() switch
-            {
-                "double" => LineStyle.Double,
-                "thick" => LineStyle.Thick,
-                _ => LineStyle.Single
-            };
-
-            if (lineWidth.HasValue) para.ParagraphFormat.Borders.Bottom.LineWidth = lineWidth.Value;
-
-            header.AppendChild(para);
-        }
-
-        doc.Save(outputPath);
-        return await Task.FromResult($"Header line set: {outputPath}");
+            doc.Save(outputPath);
+            return $"Header line set: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -577,39 +592,42 @@ Usage examples:
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetFooterLineAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> SetFooterLineAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var lineStyle = ArgumentHelper.GetString(arguments, "lineStyle", "single");
-        var lineWidth = ArgumentHelper.GetDoubleNullable(arguments, "lineWidth");
-        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
-
-        var doc = new Document(path);
-        var sections = sectionIndex == -1 ? doc.Sections.Cast<Section>() : [doc.Sections[sectionIndex]];
-
-        foreach (var section in sections)
+        return Task.Run(() =>
         {
-            var footer = section.HeadersFooters[HeaderFooterType.FooterPrimary];
-            if (footer == null)
+            var lineStyle = ArgumentHelper.GetString(arguments, "lineStyle", "single");
+            var lineWidth = ArgumentHelper.GetDoubleNullable(arguments, "lineWidth");
+            var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
+
+            var doc = new Document(path);
+            var sections = sectionIndex == -1 ? doc.Sections.Cast<Section>() : [doc.Sections[sectionIndex]];
+
+            foreach (var section in sections)
             {
-                footer = new HeaderFooter(doc, HeaderFooterType.FooterPrimary);
-                section.HeadersFooters.Add(footer);
+                var footer = section.HeadersFooters[HeaderFooterType.FooterPrimary];
+                if (footer == null)
+                {
+                    footer = new HeaderFooter(doc, HeaderFooterType.FooterPrimary);
+                    section.HeadersFooters.Add(footer);
+                }
+
+                var para = new Paragraph(doc);
+                para.ParagraphFormat.Borders.Top.LineStyle = lineStyle.ToLower() switch
+                {
+                    "double" => LineStyle.Double,
+                    "thick" => LineStyle.Thick,
+                    _ => LineStyle.Single
+                };
+
+                if (lineWidth.HasValue) para.ParagraphFormat.Borders.Top.LineWidth = lineWidth.Value;
+
+                footer.AppendChild(para);
             }
 
-            var para = new Paragraph(doc);
-            para.ParagraphFormat.Borders.Top.LineStyle = lineStyle.ToLower() switch
-            {
-                "double" => LineStyle.Double,
-                "thick" => LineStyle.Thick,
-                _ => LineStyle.Single
-            };
-
-            if (lineWidth.HasValue) para.ParagraphFormat.Borders.Top.LineWidth = lineWidth.Value;
-
-            footer.AppendChild(para);
-        }
-
-        doc.Save(outputPath);
-        return await Task.FromResult($"Footer line set: {outputPath}");
+            doc.Save(outputPath);
+            return $"Footer line set: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -622,60 +640,63 @@ Usage examples:
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetHeaderTabStopsAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> SetHeaderTabStopsAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var tabStops = ArgumentHelper.GetArray(arguments, "tabStops", false);
-        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
-
-        var doc = new Document(path);
-        var sections = sectionIndex == -1 ? doc.Sections.Cast<Section>() : [doc.Sections[sectionIndex]];
-
-        foreach (var section in sections)
+        return Task.Run(() =>
         {
-            var header = section.HeadersFooters[HeaderFooterType.HeaderPrimary];
-            if (header == null)
-            {
-                header = new HeaderFooter(doc, HeaderFooterType.HeaderPrimary);
-                section.HeadersFooters.Add(header);
-            }
+            var tabStops = ArgumentHelper.GetArray(arguments, "tabStops", false);
+            var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
 
-            if (tabStops is { Count: > 0 })
-            {
-                var para = header.FirstParagraph ?? new Paragraph(doc);
-                para.ParagraphFormat.TabStops.Clear();
+            var doc = new Document(path);
+            var sections = sectionIndex == -1 ? doc.Sections.Cast<Section>() : [doc.Sections[sectionIndex]];
 
-                foreach (var tabStopJson in tabStops)
+            foreach (var section in sections)
+            {
+                var header = section.HeadersFooters[HeaderFooterType.HeaderPrimary];
+                if (header == null)
                 {
-                    var position = tabStopJson?["position"]?.GetValue<double>() ?? 0;
-                    var alignmentStr = tabStopJson?["alignment"]?.GetValue<string>() ?? "left";
-                    var leaderStr = tabStopJson?["leader"]?.GetValue<string>() ?? "none";
-
-                    var tabAlignment = alignmentStr.ToLower() switch
-                    {
-                        "center" => TabAlignment.Center,
-                        "right" => TabAlignment.Right,
-                        "decimal" => TabAlignment.Decimal,
-                        "bar" => TabAlignment.Bar,
-                        _ => TabAlignment.Left
-                    };
-
-                    var tabLeader = leaderStr.ToLower() switch
-                    {
-                        "dots" => TabLeader.Dots,
-                        "dashes" => TabLeader.Dashes,
-                        "line" => TabLeader.Line,
-                        _ => TabLeader.None
-                    };
-
-                    para.ParagraphFormat.TabStops.Add(new TabStop(position, tabAlignment, tabLeader));
+                    header = new HeaderFooter(doc, HeaderFooterType.HeaderPrimary);
+                    section.HeadersFooters.Add(header);
                 }
 
-                if (header.FirstParagraph == null) header.AppendChild(para);
-            }
-        }
+                if (tabStops is { Count: > 0 })
+                {
+                    var para = header.FirstParagraph ?? new Paragraph(doc);
+                    para.ParagraphFormat.TabStops.Clear();
 
-        doc.Save(outputPath);
-        return await Task.FromResult($"Header tab stops set: {outputPath}");
+                    foreach (var tabStopJson in tabStops)
+                    {
+                        var position = tabStopJson?["position"]?.GetValue<double>() ?? 0;
+                        var alignmentStr = tabStopJson?["alignment"]?.GetValue<string>() ?? "left";
+                        var leaderStr = tabStopJson?["leader"]?.GetValue<string>() ?? "none";
+
+                        var tabAlignment = alignmentStr.ToLower() switch
+                        {
+                            "center" => TabAlignment.Center,
+                            "right" => TabAlignment.Right,
+                            "decimal" => TabAlignment.Decimal,
+                            "bar" => TabAlignment.Bar,
+                            _ => TabAlignment.Left
+                        };
+
+                        var tabLeader = leaderStr.ToLower() switch
+                        {
+                            "dots" => TabLeader.Dots,
+                            "dashes" => TabLeader.Dashes,
+                            "line" => TabLeader.Line,
+                            _ => TabLeader.None
+                        };
+
+                        para.ParagraphFormat.TabStops.Add(new TabStop(position, tabAlignment, tabLeader));
+                    }
+
+                    if (header.FirstParagraph == null) header.AppendChild(para);
+                }
+            }
+
+            doc.Save(outputPath);
+            return $"Header tab stops set: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -688,60 +709,63 @@ Usage examples:
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetFooterTabStopsAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> SetFooterTabStopsAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var tabStops = ArgumentHelper.GetArray(arguments, "tabStops", false);
-        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
-
-        var doc = new Document(path);
-        var sections = sectionIndex == -1 ? doc.Sections.Cast<Section>() : [doc.Sections[sectionIndex]];
-
-        foreach (var section in sections)
+        return Task.Run(() =>
         {
-            var footer = section.HeadersFooters[HeaderFooterType.FooterPrimary];
-            if (footer == null)
-            {
-                footer = new HeaderFooter(doc, HeaderFooterType.FooterPrimary);
-                section.HeadersFooters.Add(footer);
-            }
+            var tabStops = ArgumentHelper.GetArray(arguments, "tabStops", false);
+            var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
 
-            if (tabStops is { Count: > 0 })
-            {
-                var para = footer.FirstParagraph ?? new Paragraph(doc);
-                para.ParagraphFormat.TabStops.Clear();
+            var doc = new Document(path);
+            var sections = sectionIndex == -1 ? doc.Sections.Cast<Section>() : [doc.Sections[sectionIndex]];
 
-                foreach (var tabStopJson in tabStops)
+            foreach (var section in sections)
+            {
+                var footer = section.HeadersFooters[HeaderFooterType.FooterPrimary];
+                if (footer == null)
                 {
-                    var position = tabStopJson?["position"]?.GetValue<double>() ?? 0;
-                    var alignmentStr = tabStopJson?["alignment"]?.GetValue<string>() ?? "left";
-                    var leaderStr = tabStopJson?["leader"]?.GetValue<string>() ?? "none";
-
-                    var tabAlignment = alignmentStr.ToLower() switch
-                    {
-                        "center" => TabAlignment.Center,
-                        "right" => TabAlignment.Right,
-                        "decimal" => TabAlignment.Decimal,
-                        "bar" => TabAlignment.Bar,
-                        _ => TabAlignment.Left
-                    };
-
-                    var tabLeader = leaderStr.ToLower() switch
-                    {
-                        "dots" => TabLeader.Dots,
-                        "dashes" => TabLeader.Dashes,
-                        "line" => TabLeader.Line,
-                        _ => TabLeader.None
-                    };
-
-                    para.ParagraphFormat.TabStops.Add(new TabStop(position, tabAlignment, tabLeader));
+                    footer = new HeaderFooter(doc, HeaderFooterType.FooterPrimary);
+                    section.HeadersFooters.Add(footer);
                 }
 
-                if (footer.FirstParagraph == null) footer.AppendChild(para);
-            }
-        }
+                if (tabStops is { Count: > 0 })
+                {
+                    var para = footer.FirstParagraph ?? new Paragraph(doc);
+                    para.ParagraphFormat.TabStops.Clear();
 
-        doc.Save(outputPath);
-        return await Task.FromResult($"Footer tab stops set: {outputPath}");
+                    foreach (var tabStopJson in tabStops)
+                    {
+                        var position = tabStopJson?["position"]?.GetValue<double>() ?? 0;
+                        var alignmentStr = tabStopJson?["alignment"]?.GetValue<string>() ?? "left";
+                        var leaderStr = tabStopJson?["leader"]?.GetValue<string>() ?? "none";
+
+                        var tabAlignment = alignmentStr.ToLower() switch
+                        {
+                            "center" => TabAlignment.Center,
+                            "right" => TabAlignment.Right,
+                            "decimal" => TabAlignment.Decimal,
+                            "bar" => TabAlignment.Bar,
+                            _ => TabAlignment.Left
+                        };
+
+                        var tabLeader = leaderStr.ToLower() switch
+                        {
+                            "dots" => TabLeader.Dots,
+                            "dashes" => TabLeader.Dashes,
+                            "line" => TabLeader.Line,
+                            _ => TabLeader.None
+                        };
+
+                        para.ParagraphFormat.TabStops.Add(new TabStop(position, tabAlignment, tabLeader));
+                    }
+
+                    if (footer.FirstParagraph == null) footer.AppendChild(para);
+                }
+            }
+
+            doc.Save(outputPath);
+            return $"Footer tab stops set: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -751,12 +775,15 @@ Usage examples:
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetHeaderFooterAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> SetHeaderFooterAsync(JsonObject? arguments, string path, string outputPath)
     {
-        // Combined operation to set both header and footer
-        await SetHeaderTextAsync(arguments, path, outputPath);
-        await SetFooterTextAsync(arguments, path, outputPath);
-        return await Task.FromResult($"Header and footer set: {outputPath}");
+        return Task.Run(() =>
+        {
+            // Combined operation to set both header and footer
+            SetHeaderTextAsync(arguments, path, outputPath).Wait();
+            SetFooterTextAsync(arguments, path, outputPath).Wait();
+            return $"Header and footer set: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -765,91 +792,94 @@ Usage examples:
     /// <param name="arguments">JSON arguments (no specific parameters required)</param>
     /// <param name="path">Word document file path</param>
     /// <returns>Formatted string with all headers and footers</returns>
-    private async Task<string> GetHeadersFootersAsync(JsonObject? arguments, string path)
+    private Task<string> GetHeadersFootersAsync(JsonObject? arguments, string path)
     {
-        var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
-
-        var doc = new Document(path);
-        doc.UpdateFields();
-
-        var result = new StringBuilder();
-
-        result.AppendLine("=== Document Header and Footer Information ===\n");
-        result.AppendLine($"Total sections: {doc.Sections.Count}\n");
-
-        var sections = sectionIndex.HasValue
-            ? [doc.Sections[sectionIndex.Value]]
-            : doc.Sections.Cast<Section>().ToArray();
-
-        if (sectionIndex.HasValue && (sectionIndex.Value < 0 || sectionIndex.Value >= doc.Sections.Count))
-            throw new ArgumentException(
-                $"Section index {sectionIndex.Value} is out of range (document has {doc.Sections.Count} sections)");
-
-        for (var i = 0; i < sections.Length; i++)
+        return Task.Run(() =>
         {
-            var section = sections[i];
-            var actualIndex = sectionIndex ?? i;
+            var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
 
-            result.AppendLine($"[Section {actualIndex}]");
+            var doc = new Document(path);
+            doc.UpdateFields();
 
-            result.AppendLine("Headers:");
-            var headerTypes = new[]
+            var result = new StringBuilder();
+
+            result.AppendLine("=== Document Header and Footer Information ===\n");
+            result.AppendLine($"Total sections: {doc.Sections.Count}\n");
+
+            var sections = sectionIndex.HasValue
+                ? [doc.Sections[sectionIndex.Value]]
+                : doc.Sections.Cast<Section>().ToArray();
+
+            if (sectionIndex.HasValue && (sectionIndex.Value < 0 || sectionIndex.Value >= doc.Sections.Count))
+                throw new ArgumentException(
+                    $"Section index {sectionIndex.Value} is out of range (document has {doc.Sections.Count} sections)");
+
+            for (var i = 0; i < sections.Length; i++)
             {
-                (HeaderFooterType.HeaderPrimary, "Primary header"),
-                (HeaderFooterType.HeaderFirst, "First page header"),
-                (HeaderFooterType.HeaderEven, "Even page header")
-            };
+                var section = sections[i];
+                var actualIndex = sectionIndex ?? i;
 
-            var hasHeader = false;
-            foreach (var (type, name) in headerTypes)
-            {
-                var header = section.HeadersFooters[type];
-                if (header != null)
+                result.AppendLine($"[Section {actualIndex}]");
+
+                result.AppendLine("Headers:");
+                var headerTypes = new[]
                 {
-                    var headerText = header.ToString(SaveFormat.Text).Trim();
-                    if (!string.IsNullOrEmpty(headerText))
+                    (HeaderFooterType.HeaderPrimary, "Primary header"),
+                    (HeaderFooterType.HeaderFirst, "First page header"),
+                    (HeaderFooterType.HeaderEven, "Even page header")
+                };
+
+                var hasHeader = false;
+                foreach (var (type, name) in headerTypes)
+                {
+                    var header = section.HeadersFooters[type];
+                    if (header != null)
                     {
-                        result.AppendLine($"  {name}:");
-                        result.AppendLine($"    {headerText.Replace("\n", "\n    ")}");
-                        hasHeader = true;
+                        var headerText = header.ToString(SaveFormat.Text).Trim();
+                        if (!string.IsNullOrEmpty(headerText))
+                        {
+                            result.AppendLine($"  {name}:");
+                            result.AppendLine($"    {headerText.Replace("\n", "\n    ")}");
+                            hasHeader = true;
+                        }
                     }
                 }
-            }
 
-            if (!hasHeader) result.AppendLine("  (No header)");
+                if (!hasHeader) result.AppendLine("  (No header)");
 
-            result.AppendLine();
+                result.AppendLine();
 
-            result.AppendLine("Footers:");
-            var footerTypes = new[]
-            {
-                (HeaderFooterType.FooterPrimary, "Primary footer"),
-                (HeaderFooterType.FooterFirst, "First page footer"),
-                (HeaderFooterType.FooterEven, "Even page footer")
-            };
-
-            var hasFooter = false;
-            foreach (var (type, name) in footerTypes)
-            {
-                var footer = section.HeadersFooters[type];
-                if (footer != null)
+                result.AppendLine("Footers:");
+                var footerTypes = new[]
                 {
-                    var footerText = footer.ToString(SaveFormat.Text).Trim();
-                    if (!string.IsNullOrEmpty(footerText))
+                    (HeaderFooterType.FooterPrimary, "Primary footer"),
+                    (HeaderFooterType.FooterFirst, "First page footer"),
+                    (HeaderFooterType.FooterEven, "Even page footer")
+                };
+
+                var hasFooter = false;
+                foreach (var (type, name) in footerTypes)
+                {
+                    var footer = section.HeadersFooters[type];
+                    if (footer != null)
                     {
-                        result.AppendLine($"  {name}:");
-                        result.AppendLine($"    {footerText.Replace("\n", "\n    ")}");
-                        hasFooter = true;
+                        var footerText = footer.ToString(SaveFormat.Text).Trim();
+                        if (!string.IsNullOrEmpty(footerText))
+                        {
+                            result.AppendLine($"  {name}:");
+                            result.AppendLine($"    {footerText.Replace("\n", "\n    ")}");
+                            hasFooter = true;
+                        }
                     }
                 }
+
+                if (!hasFooter) result.AppendLine("  (No footer)");
+
+                if (i < sections.Length - 1) result.AppendLine();
             }
 
-            if (!hasFooter) result.AppendLine("  (No footer)");
-
-            if (i < sections.Length - 1) result.AppendLine();
-        }
-
-        return await Task.FromResult(result.ToString());
+            return result.ToString();
+        });
     }
 
     /// <summary>
@@ -940,9 +970,10 @@ Usage examples:
                     var field = builder.InsertField(fieldType, false);
                     field.Update();
                 }
-                catch
+                catch (Exception ex)
                 {
                     // Field insertion failed, restore font settings if they were modified
+                    Console.Error.WriteLine($"[WARN] Failed to insert field '{fieldType}' in header/footer: {ex.Message}");
                     if (fontName != null || fontSize.HasValue)
                         // Apply font settings using FontHelper
                         FontHelper.Word.ApplyFontSettings(

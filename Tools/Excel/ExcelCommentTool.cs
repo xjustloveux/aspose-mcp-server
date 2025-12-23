@@ -102,29 +102,32 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message with comment details</returns>
-    private async Task<string> AddCommentAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> AddCommentAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var cell = ArgumentHelper.GetString(arguments, "cell");
-        var comment = ArgumentHelper.GetString(arguments, "comment");
-        var author = ArgumentHelper.GetStringNullable(arguments, "author");
-
-        using var workbook = new Workbook(path);
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var cellObj = worksheet.Cells[cell];
-
-        var commentObj = worksheet.Comments[cellObj.Name];
-        if (commentObj == null)
+        return Task.Run(() =>
         {
-            var commentIndex = worksheet.Comments.Add(cellObj.Name);
-            commentObj = worksheet.Comments[commentIndex];
-        }
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var cell = ArgumentHelper.GetString(arguments, "cell");
+            var comment = ArgumentHelper.GetString(arguments, "comment");
+            var author = ArgumentHelper.GetStringNullable(arguments, "author");
 
-        commentObj.Note = comment;
-        if (!string.IsNullOrEmpty(author)) commentObj.Author = author;
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            var cellObj = worksheet.Cells[cell];
 
-        workbook.Save(outputPath);
-        return await Task.FromResult($"Comment added to cell {cell} in sheet {sheetIndex}: {outputPath}");
+            var commentObj = worksheet.Comments[cellObj.Name];
+            if (commentObj == null)
+            {
+                var commentIndex = worksheet.Comments.Add(cellObj.Name);
+                commentObj = worksheet.Comments[commentIndex];
+            }
+
+            commentObj.Note = comment;
+            if (!string.IsNullOrEmpty(author)) commentObj.Author = author;
+
+            workbook.Save(outputPath);
+            return $"Comment added to cell {cell} in sheet {sheetIndex}: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -134,25 +137,28 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> EditCommentAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> EditCommentAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var cell = ArgumentHelper.GetString(arguments, "cell");
-        var comment = ArgumentHelper.GetString(arguments, "comment");
-        var author = ArgumentHelper.GetStringNullable(arguments, "author");
+        return Task.Run(() =>
+        {
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var cell = ArgumentHelper.GetString(arguments, "cell");
+            var comment = ArgumentHelper.GetString(arguments, "comment");
+            var author = ArgumentHelper.GetStringNullable(arguments, "author");
 
-        using var workbook = new Workbook(path);
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var cellObj = worksheet.Cells[cell];
-        var commentObj = worksheet.Comments[cellObj.Name];
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            var cellObj = worksheet.Cells[cell];
+            var commentObj = worksheet.Comments[cellObj.Name];
 
-        if (commentObj == null) throw new ArgumentException($"No comment found on cell {cell}");
+            if (commentObj == null) throw new ArgumentException($"No comment found on cell {cell}");
 
-        commentObj.Note = comment;
-        if (!string.IsNullOrEmpty(author)) commentObj.Author = author;
+            commentObj.Note = comment;
+            if (!string.IsNullOrEmpty(author)) commentObj.Author = author;
 
-        workbook.Save(outputPath);
-        return await Task.FromResult($"Comment edited on cell {cell} in sheet {sheetIndex}: {outputPath}");
+            workbook.Save(outputPath);
+            return $"Comment edited on cell {cell} in sheet {sheetIndex}: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -162,19 +168,22 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> DeleteCommentAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> DeleteCommentAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var cell = ArgumentHelper.GetString(arguments, "cell");
+        return Task.Run(() =>
+        {
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var cell = ArgumentHelper.GetString(arguments, "cell");
 
-        using var workbook = new Workbook(path);
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var comment = worksheet.Comments[cell];
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            var comment = worksheet.Comments[cell];
 
-        if (comment != null) worksheet.Comments.RemoveAt(cell);
+            if (comment != null) worksheet.Comments.RemoveAt(cell);
 
-        workbook.Save(outputPath);
-        return await Task.FromResult($"Comment deleted from cell {cell} in sheet {sheetIndex}: {outputPath}");
+            workbook.Save(outputPath);
+            return $"Comment deleted from cell {cell} in sheet {sheetIndex}: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -184,44 +193,47 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Formatted string with comment information</returns>
-    private async Task<string> GetCommentsAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> GetCommentsAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var cell = ArgumentHelper.GetStringNullable(arguments, "cell");
-
-        using var workbook = new Workbook(path);
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var sb = new StringBuilder();
-
-        if (!string.IsNullOrEmpty(cell))
+        return Task.Run(() =>
         {
-            var comment = worksheet.Comments[cell];
-            if (comment != null)
+            var cell = ArgumentHelper.GetStringNullable(arguments, "cell");
+
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            var sb = new StringBuilder();
+
+            if (!string.IsNullOrEmpty(cell))
             {
-                sb.AppendLine($"Comment on cell {cell}:");
-                sb.AppendLine($"  Author: {comment.Author}");
-                sb.AppendLine($"  Note: {comment.Note}");
-            }
-            else
-            {
-                sb.AppendLine($"No comment found on cell {cell}");
-            }
-        }
-        else
-        {
-            sb.AppendLine($"Comments in sheet {sheetIndex}:");
-            if (worksheet.Comments.Count > 0)
-                foreach (var comment in worksheet.Comments)
+                var comment = worksheet.Comments[cell];
+                if (comment != null)
                 {
-                    var cellName = CellsHelper.CellIndexToName(comment.Row, comment.Column);
-                    sb.AppendLine($"  Cell {cellName}:");
-                    sb.AppendLine($"    Author: {comment.Author}");
-                    sb.AppendLine($"    Note: {comment.Note}");
-                    sb.AppendLine();
+                    sb.AppendLine($"Comment on cell {cell}:");
+                    sb.AppendLine($"  Author: {comment.Author}");
+                    sb.AppendLine($"  Note: {comment.Note}");
                 }
+                else
+                {
+                    sb.AppendLine($"No comment found on cell {cell}");
+                }
+            }
             else
-                sb.AppendLine("  No comments found");
-        }
+            {
+                sb.AppendLine($"Comments in sheet {sheetIndex}:");
+                if (worksheet.Comments.Count > 0)
+                    foreach (var comment in worksheet.Comments)
+                    {
+                        var cellName = CellsHelper.CellIndexToName(comment.Row, comment.Column);
+                        sb.AppendLine($"  Cell {cellName}:");
+                        sb.AppendLine($"    Author: {comment.Author}");
+                        sb.AppendLine($"    Note: {comment.Note}");
+                        sb.AppendLine();
+                    }
+                else
+                    sb.AppendLine("  No comments found");
+            }
 
-        return await Task.FromResult(sb.ToString());
+            return sb.ToString();
+        });
     }
 }

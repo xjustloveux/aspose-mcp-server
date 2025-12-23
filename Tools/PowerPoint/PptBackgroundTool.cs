@@ -85,37 +85,40 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing optional slideIndex, imagePath, color, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetBackgroundAsync(JsonObject? arguments, string path)
+    private Task<string> SetBackgroundAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", 0);
-        var colorHex = ArgumentHelper.GetStringNullable(arguments, "color");
-        var imagePath = ArgumentHelper.GetStringNullable(arguments, "imagePath");
-
-        using var presentation = new Presentation(path);
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-        var fillFormat = slide.Background.FillFormat;
-
-        if (!string.IsNullOrWhiteSpace(imagePath))
+        return Task.Run(async () =>
         {
-            var img = presentation.Images.AddImage(await File.ReadAllBytesAsync(imagePath));
-            fillFormat.FillType = FillType.Picture;
-            fillFormat.PictureFillFormat.PictureFillMode = PictureFillMode.Stretch;
-            fillFormat.PictureFillFormat.Picture.Image = img;
-        }
-        else if (!string.IsNullOrWhiteSpace(colorHex))
-        {
-            var color = ColorHelper.ParseColor(colorHex);
-            fillFormat.FillType = FillType.Solid;
-            fillFormat.SolidFillColor.Color = color;
-        }
-        else
-        {
-            throw new ArgumentException("Please provide at least one of color or imagePath");
-        }
+            var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", 0);
+            var colorHex = ArgumentHelper.GetStringNullable(arguments, "color");
+            var imagePath = ArgumentHelper.GetStringNullable(arguments, "imagePath");
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        presentation.Save(outputPath, SaveFormat.Pptx);
-        return await Task.FromResult($"Background updated for slide {slideIndex}: {outputPath}");
+            using var presentation = new Presentation(path);
+            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+            var fillFormat = slide.Background.FillFormat;
+
+            if (!string.IsNullOrWhiteSpace(imagePath))
+            {
+                var img = presentation.Images.AddImage(await File.ReadAllBytesAsync(imagePath));
+                fillFormat.FillType = FillType.Picture;
+                fillFormat.PictureFillFormat.PictureFillMode = PictureFillMode.Stretch;
+                fillFormat.PictureFillFormat.Picture.Image = img;
+            }
+            else if (!string.IsNullOrWhiteSpace(colorHex))
+            {
+                var color = ColorHelper.ParseColor(colorHex);
+                fillFormat.FillType = FillType.Solid;
+                fillFormat.SolidFillColor.Color = color;
+            }
+            else
+            {
+                throw new ArgumentException("Please provide at least one of color or imagePath");
+            }
+
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
+            return $"Background updated for slide {slideIndex}: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -124,28 +127,31 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing slideIndex</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Formatted string with background details</returns>
-    private async Task<string> GetBackgroundAsync(JsonObject? arguments, string path)
+    private Task<string> GetBackgroundAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
-
-        using var presentation = new Presentation(path);
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-        var background = slide.Background;
-        var sb = new StringBuilder();
-
-        sb.AppendLine($"=== Slide {slideIndex} Background ===");
-        if (background != null)
+        return Task.Run(() =>
         {
-            sb.AppendLine($"FillType: {background.FillFormat.FillType}");
-            if (background.FillFormat.FillType == FillType.Solid)
-                sb.AppendLine($"Color: {background.FillFormat.SolidFillColor}");
-            else if (background.FillFormat.FillType == FillType.Picture) sb.AppendLine("Picture fill");
-        }
-        else
-        {
-            sb.AppendLine("No background set");
-        }
+            var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
 
-        return await Task.FromResult(sb.ToString());
+            using var presentation = new Presentation(path);
+            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+            var background = slide.Background;
+            var sb = new StringBuilder();
+
+            sb.AppendLine($"=== Slide {slideIndex} Background ===");
+            if (background != null)
+            {
+                sb.AppendLine($"FillType: {background.FillFormat.FillType}");
+                if (background.FillFormat.FillType == FillType.Solid)
+                    sb.AppendLine($"Color: {background.FillFormat.SolidFillColor}");
+                else if (background.FillFormat.FillType == FillType.Picture) sb.AppendLine("Picture fill");
+            }
+            else
+            {
+                sb.AppendLine("No background set");
+            }
+
+            return sb.ToString();
+        });
     }
 }

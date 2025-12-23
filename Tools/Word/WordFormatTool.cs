@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using AsposeMcpServer.Core;
@@ -180,84 +180,87 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, paragraphIndex, runIndex, optional sectionIndex</param>
     /// <returns>Formatted string with run format details</returns>
-    private async Task<string> GetRunFormat(JsonObject? arguments)
+    private Task<string> GetRunFormat(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex");
-        var runIndex = ArgumentHelper.GetIntNullable(arguments, "runIndex");
-        var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
-
-        var doc = new Document(path);
-
-        // Handle paragraphIndex=-1 (document end)
-        if (paragraphIndex == -1)
+        return Task.Run(() =>
         {
-            var lastSection = doc.LastSection;
-            var bodyParagraphs = lastSection.Body.GetChildNodes(NodeType.Paragraph, false);
-            if (bodyParagraphs.Count > 0)
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex");
+            var runIndex = ArgumentHelper.GetIntNullable(arguments, "runIndex");
+            var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
+
+            var doc = new Document(path);
+
+            // Handle paragraphIndex=-1 (document end)
+            if (paragraphIndex == -1)
             {
-                paragraphIndex = bodyParagraphs.Count - 1;
-                sectionIndex = doc.Sections.Count - 1;
+                var lastSection = doc.LastSection;
+                var bodyParagraphs = lastSection.Body.GetChildNodes(NodeType.Paragraph, false);
+                if (bodyParagraphs.Count > 0)
+                {
+                    paragraphIndex = bodyParagraphs.Count - 1;
+                    sectionIndex = doc.Sections.Count - 1;
+                }
+                else
+                {
+                    throw new ArgumentException("Cannot get run format: document has no paragraphs.");
+                }
+            }
+
+            var sectionIdx = sectionIndex ?? 0;
+            if (sectionIdx < 0 || sectionIdx >= doc.Sections.Count)
+                throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
+
+            var section = doc.Sections[sectionIdx];
+            var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
+
+            if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
+                throw new ArgumentException(
+                    $"paragraphIndex must be between 0 and {paragraphs.Count - 1}, or use -1 for document end");
+
+            var para = paragraphs[paragraphIndex];
+            var runs = para.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+            var sb = new StringBuilder();
+
+            if (runIndex.HasValue)
+            {
+                if (runIndex.Value < 0 || runIndex.Value >= runs.Count)
+                    throw new ArgumentException(
+                        $"runIndex {runIndex.Value} is out of range (paragraph #{paragraphIndex} has {runs.Count} Runs, valid range: 0-{runs.Count - 1})");
+
+                var run = runs[runIndex.Value];
+                sb.AppendLine($"=== Run {runIndex.Value} Format ===");
+                sb.AppendLine($"  Text: {run.Text}");
+                sb.AppendLine($"  Font Name: {run.Font.Name}");
+                sb.AppendLine($"  Font Name (ASCII): {run.Font.NameAscii}");
+                sb.AppendLine($"  Font Name (Far East): {run.Font.NameFarEast}");
+                sb.AppendLine($"  Font Size: {run.Font.Size} pt");
+                sb.AppendLine($"  Bold: {run.Font.Bold}");
+                sb.AppendLine($"  Italic: {run.Font.Italic}");
+                sb.AppendLine($"  Underline: {run.Font.Underline}");
+                sb.AppendLine($"  StrikeThrough: {run.Font.StrikeThrough}");
+                sb.AppendLine($"  Superscript: {run.Font.Superscript}");
+                sb.AppendLine($"  Subscript: {run.Font.Subscript}");
+                sb.AppendLine($"  Color: #{run.Font.Color.R:X2}{run.Font.Color.G:X2}{run.Font.Color.B:X2}");
             }
             else
             {
-                throw new ArgumentException("Cannot get run format: document has no paragraphs.");
+                sb.AppendLine($"=== Runs in Paragraph {paragraphIndex} ({runs.Count}) ===");
+                for (var i = 0; i < runs.Count; i++)
+                {
+                    var run = runs[i];
+                    sb.AppendLine($"\n[{i}] Text: {run.Text}");
+                    sb.AppendLine($"    Font: {run.Font.NameAscii}/{run.Font.NameFarEast}, Size: {run.Font.Size}pt");
+                    sb.AppendLine($"    Bold: {run.Font.Bold}, Italic: {run.Font.Italic}");
+                    sb.AppendLine($"    Underline: {run.Font.Underline}");
+                    if (run.Font.StrikeThrough) sb.AppendLine("    StrikeThrough: True");
+                    if (run.Font.Superscript) sb.AppendLine("    Superscript: True");
+                    if (run.Font.Subscript) sb.AppendLine("    Subscript: True");
+                }
             }
-        }
 
-        var sectionIdx = sectionIndex ?? 0;
-        if (sectionIdx < 0 || sectionIdx >= doc.Sections.Count)
-            throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
-
-        var section = doc.Sections[sectionIdx];
-        var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
-
-        if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
-            throw new ArgumentException(
-                $"paragraphIndex must be between 0 and {paragraphs.Count - 1}, or use -1 for document end");
-
-        var para = paragraphs[paragraphIndex];
-        var runs = para.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
-        var sb = new StringBuilder();
-
-        if (runIndex.HasValue)
-        {
-            if (runIndex.Value < 0 || runIndex.Value >= runs.Count)
-                throw new ArgumentException(
-                    $"runIndex {runIndex.Value} is out of range (paragraph #{paragraphIndex} has {runs.Count} Runs, valid range: 0-{runs.Count - 1})");
-
-            var run = runs[runIndex.Value];
-            sb.AppendLine($"=== Run {runIndex.Value} Format ===");
-            sb.AppendLine($"  Text: {run.Text}");
-            sb.AppendLine($"  Font Name: {run.Font.Name}");
-            sb.AppendLine($"  Font Name (ASCII): {run.Font.NameAscii}");
-            sb.AppendLine($"  Font Name (Far East): {run.Font.NameFarEast}");
-            sb.AppendLine($"  Font Size: {run.Font.Size} pt");
-            sb.AppendLine($"  Bold: {run.Font.Bold}");
-            sb.AppendLine($"  Italic: {run.Font.Italic}");
-            sb.AppendLine($"  Underline: {run.Font.Underline}");
-            sb.AppendLine($"  StrikeThrough: {run.Font.StrikeThrough}");
-            sb.AppendLine($"  Superscript: {run.Font.Superscript}");
-            sb.AppendLine($"  Subscript: {run.Font.Subscript}");
-            sb.AppendLine($"  Color: #{run.Font.Color.R:X2}{run.Font.Color.G:X2}{run.Font.Color.B:X2}");
-        }
-        else
-        {
-            sb.AppendLine($"=== Runs in Paragraph {paragraphIndex} ({runs.Count}) ===");
-            for (var i = 0; i < runs.Count; i++)
-            {
-                var run = runs[i];
-                sb.AppendLine($"\n[{i}] Text: {run.Text}");
-                sb.AppendLine($"    Font: {run.Font.NameAscii}/{run.Font.NameFarEast}, Size: {run.Font.Size}pt");
-                sb.AppendLine($"    Bold: {run.Font.Bold}, Italic: {run.Font.Italic}");
-                sb.AppendLine($"    Underline: {run.Font.Underline}");
-                if (run.Font.StrikeThrough) sb.AppendLine("    StrikeThrough: True");
-                if (run.Font.Superscript) sb.AppendLine("    Superscript: True");
-                if (run.Font.Subscript) sb.AppendLine("    Subscript: True");
-            }
-        }
-
-        return await Task.FromResult(sb.ToString());
+            return sb.ToString();
+        });
     }
 
     /// <summary>
@@ -268,105 +271,108 @@ Usage examples:
     ///     sectionIndex, outputPath
     /// </param>
     /// <returns>Success message</returns>
-    private async Task<string> SetRunFormat(JsonObject? arguments)
+    private Task<string> SetRunFormat(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex");
-        var runIndex = ArgumentHelper.GetIntNullable(arguments, "runIndex");
-        var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
-        var fontName = ArgumentHelper.GetStringNullable(arguments, "fontName");
-        var fontNameAscii = ArgumentHelper.GetStringNullable(arguments, "fontNameAscii");
-        var fontNameFarEast = ArgumentHelper.GetStringNullable(arguments, "fontNameFarEast");
-        var fontSize = ArgumentHelper.GetDoubleNullable(arguments, "fontSize");
-        var bold = ArgumentHelper.GetBoolNullable(arguments, "bold");
-        var italic = ArgumentHelper.GetBoolNullable(arguments, "italic");
-        var underline = ArgumentHelper.GetBoolNullable(arguments, "underline");
-        var color = ArgumentHelper.GetStringNullable(arguments, "color");
-
-        var doc = new Document(path);
-
-        // Handle paragraphIndex=-1 (document end)
-        if (paragraphIndex == -1)
+        return Task.Run(() =>
         {
-            var lastSection = doc.LastSection;
-            var bodyParagraphs = lastSection.Body.GetChildNodes(NodeType.Paragraph, false);
-            if (bodyParagraphs.Count > 0)
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+            var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex");
+            var runIndex = ArgumentHelper.GetIntNullable(arguments, "runIndex");
+            var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
+            var fontName = ArgumentHelper.GetStringNullable(arguments, "fontName");
+            var fontNameAscii = ArgumentHelper.GetStringNullable(arguments, "fontNameAscii");
+            var fontNameFarEast = ArgumentHelper.GetStringNullable(arguments, "fontNameFarEast");
+            var fontSize = ArgumentHelper.GetDoubleNullable(arguments, "fontSize");
+            var bold = ArgumentHelper.GetBoolNullable(arguments, "bold");
+            var italic = ArgumentHelper.GetBoolNullable(arguments, "italic");
+            var underline = ArgumentHelper.GetBoolNullable(arguments, "underline");
+            var color = ArgumentHelper.GetStringNullable(arguments, "color");
+
+            var doc = new Document(path);
+
+            // Handle paragraphIndex=-1 (document end)
+            if (paragraphIndex == -1)
             {
-                paragraphIndex = bodyParagraphs.Count - 1;
-                sectionIndex = doc.Sections.Count - 1;
+                var lastSection = doc.LastSection;
+                var bodyParagraphs = lastSection.Body.GetChildNodes(NodeType.Paragraph, false);
+                if (bodyParagraphs.Count > 0)
+                {
+                    paragraphIndex = bodyParagraphs.Count - 1;
+                    sectionIndex = doc.Sections.Count - 1;
+                }
+                else
+                {
+                    throw new ArgumentException("Cannot get run format: document has no paragraphs.");
+                }
+            }
+
+            var sectionIdx = sectionIndex ?? 0;
+            if (sectionIdx < 0 || sectionIdx >= doc.Sections.Count)
+                throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
+
+            var section = doc.Sections[sectionIdx];
+            var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
+
+            if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
+                throw new ArgumentException(
+                    $"paragraphIndex must be between 0 and {paragraphs.Count - 1}, or use -1 for document end");
+
+            var para = paragraphs[paragraphIndex];
+            var runs = para.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+
+            // If paragraph has no runs and runIndex is specified, create a run
+            if (runs.Count == 0 && runIndex.HasValue)
+            {
+                if (runIndex.Value != 0)
+                    throw new ArgumentException("Paragraph has no Run nodes, runIndex must be 0 to create a new Run");
+                // Create a new run with empty text
+                var newRun = new Run(doc);
+                para.AppendChild(newRun);
+                runs = para.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+            }
+            // If paragraph has no runs and no runIndex specified, create a run
+            else if (runs.Count == 0)
+            {
+                var newRun = new Run(doc);
+                para.AppendChild(newRun);
+                runs = para.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+            }
+
+            List<Run> runsToFormat;
+            if (runIndex.HasValue)
+            {
+                if (runIndex.Value < 0 || runIndex.Value >= runs.Count)
+                    throw new ArgumentException(
+                        $"runIndex must be between 0 and {runs.Count - 1} (paragraph has {runs.Count} Runs)");
+                runsToFormat = [runs[runIndex.Value]];
             }
             else
             {
-                throw new ArgumentException("Cannot get run format: document has no paragraphs.");
+                runsToFormat = runs;
             }
-        }
 
-        var sectionIdx = sectionIndex ?? 0;
-        if (sectionIdx < 0 || sectionIdx >= doc.Sections.Count)
-            throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
+            foreach (var run in runsToFormat)
+            {
+                // Apply font settings using FontHelper
+                var underlineStr = underline.HasValue ? underline.Value ? "single" : "none" : null;
+                FontHelper.Word.ApplyFontSettings(
+                    run,
+                    fontName,
+                    fontNameAscii,
+                    fontNameFarEast,
+                    fontSize,
+                    bold,
+                    italic,
+                    underlineStr,
+                    color
+                );
+            }
 
-        var section = doc.Sections[sectionIdx];
-        var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
-
-        if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
-            throw new ArgumentException(
-                $"paragraphIndex must be between 0 and {paragraphs.Count - 1}, or use -1 for document end");
-
-        var para = paragraphs[paragraphIndex];
-        var runs = para.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
-
-        // If paragraph has no runs and runIndex is specified, create a run
-        if (runs.Count == 0 && runIndex.HasValue)
-        {
-            if (runIndex.Value != 0)
-                throw new ArgumentException("Paragraph has no Run nodes, runIndex must be 0 to create a new Run");
-            // Create a new run with empty text
-            var newRun = new Run(doc);
-            para.AppendChild(newRun);
-            runs = para.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
-        }
-        // If paragraph has no runs and no runIndex specified, create a run
-        else if (runs.Count == 0)
-        {
-            var newRun = new Run(doc);
-            para.AppendChild(newRun);
-            runs = para.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
-        }
-
-        List<Run> runsToFormat;
-        if (runIndex.HasValue)
-        {
-            if (runIndex.Value < 0 || runIndex.Value >= runs.Count)
-                throw new ArgumentException(
-                    $"runIndex must be between 0 and {runs.Count - 1} (paragraph has {runs.Count} Runs)");
-            runsToFormat = [runs[runIndex.Value]];
-        }
-        else
-        {
-            runsToFormat = runs;
-        }
-
-        foreach (var run in runsToFormat)
-        {
-            // Apply font settings using FontHelper
-            var underlineStr = underline.HasValue ? underline.Value ? "single" : "none" : null;
-            FontHelper.Word.ApplyFontSettings(
-                run,
-                fontName,
-                fontNameAscii,
-                fontNameFarEast,
-                fontSize,
-                bold,
-                italic,
-                underlineStr,
-                color
-            );
-        }
-
-        doc.Save(outputPath);
-        return await Task.FromResult($"Run format updated: {outputPath}");
+            doc.Save(outputPath);
+            return $"Run format updated: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -374,186 +380,190 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, paragraphIndex, optional sectionIndex</param>
     /// <returns>Formatted string with tab stops</returns>
-    private async Task<string> GetTabStops(JsonObject? arguments)
+    private Task<string> GetTabStops(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var location = ArgumentHelper.GetString(arguments, "location", "body");
-        var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex", 0);
-        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
-        var allParagraphs = ArgumentHelper.GetBool(arguments, "allParagraphs", false);
-        var includeStyle = ArgumentHelper.GetBool(arguments, "includeStyle", true);
-
-        var doc = new Document(path);
-
-        if (sectionIndex >= doc.Sections.Count)
-            throw new ArgumentException(
-                $"Section index {sectionIndex} out of range (total sections: {doc.Sections.Count})");
-
-        var section = doc.Sections[sectionIndex];
-        var result = new StringBuilder();
-
-        result.AppendLine("=== Tab Stops Information ===");
-        result.AppendLine($"Location: {location}");
-        if (location == "body")
-            result.AppendLine($"Paragraph Index: {paragraphIndex}");
-        result.AppendLine($"Section Index: {sectionIndex}");
-        result.AppendLine();
-
-        List<Paragraph> targetParagraphs;
-        string locationDesc;
-
-        switch (location.ToLower())
+        return Task.Run(() =>
         {
-            case "header":
-                var header = section.HeadersFooters[HeaderFooterType.HeaderPrimary];
-                if (header != null)
-                {
-                    var headerParas = header.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
-                    targetParagraphs = allParagraphs ? headerParas :
-                        headerParas.Count > 0 ? new List<Paragraph> { headerParas[0] } : new List<Paragraph>();
-                    locationDesc = "Header";
-                }
-                else
-                {
-                    throw new InvalidOperationException("Header not found");
-                }
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            var location = ArgumentHelper.GetString(arguments, "location", "body");
+            var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex", 0);
+            var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
+            var allParagraphs = ArgumentHelper.GetBool(arguments, "allParagraphs", false);
+            var includeStyle = ArgumentHelper.GetBool(arguments, "includeStyle", true);
 
-                break;
+            var doc = new Document(path);
 
-            case "footer":
-                var footer = section.HeadersFooters[HeaderFooterType.FooterPrimary];
-                if (footer != null)
-                {
-                    var footerParas = footer.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
-                    targetParagraphs = allParagraphs ? footerParas :
-                        footerParas.Count > 0 ? new List<Paragraph> { footerParas[0] } : new List<Paragraph>();
-                    locationDesc = "Footer";
-                }
-                else
-                {
-                    throw new InvalidOperationException("Footer not found");
-                }
+            if (sectionIndex >= doc.Sections.Count)
+                throw new ArgumentException(
+                    $"Section index {sectionIndex} out of range (total sections: {doc.Sections.Count})");
 
-                break;
+            var section = doc.Sections[sectionIndex];
+            var result = new StringBuilder();
 
-            default:
-                var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
-                if (allParagraphs)
-                {
-                    targetParagraphs = paragraphs;
-                }
-                else
-                {
-                    if (paragraphIndex >= paragraphs.Count)
-                        throw new ArgumentException(
-                            $"Paragraph index {paragraphIndex} out of range (total paragraphs: {paragraphs.Count})");
-                    targetParagraphs = [paragraphs[paragraphIndex]];
-                }
-
-                locationDesc = allParagraphs ? "Body" : $"Body Paragraph {paragraphIndex}";
-                break;
-        }
-
-        if (targetParagraphs.Count == 0)
-            throw new InvalidOperationException("No target paragraphs found");
-
-        var allTabStops =
-            new Dictionary<string, (double position, TabAlignment alignment, TabLeader leader, string source)>();
-
-        for (var paraIdx = 0; paraIdx < targetParagraphs.Count; paraIdx++)
-        {
-            var para = targetParagraphs[paraIdx];
-            var paraSource = allParagraphs ? $"Paragraph {paraIdx}" : "Paragraph";
-
-            var paraTabStops = para.ParagraphFormat.TabStops;
-            for (var i = 0; i < paraTabStops.Count; i++)
-            {
-                var tab = paraTabStops[i];
-                var position = Math.Round(tab.Position, 2);
-                var key = $"{position}_{tab.Alignment}";
-                if (!allTabStops.ContainsKey(key))
-                    allTabStops[key] = (position, tab.Alignment, tab.Leader, $"{paraSource} (Custom)");
-            }
-
-            if (includeStyle && para.ParagraphFormat.Style != null)
-            {
-                var currentStyle = para.ParagraphFormat.Style;
-                var styleChain = new List<Style>();
-
-                while (currentStyle != null)
-                {
-                    styleChain.Add(currentStyle);
-                    if (!string.IsNullOrEmpty(currentStyle.BaseStyleName))
-                        try
-                        {
-                            var baseStyle = para.Document.Styles[currentStyle.BaseStyleName];
-                            if (baseStyle != null && !styleChain.Contains(baseStyle))
-                                currentStyle = baseStyle;
-                            else
-                                currentStyle = null;
-                        }
-                        catch
-                        {
-                            currentStyle = null;
-                        }
-                    else
-                        currentStyle = null;
-                }
-
-                foreach (var chainStyle in styleChain)
-                    if (chainStyle.ParagraphFormat != null)
-                    {
-                        var styleTabStops = chainStyle.ParagraphFormat.TabStops;
-                        for (var i = 0; i < styleTabStops.Count; i++)
-                        {
-                            var tab = styleTabStops[i];
-                            var position = Math.Round(tab.Position, 2);
-                            var key = $"{position}_{tab.Alignment}";
-
-                            if (!allTabStops.ContainsKey(key))
-                            {
-                                var styleName = chainStyle == para.ParagraphFormat.Style
-                                    ? chainStyle.Name
-                                    : $"{para.ParagraphFormat.Style.Name} (Base: {chainStyle.Name})";
-                                allTabStops[key] = (position, tab.Alignment, tab.Leader,
-                                    $"{paraSource} (Style: {styleName})");
-                            }
-                        }
-                    }
-            }
-        }
-
-        result.AppendLine($"【Tab Stops in {locationDesc}】");
-        if (allParagraphs)
-            result.AppendLine($"Read Range: All paragraphs ({targetParagraphs.Count})");
-        if (includeStyle)
-            result.AppendLine("Include Style Tab Stops: Yes");
-        result.AppendLine();
-
-        if (allTabStops.Count == 0)
-        {
-            result.AppendLine("  No Tab Stops");
-        }
-        else
-        {
-            result.AppendLine($"  Total {allTabStops.Count} Tab Stop(s):");
+            result.AppendLine("=== Tab Stops Information ===");
+            result.AppendLine($"Location: {location}");
+            if (location == "body")
+                result.AppendLine($"Paragraph Index: {paragraphIndex}");
+            result.AppendLine($"Section Index: {sectionIndex}");
             result.AppendLine();
 
-            var idx = 1;
-            foreach (var kvp in allTabStops.OrderBy(x => x.Value.position))
-            {
-                var (position, alignment, leader, source) = kvp.Value;
-                result.AppendLine($"  Tab Stop {idx}:");
-                result.AppendLine($"    Position: {position:F2} pt ({position / 28.35:F2} cm)");
-                result.AppendLine($"    Alignment: {alignment}");
-                result.AppendLine($"    Leader: {leader}");
-                result.AppendLine($"    Source: {source}");
-                result.AppendLine();
-                idx++;
-            }
-        }
+            List<Paragraph> targetParagraphs;
+            string locationDesc;
 
-        return await Task.FromResult(result.ToString());
+            switch (location.ToLower())
+            {
+                case "header":
+                    var header = section.HeadersFooters[HeaderFooterType.HeaderPrimary];
+                    if (header != null)
+                    {
+                        var headerParas = header.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
+                        targetParagraphs = allParagraphs ? headerParas :
+                            headerParas.Count > 0 ? new List<Paragraph> { headerParas[0] } : new List<Paragraph>();
+                        locationDesc = "Header";
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException("Header not found");
+                    }
+
+                    break;
+
+                case "footer":
+                    var footer = section.HeadersFooters[HeaderFooterType.FooterPrimary];
+                    if (footer != null)
+                    {
+                        var footerParas = footer.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
+                        targetParagraphs = allParagraphs ? footerParas :
+                            footerParas.Count > 0 ? new List<Paragraph> { footerParas[0] } : new List<Paragraph>();
+                        locationDesc = "Footer";
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException("Footer not found");
+                    }
+
+                    break;
+
+                default:
+                    var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
+                    if (allParagraphs)
+                    {
+                        targetParagraphs = paragraphs;
+                    }
+                    else
+                    {
+                        if (paragraphIndex >= paragraphs.Count)
+                            throw new ArgumentException(
+                                $"Paragraph index {paragraphIndex} out of range (total paragraphs: {paragraphs.Count})");
+                        targetParagraphs = [paragraphs[paragraphIndex]];
+                    }
+
+                    locationDesc = allParagraphs ? "Body" : $"Body Paragraph {paragraphIndex}";
+                    break;
+            }
+
+            if (targetParagraphs.Count == 0)
+                throw new InvalidOperationException("No target paragraphs found");
+
+            var allTabStops =
+                new Dictionary<string, (double position, TabAlignment alignment, TabLeader leader, string source)>();
+
+            for (var paraIdx = 0; paraIdx < targetParagraphs.Count; paraIdx++)
+            {
+                var para = targetParagraphs[paraIdx];
+                var paraSource = allParagraphs ? $"Paragraph {paraIdx}" : "Paragraph";
+
+                var paraTabStops = para.ParagraphFormat.TabStops;
+                for (var i = 0; i < paraTabStops.Count; i++)
+                {
+                    var tab = paraTabStops[i];
+                    var position = Math.Round(tab.Position, 2);
+                    var key = $"{position}_{tab.Alignment}";
+                    if (!allTabStops.ContainsKey(key))
+                        allTabStops[key] = (position, tab.Alignment, tab.Leader, $"{paraSource} (Custom)");
+                }
+
+                if (includeStyle && para.ParagraphFormat.Style != null)
+                {
+                    var currentStyle = para.ParagraphFormat.Style;
+                    var styleChain = new List<Style>();
+
+                    while (currentStyle != null)
+                    {
+                        styleChain.Add(currentStyle);
+                        if (!string.IsNullOrEmpty(currentStyle.BaseStyleName))
+                            try
+                            {
+                                var baseStyle = para.Document.Styles[currentStyle.BaseStyleName];
+                                if (baseStyle != null && !styleChain.Contains(baseStyle))
+                                    currentStyle = baseStyle;
+                                else
+                                    currentStyle = null;
+                            }
+                            catch (Exception ex)
+                            {
+                                currentStyle = null;
+                                Console.Error.WriteLine($"[WARN] Error accessing paragraph style: {ex.Message}");
+                            }
+                        else
+                            currentStyle = null;
+                    }
+
+                    foreach (var chainStyle in styleChain)
+                        if (chainStyle.ParagraphFormat != null)
+                        {
+                            var styleTabStops = chainStyle.ParagraphFormat.TabStops;
+                            for (var i = 0; i < styleTabStops.Count; i++)
+                            {
+                                var tab = styleTabStops[i];
+                                var position = Math.Round(tab.Position, 2);
+                                var key = $"{position}_{tab.Alignment}";
+
+                                if (!allTabStops.ContainsKey(key))
+                                {
+                                    var styleName = chainStyle == para.ParagraphFormat.Style
+                                        ? chainStyle.Name
+                                        : $"{para.ParagraphFormat.Style.Name} (Base: {chainStyle.Name})";
+                                    allTabStops[key] = (position, tab.Alignment, tab.Leader,
+                                        $"{paraSource} (Style: {styleName})");
+                                }
+                            }
+                        }
+                }
+            }
+
+            result.AppendLine($"�iTab Stops in {locationDesc}�j");
+            if (allParagraphs)
+                result.AppendLine($"Read Range: All paragraphs ({targetParagraphs.Count})");
+            if (includeStyle)
+                result.AppendLine("Include Style Tab Stops: Yes");
+            result.AppendLine();
+
+            if (allTabStops.Count == 0)
+            {
+                result.AppendLine("  No Tab Stops");
+            }
+            else
+            {
+                result.AppendLine($"  Total {allTabStops.Count} Tab Stop(s):");
+                result.AppendLine();
+
+                var idx = 1;
+                foreach (var kvp in allTabStops.OrderBy(x => x.Value.position))
+                {
+                    var (position, alignment, leader, source) = kvp.Value;
+                    result.AppendLine($"  Tab Stop {idx}:");
+                    result.AppendLine($"    Position: {position:F2} pt ({position / 28.35:F2} cm)");
+                    result.AppendLine($"    Alignment: {alignment}");
+                    result.AppendLine($"    Leader: {leader}");
+                    result.AppendLine($"    Source: {source}");
+                    result.AppendLine();
+                    idx++;
+                }
+            }
+
+            return result.ToString();
+        });
     }
 
     /// <summary>
@@ -564,88 +574,91 @@ Usage examples:
     ///     outputPath
     /// </param>
     /// <returns>Success message</returns>
-    private async Task<string> SetParagraphBorder(JsonObject? arguments)
+    private Task<string> SetParagraphBorder(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex");
-        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
-
-        var doc = new Document(path);
-
-        if (sectionIndex >= doc.Sections.Count)
-            throw new ArgumentException(
-                $"Section index {sectionIndex} out of range (total sections: {doc.Sections.Count})");
-
-        var section = doc.Sections[sectionIndex];
-        var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
-
-        if (paragraphIndex >= paragraphs.Count)
-            throw new ArgumentException(
-                $"Paragraph index {paragraphIndex} out of range (total paragraphs: {paragraphs.Count})");
-
-        var para = paragraphs[paragraphIndex];
-        var borders = para.ParagraphFormat.Borders;
-
-        var defaultLineStyle = ArgumentHelper.GetString(arguments, "lineStyle", "single");
-        var defaultLineWidth = ArgumentHelper.GetDouble(arguments, "lineWidth", "lineWidth", 0.5);
-        var defaultLineColor = ArgumentHelper.GetString(arguments, "lineColor", "000000");
-
-        if (ArgumentHelper.GetBool(arguments, "borderTop", false))
+        return Task.Run(() =>
         {
-            borders.Top.LineStyle = GetLineStyle(defaultLineStyle);
-            borders.Top.LineWidth = defaultLineWidth;
-            borders.Top.Color = ColorHelper.ParseColor(defaultLineColor);
-        }
-        else
-        {
-            borders.Top.LineStyle = LineStyle.None;
-        }
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex");
+            var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
 
-        if (ArgumentHelper.GetBool(arguments, "borderBottom", false))
-        {
-            borders.Bottom.LineStyle = GetLineStyle(defaultLineStyle);
-            borders.Bottom.LineWidth = defaultLineWidth;
-            borders.Bottom.Color = ColorHelper.ParseColor(defaultLineColor);
-        }
-        else
-        {
-            borders.Bottom.LineStyle = LineStyle.None;
-        }
+            var doc = new Document(path);
 
-        if (ArgumentHelper.GetBool(arguments, "borderLeft", false))
-        {
-            borders.Left.LineStyle = GetLineStyle(defaultLineStyle);
-            borders.Left.LineWidth = defaultLineWidth;
-            borders.Left.Color = ColorHelper.ParseColor(defaultLineColor);
-        }
-        else
-        {
-            borders.Left.LineStyle = LineStyle.None;
-        }
+            if (sectionIndex >= doc.Sections.Count)
+                throw new ArgumentException(
+                    $"Section index {sectionIndex} out of range (total sections: {doc.Sections.Count})");
 
-        if (ArgumentHelper.GetBool(arguments, "borderRight", false))
-        {
-            borders.Right.LineStyle = GetLineStyle(defaultLineStyle);
-            borders.Right.LineWidth = defaultLineWidth;
-            borders.Right.Color = ColorHelper.ParseColor(defaultLineColor);
-        }
-        else
-        {
-            borders.Right.LineStyle = LineStyle.None;
-        }
+            var section = doc.Sections[sectionIndex];
+            var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
 
-        doc.Save(outputPath);
+            if (paragraphIndex >= paragraphs.Count)
+                throw new ArgumentException(
+                    $"Paragraph index {paragraphIndex} out of range (total paragraphs: {paragraphs.Count})");
 
-        var enabledBorders = new List<string>();
-        if (ArgumentHelper.GetBool(arguments, "borderTop", false)) enabledBorders.Add("Top");
-        if (ArgumentHelper.GetBool(arguments, "borderBottom", false)) enabledBorders.Add("Bottom");
-        if (ArgumentHelper.GetBool(arguments, "borderLeft", false)) enabledBorders.Add("Left");
-        if (ArgumentHelper.GetBool(arguments, "borderRight", false)) enabledBorders.Add("Right");
+            var para = paragraphs[paragraphIndex];
+            var borders = para.ParagraphFormat.Borders;
 
-        var bordersDesc = enabledBorders.Count > 0 ? string.Join(", ", enabledBorders) : "None";
+            var defaultLineStyle = ArgumentHelper.GetString(arguments, "lineStyle", "single");
+            var defaultLineWidth = ArgumentHelper.GetDouble(arguments, "lineWidth", "lineWidth", 0.5);
+            var defaultLineColor = ArgumentHelper.GetString(arguments, "lineColor", "000000");
 
-        return await Task.FromResult($"Successfully set paragraph {paragraphIndex} borders: {bordersDesc}");
+            if (ArgumentHelper.GetBool(arguments, "borderTop", false))
+            {
+                borders.Top.LineStyle = GetLineStyle(defaultLineStyle);
+                borders.Top.LineWidth = defaultLineWidth;
+                borders.Top.Color = ColorHelper.ParseColor(defaultLineColor);
+            }
+            else
+            {
+                borders.Top.LineStyle = LineStyle.None;
+            }
+
+            if (ArgumentHelper.GetBool(arguments, "borderBottom", false))
+            {
+                borders.Bottom.LineStyle = GetLineStyle(defaultLineStyle);
+                borders.Bottom.LineWidth = defaultLineWidth;
+                borders.Bottom.Color = ColorHelper.ParseColor(defaultLineColor);
+            }
+            else
+            {
+                borders.Bottom.LineStyle = LineStyle.None;
+            }
+
+            if (ArgumentHelper.GetBool(arguments, "borderLeft", false))
+            {
+                borders.Left.LineStyle = GetLineStyle(defaultLineStyle);
+                borders.Left.LineWidth = defaultLineWidth;
+                borders.Left.Color = ColorHelper.ParseColor(defaultLineColor);
+            }
+            else
+            {
+                borders.Left.LineStyle = LineStyle.None;
+            }
+
+            if (ArgumentHelper.GetBool(arguments, "borderRight", false))
+            {
+                borders.Right.LineStyle = GetLineStyle(defaultLineStyle);
+                borders.Right.LineWidth = defaultLineWidth;
+                borders.Right.Color = ColorHelper.ParseColor(defaultLineColor);
+            }
+            else
+            {
+                borders.Right.LineStyle = LineStyle.None;
+            }
+
+            doc.Save(outputPath);
+
+            var enabledBorders = new List<string>();
+            if (ArgumentHelper.GetBool(arguments, "borderTop", false)) enabledBorders.Add("Top");
+            if (ArgumentHelper.GetBool(arguments, "borderBottom", false)) enabledBorders.Add("Bottom");
+            if (ArgumentHelper.GetBool(arguments, "borderLeft", false)) enabledBorders.Add("Left");
+            if (ArgumentHelper.GetBool(arguments, "borderRight", false)) enabledBorders.Add("Right");
+
+            var bordersDesc = enabledBorders.Count > 0 ? string.Join(", ", enabledBorders) : "None";
+
+            return $"Successfully set paragraph {paragraphIndex} borders: {bordersDesc}";
+        });
     }
 
     private LineStyle GetLineStyle(string style)

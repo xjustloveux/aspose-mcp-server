@@ -141,25 +141,28 @@ Usage examples:
     /// <param name="path">PowerPoint file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> AddAudioAsync(JsonObject? arguments, string path, int slideIndex)
+    private Task<string> AddAudioAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var audioPath = ArgumentHelper.GetString(arguments, "audioPath");
-        var x = ArgumentHelper.GetFloat(arguments, "x", 50);
-        var y = ArgumentHelper.GetFloat(arguments, "y", 50);
-        var width = ArgumentHelper.GetFloat(arguments, "width", 80);
-        var height = ArgumentHelper.GetFloat(arguments, "height", 80);
+        return Task.Run(() =>
+        {
+            var audioPath = ArgumentHelper.GetString(arguments, "audioPath");
+            var x = ArgumentHelper.GetFloat(arguments, "x", 50);
+            var y = ArgumentHelper.GetFloat(arguments, "y", 50);
+            var width = ArgumentHelper.GetFloat(arguments, "width", 80);
+            var height = ArgumentHelper.GetFloat(arguments, "height", 80);
 
-        using var presentation = new Presentation(path);
-        if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
-            throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
+            using var presentation = new Presentation(path);
+            if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
+                throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
 
-        var slide = presentation.Slides[slideIndex];
-        await using var audioStream = File.OpenRead(audioPath);
-        slide.Shapes.AddAudioFrameEmbedded(x, y, width, height, audioStream);
+            var slide = presentation.Slides[slideIndex];
+            using var audioStream = File.OpenRead(audioPath);
+            slide.Shapes.AddAudioFrameEmbedded(x, y, width, height, audioStream);
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        presentation.Save(outputPath, SaveFormat.Pptx);
-        return await Task.FromResult($"Audio inserted into slide {slideIndex}: {audioPath}");
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
+            return $"Audio inserted into slide {slideIndex}: {audioPath}";
+        });
     }
 
     /// <summary>
@@ -169,20 +172,24 @@ Usage examples:
     /// <param name="path">PowerPoint file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> DeleteAudioAsync(JsonObject? arguments, string path, int slideIndex)
+    private Task<string> DeleteAudioAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
+        return Task.Run(() =>
+        {
+            var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
 
-        using var presentation = new Presentation(path);
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-        var shape = PowerPointHelper.GetShape(slide, shapeIndex);
-        if (shape is not IAudioFrame) throw new ArgumentException($"Shape at index {shapeIndex} is not an audio frame");
+            using var presentation = new Presentation(path);
+            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+            var shape = PowerPointHelper.GetShape(slide, shapeIndex);
+            if (shape is not IAudioFrame)
+                throw new ArgumentException($"Shape at index {shapeIndex} is not an audio frame");
 
-        slide.Shapes.Remove(shape);
+            slide.Shapes.Remove(shape);
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        presentation.Save(outputPath, SaveFormat.Pptx);
-        return await Task.FromResult($"Audio deleted from slide {slideIndex}, shape {shapeIndex}");
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
+            return $"Audio deleted from slide {slideIndex}, shape {shapeIndex}";
+        });
     }
 
     /// <summary>
@@ -192,24 +199,27 @@ Usage examples:
     /// <param name="path">PowerPoint file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> AddVideoAsync(JsonObject? arguments, string path, int slideIndex)
+    private Task<string> AddVideoAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var videoPath = ArgumentHelper.GetString(arguments, "videoPath");
-        var x = ArgumentHelper.GetFloat(arguments, "x", 50);
-        var y = ArgumentHelper.GetFloat(arguments, "y", 50);
-        var width = ArgumentHelper.GetFloat(arguments, "width", 320);
-        var height = ArgumentHelper.GetFloat(arguments, "height", 240);
+        return Task.Run(() =>
+        {
+            var videoPath = ArgumentHelper.GetString(arguments, "videoPath");
+            var x = ArgumentHelper.GetFloat(arguments, "x", 50);
+            var y = ArgumentHelper.GetFloat(arguments, "y", 50);
+            var width = ArgumentHelper.GetFloat(arguments, "width", 320);
+            var height = ArgumentHelper.GetFloat(arguments, "height", 240);
 
-        using var presentation = new Presentation(path);
-        if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
-            throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
+            using var presentation = new Presentation(path);
+            if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
+                throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
 
-        var slide = presentation.Slides[slideIndex];
-        _ = slide.Shapes.AddVideoFrame(x, y, width, height, videoPath);
+            var slide = presentation.Slides[slideIndex];
+            _ = slide.Shapes.AddVideoFrame(x, y, width, height, videoPath);
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        presentation.Save(outputPath, SaveFormat.Pptx);
-        return await Task.FromResult($"Video inserted into slide {slideIndex}: {videoPath}");
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
+            return $"Video inserted into slide {slideIndex}: {videoPath}";
+        });
     }
 
     /// <summary>
@@ -219,20 +229,24 @@ Usage examples:
     /// <param name="path">PowerPoint file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> DeleteVideoAsync(JsonObject? arguments, string path, int slideIndex)
+    private Task<string> DeleteVideoAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
+        return Task.Run(() =>
+        {
+            var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
 
-        using var presentation = new Presentation(path);
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-        var shape = PowerPointHelper.GetShape(slide, shapeIndex);
-        if (shape is not IVideoFrame) throw new ArgumentException($"Shape at index {shapeIndex} is not a video frame");
+            using var presentation = new Presentation(path);
+            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+            var shape = PowerPointHelper.GetShape(slide, shapeIndex);
+            if (shape is not IVideoFrame)
+                throw new ArgumentException($"Shape at index {shapeIndex} is not a video frame");
 
-        slide.Shapes.Remove(shape);
+            slide.Shapes.Remove(shape);
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        presentation.Save(outputPath, SaveFormat.Pptx);
-        return await Task.FromResult($"Video deleted from slide {slideIndex}, shape {shapeIndex}");
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
+            return $"Video deleted from slide {slideIndex}, shape {shapeIndex}";
+        });
     }
 
     /// <summary>
@@ -242,53 +256,60 @@ Usage examples:
     /// <param name="path">PowerPoint file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetPlaybackAsync(JsonObject? arguments, string path, int slideIndex)
+    private Task<string> SetPlaybackAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
-        var playModeStr = ArgumentHelper.GetString(arguments, "playMode", "auto");
-        var loop = ArgumentHelper.GetBool(arguments, "loop", false);
-        var rewind = ArgumentHelper.GetBool(arguments, "rewind", false);
-        var volumeStr = ArgumentHelper.GetString(arguments, "volume", "medium");
-
-        using var presentation = new Presentation(path);
-        if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
-            throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
-
-        var slide = presentation.Slides[slideIndex];
-        if (shapeIndex < 0 || shapeIndex >= slide.Shapes.Count)
-            throw new ArgumentException($"shapeIndex must be between 0 and {slide.Shapes.Count - 1}");
-
-        var playModeAudio = playModeStr.ToLower() == "onclick" ? AudioPlayModePreset.OnClick : AudioPlayModePreset.Auto;
-        var playModeVideo = playModeStr.ToLower() == "onclick" ? VideoPlayModePreset.OnClick : VideoPlayModePreset.Auto;
-        var volume = volumeStr.ToLower() switch
+        return Task.Run(() =>
         {
-            "mute" => AudioVolumeMode.Mute,
-            "low" => AudioVolumeMode.Low,
-            "loud" => AudioVolumeMode.Loud,
-            _ => AudioVolumeMode.Medium
-        };
+            var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
+            var playModeStr = ArgumentHelper.GetString(arguments, "playMode", "auto");
+            var loop = ArgumentHelper.GetBool(arguments, "loop", false);
+            var rewind = ArgumentHelper.GetBool(arguments, "rewind", false);
+            var volumeStr = ArgumentHelper.GetString(arguments, "volume", "medium");
 
-        var shape = slide.Shapes[shapeIndex];
-        if (shape is IAudioFrame audio)
-        {
-            audio.PlayMode = playModeAudio;
-            audio.Volume = volume;
-            audio.PlayLoopMode = loop;
-        }
-        else if (shape is IVideoFrame video)
-        {
-            video.PlayMode = playModeVideo;
-            video.Volume = volume;
-            video.PlayLoopMode = loop;
-            video.RewindVideo = rewind;
-        }
-        else
-        {
-            throw new ArgumentException("The specified shape is not audio or video");
-        }
+            using var presentation = new Presentation(path);
+            if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
+                throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        presentation.Save(outputPath, SaveFormat.Pptx);
-        return await Task.FromResult($"Media playback settings updated: slide {slideIndex}, shape {shapeIndex}");
+            var slide = presentation.Slides[slideIndex];
+            if (shapeIndex < 0 || shapeIndex >= slide.Shapes.Count)
+                throw new ArgumentException($"shapeIndex must be between 0 and {slide.Shapes.Count - 1}");
+
+            var playModeAudio = playModeStr.ToLower() == "onclick"
+                ? AudioPlayModePreset.OnClick
+                : AudioPlayModePreset.Auto;
+            var playModeVideo = playModeStr.ToLower() == "onclick"
+                ? VideoPlayModePreset.OnClick
+                : VideoPlayModePreset.Auto;
+            var volume = volumeStr.ToLower() switch
+            {
+                "mute" => AudioVolumeMode.Mute,
+                "low" => AudioVolumeMode.Low,
+                "loud" => AudioVolumeMode.Loud,
+                _ => AudioVolumeMode.Medium
+            };
+
+            var shape = slide.Shapes[shapeIndex];
+            if (shape is IAudioFrame audio)
+            {
+                audio.PlayMode = playModeAudio;
+                audio.Volume = volume;
+                audio.PlayLoopMode = loop;
+            }
+            else if (shape is IVideoFrame video)
+            {
+                video.PlayMode = playModeVideo;
+                video.Volume = volume;
+                video.PlayLoopMode = loop;
+                video.RewindVideo = rewind;
+            }
+            else
+            {
+                throw new ArgumentException("The specified shape is not audio or video");
+            }
+
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
+            return $"Media playback settings updated: slide {slideIndex}, shape {shapeIndex}";
+        });
     }
 }

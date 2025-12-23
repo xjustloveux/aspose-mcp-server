@@ -106,6 +106,8 @@ Usage examples:
         {
             "set" => await SetShapeFormatAsync(arguments, path, slideIndex, shapeIndex),
             "get" => await GetShapeFormatAsync(arguments, path, slideIndex, shapeIndex),
+            "set_line" => await SetShapeLineAsync(arguments, path, slideIndex, shapeIndex),
+            "set_fill" => await SetShapeFillAsync(arguments, path, slideIndex, shapeIndex),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -118,43 +120,46 @@ Usage examples:
     /// <param name="slideIndex">Slide index (0-based)</param>
     /// <param name="shapeIndex">Shape index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetShapeFormatAsync(JsonObject? arguments, string path, int slideIndex, int shapeIndex)
+    private Task<string> SetShapeFormatAsync(JsonObject? arguments, string path, int slideIndex, int shapeIndex)
     {
-        var x = ArgumentHelper.GetFloatNullable(arguments, "x");
-        var y = ArgumentHelper.GetFloatNullable(arguments, "y");
-        var width = ArgumentHelper.GetFloatNullable(arguments, "width");
-        var height = ArgumentHelper.GetFloatNullable(arguments, "height");
-        var rotation = ArgumentHelper.GetFloatNullable(arguments, "rotation");
-        var fillColor = ArgumentHelper.GetStringNullable(arguments, "fillColor");
-        var lineColor = ArgumentHelper.GetStringNullable(arguments, "lineColor");
-
-        using var presentation = new Presentation(path);
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-        var shape = PowerPointHelper.GetShape(slide, shapeIndex);
-
-        if (x.HasValue) shape.X = x.Value;
-        if (y.HasValue) shape.Y = y.Value;
-        if (width.HasValue) shape.Width = width.Value;
-        if (height.HasValue) shape.Height = height.Value;
-        if (rotation.HasValue) shape.Rotation = rotation.Value;
-
-        if (!string.IsNullOrWhiteSpace(fillColor))
+        return Task.Run(() =>
         {
-            var color = ColorHelper.ParseColor(fillColor);
-            shape.FillFormat.FillType = FillType.Solid;
-            shape.FillFormat.SolidFillColor.Color = color;
-        }
+            var x = ArgumentHelper.GetFloatNullable(arguments, "x");
+            var y = ArgumentHelper.GetFloatNullable(arguments, "y");
+            var width = ArgumentHelper.GetFloatNullable(arguments, "width");
+            var height = ArgumentHelper.GetFloatNullable(arguments, "height");
+            var rotation = ArgumentHelper.GetFloatNullable(arguments, "rotation");
+            var fillColor = ArgumentHelper.GetStringNullable(arguments, "fillColor");
+            var lineColor = ArgumentHelper.GetStringNullable(arguments, "lineColor");
 
-        if (!string.IsNullOrWhiteSpace(lineColor))
-        {
-            var color = ColorHelper.ParseColor(lineColor);
-            shape.LineFormat.FillFormat.FillType = FillType.Solid;
-            shape.LineFormat.FillFormat.SolidFillColor.Color = color;
-        }
+            using var presentation = new Presentation(path);
+            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+            var shape = PowerPointHelper.GetShape(slide, shapeIndex);
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        presentation.Save(outputPath, SaveFormat.Pptx);
-        return await Task.FromResult($"Shape format updated: slide {slideIndex}, shape {shapeIndex}");
+            if (x.HasValue) shape.X = x.Value;
+            if (y.HasValue) shape.Y = y.Value;
+            if (width.HasValue) shape.Width = width.Value;
+            if (height.HasValue) shape.Height = height.Value;
+            if (rotation.HasValue) shape.Rotation = rotation.Value;
+
+            if (!string.IsNullOrWhiteSpace(fillColor))
+            {
+                var color = ColorHelper.ParseColor(fillColor);
+                shape.FillFormat.FillType = FillType.Solid;
+                shape.FillFormat.SolidFillColor.Color = color;
+            }
+
+            if (!string.IsNullOrWhiteSpace(lineColor))
+            {
+                var color = ColorHelper.ParseColor(lineColor);
+                shape.LineFormat.FillFormat.FillType = FillType.Solid;
+                shape.LineFormat.FillFormat.SolidFillColor.Color = color;
+            }
+
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
+            return $"Shape format updated: slide {slideIndex}, shape {shapeIndex}";
+        });
     }
 
     /// <summary>
@@ -165,64 +170,123 @@ Usage examples:
     /// <param name="slideIndex">Slide index (0-based)</param>
     /// <param name="shapeIndex">Shape index (0-based)</param>
     /// <returns>Formatted string with shape format details</returns>
-    private async Task<string> GetShapeFormatAsync(JsonObject? _, string path, int slideIndex, int shapeIndex)
+    private Task<string> GetShapeFormatAsync(JsonObject? _, string path, int slideIndex, int shapeIndex)
     {
-        using var presentation = new Presentation(path);
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-        var shape = PowerPointHelper.GetShape(slide, shapeIndex);
-        var sb = new StringBuilder();
-
-        sb.AppendLine($"Shape [{shapeIndex}] Format:");
-        sb.AppendLine($"  Type: {shape.GetType().Name}");
-        sb.AppendLine($"  Position: X={shape.X}, Y={shape.Y}");
-        sb.AppendLine($"  Size: Width={shape.Width}, Height={shape.Height}");
-        sb.AppendLine($"  Rotation: {shape.Rotation}°");
-
-        // Fill format
-        sb.AppendLine($"  Fill Type: {shape.FillFormat.FillType}");
-        if (shape.FillFormat.FillType == FillType.Solid)
+        return Task.Run(() =>
         {
-            var color = shape.FillFormat.SolidFillColor.Color;
-            sb.AppendLine(
-                $"  Fill Color: RGB({color.R}, {color.G}, {color.B}), Hex: #{color.R:X2}{color.G:X2}{color.B:X2}");
-        }
+            using var presentation = new Presentation(path);
+            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+            var shape = PowerPointHelper.GetShape(slide, shapeIndex);
+            var sb = new StringBuilder();
 
-        // Line format
-        sb.AppendLine($"  Line Width: {shape.LineFormat.Width}");
-        if (shape.LineFormat.FillFormat.FillType == FillType.Solid)
-        {
-            var color = shape.LineFormat.FillFormat.SolidFillColor.Color;
-            sb.AppendLine(
-                $"  Line Color: RGB({color.R}, {color.G}, {color.B}), Hex: #{color.R:X2}{color.G:X2}{color.B:X2}");
-        }
+            sb.AppendLine($"Shape [{shapeIndex}] Format:");
+            sb.AppendLine($"  Type: {shape.GetType().Name}");
+            sb.AppendLine($"  Position: X={shape.X}, Y={shape.Y}");
+            sb.AppendLine($"  Size: Width={shape.Width}, Height={shape.Height}");
+            sb.AppendLine($"  Rotation: {shape.Rotation}°");
 
-        // Text format (if applicable)
-        if (shape is IAutoShape { TextFrame: not null } autoShape)
-        {
-            sb.AppendLine($"  Text: {autoShape.TextFrame.Text}");
-            if (autoShape.TextFrame.Paragraphs.Count > 0)
+            // Fill format
+            sb.AppendLine($"  Fill Type: {shape.FillFormat.FillType}");
+            if (shape.FillFormat.FillType == FillType.Solid)
             {
-                var firstPara = autoShape.TextFrame.Paragraphs[0];
-                if (firstPara.Portions.Count > 0)
+                var color = shape.FillFormat.SolidFillColor.Color;
+                sb.AppendLine(
+                    $"  Fill Color: RGB({color.R}, {color.G}, {color.B}), Hex: #{color.R:X2}{color.G:X2}{color.B:X2}");
+            }
+
+            // Line format
+            sb.AppendLine($"  Line Width: {shape.LineFormat.Width}");
+            if (shape.LineFormat.FillFormat.FillType == FillType.Solid)
+            {
+                var color = shape.LineFormat.FillFormat.SolidFillColor.Color;
+                sb.AppendLine(
+                    $"  Line Color: RGB({color.R}, {color.G}, {color.B}), Hex: #{color.R:X2}{color.G:X2}{color.B:X2}");
+            }
+
+            // Text format (if applicable)
+            if (shape is IAutoShape { TextFrame: not null } autoShape)
+            {
+                sb.AppendLine($"  Text: {autoShape.TextFrame.Text}");
+                if (autoShape.TextFrame.Paragraphs.Count > 0)
                 {
-                    var portion = firstPara.Portions[0];
-                    sb.AppendLine($"  Font: {portion.PortionFormat.LatinFont?.FontName ?? "(default)"}");
-                    sb.AppendLine($"  Font Size: {portion.PortionFormat.FontHeight}");
-                    sb.AppendLine(
-                        $"  Bold: {portion.PortionFormat.FontBold}, Italic: {portion.PortionFormat.FontItalic}");
+                    var firstPara = autoShape.TextFrame.Paragraphs[0];
+                    if (firstPara.Portions.Count > 0)
+                    {
+                        var portion = firstPara.Portions[0];
+                        sb.AppendLine($"  Font: {portion.PortionFormat.LatinFont?.FontName ?? "(default)"}");
+                        sb.AppendLine($"  Font Size: {portion.PortionFormat.FontHeight}");
+                        sb.AppendLine(
+                            $"  Bold: {portion.PortionFormat.FontBold}, Italic: {portion.PortionFormat.FontItalic}");
+                    }
                 }
             }
-        }
 
-        // Hyperlink
-        if (shape.HyperlinkClick != null)
+            // Hyperlink
+            if (shape.HyperlinkClick != null)
+            {
+                var url = shape.HyperlinkClick.ExternalUrl ?? (shape.HyperlinkClick.TargetSlide != null
+                    ? $"Slide {presentation.Slides.IndexOf(shape.HyperlinkClick.TargetSlide)}"
+                    : "Internal link");
+                sb.AppendLine($"  Hyperlink: {url}");
+            }
+
+            return sb.ToString();
+        });
+    }
+
+    /// <summary>
+    ///     Sets shape line properties
+    /// </summary>
+    private Task<string> SetShapeLineAsync(JsonObject? arguments, string path, int slideIndex, int shapeIndex)
+    {
+        return Task.Run(() =>
         {
-            var url = shape.HyperlinkClick.ExternalUrl ?? (shape.HyperlinkClick.TargetSlide != null
-                ? $"Slide {presentation.Slides.IndexOf(shape.HyperlinkClick.TargetSlide)}"
-                : "Internal link");
-            sb.AppendLine($"  Hyperlink: {url}");
-        }
+            var lineColor = ArgumentHelper.GetStringNullable(arguments, "color");
+            var lineWidth = ArgumentHelper.GetFloatNullable(arguments, "width");
 
-        return await Task.FromResult(sb.ToString());
+            using var presentation = new Presentation(path);
+            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+            var shape = PowerPointHelper.GetShape(slide, shapeIndex);
+
+            if (!string.IsNullOrWhiteSpace(lineColor))
+            {
+                var color = ColorHelper.ParseColor(lineColor);
+                shape.LineFormat.FillFormat.FillType = FillType.Solid;
+                shape.LineFormat.FillFormat.SolidFillColor.Color = color;
+            }
+
+            if (lineWidth.HasValue) shape.LineFormat.Width = lineWidth.Value;
+
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
+            return $"Shape line format updated: slide {slideIndex}, shape {shapeIndex}";
+        });
+    }
+
+    /// <summary>
+    ///     Sets shape fill properties
+    /// </summary>
+    private Task<string> SetShapeFillAsync(JsonObject? arguments, string path, int slideIndex, int shapeIndex)
+    {
+        return Task.Run(() =>
+        {
+            var fillType = ArgumentHelper.GetStringNullable(arguments, "fillType") ?? "Solid";
+            var color = ArgumentHelper.GetStringNullable(arguments, "color");
+
+            using var presentation = new Presentation(path);
+            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+            var shape = PowerPointHelper.GetShape(slide, shapeIndex);
+
+            if (fillType.Equals("Solid", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(color))
+            {
+                var fillColor = ColorHelper.ParseColor(color);
+                shape.FillFormat.FillType = FillType.Solid;
+                shape.FillFormat.SolidFillColor.Color = fillColor;
+            }
+
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
+            return $"Shape fill format updated: slide {slideIndex}, shape {shapeIndex}";
+        });
     }
 }

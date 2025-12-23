@@ -1,21 +1,63 @@
 # Aspose MCP Server
 
+[![GitHub release](https://img.shields.io/github/v/release/xjustloveux/aspose-mcp-server?include_prereleases&style=flat-square)](https://github.com/xjustloveux/aspose-mcp-server/releases)
+[![GitHub license](https://img.shields.io/github/license/xjustloveux/aspose-mcp-server?style=flat-square)](LICENSE)
+[![.NET Version](https://img.shields.io/badge/.NET-8.0-512BD4?style=flat-square&logo=dotnet)](https://dotnet.microsoft.com/)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/xjustloveux/aspose-mcp-server/build-multi-platform.yml?branch=main&label=build&style=flat-square)](https://github.com/xjustloveux/aspose-mcp-server/actions/workflows/build-multi-platform.yml)
+[![Test Status](https://img.shields.io/github/actions/workflow/status/xjustloveux/aspose-mcp-server/test.yml?branch=main&label=tests&style=flat-square)](https://github.com/xjustloveux/aspose-mcp-server/actions/workflows/test.yml)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey?style=flat-square)](https://github.com/xjustloveux/aspose-mcp-server/releases)
+[![Test Coverage](https://codecov.io/gh/xjustloveux/aspose-mcp-server/branch/main/graph/badge.svg)](https://codecov.io/gh/xjustloveux/aspose-mcp-server)
+[![MCP Version](https://img.shields.io/badge/MCP-2025--11--25-blue?style=flat-square)](https://modelcontextprotocol.io/)
+[![Aspose Version](https://img.shields.io/badge/Aspose-23.10.0-orange?style=flat-square)](https://products.aspose.com/total/net/)
+[![xUnit](https://img.shields.io/badge/xUnit-2.9.2-blue?style=flat-square&logo=xunit)](https://xunit.net/)
+
+**格式支援：** ![Word](https://img.shields.io/badge/Word-DOC%2CDOCX-blue?style=flat-square) ![Excel](https://img.shields.io/badge/Excel-XLS%2CXLSX-green?style=flat-square) ![PowerPoint](https://img.shields.io/badge/PowerPoint-PPT%2CPPTX-orange?style=flat-square) ![PDF](https://img.shields.io/badge/PDF-PDF-red?style=flat-square)
+
 基於 .NET 8.0 和 Aspose.Total 的 Model Context Protocol (MCP) 伺服器，為 MCP 客戶端提供強大的辦公文檔處理能力。
 
 ## ✨ 特性
 
-- **90 個統一工具** - Word(24)、Excel(25)、PowerPoint(24)、PDF(15)、轉換工具(2)已整合
-- **按需啟用** - 只啟用需要的文檔類型
-- **跨平台** - Windows、Linux、macOS (Intel + ARM)
-- **開箱即用** - publish/ 包含預編譯版本
+### 核心功能
+- **90 個統一工具** - Word(24)、Excel(25)、PowerPoint(24)、PDF(15)、轉換工具(2) 已整合
+- **按需啟用** - 只啟用需要的文檔類型，減少資源佔用
+- **跨平台** - Windows、Linux、macOS (Intel + ARM)，單一可執行檔案
+- **開箱即用** - 預編譯版本無需安裝 .NET Runtime
 - **完整讀寫** - 支援從A文檔讀取格式應用到B文檔
+
+### 技術特性
+- **MCP 2025-11-25 規範支援** - 完全符合最新 MCP 協議規範，自動工具註解（readonly/destructive）基於命名約定，完整的 JSON-RPC 2.0 錯誤處理
+- **統一字型設定** - 多個工具支援中英文字型分別設定（`fontNameAscii` 和 `fontNameFarEast` 參數）
+- **靈活的授權配置** - 支援總授權或單一組件授權，自動搜尋、環境變數或命令列參數配置，試用模式降級（找不到授權時）
+- **自動工具發現** - 基於命名約定的自動工具註冊系統
 - **安全加固** - 全面的路徑驗證、輸入驗證和錯誤處理
+
+## 📑 目錄
+
+**開始使用**
+- [🚀 快速開始](#-快速開始) - 下載、配置、啟動
+- [📦 功能概覽](#-功能概覽) - Word、Excel、PowerPoint、PDF、轉換工具
+- [📋 工具列表](#-工具列表) - 90 個工具的詳細說明
+
+**開發與技術**
+- [🛠️ 開發者指南](#️-開發者指南) - 倉庫結構、本地開發、多平台構建、運行測試
+- [🔒 安全特性](#-安全特性) - 路徑驗證、輸入驗證、錯誤處理
+- [🌍 跨平台支援](#-跨平台支援) - Windows、Linux、macOS 技術規格
+
+**參考資料**
+- [📝 使用範例](#-使用範例) - 從A文檔複製格式到B文檔
+- [⚠️ 重要說明](#️-重要說明) - 索引行為、參數命名一致性
+- [📄 授權](#-授權) - Aspose 授權配置方式
+- [❓ 常見問題](#-常見問題) - FAQ
+
+**其他**
+- [🔗 相關資源](#-相關資源) - 官方文檔、MCP 客戶端、專案資源
+- [📊 專案統計](#-專案統計) - 工具數、測試覆蓋率、技術規格
 
 ## 🚀 快速開始
 
 ### 1. 下載預編譯版本
 
-從 [GitHub Releases](../../releases) 下載最新版本：
+從 [GitHub Releases](https://github.com/xjustloveux/aspose-mcp-server/releases) 下載最新版本：
 - Windows: `aspose-mcp-server-windows-x64.zip`
 - Linux: `aspose-mcp-server-linux-x64.zip`
 - macOS Intel: `aspose-mcp-server-macos-x64.zip`
@@ -79,7 +121,7 @@
 - 啟用任何文檔工具（`--word`、`--excel`、`--ppt`）時，自動包含 `convert_to_pdf`（轉換為PDF）
 - 啟用兩個或以上文檔工具時，自動包含 `convert_document`（跨格式轉換，如Word轉Excel）
 
-📋 **更多配置範例：** `claude_desktop_config_example.json`（配置格式適用於所有 MCP 客戶端）
+📋 **更多配置範例：** `config_example.json`（配置格式適用於所有 MCP 客戶端）
 
 ### 3. 重啟 MCP 客戶端
 
@@ -165,6 +207,13 @@ aspose-mcp-server/
 │   ├── McpErrorHandler.cs     - 錯誤處理
 │   ├── ToolRegistry.cs        - 工具註冊
 │   └── ServerConfig.cs        - 伺服器配置
+├── Tests/            🧪 單元測試
+│   ├── Word/         24 個測試類
+│   ├── Excel/        25 個測試類
+│   ├── PowerPoint/   24 個測試類
+│   ├── Pdf/          15 個測試類
+│   ├── Conversion/   2 個測試類
+│   └── Helpers/       測試基礎設施
 ├── .github/
 │   └── workflows/    🔄 GitHub Actions 工作流程
 └── bin/              ❌ 本地編譯輸出（不在版本控制）
@@ -189,9 +238,102 @@ pwsh publish.ps1 -All
 
 ### 多平台構建
 
-**所有平台由 GitHub Actions 自動構建：**
-- 推送到 main/master 分支時自動觸發
-- 構建產物：從 Actions 頁面或 Releases 頁面下載
+**本地構建：**
+```bash
+# Windows
+pwsh publish.ps1 -Windows
+
+# Linux
+pwsh publish.ps1 -Linux
+
+# macOS (Intel + ARM)
+pwsh publish.ps1 -MacOS
+
+# 所有平台
+pwsh publish.ps1 -All
+
+# 清理後構建
+pwsh publish.ps1 -All -Clean
+```
+
+**構建產物位置：**
+- Windows: `publish/windows-x64/AsposeMcpServer.exe`
+- Linux: `publish/linux-x64/AsposeMcpServer`
+- macOS Intel: `publish/macos-x64/AsposeMcpServer`
+- macOS ARM: `publish/macos-arm64/AsposeMcpServer`
+
+**注意：** 構建產物為自包含單一可執行檔案，無需安裝 .NET Runtime 即可運行。
+
+### 運行測試
+
+本專案包含完整的單元測試套件，使用 xUnit 測試框架。推薦使用 `test.ps1` 腳本運行測試，它提供了 UTF-8 編碼支援和便捷的參數選項。
+
+**測試統計：**
+- **測試類**: 90 個測試類
+- **測試用例**: 約 450+ 個測試用例
+- **測試覆蓋率**: 85.6% (77/90 工具)
+- **測試框架**: xUnit 2.9.2
+
+**運行測試：**
+```powershell
+# 運行所有測試
+pwsh test.ps1
+
+# 運行測試（詳細輸出）
+pwsh test.ps1 -Verbose
+
+# 運行測試（不重新構建）
+pwsh test.ps1 -NoBuild
+
+# 運行測試並收集覆蓋率
+pwsh test.ps1 -Coverage
+
+# 運行特定類別的測試
+pwsh test.ps1 -Filter "FullyQualifiedName~Word"
+pwsh test.ps1 -Filter "FullyQualifiedName~Excel"
+pwsh test.ps1 -Filter "FullyQualifiedName~PowerPoint"
+pwsh test.ps1 -Filter "FullyQualifiedName~Pdf"
+
+# 運行特定測試類
+pwsh test.ps1 -Filter "FullyQualifiedName~WordTextToolTests"
+
+# 運行特定測試方法
+pwsh test.ps1 -Filter "FullyQualifiedName~AddTextWithStyle_ShouldCreateEmptyParagraphsWithNormalStyle"
+
+# 跳過授權（強制評估模式）
+pwsh test.ps1 -SkipLicense
+
+# 組合使用
+pwsh test.ps1 -Verbose -Coverage -Filter "FullyQualifiedName~Word"
+```
+
+**test.ps1 參數說明：**
+- `-Verbose` - 顯示詳細測試輸出
+- `-NoBuild` - 跳過構建步驟（使用已構建的版本）
+- `-Coverage` - 收集測試覆蓋率數據
+- `-Filter <filter>` - 過濾特定測試（支援 dotnet test 的過濾語法）
+- `-SkipLicense` - 跳過授權載入，強制使用評估模式
+
+**測試結構：**
+- `Tests/Word/` - Word 工具測試（24 個測試類）
+- `Tests/Excel/` - Excel 工具測試（25 個測試類）
+- `Tests/PowerPoint/` - PowerPoint 工具測試（24 個測試類）
+- `Tests/Pdf/` - PDF 工具測試（15 個測試類）
+- `Tests/Conversion/` - 轉換工具測試（2 個測試類）
+- `Tests/Helpers/` - 測試基礎設施（TestBase、WordTestBase、ExcelTestBase、PdfTestBase）
+
+**CI/CD 集成：**
+- 測試已集成到 GitHub Actions 工作流中
+- 每次推送或創建 Pull Request 時會自動運行測試
+- 測試在評估模式下運行（無需授權檔案）
+
+**測試注意事項：**
+- `test.ps1` 腳本會自動設置 UTF-8 編碼，確保中文輸出正常顯示
+- 測試會創建臨時檔案，測試完成後會自動清理
+- Aspose 授權檔案不會包含在 Git 倉庫中
+- 使用 `-SkipLicense` 參數可在評估模式下運行測試（無需授權檔案）
+- 測試檔案會保存在系統臨時目錄中
+- 測試結果會保存為 `Tests/TestResults/test-results.trx`（TRX 格式）
 
 ## 📋 工具列表
 
@@ -343,21 +485,6 @@ pwsh publish.ps1 -All
 - `pdf_properties` - 獲取、設定文檔屬性（2個操作：get, set）
 - `pdf_redact` - 編輯（塗黑）文字或區域
 
-## 🎉 主要特性
-
-### MCP 2025-11-25 規範支援
-- ✅ 符合最新 MCP 協議規範（protocolVersion: 2025-11-25）
-- ✅ 自動工具註解（readonly/destructive）基於命名約定
-- ✅ 完整的 JSON-RPC 2.0 錯誤處理
-
-### 統一字型設定
-多個工具支援中英文字型分別設定（`fontNameAscii` 和 `fontNameFarEast` 參數）
-
-### 靈活的授權配置
-- 支援總授權或單一組件授權
-- 自動搜尋、環境變數或命令列參數配置
-- 試用模式降級（找不到授權時）
-
 ## ⚠️ 重要說明
 
 ### 索引行為說明
@@ -412,29 +539,132 @@ word_style(path="B.docx", operation="copy_styles", sourceDocument="A.docx")
 
 ## 🌍 跨平台支援
 
-所有平台由 **GitHub Actions** 自動構建和發布：
-- ✅ Windows (x64)
-- ✅ Linux (x64)
-- ✅ macOS Intel (x64)
-- ✅ macOS ARM (arm64 - M1/M2/M3)
+支援以下平台（使用 .NET 8.0 自包含發布）：
+- ✅ Windows (x64) - `win-x64`
+- ✅ Linux (x64) - `linux-x64`
+- ✅ macOS Intel (x64) - `osx-x64`
+- ✅ macOS ARM (arm64 - M1/M2/M3) - `osx-arm64`
 
-**獲取方式：** 從 [GitHub Releases](../../releases) 下載最新版本
+**技術規格：**
+- .NET 8.0 Runtime（自包含，無需額外安裝）
+- Aspose.Total 23.10.0（包含 Words、Cells、Slides、Pdf、Email）
+- 單一可執行檔案（PublishSingleFile）
+- 支援 UTF-8 編碼（完整中文支援）
+
+**獲取方式：** 
+- 從 [GitHub Releases](https://github.com/xjustloveux/aspose-mcp-server/releases) 下載預編譯版本
+- 或使用 `publish.ps1` 腳本本地構建
+
+**注意：** GitHub Actions 會在推送到 main/master 分支時自動構建所有平台版本。
 
 ## 📄 授權
 
 本專案需要有效的 Aspose 授權檔案。支援以下授權類型：
-- `Aspose.Total.lic` - 總授權（包含所有組件）
-- `Aspose.Words.lic`、`Aspose.Cells.lic`、`Aspose.Slides.lic`、`Aspose.Pdf.lic` - 單一組件授權
+- `Aspose.Total.lic` - 總授權（包含所有組件，推薦）
+- `Aspose.Words.lic` - Word 組件授權
+- `Aspose.Cells.lic` - Excel 組件授權
+- `Aspose.Slides.lic` - PowerPoint 組件授權
+- `Aspose.Pdf.lic` - PDF 組件授權
 
-**配置方式：**
-1. 將授權檔案放在可執行檔案同一目錄（自動搜尋）
-2. 使用環境變數 `ASPOSE_LICENSE_PATH` 指定路徑
-3. 使用命令列參數 `--license:路徑` 指定路徑
+**授權檔案配置方式（按優先順序）：**
+1. **命令列參數**（最高優先級）：`--license:路徑` 或 `--license=路徑`
+2. **環境變數**：設定 `ASPOSE_LICENSE_PATH` 環境變數
+3. **自動搜尋**（預設）：在可執行檔案同一目錄搜尋常見授權檔案名稱
 
-如果找不到授權檔案，系統會以試用模式運行（會有試用版標記）。
+**授權搜尋順序：**
+1. `Aspose.Total.lic`
+2. `Aspose.Words.lic`、`Aspose.Cells.lic`、`Aspose.Slides.lic`、`Aspose.Pdf.lic`（根據啟用的工具）
+
+**試用模式：**
+如果找不到授權檔案，系統會以試用模式運行（生成的文檔會有試用版標記）。建議配置有效授權以移除標記。
+
+**授權版本相容性：**
+- 當前使用的 Aspose 版本：23.10.0
+- 授權檔案需與使用的 Aspose 版本相容
+
+## ❓ 常見問題
+
+### Q: 如何確認工具是否正常運行？
+A: 啟動 MCP 客戶端後，檢查工具列表是否包含 `word_*`、`excel_*` 等工具。如果沒有，請檢查：
+1. 配置檔案路徑是否正確
+2. 可執行檔案是否有執行權限（Linux/macOS）
+3. 授權檔案是否正確配置
+4. 查看 MCP 客戶端的錯誤日誌
+
+### Q: 為什麼生成的文檔有試用版標記？
+A: 這表示授權檔案未正確載入。請檢查：
+1. 授權檔案路徑是否正確
+2. 授權檔案是否與 Aspose 版本相容（當前版本：23.10.0）
+3. 授權檔案是否有效且未過期
+
+### Q: 可以同時啟用多個工具類型嗎？
+A: 可以。使用 `--all` 參數或同時指定多個參數，例如：
+```json
+"args": ["--word", "--excel", "--pdf"]
+```
+
+### Q: 轉換工具何時可用？
+A: 
+- `convert_to_pdf`：啟用任何文檔工具（`--word`、`--excel`、`--ppt`）時自動可用
+- `convert_document`：啟用兩個或以上文檔工具時自動可用
+
+### Q: 支援哪些文檔格式？
+A: 
+- **Word**: DOC、DOCX、RTF、ODT、HTML、TXT 等
+- **Excel**: XLS、XLSX、CSV、ODS、HTML 等
+- **PowerPoint**: PPT、PPTX、ODP、HTML 等
+- **PDF**: PDF（讀寫、編輯、簽名等）
+
+### Q: 如何在 Linux/macOS 上設置執行權限？
+A: 
+```bash
+chmod +x AsposeMcpServer
+```
+
+### Q: 錯誤訊息顯示路徑無效怎麼辦？
+A: 檢查：
+1. 路徑是否使用正確的分隔符（Windows 可用 `/` 或 `\\`）
+2. 路徑長度是否超過 260 字元（Windows 限制）
+3. 檔案名稱是否包含非法字元
+4. 是否啟用了絕對路徑（某些工具可能需要）
+
+### Q: 如何查看詳細的錯誤資訊？
+A: 檢查 MCP 客戶端的錯誤日誌。生產環境中，詳細錯誤資訊會被清理以防止資訊洩露。開發環境（DEBUG 模式）會顯示完整錯誤資訊。
+
+### Q: 可以自訂工具嗎？
+A: 可以。工具基於命名約定自動發現，您可以：
+1. 創建新的工具類（實現 `IAsposeTool` 介面）
+2. 遵循命名約定（`*Tool.cs`）
+3. 放在對應的 `Tools/` 子目錄中
+4. 工具會自動註冊
 
 ## 🔗 相關資源
 
+**官方文檔：**
 - [Aspose.Total for .NET](https://products.aspose.com/total/net/)
 - [Model Context Protocol](https://modelcontextprotocol.io/)
-- [Claude Desktop](https://claude.ai/desktop)、[Cursor](https://cursor.sh/) - MCP 客戶端
+- [MCP Specification](https://spec.modelcontextprotocol.io/)
+
+**MCP 客戶端：**
+- [Claude Desktop](https://claude.ai/desktop) - Anthropic 官方 MCP 客戶端
+- [Cursor](https://cursor.sh/) - AI 程式碼編輯器，支援 MCP
+- [Continue](https://continue.dev/) - VS Code 擴展，支援 MCP
+
+**專案資源：**
+- [GitHub Repository](https://github.com/xjustloveux/aspose-mcp-server)
+- [配置範例](config_example.json) - 詳細的 MCP 客戶端配置範例
+- [開發者文檔](docs/developers.html) - 開發者指南和 API 文檔
+- [工具列表](docs/tools.html) - 完整的工具列表和使用說明
+
+## 📊 專案統計
+
+- **總工具數：** 90 個
+- **程式碼行數：** ~15,000+ 行
+- **測試類數：** 90 個測試類
+- **測試用例數：** 約 450+ 個測試用例
+- **測試覆蓋率：** 85.6% (77/90 工具)
+- **測試框架：** xUnit 2.9.2
+- **CI/CD：** GitHub Actions 自動測試
+- **支援格式：** Word、Excel、PowerPoint、PDF 及其相互轉換
+- **目標框架：** .NET 8.0
+- **授權：** 需要 Aspose 商業授權（見上方授權章節）

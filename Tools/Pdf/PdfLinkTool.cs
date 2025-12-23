@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
@@ -115,47 +115,50 @@ Usage examples:
     ///     outputPath
     /// </param>
     /// <returns>Success message</returns>
-    private async Task<string> AddLink(JsonObject? arguments)
+    private Task<string> AddLink(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
-        var x = ArgumentHelper.GetDouble(arguments, "x");
-        var y = ArgumentHelper.GetDouble(arguments, "y");
-        var width = ArgumentHelper.GetDouble(arguments, "width");
-        var height = ArgumentHelper.GetDouble(arguments, "height");
-        var url = ArgumentHelper.GetStringNullable(arguments, "url");
-        var targetPage = ArgumentHelper.GetIntNullable(arguments, "targetPage");
-
-        SecurityHelper.ValidateFilePath(path);
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-
-        using var document = new Document(path);
-        if (pageIndex < 1 || pageIndex > document.Pages.Count)
-            throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
-
-        var page = document.Pages[pageIndex];
-        var rect = new Rectangle(x, y, x + width, y + height);
-        LinkAnnotation link;
-
-        if (!string.IsNullOrEmpty(url))
+        return Task.Run(() =>
         {
-            link = new LinkAnnotation(page, rect) { Action = new GoToURIAction(url) };
-        }
-        else if (targetPage.HasValue)
-        {
-            if (targetPage.Value < 1 || targetPage.Value > document.Pages.Count)
-                throw new ArgumentException($"targetPage must be between 1 and {document.Pages.Count}");
-            link = new LinkAnnotation(page, rect) { Action = new GoToAction(document.Pages[targetPage.Value]) };
-        }
-        else
-        {
-            throw new ArgumentException("Either url or targetPage must be provided");
-        }
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
+            var x = ArgumentHelper.GetDouble(arguments, "x");
+            var y = ArgumentHelper.GetDouble(arguments, "y");
+            var width = ArgumentHelper.GetDouble(arguments, "width");
+            var height = ArgumentHelper.GetDouble(arguments, "height");
+            var url = ArgumentHelper.GetStringNullable(arguments, "url");
+            var targetPage = ArgumentHelper.GetIntNullable(arguments, "targetPage");
 
-        page.Annotations.Add(link);
-        document.Save(outputPath);
-        return await Task.FromResult($"Successfully added link to page {pageIndex}. Output: {outputPath}");
+            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+
+            using var document = new Document(path);
+            if (pageIndex < 1 || pageIndex > document.Pages.Count)
+                throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
+
+            var page = document.Pages[pageIndex];
+            var rect = new Rectangle(x, y, x + width, y + height);
+            LinkAnnotation link;
+
+            if (!string.IsNullOrEmpty(url))
+            {
+                link = new LinkAnnotation(page, rect) { Action = new GoToURIAction(url) };
+            }
+            else if (targetPage.HasValue)
+            {
+                if (targetPage.Value < 1 || targetPage.Value > document.Pages.Count)
+                    throw new ArgumentException($"targetPage must be between 1 and {document.Pages.Count}");
+                link = new LinkAnnotation(page, rect) { Action = new GoToAction(document.Pages[targetPage.Value]) };
+            }
+            else
+            {
+                throw new ArgumentException("Either url or targetPage must be provided");
+            }
+
+            page.Annotations.Add(link);
+            document.Save(outputPath);
+            return $"Successfully added link to page {pageIndex}. Output: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -163,29 +166,32 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, pageIndex, linkIndex, optional outputPath</param>
     /// <returns>Success message</returns>
-    private async Task<string> DeleteLink(JsonObject? arguments)
+    private Task<string> DeleteLink(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
-        var linkIndex = ArgumentHelper.GetInt(arguments, "linkIndex");
+        return Task.Run(() =>
+        {
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
+            var linkIndex = ArgumentHelper.GetInt(arguments, "linkIndex");
 
-        SecurityHelper.ValidateFilePath(path);
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
-        using var document = new Document(path);
-        if (pageIndex < 1 || pageIndex > document.Pages.Count)
-            throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
+            using var document = new Document(path);
+            if (pageIndex < 1 || pageIndex > document.Pages.Count)
+                throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
 
-        var page = document.Pages[pageIndex];
-        var links = page.Annotations.OfType<LinkAnnotation>().ToList();
-        if (linkIndex < 0 || linkIndex >= links.Count)
-            throw new ArgumentException($"linkIndex must be between 0 and {links.Count - 1}");
+            var page = document.Pages[pageIndex];
+            var links = page.Annotations.OfType<LinkAnnotation>().ToList();
+            if (linkIndex < 0 || linkIndex >= links.Count)
+                throw new ArgumentException($"linkIndex must be between 0 and {links.Count - 1}");
 
-        page.Annotations.Delete(links[linkIndex]);
-        document.Save(outputPath);
-        return await Task.FromResult(
-            $"Successfully deleted link {linkIndex} from page {pageIndex}. Output: {outputPath}");
+            page.Annotations.Delete(links[linkIndex]);
+            document.Save(outputPath);
+            return
+                $"Successfully deleted link {linkIndex} from page {pageIndex}. Output: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -193,41 +199,44 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, pageIndex, linkIndex, optional url, pageNumber, outputPath</param>
     /// <returns>Success message</returns>
-    private async Task<string> EditLink(JsonObject? arguments)
+    private Task<string> EditLink(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
-        var linkIndex = ArgumentHelper.GetInt(arguments, "linkIndex");
-        var url = ArgumentHelper.GetStringNullable(arguments, "url");
-        var targetPage = ArgumentHelper.GetIntNullable(arguments, "targetPage");
-
-        SecurityHelper.ValidateFilePath(path);
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-
-        using var document = new Document(path);
-        if (pageIndex < 1 || pageIndex > document.Pages.Count)
-            throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
-
-        var page = document.Pages[pageIndex];
-        var links = page.Annotations.OfType<LinkAnnotation>().ToList();
-        if (linkIndex < 0 || linkIndex >= links.Count)
-            throw new ArgumentException($"linkIndex must be between 0 and {links.Count - 1}");
-
-        var link = links[linkIndex];
-        if (!string.IsNullOrEmpty(url))
+        return Task.Run(() =>
         {
-            link.Action = new GoToURIAction(url);
-        }
-        else if (targetPage.HasValue)
-        {
-            if (targetPage.Value < 1 || targetPage.Value > document.Pages.Count)
-                throw new ArgumentException($"targetPage must be between 1 and {document.Pages.Count}");
-            link.Action = new GoToAction(document.Pages[targetPage.Value]);
-        }
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
+            var linkIndex = ArgumentHelper.GetInt(arguments, "linkIndex");
+            var url = ArgumentHelper.GetStringNullable(arguments, "url");
+            var targetPage = ArgumentHelper.GetIntNullable(arguments, "targetPage");
 
-        document.Save(outputPath);
-        return await Task.FromResult($"Successfully edited link {linkIndex} on page {pageIndex}. Output: {outputPath}");
+            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+
+            using var document = new Document(path);
+            if (pageIndex < 1 || pageIndex > document.Pages.Count)
+                throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
+
+            var page = document.Pages[pageIndex];
+            var links = page.Annotations.OfType<LinkAnnotation>().ToList();
+            if (linkIndex < 0 || linkIndex >= links.Count)
+                throw new ArgumentException($"linkIndex must be between 0 and {links.Count - 1}");
+
+            var link = links[linkIndex];
+            if (!string.IsNullOrEmpty(url))
+            {
+                link.Action = new GoToURIAction(url);
+            }
+            else if (targetPage.HasValue)
+            {
+                if (targetPage.Value < 1 || targetPage.Value > document.Pages.Count)
+                    throw new ArgumentException($"targetPage must be between 1 and {document.Pages.Count}");
+                link.Action = new GoToAction(document.Pages[targetPage.Value]);
+            }
+
+            document.Save(outputPath);
+            return $"Successfully edited link {linkIndex} on page {pageIndex}. Output: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -235,64 +244,67 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, pageIndex</param>
     /// <returns>Formatted string with all links</returns>
-    private async Task<string> GetLinks(JsonObject? arguments)
+    private Task<string> GetLinks(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var pageIndex = ArgumentHelper.GetIntNullable(arguments, "pageIndex");
-
-        SecurityHelper.ValidateFilePath(path);
-
-        using var document = new Document(path);
-        var sb = new StringBuilder();
-        sb.AppendLine("=== PDF Links ===");
-        sb.AppendLine();
-
-        if (pageIndex.HasValue)
+        return Task.Run(() =>
         {
-            if (pageIndex.Value < 1 || pageIndex.Value > document.Pages.Count)
-                throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            var pageIndex = ArgumentHelper.GetIntNullable(arguments, "pageIndex");
 
-            var page = document.Pages[pageIndex.Value];
-            var links = page.Annotations.OfType<LinkAnnotation>().ToList();
-            sb.AppendLine($"Page {pageIndex.Value} Links ({links.Count}):");
-            for (var i = 0; i < links.Count; i++)
+            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
+
+            using var document = new Document(path);
+            var sb = new StringBuilder();
+            sb.AppendLine("=== PDF Links ===");
+            sb.AppendLine();
+
+            if (pageIndex.HasValue)
             {
-                var link = links[i];
-                sb.AppendLine($"  [{i}] Position: ({link.Rect.LLX}, {link.Rect.LLY})");
-                if (link.Action is GoToURIAction uriAction)
-                    sb.AppendLine($"      URL: {uriAction.URI}");
-                else if (link.Action is GoToAction)
-                    sb.AppendLine("      Target: Page");
-                sb.AppendLine();
-            }
-        }
-        else
-        {
-            var totalCount = 0;
-            for (var p = 1; p <= document.Pages.Count; p++)
-            {
-                var page = document.Pages[p];
+                if (pageIndex.Value < 1 || pageIndex.Value > document.Pages.Count)
+                    throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
+
+                var page = document.Pages[pageIndex.Value];
                 var links = page.Annotations.OfType<LinkAnnotation>().ToList();
-                if (links.Count > 0)
+                sb.AppendLine($"Page {pageIndex.Value} Links ({links.Count}):");
+                for (var i = 0; i < links.Count; i++)
                 {
-                    sb.AppendLine($"Page {p} ({links.Count} links):");
-                    for (var i = 0; i < links.Count; i++)
-                    {
-                        var link = links[i];
-                        if (link.Action is GoToURIAction uriAction)
-                            sb.AppendLine($"  [{i}] URL: {uriAction.URI}");
-                        else if (link.Action is GoToAction)
-                            sb.AppendLine($"  [{i}] Target: Page");
-                    }
-
+                    var link = links[i];
+                    sb.AppendLine($"  [{i}] Position: ({link.Rect.LLX}, {link.Rect.LLY})");
+                    if (link.Action is GoToURIAction uriAction)
+                        sb.AppendLine($"      URL: {uriAction.URI}");
+                    else if (link.Action is GoToAction)
+                        sb.AppendLine("      Target: Page");
                     sb.AppendLine();
-                    totalCount += links.Count;
                 }
             }
+            else
+            {
+                var totalCount = 0;
+                for (var p = 1; p <= document.Pages.Count; p++)
+                {
+                    var page = document.Pages[p];
+                    var links = page.Annotations.OfType<LinkAnnotation>().ToList();
+                    if (links.Count > 0)
+                    {
+                        sb.AppendLine($"Page {p} ({links.Count} links):");
+                        for (var i = 0; i < links.Count; i++)
+                        {
+                            var link = links[i];
+                            if (link.Action is GoToURIAction uriAction)
+                                sb.AppendLine($"  [{i}] URL: {uriAction.URI}");
+                            else if (link.Action is GoToAction)
+                                sb.AppendLine($"  [{i}] Target: Page");
+                        }
 
-            sb.Insert(0, $"Total Links: {totalCount}\n\n");
-        }
+                        sb.AppendLine();
+                        totalCount += links.Count;
+                    }
+                }
 
-        return await Task.FromResult(sb.ToString());
+                sb.Insert(0, $"Total Links: {totalCount}\n\n");
+            }
+
+            return sb.ToString();
+        });
     }
 }

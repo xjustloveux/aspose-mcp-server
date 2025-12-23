@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
@@ -120,47 +120,50 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing sheetName and optional insertAt</param>
     /// <param name="path">Excel file path</param>
     /// <returns>Success message with worksheet name</returns>
-    private async Task<string> AddSheetAsync(JsonObject? arguments, string path)
+    private Task<string> AddSheetAsync(JsonObject? arguments, string path)
     {
-        var sheetName = ArgumentHelper.GetString(arguments, "sheetName").Trim();
-        var insertAt = ArgumentHelper.GetIntNullable(arguments, "insertAt");
-
-        if (string.IsNullOrWhiteSpace(sheetName)) throw new ArgumentException("sheetName cannot be empty");
-
-        using var workbook = new Workbook(path);
-
-        var duplicate =
-            workbook.Worksheets.Any(ws => string.Equals(ws.Name, sheetName, StringComparison.OrdinalIgnoreCase));
-        if (duplicate) throw new ArgumentException($"Worksheet name '{sheetName}' already exists in the workbook");
-
-        Worksheet newSheet;
-        if (insertAt.HasValue)
+        return Task.Run(() =>
         {
-            if (insertAt.Value < 0 || insertAt.Value > workbook.Worksheets.Count)
-                throw new ArgumentException($"insertAt must be between 0 and {workbook.Worksheets.Count}");
+            var sheetName = ArgumentHelper.GetString(arguments, "sheetName").Trim();
+            var insertAt = ArgumentHelper.GetIntNullable(arguments, "insertAt");
 
-            if (insertAt.Value == workbook.Worksheets.Count)
+            if (string.IsNullOrWhiteSpace(sheetName)) throw new ArgumentException("sheetName cannot be empty");
+
+            using var workbook = new Workbook(path);
+
+            var duplicate =
+                workbook.Worksheets.Any(ws => string.Equals(ws.Name, sheetName, StringComparison.OrdinalIgnoreCase));
+            if (duplicate) throw new ArgumentException($"Worksheet name '{sheetName}' already exists in the workbook");
+
+            Worksheet newSheet;
+            if (insertAt.HasValue)
+            {
+                if (insertAt.Value < 0 || insertAt.Value > workbook.Worksheets.Count)
+                    throw new ArgumentException($"insertAt must be between 0 and {workbook.Worksheets.Count}");
+
+                if (insertAt.Value == workbook.Worksheets.Count)
+                {
+                    var addedIndex = workbook.Worksheets.Add();
+                    newSheet = workbook.Worksheets[addedIndex];
+                }
+                else
+                {
+                    workbook.Worksheets.Insert(insertAt.Value, SheetType.Worksheet);
+                    newSheet = workbook.Worksheets[insertAt.Value];
+                }
+            }
+            else
             {
                 var addedIndex = workbook.Worksheets.Add();
                 newSheet = workbook.Worksheets[addedIndex];
             }
-            else
-            {
-                workbook.Worksheets.Insert(insertAt.Value, SheetType.Worksheet);
-                newSheet = workbook.Worksheets[insertAt.Value];
-            }
-        }
-        else
-        {
-            var addedIndex = workbook.Worksheets.Add();
-            newSheet = workbook.Worksheets[addedIndex];
-        }
 
-        newSheet.Name = sheetName;
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        workbook.Save(outputPath);
+            newSheet.Name = sheetName;
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            workbook.Save(outputPath);
 
-        return await Task.FromResult($"Worksheet '{sheetName}' added: {outputPath}");
+            return $"Worksheet '{sheetName}' added: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -169,21 +172,24 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing sheetIndex</param>
     /// <param name="path">Excel file path</param>
     /// <returns>Success message with deleted sheet name</returns>
-    private async Task<string> DeleteSheetAsync(JsonObject? arguments, string path)
+    private Task<string> DeleteSheetAsync(JsonObject? arguments, string path)
     {
-        var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex");
+        return Task.Run(() =>
+        {
+            var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex");
 
-        using var workbook = new Workbook(path);
-        ExcelHelper.ValidateSheetIndex(sheetIndex, workbook);
+            using var workbook = new Workbook(path);
+            ExcelHelper.ValidateSheetIndex(sheetIndex, workbook);
 
-        if (workbook.Worksheets.Count <= 1) throw new InvalidOperationException("Cannot delete the last worksheet");
+            if (workbook.Worksheets.Count <= 1) throw new InvalidOperationException("Cannot delete the last worksheet");
 
-        var sheetName = workbook.Worksheets[sheetIndex].Name;
-        workbook.Worksheets.RemoveAt(sheetIndex);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        workbook.Save(outputPath);
+            var sheetName = workbook.Worksheets[sheetIndex].Name;
+            workbook.Worksheets.RemoveAt(sheetIndex);
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            workbook.Save(outputPath);
 
-        return await Task.FromResult($"Worksheet '{sheetName}' (index {sheetIndex}) deleted: {outputPath}");
+            return $"Worksheet '{sheetName}' (index {sheetIndex}) deleted: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -192,21 +198,25 @@ Usage examples:
     /// <param name="_">Unused parameter</param>
     /// <param name="path">Excel file path</param>
     /// <returns>Formatted string with worksheet list</returns>
-    private async Task<string> GetSheetsAsync(JsonObject? _, string path)
+    private Task<string> GetSheetsAsync(JsonObject? _, string path)
     {
-        using var workbook = new Workbook(path);
-        var result = new StringBuilder();
-
-        result.AppendLine($"=== Worksheet list for workbook '{Path.GetFileName(path)}' ===\n");
-        result.AppendLine($"Total worksheets: {workbook.Worksheets.Count}\n");
-
-        for (var i = 0; i < workbook.Worksheets.Count; i++)
+        return Task.Run(() =>
         {
-            var worksheet = workbook.Worksheets[i];
-            result.AppendLine($"{i}. {worksheet.Name} (visibility: {(worksheet.IsVisible ? "Visible" : "Hidden")})");
-        }
+            using var workbook = new Workbook(path);
+            var result = new StringBuilder();
 
-        return await Task.FromResult(result.ToString());
+            result.AppendLine($"=== Worksheet list for workbook '{Path.GetFileName(path)}' ===\n");
+            result.AppendLine($"Total worksheets: {workbook.Worksheets.Count}\n");
+
+            for (var i = 0; i < workbook.Worksheets.Count; i++)
+            {
+                var worksheet = workbook.Worksheets[i];
+                result.AppendLine(
+                    $"{i}. {worksheet.Name} (visibility: {(worksheet.IsVisible ? "Visible" : "Hidden")})");
+            }
+
+            return result.ToString();
+        });
     }
 
     /// <summary>
@@ -215,33 +225,36 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing sheetIndex and newName</param>
     /// <param name="path">Excel file path</param>
     /// <returns>Success message with old and new names</returns>
-    private async Task<string> RenameSheetAsync(JsonObject? arguments, string path)
+    private Task<string> RenameSheetAsync(JsonObject? arguments, string path)
     {
-        var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex");
-        var newName = ArgumentHelper.GetString(arguments, "newName").Trim();
+        return Task.Run(() =>
+        {
+            var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex");
+            var newName = ArgumentHelper.GetString(arguments, "newName").Trim();
 
-        if (string.IsNullOrWhiteSpace(newName)) throw new ArgumentException("newName cannot be empty");
+            if (string.IsNullOrWhiteSpace(newName)) throw new ArgumentException("newName cannot be empty");
 
-        using var workbook = new Workbook(path);
+            using var workbook = new Workbook(path);
 
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var oldName = worksheet.Name;
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            var oldName = worksheet.Name;
 
-        // Check for duplicate names
-        var duplicate = workbook.Worksheets.Any(ws =>
-            ws != worksheet && string.Equals(ws.Name, newName, StringComparison.OrdinalIgnoreCase));
-        if (duplicate) throw new ArgumentException($"Worksheet name '{newName}' already exists in the workbook");
+            // Check for duplicate names
+            var duplicate = workbook.Worksheets.Any(ws =>
+                ws != worksheet && string.Equals(ws.Name, newName, StringComparison.OrdinalIgnoreCase));
+            if (duplicate) throw new ArgumentException($"Worksheet name '{newName}' already exists in the workbook");
 
-        // Check length before setting name (Excel worksheet name limit is 31 characters)
-        if (newName.Length > 31)
-            throw new ArgumentException(
-                $"Worksheet name '{newName}' (length: {newName.Length}) exceeds Excel's standard limit of 31 characters. Aspose.Cells does not allow worksheet names longer than 31 characters.");
+            // Check length before setting name (Excel worksheet name limit is 31 characters)
+            if (newName.Length > 31)
+                throw new ArgumentException(
+                    $"Worksheet name '{newName}' (length: {newName.Length}) exceeds Excel's standard limit of 31 characters. Aspose.Cells does not allow worksheet names longer than 31 characters.");
 
-        worksheet.Name = newName;
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        workbook.Save(outputPath);
+            worksheet.Name = newName;
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            workbook.Save(outputPath);
 
-        return await Task.FromResult($"Worksheet '{oldName}' renamed to '{newName}': {outputPath}");
+            return $"Worksheet '{oldName}' renamed to '{newName}': {outputPath}";
+        });
     }
 
     /// <summary>
@@ -250,93 +263,96 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing sheetIndex and targetIndex or insertAt</param>
     /// <param name="path">Excel file path</param>
     /// <returns>Success message with move details</returns>
-    private async Task<string> MoveSheetAsync(JsonObject? arguments, string path)
+    private Task<string> MoveSheetAsync(JsonObject? arguments, string path)
     {
-        var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex");
-        var targetIndex = ArgumentHelper.GetIntNullable(arguments, "targetIndex");
-        var insertAt = ArgumentHelper.GetIntNullable(arguments, "insertAt");
-
-        if (!targetIndex.HasValue && !insertAt.HasValue)
-            throw new ArgumentException("Either targetIndex or insertAt is required for move operation");
-
-        var finalTargetIndex = targetIndex ?? insertAt!.Value;
-
-        using var workbook = new Workbook(path);
-
-        if (sheetIndex < 0 || sheetIndex >= workbook.Worksheets.Count)
-            throw new ArgumentException(
-                $"Worksheet index {sheetIndex} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
-
-        if (finalTargetIndex < 0 || finalTargetIndex >= workbook.Worksheets.Count)
-            throw new ArgumentException(
-                $"Target index {finalTargetIndex} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
-
-        if (sheetIndex == finalTargetIndex)
-            return await Task.FromResult($"Worksheet is already at position {sheetIndex}, no move needed: {path}");
-
-        var sheetName = workbook.Worksheets[sheetIndex].Name;
-
-        // Use temporary unique name to avoid conflicts during move (Excel sheet name limit: 31 characters)
-        var tempName = $"Temp_{DateTime.Now.Ticks % 1000000}";
-        var tempCounter = 0;
-        while (workbook.Worksheets.Any(ws => ws.Name == tempName))
+        return Task.Run(() =>
         {
-            tempName = $"Temp_{DateTime.Now.Ticks % 1000000}_{tempCounter++}";
-            if (tempName.Length > 31) tempName = tempName.Substring(0, 31);
-        }
+            var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex");
+            var targetIndex = ArgumentHelper.GetIntNullable(arguments, "targetIndex");
+            var insertAt = ArgumentHelper.GetIntNullable(arguments, "insertAt");
 
-        // Use Copy method to duplicate sheet at target position, then remove original
-        try
-        {
-            if (finalTargetIndex < sheetIndex)
+            if (!targetIndex.HasValue && !insertAt.HasValue)
+                throw new ArgumentException("Either targetIndex or insertAt is required for move operation");
+
+            var finalTargetIndex = targetIndex ?? insertAt!.Value;
+
+            using var workbook = new Workbook(path);
+
+            if (sheetIndex < 0 || sheetIndex >= workbook.Worksheets.Count)
+                throw new ArgumentException(
+                    $"Worksheet index {sheetIndex} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
+
+            if (finalTargetIndex < 0 || finalTargetIndex >= workbook.Worksheets.Count)
+                throw new ArgumentException(
+                    $"Target index {finalTargetIndex} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
+
+            if (sheetIndex == finalTargetIndex)
+                return $"Worksheet is already at position {sheetIndex}, no move needed: {path}";
+
+            var sheetName = workbook.Worksheets[sheetIndex].Name;
+
+            // Use temporary unique name to avoid conflicts during move (Excel sheet name limit: 31 characters)
+            var tempName = $"Temp_{DateTime.Now.Ticks % 1000000}";
+            var tempCounter = 0;
+            while (workbook.Worksheets.Any(ws => ws.Name == tempName))
             {
-                // Moving backward: insert copy at target position first
-                workbook.Worksheets.Insert(finalTargetIndex, SheetType.Worksheet);
-                var newSheet = workbook.Worksheets[finalTargetIndex];
-                var sourceSheet = workbook.Worksheets[sheetIndex + 1];
-                newSheet.Copy(sourceSheet);
-                newSheet.Name = tempName;
-                workbook.Worksheets.RemoveAt(sheetIndex + 1);
-                newSheet.Name = sheetName;
+                tempName = $"Temp_{DateTime.Now.Ticks % 1000000}_{tempCounter++}";
+                if (tempName.Length > 31) tempName = tempName.Substring(0, 31);
             }
-            else
-            {
-                // Moving forward: copy to target position, then remove original
-                workbook.Worksheets.Insert(finalTargetIndex, SheetType.Worksheet);
-                var newSheet = workbook.Worksheets[finalTargetIndex];
-                var sourceSheet = workbook.Worksheets[sheetIndex];
-                newSheet.Copy(sourceSheet);
-                newSheet.Name = tempName;
-                workbook.Worksheets.RemoveAt(sheetIndex);
-                newSheet.Name = sheetName;
-            }
-        }
-        catch (Exception ex)
-        {
-            // Clean up temporary sheet if operation fails
+
+            // Use Copy method to duplicate sheet at target position, then remove original
             try
             {
-                for (var i = workbook.Worksheets.Count - 1; i >= 0; i--)
-                    if (workbook.Worksheets[i].Name == tempName)
-                    {
-                        workbook.Worksheets.RemoveAt(i);
-                        break;
-                    }
+                if (finalTargetIndex < sheetIndex)
+                {
+                    // Moving backward: insert copy at target position first
+                    workbook.Worksheets.Insert(finalTargetIndex, SheetType.Worksheet);
+                    var newSheet = workbook.Worksheets[finalTargetIndex];
+                    var sourceSheet = workbook.Worksheets[sheetIndex + 1];
+                    newSheet.Copy(sourceSheet);
+                    newSheet.Name = tempName;
+                    workbook.Worksheets.RemoveAt(sheetIndex + 1);
+                    newSheet.Name = sheetName;
+                }
+                else
+                {
+                    // Moving forward: copy to target position, then remove original
+                    workbook.Worksheets.Insert(finalTargetIndex, SheetType.Worksheet);
+                    var newSheet = workbook.Worksheets[finalTargetIndex];
+                    var sourceSheet = workbook.Worksheets[sheetIndex];
+                    newSheet.Copy(sourceSheet);
+                    newSheet.Name = tempName;
+                    workbook.Worksheets.RemoveAt(sheetIndex);
+                    newSheet.Name = sheetName;
+                }
             }
-            catch
+            catch (Exception ex)
             {
-                // Ignore cleanup errors
+                // Clean up temporary sheet if operation fails
+                try
+                {
+                    for (var i = workbook.Worksheets.Count - 1; i >= 0; i--)
+                        if (workbook.Worksheets[i].Name == tempName)
+                        {
+                            workbook.Worksheets.RemoveAt(i);
+                            break;
+                        }
+                }
+                catch (Exception ex)
+                {
+                    // Ignore cleanup errors
+                    Console.Error.WriteLine($"[WARN] Error during sheet cleanup: {ex.Message}");
+                }
+
+                throw new ArgumentException(
+                    $"Failed to move sheet: {ex.Message}. Source index: {sheetIndex}, Target index: {finalTargetIndex}, Total sheets: {workbook.Worksheets.Count}");
             }
 
-            throw new ArgumentException(
-                $"Failed to move sheet: {ex.Message}. Source index: {sheetIndex}, Target index: {finalTargetIndex}, Total sheets: {workbook.Worksheets.Count}");
-        }
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            workbook.Save(outputPath);
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        workbook.Save(outputPath);
-
-        return await Task.FromResult(
-            $"Worksheet '{sheetName}' moved from position {sheetIndex} to {finalTargetIndex}: {outputPath}");
+            return $"Worksheet '{sheetName}' moved from position {sheetIndex} to {finalTargetIndex}: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -345,44 +361,47 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing sheetIndex, newName, optional targetIndex or copyToPath</param>
     /// <param name="path">Excel file path</param>
     /// <returns>Success message with copy details</returns>
-    private async Task<string> CopySheetAsync(JsonObject? arguments, string path)
+    private Task<string> CopySheetAsync(JsonObject? arguments, string path)
     {
-        var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex");
-        var targetIndex = ArgumentHelper.GetIntNullable(arguments, "targetIndex");
-        var copyToPath = ArgumentHelper.GetStringNullable(arguments, "copyToPath");
-        if (!string.IsNullOrEmpty(copyToPath)) SecurityHelper.ValidateFilePath(copyToPath, "copyToPath");
-
-        using var workbook = new Workbook(path);
-
-        if (sheetIndex < 0 || sheetIndex >= workbook.Worksheets.Count)
-            throw new ArgumentException(
-                $"Worksheet index {sheetIndex} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
-
-        var sourceSheet = workbook.Worksheets[sheetIndex];
-        var sheetName = sourceSheet.Name;
-
-        if (!string.IsNullOrEmpty(copyToPath))
+        return Task.Run(() =>
         {
-            // Copy to another workbook
-            using var targetWorkbook = new Workbook();
-            var newSheet = targetWorkbook.Worksheets.Add(sheetName);
-            sourceSheet.Copy(newSheet);
-            targetWorkbook.Save(copyToPath);
-            return await Task.FromResult($"Worksheet '{sheetName}' copied to '{copyToPath}': {path}");
-        }
+            var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex");
+            var targetIndex = ArgumentHelper.GetIntNullable(arguments, "targetIndex");
+            var copyToPath = ArgumentHelper.GetStringNullable(arguments, "copyToPath");
+            if (!string.IsNullOrEmpty(copyToPath)) SecurityHelper.ValidateFilePath(copyToPath, "copyToPath", true);
 
-        // Copy within same workbook
-        targetIndex ??= workbook.Worksheets.Count;
+            using var workbook = new Workbook(path);
 
-        if (targetIndex.Value < 0 || targetIndex.Value > workbook.Worksheets.Count)
-            throw new ArgumentException(
-                $"Target index {targetIndex.Value} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
+            if (sheetIndex < 0 || sheetIndex >= workbook.Worksheets.Count)
+                throw new ArgumentException(
+                    $"Worksheet index {sheetIndex} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
 
-        _ = workbook.Worksheets.AddCopy(sheetIndex);
-        // If specific position is needed, would need to copy and reorder manually
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        workbook.Save(outputPath);
-        return await Task.FromResult($"Worksheet '{sheetName}' copied to position {targetIndex.Value}: {outputPath}");
+            var sourceSheet = workbook.Worksheets[sheetIndex];
+            var sheetName = sourceSheet.Name;
+
+            if (!string.IsNullOrEmpty(copyToPath))
+            {
+                // Copy to another workbook
+                using var targetWorkbook = new Workbook();
+                var newSheet = targetWorkbook.Worksheets.Add(sheetName);
+                sourceSheet.Copy(newSheet);
+                targetWorkbook.Save(copyToPath);
+                return $"Worksheet '{sheetName}' copied to '{copyToPath}': {path}";
+            }
+
+            // Copy within same workbook
+            targetIndex ??= workbook.Worksheets.Count;
+
+            if (targetIndex.Value < 0 || targetIndex.Value > workbook.Worksheets.Count)
+                throw new ArgumentException(
+                    $"Target index {targetIndex.Value} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
+
+            _ = workbook.Worksheets.AddCopy(sheetIndex);
+            // If specific position is needed, would need to copy and reorder manually
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            workbook.Save(outputPath);
+            return $"Worksheet '{sheetName}' copied to position {targetIndex.Value}: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -391,25 +410,28 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing sheetIndex and optional targetIndex, isVisible</param>
     /// <param name="path">Excel file path</param>
     /// <returns>Success message with visibility status</returns>
-    private async Task<string> HideSheetAsync(JsonObject? arguments, string path)
+    private Task<string> HideSheetAsync(JsonObject? arguments, string path)
     {
-        var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex");
-
-        using var workbook = new Workbook(path);
-
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var sheetName = worksheet.Name;
-
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        if (worksheet.IsVisible)
+        return Task.Run(() =>
         {
-            worksheet.IsVisible = false;
-            workbook.Save(outputPath);
-            return await Task.FromResult($"Worksheet '{sheetName}' hidden: {outputPath}");
-        }
+            var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex");
 
-        worksheet.IsVisible = true;
-        workbook.Save(outputPath);
-        return await Task.FromResult($"Worksheet '{sheetName}' shown: {outputPath}");
+            using var workbook = new Workbook(path);
+
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            var sheetName = worksheet.Name;
+
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            if (worksheet.IsVisible)
+            {
+                worksheet.IsVisible = false;
+                workbook.Save(outputPath);
+                return $"Worksheet '{sheetName}' hidden: {outputPath}";
+            }
+
+            worksheet.IsVisible = true;
+            workbook.Save(outputPath);
+            return $"Worksheet '{sheetName}' shown: {outputPath}";
+        });
     }
 }

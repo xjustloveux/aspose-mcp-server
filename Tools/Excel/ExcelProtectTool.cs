@@ -113,43 +113,48 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing password, optional sheetIndex, protectWorkbook, protectionType</param>
     /// <param name="path">Excel file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> ProtectAsync(JsonObject? arguments, string path)
+    private Task<string> ProtectAsync(JsonObject? arguments, string path)
     {
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var password = ArgumentHelper.GetString(arguments, "password");
-        var sheetIndex = ArgumentHelper.GetIntNullable(arguments, "sheetIndex");
-        var protectWorkbook = ArgumentHelper.GetBool(arguments, "protectWorkbook", false);
-        // protectStructure defaults to true when protectWorkbook is true, otherwise defaults to false
-        var protectStructure = ArgumentHelper.GetBool(arguments, "protectStructure", protectWorkbook);
-        var protectWindows = ArgumentHelper.GetBool(arguments, "protectWindows", false);
-
-        using var workbook = new Workbook(path);
-
-        if (protectWorkbook || (!sheetIndex.HasValue && !protectWorkbook))
+        return Task.Run(() =>
         {
-            // Protect workbook with granular control
-            var protectionType = ProtectionType.None;
-            if (protectStructure && protectWindows)
-                protectionType = ProtectionType.All;
-            else if (protectStructure)
-                protectionType = ProtectionType.Structure;
-            else if (protectWindows) protectionType = ProtectionType.Windows;
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var password = ArgumentHelper.GetString(arguments, "password");
+            var sheetIndex = ArgumentHelper.GetIntNullable(arguments, "sheetIndex");
+            var protectWorkbook = ArgumentHelper.GetBool(arguments, "protectWorkbook", false);
+            // protectStructure defaults to true when protectWorkbook is true, otherwise defaults to false
+            var protectStructure = ArgumentHelper.GetBool(arguments, "protectStructure", protectWorkbook);
+            var protectWindows = ArgumentHelper.GetBool(arguments, "protectWindows", false);
 
-            if (protectionType != ProtectionType.None) workbook.Protect(protectionType, password);
-        }
-        else if (sheetIndex.HasValue)
-        {
-            if (sheetIndex.Value < 0 || sheetIndex.Value >= workbook.Worksheets.Count)
-                throw new ArgumentException($"sheetIndex must be between 0 and {workbook.Worksheets.Count - 1}");
-            workbook.Worksheets[sheetIndex.Value].Protect(ProtectionType.All, password, null);
-        }
+            using var workbook = new Workbook(path);
 
-        workbook.Save(outputPath);
+            if (protectWorkbook || (!sheetIndex.HasValue && !protectWorkbook))
+            {
+                // Protect workbook with granular control
+                var protectionType = ProtectionType.None;
+                if (protectStructure && protectWindows)
+                    protectionType = ProtectionType.All;
+                else if (protectStructure)
+                    protectionType = ProtectionType.Structure;
+                else if (protectWindows) protectionType = ProtectionType.Windows;
 
-        var target = protectWorkbook ? "workbook" : sheetIndex.HasValue ? $"worksheet {sheetIndex.Value}" : "workbook";
-        var result = $"Excel {target} protected with password: {outputPath}";
-        if (protectWorkbook) result += $"\nProtect structure: {protectStructure}\nProtect windows: {protectWindows}";
-        return await Task.FromResult(result);
+                if (protectionType != ProtectionType.None) workbook.Protect(protectionType, password);
+            }
+            else if (sheetIndex.HasValue)
+            {
+                if (sheetIndex.Value < 0 || sheetIndex.Value >= workbook.Worksheets.Count)
+                    throw new ArgumentException($"sheetIndex must be between 0 and {workbook.Worksheets.Count - 1}");
+                workbook.Worksheets[sheetIndex.Value].Protect(ProtectionType.All, password, null);
+            }
+
+            workbook.Save(outputPath);
+
+            var target = protectWorkbook ? "workbook" :
+                sheetIndex.HasValue ? $"worksheet {sheetIndex.Value}" : "workbook";
+            var result = $"Excel {target} protected with password: {outputPath}";
+            if (protectWorkbook)
+                result += $"\nProtect structure: {protectStructure}\nProtect windows: {protectWindows}";
+            return result;
+        });
     }
 
     /// <summary>
@@ -158,47 +163,49 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing password, optional sheetIndex</param>
     /// <param name="path">Excel file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> UnprotectAsync(JsonObject? arguments, string path)
+    private Task<string> UnprotectAsync(JsonObject? arguments, string path)
     {
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var password = ArgumentHelper.GetStringNullable(arguments, "password");
-        var sheetIndex = ArgumentHelper.GetIntNullable(arguments, "sheetIndex");
-
-        using var workbook = new Workbook(path);
-
-        if (sheetIndex.HasValue)
+        return Task.Run(() =>
         {
-            if (sheetIndex.Value < 0 || sheetIndex.Value >= workbook.Worksheets.Count)
-                throw new ArgumentException($"sheetIndex must be between 0 and {workbook.Worksheets.Count - 1}");
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var password = ArgumentHelper.GetStringNullable(arguments, "password");
+            var sheetIndex = ArgumentHelper.GetIntNullable(arguments, "sheetIndex");
 
-            var worksheet = workbook.Worksheets[sheetIndex.Value];
-            var wasProtected = worksheet.IsProtected;
+            using var workbook = new Workbook(path);
 
-            if (!wasProtected)
+            if (sheetIndex.HasValue)
             {
+                if (sheetIndex.Value < 0 || sheetIndex.Value >= workbook.Worksheets.Count)
+                    throw new ArgumentException($"sheetIndex must be between 0 and {workbook.Worksheets.Count - 1}");
+
+                var worksheet = workbook.Worksheets[sheetIndex.Value];
+                var wasProtected = worksheet.IsProtected;
+
+                if (!wasProtected)
+                {
+                    workbook.Save(outputPath);
+                    return $"Worksheet '{worksheet.Name}' is not protected. No password needed.\nOutput: {outputPath}";
+                }
+
+                try
+                {
+                    worksheet.Unprotect(password);
+                }
+                catch (Exception ex)
+                {
+                    workbook.Save(outputPath);
+                    throw new ArgumentException(
+                        $"Incorrect password. Cannot unprotect worksheet '{worksheet.Name}'. Error: {ex.Message}");
+                }
+
                 workbook.Save(outputPath);
-                return await Task.FromResult(
-                    $"Worksheet '{worksheet.Name}' is not protected. No password needed.\nOutput: {outputPath}");
+                return $"Worksheet protection removed: {worksheet.Name}\nOutput: {outputPath}";
             }
 
-            try
-            {
-                worksheet.Unprotect(password);
-            }
-            catch (Exception ex)
-            {
-                workbook.Save(outputPath);
-                throw new ArgumentException(
-                    $"Incorrect password. Cannot unprotect worksheet '{worksheet.Name}'. Error: {ex.Message}");
-            }
-
+            workbook.Unprotect(password);
             workbook.Save(outputPath);
-            return await Task.FromResult($"Worksheet protection removed: {worksheet.Name}\nOutput: {outputPath}");
-        }
-
-        workbook.Unprotect(password);
-        workbook.Save(outputPath);
-        return await Task.FromResult($"Workbook protection removed\nOutput: {outputPath}");
+            return $"Workbook protection removed\nOutput: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -207,36 +214,39 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing optional sheetIndex</param>
     /// <param name="path">Excel file path</param>
     /// <returns>Formatted string with protection status</returns>
-    private async Task<string> GetProtectionAsync(JsonObject? arguments, string path)
+    private Task<string> GetProtectionAsync(JsonObject? arguments, string path)
     {
-        var sheetIndex = ArgumentHelper.GetIntNullable(arguments, "sheetIndex");
-
-        using var workbook = new Workbook(path);
-        var result = new StringBuilder();
-
-        result.AppendLine("=== Excel Protection Settings Information ===\n");
-
-        result.AppendLine("[Workbook Protection]");
-        result.AppendLine("Note: Workbook protection status needs to be checked through protection methods");
-        result.AppendLine();
-
-        if (sheetIndex.HasValue)
+        return Task.Run(() =>
         {
-            if (sheetIndex.Value < 0 || sheetIndex.Value >= workbook.Worksheets.Count)
-                throw new ArgumentException(
-                    $"Worksheet index {sheetIndex.Value} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
-            AppendSheetProtection(result, workbook.Worksheets[sheetIndex.Value], sheetIndex.Value);
-        }
-        else
-        {
-            for (var i = 0; i < workbook.Worksheets.Count; i++)
+            var sheetIndex = ArgumentHelper.GetIntNullable(arguments, "sheetIndex");
+
+            using var workbook = new Workbook(path);
+            var result = new StringBuilder();
+
+            result.AppendLine("=== Excel Protection Settings Information ===\n");
+
+            result.AppendLine("[Workbook Protection]");
+            result.AppendLine("Note: Workbook protection status needs to be checked through protection methods");
+            result.AppendLine();
+
+            if (sheetIndex.HasValue)
             {
-                AppendSheetProtection(result, workbook.Worksheets[i], i);
-                if (i < workbook.Worksheets.Count - 1) result.AppendLine();
+                if (sheetIndex.Value < 0 || sheetIndex.Value >= workbook.Worksheets.Count)
+                    throw new ArgumentException(
+                        $"Worksheet index {sheetIndex.Value} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
+                AppendSheetProtection(result, workbook.Worksheets[sheetIndex.Value], sheetIndex.Value);
             }
-        }
+            else
+            {
+                for (var i = 0; i < workbook.Worksheets.Count; i++)
+                {
+                    AppendSheetProtection(result, workbook.Worksheets[i], i);
+                    if (i < workbook.Worksheets.Count - 1) result.AppendLine();
+                }
+            }
 
-        return await Task.FromResult(result.ToString());
+            return result.ToString();
+        });
     }
 
     private void AppendSheetProtection(StringBuilder result, Worksheet worksheet, int index)
@@ -267,27 +277,30 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing range, isLocked, optional sheetIndex</param>
     /// <param name="path">Excel file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetCellLockedAsync(JsonObject? arguments, string path)
+    private Task<string> SetCellLockedAsync(JsonObject? arguments, string path)
     {
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
-        var range = ArgumentHelper.GetString(arguments, "range");
-        var locked = ArgumentHelper.GetBool(arguments, "locked", false);
+        return Task.Run(() =>
+        {
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
+            var range = ArgumentHelper.GetString(arguments, "range");
+            var locked = ArgumentHelper.GetBool(arguments, "locked", false);
 
-        using var workbook = new Workbook(path);
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var cells = worksheet.Cells;
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            var cells = worksheet.Cells;
 
-        var cellRange = ExcelHelper.CreateRange(cells, range);
+            var cellRange = ExcelHelper.CreateRange(cells, range);
 
-        var style = workbook.CreateStyle();
-        style.IsLocked = locked;
+            var style = workbook.CreateStyle();
+            style.IsLocked = locked;
 
-        var styleFlag = new StyleFlag { Locked = true };
-        cellRange.ApplyStyle(style, styleFlag);
+            var styleFlag = new StyleFlag { Locked = true };
+            cellRange.ApplyStyle(style, styleFlag);
 
-        workbook.Save(outputPath);
-        return await Task.FromResult(
-            $"Cell lock status set to {(locked ? "locked" : "unlocked")} for range {range} in sheet {sheetIndex}: {outputPath}");
+            workbook.Save(outputPath);
+            return
+                $"Cell lock status set to {(locked ? "locked" : "unlocked")} for range {range} in sheet {sheetIndex}: {outputPath}";
+        });
     }
 }

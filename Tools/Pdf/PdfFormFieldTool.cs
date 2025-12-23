@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using Aspose.Pdf.Forms;
@@ -126,49 +126,53 @@ Usage examples:
     ///     defaultValue, outputPath
     /// </param>
     /// <returns>Success message</returns>
-    private async Task<string> AddFormField(JsonObject? arguments)
+    private Task<string> AddFormField(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
-        var fieldType = ArgumentHelper.GetString(arguments, "fieldType");
-        var fieldName = ArgumentHelper.GetString(arguments, "fieldName");
-        var x = ArgumentHelper.GetDouble(arguments, "x");
-        var y = ArgumentHelper.GetDouble(arguments, "y");
-        var width = ArgumentHelper.GetDouble(arguments, "width");
-        var height = ArgumentHelper.GetDouble(arguments, "height");
-        var defaultValue = ArgumentHelper.GetStringNullable(arguments, "defaultValue");
-
-        using var document = new Document(path);
-        if (pageIndex < 1 || pageIndex > document.Pages.Count)
-            throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
-
-        var page = document.Pages[pageIndex];
-        var rect = new Rectangle(x, y, x + width, y + height);
-        Field field;
-
-        switch (fieldType)
+        return Task.Run(() =>
         {
-            case "TextBox":
-                field = new TextBoxField(page, rect) { PartialName = fieldName };
-                if (!string.IsNullOrEmpty(defaultValue))
-                    ((TextBoxField)field).Value = defaultValue;
-                break;
-            case "CheckBox":
-                field = new CheckboxField(page, rect) { PartialName = fieldName };
-                break;
-            case "RadioButton":
-                field = new RadioButtonField(page) { PartialName = fieldName };
-                var radioOption = new RadioButtonOptionField(page, rect);
-                ((RadioButtonField)field).Add(radioOption);
-                break;
-            default:
-                throw new ArgumentException($"Unknown field type: {fieldType}");
-        }
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
+            var fieldType = ArgumentHelper.GetString(arguments, "fieldType");
+            var fieldName = ArgumentHelper.GetString(arguments, "fieldName");
+            var x = ArgumentHelper.GetDouble(arguments, "x");
+            var y = ArgumentHelper.GetDouble(arguments, "y");
+            var width = ArgumentHelper.GetDouble(arguments, "width");
+            var height = ArgumentHelper.GetDouble(arguments, "height");
+            var defaultValue = ArgumentHelper.GetStringNullable(arguments, "defaultValue");
 
-        document.Form.Add(field);
-        document.Save(outputPath);
-        return await Task.FromResult($"Successfully added {fieldType} field '{fieldName}'. Output: {outputPath}");
+            using var document = new Document(path);
+            if (pageIndex < 1 || pageIndex > document.Pages.Count)
+                throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
+
+            var page = document.Pages[pageIndex];
+            var rect = new Rectangle(x, y, x + width, y + height);
+            Field field;
+
+            switch (fieldType.ToLower())
+            {
+                case "textbox":
+                case "textfield":
+                    field = new TextBoxField(page, rect) { PartialName = fieldName };
+                    if (!string.IsNullOrEmpty(defaultValue))
+                        ((TextBoxField)field).Value = defaultValue;
+                    break;
+                case "checkbox":
+                    field = new CheckboxField(page, rect) { PartialName = fieldName };
+                    break;
+                case "radiobutton":
+                    field = new RadioButtonField(page) { PartialName = fieldName };
+                    var radioOption = new RadioButtonOptionField(page, rect);
+                    ((RadioButtonField)field).Add(radioOption);
+                    break;
+                default:
+                    throw new ArgumentException($"Unknown field type: {fieldType}");
+            }
+
+            document.Form.Add(field);
+            document.Save(outputPath);
+            return $"Successfully added {fieldType} field '{fieldName}'. Output: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -176,19 +180,22 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, fieldName, optional outputPath</param>
     /// <returns>Success message</returns>
-    private async Task<string> DeleteFormField(JsonObject? arguments)
+    private Task<string> DeleteFormField(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var fieldName = ArgumentHelper.GetString(arguments, "fieldName");
+        return Task.Run(() =>
+        {
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var fieldName = ArgumentHelper.GetString(arguments, "fieldName");
 
-        SecurityHelper.ValidateFilePath(path);
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
-        using var document = new Document(path);
-        document.Form.Delete(fieldName);
-        document.Save(outputPath);
-        return await Task.FromResult($"Successfully deleted form field '{fieldName}'. Output: {outputPath}");
+            using var document = new Document(path);
+            document.Form.Delete(fieldName);
+            document.Save(outputPath);
+            return $"Successfully deleted form field '{fieldName}'. Output: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -196,29 +203,32 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, fieldName, optional value, x, y, width, height, outputPath</param>
     /// <returns>Success message</returns>
-    private async Task<string> EditFormField(JsonObject? arguments)
+    private Task<string> EditFormField(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var fieldName = ArgumentHelper.GetString(arguments, "fieldName");
-        var value = ArgumentHelper.GetStringNullable(arguments, "value");
-        var checkedValue = ArgumentHelper.GetBoolNullable(arguments, "checkedValue");
+        return Task.Run(() =>
+        {
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var fieldName = ArgumentHelper.GetString(arguments, "fieldName");
+            var value = ArgumentHelper.GetStringNullable(arguments, "value");
+            var checkedValue = ArgumentHelper.GetBoolNullable(arguments, "checkedValue");
 
-        SecurityHelper.ValidateFilePath(path);
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
-        using var document = new Document(path);
-        var field = document.Form[fieldName];
-        if (field == null)
-            throw new ArgumentException($"Form field '{fieldName}' not found");
+            using var document = new Document(path);
+            var field = document.Form[fieldName];
+            if (field == null)
+                throw new ArgumentException($"Form field '{fieldName}' not found");
 
-        if (field is TextBoxField textBox && !string.IsNullOrEmpty(value))
-            textBox.Value = value;
-        else if (field is CheckboxField checkBox && checkedValue.HasValue)
-            checkBox.Checked = checkedValue.Value;
+            if (field is TextBoxField textBox && !string.IsNullOrEmpty(value))
+                textBox.Value = value;
+            else if (field is CheckboxField checkBox && checkedValue.HasValue)
+                checkBox.Checked = checkedValue.Value;
 
-        document.Save(outputPath);
-        return await Task.FromResult($"Successfully edited form field '{fieldName}'. Output: {outputPath}");
+            document.Save(outputPath);
+            return $"Successfully edited form field '{fieldName}'. Output: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -226,35 +236,38 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments (no specific parameters required)</param>
     /// <returns>Formatted string with all form fields</returns>
-    private async Task<string> GetFormFields(JsonObject? arguments)
+    private Task<string> GetFormFields(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-
-        using var document = new Document(path);
-        var sb = new StringBuilder();
-        sb.AppendLine("=== PDF Form Fields ===");
-        sb.AppendLine();
-
-        if (document.Form.Count == 0)
+        return Task.Run(() =>
         {
-            sb.AppendLine("No form fields found.");
-            return await Task.FromResult(sb.ToString());
-        }
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
 
-        sb.AppendLine($"Total Form Fields: {document.Form.Count}");
-        sb.AppendLine();
-
-        foreach (var field in document.Form.Cast<Field>())
-        {
-            sb.AppendLine($"Name: {field.PartialName}");
-            sb.AppendLine($"Type: {field.GetType().Name}");
-            if (field is TextBoxField textBox)
-                sb.AppendLine($"Value: {textBox.Value}");
-            else if (field is CheckboxField checkBox)
-                sb.AppendLine($"Checked: {checkBox.Checked}");
+            using var document = new Document(path);
+            var sb = new StringBuilder();
+            sb.AppendLine("=== PDF Form Fields ===");
             sb.AppendLine();
-        }
 
-        return await Task.FromResult(sb.ToString());
+            if (document.Form.Count == 0)
+            {
+                sb.AppendLine("No form fields found.");
+                return sb.ToString();
+            }
+
+            sb.AppendLine($"Total Form Fields: {document.Form.Count}");
+            sb.AppendLine();
+
+            foreach (var field in document.Form.Cast<Field>())
+            {
+                sb.AppendLine($"Name: {field.PartialName}");
+                sb.AppendLine($"Type: {field.GetType().Name}");
+                if (field is TextBoxField textBox)
+                    sb.AppendLine($"Value: {textBox.Value}");
+                else if (field is CheckboxField checkBox)
+                    sb.AppendLine($"Checked: {checkBox.Checked}");
+                sb.AppendLine();
+            }
+
+            return sb.ToString();
+        });
     }
 }

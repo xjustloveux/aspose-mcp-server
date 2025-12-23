@@ -14,6 +14,9 @@ namespace AsposeMcpServer.Tools.Word;
 /// </summary>
 public class WordTextTool : IAsposeTool
 {
+    /// <summary>
+    ///     Gets the description of the tool and its usage examples
+    /// </summary>
     public string Description =>
         @"Perform text operations in Word documents. Supports 8 operations: add, delete, replace, search, format, insert_at_position, delete_range, add_with_style.
 
@@ -27,6 +30,9 @@ Usage examples:
 - Delete text: word_text(operation='delete', path='doc.docx', searchText='text to delete') or word_text(operation='delete', path='doc.docx', startParagraphIndex=0, endParagraphIndex=0)
 - Delete range: word_text(operation='delete_range', path='doc.docx', startParagraphIndex=0, startRunIndex=0, endParagraphIndex=0, endRunIndex=5)";
 
+    /// <summary>
+    ///     Gets the JSON schema defining the input parameters for the tool
+    /// </summary>
     public object InputSchema => new
     {
         type = "object",
@@ -314,7 +320,7 @@ Usage examples:
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
         return operation switch
         {
@@ -337,178 +343,170 @@ Usage examples:
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> AddTextAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> AddTextAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var text = ArgumentHelper.GetString(arguments, "text");
-        var fontName = ArgumentHelper.GetStringNullable(arguments, "fontName");
-        var fontSize = ArgumentHelper.GetDoubleNullable(arguments, "fontSize");
-        var bold = ArgumentHelper.GetBool(arguments, "bold", false);
-        var italic = ArgumentHelper.GetBool(arguments, "italic", false);
-        var underline = ArgumentHelper.GetStringNullable(arguments, "underline");
-        var color = ArgumentHelper.GetStringNullable(arguments, "color");
-        var strikethrough = ArgumentHelper.GetBool(arguments, "strikethrough", false);
-        var superscript = ArgumentHelper.GetBool(arguments, "superscript", false);
-        var subscript = ArgumentHelper.GetBool(arguments, "subscript", false);
-
-        var doc = new Document(path);
-
-        // Get the last section's body to append the new paragraph
-        doc.EnsureMinimum();
-        var lastSection = doc.LastSection;
-        var body = lastSection.Body;
-
-        // Only split text if it actually contains newlines
-        // If text doesn't contain newlines, treat it as a single paragraph
-        // This prevents creating unnecessary paragraphs that cause format misapplication
-        var lines = text.Contains('\n') || text.Contains('\r')
-            ? text.Split(["\r\n", "\n", "\r"], StringSplitOptions.None)
-            : [text];
-
-        var builder = new DocumentBuilder(doc);
-
-        // Move to last paragraph in document body (not inside Shape/TextBox)
-        // MoveToDocumentEnd() might move inside textbox if cursor is already there
-        var bodyParagraphs = body.GetChildNodes(NodeType.Paragraph, false);
-        if (bodyParagraphs.Count > 0)
+        return Task.Run(() =>
         {
-            if (bodyParagraphs[^1] is Paragraph lastBodyPara)
-                builder.MoveTo(lastBodyPara);
-            else
-                builder.MoveToDocumentEnd();
-        }
-        else
-        {
-            builder.MoveToDocumentEnd();
-        }
+            var text = ArgumentHelper.GetString(arguments, "text");
+            var fontName = ArgumentHelper.GetStringNullable(arguments, "fontName");
+            var fontSize = ArgumentHelper.GetDoubleNullable(arguments, "fontSize");
+            var bold = ArgumentHelper.GetBool(arguments, "bold", false);
+            var italic = ArgumentHelper.GetBool(arguments, "italic", false);
+            var underline = ArgumentHelper.GetStringNullable(arguments, "underline");
+            var color = ArgumentHelper.GetStringNullable(arguments, "color");
+            var strikethrough = ArgumentHelper.GetBool(arguments, "strikethrough", false);
+            var superscript = ArgumentHelper.GetBool(arguments, "superscript", false);
+            var subscript = ArgumentHelper.GetBool(arguments, "subscript", false);
 
-        // Ensure we're in document body, not inside Shape/TextBox
-        var currentNode = builder.CurrentNode;
-        if (currentNode != null)
-        {
-            var shapeAncestor = currentNode.GetAncestor(NodeType.Shape);
-            if (shapeAncestor != null)
+            var doc = new Document(path);
+
+            doc.EnsureMinimum();
+            var lastSection = doc.LastSection;
+            var body = lastSection.Body;
+
+            // Split text by newlines to create multiple paragraphs, preventing format misapplication
+            var lines = text.Contains('\n') || text.Contains('\r')
+                ? text.Split(["\r\n", "\n", "\r"], StringSplitOptions.None)
+                : [text];
+
+            var builder = new DocumentBuilder(doc);
+
+            // Move to last paragraph in document body (not inside Shape/TextBox)
+            var bodyParagraphs = body.GetChildNodes(NodeType.Paragraph, false);
+            if (bodyParagraphs.Count > 0)
             {
-                bodyParagraphs = body.GetChildNodes(NodeType.Paragraph, false);
-                if (bodyParagraphs.Count > 0)
-                {
-                    if (bodyParagraphs[^1] is Paragraph lastBodyPara) builder.MoveTo(lastBodyPara);
-                }
+                if (bodyParagraphs[^1] is Paragraph lastBodyPara)
+                    builder.MoveTo(lastBodyPara);
                 else
+                    builder.MoveToDocumentEnd();
+            }
+            else
+            {
+                builder.MoveToDocumentEnd();
+            }
+
+            // Ensure we're in document body, not inside Shape/TextBox
+            var currentNode = builder.CurrentNode;
+            if (currentNode != null)
+            {
+                var shapeAncestor = currentNode.GetAncestor(NodeType.Shape);
+                if (shapeAncestor != null)
                 {
-                    // No paragraphs, append to body directly
-                    builder.MoveTo(body);
+                    bodyParagraphs = body.GetChildNodes(NodeType.Paragraph, false);
+                    if (bodyParagraphs.Count > 0)
+                    {
+                        if (bodyParagraphs[^1] is Paragraph lastBodyPara) builder.MoveTo(lastBodyPara);
+                    }
+                    else
+                    {
+                        builder.MoveTo(body);
+                    }
                 }
             }
-        }
 
-        for (var i = 0; i < lines.Length; i++)
-        {
-            var line = lines[i];
-            var currentParaBefore = builder.CurrentParagraph;
-            var needsNewParagraph = false;
-            if (currentParaBefore != null)
+            for (var i = 0; i < lines.Length; i++)
             {
-                var existingRuns = currentParaBefore.GetChildNodes(NodeType.Run, false);
-                var existingText = currentParaBefore.GetText().Trim();
-                needsNewParagraph = existingRuns.Count > 0 || !string.IsNullOrEmpty(existingText);
-            }
+                var line = lines[i];
+                var currentParaBefore = builder.CurrentParagraph;
+                var needsNewParagraph = false;
+                if (currentParaBefore != null)
+                {
+                    var existingRuns = currentParaBefore.GetChildNodes(NodeType.Run, false);
+                    var existingText = currentParaBefore.GetText().Trim();
+                    needsNewParagraph = existingRuns.Count > 0 || !string.IsNullOrEmpty(existingText);
+                }
 
-            if (needsNewParagraph || i == 0)
-            {
-                builder.Writeln();
-                builder.MoveTo(builder.CurrentParagraph);
-            }
+                if (needsNewParagraph || i == 0)
+                {
+                    builder.Writeln();
+                    builder.MoveTo(builder.CurrentParagraph);
+                }
 
-            builder.Font.ClearFormatting();
-            builder.Font.Bold = false;
-            builder.Font.Italic = false;
-            builder.Font.Underline = Underline.None;
-            builder.Font.StrikeThrough = false;
-            builder.Font.Superscript = false;
-            builder.Font.Subscript = false;
-            builder.ParagraphFormat.ClearFormatting();
+                builder.Font.ClearFormatting();
+                builder.Font.Bold = false;
+                builder.Font.Italic = false;
+                builder.Font.Underline = Underline.None;
+                builder.Font.StrikeThrough = false;
+                builder.Font.Superscript = false;
+                builder.Font.Subscript = false;
+                builder.ParagraphFormat.ClearFormatting();
 
-            // Apply font settings using FontHelper
-            bool? strikethroughValue = arguments?["strikethrough"] != null ? strikethrough : null;
-            bool? superscriptValue = arguments?["superscript"] != null ? superscript : null;
-            bool? subscriptValue = arguments?["subscript"] != null ? subscript : null;
+                bool? strikethroughValue = arguments?["strikethrough"] != null ? strikethrough : null;
+                bool? superscriptValue = arguments?["superscript"] != null ? superscript : null;
+                bool? subscriptValue = arguments?["subscript"] != null ? subscript : null;
 
-            FontHelper.Word.ApplyFontSettings(
-                builder,
-                fontName,
-                fontSize: fontSize,
-                bold: arguments?["bold"] != null ? bold : null,
-                italic: arguments?["italic"] != null ? italic : null,
-                underline: underline,
-                color: color,
-                strikethrough: strikethroughValue,
-                superscript: superscriptValue,
-                subscript: subscriptValue
-            );
+                FontHelper.Word.ApplyFontSettings(
+                    builder,
+                    fontName,
+                    fontSize: fontSize,
+                    bold: arguments?["bold"] != null ? bold : null,
+                    italic: arguments?["italic"] != null ? italic : null,
+                    underline: underline,
+                    color: color,
+                    strikethrough: strikethroughValue,
+                    superscript: superscriptValue,
+                    subscript: subscriptValue
+                );
 
-            // Get the current paragraph and its runs before writing
-            var currentPara = builder.CurrentParagraph;
-            var runsBefore = 0;
-            if (currentPara != null) runsBefore = currentPara.GetChildNodes(NodeType.Run, false).Count;
+                var currentPara = builder.CurrentParagraph;
+                var runsBefore = 0;
+                if (currentPara != null) runsBefore = currentPara.GetChildNodes(NodeType.Run, false).Count;
 
-            // Write text using DocumentBuilder - this ensures format is applied correctly
-            builder.Write(line);
+                // Write text using DocumentBuilder to ensure format is applied correctly
+                builder.Write(line);
 
-            // Get ALL runs in the paragraph and ensure format is applied to ALL of them
-            // This includes any runs that might have been created by DocumentBuilder internally
-            if (currentPara != null)
-            {
-                var runs = currentPara.GetChildNodes(NodeType.Run, false);
-                var runsAfter = runs.Count;
+                // Apply format to all runs created by DocumentBuilder
+                if (currentPara != null)
+                {
+                    var runs = currentPara.GetChildNodes(NodeType.Run, false);
+                    var runsAfter = runs.Count;
 
-                for (var r = runsBefore; r < runsAfter; r++)
-                    if (runs[r] is Run run)
-                    {
-                        var isNewRun = r >= runsBefore;
-                        var textMatches = run.Text == line;
-
-                        if (isNewRun && textMatches)
+                    for (var r = runsBefore; r < runsAfter; r++)
+                        if (runs[r] is Run run)
                         {
-                            // Clear conflicting formats first
-                            run.Font.Subscript = false;
-                            run.Font.Superscript = false;
-                            run.Font.StrikeThrough = false;
-                            run.Font.Bold = false;
-                            run.Font.Italic = false;
-                            run.Font.Underline = Underline.None;
+                            var isNewRun = r >= runsBefore;
+                            var textMatches = run.Text == line;
 
-                            // Apply font settings using FontHelper (reuse variables from outer scope)
-                            FontHelper.Word.ApplyFontSettings(
-                                run,
-                                fontSize: null, // Not setting fontSize here
-                                bold: arguments?["bold"] != null ? bold : null,
-                                italic: arguments?["italic"] != null ? italic : null,
-                                underline: underline,
-                                strikethrough: arguments?["strikethrough"] != null ? strikethrough : null,
-                                superscript: arguments?["superscript"] != null ? superscript : null,
-                                subscript: arguments?["subscript"] != null ? subscript : null
-                            );
+                            if (isNewRun && textMatches)
+                            {
+                                run.Font.Subscript = false;
+                                run.Font.Superscript = false;
+                                run.Font.StrikeThrough = false;
+                                run.Font.Bold = false;
+                                run.Font.Italic = false;
+                                run.Font.Underline = Underline.None;
+
+                                FontHelper.Word.ApplyFontSettings(
+                                    run,
+                                    fontSize: null,
+                                    bold: arguments?["bold"] != null ? bold : null,
+                                    italic: arguments?["italic"] != null ? italic : null,
+                                    underline: underline,
+                                    strikethrough: arguments?["strikethrough"] != null ? strikethrough : null,
+                                    superscript: arguments?["superscript"] != null ? superscript : null,
+                                    subscript: arguments?["subscript"] != null ? subscript : null
+                                );
+                            }
                         }
-                    }
+                }
             }
-        }
 
-        // Save document
-        doc.Save(outputPath);
+            doc.Save(outputPath);
 
-        var formatInfo = new List<string>();
-        if (bold) formatInfo.Add("bold");
-        if (italic) formatInfo.Add("italic");
-        if (!string.IsNullOrEmpty(underline) && underline != "none") formatInfo.Add($"underline({underline})");
-        if (strikethrough) formatInfo.Add("strikethrough");
-        if (superscript) formatInfo.Add("superscript");
-        if (subscript) formatInfo.Add("subscript");
+            var formatInfo = new List<string>();
+            if (bold) formatInfo.Add("bold");
+            if (italic) formatInfo.Add("italic");
+            if (!string.IsNullOrEmpty(underline) && underline != "none") formatInfo.Add($"underline({underline})");
+            if (strikethrough) formatInfo.Add("strikethrough");
+            if (superscript) formatInfo.Add("superscript");
+            if (subscript) formatInfo.Add("subscript");
 
-        var result = "Text added to document successfully\n";
-        if (formatInfo.Count > 0) result += $"Applied formats: {string.Join(", ", formatInfo)}\n";
-        result += $"Output: {outputPath}";
+            var result = "Text added to document successfully\n";
+            if (formatInfo.Count > 0) result += $"Applied formats: {string.Join(", ", formatInfo)}\n";
+            result += $"Output: {outputPath}";
 
-        return await Task.FromResult(result);
+            return result;
+        });
     }
 
     /// <summary>
@@ -518,194 +516,190 @@ Usage examples:
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <returns>Success message with deletion count</returns>
-    private async Task<string> DeleteTextAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> DeleteTextAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var searchText = ArgumentHelper.GetStringNullable(arguments, "searchText");
-        var startParagraphIndex = ArgumentHelper.GetIntNullable(arguments, "startParagraphIndex");
-        var startRunIndex = ArgumentHelper.GetInt(arguments, "startRunIndex", 0);
-        var endParagraphIndex = ArgumentHelper.GetIntNullable(arguments, "endParagraphIndex");
-        var endRunIndex = ArgumentHelper.GetIntNullable(arguments, "endRunIndex");
-
-        var doc = new Document(path);
-        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
-
-        // If searchText is provided, find the text and determine paragraph/run indices
-        if (!string.IsNullOrEmpty(searchText))
+        return Task.Run(() =>
         {
-            // Search for the text in the document
-            var found = false;
-            for (var p = 0; p < paragraphs.Count; p++)
+            var searchText = ArgumentHelper.GetStringNullable(arguments, "searchText");
+            var startParagraphIndex = ArgumentHelper.GetIntNullable(arguments, "startParagraphIndex");
+            var startRunIndex = ArgumentHelper.GetInt(arguments, "startRunIndex", 0);
+            var endParagraphIndex = ArgumentHelper.GetIntNullable(arguments, "endParagraphIndex");
+            var endRunIndex = ArgumentHelper.GetIntNullable(arguments, "endRunIndex");
+
+            var doc = new Document(path);
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
+
+            if (!string.IsNullOrEmpty(searchText))
             {
-                if (paragraphs[p] is not Paragraph para) continue;
-
-                var paraText = para.GetText();
-                var textIndex = paraText.IndexOf(searchText, StringComparison.OrdinalIgnoreCase);
-
-                if (textIndex >= 0)
+                var found = false;
+                for (var p = 0; p < paragraphs.Count; p++)
                 {
-                    // Found the text, determine run indices
-                    var runs = para.GetChildNodes(NodeType.Run, false);
-                    var charCount = 0;
-                    var startRunIdx = 0;
-                    var endRunIdx = runs.Count - 1;
+                    if (paragraphs[p] is not Paragraph para) continue;
 
-                    // Find the run containing the start of searchText
-                    for (var r = 0; r < runs.Count; r++)
+                    var paraText = para.GetText();
+                    var textIndex = paraText.IndexOf(searchText, StringComparison.OrdinalIgnoreCase);
+
+                    if (textIndex >= 0)
                     {
-                        if (runs[r] is not Run run) continue;
+                        var runs = para.GetChildNodes(NodeType.Run, false);
+                        var charCount = 0;
+                        var startRunIdx = 0;
+                        var endRunIdx = runs.Count - 1;
 
-                        var runLength = run.Text.Length;
-                        if (charCount + runLength > textIndex)
+                        for (var r = 0; r < runs.Count; r++)
                         {
-                            startRunIdx = r;
-                            break;
+                            if (runs[r] is not Run run) continue;
+
+                            var runLength = run.Text.Length;
+                            if (charCount + runLength > textIndex)
+                            {
+                                startRunIdx = r;
+                                break;
+                            }
+
+                            charCount += runLength;
                         }
 
-                        charCount += runLength;
-                    }
-
-                    // Find the run containing the end of searchText
-                    charCount = 0;
-                    var endTextIndex = textIndex + searchText.Length;
-                    for (var r = 0; r < runs.Count; r++)
-                    {
-                        if (runs[r] is not Run run) continue;
-
-                        var runLength = run.Text.Length;
-                        if (charCount + runLength >= endTextIndex)
+                        charCount = 0;
+                        var endTextIndex = textIndex + searchText.Length;
+                        for (var r = 0; r < runs.Count; r++)
                         {
-                            endRunIdx = r;
-                            break;
+                            if (runs[r] is not Run run) continue;
+
+                            var runLength = run.Text.Length;
+                            if (charCount + runLength >= endTextIndex)
+                            {
+                                endRunIdx = r;
+                                break;
+                            }
+
+                            charCount += runLength;
                         }
 
-                        charCount += runLength;
+                        startParagraphIndex = p;
+                        endParagraphIndex = p;
+                        startRunIndex = startRunIdx;
+                        endRunIndex = endRunIdx;
+                        found = true;
+                        break;
                     }
-
-                    startParagraphIndex = p;
-                    endParagraphIndex = p;
-                    startRunIndex = startRunIdx;
-                    endRunIndex = endRunIdx;
-                    found = true;
-                    break;
                 }
+
+                if (!found)
+                    throw new ArgumentException(
+                        $"Text '{searchText}' not found. Please use search operation to confirm text location first.");
+            }
+            else
+            {
+                if (!startParagraphIndex.HasValue)
+                    throw new ArgumentException("startParagraphIndex is required when searchText is not provided");
+                if (!endParagraphIndex.HasValue)
+                    throw new ArgumentException("endParagraphIndex is required when searchText is not provided");
             }
 
-            if (!found)
+            if (!startParagraphIndex.HasValue || !endParagraphIndex.HasValue)
+                throw new ArgumentException("Unable to determine paragraph index");
+
+            if (startParagraphIndex.Value < 0 || startParagraphIndex.Value >= paragraphs.Count ||
+                endParagraphIndex.Value < 0 || endParagraphIndex.Value >= paragraphs.Count ||
+                startParagraphIndex.Value > endParagraphIndex.Value)
                 throw new ArgumentException(
-                    $"Text '{searchText}' not found. Please use search operation to confirm text location first.");
-        }
-        else
-        {
-            // Require paragraph indices if searchText is not provided
-            if (!startParagraphIndex.HasValue)
-                throw new ArgumentException("startParagraphIndex is required when searchText is not provided");
-            if (!endParagraphIndex.HasValue)
-                throw new ArgumentException("endParagraphIndex is required when searchText is not provided");
-        }
+                    $"Paragraph index is out of range (document has {paragraphs.Count} paragraphs)");
 
-        if (!startParagraphIndex.HasValue || !endParagraphIndex.HasValue)
-            throw new ArgumentException("Unable to determine paragraph index");
+            if (paragraphs[startParagraphIndex.Value] is not Paragraph startPara ||
+                paragraphs[endParagraphIndex.Value] is not Paragraph endPara)
+                throw new InvalidOperationException("Unable to find specified paragraph");
 
-        if (startParagraphIndex.Value < 0 || startParagraphIndex.Value >= paragraphs.Count ||
-            endParagraphIndex.Value < 0 || endParagraphIndex.Value >= paragraphs.Count ||
-            startParagraphIndex.Value > endParagraphIndex.Value)
-            throw new ArgumentException(
-                $"Paragraph index is out of range (document has {paragraphs.Count} paragraphs)");
+            var deletedText = "";
+            try
+            {
+                var startRuns = startPara.GetChildNodes(NodeType.Run, false);
+                var endRuns = endPara.GetChildNodes(NodeType.Run, false);
 
-        if (paragraphs[startParagraphIndex.Value] is not Paragraph startPara ||
-            paragraphs[endParagraphIndex.Value] is not Paragraph endPara)
-            throw new InvalidOperationException("Unable to find specified paragraph");
+                if (startParagraphIndex.Value == endParagraphIndex.Value)
+                {
+                    if (startRuns is { Count: > 0 })
+                    {
+                        var actualEndRunIndex = endRunIndex ?? startRuns.Count - 1;
+                        if (startRunIndex >= 0 && startRunIndex < startRuns.Count &&
+                            actualEndRunIndex >= 0 && actualEndRunIndex < startRuns.Count &&
+                            startRunIndex <= actualEndRunIndex)
+                            for (var i = startRunIndex; i <= actualEndRunIndex; i++)
+                                if (startRuns[i] is Run run)
+                                    deletedText += run.Text;
+                    }
+                }
+                else
+                {
+                    if (startRuns != null && startRuns.Count > startRunIndex)
+                        for (var i = startRunIndex; i < startRuns.Count; i++)
+                            if (startRuns[i] is Run run)
+                                deletedText += run.Text;
 
-        // Get deleted text preview before deletion
-        var deletedText = "";
-        try
-        {
-            var startRuns = startPara.GetChildNodes(NodeType.Run, false);
-            var endRuns = endPara.GetChildNodes(NodeType.Run, false);
+                    for (var p = startParagraphIndex.Value + 1; p < endParagraphIndex.Value; p++)
+                        if (paragraphs[p] is Paragraph para)
+                            deletedText += para.GetText();
+
+                    if (endRuns is { Count: > 0 })
+                    {
+                        var actualEndRunIndex = endRunIndex ?? endRuns.Count - 1;
+                        for (var i = 0; i <= actualEndRunIndex && i < endRuns.Count; i++)
+                            if (endRuns[i] is Run run)
+                                deletedText += run.Text;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Ignore exceptions when extracting deleted text - this is for informational purposes only
+                Console.Error.WriteLine($"[WARN] Error extracting deleted text (informational only): {ex.Message}");
+            }
 
             if (startParagraphIndex.Value == endParagraphIndex.Value)
             {
-                if (startRuns is { Count: > 0 })
+                var runs = startPara.GetChildNodes(NodeType.Run, false);
+                if (runs is { Count: > 0 })
                 {
-                    var actualEndRunIndex = endRunIndex ?? startRuns.Count - 1;
-                    if (startRunIndex >= 0 && startRunIndex < startRuns.Count &&
-                        actualEndRunIndex >= 0 && actualEndRunIndex < startRuns.Count &&
+                    var actualEndRunIndex = endRunIndex ?? runs.Count - 1;
+                    if (startRunIndex >= 0 && startRunIndex < runs.Count &&
+                        actualEndRunIndex >= 0 && actualEndRunIndex < runs.Count &&
                         startRunIndex <= actualEndRunIndex)
-                        for (var i = startRunIndex; i <= actualEndRunIndex; i++)
-                            if (startRuns[i] is Run run)
-                                deletedText += run.Text;
+                        for (var i = actualEndRunIndex; i >= startRunIndex; i--)
+                            runs[i]?.Remove();
                 }
             }
             else
             {
+                var startRuns = startPara.GetChildNodes(NodeType.Run, false);
                 if (startRuns != null && startRuns.Count > startRunIndex)
-                    for (var i = startRunIndex; i < startRuns.Count; i++)
-                        if (startRuns[i] is Run run)
-                            deletedText += run.Text;
+                    for (var i = startRuns.Count - 1; i >= startRunIndex; i--)
+                        startRuns[i]?.Remove();
 
-                for (var p = startParagraphIndex.Value + 1; p < endParagraphIndex.Value; p++)
-                    if (paragraphs[p] is Paragraph para)
-                        deletedText += para.GetText();
+                for (var p = endParagraphIndex.Value - 1; p > startParagraphIndex.Value; p--) paragraphs[p]?.Remove();
 
+                var endRuns = endPara.GetChildNodes(NodeType.Run, false);
                 if (endRuns is { Count: > 0 })
                 {
                     var actualEndRunIndex = endRunIndex ?? endRuns.Count - 1;
-                    for (var i = 0; i <= actualEndRunIndex && i < endRuns.Count; i++)
-                        if (endRuns[i] is Run run)
-                            deletedText += run.Text;
+                    for (var i = actualEndRunIndex; i >= 0; i--)
+                        if (i < endRuns.Count)
+                            endRuns[i]?.Remove();
                 }
             }
-        }
-        catch
-        {
-            // Ignore preview errors
-        }
 
-        // Delete text
-        if (startParagraphIndex.Value == endParagraphIndex.Value)
-        {
-            var runs = startPara.GetChildNodes(NodeType.Run, false);
-            if (runs is { Count: > 0 })
-            {
-                var actualEndRunIndex = endRunIndex ?? runs.Count - 1;
-                if (startRunIndex >= 0 && startRunIndex < runs.Count &&
-                    actualEndRunIndex >= 0 && actualEndRunIndex < runs.Count &&
-                    startRunIndex <= actualEndRunIndex)
-                    for (var i = actualEndRunIndex; i >= startRunIndex; i--)
-                        runs[i]?.Remove();
-            }
-        }
-        else
-        {
-            var startRuns = startPara.GetChildNodes(NodeType.Run, false);
-            if (startRuns != null && startRuns.Count > startRunIndex)
-                for (var i = startRuns.Count - 1; i >= startRunIndex; i--)
-                    startRuns[i]?.Remove();
+            doc.Save(outputPath);
 
-            for (var p = endParagraphIndex.Value - 1; p > startParagraphIndex.Value; p--) paragraphs[p]?.Remove();
+            var preview = deletedText.Length > 50 ? deletedText.Substring(0, 50) + "..." : deletedText;
 
-            var endRuns = endPara.GetChildNodes(NodeType.Run, false);
-            if (endRuns is { Count: > 0 })
-            {
-                var actualEndRunIndex = endRunIndex ?? endRuns.Count - 1;
-                for (var i = actualEndRunIndex; i >= 0; i--)
-                    if (i < endRuns.Count)
-                        endRuns[i]?.Remove();
-            }
-        }
+            var result = "Text deleted successfully\n";
+            if (!string.IsNullOrEmpty(searchText)) result += $"Deleted text: {searchText}\n";
+            result +=
+                $"Range: Paragraph {startParagraphIndex.Value} Run {startRunIndex} to Paragraph {endParagraphIndex.Value} Run {endRunIndex ?? -1}\n";
+            if (!string.IsNullOrEmpty(preview)) result += $"Deleted content preview: {preview}\n";
+            result += $"Output: {outputPath}";
 
-        doc.Save(outputPath);
-
-        var preview = deletedText.Length > 50 ? deletedText.Substring(0, 50) + "..." : deletedText;
-
-        var result = "Text deleted successfully\n";
-        if (!string.IsNullOrEmpty(searchText)) result += $"Deleted text: {searchText}\n";
-        result +=
-            $"Range: Paragraph {startParagraphIndex.Value} Run {startRunIndex} to Paragraph {endParagraphIndex.Value} Run {endRunIndex ?? -1}\n";
-        if (!string.IsNullOrEmpty(preview)) result += $"Deleted content preview: {preview}\n";
-        result += $"Output: {outputPath}";
-
-        return await Task.FromResult(result);
+            return result;
+        });
     }
 
     /// <summary>
@@ -718,32 +712,35 @@ Usage examples:
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <returns>Success message with replacement count</returns>
-    private async Task<string> ReplaceTextAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> ReplaceTextAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var find = ArgumentHelper.GetString(arguments, "find");
-        var replace = ArgumentHelper.GetString(arguments, "replace");
-        var useRegex = ArgumentHelper.GetBool(arguments, "useRegex", false);
-        var replaceInFields = ArgumentHelper.GetBool(arguments, "replaceInFields", false);
+        return Task.Run(() =>
+        {
+            var find = ArgumentHelper.GetString(arguments, "find");
+            var replace = ArgumentHelper.GetString(arguments, "replace");
+            var useRegex = ArgumentHelper.GetBool(arguments, "useRegex", false);
+            var replaceInFields = ArgumentHelper.GetBool(arguments, "replaceInFields", false);
 
-        var doc = new Document(path);
+            var doc = new Document(path);
 
-        var options = new FindReplaceOptions();
+            var options = new FindReplaceOptions();
 
-        // Fields (like hyperlinks) should not be replaced unless explicitly requested
-        if (!replaceInFields) options.ReplacingCallback = new FieldSkipReplacingCallback();
+            // Fields (like hyperlinks) should not be replaced unless explicitly requested
+            if (!replaceInFields) options.ReplacingCallback = new FieldSkipReplacingCallback();
 
-        if (useRegex)
-            doc.Range.Replace(new Regex(find), replace, options);
-        else
-            doc.Range.Replace(find, replace, options);
+            if (useRegex)
+                doc.Range.Replace(new Regex(find), replace, options);
+            else
+                doc.Range.Replace(find, replace, options);
 
-        doc.Save(outputPath);
+            doc.Save(outputPath);
 
-        var result = $"Text replaced in document: {outputPath}";
-        if (!replaceInFields)
-            result +=
-                "\nNote: Fields (such as hyperlinks) were excluded from replacement to preserve their functionality.";
-        return await Task.FromResult(result);
+            var result = $"Text replaced in document: {outputPath}";
+            if (!replaceInFields)
+                result +=
+                    "\nNote: Fields (such as hyperlinks) were excluded from replacement to preserve their functionality.";
+            return result;
+        });
     }
 
     /// <summary>
@@ -752,77 +749,80 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing searchText, optional matchCase, matchWholeWord</param>
     /// <param name="path">Word document file path</param>
     /// <returns>Formatted string with search results</returns>
-    private async Task<string> SearchTextAsync(JsonObject? arguments, string path)
+    private Task<string> SearchTextAsync(JsonObject? arguments, string path)
     {
-        var searchText = ArgumentHelper.GetString(arguments, "searchText");
-        var useRegex = ArgumentHelper.GetBool(arguments, "useRegex", false);
-        var caseSensitive = ArgumentHelper.GetBool(arguments, "caseSensitive", false);
-        var maxResults = ArgumentHelper.GetInt(arguments, "maxResults", 50);
-        var contextLength = ArgumentHelper.GetInt(arguments, "contextLength", 50);
-
-        var doc = new Document(path);
-        var result = new StringBuilder();
-        var matches = new List<(string text, int paragraphIndex, string context)>();
-
-        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
-
-        for (var i = 0; i < paragraphs.Count && matches.Count < maxResults; i++)
+        return Task.Run(() =>
         {
-            if (paragraphs[i] is not Paragraph para) continue;
+            var searchText = ArgumentHelper.GetString(arguments, "searchText");
+            var useRegex = ArgumentHelper.GetBool(arguments, "useRegex", false);
+            var caseSensitive = ArgumentHelper.GetBool(arguments, "caseSensitive", false);
+            var maxResults = ArgumentHelper.GetInt(arguments, "maxResults", 50);
+            var contextLength = ArgumentHelper.GetInt(arguments, "contextLength", 50);
 
-            var paraText = para.GetText();
+            var doc = new Document(path);
+            var result = new StringBuilder();
+            var matches = new List<(string text, int paragraphIndex, string context)>();
 
-            if (useRegex)
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
+
+            for (var i = 0; i < paragraphs.Count && matches.Count < maxResults; i++)
             {
-                var options = caseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase;
-                var regex = new Regex(searchText, options);
-                var regexMatches = regex.Matches(paraText);
+                if (paragraphs[i] is not Paragraph para) continue;
 
-                foreach (Match match in regexMatches)
+                var paraText = para.GetText();
+
+                if (useRegex)
                 {
-                    if (matches.Count >= maxResults) break;
+                    var options = caseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase;
+                    var regex = new Regex(searchText, options);
+                    var regexMatches = regex.Matches(paraText);
 
-                    var context = GetContext(paraText, match.Index, match.Length, contextLength);
-                    matches.Add((match.Value, i, context));
+                    foreach (Match match in regexMatches)
+                    {
+                        if (matches.Count >= maxResults) break;
+
+                        var context = GetContext(paraText, match.Index, match.Length, contextLength);
+                        matches.Add((match.Value, i, context));
+                    }
+                }
+                else
+                {
+                    var comparison = caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+                    var index = 0;
+
+                    while ((index = paraText.IndexOf(searchText, index, comparison)) != -1)
+                    {
+                        if (matches.Count >= maxResults) break;
+
+                        var context = GetContext(paraText, index, searchText.Length, contextLength);
+                        matches.Add((searchText, i, context));
+                        index += searchText.Length;
+                    }
                 }
             }
+
+            result.AppendLine("=== Search Results ===");
+            result.AppendLine($"Search text: {searchText}");
+            result.AppendLine($"Use regex: {(useRegex ? "Yes" : "No")}");
+            result.AppendLine($"Case sensitive: {(caseSensitive ? "Yes" : "No")}");
+            result.AppendLine(
+                $"Found {matches.Count} matches{(matches.Count >= maxResults ? $" (limited to first {maxResults})" : "")}\n");
+
+            if (matches.Count == 0)
+                result.AppendLine("No matching text found");
             else
-            {
-                var comparison = caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
-                var index = 0;
-
-                while ((index = paraText.IndexOf(searchText, index, comparison)) != -1)
+                for (var i = 0; i < matches.Count; i++)
                 {
-                    if (matches.Count >= maxResults) break;
-
-                    var context = GetContext(paraText, index, searchText.Length, contextLength);
-                    matches.Add((searchText, i, context));
-                    index += searchText.Length;
+                    var match = matches[i];
+                    result.AppendLine($"Match #{i + 1}:");
+                    result.AppendLine($"  Location: Paragraph #{match.paragraphIndex}");
+                    result.AppendLine($"  Matched text: {match.text}");
+                    result.AppendLine($"  Context: ...{match.context}...");
+                    result.AppendLine();
                 }
-            }
-        }
 
-        result.AppendLine("=== Search Results ===");
-        result.AppendLine($"Search text: {searchText}");
-        result.AppendLine($"Use regex: {(useRegex ? "Yes" : "No")}");
-        result.AppendLine($"Case sensitive: {(caseSensitive ? "Yes" : "No")}");
-        result.AppendLine(
-            $"Found {matches.Count} matches{(matches.Count >= maxResults ? $" (limited to first {maxResults})" : "")}\n");
-
-        if (matches.Count == 0)
-            result.AppendLine("No matching text found");
-        else
-            for (var i = 0; i < matches.Count; i++)
-            {
-                var match = matches[i];
-                result.AppendLine($"Match #{i + 1}:");
-                result.AppendLine($"  Location: Paragraph #{match.paragraphIndex}");
-                result.AppendLine($"  Matched text: {match.text}");
-                result.AppendLine($"  Context: ...{match.context}...");
-                result.AppendLine();
-            }
-
-        return await Task.FromResult(result.ToString());
+            return result.ToString();
+        });
     }
 
     private string GetContext(string text, int matchIndex, int matchLength, int contextLength)
@@ -852,169 +852,164 @@ Usage examples:
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <returns>Success message with format count</returns>
-    private async Task<string> FormatTextAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> FormatTextAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex");
-        var runIndex = ArgumentHelper.GetIntNullable(arguments, "runIndex");
-        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
-        var fontName = ArgumentHelper.GetStringNullable(arguments, "fontName");
-        var fontNameAscii = ArgumentHelper.GetStringNullable(arguments, "fontNameAscii");
-        var fontNameFarEast = ArgumentHelper.GetStringNullable(arguments, "fontNameFarEast");
-        var fontSize = ArgumentHelper.GetDoubleNullable(arguments, "fontSize");
-        var bold = ArgumentHelper.GetBoolNullable(arguments, "bold");
-        var italic = ArgumentHelper.GetBoolNullable(arguments, "italic");
-        var underline = ArgumentHelper.GetStringNullable(arguments, "underline");
-        var color = ArgumentHelper.GetStringNullable(arguments, "color");
-        var strikethrough = ArgumentHelper.GetBoolNullable(arguments, "strikethrough");
-        var superscript = ArgumentHelper.GetBoolNullable(arguments, "superscript");
-        var subscript = ArgumentHelper.GetBoolNullable(arguments, "subscript");
-
-        var doc = new Document(path);
-
-        // Use section-based paragraph indexing to match GetRunFormat behavior
-        // This ensures consistent indexing between format and get operations
-        if (sectionIndex < 0 || sectionIndex >= doc.Sections.Count)
-            throw new ArgumentException(
-                $"sectionIndex {sectionIndex} is out of range (document has {doc.Sections.Count} sections)");
-
-        var section = doc.Sections[sectionIndex];
-        var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
-
-        if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
-            throw new ArgumentException(
-                $"Paragraph index {paragraphIndex} is out of range (section {sectionIndex} body has {paragraphs.Count} paragraphs)");
-
-        var para = paragraphs[paragraphIndex];
-
-        var runs = para.GetChildNodes(NodeType.Run, false);
-        if (runs == null || runs.Count == 0)
+        return Task.Run(() =>
         {
-            var newRun = new Run(doc, "");
-            para.AppendChild(newRun);
-            runs = para.GetChildNodes(NodeType.Run, false);
-            if (runs == null || runs.Count == 0)
-                throw new InvalidOperationException(
-                    $"Paragraph #{paragraphIndex} has no Run nodes and cannot create new Run node");
-        }
+            var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex");
+            var runIndex = ArgumentHelper.GetIntNullable(arguments, "runIndex");
+            var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
+            var fontName = ArgumentHelper.GetStringNullable(arguments, "fontName");
+            var fontNameAscii = ArgumentHelper.GetStringNullable(arguments, "fontNameAscii");
+            var fontNameFarEast = ArgumentHelper.GetStringNullable(arguments, "fontNameFarEast");
+            var fontSize = ArgumentHelper.GetDoubleNullable(arguments, "fontSize");
+            var bold = ArgumentHelper.GetBoolNullable(arguments, "bold");
+            var italic = ArgumentHelper.GetBoolNullable(arguments, "italic");
+            var underline = ArgumentHelper.GetStringNullable(arguments, "underline");
+            var color = ArgumentHelper.GetStringNullable(arguments, "color");
+            var strikethrough = ArgumentHelper.GetBoolNullable(arguments, "strikethrough");
+            var superscript = ArgumentHelper.GetBoolNullable(arguments, "superscript");
+            var subscript = ArgumentHelper.GetBoolNullable(arguments, "subscript");
 
-        var changes = new List<string>();
-        var runsToFormat = new List<Run>();
+            var doc = new Document(path);
 
-        if (runIndex.HasValue)
-        {
-            if (runIndex.Value < 0 || runIndex.Value >= runs.Count)
+            // Use section-based paragraph indexing to match GetRunFormat behavior
+            if (sectionIndex < 0 || sectionIndex >= doc.Sections.Count)
                 throw new ArgumentException(
-                    $"Run index {runIndex.Value} is out of range (paragraph has {runs.Count} Runs)");
-            if (runs[runIndex.Value] is Run run)
-                runsToFormat.Add(run);
-        }
-        else
-        {
-            foreach (var node in runs)
-                if (node is Run run)
+                    $"sectionIndex {sectionIndex} is out of range (document has {doc.Sections.Count} sections)");
+
+            var section = doc.Sections[sectionIndex];
+            var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
+
+            if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
+                throw new ArgumentException(
+                    $"Paragraph index {paragraphIndex} is out of range (section {sectionIndex} body has {paragraphs.Count} paragraphs)");
+
+            var para = paragraphs[paragraphIndex];
+
+            var runs = para.GetChildNodes(NodeType.Run, false);
+            if (runs == null || runs.Count == 0)
+            {
+                var newRun = new Run(doc, "");
+                para.AppendChild(newRun);
+                runs = para.GetChildNodes(NodeType.Run, false);
+                if (runs == null || runs.Count == 0)
+                    throw new InvalidOperationException(
+                        $"Paragraph #{paragraphIndex} has no Run nodes and cannot create new Run node");
+            }
+
+            var changes = new List<string>();
+            var runsToFormat = new List<Run>();
+
+            if (runIndex.HasValue)
+            {
+                if (runIndex.Value < 0 || runIndex.Value >= runs.Count)
+                    throw new ArgumentException(
+                        $"Run index {runIndex.Value} is out of range (paragraph has {runs.Count} Runs)");
+                if (runs[runIndex.Value] is Run run)
                     runsToFormat.Add(run);
-        }
-
-        foreach (var run in runsToFormat)
-        {
-            // Clear conflicting formats before applying new ones to prevent accumulation
-            // This ensures formats are applied correctly without interference from previous formats
-
-            // Clear superscript/subscript if either is being set (they are mutually exclusive)
-            if (superscript.HasValue || subscript.HasValue)
+            }
+            else
             {
-                if (superscript.HasValue && superscript.Value)
-                {
-                    run.Font.Subscript = false; // Clear subscript when setting superscript
-                }
-                else if (subscript.HasValue && subscript.Value)
-                {
-                    run.Font.Superscript = false; // Clear superscript when setting subscript
-                }
-                else
-                {
-                    // If setting to false, clear both
-                    if (superscript.HasValue && !superscript.Value) run.Font.Superscript = false;
-                    if (subscript.HasValue && !subscript.Value) run.Font.Subscript = false;
-                }
+                foreach (var node in runs)
+                    if (node is Run run)
+                        runsToFormat.Add(run);
             }
 
-            // Clear underline if it's being set (to avoid conflicts)
-            if (!string.IsNullOrEmpty(underline))
+            foreach (var run in runsToFormat)
             {
-                // Will be set below, but ensure no other underline styles interfere
+                // Clear superscript/subscript if either is being set (they are mutually exclusive)
+                if (superscript.HasValue || subscript.HasValue)
+                {
+                    if (superscript.HasValue && superscript.Value)
+                    {
+                        run.Font.Subscript = false; // Clear subscript when setting superscript
+                    }
+                    else if (subscript.HasValue && subscript.Value)
+                    {
+                        run.Font.Superscript = false; // Clear superscript when setting subscript
+                    }
+                    else
+                    {
+                        // If setting to false, clear both
+                        if (superscript.HasValue && !superscript.Value) run.Font.Superscript = false;
+                        if (subscript.HasValue && !subscript.Value) run.Font.Subscript = false;
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(underline))
+                {
+                }
+
+                FontHelper.Word.ApplyFontSettings(
+                    run,
+                    fontName,
+                    fontNameAscii,
+                    fontNameFarEast,
+                    fontSize,
+                    bold,
+                    italic,
+                    underline,
+                    color,
+                    strikethrough,
+                    superscript,
+                    subscript
+                );
+
+                if (!string.IsNullOrEmpty(fontNameAscii))
+                    changes.Add($"Font (ASCII): {fontNameAscii}");
+
+                if (!string.IsNullOrEmpty(fontNameFarEast))
+                    changes.Add($"Font (Far East): {fontNameFarEast}");
+
+                if (!string.IsNullOrEmpty(fontName))
+                    if (string.IsNullOrEmpty(fontNameAscii) && string.IsNullOrEmpty(fontNameFarEast))
+                        changes.Add($"Font: {fontName}");
+
+                if (fontSize.HasValue)
+                    changes.Add($"Font size: {fontSize.Value} points");
+
+                if (bold.HasValue)
+                    changes.Add($"Bold: {(bold.Value ? "Yes" : "No")}");
+
+                if (italic.HasValue)
+                    changes.Add($"Italic: {(italic.Value ? "Yes" : "No")}");
+
+                if (!string.IsNullOrEmpty(underline))
+                    changes.Add($"Underline: {underline}");
+
+                if (!string.IsNullOrEmpty(color))
+                {
+                    var colorValue = color.TrimStart('#');
+                    changes.Add($"Color: {(colorValue.Length == 6 ? "#" : "")}{colorValue}");
+                }
+
+                if (strikethrough.HasValue)
+                    changes.Add($"Strikethrough: {(strikethrough.Value ? "Yes" : "No")}");
+
+                if (superscript.HasValue)
+                    changes.Add($"Superscript: {(superscript.Value ? "Yes" : "No")}");
+
+                if (subscript.HasValue)
+                    changes.Add($"Subscript: {(subscript.Value ? "Yes" : "No")}");
             }
 
-            // Apply font settings using FontHelper
-            FontHelper.Word.ApplyFontSettings(
-                run,
-                fontName,
-                fontNameAscii,
-                fontNameFarEast,
-                fontSize,
-                bold,
-                italic,
-                underline,
-                color,
-                strikethrough,
-                superscript,
-                subscript
-            );
+            doc.Save(outputPath);
 
-            // Record changes for user feedback
-            if (!string.IsNullOrEmpty(fontNameAscii))
-                changes.Add($"Font (ASCII): {fontNameAscii}");
+            var result = "Run-level formatting set successfully\n";
+            result += $"Paragraph index: {paragraphIndex}\n";
+            if (runIndex.HasValue)
+                result += $"Run index: {runIndex.Value}\n";
+            else
+                result += $"Formatted Runs: {runsToFormat.Count}\n";
+            if (changes.Count > 0)
+                result += $"Changes: {string.Join(", ", changes.Distinct())}\n";
+            else
+                result += "No change parameters provided\n";
+            result += $"Output: {outputPath}";
 
-            if (!string.IsNullOrEmpty(fontNameFarEast))
-                changes.Add($"Font (Far East): {fontNameFarEast}");
-
-            if (!string.IsNullOrEmpty(fontName))
-                if (string.IsNullOrEmpty(fontNameAscii) && string.IsNullOrEmpty(fontNameFarEast))
-                    changes.Add($"Font: {fontName}");
-
-            if (fontSize.HasValue)
-                changes.Add($"Font size: {fontSize.Value} points");
-
-            if (bold.HasValue)
-                changes.Add($"Bold: {(bold.Value ? "Yes" : "No")}");
-
-            if (italic.HasValue)
-                changes.Add($"Italic: {(italic.Value ? "Yes" : "No")}");
-
-            if (!string.IsNullOrEmpty(underline))
-                changes.Add($"Underline: {underline}");
-
-            if (!string.IsNullOrEmpty(color))
-            {
-                var colorValue = color.TrimStart('#');
-                changes.Add($"Color: {(colorValue.Length == 6 ? "#" : "")}{colorValue}");
-            }
-
-            if (strikethrough.HasValue)
-                changes.Add($"Strikethrough: {(strikethrough.Value ? "Yes" : "No")}");
-
-            if (superscript.HasValue)
-                changes.Add($"Superscript: {(superscript.Value ? "Yes" : "No")}");
-
-            if (subscript.HasValue)
-                changes.Add($"Subscript: {(subscript.Value ? "Yes" : "No")}");
-        }
-
-        doc.Save(outputPath);
-
-        var result = "Run-level formatting set successfully\n";
-        result += $"Paragraph index: {paragraphIndex}\n";
-        if (runIndex.HasValue)
-            result += $"Run index: {runIndex.Value}\n";
-        else
-            result += $"Formatted Runs: {runsToFormat.Count}\n";
-        if (changes.Count > 0)
-            result += $"Changes: {string.Join(", ", changes.Distinct())}\n";
-        else
-            result += "No change parameters provided\n";
-        result += $"Output: {outputPath}";
-
-        return await Task.FromResult(result);
+            return result;
+        });
     }
 
     /// <summary>
@@ -1024,58 +1019,70 @@ Usage examples:
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> InsertTextAtPositionAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> InsertTextAtPositionAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var paragraphIndex = ArgumentHelper.GetInt(arguments, "insertParagraphIndex");
-        var charIndex = ArgumentHelper.GetInt(arguments, "charIndex");
-        var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
-        var text = ArgumentHelper.GetString(arguments, "text");
-        _ = ArgumentHelper.GetBool(arguments, "insertBefore", false);
-
-        var doc = new Document(path);
-        var sectionIdx = sectionIndex ?? 0;
-        if (sectionIdx < 0 || sectionIdx >= doc.Sections.Count)
-            throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
-
-        var section = doc.Sections[sectionIdx];
-        var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
-
-        if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
-            throw new ArgumentException($"paragraphIndex must be between 0 and {paragraphs.Count - 1}");
-
-        var para = paragraphs[paragraphIndex];
-        var runs = para.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
-        var totalChars = 0;
-        var targetRunIndex = -1;
-        var targetRunCharIndex = 0;
-
-        for (var i = 0; i < runs.Count; i++)
+        return Task.Run(() =>
         {
-            var runLength = runs[i].Text.Length;
-            if (totalChars + runLength >= charIndex)
+            var paragraphIndex = ArgumentHelper.GetInt(arguments, "insertParagraphIndex");
+            var charIndex = ArgumentHelper.GetInt(arguments, "charIndex");
+            var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
+            var text = ArgumentHelper.GetString(arguments, "text");
+            var insertBefore = ArgumentHelper.GetBool(arguments, "insertBefore", false);
+
+            var doc = new Document(path);
+            var sectionIdx = sectionIndex ?? 0;
+            if (sectionIdx < 0 || sectionIdx >= doc.Sections.Count)
+                throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
+
+            var section = doc.Sections[sectionIdx];
+            var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
+
+            if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
+                throw new ArgumentException($"paragraphIndex must be between 0 and {paragraphs.Count - 1}");
+
+            var para = paragraphs[paragraphIndex];
+            var runs = para.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+            var totalChars = 0;
+            var targetRunIndex = -1;
+            var targetRunCharIndex = 0;
+
+            for (var i = 0; i < runs.Count; i++)
             {
-                targetRunIndex = i;
-                targetRunCharIndex = charIndex - totalChars;
-                break;
+                var runLength = runs[i].Text.Length;
+                if (totalChars + runLength >= charIndex)
+                {
+                    targetRunIndex = i;
+                    targetRunCharIndex = charIndex - totalChars;
+                    break;
+                }
+
+                totalChars += runLength;
             }
 
-            totalChars += runLength;
-        }
+            if (targetRunIndex == -1)
+            {
+                var builder = new DocumentBuilder(doc);
+                builder.MoveTo(para);
+                if (insertBefore)
+                {
+                    builder.Write(text);
+                }
+                else
+                {
+                    builder.MoveTo(para);
+                    builder.MoveToParagraph(paragraphIndex, para.GetText().Length);
+                    builder.Write(text);
+                }
+            }
+            else
+            {
+                var targetRun = runs[targetRunIndex];
+                targetRun.Text = targetRun.Text.Insert(targetRunCharIndex, text);
+            }
 
-        if (targetRunIndex == -1)
-        {
-            var builder = new DocumentBuilder(doc);
-            builder.MoveTo(para);
-            builder.Write(text);
-        }
-        else
-        {
-            var targetRun = runs[targetRunIndex];
-            targetRun.Text = targetRun.Text.Insert(targetRunCharIndex, text);
-        }
-
-        doc.Save(outputPath);
-        return await Task.FromResult($"Text inserted at position: {outputPath}");
+            doc.Save(outputPath);
+            return $"Text inserted at position: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -1085,96 +1092,99 @@ Usage examples:
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> DeleteTextRangeAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> DeleteTextRangeAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var startParagraphIndex = ArgumentHelper.GetInt(arguments, "startParagraphIndex");
-        var startCharIndex = ArgumentHelper.GetInt(arguments, "startCharIndex");
-        var endParagraphIndex = ArgumentHelper.GetInt(arguments, "endParagraphIndex");
-        var endCharIndex = ArgumentHelper.GetInt(arguments, "endCharIndex");
-        var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
-
-        var doc = new Document(path);
-        var sectionIdx = sectionIndex ?? 0;
-        if (sectionIdx < 0 || sectionIdx >= doc.Sections.Count)
-            throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
-
-        var section = doc.Sections[sectionIdx];
-        var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
-
-        if (startParagraphIndex < 0 || startParagraphIndex >= paragraphs.Count ||
-            endParagraphIndex < 0 || endParagraphIndex >= paragraphs.Count)
-            throw new ArgumentException("Paragraph indices out of range");
-
-        var startPara = paragraphs[startParagraphIndex];
-        var endPara = paragraphs[endParagraphIndex];
-
-        if (startParagraphIndex == endParagraphIndex)
+        return Task.Run(() =>
         {
-            var runs = startPara.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
-            var totalChars = 0;
-            int startRunIndex = -1, endRunIndex = -1;
-            int startRunCharIndex = 0, endRunCharIndex = 0;
+            var startParagraphIndex = ArgumentHelper.GetInt(arguments, "startParagraphIndex");
+            var startCharIndex = ArgumentHelper.GetInt(arguments, "startCharIndex");
+            var endParagraphIndex = ArgumentHelper.GetInt(arguments, "endParagraphIndex");
+            var endCharIndex = ArgumentHelper.GetInt(arguments, "endCharIndex");
+            var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
 
-            for (var i = 0; i < runs.Count; i++)
+            var doc = new Document(path);
+            var sectionIdx = sectionIndex ?? 0;
+            if (sectionIdx < 0 || sectionIdx >= doc.Sections.Count)
+                throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
+
+            var section = doc.Sections[sectionIdx];
+            var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
+
+            if (startParagraphIndex < 0 || startParagraphIndex >= paragraphs.Count ||
+                endParagraphIndex < 0 || endParagraphIndex >= paragraphs.Count)
+                throw new ArgumentException("Paragraph indices out of range");
+
+            var startPara = paragraphs[startParagraphIndex];
+            var endPara = paragraphs[endParagraphIndex];
+
+            if (startParagraphIndex == endParagraphIndex)
             {
-                var runLength = runs[i].Text.Length;
-                if (startRunIndex == -1 && totalChars + runLength > startCharIndex)
+                var runs = startPara.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+                var totalChars = 0;
+                int startRunIndex = -1, endRunIndex = -1;
+                int startRunCharIndex = 0, endRunCharIndex = 0;
+
+                for (var i = 0; i < runs.Count; i++)
                 {
-                    startRunIndex = i;
-                    startRunCharIndex = startCharIndex - totalChars;
-                }
-
-                if (totalChars + runLength > endCharIndex)
-                {
-                    endRunIndex = i;
-                    endRunCharIndex = endCharIndex - totalChars;
-                    break;
-                }
-
-                totalChars += runLength;
-            }
-
-            if (startRunIndex >= 0 && endRunIndex >= 0)
-            {
-                if (startRunIndex == endRunIndex)
-                {
-                    var run = runs[startRunIndex];
-                    run.Text = run.Text.Remove(startRunCharIndex, endRunCharIndex - startRunCharIndex);
-                }
-                else
-                {
-                    var startRun = runs[startRunIndex];
-                    startRun.Text = startRun.Text.Substring(0, startRunCharIndex);
-
-                    for (var i = startRunIndex + 1; i < endRunIndex; i++) runs[i].Remove();
-
-                    if (endRunIndex < runs.Count)
+                    var runLength = runs[i].Text.Length;
+                    if (startRunIndex == -1 && totalChars + runLength > startCharIndex)
                     {
-                        var endRun = runs[endRunIndex];
-                        endRun.Text = endRun.Text.Substring(endRunCharIndex);
+                        startRunIndex = i;
+                        startRunCharIndex = startCharIndex - totalChars;
+                    }
+
+                    if (totalChars + runLength > endCharIndex)
+                    {
+                        endRunIndex = i;
+                        endRunCharIndex = endCharIndex - totalChars;
+                        break;
+                    }
+
+                    totalChars += runLength;
+                }
+
+                if (startRunIndex >= 0 && endRunIndex >= 0)
+                {
+                    if (startRunIndex == endRunIndex)
+                    {
+                        var run = runs[startRunIndex];
+                        run.Text = run.Text.Remove(startRunCharIndex, endRunCharIndex - startRunCharIndex);
+                    }
+                    else
+                    {
+                        var startRun = runs[startRunIndex];
+                        startRun.Text = startRun.Text.Substring(0, startRunCharIndex);
+
+                        for (var i = startRunIndex + 1; i < endRunIndex; i++) runs[i].Remove();
+
+                        if (endRunIndex < runs.Count)
+                        {
+                            var endRun = runs[endRunIndex];
+                            endRun.Text = endRun.Text.Substring(endRunCharIndex);
+                        }
                     }
                 }
             }
-        }
-        else
-        {
-            var startParaRuns = startPara.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
-            var startRun = startParaRuns.LastOrDefault();
-            if (startRun != null && startRun.Text.Length > startCharIndex)
-                startRun.Text = startRun.Text.Substring(0, startCharIndex);
-
-            for (var i = startParagraphIndex + 1; i < endParagraphIndex; i++) paragraphs[i].Remove();
-
-            var endParaRuns = endPara.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
-            if (endParaRuns.Count > 0 && endCharIndex < endParaRuns[0].Text.Length)
+            else
             {
-                endParaRuns[0].Text = endParaRuns[0].Text.Substring(endCharIndex);
-                for (var i = 1; i < endParaRuns.Count; i++) endParaRuns[i].Remove();
-            }
-        }
+                var startParaRuns = startPara.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+                var startRun = startParaRuns.LastOrDefault();
+                if (startRun != null && startRun.Text.Length > startCharIndex)
+                    startRun.Text = startRun.Text.Substring(0, startCharIndex);
 
-        doc.Save(outputPath);
-        return await Task.FromResult($"Text range deleted: {outputPath}");
+                for (var i = startParagraphIndex + 1; i < endParagraphIndex; i++) paragraphs[i].Remove();
+
+                var endParaRuns = endPara.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+                if (endParaRuns.Count > 0 && endCharIndex < endParaRuns[0].Text.Length)
+                {
+                    endParaRuns[0].Text = endParaRuns[0].Text.Substring(endCharIndex);
+                    for (var i = 1; i < endParaRuns.Count; i++) endParaRuns[i].Remove();
+                }
+            }
+
+            doc.Save(outputPath);
+            return $"Text range deleted: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -1184,224 +1194,294 @@ Usage examples:
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> AddTextWithStyleAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> AddTextWithStyleAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var text = ArgumentHelper.GetString(arguments, "text");
-        var styleName = ArgumentHelper.GetStringNullable(arguments, "styleName");
-        var fontName = ArgumentHelper.GetStringNullable(arguments, "fontName");
-        var fontNameAscii = ArgumentHelper.GetStringNullable(arguments, "fontNameAscii");
-        var fontNameFarEast = ArgumentHelper.GetStringNullable(arguments, "fontNameFarEast");
-        var fontSize = ArgumentHelper.GetDoubleNullable(arguments, "fontSize");
-        var bold = ArgumentHelper.GetBoolNullable(arguments, "bold");
-        var italic = ArgumentHelper.GetBoolNullable(arguments, "italic");
-        var underline = ArgumentHelper.GetBoolNullable(arguments, "underline");
-        var color = ArgumentHelper.GetStringNullable(arguments, "color");
-        var alignment = ArgumentHelper.GetStringNullable(arguments, "alignment");
-        var indentLevel = ArgumentHelper.GetIntNullable(arguments, "indentLevel");
-        var leftIndent = ArgumentHelper.GetDoubleNullable(arguments, "leftIndent");
-        var firstLineIndent = ArgumentHelper.GetDoubleNullable(arguments, "firstLineIndent");
-        var tabStops = ArgumentHelper.GetArray(arguments, "tabStops", false);
-        var paragraphIndex = ArgumentHelper.GetIntNullable(arguments, "paragraphIndexForAdd");
-
-        var doc = new Document(path);
-        var builder = new DocumentBuilder(doc);
-
-        Paragraph? targetPara = null;
-
-        if (paragraphIndex.HasValue)
+        return Task.Run(() =>
         {
-            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
-            if (paragraphIndex.Value == -1)
+            var text = ArgumentHelper.GetString(arguments, "text");
+            var styleName = ArgumentHelper.GetStringNullable(arguments, "styleName");
+            var fontName = ArgumentHelper.GetStringNullable(arguments, "fontName");
+            var fontNameAscii = ArgumentHelper.GetStringNullable(arguments, "fontNameAscii");
+            var fontNameFarEast = ArgumentHelper.GetStringNullable(arguments, "fontNameFarEast");
+            var fontSize = ArgumentHelper.GetDoubleNullable(arguments, "fontSize");
+            var bold = ArgumentHelper.GetBoolNullable(arguments, "bold");
+            var italic = ArgumentHelper.GetBoolNullable(arguments, "italic");
+            var underline = ArgumentHelper.GetBoolNullable(arguments, "underline");
+            var color = ArgumentHelper.GetStringNullable(arguments, "color");
+            var alignment = ArgumentHelper.GetStringNullable(arguments, "alignment");
+            var indentLevel = ArgumentHelper.GetIntNullable(arguments, "indentLevel");
+            var leftIndent = ArgumentHelper.GetDoubleNullable(arguments, "leftIndent");
+            var firstLineIndent = ArgumentHelper.GetDoubleNullable(arguments, "firstLineIndent");
+            var tabStops = ArgumentHelper.GetArray(arguments, "tabStops", false);
+            var paragraphIndex = ArgumentHelper.GetIntNullable(arguments, "paragraphIndexForAdd");
+
+            var doc = new Document(path);
+            var builder = new DocumentBuilder(doc);
+
+            Paragraph? targetPara = null;
+
+            if (paragraphIndex.HasValue)
             {
-                if (paragraphs.Count > 0)
-                    if (paragraphs[0] is Paragraph firstPara)
+                var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
+                if (paragraphIndex.Value == -1)
+                {
+                    if (paragraphs.Count > 0)
+                        if (paragraphs[0] is Paragraph firstPara)
+                        {
+                            targetPara = firstPara;
+                            builder.MoveTo(targetPara);
+                        }
+                }
+                else if (paragraphIndex.Value >= 0 && paragraphIndex.Value < paragraphs.Count)
+                {
+                    if (paragraphs[paragraphIndex.Value] is Paragraph targetParagraph)
                     {
-                        targetPara = firstPara;
+                        targetPara = targetParagraph;
                         builder.MoveTo(targetPara);
                     }
-            }
-            else if (paragraphIndex.Value >= 0 && paragraphIndex.Value < paragraphs.Count)
-            {
-                if (paragraphs[paragraphIndex.Value] is Paragraph targetParagraph)
-                {
-                    targetPara = targetParagraph;
-                    builder.MoveTo(targetPara);
+                    else
+                    {
+                        throw new InvalidOperationException(
+                            $"Unable to find paragraph at index {paragraphIndex.Value}");
+                    }
                 }
                 else
                 {
-                    throw new InvalidOperationException($"Unable to find paragraph at index {paragraphIndex.Value}");
-                }
-            }
-            else
-            {
-                throw new ArgumentException(
-                    $"Paragraph index {paragraphIndex.Value} is out of range (document has {paragraphs.Count} paragraphs)");
-            }
-        }
-        else
-        {
-            builder.MoveToDocumentEnd();
-        }
-
-        var para = new Paragraph(doc);
-        var run = new Run(doc, text);
-
-        var hasCustomParams = !string.IsNullOrEmpty(fontName) || !string.IsNullOrEmpty(fontNameAscii) ||
-                              !string.IsNullOrEmpty(fontNameFarEast) || fontSize.HasValue ||
-                              bold.HasValue || italic.HasValue || underline.HasValue ||
-                              !string.IsNullOrEmpty(color) || !string.IsNullOrEmpty(alignment);
-
-        var warningMessage = "";
-        if (!string.IsNullOrEmpty(styleName) && hasCustomParams)
-            warningMessage =
-                "\n⚠️ Note: When using both styleName and custom parameters, custom parameters will override corresponding properties in the style.\n" +
-                "This allows you to customize specific properties while applying a style.\n" +
-                "If you need a fully custom style, it is recommended to use word_create_style to create a custom style.\n" +
-                "Example: word_create_style(styleName='Custom Heading', baseStyle='Heading 1', color='000000')";
-
-        if (!string.IsNullOrEmpty(styleName))
-            try
-            {
-                var style = doc.Styles[styleName];
-                if (style != null)
-                    para.ParagraphFormat.StyleName = styleName;
-                else
                     throw new ArgumentException(
-                        $"Style '{styleName}' not found. Use word_get_styles tool to view available styles");
+                        $"Paragraph index {paragraphIndex.Value} is out of range (document has {paragraphs.Count} paragraphs)");
+                }
             }
-            catch (Exception ex)
+            else
             {
-                throw new InvalidOperationException(
-                    $"Unable to apply style '{styleName}': {ex.Message}. Use word_get_styles tool to view available styles",
-                    ex);
+                builder.MoveToDocumentEnd();
             }
 
-        // Apply font settings using FontHelper
-        var underlineStr = underline.HasValue ? underline.Value ? "single" : "none" : null;
-        FontHelper.Word.ApplyFontSettings(
-            run,
-            fontName,
-            fontNameAscii,
-            fontNameFarEast,
-            fontSize,
-            bold,
-            italic,
-            underlineStr,
-            color
-        );
+            var para = new Paragraph(doc);
+            var run = new Run(doc, text);
 
-        if (!string.IsNullOrEmpty(alignment))
-            para.ParagraphFormat.Alignment = alignment.ToLower() switch
-            {
-                "left" => ParagraphAlignment.Left,
-                "right" => ParagraphAlignment.Right,
-                "center" => ParagraphAlignment.Center,
-                "justify" => ParagraphAlignment.Justify,
-                _ => ParagraphAlignment.Left
-            };
+            var hasCustomParams = !string.IsNullOrEmpty(fontName) || !string.IsNullOrEmpty(fontNameAscii) ||
+                                  !string.IsNullOrEmpty(fontNameFarEast) || fontSize.HasValue ||
+                                  bold.HasValue || italic.HasValue || underline.HasValue ||
+                                  !string.IsNullOrEmpty(color) || !string.IsNullOrEmpty(alignment);
 
-        if (indentLevel.HasValue)
-            para.ParagraphFormat.LeftIndent = indentLevel.Value * 36;
-        else if (leftIndent.HasValue) para.ParagraphFormat.LeftIndent = leftIndent.Value;
+            var warningMessage = "";
+            if (!string.IsNullOrEmpty(styleName) && hasCustomParams)
+                warningMessage =
+                    "\n⚠️ Note: When using both styleName and custom parameters, custom parameters will override corresponding properties in the style.\n" +
+                    "This allows you to customize specific properties while applying a style.\n" +
+                    "If you need a fully custom style, it is recommended to use word_create_style to create a custom style.\n" +
+                    "Example: word_create_style(styleName='Custom Heading', baseStyle='Heading 1', color='000000')";
 
-        if (firstLineIndent.HasValue) para.ParagraphFormat.FirstLineIndent = firstLineIndent.Value;
-
-        if (tabStops is { Count: > 0 })
-        {
-            para.ParagraphFormat.TabStops.Clear();
-
-            foreach (var tabStopJson in tabStops)
-            {
-                var position = tabStopJson?["position"]?.GetValue<double>() ?? 0;
-                var alignmentStr = tabStopJson?["alignment"]?.GetValue<string>() ?? "Left";
-                var leaderStr = tabStopJson?["leader"]?.GetValue<string>() ?? "None";
-
-                var tabAlignment = alignmentStr switch
+            if (!string.IsNullOrEmpty(styleName))
+                try
                 {
-                    "Center" => TabAlignment.Center,
-                    "Right" => TabAlignment.Right,
-                    "Decimal" => TabAlignment.Decimal,
-                    "Bar" => TabAlignment.Bar,
-                    _ => TabAlignment.Left
+                    var style = doc.Styles[styleName];
+                    if (style != null)
+                        para.ParagraphFormat.StyleName = styleName;
+                    else
+                        throw new ArgumentException(
+                            $"Style '{styleName}' not found. Use word_get_styles tool to view available styles");
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException(
+                        $"Unable to apply style '{styleName}': {ex.Message}. Use word_get_styles tool to view available styles",
+                        ex);
+                }
+
+            var underlineStr = underline.HasValue ? underline.Value ? "single" : "none" : null;
+            FontHelper.Word.ApplyFontSettings(
+                run,
+                fontName,
+                fontNameAscii,
+                fontNameFarEast,
+                fontSize,
+                bold,
+                italic,
+                underlineStr,
+                color
+            );
+
+            if (!string.IsNullOrEmpty(alignment))
+                para.ParagraphFormat.Alignment = alignment.ToLower() switch
+                {
+                    "left" => ParagraphAlignment.Left,
+                    "right" => ParagraphAlignment.Right,
+                    "center" => ParagraphAlignment.Center,
+                    "justify" => ParagraphAlignment.Justify,
+                    _ => ParagraphAlignment.Left
                 };
 
-                var tabLeader = leaderStr switch
+            if (indentLevel.HasValue)
+                para.ParagraphFormat.LeftIndent = indentLevel.Value * 36;
+            else if (leftIndent.HasValue) para.ParagraphFormat.LeftIndent = leftIndent.Value;
+
+            if (firstLineIndent.HasValue) para.ParagraphFormat.FirstLineIndent = firstLineIndent.Value;
+
+            if (tabStops is { Count: > 0 })
+            {
+                para.ParagraphFormat.TabStops.Clear();
+
+                foreach (var tabStopJson in tabStops)
                 {
-                    "Dots" => TabLeader.Dots,
-                    "Dashes" => TabLeader.Dashes,
-                    "Line" => TabLeader.Line,
-                    "Heavy" => TabLeader.Heavy,
-                    "MiddleDot" => TabLeader.MiddleDot,
-                    _ => TabLeader.None
-                };
+                    var position = tabStopJson?["position"]?.GetValue<double>() ?? 0;
+                    var alignmentStr = tabStopJson?["alignment"]?.GetValue<string>() ?? "Left";
+                    var leaderStr = tabStopJson?["leader"]?.GetValue<string>() ?? "None";
 
-                para.ParagraphFormat.TabStops.Add(new TabStop(position, tabAlignment, tabLeader));
+                    var tabAlignment = alignmentStr switch
+                    {
+                        "Center" => TabAlignment.Center,
+                        "Right" => TabAlignment.Right,
+                        "Decimal" => TabAlignment.Decimal,
+                        "Bar" => TabAlignment.Bar,
+                        _ => TabAlignment.Left
+                    };
+
+                    var tabLeader = leaderStr switch
+                    {
+                        "Dots" => TabLeader.Dots,
+                        "Dashes" => TabLeader.Dashes,
+                        "Line" => TabLeader.Line,
+                        "Heavy" => TabLeader.Heavy,
+                        "MiddleDot" => TabLeader.MiddleDot,
+                        _ => TabLeader.None
+                    };
+
+                    para.ParagraphFormat.TabStops.Add(new TabStop(position, tabAlignment, tabLeader));
+                }
             }
-        }
 
-        para.AppendChild(run);
+            para.AppendChild(run);
 
-        if (paragraphIndex.HasValue && targetPara != null)
-        {
-            if (paragraphIndex.Value == -1)
-                targetPara.ParentNode.InsertBefore(para, targetPara);
+            if (paragraphIndex.HasValue && targetPara != null)
+            {
+                if (paragraphIndex.Value == -1)
+                    targetPara.ParentNode.InsertBefore(para, targetPara);
+                else
+                    targetPara.ParentNode.InsertAfter(para, targetPara);
+            }
             else
-                targetPara.ParentNode.InsertAfter(para, targetPara);
-        }
-        else
-        {
-            builder.CurrentParagraph.ParentNode.AppendChild(para);
-        }
+            {
+                builder.CurrentParagraph.ParentNode.AppendChild(para);
+            }
 
-        doc.Save(outputPath);
+            // Fix empty paragraphs created after insertion to use Normal style
+            // Word automatically creates empty paragraphs after insertion, and they inherit the previous paragraph's style
+            // We need to ensure these empty paragraphs use Normal style instead
+            // Check all empty paragraphs in the parent node, not just the next sibling
+            var parentNode = para.ParentNode;
+            if (parentNode != null)
+            {
+                // Get all paragraphs in the parent node
+                var allParagraphs = parentNode.GetChildNodes(NodeType.Paragraph, false).Cast<Paragraph>().ToList();
 
-        var result = "Text added successfully\n";
-        if (paragraphIndex.HasValue)
-        {
-            if (paragraphIndex.Value == -1)
-                result += "Insert position: beginning of document\n";
+                // Find the index of the inserted paragraph
+                var insertedIndex = allParagraphs.IndexOf(para);
+
+                // Check paragraphs after the inserted one
+                for (var i = insertedIndex + 1; i < allParagraphs.Count; i++)
+                {
+                    var nextPara = allParagraphs[i];
+                    if (string.IsNullOrWhiteSpace(nextPara.GetText()))
+                        // Set empty paragraph to Normal style using StyleIdentifier for more reliable application
+                        try
+                        {
+                            var normalStyle = doc.Styles[StyleIdentifier.Normal];
+                            if (normalStyle != null)
+                            {
+                                // Use StyleIdentifier for more reliable style application
+                                nextPara.ParagraphFormat.StyleIdentifier = StyleIdentifier.Normal;
+                                // Also set Style and StyleName to ensure consistency
+                                nextPara.ParagraphFormat.Style = normalStyle;
+                                nextPara.ParagraphFormat.StyleName = "Normal";
+                                // Clear any direct formatting that might override the style
+                                nextPara.ParagraphFormat.ClearFormatting();
+                                // Re-apply the style after clearing
+                                nextPara.ParagraphFormat.StyleIdentifier = StyleIdentifier.Normal;
+                                nextPara.ParagraphFormat.Style = normalStyle;
+                                nextPara.ParagraphFormat.StyleName = "Normal";
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            // Fallback: try setting StyleName directly
+                            Console.Error.WriteLine($"[WARN] Failed to set paragraph style, trying fallback method: {ex.Message}");
+                            try
+                            {
+                                nextPara.ParagraphFormat.ClearFormatting();
+                                nextPara.ParagraphFormat.StyleName = "Normal";
+                                nextPara.ParagraphFormat.StyleIdentifier = StyleIdentifier.Normal;
+                            }
+                            catch (Exception ex2)
+                            {
+                                // If that also fails, skip this paragraph
+                                Console.Error.WriteLine($"[WARN] Fallback method also failed, skipping paragraph: {ex2.Message}");
+                            }
+                        }
+                    else
+                        // Stop at first non-empty paragraph
+                        break;
+                }
+            }
+
+            doc.Save(outputPath);
+
+            var result = "Text added successfully\n";
+            if (paragraphIndex.HasValue)
+            {
+                if (paragraphIndex.Value == -1)
+                    result += "Insert position: beginning of document\n";
+                else
+                    result += $"Insert position: after paragraph #{paragraphIndex.Value}\n";
+            }
             else
-                result += $"Insert position: after paragraph #{paragraphIndex.Value}\n";
-        }
-        else
-        {
-            result += "Insert position: end of document\n";
-        }
+            {
+                result += "Insert position: end of document\n";
+            }
 
-        if (!string.IsNullOrEmpty(styleName))
-        {
-            result += $"Applied style: {styleName}\n";
-        }
-        else
-        {
-            result += "Custom formatting:\n";
-            if (!string.IsNullOrEmpty(fontNameAscii)) result += $"  Font (ASCII): {fontNameAscii}\n";
-            if (!string.IsNullOrEmpty(fontNameFarEast)) result += $"  Font (Far East): {fontNameFarEast}\n";
-            if (!string.IsNullOrEmpty(fontName) && string.IsNullOrEmpty(fontNameAscii) &&
-                string.IsNullOrEmpty(fontNameFarEast))
-                result += $"  Font: {fontName}\n";
-            if (fontSize.HasValue) result += $"  Font size: {fontSize.Value} pt\n";
-            if (bold.HasValue && bold.Value) result += "  Bold\n";
-            if (italic.HasValue && italic.Value) result += "  Italic\n";
-            if (underline.HasValue && underline.Value) result += "  Underline\n";
-            if (!string.IsNullOrEmpty(color)) result += $"  Color: {color}\n";
-            if (!string.IsNullOrEmpty(alignment)) result += $"  Alignment: {alignment}\n";
-        }
+            if (!string.IsNullOrEmpty(styleName))
+            {
+                result += $"Applied style: {styleName}\n";
+            }
+            else
+            {
+                result += "Custom formatting:\n";
+                if (!string.IsNullOrEmpty(fontNameAscii)) result += $"  Font (ASCII): {fontNameAscii}\n";
+                if (!string.IsNullOrEmpty(fontNameFarEast)) result += $"  Font (Far East): {fontNameFarEast}\n";
+                if (!string.IsNullOrEmpty(fontName) && string.IsNullOrEmpty(fontNameAscii) &&
+                    string.IsNullOrEmpty(fontNameFarEast))
+                    result += $"  Font: {fontName}\n";
+                if (fontSize.HasValue) result += $"  Font size: {fontSize.Value} pt\n";
+                if (bold.HasValue && bold.Value) result += "  Bold\n";
+                if (italic.HasValue && italic.Value) result += "  Italic\n";
+                if (underline.HasValue && underline.Value) result += "  Underline\n";
+                if (!string.IsNullOrEmpty(color)) result += $"  Color: {color}\n";
+                if (!string.IsNullOrEmpty(alignment)) result += $"  Alignment: {alignment}\n";
+            }
 
-        if (indentLevel.HasValue) result += $"Indent level: {indentLevel.Value} ({indentLevel.Value * 36} pt)\n";
-        else if (leftIndent.HasValue) result += $"Left indent: {leftIndent.Value} pt\n";
-        if (firstLineIndent.HasValue) result += $"First line indent: {firstLineIndent.Value} pt\n";
-        result += $"Output: {outputPath}";
+            if (indentLevel.HasValue) result += $"Indent level: {indentLevel.Value} ({indentLevel.Value * 36} pt)\n";
+            else if (leftIndent.HasValue) result += $"Left indent: {leftIndent.Value} pt\n";
+            if (firstLineIndent.HasValue) result += $"First line indent: {firstLineIndent.Value} pt\n";
+            result += $"Output: {outputPath}";
 
-        result += warningMessage;
+            result += warningMessage;
 
-        return await Task.FromResult(result);
+            return result;
+        });
     }
 }
 
-// Helper class to skip field replacement
+/// <summary>
+///     Helper class to skip field replacement during text replacement operations
+///     Prevents replacement of text inside Word fields (like hyperlinks) unless explicitly requested
+/// </summary>
 internal class FieldSkipReplacingCallback : IReplacingCallback
 {
+    /// <summary>
+    ///     Determines whether to replace or skip text replacement based on field context
+    /// </summary>
+    /// <param name="args">Replacing arguments containing match information</param>
+    /// <returns>ReplaceAction.Skip if inside a field, ReplaceAction.Replace otherwise</returns>
     public ReplaceAction Replacing(ReplacingArgs args)
     {
         // Skip replacement if we're inside a field

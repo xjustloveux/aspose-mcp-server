@@ -114,26 +114,29 @@ Usage examples:
     /// <param name="_">Unused parameter</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Formatted string with properties</returns>
-    private async Task<string> GetPropertiesAsync(JsonObject? _, string path)
+    private Task<string> GetPropertiesAsync(JsonObject? _, string path)
     {
-        using var presentation = new Presentation(path);
-        var props = presentation.DocumentProperties;
-        var sb = new StringBuilder();
+        return Task.Run(() =>
+        {
+            using var presentation = new Presentation(path);
+            var props = presentation.DocumentProperties;
+            var sb = new StringBuilder();
 
-        sb.AppendLine("=== Document Properties ===");
-        sb.AppendLine($"Title: {props.Title ?? "(none)"}");
-        sb.AppendLine($"Subject: {props.Subject ?? "(none)"}");
-        sb.AppendLine($"Author: {props.Author ?? "(none)"}");
-        sb.AppendLine($"Keywords: {props.Keywords ?? "(none)"}");
-        sb.AppendLine($"Comments: {props.Comments ?? "(none)"}");
-        sb.AppendLine($"Category: {props.Category ?? "(none)"}");
-        sb.AppendLine($"Company: {props.Company ?? "(none)"}");
-        sb.AppendLine($"Manager: {props.Manager ?? "(none)"}");
-        sb.AppendLine($"Created: {props.CreatedTime}");
-        sb.AppendLine($"Modified: {props.LastSavedTime}");
-        sb.AppendLine($"Revision: {props.RevisionNumber}");
+            sb.AppendLine("=== Document Properties ===");
+            sb.AppendLine($"Title: {props.Title ?? "(none)"}");
+            sb.AppendLine($"Subject: {props.Subject ?? "(none)"}");
+            sb.AppendLine($"Author: {props.Author ?? "(none)"}");
+            sb.AppendLine($"Keywords: {props.Keywords ?? "(none)"}");
+            sb.AppendLine($"Comments: {props.Comments ?? "(none)"}");
+            sb.AppendLine($"Category: {props.Category ?? "(none)"}");
+            sb.AppendLine($"Company: {props.Company ?? "(none)"}");
+            sb.AppendLine($"Manager: {props.Manager ?? "(none)"}");
+            sb.AppendLine($"Created: {props.CreatedTime}");
+            sb.AppendLine($"Modified: {props.LastSavedTime}");
+            sb.AppendLine($"Revision: {props.RevisionNumber}");
 
-        return await Task.FromResult(sb.ToString());
+            return sb.ToString();
+        });
     }
 
     /// <summary>
@@ -142,79 +145,82 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing various property values, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetPropertiesAsync(JsonObject? arguments, string path)
+    private Task<string> SetPropertiesAsync(JsonObject? arguments, string path)
     {
-        var title = ArgumentHelper.GetStringNullable(arguments, "title");
-        var subject = ArgumentHelper.GetStringNullable(arguments, "subject");
-        var author = ArgumentHelper.GetStringNullable(arguments, "author");
-        var keywords = ArgumentHelper.GetStringNullable(arguments, "keywords");
-        var comments = ArgumentHelper.GetStringNullable(arguments, "comments");
-        var category = ArgumentHelper.GetStringNullable(arguments, "category");
-        var company = ArgumentHelper.GetStringNullable(arguments, "company");
-        var manager = ArgumentHelper.GetStringNullable(arguments, "manager");
-        var customProps = ArgumentHelper.GetObject(arguments, "customProperties", false);
-
-        using var presentation = new Presentation(path);
-        var props = presentation.DocumentProperties;
-        var changes = new List<string>();
-
-        if (!string.IsNullOrEmpty(title))
+        return Task.Run(() =>
         {
-            props.Title = title;
-            changes.Add("Title");
-        }
+            var title = ArgumentHelper.GetStringNullable(arguments, "title");
+            var subject = ArgumentHelper.GetStringNullable(arguments, "subject");
+            var author = ArgumentHelper.GetStringNullable(arguments, "author");
+            var keywords = ArgumentHelper.GetStringNullable(arguments, "keywords");
+            var comments = ArgumentHelper.GetStringNullable(arguments, "comments");
+            var category = ArgumentHelper.GetStringNullable(arguments, "category");
+            var company = ArgumentHelper.GetStringNullable(arguments, "company");
+            var manager = ArgumentHelper.GetStringNullable(arguments, "manager");
+            var customProps = ArgumentHelper.GetObject(arguments, "customProperties", false);
 
-        if (!string.IsNullOrEmpty(subject))
-        {
-            props.Subject = subject;
-            changes.Add("Subject");
-        }
+            using var presentation = new Presentation(path);
+            var props = presentation.DocumentProperties;
+            var changes = new List<string>();
 
-        if (!string.IsNullOrEmpty(author))
-        {
-            props.Author = author;
-            changes.Add("Author");
-        }
+            if (!string.IsNullOrEmpty(title))
+            {
+                props.Title = title;
+                changes.Add("Title");
+            }
 
-        if (!string.IsNullOrEmpty(keywords))
-        {
-            props.Keywords = keywords;
-            changes.Add("Keywords");
-        }
+            if (!string.IsNullOrEmpty(subject))
+            {
+                props.Subject = subject;
+                changes.Add("Subject");
+            }
 
-        if (!string.IsNullOrEmpty(comments))
-        {
-            props.Comments = comments;
-            changes.Add("Comments");
-        }
+            if (!string.IsNullOrEmpty(author))
+            {
+                props.Author = author;
+                changes.Add("Author");
+            }
 
-        if (!string.IsNullOrEmpty(category))
-        {
-            props.Category = category;
-            changes.Add("Category");
-        }
+            if (!string.IsNullOrEmpty(keywords))
+            {
+                props.Keywords = keywords;
+                changes.Add("Keywords");
+            }
 
-        if (!string.IsNullOrEmpty(company))
-        {
-            props.Company = company;
-            changes.Add("Company");
-        }
+            if (!string.IsNullOrEmpty(comments))
+            {
+                props.Comments = comments;
+                changes.Add("Comments");
+            }
 
-        if (!string.IsNullOrEmpty(manager))
-        {
-            props.Manager = manager;
-            changes.Add("Manager");
-        }
+            if (!string.IsNullOrEmpty(category))
+            {
+                props.Category = category;
+                changes.Add("Category");
+            }
 
-        if (customProps != null)
-        {
-            foreach (var kvp in customProps) props[kvp.Key] = kvp.Value?.GetValue<string>() ?? "";
-            changes.Add("CustomProperties");
-        }
+            if (!string.IsNullOrEmpty(company))
+            {
+                props.Company = company;
+                changes.Add("Company");
+            }
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        presentation.Save(outputPath, SaveFormat.Pptx);
+            if (!string.IsNullOrEmpty(manager))
+            {
+                props.Manager = manager;
+                changes.Add("Manager");
+            }
 
-        return await Task.FromResult($"Document properties updated: {string.Join(", ", changes)} - {outputPath}");
+            if (customProps != null)
+            {
+                foreach (var kvp in customProps) props[kvp.Key] = kvp.Value?.GetValue<string>() ?? "";
+                changes.Add("CustomProperties");
+            }
+
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
+
+            return $"Document properties updated: {string.Join(", ", changes)} - {outputPath}";
+        });
     }
 }

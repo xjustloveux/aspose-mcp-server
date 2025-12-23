@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Nodes;
+using System.Text.Json.Nodes;
 using Aspose.Words;
 using Aspose.Words.Replacing;
 using Aspose.Words.Settings;
@@ -182,114 +182,117 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments containing outputPath, optional content</param>
     /// <returns>Success message with file path</returns>
-    private async Task<string> CreateDocument(JsonObject? arguments)
+    private Task<string> CreateDocument(JsonObject? arguments)
     {
-        var outputPath = ArgumentHelper.GetString(arguments, "outputPath");
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var content = ArgumentHelper.GetStringNullable(arguments, "content");
-        var skipInitialContent = ArgumentHelper.GetBool(arguments, "skipInitialContent", false);
-        var marginTop = ArgumentHelper.GetDouble(arguments, "marginTop", 70.87);
-        var marginBottom = ArgumentHelper.GetDouble(arguments, "marginBottom", 70.87);
-        var marginLeft = ArgumentHelper.GetDouble(arguments, "marginLeft", 70.87);
-        var marginRight = ArgumentHelper.GetDouble(arguments, "marginRight", 70.87);
-        var compatibilityMode = ArgumentHelper.GetString(arguments, "compatibilityMode", "Word2019");
-        var pageWidth = ArgumentHelper.GetDoubleNullable(arguments, "pageWidth");
-        var pageHeight = ArgumentHelper.GetDoubleNullable(arguments, "pageHeight");
-        var paperSize = ArgumentHelper.GetString(arguments, "paperSize", "A4");
-        var headerDistance = ArgumentHelper.GetDouble(arguments, "headerDistance", 35.4);
-        var footerDistance = ArgumentHelper.GetDouble(arguments, "footerDistance", 35.4);
-
-        var doc = new Document();
-
-        var wordVersion = compatibilityMode switch
+        return Task.Run(() =>
         {
-            "Word2019" => MsWordVersion.Word2019,
-            "Word2016" => MsWordVersion.Word2016,
-            "Word2013" => MsWordVersion.Word2013,
-            "Word2010" => MsWordVersion.Word2010,
-            "Word2007" => MsWordVersion.Word2007,
-            _ => MsWordVersion.Word2019
-        };
-        doc.CompatibilityOptions.OptimizeFor(wordVersion);
+            var outputPath = ArgumentHelper.GetString(arguments, "outputPath");
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+            var content = ArgumentHelper.GetStringNullable(arguments, "content");
+            var skipInitialContent = ArgumentHelper.GetBool(arguments, "skipInitialContent", false);
+            var marginTop = ArgumentHelper.GetDouble(arguments, "marginTop", 70.87);
+            var marginBottom = ArgumentHelper.GetDouble(arguments, "marginBottom", 70.87);
+            var marginLeft = ArgumentHelper.GetDouble(arguments, "marginLeft", 70.87);
+            var marginRight = ArgumentHelper.GetDouble(arguments, "marginRight", 70.87);
+            var compatibilityMode = ArgumentHelper.GetString(arguments, "compatibilityMode", "Word2019");
+            var pageWidth = ArgumentHelper.GetDoubleNullable(arguments, "pageWidth");
+            var pageHeight = ArgumentHelper.GetDoubleNullable(arguments, "pageHeight");
+            var paperSize = ArgumentHelper.GetString(arguments, "paperSize", "A4");
+            var headerDistance = ArgumentHelper.GetDouble(arguments, "headerDistance", 35.4);
+            var footerDistance = ArgumentHelper.GetDouble(arguments, "footerDistance", 35.4);
 
-        var section = doc.FirstSection;
-        if (section != null)
-        {
-            var pageSetup = section.PageSetup;
+            var doc = new Document();
 
-            // Set page size (paper size or custom dimensions)
-            if (!string.IsNullOrEmpty(paperSize) && pageWidth == null && pageHeight == null)
+            var wordVersion = compatibilityMode switch
             {
-                // Use predefined paper size
-                switch (paperSize.ToUpper())
+                "Word2019" => MsWordVersion.Word2019,
+                "Word2016" => MsWordVersion.Word2016,
+                "Word2013" => MsWordVersion.Word2013,
+                "Word2010" => MsWordVersion.Word2010,
+                "Word2007" => MsWordVersion.Word2007,
+                _ => MsWordVersion.Word2019
+            };
+            doc.CompatibilityOptions.OptimizeFor(wordVersion);
+
+            var section = doc.FirstSection;
+            if (section != null)
+            {
+                var pageSetup = section.PageSetup;
+
+                // Set page size (paper size or custom dimensions)
+                if (!string.IsNullOrEmpty(paperSize) && pageWidth == null && pageHeight == null)
                 {
-                    case "A4":
-                        pageSetup.PageWidth = 595.3; // 21.0 cm
-                        pageSetup.PageHeight = 841.9; // 29.7 cm
-                        break;
-                    case "LETTER":
-                        pageSetup.PageWidth = 612; // 8.5 inch
-                        pageSetup.PageHeight = 792; // 11 inch
-                        break;
-                    case "A3":
-                        pageSetup.PageWidth = 841.9; // 29.7 cm
-                        pageSetup.PageHeight = 1190.55; // 42.0 cm
-                        break;
-                    case "LEGAL":
-                        pageSetup.PageWidth = 612; // 8.5 inch
-                        pageSetup.PageHeight = 1008; // 14 inch
-                        break;
-                    default:
-                        pageSetup.PageWidth = 595.3; // Default to A4
-                        pageSetup.PageHeight = 841.9;
-                        break;
+                    // Use predefined paper size
+                    switch (paperSize.ToUpper())
+                    {
+                        case "A4":
+                            pageSetup.PageWidth = 595.3; // 21.0 cm
+                            pageSetup.PageHeight = 841.9; // 29.7 cm
+                            break;
+                        case "LETTER":
+                            pageSetup.PageWidth = 612; // 8.5 inch
+                            pageSetup.PageHeight = 792; // 11 inch
+                            break;
+                        case "A3":
+                            pageSetup.PageWidth = 841.9; // 29.7 cm
+                            pageSetup.PageHeight = 1190.55; // 42.0 cm
+                            break;
+                        case "LEGAL":
+                            pageSetup.PageWidth = 612; // 8.5 inch
+                            pageSetup.PageHeight = 1008; // 14 inch
+                            break;
+                        default:
+                            pageSetup.PageWidth = 595.3; // Default to A4
+                            pageSetup.PageHeight = 841.9;
+                            break;
+                    }
+                }
+                else
+                {
+                    // Use custom dimensions if specified
+                    pageSetup.PageWidth = pageWidth ?? 595.3; // Default to A4 width
+
+                    pageSetup.PageHeight = pageHeight ?? 841.9; // Default to A4 height
+                }
+
+                // Set margins
+                pageSetup.TopMargin = marginTop;
+                pageSetup.BottomMargin = marginBottom;
+                pageSetup.LeftMargin = marginLeft;
+                pageSetup.RightMargin = marginRight;
+
+                // Set header/footer distance
+                pageSetup.HeaderDistance = headerDistance;
+                pageSetup.FooterDistance = footerDistance;
+            }
+
+            var builder = new DocumentBuilder(doc);
+
+            if (skipInitialContent)
+            {
+                if (doc.FirstSection is { Body: not null })
+                {
+                    doc.FirstSection.Body.RemoveAllChildren();
+                    var firstPara = new Paragraph(doc)
+                    {
+                        ParagraphFormat =
+                        {
+                            SpaceBefore = 0,
+                            SpaceAfter = 0,
+                            LineSpacing = 12
+                        }
+                    };
+                    doc.FirstSection.Body.AppendChild(firstPara);
                 }
             }
-            else
+            else if (!string.IsNullOrEmpty(content))
             {
-                // Use custom dimensions if specified
-                pageSetup.PageWidth = pageWidth ?? 595.3; // Default to A4 width
-
-                pageSetup.PageHeight = pageHeight ?? 841.9; // Default to A4 height
+                builder.Write(content);
             }
 
-            // Set margins
-            pageSetup.TopMargin = marginTop;
-            pageSetup.BottomMargin = marginBottom;
-            pageSetup.LeftMargin = marginLeft;
-            pageSetup.RightMargin = marginRight;
-
-            // Set header/footer distance
-            pageSetup.HeaderDistance = headerDistance;
-            pageSetup.FooterDistance = footerDistance;
-        }
-
-        var builder = new DocumentBuilder(doc);
-
-        if (skipInitialContent)
-        {
-            if (doc.FirstSection is { Body: not null })
-            {
-                doc.FirstSection.Body.RemoveAllChildren();
-                var firstPara = new Paragraph(doc)
-                {
-                    ParagraphFormat =
-                    {
-                        SpaceBefore = 0,
-                        SpaceAfter = 0,
-                        LineSpacing = 12
-                    }
-                };
-                doc.FirstSection.Body.AppendChild(firstPara);
-            }
-        }
-        else if (!string.IsNullOrEmpty(content))
-        {
-            builder.Write(content);
-        }
-
-        doc.Save(outputPath);
-        return await Task.FromResult($"Word document created successfully at: {outputPath}");
+            doc.Save(outputPath);
+            return $"Word document created successfully at: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -297,46 +300,48 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments containing templatePath, outputPath, optional data</param>
     /// <returns>Success message with output path</returns>
-    private async Task<string> CreateFromTemplate(JsonObject? arguments)
+    private Task<string> CreateFromTemplate(JsonObject? arguments)
     {
-        var templatePath = ArgumentHelper.GetString(arguments, "templatePath");
-        var outputPath = ArgumentHelper.GetString(arguments, "outputPath");
-        var placeholderStyle = ArgumentHelper.GetString(arguments, "placeholderStyle", "doubleCurly");
-
-        SecurityHelper.ValidateFilePath(templatePath, "templatePath");
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-
-        if (!File.Exists(templatePath))
-            throw new FileNotFoundException($"Template file not found: {templatePath}");
-
-        var replacements = new Dictionary<string, string>();
-        if (arguments?.ContainsKey("replacements") == true)
+        return Task.Run(() =>
         {
-            var replacementsObj = arguments["replacements"]?.AsObject();
-            if (replacementsObj != null)
-                foreach (var kvp in replacementsObj)
-                {
-                    var key = kvp.Key;
-                    var value = kvp.Value?.GetValue<string>() ?? "";
+            var templatePath = ArgumentHelper.GetString(arguments, "templatePath");
+            var outputPath = ArgumentHelper.GetString(arguments, "outputPath");
+            var placeholderStyle = ArgumentHelper.GetString(arguments, "placeholderStyle", "doubleCurly");
 
-                    if (!IsValidPlaceholder(key, placeholderStyle))
-                        key = FormatPlaceholder(key, placeholderStyle);
+            SecurityHelper.ValidateFilePath(templatePath, "templatePath", true);
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
-                    replacements[key] = value;
-                }
-        }
+            if (!File.Exists(templatePath))
+                throw new FileNotFoundException($"Template file not found: {templatePath}");
 
-        if (replacements.Count == 0)
-            throw new ArgumentException("replacements cannot be empty");
+            var replacements = new Dictionary<string, string>();
+            if (arguments?.ContainsKey("replacements") == true)
+            {
+                var replacementsObj = arguments["replacements"]?.AsObject();
+                if (replacementsObj != null)
+                    foreach (var kvp in replacementsObj)
+                    {
+                        var key = kvp.Key;
+                        var value = kvp.Value?.GetValue<string>() ?? "";
 
-        var doc = new Document(templatePath);
+                        if (!IsValidPlaceholder(key, placeholderStyle))
+                            key = FormatPlaceholder(key, placeholderStyle);
 
-        foreach (var kvp in replacements)
-            doc.Range.Replace(kvp.Key, kvp.Value, new FindReplaceOptions());
+                        replacements[key] = value;
+                    }
+            }
 
-        doc.Save(outputPath);
-        return await Task.FromResult(
-            $"Document created from template: {outputPath} (replaced {replacements.Count} placeholders)");
+            if (replacements.Count == 0)
+                throw new ArgumentException("replacements cannot be empty");
+
+            var doc = new Document(templatePath);
+
+            foreach (var kvp in replacements)
+                doc.Range.Replace(kvp.Key, kvp.Value, new FindReplaceOptions());
+
+            doc.Save(outputPath);
+            return $"Document created from template: {outputPath} (replaced {replacements.Count} placeholders)";
+        });
     }
 
     /// <summary>
@@ -344,33 +349,36 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, outputPath, format</param>
     /// <returns>Success message with output path</returns>
-    private async Task<string> ConvertDocument(JsonObject? arguments)
+    private Task<string> ConvertDocument(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetAndValidatePath(arguments, "outputPath");
-        var format = ArgumentHelper.GetString(arguments, "format").ToLower();
-
-        SecurityHelper.ValidateFilePath(path);
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-
-        var doc = new Document(path);
-
-        var saveFormat = format switch
+        return Task.Run(() =>
         {
-            "pdf" => SaveFormat.Pdf,
-            "html" => SaveFormat.Html,
-            "docx" => SaveFormat.Docx,
-            "doc" => SaveFormat.Doc,
-            "txt" => SaveFormat.Text,
-            "rtf" => SaveFormat.Rtf,
-            "odt" => SaveFormat.Odt,
-            "epub" => SaveFormat.Epub,
-            "xps" => SaveFormat.Xps,
-            _ => throw new ArgumentException($"Unsupported format: {format}")
-        };
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            var outputPath = ArgumentHelper.GetAndValidatePath(arguments, "outputPath");
+            var format = ArgumentHelper.GetString(arguments, "format").ToLower();
 
-        doc.Save(outputPath, saveFormat);
-        return await Task.FromResult($"Document converted from {path} to {outputPath} ({format})");
+            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+
+            var doc = new Document(path);
+
+            var saveFormat = format switch
+            {
+                "pdf" => SaveFormat.Pdf,
+                "html" => SaveFormat.Html,
+                "docx" => SaveFormat.Docx,
+                "doc" => SaveFormat.Doc,
+                "txt" => SaveFormat.Text,
+                "rtf" => SaveFormat.Rtf,
+                "odt" => SaveFormat.Odt,
+                "epub" => SaveFormat.Epub,
+                "xps" => SaveFormat.Xps,
+                _ => throw new ArgumentException($"Unsupported format: {format}")
+            };
+
+            doc.Save(outputPath, saveFormat);
+            return $"Document converted from {path} to {outputPath} ({format})";
+        });
     }
 
     /// <summary>
@@ -378,31 +386,34 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments containing sourcePaths array, outputPath</param>
     /// <returns>Success message with merged file path</returns>
-    private async Task<string> MergeDocuments(JsonObject? arguments)
+    private Task<string> MergeDocuments(JsonObject? arguments)
     {
-        var inputPathsArray = ArgumentHelper.GetArray(arguments, "inputPaths");
-        var outputPath = ArgumentHelper.GetString(arguments, "outputPath");
-
-        SecurityHelper.ValidateArraySize(inputPathsArray, "inputPaths");
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-
-        var inputPaths = inputPathsArray.Select(p => p?.GetValue<string>()).Where(p => p != null).ToList();
-
-        if (inputPaths.Count == 0)
-            throw new ArgumentException("At least one input path is required");
-
-        foreach (var inputPath in inputPaths) SecurityHelper.ValidateFilePath(inputPath!, "inputPaths");
-
-        var mergedDoc = new Document(inputPaths[0]);
-
-        for (var i = 1; i < inputPaths.Count; i++)
+        return Task.Run(() =>
         {
-            var doc = new Document(inputPaths[i]);
-            mergedDoc.AppendDocument(doc, ImportFormatMode.KeepSourceFormatting);
-        }
+            var inputPathsArray = ArgumentHelper.GetArray(arguments, "inputPaths");
+            var outputPath = ArgumentHelper.GetString(arguments, "outputPath");
 
-        mergedDoc.Save(outputPath);
-        return await Task.FromResult($"Merged {inputPaths.Count} documents into: {outputPath}");
+            SecurityHelper.ValidateArraySize(inputPathsArray, "inputPaths");
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+
+            var inputPaths = inputPathsArray.Select(p => p?.GetValue<string>()).Where(p => p != null).ToList();
+
+            if (inputPaths.Count == 0)
+                throw new ArgumentException("At least one input path is required");
+
+            foreach (var inputPath in inputPaths) SecurityHelper.ValidateFilePath(inputPath!, "inputPaths", true);
+
+            var mergedDoc = new Document(inputPaths[0]);
+
+            for (var i = 1; i < inputPaths.Count; i++)
+            {
+                var doc = new Document(inputPaths[i]);
+                mergedDoc.AppendDocument(doc, ImportFormatMode.KeepSourceFormatting);
+            }
+
+            mergedDoc.Save(outputPath);
+            return $"Merged {inputPaths.Count} documents into: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -410,45 +421,48 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, outputPath, splitBy (page or section)</param>
     /// <returns>Success message with split file count</returns>
-    private async Task<string> SplitDocument(JsonObject? arguments)
+    private Task<string> SplitDocument(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputDir = ArgumentHelper.GetString(arguments, "outputDir");
-        var splitBy = ArgumentHelper.GetString(arguments, "splitBy", "section");
-
-        SecurityHelper.ValidateFilePath(path);
-        SecurityHelper.ValidateFilePath(outputDir, "outputDir");
-
-        Directory.CreateDirectory(outputDir);
-
-        var doc = new Document(path);
-        var fileBaseName = SecurityHelper.SanitizeFileName(Path.GetFileNameWithoutExtension(path));
-
-        if (splitBy.ToLower() == "section")
+        return Task.Run(() =>
         {
-            for (var i = 0; i < doc.Sections.Count; i++)
-            {
-                var sectionDoc = new Document();
-                sectionDoc.FirstSection.Remove();
-                var importedSection = sectionDoc.ImportNode(doc.Sections[i], true);
-                sectionDoc.AppendChild(importedSection);
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            var outputDir = ArgumentHelper.GetString(arguments, "outputDir");
+            var splitBy = ArgumentHelper.GetString(arguments, "splitBy", "section");
 
-                var outputPath = Path.Combine(outputDir, $"{fileBaseName}_section_{i + 1}.docx");
-                sectionDoc.Save(outputPath);
+            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
+            SecurityHelper.ValidateFilePath(outputDir, "outputDir", true);
+
+            Directory.CreateDirectory(outputDir);
+
+            var doc = new Document(path);
+            var fileBaseName = SecurityHelper.SanitizeFileName(Path.GetFileNameWithoutExtension(path));
+
+            if (splitBy.ToLower() == "section")
+            {
+                for (var i = 0; i < doc.Sections.Count; i++)
+                {
+                    var sectionDoc = new Document();
+                    sectionDoc.FirstSection.Remove();
+                    var importedSection = sectionDoc.ImportNode(doc.Sections[i], true);
+                    sectionDoc.AppendChild(importedSection);
+
+                    var outputPath = Path.Combine(outputDir, $"{fileBaseName}_section_{i + 1}.docx");
+                    sectionDoc.Save(outputPath);
+                }
+
+                return $"Document split into {doc.Sections.Count} sections in: {outputDir}";
             }
 
-            return await Task.FromResult($"Document split into {doc.Sections.Count} sections in: {outputDir}");
-        }
+            var pageCount = doc.PageCount;
+            for (var i = 0; i < pageCount; i++)
+            {
+                var pageDoc = doc.ExtractPages(i, 1);
+                var outputPath = Path.Combine(outputDir, $"{fileBaseName}_page_{i + 1}.docx");
+                pageDoc.Save(outputPath);
+            }
 
-        var pageCount = doc.PageCount;
-        for (var i = 0; i < pageCount; i++)
-        {
-            var pageDoc = doc.ExtractPages(i, 1);
-            var outputPath = Path.Combine(outputDir, $"{fileBaseName}_page_{i + 1}.docx");
-            pageDoc.Save(outputPath);
-        }
-
-        return await Task.FromResult($"Document split into {pageCount} pages in: {outputDir}");
+            return $"Document split into {pageCount} pages in: {outputDir}";
+        });
     }
 
     /// <summary>

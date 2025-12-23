@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Nodes;
+using System.Text.Json.Nodes;
 using Aspose.Words;
 using AsposeMcpServer.Core;
 
@@ -9,11 +9,17 @@ namespace AsposeMcpServer.Tools.Word;
 /// </summary>
 public class WordWatermarkTool : IAsposeTool
 {
+    /// <summary>
+    ///     Gets the description of the tool and its usage examples
+    /// </summary>
     public string Description => @"Manage watermarks in Word documents. Supports 1 operation: add.
 
 Usage examples:
 - Add watermark: word_watermark(operation='add', path='doc.docx', text='CONFIDENTIAL', fontSize=72, isSemitransparent=true)";
 
+    /// <summary>
+    ///     Gets the JSON schema defining the input parameters for the tool
+    /// </summary>
     public object InputSchema => new
     {
         type = "object",
@@ -87,30 +93,33 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, optional text, imagePath, outputPath</param>
     /// <returns>Success message</returns>
-    private async Task<string> AddWatermark(JsonObject? arguments)
+    private Task<string> AddWatermark(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var text = ArgumentHelper.GetString(arguments, "text");
-        var fontFamily = ArgumentHelper.GetString(arguments, "fontFamily", "Arial");
-        var fontSize = ArgumentHelper.GetDouble(arguments, "fontSize", "fontSize", false, 72);
-        var isSemitransparent = ArgumentHelper.GetBool(arguments, "isSemitransparent");
-        var layout = ArgumentHelper.GetString(arguments, "layout", "Diagonal");
-
-        var doc = new Document(path);
-
-        var watermarkOptions = new TextWatermarkOptions
+        return Task.Run(() =>
         {
-            FontFamily = fontFamily,
-            FontSize = (float)fontSize,
-            IsSemitrasparent = isSemitransparent,
-            Layout = layout.ToLower() == "horizontal" ? WatermarkLayout.Horizontal : WatermarkLayout.Diagonal
-        };
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+            var text = ArgumentHelper.GetString(arguments, "text");
+            var fontFamily = ArgumentHelper.GetString(arguments, "fontFamily", "Arial");
+            var fontSize = ArgumentHelper.GetDouble(arguments, "fontSize", "fontSize", false, 72);
+            var isSemitransparent = ArgumentHelper.GetBool(arguments, "isSemitransparent", true);
+            var layout = ArgumentHelper.GetString(arguments, "layout", "Diagonal");
 
-        doc.Watermark.SetText(text, watermarkOptions);
-        doc.Save(outputPath);
+            var doc = new Document(path);
 
-        return await Task.FromResult($"Watermark added to document. Output: {outputPath}");
+            var watermarkOptions = new TextWatermarkOptions
+            {
+                FontFamily = fontFamily,
+                FontSize = (float)fontSize,
+                IsSemitrasparent = isSemitransparent,
+                Layout = layout.ToLower() == "horizontal" ? WatermarkLayout.Horizontal : WatermarkLayout.Diagonal
+            };
+
+            doc.Watermark.SetText(text, watermarkOptions);
+            doc.Save(outputPath);
+
+            return $"Watermark added to document. Output: {outputPath}";
+        });
     }
 }

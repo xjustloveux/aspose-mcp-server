@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using Aspose.Pdf.Text;
@@ -67,35 +67,38 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, optional pageIndex</param>
     /// <returns>PDF content as string</returns>
-    private async Task<string> GetContent(JsonObject? arguments)
+    private Task<string> GetContent(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var pageIndex = ArgumentHelper.GetIntNullable(arguments, "pageIndex");
-
-        SecurityHelper.ValidateFilePath(path);
-
-        using var document = new Document(path);
-        var sb = new StringBuilder();
-
-        if (pageIndex.HasValue)
+        return Task.Run(() =>
         {
-            if (pageIndex.Value < 1 || pageIndex.Value > document.Pages.Count)
-                throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            var pageIndex = ArgumentHelper.GetIntNullable(arguments, "pageIndex");
 
-            var textAbsorber = new TextAbsorber();
-            document.Pages[pageIndex.Value].Accept(textAbsorber);
-            sb.AppendLine($"=== Content from Page {pageIndex.Value} ===");
-            sb.AppendLine(textAbsorber.Text);
-        }
-        else
-        {
-            var textAbsorber = new TextAbsorber();
-            document.Pages.Accept(textAbsorber);
-            sb.AppendLine("=== Full Document Content ===");
-            sb.AppendLine(textAbsorber.Text);
-        }
+            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
 
-        return await Task.FromResult(sb.ToString());
+            using var document = new Document(path);
+            var sb = new StringBuilder();
+
+            if (pageIndex.HasValue)
+            {
+                if (pageIndex.Value < 1 || pageIndex.Value > document.Pages.Count)
+                    throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
+
+                var textAbsorber = new TextAbsorber();
+                document.Pages[pageIndex.Value].Accept(textAbsorber);
+                sb.AppendLine($"=== Content from Page {pageIndex.Value} ===");
+                sb.AppendLine(textAbsorber.Text);
+            }
+            else
+            {
+                var textAbsorber = new TextAbsorber();
+                document.Pages.Accept(textAbsorber);
+                sb.AppendLine("=== Full Document Content ===");
+                sb.AppendLine(textAbsorber.Text);
+            }
+
+            return sb.ToString();
+        });
     }
 
     /// <summary>
@@ -103,32 +106,35 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments containing path</param>
     /// <returns>Formatted string with statistics</returns>
-    private async Task<string> GetStatistics(JsonObject? arguments)
+    private Task<string> GetStatistics(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        return Task.Run(() =>
+        {
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
 
-        using var document = new Document(path);
-        var fileInfo = new FileInfo(path);
-        var sb = new StringBuilder();
+            using var document = new Document(path);
+            var fileInfo = new FileInfo(path);
+            var sb = new StringBuilder();
 
-        sb.AppendLine("=== PDF Statistics ===");
-        sb.AppendLine($"File Size: {fileInfo.Length} bytes ({fileInfo.Length / 1024.0:F2} KB)");
-        sb.AppendLine($"Total Pages: {document.Pages.Count}");
-        sb.AppendLine($"Is Encrypted: {document.IsEncrypted}");
-        sb.AppendLine($"Is Linearized: {document.IsLinearized}");
-        sb.AppendLine($"Bookmarks: {document.Outlines.Count}");
-        sb.AppendLine($"Form Fields: {document.Form?.Count ?? 0}");
+            sb.AppendLine("=== PDF Statistics ===");
+            sb.AppendLine($"File Size: {fileInfo.Length} bytes ({fileInfo.Length / 1024.0:F2} KB)");
+            sb.AppendLine($"Total Pages: {document.Pages.Count}");
+            sb.AppendLine($"Is Encrypted: {document.IsEncrypted}");
+            sb.AppendLine($"Is Linearized: {document.IsLinearized}");
+            sb.AppendLine($"Bookmarks: {document.Outlines.Count}");
+            sb.AppendLine($"Form Fields: {document.Form?.Count ?? 0}");
 
-        var totalAnnotations = 0;
-        for (var i = 1; i <= document.Pages.Count; i++)
-            totalAnnotations += document.Pages[i].Annotations.Count;
-        sb.AppendLine($"Total Annotations: {totalAnnotations}");
+            var totalAnnotations = 0;
+            for (var i = 1; i <= document.Pages.Count; i++)
+                totalAnnotations += document.Pages[i].Annotations.Count;
+            sb.AppendLine($"Total Annotations: {totalAnnotations}");
 
-        var totalParagraphs = 0;
-        for (var i = 1; i <= document.Pages.Count; i++)
-            totalParagraphs += document.Pages[i].Paragraphs.Count;
-        sb.AppendLine($"Total Paragraphs: {totalParagraphs}");
+            var totalParagraphs = 0;
+            for (var i = 1; i <= document.Pages.Count; i++)
+                totalParagraphs += document.Pages[i].Paragraphs.Count;
+            sb.AppendLine($"Total Paragraphs: {totalParagraphs}");
 
-        return await Task.FromResult(sb.ToString());
+            return sb.ToString();
+        });
     }
 }

@@ -195,129 +195,133 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message with range location</returns>
-    private async Task<string> WriteRangeAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> WriteRangeAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var startCell = ArgumentHelper.GetString(arguments, "startCell");
-        var dataArray = ArgumentHelper.GetArray(arguments, "data");
-
-        using var workbook = new Workbook(path);
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var startCellObj = worksheet.Cells[startCell];
-        var startRow = startCellObj.Row;
-        var startCol = startCellObj.Column;
-
-        // Check if all items are arrays (2D array format) to use ImportTwoDimensionArray
-        var is2DArrayFormat = dataArray.All(item => item is JsonArray);
-
-        if (is2DArrayFormat && dataArray.Count > 0)
+        return Task.Run(() =>
         {
-            // 2D array format: [["value1", "value2"], ["value3", "value4"]]
-            // Use ImportTwoDimensionArray method - this is the official way to import 2D arrays
-            // According to Aspose.Cells documentation, this method avoids cell reference interpretation issues
+            var startCell = ArgumentHelper.GetString(arguments, "startCell");
+            var dataArray = ArgumentHelper.GetArray(arguments, "data");
 
-            // Determine dimensions
-            var rowCount = dataArray.Count;
-            var colCount = dataArray.Max(item => item is JsonArray arr ? arr.Count : 0);
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            var startCellObj = worksheet.Cells[startCell];
+            var startRow = startCellObj.Row;
+            var startCol = startCellObj.Column;
 
-            if (colCount > 0)
+            // Check if all items are arrays (2D array format) to use ImportTwoDimensionArray
+            var is2DArrayFormat = dataArray.All(item => item is JsonArray);
+
+            if (is2DArrayFormat && dataArray.Count > 0)
             {
-                // Create 2D object array
-                var data2D = new object[rowCount, colCount];
+                // 2D array format: [["value1", "value2"], ["value3", "value4"]]
+                // Use ImportTwoDimensionArray method - this is the official way to import 2D arrays
+                // According to Aspose.Cells documentation, this method avoids cell reference interpretation issues
 
-                for (var i = 0; i < rowCount; i++)
-                    if (dataArray[i] is JsonArray rowArray)
-                        for (var j = 0; j < colCount; j++)
-                            if (j < rowArray.Count)
+                // Determine dimensions
+                var rowCount = dataArray.Count;
+                var colCount = dataArray.Max(item => item is JsonArray arr ? arr.Count : 0);
+
+                if (colCount > 0)
+                {
+                    // Create 2D object array
+                    var data2D = new object[rowCount, colCount];
+
+                    for (var i = 0; i < rowCount; i++)
+                        if (dataArray[i] is JsonArray rowArray)
+                            for (var j = 0; j < colCount; j++)
+                                if (j < rowArray.Count)
+                                {
+                                    var cellValue = rowArray[j]?.GetValue<string>() ?? "";
+
+                                    // Parse value as number, boolean, or string
+                                    if (double.TryParse(cellValue, NumberStyles.Any, CultureInfo.InvariantCulture,
+                                            out var numValue))
+                                        data2D[i, j] = numValue;
+                                    else if (bool.TryParse(cellValue, out var boolValue))
+                                        data2D[i, j] = boolValue;
+                                    else
+                                        data2D[i, j] = cellValue;
+                                }
+                                else
+                                {
+                                    data2D[i, j] = "";
+                                }
+
+                    // Import the 2D array using official method
+                    worksheet.Cells.ImportTwoDimensionArray(data2D, startRow, startCol);
+
+                    // After importing, set text format for values that look like cell references
+                    // This ensures they are stored as text, not interpreted as cell references
+                    for (var i = 0; i < rowCount; i++)
+                        if (dataArray[i] is JsonArray rowArray)
+                            for (var j = 0; j < rowArray.Count; j++)
                             {
                                 var cellValue = rowArray[j]?.GetValue<string>() ?? "";
 
-                                // Parse value as number, boolean, or string
-                                if (double.TryParse(cellValue, NumberStyles.Any, CultureInfo.InvariantCulture,
-                                        out var numValue))
-                                    data2D[i, j] = numValue;
-                                else if (bool.TryParse(cellValue, out var boolValue))
-                                    data2D[i, j] = boolValue;
-                                else
-                                    data2D[i, j] = cellValue;
+                                // Check if value looks like a cell reference
+                                var looksLikeCellRef = cellValue.Length >= 2 &&
+                                                       char.IsLetter(cellValue[0]) &&
+                                                       ((cellValue.Length is 2 && char.IsDigit(cellValue[1])) ||
+                                                        (cellValue.Length is > 2 and <= 5 &&
+                                                         cellValue.Skip(1).All(char.IsLetterOrDigit) &&
+                                                         cellValue.Substring(1).Any(char.IsDigit) &&
+                                                         !cellValue.Contains(" ") &&
+                                                         !cellValue.Contains(":") &&
+                                                         !cellValue.Contains("$")));
+
+                                // If it's not a number or boolean and looks like a cell reference, force text format
+                                if (looksLikeCellRef &&
+                                    !double.TryParse(cellValue, NumberStyles.Any, CultureInfo.InvariantCulture,
+                                        out _) &&
+                                    !bool.TryParse(cellValue, out _))
+                                {
+                                    var cellObj = worksheet.Cells[startRow + i, startCol + j];
+                                    var style = workbook.CreateStyle();
+                                    style.Number = 49; // Text format
+                                    cellObj.SetStyle(style);
+                                    cellObj.PutValue(cellValue, true);
+                                }
                             }
-                            else
-                            {
-                                data2D[i, j] = "";
-                            }
-
-                // Import the 2D array using official method
-                worksheet.Cells.ImportTwoDimensionArray(data2D, startRow, startCol);
-
-                // After importing, set text format for values that look like cell references
-                // This ensures they are stored as text, not interpreted as cell references
-                for (var i = 0; i < rowCount; i++)
-                    if (dataArray[i] is JsonArray rowArray)
-                        for (var j = 0; j < rowArray.Count; j++)
-                        {
-                            var cellValue = rowArray[j]?.GetValue<string>() ?? "";
-
-                            // Check if value looks like a cell reference
-                            var looksLikeCellRef = cellValue.Length >= 2 &&
-                                                   char.IsLetter(cellValue[0]) &&
-                                                   ((cellValue.Length is 2 && char.IsDigit(cellValue[1])) ||
-                                                    (cellValue.Length is > 2 and <= 5 &&
-                                                     cellValue.Skip(1).All(char.IsLetterOrDigit) &&
-                                                     cellValue.Substring(1).Any(char.IsDigit) &&
-                                                     !cellValue.Contains(" ") &&
-                                                     !cellValue.Contains(":") &&
-                                                     !cellValue.Contains("$")));
-
-                            // If it's not a number or boolean and looks like a cell reference, force text format
-                            if (looksLikeCellRef &&
-                                !double.TryParse(cellValue, NumberStyles.Any, CultureInfo.InvariantCulture, out _) &&
-                                !bool.TryParse(cellValue, out _))
-                            {
-                                var cellObj = worksheet.Cells[startRow + i, startCol + j];
-                                var style = workbook.CreateStyle();
-                                style.Number = 49; // Text format
-                                cellObj.SetStyle(style);
-                                cellObj.PutValue(cellValue, true);
-                            }
-                        }
+                }
             }
-        }
-        else
-        {
-            // Object format: [{"cell": "A1", "value": "10"}, {"cell": "B1", "value": "20"}]
-            for (var i = 0; i < dataArray.Count; i++)
+            else
             {
-                var item = dataArray[i];
-
-                if (item is JsonObject itemObj)
+                // Object format: [{"cell": "A1", "value": "10"}, {"cell": "B1", "value": "20"}]
+                for (var i = 0; i < dataArray.Count; i++)
                 {
-                    var cellRef = itemObj["cell"]?.GetValue<string>();
-                    var cellValue = itemObj["value"]?.GetValue<string>() ?? "";
+                    var item = dataArray[i];
 
-                    if (!string.IsNullOrEmpty(cellRef))
+                    if (item is JsonObject itemObj)
                     {
-                        var cellObj = worksheet.Cells[cellRef];
+                        var cellRef = itemObj["cell"]?.GetValue<string>();
+                        var cellValue = itemObj["value"]?.GetValue<string>() ?? "";
 
-                        // Parse value as number, boolean, or string
-                        if (double.TryParse(cellValue, NumberStyles.Any, CultureInfo.InvariantCulture,
-                                out var numValue))
-                            cellObj.PutValue(numValue);
-                        else if (bool.TryParse(cellValue, out var boolValue))
-                            cellObj.PutValue(boolValue);
-                        else
-                            cellObj.PutValue(cellValue);
+                        if (!string.IsNullOrEmpty(cellRef))
+                        {
+                            var cellObj = worksheet.Cells[cellRef];
+
+                            // Parse value as number, boolean, or string
+                            if (double.TryParse(cellValue, NumberStyles.Any, CultureInfo.InvariantCulture,
+                                    out var numValue))
+                                cellObj.PutValue(numValue);
+                            else if (bool.TryParse(cellValue, out var boolValue))
+                                cellObj.PutValue(boolValue);
+                            else
+                                cellObj.PutValue(cellValue);
+                        }
+                    }
+                    else
+                    {
+                        throw new ArgumentException(
+                            $"Invalid data format at index {i}. Expected array of arrays (2D) or array of objects with 'cell' and 'value' properties. Got: {item?.GetType().Name ?? "null"}");
                     }
                 }
-                else
-                {
-                    throw new ArgumentException(
-                        $"Invalid data format at index {i}. Expected array of arrays (2D) or array of objects with 'cell' and 'value' properties. Got: {item?.GetType().Name ?? "null"}");
-                }
             }
-        }
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        workbook.Save(outputPath);
-        return await Task.FromResult($"Data written to range starting at {startCell}: {outputPath}");
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            workbook.Save(outputPath);
+            return $"Data written to range starting at {startCell}: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -327,50 +331,53 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message with range information</returns>
-    private async Task<string> EditRangeAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> EditRangeAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var range = ArgumentHelper.GetString(arguments, "range");
-        var dataArray = ArgumentHelper.GetArray(arguments, "data");
-        var clearRange = ArgumentHelper.GetBool(arguments, "clearRange", false);
-
-        using var workbook = new Workbook(path);
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var cells = worksheet.Cells;
-
-        var cellRange = ExcelHelper.CreateRange(cells, range);
-
-        if (clearRange)
-            for (var i = cellRange.FirstRow; i <= cellRange.FirstRow + cellRange.RowCount - 1; i++)
-            for (var j = cellRange.FirstColumn; j <= cellRange.FirstColumn + cellRange.ColumnCount - 1; j++)
-                cells[i, j].PutValue("");
-
-        var startRow = cellRange.FirstRow;
-        var startCol = cellRange.FirstColumn;
-
-        for (var i = 0; i < dataArray.Count; i++)
+        return Task.Run(() =>
         {
-            var rowArray = dataArray[i]?.AsArray();
-            if (rowArray != null)
-                for (var j = 0; j < rowArray.Count; j++)
-                {
-                    var value = rowArray[j]?.GetValue<string>() ?? "";
-                    var cellObj = cells[startRow + i, startCol + j];
+            var range = ArgumentHelper.GetString(arguments, "range");
+            var dataArray = ArgumentHelper.GetArray(arguments, "data");
+            var clearRange = ArgumentHelper.GetBool(arguments, "clearRange", false);
 
-                    // Parse value as number, boolean, or string
-                    // Ensures formulas can correctly identify numeric values (same as excel_cell write)
-                    if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var numValue))
-                        // Use PutValue with number to ensure Excel recognizes it as numeric type
-                        cellObj.PutValue(numValue);
-                    else if (bool.TryParse(value, out var boolValue))
-                        cellObj.PutValue(boolValue);
-                    else
-                        cellObj.PutValue(value);
-                }
-        }
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            var cells = worksheet.Cells;
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        workbook.Save(outputPath);
-        return await Task.FromResult($"Range {range} edited in sheet {sheetIndex}: {outputPath}");
+            var cellRange = ExcelHelper.CreateRange(cells, range);
+
+            if (clearRange)
+                for (var i = cellRange.FirstRow; i <= cellRange.FirstRow + cellRange.RowCount - 1; i++)
+                for (var j = cellRange.FirstColumn; j <= cellRange.FirstColumn + cellRange.ColumnCount - 1; j++)
+                    cells[i, j].PutValue("");
+
+            var startRow = cellRange.FirstRow;
+            var startCol = cellRange.FirstColumn;
+
+            for (var i = 0; i < dataArray.Count; i++)
+            {
+                var rowArray = dataArray[i]?.AsArray();
+                if (rowArray != null)
+                    for (var j = 0; j < rowArray.Count; j++)
+                    {
+                        var value = rowArray[j]?.GetValue<string>() ?? "";
+                        var cellObj = cells[startRow + i, startCol + j];
+
+                        // Parse value as number, boolean, or string
+                        // Ensures formulas can correctly identify numeric values (same as excel_cell write)
+                        if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var numValue))
+                            // Use PutValue with number to ensure Excel recognizes it as numeric type
+                            cellObj.PutValue(numValue);
+                        else if (bool.TryParse(value, out var boolValue))
+                            cellObj.PutValue(boolValue);
+                        else
+                            cellObj.PutValue(value);
+                    }
+            }
+
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            workbook.Save(outputPath);
+            return $"Range {range} edited in sheet {sheetIndex}: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -380,74 +387,77 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Formatted string with range data</returns>
-    private async Task<string> GetRangeAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> GetRangeAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var range = ArgumentHelper.GetString(arguments, "range");
-        var includeFormulas = ArgumentHelper.GetBool(arguments, "includeFormulas", false);
-        var includeFormat = ArgumentHelper.GetBool(arguments, "includeFormat", false);
-
-        using var workbook = new Workbook(path);
-        if (sheetIndex < 0 || sheetIndex >= workbook.Worksheets.Count)
-            throw new ArgumentException($"sheetIndex must be between 0 and {workbook.Worksheets.Count - 1}");
-
-        workbook.CalculateFormula();
-
-        var worksheet = workbook.Worksheets[sheetIndex];
-        var cells = worksheet.Cells;
-
-        var cellRange = ExcelHelper.CreateRange(cells, range);
-
-        var sb = new StringBuilder();
-        sb.AppendLine($"Range: {range}");
-        sb.AppendLine($"Rows: {cellRange.RowCount}, Columns: {cellRange.ColumnCount}");
-        sb.AppendLine();
-
-        for (var i = 0; i < cellRange.RowCount; i++)
+        return Task.Run(() =>
         {
-            for (var j = 0; j < cellRange.ColumnCount; j++)
-            {
-                var cell = cells[cellRange.FirstRow + i, cellRange.FirstColumn + j];
-                var cellRef = CellsHelper.CellIndexToName(cellRange.FirstRow + i, cellRange.FirstColumn + j);
+            var range = ArgumentHelper.GetString(arguments, "range");
+            var includeFormulas = ArgumentHelper.GetBool(arguments, "includeFormulas", false);
+            var includeFormat = ArgumentHelper.GetBool(arguments, "includeFormat", false);
 
-                if (includeFormulas && !string.IsNullOrEmpty(cell.Formula))
+            using var workbook = new Workbook(path);
+            if (sheetIndex < 0 || sheetIndex >= workbook.Worksheets.Count)
+                throw new ArgumentException($"sheetIndex must be between 0 and {workbook.Worksheets.Count - 1}");
+
+            workbook.CalculateFormula();
+
+            var worksheet = workbook.Worksheets[sheetIndex];
+            var cells = worksheet.Cells;
+
+            var cellRange = ExcelHelper.CreateRange(cells, range);
+
+            var sb = new StringBuilder();
+            sb.AppendLine($"Range: {range}");
+            sb.AppendLine($"Rows: {cellRange.RowCount}, Columns: {cellRange.ColumnCount}");
+            sb.AppendLine();
+
+            for (var i = 0; i < cellRange.RowCount; i++)
+            {
+                for (var j = 0; j < cellRange.ColumnCount; j++)
                 {
-                    sb.Append($"{cellRef}: {cell.Formula}");
-                }
-                else
-                {
-                    object? displayValue;
-                    if (!string.IsNullOrEmpty(cell.Formula))
+                    var cell = cells[cellRange.FirstRow + i, cellRange.FirstColumn + j];
+                    var cellRef = CellsHelper.CellIndexToName(cellRange.FirstRow + i, cellRange.FirstColumn + j);
+
+                    if (includeFormulas && !string.IsNullOrEmpty(cell.Formula))
                     {
-                        displayValue = cell.Value;
-                        if (displayValue is CellValueType.IsError)
-                            displayValue = cell.DisplayStringValue;
-                        if (displayValue == null || (displayValue is string str && string.IsNullOrEmpty(str)))
-                        {
-                            displayValue = cell.DisplayStringValue;
-                            if (string.IsNullOrEmpty(displayValue?.ToString())) displayValue = cell.Formula;
-                        }
+                        sb.Append($"{cellRef}: {cell.Formula}");
                     }
                     else
                     {
-                        displayValue = cell.Value ?? cell.DisplayStringValue;
+                        object? displayValue;
+                        if (!string.IsNullOrEmpty(cell.Formula))
+                        {
+                            displayValue = cell.Value;
+                            if (displayValue is CellValueType.IsError)
+                                displayValue = cell.DisplayStringValue;
+                            if (displayValue == null || (displayValue is string str && string.IsNullOrEmpty(str)))
+                            {
+                                displayValue = cell.DisplayStringValue;
+                                if (string.IsNullOrEmpty(displayValue?.ToString())) displayValue = cell.Formula;
+                            }
+                        }
+                        else
+                        {
+                            displayValue = cell.Value ?? cell.DisplayStringValue;
+                        }
+
+                        sb.Append($"{cellRef}: {displayValue ?? "(empty)"}");
                     }
 
-                    sb.Append($"{cellRef}: {displayValue ?? "(empty)"}");
+                    if (includeFormat)
+                    {
+                        var style = cell.GetStyle();
+                        sb.Append($" [Font: {style.Font.Name}, Size: {style.Font.Size}]");
+                    }
+
+                    if (j < cellRange.ColumnCount - 1) sb.Append(" | ");
                 }
 
-                if (includeFormat)
-                {
-                    var style = cell.GetStyle();
-                    sb.Append($" [Font: {style.Font.Name}, Size: {style.Font.Size}]");
-                }
-
-                if (j < cellRange.ColumnCount - 1) sb.Append(" | ");
+                sb.AppendLine();
             }
 
-            sb.AppendLine();
-        }
-
-        return await Task.FromResult(sb.ToString());
+            return sb.ToString();
+        });
     }
 
     /// <summary>
@@ -457,43 +467,46 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message with cleared range</returns>
-    private async Task<string> ClearRangeAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> ClearRangeAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var range = ArgumentHelper.GetString(arguments, "range");
-        var clearContent = ArgumentHelper.GetBool(arguments, "clearContent", true);
-        var clearFormat = ArgumentHelper.GetBool(arguments, "clearFormat", false);
-
-        using var workbook = new Workbook(path);
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var cells = worksheet.Cells;
-
-        var cellRange = ExcelHelper.CreateRange(cells, range);
-
-        if (clearContent && clearFormat)
+        return Task.Run(() =>
         {
-            for (var i = cellRange.FirstRow; i <= cellRange.FirstRow + cellRange.RowCount - 1; i++)
-            for (var j = cellRange.FirstColumn; j <= cellRange.FirstColumn + cellRange.ColumnCount - 1; j++)
+            var range = ArgumentHelper.GetString(arguments, "range");
+            var clearContent = ArgumentHelper.GetBool(arguments, "clearContent", true);
+            var clearFormat = ArgumentHelper.GetBool(arguments, "clearFormat", false);
+
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            var cells = worksheet.Cells;
+
+            var cellRange = ExcelHelper.CreateRange(cells, range);
+
+            if (clearContent && clearFormat)
             {
-                cells[i, j].PutValue("");
-                var defaultStyle = workbook.CreateStyle();
-                cells[i, j].SetStyle(defaultStyle);
+                for (var i = cellRange.FirstRow; i <= cellRange.FirstRow + cellRange.RowCount - 1; i++)
+                for (var j = cellRange.FirstColumn; j <= cellRange.FirstColumn + cellRange.ColumnCount - 1; j++)
+                {
+                    cells[i, j].PutValue("");
+                    var defaultStyle = workbook.CreateStyle();
+                    cells[i, j].SetStyle(defaultStyle);
+                }
             }
-        }
-        else if (clearContent)
-        {
-            for (var i = cellRange.FirstRow; i <= cellRange.FirstRow + cellRange.RowCount - 1; i++)
-            for (var j = cellRange.FirstColumn; j <= cellRange.FirstColumn + cellRange.ColumnCount - 1; j++)
-                cells[i, j].PutValue("");
-        }
-        else if (clearFormat)
-        {
-            var defaultStyle = workbook.CreateStyle();
-            cellRange.ApplyStyle(defaultStyle, new StyleFlag { All = true });
-        }
+            else if (clearContent)
+            {
+                for (var i = cellRange.FirstRow; i <= cellRange.FirstRow + cellRange.RowCount - 1; i++)
+                for (var j = cellRange.FirstColumn; j <= cellRange.FirstColumn + cellRange.ColumnCount - 1; j++)
+                    cells[i, j].PutValue("");
+            }
+            else if (clearFormat)
+            {
+                var defaultStyle = workbook.CreateStyle();
+                cellRange.ApplyStyle(defaultStyle, new StyleFlag { All = true });
+            }
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        workbook.Save(outputPath);
-        return await Task.FromResult($"Range {range} cleared in sheet {sheetIndex}: {outputPath}");
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            workbook.Save(outputPath);
+            return $"Range {range} cleared in sheet {sheetIndex}: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -506,45 +519,48 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message with copy details</returns>
-    private async Task<string> CopyRangeAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> CopyRangeAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var sourceSheetIndex = ArgumentHelper.GetInt(arguments, "sourceSheetIndex", sheetIndex);
-        var sourceRange = ArgumentHelper.GetString(arguments, "sourceRange");
-        var destSheetIndex = ArgumentHelper.GetIntNullable(arguments, "destSheetIndex");
-        var destCell = ArgumentHelper.GetString(arguments, "destCell");
-        var copyOptions = ArgumentHelper.GetString(arguments, "copyOptions", "All");
-
-        using var workbook = new Workbook(path);
-        var sourceSheet = ExcelHelper.GetWorksheet(workbook, sourceSheetIndex);
-        var destSheetIdx = destSheetIndex ?? sourceSheetIndex;
-        var destSheet = ExcelHelper.GetWorksheet(workbook, destSheetIdx);
-
-        Range sourceRangeObj;
-        Range destRangeObj;
-        try
+        return Task.Run(() =>
         {
-            sourceRangeObj = sourceSheet.Cells.CreateRange(sourceRange);
-            destRangeObj = destSheet.Cells.CreateRange(destCell);
-        }
-        catch (Exception ex)
-        {
-            throw new ArgumentException(
-                $"Invalid range format. Source range: '{sourceRange}', Destination cell: '{destCell}'. Range exceeds Excel limits (valid range: A1:XFD1048576). Error: {ex.Message}");
-        }
+            var sourceSheetIndex = ArgumentHelper.GetInt(arguments, "sourceSheetIndex", sheetIndex);
+            var sourceRange = ArgumentHelper.GetString(arguments, "sourceRange");
+            var destSheetIndex = ArgumentHelper.GetIntNullable(arguments, "destSheetIndex");
+            var destCell = ArgumentHelper.GetString(arguments, "destCell");
+            var copyOptions = ArgumentHelper.GetString(arguments, "copyOptions", "All");
 
-        var copyOptionsEnum = copyOptions switch
-        {
-            "Values" => PasteType.Values,
-            "Formats" => PasteType.Formats,
-            "Formulas" => PasteType.Formulas,
-            _ => PasteType.All
-        };
+            using var workbook = new Workbook(path);
+            var sourceSheet = ExcelHelper.GetWorksheet(workbook, sourceSheetIndex);
+            var destSheetIdx = destSheetIndex ?? sourceSheetIndex;
+            var destSheet = ExcelHelper.GetWorksheet(workbook, destSheetIdx);
 
-        destRangeObj.Copy(sourceRangeObj, new PasteOptions { PasteType = copyOptionsEnum });
+            Range sourceRangeObj;
+            Range destRangeObj;
+            try
+            {
+                sourceRangeObj = sourceSheet.Cells.CreateRange(sourceRange);
+                destRangeObj = destSheet.Cells.CreateRange(destCell);
+            }
+            catch (Exception ex)
+            {
+                throw new ArgumentException(
+                    $"Invalid range format. Source range: '{sourceRange}', Destination cell: '{destCell}'. Range exceeds Excel limits (valid range: A1:XFD1048576). Error: {ex.Message}");
+            }
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        workbook.Save(outputPath);
-        return await Task.FromResult($"Range {sourceRange} copied to {destCell} in sheet {destSheetIdx}: {outputPath}");
+            var copyOptionsEnum = copyOptions switch
+            {
+                "Values" => PasteType.Values,
+                "Formats" => PasteType.Formats,
+                "Formulas" => PasteType.Formulas,
+                _ => PasteType.All
+            };
+
+            destRangeObj.Copy(sourceRangeObj, new PasteOptions { PasteType = copyOptionsEnum });
+
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            workbook.Save(outputPath);
+            return $"Range {sourceRange} copied to {destCell} in sheet {destSheetIdx}: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -554,30 +570,35 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message with move details</returns>
-    private async Task<string> MoveRangeAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> MoveRangeAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var sourceSheetIndex = ArgumentHelper.GetInt(arguments, "sourceSheetIndex", sheetIndex);
-        var sourceRange = ArgumentHelper.GetString(arguments, "sourceRange");
-        var destSheetIndex = ArgumentHelper.GetIntNullable(arguments, "destSheetIndex");
-        var destCell = ArgumentHelper.GetString(arguments, "destCell");
+        return Task.Run(() =>
+        {
+            var sourceSheetIndex = ArgumentHelper.GetInt(arguments, "sourceSheetIndex", sheetIndex);
+            var sourceRange = ArgumentHelper.GetString(arguments, "sourceRange");
+            var destSheetIndex = ArgumentHelper.GetIntNullable(arguments, "destSheetIndex");
+            var destCell = ArgumentHelper.GetString(arguments, "destCell");
 
-        using var workbook = new Workbook(path);
-        var sourceSheet = ExcelHelper.GetWorksheet(workbook, sourceSheetIndex);
-        var destSheetIdx = destSheetIndex ?? sourceSheetIndex;
-        var destSheet = ExcelHelper.GetWorksheet(workbook, destSheetIdx);
+            using var workbook = new Workbook(path);
+            var sourceSheet = ExcelHelper.GetWorksheet(workbook, sourceSheetIndex);
+            var destSheetIdx = destSheetIndex ?? sourceSheetIndex;
+            var destSheet = ExcelHelper.GetWorksheet(workbook, destSheetIdx);
 
-        var sourceRangeObj = ExcelHelper.CreateRange(sourceSheet.Cells, sourceRange, "source range");
-        var destRangeObj = ExcelHelper.CreateRange(destSheet.Cells, destCell, "destination cell");
+            var sourceRangeObj = ExcelHelper.CreateRange(sourceSheet.Cells, sourceRange, "source range");
+            var destRangeObj = ExcelHelper.CreateRange(destSheet.Cells, destCell, "destination cell");
 
-        destRangeObj.Copy(sourceRangeObj, new PasteOptions { PasteType = PasteType.All });
+            destRangeObj.Copy(sourceRangeObj, new PasteOptions { PasteType = PasteType.All });
 
-        for (var i = sourceRangeObj.FirstRow; i <= sourceRangeObj.FirstRow + sourceRangeObj.RowCount - 1; i++)
-        for (var j = sourceRangeObj.FirstColumn; j <= sourceRangeObj.FirstColumn + sourceRangeObj.ColumnCount - 1; j++)
-            sourceSheet.Cells[i, j].PutValue("");
+            for (var i = sourceRangeObj.FirstRow; i <= sourceRangeObj.FirstRow + sourceRangeObj.RowCount - 1; i++)
+            for (var j = sourceRangeObj.FirstColumn;
+                 j <= sourceRangeObj.FirstColumn + sourceRangeObj.ColumnCount - 1;
+                 j++)
+                sourceSheet.Cells[i, j].PutValue("");
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        workbook.Save(outputPath);
-        return await Task.FromResult($"Range {sourceRange} moved to {destCell} in sheet {destSheetIdx}: {outputPath}");
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            workbook.Save(outputPath);
+            return $"Range {sourceRange} moved to {destCell} in sheet {destSheetIdx}: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -587,42 +608,45 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message with format copy details</returns>
-    private async Task<string> CopyFormatAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> CopyFormatAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        // Support both 'range' and 'sourceRange' for consistency with copy/move operations
-        var range = ArgumentHelper.GetString(arguments, "range", "sourceRange", "range or sourceRange");
-        var destRange = ArgumentHelper.GetString(arguments, "destRange", false);
-        var destCell = ArgumentHelper.GetString(arguments, "destCell", false);
-
-        if (string.IsNullOrEmpty(destRange) && string.IsNullOrEmpty(destCell))
-            throw new ArgumentException(
-                "Either destRange or destCell is required for copy_format operation. Example: range='A1:C5', destRange='E1:G5' or destCell='E1'");
-
-        var copyValue = ArgumentHelper.GetBool(arguments, "copyValue", false);
-
-        using var workbook = new Workbook(path);
-
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var cells = worksheet.Cells;
-
-        var destTarget = destRange ?? destCell!;
-        var sourceCellRange = ExcelHelper.CreateRange(cells, range, "source range");
-        var destCellRange = ExcelHelper.CreateRange(cells, destTarget, "destination");
-
-        var pasteOptions = new PasteOptions
+        return Task.Run(() =>
         {
-            PasteType = copyValue ? PasteType.All : PasteType.Formats
-        };
+            // Support both 'range' and 'sourceRange' for consistency with copy/move operations
+            var range = ArgumentHelper.GetString(arguments, "range", "sourceRange", "range or sourceRange");
+            var destRange = ArgumentHelper.GetString(arguments, "destRange", false);
+            var destCell = ArgumentHelper.GetString(arguments, "destCell", false);
 
-        destCellRange.Copy(sourceCellRange, pasteOptions);
+            if (string.IsNullOrEmpty(destRange) && string.IsNullOrEmpty(destCell))
+                throw new ArgumentException(
+                    "Either destRange or destCell is required for copy_format operation. Example: range='A1:C5', destRange='E1:G5' or destCell='E1'");
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        workbook.Save(outputPath);
+            var copyValue = ArgumentHelper.GetBool(arguments, "copyValue", false);
 
-        var result = "Format copied";
-        if (copyValue) result += " with values";
-        result += $"\nSource range: {range}\nDestination: {destTarget}\nOutput: {outputPath}";
+            using var workbook = new Workbook(path);
 
-        return await Task.FromResult(result);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            var cells = worksheet.Cells;
+
+            var destTarget = destRange ?? destCell!;
+            var sourceCellRange = ExcelHelper.CreateRange(cells, range, "source range");
+            var destCellRange = ExcelHelper.CreateRange(cells, destTarget, "destination");
+
+            var pasteOptions = new PasteOptions
+            {
+                PasteType = copyValue ? PasteType.All : PasteType.Formats
+            };
+
+            destCellRange.Copy(sourceCellRange, pasteOptions);
+
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            workbook.Save(outputPath);
+
+            var result = "Format copied";
+            if (copyValue) result += " with values";
+            result += $"\nSource range: {range}\nDestination: {destTarget}\nOutput: {outputPath}";
+
+            return result;
+        });
     }
 }

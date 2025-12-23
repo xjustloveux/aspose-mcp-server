@@ -161,36 +161,39 @@ Usage examples:
     /// <param name="_">Unused parameter</param>
     /// <param name="path">Excel file path</param>
     /// <returns>Formatted string with workbook properties</returns>
-    private async Task<string> GetWorkbookPropertiesAsync(JsonObject? _, string path)
+    private Task<string> GetWorkbookPropertiesAsync(JsonObject? _, string path)
     {
-        using var workbook = new Workbook(path);
-        var props = workbook.BuiltInDocumentProperties;
-        var customProps = workbook.CustomDocumentProperties;
-
-        var sb = new StringBuilder();
-        sb.AppendLine("Workbook Properties:");
-        sb.AppendLine($"  Title: {props.Title ?? "(none)"}");
-        sb.AppendLine($"  Subject: {props.Subject ?? "(none)"}");
-        sb.AppendLine($"  Author: {props.Author ?? "(none)"}");
-        sb.AppendLine($"  Keywords: {props.Keywords ?? "(none)"}");
-        sb.AppendLine($"  Comments: {props.Comments ?? "(none)"}");
-        sb.AppendLine($"  Category: {props.Category ?? "(none)"}");
-        sb.AppendLine($"  Company: {props.Company ?? "(none)"}");
-        sb.AppendLine($"  Manager: {props.Manager ?? "(none)"}");
-        sb.AppendLine($"  Created: {props.CreatedTime}");
-        sb.AppendLine($"  Modified: {props.LastSavedTime}");
-        sb.AppendLine($"  Last Saved By: {props.LastSavedBy ?? "(none)"}");
-        sb.AppendLine($"  Revision: {props.RevisionNumber}");
-
-        if (customProps.Count > 0)
+        return Task.Run(() =>
         {
-            sb.AppendLine("\nCustom Properties:");
-            foreach (var prop in customProps) sb.AppendLine($"  {prop.Name}: {prop.Value}");
-        }
+            using var workbook = new Workbook(path);
+            var props = workbook.BuiltInDocumentProperties;
+            var customProps = workbook.CustomDocumentProperties;
 
-        sb.AppendLine($"\nTotal Sheets: {workbook.Worksheets.Count}");
+            var sb = new StringBuilder();
+            sb.AppendLine("Workbook Properties:");
+            sb.AppendLine($"  Title: {props.Title ?? "(none)"}");
+            sb.AppendLine($"  Subject: {props.Subject ?? "(none)"}");
+            sb.AppendLine($"  Author: {props.Author ?? "(none)"}");
+            sb.AppendLine($"  Keywords: {props.Keywords ?? "(none)"}");
+            sb.AppendLine($"  Comments: {props.Comments ?? "(none)"}");
+            sb.AppendLine($"  Category: {props.Category ?? "(none)"}");
+            sb.AppendLine($"  Company: {props.Company ?? "(none)"}");
+            sb.AppendLine($"  Manager: {props.Manager ?? "(none)"}");
+            sb.AppendLine($"  Created: {props.CreatedTime}");
+            sb.AppendLine($"  Modified: {props.LastSavedTime}");
+            sb.AppendLine($"  Last Saved By: {props.LastSavedBy ?? "(none)"}");
+            sb.AppendLine($"  Revision: {props.RevisionNumber}");
 
-        return await Task.FromResult(sb.ToString());
+            if (customProps.Count > 0)
+            {
+                sb.AppendLine("\nCustom Properties:");
+                foreach (var prop in customProps) sb.AppendLine($"  {prop.Name}: {prop.Value}");
+            }
+
+            sb.AppendLine($"\nTotal Sheets: {workbook.Worksheets.Count}");
+
+            return sb.ToString();
+        });
     }
 
     /// <summary>
@@ -199,37 +202,40 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing various property values</param>
     /// <param name="path">Excel file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetWorkbookPropertiesAsync(JsonObject? arguments, string path)
+    private Task<string> SetWorkbookPropertiesAsync(JsonObject? arguments, string path)
     {
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var title = ArgumentHelper.GetStringNullable(arguments, "title");
-        var subject = ArgumentHelper.GetStringNullable(arguments, "subject");
-        var author = ArgumentHelper.GetStringNullable(arguments, "author");
-        var keywords = ArgumentHelper.GetStringNullable(arguments, "keywords");
-        var comments = ArgumentHelper.GetStringNullable(arguments, "comments");
-        var category = ArgumentHelper.GetStringNullable(arguments, "category");
-        var company = ArgumentHelper.GetStringNullable(arguments, "company");
-        var manager = ArgumentHelper.GetStringNullable(arguments, "manager");
-        var customProps = ArgumentHelper.GetObject(arguments, "customProperties", false);
+        return Task.Run(() =>
+        {
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var title = ArgumentHelper.GetStringNullable(arguments, "title");
+            var subject = ArgumentHelper.GetStringNullable(arguments, "subject");
+            var author = ArgumentHelper.GetStringNullable(arguments, "author");
+            var keywords = ArgumentHelper.GetStringNullable(arguments, "keywords");
+            var comments = ArgumentHelper.GetStringNullable(arguments, "comments");
+            var category = ArgumentHelper.GetStringNullable(arguments, "category");
+            var company = ArgumentHelper.GetStringNullable(arguments, "company");
+            var manager = ArgumentHelper.GetStringNullable(arguments, "manager");
+            var customProps = ArgumentHelper.GetObject(arguments, "customProperties", false);
 
-        using var workbook = new Workbook(path);
-        var props = workbook.BuiltInDocumentProperties;
+            using var workbook = new Workbook(path);
+            var props = workbook.BuiltInDocumentProperties;
 
-        if (!string.IsNullOrEmpty(title)) props.Title = title;
-        if (!string.IsNullOrEmpty(subject)) props.Subject = subject;
-        if (!string.IsNullOrEmpty(author)) props.Author = author;
-        if (!string.IsNullOrEmpty(keywords)) props.Keywords = keywords;
-        if (!string.IsNullOrEmpty(comments)) props.Comments = comments;
-        if (!string.IsNullOrEmpty(category)) props.Category = category;
-        if (!string.IsNullOrEmpty(company)) props.Company = company;
-        if (!string.IsNullOrEmpty(manager)) props.Manager = manager;
+            if (!string.IsNullOrEmpty(title)) props.Title = title;
+            if (!string.IsNullOrEmpty(subject)) props.Subject = subject;
+            if (!string.IsNullOrEmpty(author)) props.Author = author;
+            if (!string.IsNullOrEmpty(keywords)) props.Keywords = keywords;
+            if (!string.IsNullOrEmpty(comments)) props.Comments = comments;
+            if (!string.IsNullOrEmpty(category)) props.Category = category;
+            if (!string.IsNullOrEmpty(company)) props.Company = company;
+            if (!string.IsNullOrEmpty(manager)) props.Manager = manager;
 
-        if (customProps != null)
-            foreach (var kvp in customProps)
-                workbook.CustomDocumentProperties.Add(kvp.Key, kvp.Value?.GetValue<string>() ?? "");
+            if (customProps != null)
+                foreach (var kvp in customProps)
+                    workbook.CustomDocumentProperties.Add(kvp.Key, kvp.Value?.GetValue<string>() ?? "");
 
-        workbook.Save(outputPath);
-        return await Task.FromResult($"Workbook properties updated: {outputPath}");
+            workbook.Save(outputPath);
+            return $"Workbook properties updated: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -239,37 +245,40 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Formatted string with worksheet properties</returns>
-    private async Task<string> GetSheetPropertiesAsync(JsonObject? _, string path, int sheetIndex)
+    private Task<string> GetSheetPropertiesAsync(JsonObject? _, string path, int sheetIndex)
     {
-        using var workbook = new Workbook(path);
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var sb = new StringBuilder();
+        return Task.Run(() =>
+        {
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            var sb = new StringBuilder();
 
-        sb.AppendLine("Sheet Properties:");
-        sb.AppendLine($"  Name: {worksheet.Name}");
-        sb.AppendLine($"  Index: {sheetIndex}");
-        sb.AppendLine($"  Is Visible: {worksheet.IsVisible}");
-        sb.AppendLine($"  Tab Color: {worksheet.TabColor}");
-        sb.AppendLine($"  Is Selected: {workbook.Worksheets.ActiveSheetIndex == sheetIndex}");
-        sb.AppendLine($"  Max Data Row: {worksheet.Cells.MaxDataRow}");
-        sb.AppendLine($"  Max Data Column: {worksheet.Cells.MaxDataColumn}");
-        sb.AppendLine($"  Is Protected: {worksheet.Protection.IsProtectedWithPassword}");
-        sb.AppendLine($"  Comments Count: {worksheet.Comments.Count}");
-        sb.AppendLine($"  Charts Count: {worksheet.Charts.Count}");
-        sb.AppendLine($"  Pictures Count: {worksheet.Pictures.Count}");
-        sb.AppendLine($"  Hyperlinks Count: {worksheet.Hyperlinks.Count}");
+            sb.AppendLine("Sheet Properties:");
+            sb.AppendLine($"  Name: {worksheet.Name}");
+            sb.AppendLine($"  Index: {sheetIndex}");
+            sb.AppendLine($"  Is Visible: {worksheet.IsVisible}");
+            sb.AppendLine($"  Tab Color: {worksheet.TabColor}");
+            sb.AppendLine($"  Is Selected: {workbook.Worksheets.ActiveSheetIndex == sheetIndex}");
+            sb.AppendLine($"  Max Data Row: {worksheet.Cells.MaxDataRow}");
+            sb.AppendLine($"  Max Data Column: {worksheet.Cells.MaxDataColumn}");
+            sb.AppendLine($"  Is Protected: {worksheet.Protection.IsProtectedWithPassword}");
+            sb.AppendLine($"  Comments Count: {worksheet.Comments.Count}");
+            sb.AppendLine($"  Charts Count: {worksheet.Charts.Count}");
+            sb.AppendLine($"  Pictures Count: {worksheet.Pictures.Count}");
+            sb.AppendLine($"  Hyperlinks Count: {worksheet.Hyperlinks.Count}");
 
-        var pageSetup = worksheet.PageSetup;
-        sb.AppendLine("\nPrint Settings:");
-        sb.AppendLine($"  Print Area: {pageSetup.PrintArea ?? "(none)"}");
-        sb.AppendLine($"  Print Title Rows: {pageSetup.PrintTitleRows ?? "(none)"}");
-        sb.AppendLine($"  Print Title Columns: {pageSetup.PrintTitleColumns ?? "(none)"}");
-        sb.AppendLine($"  Orientation: {pageSetup.Orientation}");
-        sb.AppendLine($"  Paper Size: {pageSetup.PaperSize}");
-        sb.AppendLine($"  Fit To Pages Wide: {pageSetup.FitToPagesWide}");
-        sb.AppendLine($"  Fit To Pages Tall: {pageSetup.FitToPagesTall}");
+            var pageSetup = worksheet.PageSetup;
+            sb.AppendLine("\nPrint Settings:");
+            sb.AppendLine($"  Print Area: {pageSetup.PrintArea ?? "(none)"}");
+            sb.AppendLine($"  Print Title Rows: {pageSetup.PrintTitleRows ?? "(none)"}");
+            sb.AppendLine($"  Print Title Columns: {pageSetup.PrintTitleColumns ?? "(none)"}");
+            sb.AppendLine($"  Orientation: {pageSetup.Orientation}");
+            sb.AppendLine($"  Paper Size: {pageSetup.PaperSize}");
+            sb.AppendLine($"  Fit To Pages Wide: {pageSetup.FitToPagesWide}");
+            sb.AppendLine($"  Fit To Pages Tall: {pageSetup.FitToPagesTall}");
 
-        return await Task.FromResult(sb.ToString());
+            return sb.ToString();
+        });
     }
 
     /// <summary>
@@ -279,31 +288,34 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> EditSheetPropertiesAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> EditSheetPropertiesAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var name = ArgumentHelper.GetStringNullable(arguments, "name");
-        var isVisible = ArgumentHelper.GetBoolNullable(arguments, "isVisible");
-        var tabColor = ArgumentHelper.GetStringNullable(arguments, "tabColor");
-        var isSelected = ArgumentHelper.GetBoolNullable(arguments, "isSelected");
-
-        using var workbook = new Workbook(path);
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-
-        if (!string.IsNullOrEmpty(name)) worksheet.Name = name;
-
-        if (isVisible.HasValue) worksheet.IsVisible = isVisible.Value;
-
-        if (!string.IsNullOrWhiteSpace(tabColor))
+        return Task.Run(() =>
         {
-            var color = ColorHelper.ParseColor(tabColor);
-            worksheet.TabColor = color;
-        }
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var name = ArgumentHelper.GetStringNullable(arguments, "name");
+            var isVisible = ArgumentHelper.GetBoolNullable(arguments, "isVisible");
+            var tabColor = ArgumentHelper.GetStringNullable(arguments, "tabColor");
+            var isSelected = ArgumentHelper.GetBoolNullable(arguments, "isSelected");
 
-        if (isSelected.HasValue && isSelected.Value) workbook.Worksheets.ActiveSheetIndex = sheetIndex;
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
 
-        workbook.Save(outputPath);
-        return await Task.FromResult($"Sheet {sheetIndex} properties updated: {outputPath}");
+            if (!string.IsNullOrEmpty(name)) worksheet.Name = name;
+
+            if (isVisible.HasValue) worksheet.IsVisible = isVisible.Value;
+
+            if (!string.IsNullOrWhiteSpace(tabColor))
+            {
+                var color = ColorHelper.ParseColor(tabColor);
+                worksheet.TabColor = color;
+            }
+
+            if (isSelected.HasValue && isSelected.Value) workbook.Worksheets.ActiveSheetIndex = sheetIndex;
+
+            workbook.Save(outputPath);
+            return $"Sheet {sheetIndex} properties updated: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -312,35 +324,38 @@ Usage examples:
     /// <param name="arguments">JSON arguments (no specific parameters required)</param>
     /// <param name="path">Excel file path</param>
     /// <returns>Formatted string with sheet information</returns>
-    private async Task<string> GetSheetInfoAsync(JsonObject? arguments, string path)
+    private Task<string> GetSheetInfoAsync(JsonObject? arguments, string path)
     {
-        var sheetIndex = ArgumentHelper.GetIntNullable(arguments, "sheetIndex");
-
-        using var workbook = new Workbook(path);
-        var result = new StringBuilder();
-
-        result.AppendLine("=== Excel Workbook Information ===\n");
-        result.AppendLine($"Total worksheets: {workbook.Worksheets.Count}\n");
-
-        if (sheetIndex.HasValue)
+        return Task.Run(() =>
         {
-            if (sheetIndex.Value < 0 || sheetIndex.Value >= workbook.Worksheets.Count)
-                throw new ArgumentException(
-                    $"Worksheet index {sheetIndex.Value} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
+            var sheetIndex = ArgumentHelper.GetIntNullable(arguments, "sheetIndex");
 
-            var worksheet = workbook.Worksheets[sheetIndex.Value];
-            AppendSheetInfo(result, worksheet, sheetIndex.Value);
-        }
-        else
-        {
-            for (var i = 0; i < workbook.Worksheets.Count; i++)
+            using var workbook = new Workbook(path);
+            var result = new StringBuilder();
+
+            result.AppendLine("=== Excel Workbook Information ===\n");
+            result.AppendLine($"Total worksheets: {workbook.Worksheets.Count}\n");
+
+            if (sheetIndex.HasValue)
             {
-                AppendSheetInfo(result, workbook.Worksheets[i], i);
-                if (i < workbook.Worksheets.Count - 1) result.AppendLine();
-            }
-        }
+                if (sheetIndex.Value < 0 || sheetIndex.Value >= workbook.Worksheets.Count)
+                    throw new ArgumentException(
+                        $"Worksheet index {sheetIndex.Value} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
 
-        return await Task.FromResult(result.ToString());
+                var worksheet = workbook.Worksheets[sheetIndex.Value];
+                AppendSheetInfo(result, worksheet, sheetIndex.Value);
+            }
+            else
+            {
+                for (var i = 0; i < workbook.Worksheets.Count; i++)
+                {
+                    AppendSheetInfo(result, workbook.Worksheets[i], i);
+                    if (i < workbook.Worksheets.Count - 1) result.AppendLine();
+                }
+            }
+
+            return result.ToString();
+        });
     }
 
     private void AppendSheetInfo(StringBuilder result, Worksheet worksheet, int index)

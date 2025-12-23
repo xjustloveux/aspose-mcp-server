@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Nodes;
+using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using Aspose.Pdf.Text;
 using AsposeMcpServer.Core;
@@ -99,63 +99,66 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, optional text, imagePath, outputPath</param>
     /// <returns>Success message</returns>
-    private async Task<string> AddWatermark(JsonObject? arguments)
+    private Task<string> AddWatermark(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var text = ArgumentHelper.GetString(arguments, "text");
-        var opacity = ArgumentHelper.GetDouble(arguments, "opacity", "opacity", false, 0.3);
-        var fontSize = ArgumentHelper.GetDouble(arguments, "fontSize", "fontSize", false, 72);
-        var fontName = ArgumentHelper.GetString(arguments, "fontName", "Arial");
-        var rotation = ArgumentHelper.GetDouble(arguments, "rotation", "rotation", false, 45);
-
-        SecurityHelper.ValidateFilePath(path);
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var horizontalAlignment = ArgumentHelper.GetString(arguments, "horizontalAlignment", "Center");
-        var verticalAlignment = ArgumentHelper.GetString(arguments, "verticalAlignment", "Center");
-
-        using var document = new Document(path);
-
-        var hAlign = horizontalAlignment.ToLower() switch
+        return Task.Run(() =>
         {
-            "left" => HorizontalAlignment.Left,
-            "right" => HorizontalAlignment.Right,
-            _ => HorizontalAlignment.Center
-        };
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var text = ArgumentHelper.GetString(arguments, "text");
+            var opacity = ArgumentHelper.GetDouble(arguments, "opacity", "opacity", false, 0.3);
+            var fontSize = ArgumentHelper.GetDouble(arguments, "fontSize", "fontSize", false, 72);
+            var fontName = ArgumentHelper.GetString(arguments, "fontName", "Arial");
+            var rotation = ArgumentHelper.GetDouble(arguments, "rotation", "rotation", false, 45);
 
-        var vAlign = verticalAlignment.ToLower() switch
-        {
-            "top" => VerticalAlignment.Top,
-            "bottom" => VerticalAlignment.Bottom,
-            _ => VerticalAlignment.Center
-        };
+            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+            var horizontalAlignment = ArgumentHelper.GetString(arguments, "horizontalAlignment", "Center");
+            var verticalAlignment = ArgumentHelper.GetString(arguments, "verticalAlignment", "Center");
 
-        foreach (var page in document.Pages)
-        {
-            var watermark = new WatermarkArtifact();
-            var textState = new TextState
+            using var document = new Document(path);
+
+            var hAlign = horizontalAlignment.ToLower() switch
             {
-                ForegroundColor = Color.Gray
+                "left" => HorizontalAlignment.Left,
+                "right" => HorizontalAlignment.Right,
+                _ => HorizontalAlignment.Center
             };
 
-            // Apply font settings using FontHelper
-            FontHelper.Pdf.ApplyFontSettings(
-                textState,
-                fontName,
-                fontSize
-            );
+            var vAlign = verticalAlignment.ToLower() switch
+            {
+                "top" => VerticalAlignment.Top,
+                "bottom" => VerticalAlignment.Bottom,
+                _ => VerticalAlignment.Center
+            };
 
-            watermark.SetTextAndState(text, textState);
-            watermark.ArtifactHorizontalAlignment = hAlign;
-            watermark.ArtifactVerticalAlignment = vAlign;
-            watermark.Rotation = rotation;
-            watermark.Opacity = opacity;
+            foreach (var page in document.Pages)
+            {
+                var watermark = new WatermarkArtifact();
+                var textState = new TextState
+                {
+                    ForegroundColor = Color.Gray
+                };
 
-            page.Artifacts.Add(watermark);
-        }
+                // Apply font settings using FontHelper
+                FontHelper.Pdf.ApplyFontSettings(
+                    textState,
+                    fontName,
+                    fontSize
+                );
 
-        document.Save(outputPath);
+                watermark.SetTextAndState(text, textState);
+                watermark.ArtifactHorizontalAlignment = hAlign;
+                watermark.ArtifactVerticalAlignment = vAlign;
+                watermark.Rotation = rotation;
+                watermark.Opacity = opacity;
 
-        return await Task.FromResult($"Watermark added to PDF. Output: {outputPath}");
+                page.Artifacts.Add(watermark);
+            }
+
+            document.Save(outputPath);
+
+            return $"Watermark added to PDF. Output: {outputPath}";
+        });
     }
 }

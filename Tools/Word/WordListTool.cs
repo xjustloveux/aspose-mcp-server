@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using Aspose.Words.Lists;
@@ -71,7 +71,7 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
             bulletChar = new
             {
                 type = "string",
-                description = "Custom bullet character (optional, for custom type, e.g., '●', '■', '▪')"
+                description = "Custom bullet character (optional, for custom type, e.g., '��', '��', '?')"
             },
             numberFormat = new
             {
@@ -152,26 +152,26 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         if (arguments == null)
-            throw new ArgumentException("❌ Arguments cannot be null\n\n" +
-                                        "📝 Usage example: word_list(path='doc.docx', items=['Item 1', 'Item 2'])");
+            throw new ArgumentException("? Arguments cannot be null\n\n" +
+                                        "?? Usage example: word_list(path='doc.docx', items=['Item 1', 'Item 2'])");
 
         if (!arguments.ContainsKey("path"))
         {
             var providedKeys = arguments.Select(kvp => kvp.Key).ToList();
-            throw new ArgumentException($"❌ Required parameter 'path' is missing\n\n" +
-                                        $"📋 Provided parameters: {(providedKeys.Count > 0 ? string.Join(", ", providedKeys.Select(k => $"'{k}'")) : "none")}\n\n" +
-                                        $"📝 Usage examples:\n" +
+            throw new ArgumentException($"? Required parameter 'path' is missing\n\n" +
+                                        $"?? Provided parameters: {(providedKeys.Count > 0 ? string.Join(", ", providedKeys.Select(k => $"'{k}'")) : "none")}\n\n" +
+                                        $"?? Usage examples:\n" +
                                         $"  word_list(path='doc.docx', items=['Item 1', 'Item 2', 'Item 3'])\n" +
                                         $"  word_list(path='doc.docx', text='New item', styleName='Heading 4')\n" +
                                         $"  word_list(path='doc.docx', paragraphIndex=0)\n\n" +
-                                        $"💡 Note: 'path' parameter is required for all operations.");
+                                        $"?? Note: 'path' parameter is required for all operations.");
         }
 
         var pathValue = arguments["path"];
         if (pathValue == null)
-            throw new ArgumentException("❌ Parameter 'path' is null\n\n" +
-                                        "📝 Usage example: word_list(path='doc.docx', items=['Item 1', 'Item 2'])\n\n" +
-                                        "💡 Note: 'path' must be a non-null string value.");
+            throw new ArgumentException("? Parameter 'path' is null\n\n" +
+                                        "?? Usage example: word_list(path='doc.docx', items=['Item 1', 'Item 2'])\n\n" +
+                                        "?? Note: 'path' must be a non-null string value.");
 
         string path;
         try
@@ -181,19 +181,19 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
         catch (Exception ex)
         {
             var pathType = pathValue.GetType().Name;
-            throw new ArgumentException($"❌ Parameter 'path' has incorrect type\n\n" +
-                                        $"📋 Current type: {pathType}\n" +
-                                        $"📋 Current value: {pathValue}\n\n" +
-                                        $"📝 Expected: string (e.g., 'doc.docx')\n\n" +
-                                        $"💡 Error: {ex.Message}");
+            throw new ArgumentException($"? Parameter 'path' has incorrect type\n\n" +
+                                        $"?? Current type: {pathType}\n" +
+                                        $"?? Current value: {pathValue}\n\n" +
+                                        $"?? Expected: string (e.g., 'doc.docx')\n\n" +
+                                        $"?? Error: {ex.Message}");
         }
 
         if (string.IsNullOrWhiteSpace(path))
-            throw new ArgumentException("❌ Parameter 'path' cannot be empty\n\n" +
-                                        "📝 Usage example: word_list(path='doc.docx', items=['Item 1', 'Item 2'])\n\n" +
-                                        "💡 Note: 'path' must be a non-empty string containing the document file path.");
+            throw new ArgumentException("? Parameter 'path' cannot be empty\n\n" +
+                                        "?? Usage example: word_list(path='doc.docx', items=['Item 1', 'Item 2'])\n\n" +
+                                        "?? Note: 'path' must be a non-empty string containing the document file path.");
 
-        SecurityHelper.ValidateFilePath(path);
+        SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
 
         // Auto-infer operation if not provided
         string operation;
@@ -247,10 +247,10 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
                 var availableOps = new[]
                     { "add_list", "add_item", "delete_item", "edit_item", "set_format", "get_format" };
                 throw new ArgumentException(
-                    $"❌ Required parameter 'operation' is missing and cannot be inferred from provided parameters\n\n" +
-                    $"📋 {providedParamsInfo}\n\n" +
-                    $"📋 Available operations: {string.Join(", ", availableOps)}\n\n" +
-                    $"📝 Usage examples:\n" +
+                    $"? Required parameter 'operation' is missing and cannot be inferred from provided parameters\n\n" +
+                    $"?? {providedParamsInfo}\n\n" +
+                    $"?? Available operations: {string.Join(", ", availableOps)}\n\n" +
+                    $"?? Usage examples:\n" +
                     $"  1. Add bullet list (auto-inferred):\n" +
                     $"     word_list(path='doc.docx', items=['Item 1', 'Item 2', 'Item 3'])\n\n" +
                     $"  2. Add numbered list (auto-inferred):\n" +
@@ -263,7 +263,7 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
                     $"     word_list(path='doc.docx', itemIndex=0, text='Modified text')\n\n" +
                     $"  6. Get list format (auto-inferred):\n" +
                     $"     word_list(path='doc.docx', itemIndex=0)\n\n" +
-                    $"💡 Tip: If auto-inference fails, explicitly specify the operation parameter");
+                    $"?? Tip: If auto-inference fails, explicitly specify the operation parameter");
             }
 
             // Add the inferred operation to arguments for consistency
@@ -282,7 +282,7 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
         }
 
         var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
         return operation switch
         {
@@ -303,69 +303,74 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> AddListAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> AddListAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var items = arguments?["items"];
-        if (items == null) throw new ArgumentException("❌ items parameter is required");
-
-        try
+        return Task.Run(() =>
         {
-            var parsedItems = ParseItems(items);
-            var listType = ArgumentHelper.GetString(arguments, "listType", "bullet");
-            var bulletChar = ArgumentHelper.GetString(arguments, "bulletChar", "●");
-            var numberFormat = ArgumentHelper.GetString(arguments, "numberFormat", "arabic");
+            var items = arguments?["items"];
+            if (items == null) throw new ArgumentException("? items parameter is required");
 
-            // Open document and create list
-            var doc = new Document(path);
-            var builder = new DocumentBuilder(doc);
-            builder.MoveToDocumentEnd();
-
-            // Create list
-            var list = doc.Lists.Add(listType == "number" ? ListTemplate.NumberDefault : ListTemplate.BulletDefault);
-
-            // Configure list format
-            if (listType == "custom" && !string.IsNullOrEmpty(bulletChar))
+            try
             {
-                list.ListLevels[0].NumberFormat = bulletChar;
-                list.ListLevels[0].NumberStyle = NumberStyle.Bullet;
-            }
-            else if (listType == "number")
-            {
-                var numStyle = numberFormat.ToLower() switch
+                var parsedItems = ParseItems(items);
+                var listType = ArgumentHelper.GetString(arguments, "listType", "bullet");
+                var bulletChar = ArgumentHelper.GetString(arguments, "bulletChar", "��");
+                var numberFormat = ArgumentHelper.GetString(arguments, "numberFormat", "arabic");
+
+                // Open document and create list
+                var doc = new Document(path);
+                var builder = new DocumentBuilder(doc);
+                builder.MoveToDocumentEnd();
+
+                // Create list
+                var list = doc.Lists.Add(listType == "number"
+                    ? ListTemplate.NumberDefault
+                    : ListTemplate.BulletDefault);
+
+                // Configure list format
+                if (listType == "custom" && !string.IsNullOrEmpty(bulletChar))
                 {
-                    "roman" => NumberStyle.UppercaseRoman,
-                    "letter" => NumberStyle.UppercaseLetter,
-                    _ => NumberStyle.Arabic
-                };
+                    list.ListLevels[0].NumberFormat = bulletChar;
+                    list.ListLevels[0].NumberStyle = NumberStyle.Bullet;
+                }
+                else if (listType == "number")
+                {
+                    var numStyle = numberFormat.ToLower() switch
+                    {
+                        "roman" => NumberStyle.UppercaseRoman,
+                        "letter" => NumberStyle.UppercaseLetter,
+                        _ => NumberStyle.Arabic
+                    };
 
-                foreach (var level in list.ListLevels) level.NumberStyle = numStyle;
+                    foreach (var level in list.ListLevels) level.NumberStyle = numStyle;
+                }
+
+                // Add list items
+                foreach (var item in parsedItems)
+                {
+                    builder.ListFormat.List = list;
+                    builder.ListFormat.ListLevelNumber = Math.Min(item.level, 8);
+                    builder.Writeln(item.text);
+                }
+
+                // Remove list formatting after adding items
+                builder.ListFormat.RemoveNumbers();
+                doc.Save(outputPath);
+
+                var result = "List added successfully\n";
+                result += $"Type: {listType}\n";
+                if (listType == "custom") result += $"Bullet character: {bulletChar}\n";
+                if (listType == "number") result += $"Number format: {numberFormat}\n";
+                result += $"Item count: {parsedItems.Count}\n";
+                result += $"Output: {outputPath}";
+
+                return result;
             }
-
-            // Add list items
-            foreach (var item in parsedItems)
+            catch (Exception ex)
             {
-                builder.ListFormat.List = list;
-                builder.ListFormat.ListLevelNumber = Math.Min(item.level, 8);
-                builder.Writeln(item.text);
+                throw new ArgumentException($"? Error creating list: {ex.Message}");
             }
-
-            // Remove list formatting after adding items
-            builder.ListFormat.RemoveNumbers();
-            doc.Save(outputPath);
-
-            var result = "List added successfully\n";
-            result += $"Type: {listType}\n";
-            if (listType == "custom") result += $"Bullet character: {bulletChar}\n";
-            if (listType == "number") result += $"Number format: {numberFormat}\n";
-            result += $"Item count: {parsedItems.Count}\n";
-            result += $"Output: {outputPath}";
-
-            return await Task.FromResult(result);
-        }
-        catch (Exception ex)
-        {
-            throw new ArgumentException($"❌ Error creating list: {ex.Message}");
-        }
+        });
     }
 
     /// <summary>
@@ -375,46 +380,49 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> AddListItemAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> AddListItemAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var text = ArgumentHelper.GetString(arguments, "text");
-        var styleName = ArgumentHelper.GetString(arguments, "styleName");
-        var listLevel = ArgumentHelper.GetInt(arguments, "listLevel", 0);
-        var applyStyleIndent = ArgumentHelper.GetBool(arguments, "applyStyleIndent");
-
-        var doc = new Document(path);
-        var builder = new DocumentBuilder(doc);
-        builder.MoveToDocumentEnd();
-
-        var style = doc.Styles[styleName];
-        if (style == null)
-            throw new ArgumentException(
-                $"Style '{styleName}' not found. Use word_get_styles tool to view available styles");
-
-        var para = new Paragraph(doc)
+        return Task.Run(() =>
         {
-            ParagraphFormat = { StyleName = styleName }
-        };
+            var text = ArgumentHelper.GetString(arguments, "text");
+            var styleName = ArgumentHelper.GetString(arguments, "styleName");
+            var listLevel = ArgumentHelper.GetInt(arguments, "listLevel", 0);
+            var applyStyleIndent = ArgumentHelper.GetBool(arguments, "applyStyleIndent", true);
 
-        if (!applyStyleIndent && listLevel > 0) para.ParagraphFormat.LeftIndent = listLevel * 36;
+            var doc = new Document(path);
+            var builder = new DocumentBuilder(doc);
+            builder.MoveToDocumentEnd();
 
-        var run = new Run(doc, text);
-        para.AppendChild(run);
-        builder.CurrentParagraph.ParentNode.AppendChild(para);
+            var style = doc.Styles[styleName];
+            if (style == null)
+                throw new ArgumentException(
+                    $"Style '{styleName}' not found. Use word_get_styles tool to view available styles");
 
-        doc.Save(outputPath);
+            var para = new Paragraph(doc)
+            {
+                ParagraphFormat = { StyleName = styleName }
+            };
 
-        var result = "List item added successfully\n";
-        result += $"Style: {styleName}\n";
-        result += $"Level: {listLevel}\n";
+            if (!applyStyleIndent && listLevel > 0) para.ParagraphFormat.LeftIndent = listLevel * 36;
 
-        if (applyStyleIndent)
-            result += "Indent: Using style-defined indent (recommended)\n";
-        else if (listLevel > 0) result += $"Indent: Manually set ({listLevel * 36} points)\n";
+            var run = new Run(doc, text);
+            para.AppendChild(run);
+            builder.CurrentParagraph.ParentNode.AppendChild(para);
 
-        result += $"Output: {outputPath}";
+            doc.Save(outputPath);
 
-        return await Task.FromResult(result);
+            var result = "List item added successfully\n";
+            result += $"Style: {styleName}\n";
+            result += $"Level: {listLevel}\n";
+
+            if (applyStyleIndent)
+                result += "Indent: Using style-defined indent (recommended)\n";
+            else if (listLevel > 0) result += $"Indent: Manually set ({listLevel * 36} points)\n";
+
+            result += $"Output: {outputPath}";
+
+            return result;
+        });
     }
 
     /// <summary>
@@ -424,34 +432,37 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> DeleteListItemAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> DeleteListItemAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex");
+        return Task.Run(() =>
+        {
+            var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex");
 
-        var doc = new Document(path);
-        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
+            var doc = new Document(path);
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
 
-        if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
-            throw new ArgumentException(
-                $"Paragraph index {paragraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
+            if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
+                throw new ArgumentException(
+                    $"Paragraph index {paragraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
 
-        if (paragraphs[paragraphIndex] is not Paragraph paraToDelete)
-            throw new InvalidOperationException($"Unable to get paragraph at index {paragraphIndex}");
+            if (paragraphs[paragraphIndex] is not Paragraph paraToDelete)
+                throw new InvalidOperationException($"Unable to get paragraph at index {paragraphIndex}");
 
-        var itemText = paraToDelete.GetText().Trim();
-        var itemPreview = itemText.Length > 50 ? itemText.Substring(0, 50) + "..." : itemText;
-        var isListItem = paraToDelete.ListFormat.IsListItem;
-        var listInfo = isListItem ? " (list item)" : " (regular paragraph)";
+            var itemText = paraToDelete.GetText().Trim();
+            var itemPreview = itemText.Length > 50 ? itemText.Substring(0, 50) + "..." : itemText;
+            var isListItem = paraToDelete.ListFormat.IsListItem;
+            var listInfo = isListItem ? " (list item)" : " (regular paragraph)";
 
-        paraToDelete.Remove();
-        doc.Save(outputPath);
+            paraToDelete.Remove();
+            doc.Save(outputPath);
 
-        var result = $"List item #{paragraphIndex} deleted successfully{listInfo}\n";
-        if (!string.IsNullOrEmpty(itemPreview)) result += $"Content preview: {itemPreview}\n";
-        result += $"Remaining paragraphs: {doc.GetChildNodes(NodeType.Paragraph, true).Count}\n";
-        result += $"Output: {outputPath}";
+            var result = $"List item #{paragraphIndex} deleted successfully{listInfo}\n";
+            if (!string.IsNullOrEmpty(itemPreview)) result += $"Content preview: {itemPreview}\n";
+            result += $"Remaining paragraphs: {doc.GetChildNodes(NodeType.Paragraph, true).Count}\n";
+            result += $"Output: {outputPath}";
 
-        return await Task.FromResult(result);
+            return result;
+        });
     }
 
     /// <summary>
@@ -461,37 +472,40 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> EditListItemAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> EditListItemAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex");
-        var text = ArgumentHelper.GetString(arguments, "text");
-        var level = ArgumentHelper.GetIntNullable(arguments, "level");
+        return Task.Run(() =>
+        {
+            var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex");
+            var text = ArgumentHelper.GetString(arguments, "text");
+            var level = ArgumentHelper.GetIntNullable(arguments, "level");
 
-        var doc = new Document(path);
-        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
+            var doc = new Document(path);
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
 
-        if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
-            throw new ArgumentException(
-                $"Paragraph index {paragraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
+            if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
+                throw new ArgumentException(
+                    $"Paragraph index {paragraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
 
-        if (paragraphs[paragraphIndex] is not Paragraph para)
-            throw new InvalidOperationException($"Unable to get paragraph at index {paragraphIndex}");
+            if (paragraphs[paragraphIndex] is not Paragraph para)
+                throw new InvalidOperationException($"Unable to get paragraph at index {paragraphIndex}");
 
-        para.Runs.Clear();
-        var run = new Run(doc, text);
-        para.AppendChild(run);
+            para.Runs.Clear();
+            var run = new Run(doc, text);
+            para.AppendChild(run);
 
-        if (level is >= 0 and <= 8) para.ParagraphFormat.LeftIndent = level.Value * 36;
+            if (level is >= 0 and <= 8) para.ParagraphFormat.LeftIndent = level.Value * 36;
 
-        doc.Save(outputPath);
+            doc.Save(outputPath);
 
-        var result = "List item edited successfully\n";
-        result += $"Paragraph index: {paragraphIndex}\n";
-        result += $"New text: {text}\n";
-        if (level.HasValue) result += $"Level: {level.Value}\n";
-        result += $"Output: {outputPath}";
+            var result = "List item edited successfully\n";
+            result += $"Paragraph index: {paragraphIndex}\n";
+            result += $"New text: {text}\n";
+            if (level.HasValue) result += $"Level: {level.Value}\n";
+            result += $"Output: {outputPath}";
 
-        return await Task.FromResult(result);
+            return result;
+        });
     }
 
     /// <summary>
@@ -501,78 +515,82 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetListFormatAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> SetListFormatAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex");
-        var numberStyle = ArgumentHelper.GetStringNullable(arguments, "numberStyle");
-        var indentLevel = ArgumentHelper.GetIntNullable(arguments, "indentLevel");
-        var leftIndent = ArgumentHelper.GetDoubleNullable(arguments, "leftIndent");
-        var firstLineIndent = ArgumentHelper.GetDoubleNullable(arguments, "firstLineIndent");
-
-        var doc = new Document(path);
-        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
-
-        if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
-            throw new ArgumentException(
-                $"Paragraph index {paragraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
-
-        var para = paragraphs[paragraphIndex] as Paragraph;
-        if (para == null) throw new InvalidOperationException($"Unable to find paragraph at index {paragraphIndex}");
-
-        var changes = new List<string>();
-
-        if (!string.IsNullOrEmpty(numberStyle) && para.ListFormat.IsListItem)
+        return Task.Run(() =>
         {
-            var list = para.ListFormat.List;
-            if (list != null)
+            var paragraphIndex = ArgumentHelper.GetInt(arguments, "paragraphIndex");
+            var numberStyle = ArgumentHelper.GetStringNullable(arguments, "numberStyle");
+            var indentLevel = ArgumentHelper.GetIntNullable(arguments, "indentLevel");
+            var leftIndent = ArgumentHelper.GetDoubleNullable(arguments, "leftIndent");
+            var firstLineIndent = ArgumentHelper.GetDoubleNullable(arguments, "firstLineIndent");
+
+            var doc = new Document(path);
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
+
+            if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
+                throw new ArgumentException(
+                    $"Paragraph index {paragraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
+
+            var para = paragraphs[paragraphIndex] as Paragraph;
+            if (para == null)
+                throw new InvalidOperationException($"Unable to find paragraph at index {paragraphIndex}");
+
+            var changes = new List<string>();
+
+            if (!string.IsNullOrEmpty(numberStyle) && para.ListFormat.IsListItem)
             {
-                var level = para.ListFormat.ListLevelNumber;
-                var listLevel = list.ListLevels[level];
-
-                var style = numberStyle.ToLower() switch
+                var list = para.ListFormat.List;
+                if (list != null)
                 {
-                    "arabic" => NumberStyle.Arabic,
-                    "roman" => NumberStyle.UppercaseRoman,
-                    "letter" => NumberStyle.UppercaseLetter,
-                    "bullet" => NumberStyle.Bullet,
-                    "none" => NumberStyle.None,
-                    _ => NumberStyle.Arabic
-                };
+                    var level = para.ListFormat.ListLevelNumber;
+                    var listLevel = list.ListLevels[level];
 
-                listLevel.NumberStyle = style;
-                changes.Add($"Number style: {numberStyle}");
+                    var style = numberStyle.ToLower() switch
+                    {
+                        "arabic" => NumberStyle.Arabic,
+                        "roman" => NumberStyle.UppercaseRoman,
+                        "letter" => NumberStyle.UppercaseLetter,
+                        "bullet" => NumberStyle.Bullet,
+                        "none" => NumberStyle.None,
+                        _ => NumberStyle.Arabic
+                    };
+
+                    listLevel.NumberStyle = style;
+                    changes.Add($"Number style: {numberStyle}");
+                }
             }
-        }
 
-        if (indentLevel.HasValue)
-        {
-            para.ParagraphFormat.LeftIndent = indentLevel.Value * 36;
-            changes.Add($"Indent level: {indentLevel.Value}");
-        }
+            if (indentLevel.HasValue)
+            {
+                para.ParagraphFormat.LeftIndent = indentLevel.Value * 36;
+                changes.Add($"Indent level: {indentLevel.Value}");
+            }
 
-        if (leftIndent.HasValue)
-        {
-            para.ParagraphFormat.LeftIndent = leftIndent.Value;
-            changes.Add($"Left indent: {leftIndent.Value} points");
-        }
+            if (leftIndent.HasValue)
+            {
+                para.ParagraphFormat.LeftIndent = leftIndent.Value;
+                changes.Add($"Left indent: {leftIndent.Value} points");
+            }
 
-        if (firstLineIndent.HasValue)
-        {
-            para.ParagraphFormat.FirstLineIndent = firstLineIndent.Value;
-            changes.Add($"First line indent: {firstLineIndent.Value} points");
-        }
+            if (firstLineIndent.HasValue)
+            {
+                para.ParagraphFormat.FirstLineIndent = firstLineIndent.Value;
+                changes.Add($"First line indent: {firstLineIndent.Value} points");
+            }
 
-        doc.Save(outputPath);
+            doc.Save(outputPath);
 
-        var result = "List format set successfully\n";
-        result += $"Paragraph index: {paragraphIndex}\n";
-        if (changes.Count > 0)
-            result += $"Changes: {string.Join(", ", changes)}\n";
-        else
-            result += "No change parameters provided\n";
-        result += $"Output: {outputPath}";
+            var result = "List format set successfully\n";
+            result += $"Paragraph index: {paragraphIndex}\n";
+            if (changes.Count > 0)
+                result += $"Changes: {string.Join(", ", changes)}\n";
+            else
+                result += "No change parameters provided\n";
+            result += $"Output: {outputPath}";
 
-        return await Task.FromResult(result);
+            return result;
+        });
     }
 
 
@@ -582,49 +600,52 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
     /// <param name="arguments">JSON arguments containing listIndex</param>
     /// <param name="path">Word document file path</param>
     /// <returns>Formatted string with list format details</returns>
-    private async Task<string> GetListFormatAsync(JsonObject? arguments, string path)
+    private Task<string> GetListFormatAsync(JsonObject? arguments, string path)
     {
-        var paragraphIndex = ArgumentHelper.GetIntNullable(arguments, "paragraphIndex");
-
-        var doc = new Document(path);
-        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
-        var result = new StringBuilder();
-
-        result.AppendLine("=== Document List Format Information ===\n");
-
-        if (paragraphIndex.HasValue)
+        return Task.Run(() =>
         {
-            if (paragraphIndex.Value < 0 || paragraphIndex.Value >= paragraphs.Count)
-                throw new ArgumentException(
-                    $"Paragraph index {paragraphIndex.Value} is out of range (document has {paragraphs.Count} paragraphs)");
+            var paragraphIndex = ArgumentHelper.GetIntNullable(arguments, "paragraphIndex");
 
-            var para = paragraphs[paragraphIndex.Value];
-            AppendListFormatInfo(result, para, paragraphIndex.Value);
-        }
-        else
-        {
-            var listParagraphs = paragraphs
-                .Where(p => p.ListFormat is { IsListItem: true })
-                .ToList();
+            var doc = new Document(path);
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
+            var result = new StringBuilder();
 
-            result.AppendLine($"Total list paragraphs: {listParagraphs.Count}\n");
+            result.AppendLine("=== Document List Format Information ===\n");
 
-            if (listParagraphs.Count == 0)
+            if (paragraphIndex.HasValue)
             {
-                result.AppendLine("No list paragraphs found");
-                return await Task.FromResult(result.ToString());
+                if (paragraphIndex.Value < 0 || paragraphIndex.Value >= paragraphs.Count)
+                    throw new ArgumentException(
+                        $"Paragraph index {paragraphIndex.Value} is out of range (document has {paragraphs.Count} paragraphs)");
+
+                var para = paragraphs[paragraphIndex.Value];
+                AppendListFormatInfo(result, para, paragraphIndex.Value);
+            }
+            else
+            {
+                var listParagraphs = paragraphs
+                    .Where(p => p.ListFormat is { IsListItem: true })
+                    .ToList();
+
+                result.AppendLine($"Total list paragraphs: {listParagraphs.Count}\n");
+
+                if (listParagraphs.Count == 0)
+                {
+                    result.AppendLine("No list paragraphs found");
+                    return result.ToString();
+                }
+
+                for (var i = 0; i < listParagraphs.Count; i++)
+                {
+                    var para = listParagraphs[i];
+                    var paraIndex = paragraphs.IndexOf(para);
+                    AppendListFormatInfo(result, para, paraIndex);
+                    if (i < listParagraphs.Count - 1) result.AppendLine();
+                }
             }
 
-            for (var i = 0; i < listParagraphs.Count; i++)
-            {
-                var para = listParagraphs[i];
-                var paraIndex = paragraphs.IndexOf(para);
-                AppendListFormatInfo(result, para, paraIndex);
-                if (i < listParagraphs.Count - 1) result.AppendLine();
-            }
-        }
-
-        return await Task.FromResult(result.ToString());
+            return result.ToString();
+        });
     }
 
     private void AppendListFormatInfo(StringBuilder result, Paragraph para, int paraIndex)
@@ -662,8 +683,8 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
         var items = new List<(string text, int level)>();
 
         if (itemsNode == null)
-            throw new ArgumentException("❌ items parameter cannot be null\n\n" +
-                                        "📝 Please provide an array in the format:\n" +
+            throw new ArgumentException("? items parameter cannot be null\n\n" +
+                                        "?? Please provide an array in the format:\n" +
                                         "  Simple format: [\"Item 1\", \"Item 2\", \"Item 3\"]\n" +
                                         "  With level format: [{\"text\": \"Item 1\", \"level\": 0}, {\"text\": \"Sub-item\", \"level\": 1}]");
 
@@ -673,17 +694,17 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
             {
                 var nodeType = itemsNode.GetType().Name;
                 var nodeValue = itemsNode.ToString();
-                throw new ArgumentException($"❌ items parameter must be an array\n\n" +
-                                            $"📋 Current type: {nodeType}\n" +
-                                            $"📋 Current value: {nodeValue}\n\n" +
-                                            $"📝 Correct format examples:\n" +
+                throw new ArgumentException($"? items parameter must be an array\n\n" +
+                                            $"?? Current type: {nodeType}\n" +
+                                            $"?? Current value: {nodeValue}\n\n" +
+                                            $"?? Correct format examples:\n" +
                                             $"  Simple format: [\"Item 1\", \"Item 2\", \"Item 3\"]\n" +
                                             $"  With level format: [{{\"text\": \"Item 1\", \"level\": 0}}, {{\"text\": \"Sub-item\", \"level\": 1}}]");
             }
 
             if (itemsArray.Count == 0)
-                throw new ArgumentException("❌ items array cannot be empty\n\n" +
-                                            "📝 Please provide at least one item, e.g.: [\"Item 1\"]");
+                throw new ArgumentException("? items array cannot be empty\n\n" +
+                                            "?? Please provide at least one item, e.g.: [\"Item 1\"]");
 
             foreach (var item in itemsArray)
             {
@@ -699,9 +720,9 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
                     }
                     catch (Exception ex)
                     {
-                        throw new ArgumentException($"❌ Unable to parse list item as string: {ex.Message}\n\n" +
-                                                    $"📋 Item value: {item}\n\n" +
-                                                    $"📝 Correct format: string, e.g. \"Item 1\"");
+                        throw new ArgumentException($"? Unable to parse list item as string: {ex.Message}\n\n" +
+                                                    $"?? Item value: {item}\n\n" +
+                                                    $"?? Correct format: string, e.g. \"Item 1\"");
                     }
                 }
                 else if (item is JsonObject jsonObj)
@@ -711,9 +732,9 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
                     if (string.IsNullOrEmpty(text))
                     {
                         var objKeys = string.Join(", ", jsonObj.Select(kvp => $"'{kvp.Key}'"));
-                        throw new ArgumentException($"❌ List item object must contain 'text' property\n\n" +
-                                                    $"📋 Current object keys: {objKeys}\n\n" +
-                                                    $"📝 Correct format: {{\"text\": \"Item text\", \"level\": 0}}");
+                        throw new ArgumentException($"? List item object must contain 'text' property\n\n" +
+                                                    $"?? Current object keys: {objKeys}\n\n" +
+                                                    $"?? Correct format: {{\"text\": \"Item text\", \"level\": 0}}");
                     }
 
                     var level = jsonObj["level"]?.GetValue<int>() ?? 0;
@@ -723,18 +744,18 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
                 }
                 else
                 {
-                    throw new ArgumentException($"❌ Invalid list item format\n\n" +
-                                                $"📋 Item type: {item.GetType().Name}\n" +
-                                                $"📋 Item value: {item}\n\n" +
-                                                $"📝 Correct format:\n" +
+                    throw new ArgumentException($"? Invalid list item format\n\n" +
+                                                $"?? Item type: {item.GetType().Name}\n" +
+                                                $"?? Item value: {item}\n\n" +
+                                                $"?? Correct format:\n" +
                                                 $"  String: \"Item text\"\n" +
                                                 $"  Object: {{\"text\": \"Item text\", \"level\": 0}}");
                 }
             }
 
             if (items.Count == 0)
-                throw new ArgumentException("❌ No valid list items after parsing\n\n" +
-                                            "📝 Please ensure items array contains at least one valid string or object");
+                throw new ArgumentException("? No valid list items after parsing\n\n" +
+                                            "?? Please ensure items array contains at least one valid string or object");
         }
         catch (ArgumentException)
         {
@@ -742,9 +763,9 @@ Simple format: ['Item 1', 'Item 2', 'Item 3']",
         }
         catch (Exception ex)
         {
-            throw new ArgumentException($"❌ Error parsing items parameter: {ex.Message}\n\n" +
-                                        $"📋 Error type: {ex.GetType().Name}\n\n" +
-                                        $"📝 Please ensure items is an array in the format:\n" +
+            throw new ArgumentException($"? Error parsing items parameter: {ex.Message}\n\n" +
+                                        $"?? Error type: {ex.GetType().Name}\n\n" +
+                                        $"?? Please ensure items is an array in the format:\n" +
                                         $"  Simple format: [\"Item 1\", \"Item 2\"]\n" +
                                         $"  With level format: [{{\"text\": \"Item 1\", \"level\": 0}}, ...]", ex);
         }

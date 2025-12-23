@@ -26,7 +26,6 @@ public static class SecurityHelper
         var invalidChars = Path.GetInvalidFileNameChars();
         var sanitized = string.Join("_", fileName.Split(invalidChars, StringSplitOptions.RemoveEmptyEntries));
 
-        // Remove path traversal attempts
         sanitized = sanitized.Replace("..", "");
         sanitized = sanitized.Replace("\\", "_");
         sanitized = sanitized.Replace("/", "_");

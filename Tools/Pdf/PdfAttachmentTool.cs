@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using AsposeMcpServer.Core;
@@ -83,35 +83,38 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, filePath, optional description, outputPath</param>
     /// <returns>Success message</returns>
-    private async Task<string> AddAttachment(JsonObject? arguments)
+    private Task<string> AddAttachment(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var attachmentPath = ArgumentHelper.GetString(arguments, "attachmentPath");
-        var attachmentName = ArgumentHelper.GetString(arguments, "attachmentName");
-        var description = ArgumentHelper.GetStringNullable(arguments, "description");
+        return Task.Run(() =>
+        {
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var attachmentPath = ArgumentHelper.GetString(arguments, "attachmentPath");
+            var attachmentName = ArgumentHelper.GetString(arguments, "attachmentName");
+            var description = ArgumentHelper.GetStringNullable(arguments, "description");
 
-        // Validate paths
-        SecurityHelper.ValidateFilePath(path);
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        SecurityHelper.ValidateFilePath(attachmentPath, "attachmentPath");
+            // Validate paths
+            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+            SecurityHelper.ValidateFilePath(attachmentPath, "attachmentPath", true);
 
-        // Validate attachment name length
-        SecurityHelper.ValidateStringLength(attachmentName, "attachmentName", 255);
-        if (description != null)
-            SecurityHelper.ValidateStringLength(description, "description", 1000);
+            // Validate attachment name length
+            SecurityHelper.ValidateStringLength(attachmentName, "attachmentName", 255);
+            if (description != null)
+                SecurityHelper.ValidateStringLength(description, "description", 1000);
 
-        if (!File.Exists(attachmentPath))
-            throw new FileNotFoundException($"Attachment file not found: {attachmentPath}");
+            if (!File.Exists(attachmentPath))
+                throw new FileNotFoundException($"Attachment file not found: {attachmentPath}");
 
-        using var document = new Document(path);
-        var fileSpecification = new FileSpecification(attachmentPath, attachmentName);
-        if (!string.IsNullOrEmpty(description))
-            fileSpecification.Description = description;
+            using var document = new Document(path);
+            var fileSpecification = new FileSpecification(attachmentPath, attachmentName);
+            if (!string.IsNullOrEmpty(description))
+                fileSpecification.Description = description;
 
-        document.EmbeddedFiles.Add(fileSpecification);
-        document.Save(outputPath);
-        return await Task.FromResult($"Successfully added attachment '{attachmentName}'. Output: {outputPath}");
+            document.EmbeddedFiles.Add(fileSpecification);
+            document.Save(outputPath);
+            return $"Successfully added attachment '{attachmentName}'. Output: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -119,25 +122,58 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, attachmentName, optional outputPath</param>
     /// <returns>Success message</returns>
-    private async Task<string> DeleteAttachment(JsonObject? arguments)
+    private Task<string> DeleteAttachment(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var attachmentName = ArgumentHelper.GetString(arguments, "attachmentName");
+        return Task.Run(() =>
+        {
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var attachmentName = ArgumentHelper.GetString(arguments, "attachmentName");
 
-        using var document = new Document(path);
-        var embeddedFiles = document.EmbeddedFiles;
+            using var document = new Document(path);
+            var embeddedFiles = document.EmbeddedFiles;
 
-        for (var i = embeddedFiles.Count - 1; i >= 0; i--)
-            if (embeddedFiles[i].Name == attachmentName)
+            // Find and delete attachment by name
+            // Note: EmbeddedFileCollection uses 1-based indexing for Item property
+            var found = false;
+            var attachmentNames = new List<string>();
+
+            // First, collect all attachment names for debugging
+            for (var i = 1; i <= embeddedFiles.Count; i++)
+                try
+                {
+                    var file = embeddedFiles[i];
+                    var name = file.Name ?? "";
+                    attachmentNames.Add(name);
+
+                    // Check Name property - use case-insensitive comparison
+                    // Also check if the name ends with the attachment name (for full path cases)
+                    var fileName = Path.GetFileName(name);
+                    if (string.Equals(name, attachmentName, StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(fileName, attachmentName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Use the actual name from the file object for deletion
+                        embeddedFiles.Delete(name);
+                        found = true;
+                        break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Skip invalid indices
+                    Console.Error.WriteLine($"[WARN] Error accessing attachment at index {i}: {ex.Message}");
+                }
+
+            if (!found)
             {
-                embeddedFiles.Delete(attachmentName);
-                document.Save(outputPath);
-                return await Task.FromResult(
-                    $"Successfully deleted attachment '{attachmentName}'. Output: {outputPath}");
+                var availableNames = string.Join(", ", attachmentNames);
+                throw new ArgumentException(
+                    $"Attachment '{attachmentName}' not found. Available attachments: {(string.IsNullOrEmpty(availableNames) ? "(none)" : availableNames)}");
             }
 
-        throw new ArgumentException($"Attachment '{attachmentName}' not found");
+            document.Save(outputPath);
+            return $"Successfully deleted attachment '{attachmentName}'. Output: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -145,57 +181,61 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments (no specific parameters required)</param>
     /// <returns>Formatted string with all attachments</returns>
-    private async Task<string> GetAttachments(JsonObject? arguments)
+    private Task<string> GetAttachments(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-
-        try
+        return Task.Run(() =>
         {
-            using var document = new Document(path);
-            var sb = new StringBuilder();
-            sb.AppendLine("=== PDF Attachments ===");
-            sb.AppendLine();
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
 
-            var embeddedFiles = document.EmbeddedFiles;
-            if (embeddedFiles == null || embeddedFiles.Count == 0)
+            try
             {
-                sb.AppendLine("No attachments found.");
-                return await Task.FromResult(sb.ToString());
-            }
+                using var document = new Document(path);
+                var sb = new StringBuilder();
+                sb.AppendLine("=== PDF Attachments ===");
+                sb.AppendLine();
 
-            sb.AppendLine($"Total Attachments: {embeddedFiles.Count}");
-            sb.AppendLine();
-
-            for (var i = 1; i <= embeddedFiles.Count; i++)
-                try
+                var embeddedFiles = document.EmbeddedFiles;
+                if (embeddedFiles == null || embeddedFiles.Count == 0)
                 {
-                    var file = embeddedFiles[i];
-                    sb.AppendLine($"[{i}] Name: {file.Name ?? "(unnamed)"}");
-                    if (!string.IsNullOrEmpty(file.Description))
-                        sb.AppendLine($"    Description: {file.Description}");
+                    sb.AppendLine("No attachments found.");
+                    return sb.ToString();
+                }
+
+                sb.AppendLine($"Total Attachments: {embeddedFiles.Count}");
+                sb.AppendLine();
+
+                for (var i = 1; i <= embeddedFiles.Count; i++)
                     try
                     {
-                        if (file.Contents != null)
-                            sb.AppendLine($"    Size: {file.Contents.Length} bytes");
+                        var file = embeddedFiles[i];
+                        sb.AppendLine($"[{i}] Name: {file.Name ?? "(unnamed)"}");
+                        if (!string.IsNullOrEmpty(file.Description))
+                            sb.AppendLine($"    Description: {file.Description}");
+                        try
+                        {
+                            if (file.Contents != null)
+                                sb.AppendLine($"    Size: {file.Contents.Length} bytes");
+                        }
+                        catch (Exception ex)
+                        {
+                            sb.AppendLine("    Size: (unavailable)");
+                            Console.Error.WriteLine($"[WARN] Failed to read attachment size: {ex.Message}");
+                        }
+
+                        sb.AppendLine();
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        sb.AppendLine("    Size: (unavailable)");
+                        sb.AppendLine($"[{i}] Error reading attachment: {ex.Message}");
+                        sb.AppendLine();
                     }
 
-                    sb.AppendLine();
-                }
-                catch (Exception ex)
-                {
-                    sb.AppendLine($"[{i}] Error reading attachment: {ex.Message}");
-                    sb.AppendLine();
-                }
-
-            return await Task.FromResult(sb.ToString());
-        }
-        catch (Exception ex)
-        {
-            throw new ArgumentException($"Failed to get attachments: {ex.Message}");
-        }
+                return sb.ToString();
+            }
+            catch (Exception ex)
+            {
+                throw new ArgumentException($"Failed to get attachments: {ex.Message}");
+            }
+        });
     }
 }

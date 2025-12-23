@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using Aspose.Words.Notes;
@@ -112,7 +112,7 @@ Usage examples:
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
         return operation switch
         {
@@ -135,79 +135,83 @@ Usage examples:
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> AddFootnoteAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> AddFootnoteAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var footnoteText = ArgumentHelper.GetString(arguments, "noteText");
-        var paragraphIndex = ArgumentHelper.GetIntNullable(arguments, "paragraphIndex");
-        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
-        var referenceText = ArgumentHelper.GetStringNullable(arguments, "referenceText");
-        var customMark = ArgumentHelper.GetStringNullable(arguments, "customMark");
-
-        var doc = new Document(path);
-        if (sectionIndex < 0 || sectionIndex >= doc.Sections.Count)
-            throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
-
-        var builder = new DocumentBuilder(doc);
-
-        if (!string.IsNullOrEmpty(referenceText))
+        return Task.Run(() =>
         {
-            var finder = new FindReplaceOptions { MatchCase = false };
-            var found = doc.Range.Replace(referenceText, referenceText, finder);
-            if (found > 0)
+            var footnoteText = ArgumentHelper.GetString(arguments, "noteText");
+            var paragraphIndex = ArgumentHelper.GetIntNullable(arguments, "paragraphIndex");
+            var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
+            var referenceText = ArgumentHelper.GetStringNullable(arguments, "referenceText");
+            var customMark = ArgumentHelper.GetStringNullable(arguments, "customMark");
+
+            var doc = new Document(path);
+            if (sectionIndex < 0 || sectionIndex >= doc.Sections.Count)
+                throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
+
+            var builder = new DocumentBuilder(doc);
+
+            if (!string.IsNullOrEmpty(referenceText))
+            {
+                var finder = new FindReplaceOptions { MatchCase = false };
+                var found = doc.Range.Replace(referenceText, referenceText, finder);
+                if (found > 0)
+                {
+                    builder.MoveToDocumentEnd();
+                    var footnote = builder.InsertFootnote(FootnoteType.Footnote, footnoteText);
+                    if (!string.IsNullOrEmpty(customMark)) footnote.ReferenceMark = customMark;
+                }
+                else
+                {
+                    throw new ArgumentException($"Reference text '{referenceText}' not found");
+                }
+            }
+            else if (paragraphIndex.HasValue)
+            {
+                if (paragraphIndex.Value == -1)
+                {
+                    // paragraphIndex=-1 means document end - move to last paragraph in Body
+                    var section = doc.Sections[sectionIndex];
+                    var bodyParagraphs = section.Body.GetChildNodes(NodeType.Paragraph, false).Cast<Paragraph>()
+                        .ToList();
+                    if (bodyParagraphs.Count > 0)
+                    {
+                        var lastPara = bodyParagraphs[^1];
+                        builder.MoveTo(lastPara);
+                    }
+                    else
+                    {
+                        // No paragraphs in body, move to document end
+                        builder.MoveToDocumentEnd();
+                    }
+
+                    var footnote = builder.InsertFootnote(FootnoteType.Footnote, footnoteText);
+                    if (!string.IsNullOrEmpty(customMark)) footnote.ReferenceMark = customMark;
+                }
+                else
+                {
+                    var section = doc.Sections[sectionIndex];
+                    var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
+                    if (paragraphIndex.Value < 0 || paragraphIndex.Value >= paragraphs.Count)
+                        throw new ArgumentException(
+                            $"paragraphIndex must be between 0 and {paragraphs.Count - 1}, or use -1 for document end");
+
+                    var para = paragraphs[paragraphIndex.Value];
+                    builder.MoveTo(para);
+                    var footnote = builder.InsertFootnote(FootnoteType.Footnote, footnoteText);
+                    if (!string.IsNullOrEmpty(customMark)) footnote.ReferenceMark = customMark;
+                }
+            }
+            else
             {
                 builder.MoveToDocumentEnd();
                 var footnote = builder.InsertFootnote(FootnoteType.Footnote, footnoteText);
                 if (!string.IsNullOrEmpty(customMark)) footnote.ReferenceMark = customMark;
             }
-            else
-            {
-                throw new ArgumentException($"Reference text '{referenceText}' not found");
-            }
-        }
-        else if (paragraphIndex.HasValue)
-        {
-            if (paragraphIndex.Value == -1)
-            {
-                // paragraphIndex=-1 means document end - move to last paragraph in Body
-                var section = doc.Sections[sectionIndex];
-                var bodyParagraphs = section.Body.GetChildNodes(NodeType.Paragraph, false).Cast<Paragraph>().ToList();
-                if (bodyParagraphs.Count > 0)
-                {
-                    var lastPara = bodyParagraphs[^1];
-                    builder.MoveTo(lastPara);
-                }
-                else
-                {
-                    // No paragraphs in body, move to document end
-                    builder.MoveToDocumentEnd();
-                }
 
-                var footnote = builder.InsertFootnote(FootnoteType.Footnote, footnoteText);
-                if (!string.IsNullOrEmpty(customMark)) footnote.ReferenceMark = customMark;
-            }
-            else
-            {
-                var section = doc.Sections[sectionIndex];
-                var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
-                if (paragraphIndex.Value < 0 || paragraphIndex.Value >= paragraphs.Count)
-                    throw new ArgumentException(
-                        $"paragraphIndex must be between 0 and {paragraphs.Count - 1}, or use -1 for document end");
-
-                var para = paragraphs[paragraphIndex.Value];
-                builder.MoveTo(para);
-                var footnote = builder.InsertFootnote(FootnoteType.Footnote, footnoteText);
-                if (!string.IsNullOrEmpty(customMark)) footnote.ReferenceMark = customMark;
-            }
-        }
-        else
-        {
-            builder.MoveToDocumentEnd();
-            var footnote = builder.InsertFootnote(FootnoteType.Footnote, footnoteText);
-            if (!string.IsNullOrEmpty(customMark)) footnote.ReferenceMark = customMark;
-        }
-
-        doc.Save(outputPath);
-        return await Task.FromResult($"Footnote added: {outputPath}");
+            doc.Save(outputPath);
+            return $"Footnote added: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -217,99 +221,103 @@ Usage examples:
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> AddEndnoteAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> AddEndnoteAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var endnoteText = ArgumentHelper.GetString(arguments, "noteText");
-        var paragraphIndex = ArgumentHelper.GetIntNullable(arguments, "paragraphIndex");
-        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
-        var referenceText = ArgumentHelper.GetStringNullable(arguments, "referenceText");
-        var customMark = ArgumentHelper.GetStringNullable(arguments, "customMark");
-
-        var doc = new Document(path);
-        if (sectionIndex < 0 || sectionIndex >= doc.Sections.Count)
-            throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
-
-        var builder = new DocumentBuilder(doc);
-
-        if (!string.IsNullOrEmpty(referenceText))
+        return Task.Run(() =>
         {
-            var finder = new FindReplaceOptions { MatchCase = false };
-            var found = doc.Range.Replace(referenceText, referenceText, finder);
-            if (found > 0)
+            var endnoteText = ArgumentHelper.GetString(arguments, "noteText");
+            var paragraphIndex = ArgumentHelper.GetIntNullable(arguments, "paragraphIndex");
+            var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
+            var referenceText = ArgumentHelper.GetStringNullable(arguments, "referenceText");
+            var customMark = ArgumentHelper.GetStringNullable(arguments, "customMark");
+
+            var doc = new Document(path);
+            if (sectionIndex < 0 || sectionIndex >= doc.Sections.Count)
+                throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
+
+            var builder = new DocumentBuilder(doc);
+
+            if (!string.IsNullOrEmpty(referenceText))
+            {
+                var finder = new FindReplaceOptions { MatchCase = false };
+                var found = doc.Range.Replace(referenceText, referenceText, finder);
+                if (found > 0)
+                {
+                    builder.MoveToDocumentEnd();
+                    var endnote = builder.InsertFootnote(FootnoteType.Endnote, endnoteText);
+                    if (!string.IsNullOrEmpty(customMark)) endnote.ReferenceMark = customMark;
+                }
+                else
+                {
+                    throw new ArgumentException($"Reference text '{referenceText}' not found");
+                }
+            }
+            else if (paragraphIndex.HasValue)
+            {
+                if (paragraphIndex.Value == -1)
+                {
+                    // paragraphIndex=-1 means document end - move to last paragraph in Body
+                    var section = doc.Sections[sectionIndex];
+                    var bodyParagraphs = section.Body.GetChildNodes(NodeType.Paragraph, false).Cast<Paragraph>()
+                        .ToList();
+                    if (bodyParagraphs.Count > 0)
+                    {
+                        var lastPara = bodyParagraphs[^1];
+                        builder.MoveTo(lastPara);
+                    }
+                    else
+                    {
+                        // No paragraphs in body, move to document end
+                        builder.MoveToDocumentEnd();
+                    }
+
+                    var endnote = builder.InsertFootnote(FootnoteType.Endnote, endnoteText);
+                    if (!string.IsNullOrEmpty(customMark)) endnote.ReferenceMark = customMark;
+                }
+                else
+                {
+                    var section = doc.Sections[sectionIndex];
+                    var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
+                    if (paragraphIndex.Value < 0 || paragraphIndex.Value >= paragraphs.Count)
+                        throw new ArgumentException(
+                            $"paragraphIndex must be between 0 and {paragraphs.Count - 1}, or use -1 for document end");
+
+                    var para = paragraphs[paragraphIndex.Value];
+
+                    var parentNode = para.ParentNode;
+                    while (parentNode != null)
+                    {
+                        if (parentNode is HeaderFooter)
+                            throw new InvalidOperationException(
+                                $"Endnotes are only allowed inside the main document body. The paragraph at index {paragraphIndex.Value} is located in a header or footer. Please use a paragraph index that refers to a paragraph in the main document body.");
+                        if (parentNode is Section || parentNode is Body) break; // We're in the main body
+                        parentNode = parentNode.ParentNode;
+                    }
+
+                    builder.MoveTo(para);
+                    try
+                    {
+                        var endnote = builder.InsertFootnote(FootnoteType.Endnote, endnoteText);
+                        if (!string.IsNullOrEmpty(customMark)) endnote.ReferenceMark = customMark;
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new InvalidOperationException(
+                            $"Failed to insert endnote: {ex.Message}. Endnotes can only be inserted in the main document body, not in headers, footers, or other special sections.",
+                            ex);
+                    }
+                }
+            }
+            else
             {
                 builder.MoveToDocumentEnd();
                 var endnote = builder.InsertFootnote(FootnoteType.Endnote, endnoteText);
                 if (!string.IsNullOrEmpty(customMark)) endnote.ReferenceMark = customMark;
             }
-            else
-            {
-                throw new ArgumentException($"Reference text '{referenceText}' not found");
-            }
-        }
-        else if (paragraphIndex.HasValue)
-        {
-            if (paragraphIndex.Value == -1)
-            {
-                // paragraphIndex=-1 means document end - move to last paragraph in Body
-                var section = doc.Sections[sectionIndex];
-                var bodyParagraphs = section.Body.GetChildNodes(NodeType.Paragraph, false).Cast<Paragraph>().ToList();
-                if (bodyParagraphs.Count > 0)
-                {
-                    var lastPara = bodyParagraphs[^1];
-                    builder.MoveTo(lastPara);
-                }
-                else
-                {
-                    // No paragraphs in body, move to document end
-                    builder.MoveToDocumentEnd();
-                }
 
-                var endnote = builder.InsertFootnote(FootnoteType.Endnote, endnoteText);
-                if (!string.IsNullOrEmpty(customMark)) endnote.ReferenceMark = customMark;
-            }
-            else
-            {
-                var section = doc.Sections[sectionIndex];
-                var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
-                if (paragraphIndex.Value < 0 || paragraphIndex.Value >= paragraphs.Count)
-                    throw new ArgumentException(
-                        $"paragraphIndex must be between 0 and {paragraphs.Count - 1}, or use -1 for document end");
-
-                var para = paragraphs[paragraphIndex.Value];
-
-                var parentNode = para.ParentNode;
-                while (parentNode != null)
-                {
-                    if (parentNode is HeaderFooter)
-                        throw new InvalidOperationException(
-                            $"Endnotes are only allowed inside the main document body. The paragraph at index {paragraphIndex.Value} is located in a header or footer. Please use a paragraph index that refers to a paragraph in the main document body.");
-                    if (parentNode is Section || parentNode is Body) break; // We're in the main body
-                    parentNode = parentNode.ParentNode;
-                }
-
-                builder.MoveTo(para);
-                try
-                {
-                    var endnote = builder.InsertFootnote(FootnoteType.Endnote, endnoteText);
-                    if (!string.IsNullOrEmpty(customMark)) endnote.ReferenceMark = customMark;
-                }
-                catch (Exception ex)
-                {
-                    throw new InvalidOperationException(
-                        $"Failed to insert endnote: {ex.Message}. Endnotes can only be inserted in the main document body, not in headers, footers, or other special sections.",
-                        ex);
-                }
-            }
-        }
-        else
-        {
-            builder.MoveToDocumentEnd();
-            var endnote = builder.InsertFootnote(FootnoteType.Endnote, endnoteText);
-            if (!string.IsNullOrEmpty(customMark)) endnote.ReferenceMark = customMark;
-        }
-
-        doc.Save(outputPath);
-        return await Task.FromResult($"Endnote added: {outputPath}");
+            doc.Save(outputPath);
+            return $"Endnote added: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -319,46 +327,49 @@ Usage examples:
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> DeleteFootnoteAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> DeleteFootnoteAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var referenceMark = ArgumentHelper.GetStringNullable(arguments, "referenceMark");
-        var footnoteIndex = ArgumentHelper.GetIntNullable(arguments, "noteIndex");
-
-        var doc = new Document(path);
-        var footnotes = doc.GetChildNodes(NodeType.Footnote, true).Cast<Footnote>()
-            .Where(f => f.FootnoteType == FootnoteType.Footnote)
-            .ToList();
-
-        var deletedCount = 0;
-
-        if (!string.IsNullOrEmpty(referenceMark))
+        return Task.Run(() =>
         {
-            var footnote = footnotes.FirstOrDefault(f => f.ReferenceMark == referenceMark);
-            if (footnote != null)
-            {
-                footnote.Remove();
-                deletedCount = 1;
-            }
-        }
-        else if (footnoteIndex.HasValue)
-        {
-            if (footnoteIndex.Value >= 0 && footnoteIndex.Value < footnotes.Count)
-            {
-                footnotes[footnoteIndex.Value].Remove();
-                deletedCount = 1;
-            }
-        }
-        else
-        {
-            foreach (var footnote in footnotes)
-            {
-                footnote.Remove();
-                deletedCount++;
-            }
-        }
+            var referenceMark = ArgumentHelper.GetStringNullable(arguments, "referenceMark");
+            var footnoteIndex = ArgumentHelper.GetIntNullable(arguments, "noteIndex");
 
-        doc.Save(outputPath);
-        return await Task.FromResult($"Deleted {deletedCount} footnote(s): {outputPath}");
+            var doc = new Document(path);
+            var footnotes = doc.GetChildNodes(NodeType.Footnote, true).Cast<Footnote>()
+                .Where(f => f.FootnoteType == FootnoteType.Footnote)
+                .ToList();
+
+            var deletedCount = 0;
+
+            if (!string.IsNullOrEmpty(referenceMark))
+            {
+                var footnote = footnotes.FirstOrDefault(f => f.ReferenceMark == referenceMark);
+                if (footnote != null)
+                {
+                    footnote.Remove();
+                    deletedCount = 1;
+                }
+            }
+            else if (footnoteIndex.HasValue)
+            {
+                if (footnoteIndex.Value >= 0 && footnoteIndex.Value < footnotes.Count)
+                {
+                    footnotes[footnoteIndex.Value].Remove();
+                    deletedCount = 1;
+                }
+            }
+            else
+            {
+                foreach (var footnote in footnotes)
+                {
+                    footnote.Remove();
+                    deletedCount++;
+                }
+            }
+
+            doc.Save(outputPath);
+            return $"Deleted {deletedCount} footnote(s): {outputPath}";
+        });
     }
 
     /// <summary>
@@ -368,46 +379,49 @@ Usage examples:
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> DeleteEndnoteAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> DeleteEndnoteAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var referenceMark = ArgumentHelper.GetStringNullable(arguments, "referenceMark");
-        var endnoteIndex = ArgumentHelper.GetIntNullable(arguments, "noteIndex");
-
-        var doc = new Document(path);
-        var endnotes = doc.GetChildNodes(NodeType.Footnote, true).Cast<Footnote>()
-            .Where(f => f.FootnoteType == FootnoteType.Endnote)
-            .ToList();
-
-        var deletedCount = 0;
-
-        if (!string.IsNullOrEmpty(referenceMark))
+        return Task.Run(() =>
         {
-            var endnote = endnotes.FirstOrDefault(f => f.ReferenceMark == referenceMark);
-            if (endnote != null)
-            {
-                endnote.Remove();
-                deletedCount = 1;
-            }
-        }
-        else if (endnoteIndex.HasValue)
-        {
-            if (endnoteIndex.Value >= 0 && endnoteIndex.Value < endnotes.Count)
-            {
-                endnotes[endnoteIndex.Value].Remove();
-                deletedCount = 1;
-            }
-        }
-        else
-        {
-            foreach (var endnote in endnotes)
-            {
-                endnote.Remove();
-                deletedCount++;
-            }
-        }
+            var referenceMark = ArgumentHelper.GetStringNullable(arguments, "referenceMark");
+            var endnoteIndex = ArgumentHelper.GetIntNullable(arguments, "noteIndex");
 
-        doc.Save(outputPath);
-        return await Task.FromResult($"Deleted {deletedCount} endnote(s): {outputPath}");
+            var doc = new Document(path);
+            var endnotes = doc.GetChildNodes(NodeType.Footnote, true).Cast<Footnote>()
+                .Where(f => f.FootnoteType == FootnoteType.Endnote)
+                .ToList();
+
+            var deletedCount = 0;
+
+            if (!string.IsNullOrEmpty(referenceMark))
+            {
+                var endnote = endnotes.FirstOrDefault(f => f.ReferenceMark == referenceMark);
+                if (endnote != null)
+                {
+                    endnote.Remove();
+                    deletedCount = 1;
+                }
+            }
+            else if (endnoteIndex.HasValue)
+            {
+                if (endnoteIndex.Value >= 0 && endnoteIndex.Value < endnotes.Count)
+                {
+                    endnotes[endnoteIndex.Value].Remove();
+                    deletedCount = 1;
+                }
+            }
+            else
+            {
+                foreach (var endnote in endnotes)
+                {
+                    endnote.Remove();
+                    deletedCount++;
+                }
+            }
+
+            doc.Save(outputPath);
+            return $"Deleted {deletedCount} endnote(s): {outputPath}";
+        });
     }
 
     /// <summary>
@@ -417,49 +431,52 @@ Usage examples:
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> EditFootnoteAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> EditFootnoteAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var referenceMark = ArgumentHelper.GetStringNullable(arguments, "referenceMark");
-        var footnoteIndex = ArgumentHelper.GetIntNullable(arguments, "noteIndex");
-        var newText = ArgumentHelper.GetString(arguments, "newText");
-
-        var doc = new Document(path);
-        var footnotes = doc.GetChildNodes(NodeType.Footnote, true).Cast<Footnote>()
-            .Where(f => f.FootnoteType == FootnoteType.Footnote)
-            .ToList();
-
-        Footnote? footnote = null;
-
-        if (!string.IsNullOrEmpty(referenceMark))
+        return Task.Run(() =>
         {
-            footnote = footnotes.FirstOrDefault(f => f.ReferenceMark == referenceMark);
-        }
-        else if (footnoteIndex.HasValue)
-        {
-            if (footnoteIndex.Value >= 0 && footnoteIndex.Value < footnotes.Count)
-                footnote = footnotes[footnoteIndex.Value];
-        }
-        else if (footnotes.Count > 0)
-        {
-            footnote = footnotes[0];
-        }
+            var referenceMark = ArgumentHelper.GetStringNullable(arguments, "referenceMark");
+            var footnoteIndex = ArgumentHelper.GetIntNullable(arguments, "noteIndex");
+            var newText = ArgumentHelper.GetString(arguments, "newText");
 
-        if (footnote == null)
-        {
-            var availableInfo = footnotes.Count > 0
-                ? $" (document has {footnotes.Count} footnotes, valid index: 0-{footnotes.Count - 1})"
-                : " (document has no footnotes)";
-            throw new ArgumentException(
-                $"Specified footnote not found{availableInfo}. Use get_footnotes operation to view available footnotes");
-        }
+            var doc = new Document(path);
+            var footnotes = doc.GetChildNodes(NodeType.Footnote, true).Cast<Footnote>()
+                .Where(f => f.FootnoteType == FootnoteType.Footnote)
+                .ToList();
 
-        footnote.RemoveAllChildren();
-        var builder = new DocumentBuilder(doc);
-        builder.MoveTo(footnote.FirstParagraph);
-        builder.Write(newText);
+            Footnote? footnote = null;
 
-        doc.Save(outputPath);
-        return await Task.FromResult($"Footnote edited: {outputPath}");
+            if (!string.IsNullOrEmpty(referenceMark))
+            {
+                footnote = footnotes.FirstOrDefault(f => f.ReferenceMark == referenceMark);
+            }
+            else if (footnoteIndex.HasValue)
+            {
+                if (footnoteIndex.Value >= 0 && footnoteIndex.Value < footnotes.Count)
+                    footnote = footnotes[footnoteIndex.Value];
+            }
+            else if (footnotes.Count > 0)
+            {
+                footnote = footnotes[0];
+            }
+
+            if (footnote == null)
+            {
+                var availableInfo = footnotes.Count > 0
+                    ? $" (document has {footnotes.Count} footnotes, valid index: 0-{footnotes.Count - 1})"
+                    : " (document has no footnotes)";
+                throw new ArgumentException(
+                    $"Specified footnote not found{availableInfo}. Use get_footnotes operation to view available footnotes");
+            }
+
+            footnote.RemoveAllChildren();
+            var builder = new DocumentBuilder(doc);
+            builder.MoveTo(footnote.FirstParagraph);
+            builder.Write(newText);
+
+            doc.Save(outputPath);
+            return $"Footnote edited: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -469,48 +486,52 @@ Usage examples:
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> EditEndnoteAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> EditEndnoteAsync(JsonObject? arguments, string path, string outputPath)
     {
-        var referenceMark = ArgumentHelper.GetStringNullable(arguments, "referenceMark");
-        var endnoteIndex = ArgumentHelper.GetIntNullable(arguments, "noteIndex");
-        var newText = ArgumentHelper.GetString(arguments, "newText");
-
-        var doc = new Document(path);
-        var endnotes = doc.GetChildNodes(NodeType.Footnote, true).Cast<Footnote>()
-            .Where(f => f.FootnoteType == FootnoteType.Endnote)
-            .ToList();
-
-        Footnote? endnote = null;
-
-        if (!string.IsNullOrEmpty(referenceMark))
+        return Task.Run(() =>
         {
-            endnote = endnotes.FirstOrDefault(f => f.ReferenceMark == referenceMark);
-        }
-        else if (endnoteIndex.HasValue)
-        {
-            if (endnoteIndex.Value >= 0 && endnoteIndex.Value < endnotes.Count) endnote = endnotes[endnoteIndex.Value];
-        }
-        else if (endnotes.Count > 0)
-        {
-            endnote = endnotes[0];
-        }
+            var referenceMark = ArgumentHelper.GetStringNullable(arguments, "referenceMark");
+            var endnoteIndex = ArgumentHelper.GetIntNullable(arguments, "noteIndex");
+            var newText = ArgumentHelper.GetString(arguments, "newText");
 
-        if (endnote == null)
-        {
-            var availableInfo = endnotes.Count > 0
-                ? $" (document has {endnotes.Count} endnotes, valid index: 0-{endnotes.Count - 1})"
-                : " (document has no endnotes)";
-            throw new ArgumentException(
-                $"Specified endnote not found{availableInfo}. Use get_endnotes operation to view available endnotes");
-        }
+            var doc = new Document(path);
+            var endnotes = doc.GetChildNodes(NodeType.Footnote, true).Cast<Footnote>()
+                .Where(f => f.FootnoteType == FootnoteType.Endnote)
+                .ToList();
 
-        endnote.RemoveAllChildren();
-        var builder = new DocumentBuilder(doc);
-        builder.MoveTo(endnote.FirstParagraph);
-        builder.Write(newText);
+            Footnote? endnote = null;
 
-        doc.Save(outputPath);
-        return await Task.FromResult($"Endnote edited: {outputPath}");
+            if (!string.IsNullOrEmpty(referenceMark))
+            {
+                endnote = endnotes.FirstOrDefault(f => f.ReferenceMark == referenceMark);
+            }
+            else if (endnoteIndex.HasValue)
+            {
+                if (endnoteIndex.Value >= 0 && endnoteIndex.Value < endnotes.Count)
+                    endnote = endnotes[endnoteIndex.Value];
+            }
+            else if (endnotes.Count > 0)
+            {
+                endnote = endnotes[0];
+            }
+
+            if (endnote == null)
+            {
+                var availableInfo = endnotes.Count > 0
+                    ? $" (document has {endnotes.Count} endnotes, valid index: 0-{endnotes.Count - 1})"
+                    : " (document has no endnotes)";
+                throw new ArgumentException(
+                    $"Specified endnote not found{availableInfo}. Use get_endnotes operation to view available endnotes");
+            }
+
+            endnote.RemoveAllChildren();
+            var builder = new DocumentBuilder(doc);
+            builder.MoveTo(endnote.FirstParagraph);
+            builder.Write(newText);
+
+            doc.Save(outputPath);
+            return $"Endnote edited: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -519,30 +540,33 @@ Usage examples:
     /// <param name="_">Unused parameter</param>
     /// <param name="path">Word document file path</param>
     /// <returns>Formatted string with all footnotes</returns>
-    private async Task<string> GetFootnotesAsync(JsonObject? _, string path)
+    private Task<string> GetFootnotesAsync(JsonObject? _, string path)
     {
-        var doc = new Document(path);
-        var sb = new StringBuilder();
-
-        sb.AppendLine("=== Footnotes ===");
-        sb.AppendLine();
-
-        var footnotes = doc.GetChildNodes(NodeType.Footnote, true).Cast<Footnote>()
-            .Where(f => f.FootnoteType == FootnoteType.Footnote)
-            .ToList();
-
-        for (var i = 0; i < footnotes.Count; i++)
+        return Task.Run(() =>
         {
-            var footnote = footnotes[i];
-            sb.AppendLine($"[{i + 1}] Reference Mark: {footnote.ReferenceMark}");
-            sb.AppendLine($"    Text: {footnote.ToString(SaveFormat.Text).Trim()}");
-            sb.AppendLine($"    Type: {footnote.FootnoteType}");
+            var doc = new Document(path);
+            var sb = new StringBuilder();
+
+            sb.AppendLine("=== Footnotes ===");
             sb.AppendLine();
-        }
 
-        sb.AppendLine($"Total Footnotes: {footnotes.Count}");
+            var footnotes = doc.GetChildNodes(NodeType.Footnote, true).Cast<Footnote>()
+                .Where(f => f.FootnoteType == FootnoteType.Footnote)
+                .ToList();
 
-        return await Task.FromResult(sb.ToString());
+            for (var i = 0; i < footnotes.Count; i++)
+            {
+                var footnote = footnotes[i];
+                sb.AppendLine($"[{i + 1}] Reference Mark: {footnote.ReferenceMark}");
+                sb.AppendLine($"    Text: {footnote.ToString(SaveFormat.Text).Trim()}");
+                sb.AppendLine($"    Type: {footnote.FootnoteType}");
+                sb.AppendLine();
+            }
+
+            sb.AppendLine($"Total Footnotes: {footnotes.Count}");
+
+            return sb.ToString();
+        });
     }
 
     /// <summary>
@@ -551,29 +575,32 @@ Usage examples:
     /// <param name="_">Unused parameter</param>
     /// <param name="path">Word document file path</param>
     /// <returns>Formatted string with all endnotes</returns>
-    private async Task<string> GetEndnotesAsync(JsonObject? _, string path)
+    private Task<string> GetEndnotesAsync(JsonObject? _, string path)
     {
-        var doc = new Document(path);
-        var sb = new StringBuilder();
-
-        sb.AppendLine("=== Endnotes ===");
-        sb.AppendLine();
-
-        var endnotes = doc.GetChildNodes(NodeType.Footnote, true).Cast<Footnote>()
-            .Where(f => f.FootnoteType == FootnoteType.Endnote)
-            .ToList();
-
-        for (var i = 0; i < endnotes.Count; i++)
+        return Task.Run(() =>
         {
-            var endnote = endnotes[i];
-            sb.AppendLine($"[{i + 1}] Reference Mark: {endnote.ReferenceMark}");
-            sb.AppendLine($"    Text: {endnote.ToString(SaveFormat.Text).Trim()}");
-            sb.AppendLine($"    Type: {endnote.FootnoteType}");
+            var doc = new Document(path);
+            var sb = new StringBuilder();
+
+            sb.AppendLine("=== Endnotes ===");
             sb.AppendLine();
-        }
 
-        sb.AppendLine($"Total Endnotes: {endnotes.Count}");
+            var endnotes = doc.GetChildNodes(NodeType.Footnote, true).Cast<Footnote>()
+                .Where(f => f.FootnoteType == FootnoteType.Endnote)
+                .ToList();
 
-        return await Task.FromResult(sb.ToString());
+            for (var i = 0; i < endnotes.Count; i++)
+            {
+                var endnote = endnotes[i];
+                sb.AppendLine($"[{i + 1}] Reference Mark: {endnote.ReferenceMark}");
+                sb.AppendLine($"    Text: {endnote.ToString(SaveFormat.Text).Trim()}");
+                sb.AppendLine($"    Type: {endnote.FootnoteType}");
+                sb.AppendLine();
+            }
+
+            sb.AppendLine($"Total Endnotes: {endnotes.Count}");
+
+            return sb.ToString();
+        });
     }
 }

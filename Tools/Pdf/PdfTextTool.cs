@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Aspose.Pdf;
@@ -124,41 +124,44 @@ Usage examples:
     ///     outputPath
     /// </param>
     /// <returns>Success message</returns>
-    private async Task<string> AddText(JsonObject? arguments)
+    private Task<string> AddText(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
-        var text = ArgumentHelper.GetString(arguments, "text");
-        var x = ArgumentHelper.GetDouble(arguments, "x", "x", false, 100);
-        var y = ArgumentHelper.GetDouble(arguments, "y", "y", false, 700);
-        var fontName = ArgumentHelper.GetString(arguments, "fontName", "Arial");
-        var fontSize = ArgumentHelper.GetDouble(arguments, "fontSize", "fontSize", false, 12);
-
-        SecurityHelper.ValidateFilePath(path);
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-
-        using var document = new Document(path);
-        if (pageIndex < 1 || pageIndex > document.Pages.Count)
-            throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
-
-        var page = document.Pages[pageIndex];
-        var textFragment = new TextFragment(text)
+        return Task.Run(() =>
         {
-            Position = new Position(x, y)
-        };
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
+            var text = ArgumentHelper.GetString(arguments, "text");
+            var x = ArgumentHelper.GetDouble(arguments, "x", "x", false, 100);
+            var y = ArgumentHelper.GetDouble(arguments, "y", "y", false, 700);
+            var fontName = ArgumentHelper.GetString(arguments, "fontName", "Arial");
+            var fontSize = ArgumentHelper.GetDouble(arguments, "fontSize", "fontSize", false, 12);
 
-        // Apply font settings using FontHelper
-        FontHelper.Pdf.ApplyFontSettings(
-            textFragment.TextState,
-            fontName,
-            fontSize
-        );
+            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
-        var textBuilder = new TextBuilder(page);
-        textBuilder.AppendText(textFragment);
-        document.Save(outputPath);
-        return await Task.FromResult($"Successfully added text to page {pageIndex}. Output: {outputPath}");
+            using var document = new Document(path);
+            if (pageIndex < 1 || pageIndex > document.Pages.Count)
+                throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
+
+            var page = document.Pages[pageIndex];
+            var textFragment = new TextFragment(text)
+            {
+                Position = new Position(x, y)
+            };
+
+            // Apply font settings using FontHelper
+            FontHelper.Pdf.ApplyFontSettings(
+                textFragment.TextState,
+                fontName,
+                fontSize
+            );
+
+            var textBuilder = new TextBuilder(page);
+            textBuilder.AppendText(textFragment);
+            document.Save(outputPath);
+            return $"Successfully added text to page {pageIndex}. Output: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -166,196 +169,202 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, pageIndex, textIndex, text, optional outputPath</param>
     /// <returns>Success message</returns>
-    private async Task<string> EditText(JsonObject? arguments)
+    private Task<string> EditText(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
-        var oldText = ArgumentHelper.GetString(arguments, "oldText");
-        var newText = ArgumentHelper.GetString(arguments, "newText");
-        var replaceAll = ArgumentHelper.GetBool(arguments, "replaceAll", false);
-
-        SecurityHelper.ValidateFilePath(path);
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-
-        using var document = new Document(path);
-        if (pageIndex < 1 || pageIndex > document.Pages.Count)
-            throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
-
-        var page = document.Pages[pageIndex];
-
-        try
+        return Task.Run(() =>
         {
-            // Try exact match first
-            var textFragmentAbsorber = new TextFragmentAbsorber(oldText);
-            page.Accept(textFragmentAbsorber);
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
+            var oldText = ArgumentHelper.GetString(arguments, "oldText");
+            var newText = ArgumentHelper.GetString(arguments, "newText");
+            var replaceAll = ArgumentHelper.GetBool(arguments, "replaceAll", false);
 
-            var fragments = textFragmentAbsorber.TextFragments;
-            var normalizedOldText = Regex.Replace(oldText, @"\s+", " ").Trim();
+            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
-            // If exact match fails, try with normalized whitespace
-            if (fragments.Count == 0 && normalizedOldText != oldText)
+            using var document = new Document(path);
+            if (pageIndex < 1 || pageIndex > document.Pages.Count)
+                throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
+
+            var page = document.Pages[pageIndex];
+
+            try
             {
-                textFragmentAbsorber = new TextFragmentAbsorber(normalizedOldText);
+                // Try exact match first
+                var textFragmentAbsorber = new TextFragmentAbsorber(oldText);
                 page.Accept(textFragmentAbsorber);
-                fragments = textFragmentAbsorber.TextFragments;
-            }
 
-            // If still no match, try case-insensitive search and partial matching
-            if (fragments.Count == 0)
-            {
-                var allTextAbsorber = new TextFragmentAbsorber();
-                page.Accept(allTextAbsorber);
-                var allFragments = allTextAbsorber.TextFragments;
-                var matchingFragments = new List<TextFragment>();
+                var fragments = textFragmentAbsorber.TextFragments;
+                var normalizedOldText = Regex.Replace(oldText, @"\s+", " ").Trim();
 
-                // Clean oldText: remove null characters and normalize
-                var cleanedOldText = oldText.Replace("\u0000", "").Trim();
-                var normalizedCleanedOldText = Regex.Replace(cleanedOldText, @"\s+", " ").Trim();
-
-                foreach (var fragment in allFragments)
-                    try
-                    {
-                        var fragmentText = (fragment.Text?.Replace("\u0000", "") ?? "").Trim();
-                        var normalizedFragmentText = Regex.Replace(fragmentText, @"\s+", " ").Trim();
-
-                        // Try multiple matching strategies:
-                        // 1. Exact match (case-insensitive)
-                        // 2. Normalized match (case-insensitive)
-                        // 3. Partial match: oldText contains in fragmentText or vice versa
-                        // 4. Partial match with normalized text
-                        var isMatch =
-                            fragmentText.Equals(oldText, StringComparison.OrdinalIgnoreCase) ||
-                            normalizedFragmentText.Equals(oldText, StringComparison.OrdinalIgnoreCase) ||
-                            normalizedFragmentText.Equals(normalizedOldText, StringComparison.OrdinalIgnoreCase) ||
-                            fragmentText.Equals(cleanedOldText, StringComparison.OrdinalIgnoreCase) ||
-                            normalizedFragmentText.Equals(normalizedCleanedOldText,
-                                StringComparison.OrdinalIgnoreCase) ||
-                            (fragmentText.Length > 0 &&
-                             oldText.Contains(fragmentText, StringComparison.OrdinalIgnoreCase)) ||
-                            (fragmentText.Length > 0 &&
-                             cleanedOldText.Contains(fragmentText, StringComparison.OrdinalIgnoreCase)) ||
-                            (fragmentText.Length > 0 &&
-                             fragmentText.Contains(oldText, StringComparison.OrdinalIgnoreCase)) ||
-                            (fragmentText.Length > 0 &&
-                             fragmentText.Contains(cleanedOldText, StringComparison.OrdinalIgnoreCase)) ||
-                            (normalizedFragmentText.Length > 0 &&
-                             normalizedFragmentText.Contains(normalizedOldText, StringComparison.OrdinalIgnoreCase)) ||
-                            (normalizedFragmentText.Length > 0 &&
-                             normalizedFragmentText.Contains(normalizedCleanedOldText,
-                                 StringComparison.OrdinalIgnoreCase));
-
-                        if (isMatch) matchingFragments.Add(fragment);
-                    }
-                    catch
-                    {
-                        // Skip fragments that cause errors
-                    }
-
-                if (matchingFragments.Count > 0)
+                // If exact match fails, try with normalized whitespace
+                if (fragments.Count == 0 && normalizedOldText != oldText)
                 {
-                    var replaceCount = replaceAll ? matchingFragments.Count : 1;
-                    for (var i = 0; i < replaceCount && i < matchingFragments.Count; i++)
+                    textFragmentAbsorber = new TextFragmentAbsorber(normalizedOldText);
+                    page.Accept(textFragmentAbsorber);
+                    fragments = textFragmentAbsorber.TextFragments;
+                }
+
+                // If still no match, try case-insensitive search and partial matching
+                if (fragments.Count == 0)
+                {
+                    var allTextAbsorber = new TextFragmentAbsorber();
+                    page.Accept(allTextAbsorber);
+                    var allFragments = allTextAbsorber.TextFragments;
+                    var matchingFragments = new List<TextFragment>();
+
+                    // Clean oldText: remove null characters and normalize
+                    var cleanedOldText = oldText.Replace("\u0000", "").Trim();
+                    var normalizedCleanedOldText = Regex.Replace(cleanedOldText, @"\s+", " ").Trim();
+
+                    foreach (var fragment in allFragments)
                         try
                         {
-                            matchingFragments[i].Text = newText;
+                            var fragmentText = (fragment.Text?.Replace("\u0000", "") ?? "").Trim();
+                            var normalizedFragmentText = Regex.Replace(fragmentText, @"\s+", " ").Trim();
+
+                            // Try multiple matching strategies:
+                            // 1. Exact match (case-insensitive)
+                            // 2. Normalized match (case-insensitive)
+                            // 3. Partial match: oldText contains in fragmentText or vice versa
+                            // 4. Partial match with normalized text
+                            var isMatch =
+                                fragmentText.Equals(oldText, StringComparison.OrdinalIgnoreCase) ||
+                                normalizedFragmentText.Equals(oldText, StringComparison.OrdinalIgnoreCase) ||
+                                normalizedFragmentText.Equals(normalizedOldText, StringComparison.OrdinalIgnoreCase) ||
+                                fragmentText.Equals(cleanedOldText, StringComparison.OrdinalIgnoreCase) ||
+                                normalizedFragmentText.Equals(normalizedCleanedOldText,
+                                    StringComparison.OrdinalIgnoreCase) ||
+                                (fragmentText.Length > 0 &&
+                                 oldText.Contains(fragmentText, StringComparison.OrdinalIgnoreCase)) ||
+                                (fragmentText.Length > 0 &&
+                                 cleanedOldText.Contains(fragmentText, StringComparison.OrdinalIgnoreCase)) ||
+                                (fragmentText.Length > 0 &&
+                                 fragmentText.Contains(oldText, StringComparison.OrdinalIgnoreCase)) ||
+                                (fragmentText.Length > 0 &&
+                                 fragmentText.Contains(cleanedOldText, StringComparison.OrdinalIgnoreCase)) ||
+                                (normalizedFragmentText.Length > 0 &&
+                                 normalizedFragmentText.Contains(normalizedOldText,
+                                     StringComparison.OrdinalIgnoreCase)) ||
+                                (normalizedFragmentText.Length > 0 &&
+                                 normalizedFragmentText.Contains(normalizedCleanedOldText,
+                                     StringComparison.OrdinalIgnoreCase));
+
+                            if (isMatch) matchingFragments.Add(fragment);
                         }
                         catch (Exception ex)
                         {
-                            throw new ArgumentException($"Failed to replace text at occurrence {i + 1}: {ex.Message}");
+                            // Skip fragments that cause errors
+                            Console.Error.WriteLine($"[WARN] Error processing text fragment during search: {ex.Message}");
                         }
 
-                    document.Save(outputPath);
-                    return await Task.FromResult(
-                        $"Replaced {replaceCount} occurrence(s) of '{oldText}' with '{newText}' on page {pageIndex}. Output: {outputPath}");
-                }
-            }
+                    if (matchingFragments.Count > 0)
+                    {
+                        var replaceCount = replaceAll ? matchingFragments.Count : 1;
+                        for (var i = 0; i < replaceCount && i < matchingFragments.Count; i++)
+                            try
+                            {
+                                matchingFragments[i].Text = newText;
+                            }
+                            catch (Exception ex)
+                            {
+                                throw new ArgumentException(
+                                    $"Failed to replace text at occurrence {i + 1}: {ex.Message}");
+                            }
 
-            if (fragments.Count == 0)
-            {
-                // Provide helpful error message with actual extracted text
-                var textAbsorber = new TextAbsorber();
-                page.Accept(textAbsorber);
-                var pageText = textAbsorber.Text ?? "";
-
-                // Also try to find similar text using fuzzy matching
-                var normalizedPageText = Regex.Replace(pageText, @"\s+", " ").Trim();
-                var normalizedSearchText = Regex.Replace(oldText, @"\s+", " ").Trim();
-                var cleanedPageText = pageText.Replace("\u0000", "").Trim();
-                var cleanedSearchText = oldText.Replace("\u0000", "").Trim();
-
-                // Get fragment details for debugging
-                var fragmentAbsorber = new TextFragmentAbsorber();
-                page.Accept(fragmentAbsorber);
-                var fragmentDetails = new List<string>();
-                foreach (var frag in fragmentAbsorber.TextFragments)
-                {
-                    var fragText = (frag.Text?.Replace("\u0000", "") ?? "").Trim();
-                    if (!string.IsNullOrEmpty(fragText)) fragmentDetails.Add($"'{fragText}'");
+                        document.Save(outputPath);
+                        return
+                            $"Replaced {replaceCount} occurrence(s) of '{oldText}' with '{newText}' on page {pageIndex}. Output: {outputPath}";
+                    }
                 }
 
-                var preview = pageText.Length > 200 ? pageText.Substring(0, 200) + "..." : pageText;
-                var errorMsg = $"Text '{oldText}' not found on page {pageIndex}.";
-
-                // Check if normalized versions match (ignoring whitespace differences)
-                if (normalizedPageText.Contains(normalizedSearchText, StringComparison.OrdinalIgnoreCase))
-                    errorMsg +=
-                        " Note: The text exists but with different whitespace. Try matching the exact extracted text format.";
-                else if (cleanedPageText.Contains(cleanedSearchText, StringComparison.OrdinalIgnoreCase))
-                    errorMsg +=
-                        " Note: The text exists but contains null characters (\\u0000). Try using the cleaned extracted text.";
-
-                if (fragmentDetails.Count > 0)
+                if (fragments.Count == 0)
                 {
-                    errorMsg +=
-                        $" Found {fragmentDetails.Count} text fragment(s): {string.Join(", ", fragmentDetails.Take(5))}";
-                    if (fragmentDetails.Count > 5) errorMsg += "...";
+                    // Provide helpful error message with actual extracted text
+                    var textAbsorber = new TextAbsorber();
+                    page.Accept(textAbsorber);
+                    var pageText = textAbsorber.Text ?? "";
+
+                    // Also try to find similar text using fuzzy matching
+                    var normalizedPageText = Regex.Replace(pageText, @"\s+", " ").Trim();
+                    var normalizedSearchText = Regex.Replace(oldText, @"\s+", " ").Trim();
+                    var cleanedPageText = pageText.Replace("\u0000", "").Trim();
+                    var cleanedSearchText = oldText.Replace("\u0000", "").Trim();
+
+                    // Get fragment details for debugging
+                    var fragmentAbsorber = new TextFragmentAbsorber();
+                    page.Accept(fragmentAbsorber);
+                    var fragmentDetails = new List<string>();
+                    foreach (var frag in fragmentAbsorber.TextFragments)
+                    {
+                        var fragText = (frag.Text?.Replace("\u0000", "") ?? "").Trim();
+                        if (!string.IsNullOrEmpty(fragText)) fragmentDetails.Add($"'{fragText}'");
+                    }
+
+                    var preview = pageText.Length > 200 ? pageText.Substring(0, 200) + "..." : pageText;
+                    var errorMsg = $"Text '{oldText}' not found on page {pageIndex}.";
+
+                    // Check if normalized versions match (ignoring whitespace differences)
+                    if (normalizedPageText.Contains(normalizedSearchText, StringComparison.OrdinalIgnoreCase))
+                        errorMsg +=
+                            " Note: The text exists but with different whitespace. Try matching the exact extracted text format.";
+                    else if (cleanedPageText.Contains(cleanedSearchText, StringComparison.OrdinalIgnoreCase))
+                        errorMsg +=
+                            " Note: The text exists but contains null characters (\\u0000). Try using the cleaned extracted text.";
+
+                    if (fragmentDetails.Count > 0)
+                    {
+                        errorMsg +=
+                            $" Found {fragmentDetails.Count} text fragment(s): {string.Join(", ", fragmentDetails.Take(5))}";
+                        if (fragmentDetails.Count > 5) errorMsg += "...";
+                    }
+
+                    errorMsg += $" Page text preview: {preview}";
+                    throw new ArgumentException(errorMsg);
                 }
 
-                errorMsg += $" Page text preview: {preview}";
-                throw new ArgumentException(errorMsg);
-            }
+                // TextFragmentCollection is 1-based, so we need to use 1-based indexing
+                // However, we should iterate through the collection properly
+                var finalReplaceCount = replaceAll ? fragments.Count : 1;
+                var replacedCount = 0;
 
-            // TextFragmentCollection is 1-based, so we need to use 1-based indexing
-            // However, we should iterate through the collection properly
-            var finalReplaceCount = replaceAll ? fragments.Count : 1;
-            var replacedCount = 0;
-
-            // Use foreach to iterate through fragments (safer than index-based access)
-            foreach (var fragment in fragments)
-            {
-                if (replacedCount >= finalReplaceCount)
-                    break;
-
-                try
+                // Use foreach to iterate through fragments (safer than index-based access)
+                foreach (var fragment in fragments)
                 {
-                    fragment.Text = newText;
-                    replacedCount++;
+                    if (replacedCount >= finalReplaceCount)
+                        break;
+
+                    try
+                    {
+                        fragment.Text = newText;
+                        replacedCount++;
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new ArgumentException(
+                            $"Failed to replace text at occurrence {replacedCount + 1}: {ex.Message}");
+                    }
                 }
-                catch (Exception ex)
-                {
+
+                if (replacedCount == 0 && fragments.Count > 0)
                     throw new ArgumentException(
-                        $"Failed to replace text at occurrence {replacedCount + 1}: {ex.Message}");
-                }
+                        $"Failed to replace any text fragments. Found {fragments.Count} fragment(s) but replacement failed.");
+
+                document.Save(outputPath);
+                return
+                    $"Replaced {finalReplaceCount} occurrence(s) of '{oldText}' with '{newText}' on page {pageIndex}. Output: {outputPath}";
             }
-
-            if (replacedCount == 0 && fragments.Count > 0)
-                throw new ArgumentException(
-                    $"Failed to replace any text fragments. Found {fragments.Count} fragment(s) but replacement failed.");
-
-            document.Save(outputPath);
-            return await Task.FromResult(
-                $"Replaced {finalReplaceCount} occurrence(s) of '{oldText}' with '{newText}' on page {pageIndex}. Output: {outputPath}");
-        }
-        catch (ArgumentException)
-        {
-            // Re-throw ArgumentException as-is
-            throw;
-        }
-        catch (Exception ex)
-        {
-            throw new ArgumentException($"Failed to edit text on page {pageIndex}: {ex.Message}");
-        }
+            catch (ArgumentException)
+            {
+                // Re-throw ArgumentException as-is
+                throw;
+            }
+            catch (Exception ex)
+            {
+                throw new ArgumentException($"Failed to edit text on page {pageIndex}: {ex.Message}");
+            }
+        });
     }
 
     /// <summary>
@@ -363,42 +372,45 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, optional pageIndex</param>
     /// <returns>Extracted text as string</returns>
-    private async Task<string> ExtractText(JsonObject? arguments)
+    private Task<string> ExtractText(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
-        var includeFontInfo = ArgumentHelper.GetBool(arguments, "includeFontInfo", false);
-
-        SecurityHelper.ValidateFilePath(path);
-
-        using var document = new Document(path);
-        if (pageIndex < 1 || pageIndex > document.Pages.Count)
-            throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
-
-        var page = document.Pages[pageIndex];
-        var textAbsorber = new TextAbsorber();
-        page.Accept(textAbsorber);
-
-        var sb = new StringBuilder();
-        sb.AppendLine($"=== Extracted Text from Page {pageIndex} ===");
-        sb.AppendLine();
-
-        if (includeFontInfo)
+        return Task.Run(() =>
         {
-            var textFragmentAbsorber = new TextFragmentAbsorber();
-            page.Accept(textFragmentAbsorber);
-            foreach (var fragment in textFragmentAbsorber.TextFragments)
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
+            var includeFontInfo = ArgumentHelper.GetBool(arguments, "includeFontInfo", false);
+
+            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
+
+            using var document = new Document(path);
+            if (pageIndex < 1 || pageIndex > document.Pages.Count)
+                throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
+
+            var page = document.Pages[pageIndex];
+            var textAbsorber = new TextAbsorber();
+            page.Accept(textAbsorber);
+
+            var sb = new StringBuilder();
+            sb.AppendLine($"=== Extracted Text from Page {pageIndex} ===");
+            sb.AppendLine();
+
+            if (includeFontInfo)
             {
-                sb.AppendLine($"Text: {fragment.Text}");
-                sb.AppendLine($"  Font: {fragment.TextState.Font.FontName}, Size: {fragment.TextState.FontSize}");
-                sb.AppendLine();
+                var textFragmentAbsorber = new TextFragmentAbsorber();
+                page.Accept(textFragmentAbsorber);
+                foreach (var fragment in textFragmentAbsorber.TextFragments)
+                {
+                    sb.AppendLine($"Text: {fragment.Text}");
+                    sb.AppendLine($"  Font: {fragment.TextState.Font.FontName}, Size: {fragment.TextState.FontSize}");
+                    sb.AppendLine();
+                }
             }
-        }
-        else
-        {
-            sb.AppendLine(textAbsorber.Text);
-        }
+            else
+            {
+                sb.AppendLine(textAbsorber.Text);
+            }
 
-        return await Task.FromResult(sb.ToString());
+            return sb.ToString();
+        });
     }
 }

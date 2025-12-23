@@ -100,17 +100,20 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing sectionName, slideIndex, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> AddSectionAsync(JsonObject? arguments, string path)
+    private Task<string> AddSectionAsync(JsonObject? arguments, string path)
     {
-        var name = ArgumentHelper.GetString(arguments, "name");
-        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
+        return Task.Run(() =>
+        {
+            var name = ArgumentHelper.GetString(arguments, "name");
+            var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
 
-        using var presentation = new Presentation(path);
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-        presentation.Sections.AddSection(name, slide);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        presentation.Save(outputPath, SaveFormat.Pptx);
-        return await Task.FromResult($"Section '{name}' added starting at slide {slideIndex}");
+            using var presentation = new Presentation(path);
+            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+            presentation.Sections.AddSection(name, slide);
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
+            return $"Section '{name}' added starting at slide {slideIndex}";
+        });
     }
 
     /// <summary>
@@ -119,19 +122,22 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing sectionIndex, newName, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> RenameSectionAsync(JsonObject? arguments, string path)
+    private Task<string> RenameSectionAsync(JsonObject? arguments, string path)
     {
-        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex");
-        var newName = ArgumentHelper.GetString(arguments, "newName");
+        return Task.Run(() =>
+        {
+            var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex");
+            var newName = ArgumentHelper.GetString(arguments, "newName");
 
-        using var presentation = new Presentation(path);
-        if (sectionIndex < 0 || sectionIndex >= presentation.Sections.Count)
-            throw new ArgumentException($"sectionIndex must be between 0 and {presentation.Sections.Count - 1}");
+            using var presentation = new Presentation(path);
+            if (sectionIndex < 0 || sectionIndex >= presentation.Sections.Count)
+                throw new ArgumentException($"sectionIndex must be between 0 and {presentation.Sections.Count - 1}");
 
-        presentation.Sections[sectionIndex].Name = newName;
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        presentation.Save(outputPath, SaveFormat.Pptx);
-        return await Task.FromResult($"Section {sectionIndex} renamed to '{newName}'");
+            presentation.Sections[sectionIndex].Name = newName;
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
+            return $"Section {sectionIndex} renamed to '{newName}'";
+        });
     }
 
     /// <summary>
@@ -140,21 +146,24 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing sectionIndex, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> DeleteSectionAsync(JsonObject? arguments, string path)
+    private Task<string> DeleteSectionAsync(JsonObject? arguments, string path)
     {
-        var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex");
-        var keepSlides = ArgumentHelper.GetBool(arguments, "keepSlides");
+        return Task.Run(() =>
+        {
+            var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex");
+            var keepSlides = ArgumentHelper.GetBool(arguments, "keepSlides", true);
 
-        using var presentation = new Presentation(path);
-        PowerPointHelper.ValidateCollectionIndex(sectionIndex, presentation.Sections.Count, "section");
-        var section = presentation.Sections[sectionIndex];
-        if (keepSlides)
-            presentation.Sections.RemoveSection(section);
-        else
-            presentation.Sections.RemoveSectionWithSlides(section);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        presentation.Save(outputPath, SaveFormat.Pptx);
-        return await Task.FromResult($"Section {sectionIndex} removed, keep slides: {keepSlides}");
+            using var presentation = new Presentation(path);
+            PowerPointHelper.ValidateCollectionIndex(sectionIndex, presentation.Sections.Count, "section");
+            var section = presentation.Sections[sectionIndex];
+            if (keepSlides)
+                presentation.Sections.RemoveSection(section);
+            else
+                presentation.Sections.RemoveSectionWithSlides(section);
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
+            return $"Section {sectionIndex} removed, keep slides: {keepSlides}";
+        });
     }
 
     /// <summary>
@@ -163,17 +172,20 @@ Usage examples:
     /// <param name="_">Unused parameter</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Formatted string with all sections</returns>
-    private async Task<string> GetSectionsAsync(JsonObject? _, string path)
+    private Task<string> GetSectionsAsync(JsonObject? _, string path)
     {
-        using var presentation = new Presentation(path);
-        var sb = new StringBuilder();
-        sb.AppendLine($"Sections: {presentation.Sections.Count}");
-        for (var i = 0; i < presentation.Sections.Count; i++)
+        return Task.Run(() =>
         {
-            var sec = presentation.Sections[i];
-            sb.AppendLine($"[{i}] {sec.Name}");
-        }
+            using var presentation = new Presentation(path);
+            var sb = new StringBuilder();
+            sb.AppendLine($"Sections: {presentation.Sections.Count}");
+            for (var i = 0; i < presentation.Sections.Count; i++)
+            {
+                var sec = presentation.Sections[i];
+                sb.AppendLine($"[{i}] {sec.Name}");
+            }
 
-        return await Task.FromResult(sb.ToString());
+            return sb.ToString();
+        });
     }
 }

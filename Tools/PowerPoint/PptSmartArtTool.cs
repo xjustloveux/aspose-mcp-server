@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Nodes;
+using System.Text;
+using System.Text.Json.Nodes;
 using Aspose.Slides;
 using Aspose.Slides.Export;
 using Aspose.Slides.SmartArt;
@@ -8,15 +9,16 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 
 /// <summary>
 ///     Unified tool for managing PowerPoint SmartArt (add, manage nodes)
-///     Merges: PptAddSmartArtTool, PptManageSmartArtNodesTool
+///     Supports: add, manage_nodes
 /// </summary>
 public class PptSmartArtTool : IAsposeTool
 {
-    public string Description => @"Manage PowerPoint SmartArt. Supports 2 operations: add, manage_nodes.
+    public string Description =>
+        @"Manage PowerPoint SmartArt. Supports 2 operations: add, manage_nodes.
 
 Usage examples:
-- Add SmartArt: ppt_smart_art(operation='add', path='presentation.pptx', slideIndex=0, layout='BasicProcess', x=100, y=100, width=400, height=300)
-- Manage nodes: ppt_smart_art(operation='manage_nodes', path='presentation.pptx', slideIndex=0, shapeIndex=0, action='add', targetPath=[0], text='New Node')";
+- Add SmartArt: ppt_smart_art(operation='add', path='presentation.pptx', slideIndex=0, layout='BasicProcess', x=100, y=100, width=400, height=300, outputPath='output.pptx')
+- Manage nodes: ppt_smart_art(operation='manage_nodes', path='presentation.pptx', slideIndex=0, shapeIndex=0, action='add', targetPath=[0], text='New Node', outputPath='output.pptx')";
 
     public object InputSchema => new
     {
@@ -27,8 +29,8 @@ Usage examples:
             {
                 type = "string",
                 description = @"Operation to perform.
-- 'add': Add SmartArt shape (required params: path, slideIndex, layout, x, y, width, height)
-- 'manage_nodes': Manage SmartArt nodes (required params: path, slideIndex, shapeIndex, action, targetPath)",
+- 'add': Add a new SmartArt shape (required params: path, slideIndex, layout)
+- 'manage_nodes': Manage SmartArt nodes (add, edit, delete) (required params: path, slideIndex, shapeIndex, action)",
                 @enum = new[] { "add", "manage_nodes" }
             },
             path = new
@@ -39,69 +41,60 @@ Usage examples:
             slideIndex = new
             {
                 type = "number",
-                description = "Slide index (0-based)"
+                description = "Slide index (0-based, required for all operations)"
             },
             shapeIndex = new
             {
                 type = "number",
-                description = "SmartArt shape index (0-based, required for manage_nodes)"
+                description = "Shape index (0-based, required for manage_nodes, refers to SmartArt shape index)"
             },
             layout = new
             {
                 type = "string",
-                description = "Layout: BasicProcess, ContinuousCycle, Hierarchy, etc. (required for add)"
-            },
-            action = new
-            {
-                type = "string",
-                description = "add|remove|rename|move (required for manage_nodes)"
-            },
-            targetPath = new
-            {
-                type = "array",
-                items = new { type = "number" },
-                description = "Node path indices from root (e.g., [0,1], required for manage_nodes)"
-            },
-            text = new
-            {
-                type = "string",
-                description = "Text for add/rename (required for manage_nodes)"
-            },
-            moveParentPath = new
-            {
-                type = "array",
-                items = new { type = "number" },
-                description = "Destination parent path for move (optional, for manage_nodes)"
-            },
-            moveIndex = new
-            {
-                type = "number",
-                description = "Insert index under new parent (optional, for manage_nodes)"
+                description =
+                    "SmartArt layout type (required for add operation, e.g., 'BasicProcess', 'Cycle', 'Hierarchy')"
             },
             x = new
             {
                 type = "number",
-                description = "X position (optional, for add, default: 50)"
+                description = "X position (optional, for add operation, defaults to 100)"
             },
             y = new
             {
                 type = "number",
-                description = "Y position (optional, for add, default: 50)"
+                description = "Y position (optional, for add operation, defaults to 100)"
             },
             width = new
             {
                 type = "number",
-                description = "Width (optional, for add, default: 400)"
+                description = "Width (optional, for add operation, defaults to 400)"
             },
             height = new
             {
                 type = "number",
-                description = "Height (optional, for add, default: 300)"
+                description = "Height (optional, for add operation, defaults to 300)"
+            },
+            action = new
+            {
+                type = "string",
+                description = "Node action: 'add', 'edit', 'delete' (required for manage_nodes operation)",
+                @enum = new[] { "add", "edit", "delete" }
+            },
+            targetPath = new
+            {
+                type = "array",
+                description =
+                    "Array of indices to target node (required for manage_nodes, e.g., [0] for first node, [0,1] for second child of first node)"
+            },
+            text = new
+            {
+                type = "string",
+                description = "Node text content (required for add/edit operations in manage_nodes)"
             },
             outputPath = new
             {
                 type = "string",
-                description = "Output file path (optional, for add/edit/delete operations, defaults to input path)"
+                description = "Output file path (optional, defaults to input path)"
             }
         },
         required = new[] { "operation", "path", "slideIndex" }
@@ -127,123 +120,146 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Adds a SmartArt diagram to a slide
+    ///     Adds a SmartArt shape to a slide
     /// </summary>
-    /// <param name="arguments">JSON arguments containing smartArtType, optional x, y, width, height, outputPath</param>
+    /// <param name="arguments">JSON arguments containing layout, x, y, width, height, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> AddSmartArtAsync(JsonObject? arguments, string path, int slideIndex)
+    private Task<string> AddSmartArtAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var layoutStr = ArgumentHelper.GetString(arguments, "layout");
-        var x = ArgumentHelper.GetFloat(arguments, "x", 50);
-        var y = ArgumentHelper.GetFloat(arguments, "y", 50);
-        var width = ArgumentHelper.GetFloat(arguments, "width", 400);
-        var height = ArgumentHelper.GetFloat(arguments, "height", 300);
-
-        using var presentation = new Presentation(path);
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-
-        var layout = layoutStr.ToLower() switch
+        return Task.Run(() =>
         {
-            "basicprocess" => SmartArtLayoutType.BasicProcess,
-            "continuouscycle" => SmartArtLayoutType.ContinuousCycle,
-            "hierarchy" => SmartArtLayoutType.Hierarchy,
-            "basicblocklist" => SmartArtLayoutType.BasicBlockList,
-            "basicpyramid" => SmartArtLayoutType.BasicPyramid,
-            "stackedlist" => SmartArtLayoutType.StackedList,
-            "horizontalmultilevelhierarchy" => SmartArtLayoutType.HorizontalMultiLevelHierarchy,
-            _ => SmartArtLayoutType.BasicProcess
-        };
-        slide.Shapes.AddSmartArt(x, y, width, height, layout);
+            var layoutStr = ArgumentHelper.GetString(arguments, "layout");
+            var x = ArgumentHelper.GetFloat(arguments, "x", 100);
+            var y = ArgumentHelper.GetFloat(arguments, "y", 100);
+            var width = ArgumentHelper.GetFloat(arguments, "width", 400);
+            var height = ArgumentHelper.GetFloat(arguments, "height", 300);
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        presentation.Save(outputPath, SaveFormat.Pptx);
-        return await Task.FromResult($"SmartArt ({layout}) added to slide {slideIndex}");
+            // Parse layout string to SmartArtLayoutType enum
+            if (!Enum.TryParse<SmartArtLayoutType>(layoutStr, true, out var layoutType))
+                throw new ArgumentException(
+                    $"Invalid SmartArt layout: '{layoutStr}'. Valid layouts include: BasicProcess, Cycle, Hierarchy, etc.");
+
+            using var presentation = new Presentation(path);
+            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+
+            slide.Shapes.AddSmartArt(x, y, width, height, layoutType);
+
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
+
+            return $"SmartArt added successfully to slide {slideIndex} with layout '{layoutStr}' - {outputPath}";
+        });
     }
 
     /// <summary>
     ///     Manages SmartArt nodes (add, edit, delete)
     /// </summary>
-    /// <param name="arguments">JSON arguments containing smartArtIndex, action, optional nodeIndex, text, outputPath</param>
+    /// <param name="arguments">JSON arguments containing shapeIndex, action, targetPath, text, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> ManageNodesAsync(JsonObject? arguments, string path, int slideIndex)
+    private Task<string> ManageNodesAsync(JsonObject? arguments, string path, int slideIndex)
     {
-        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
-        var action = ArgumentHelper.GetString(arguments, "action").ToLower();
-        var targetPathArray = ArgumentHelper.GetArray(arguments, "targetPath", false);
-        var targetPath = targetPathArray?.Select(x => x?.GetValue<int>() ?? -1).ToArray();
-        var text = ArgumentHelper.GetStringNullable(arguments, "text");
-        var moveParentPathArray = ArgumentHelper.GetArray(arguments, "moveParentPath", false);
-        var moveParentPath = moveParentPathArray?.Select(x => x?.GetValue<int>() ?? -1).ToArray();
-        _ = ArgumentHelper.GetIntNullable(arguments, "moveIndex");
-
-        using var presentation = new Presentation(path);
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-        var shape = PowerPointHelper.GetShape(slide, shapeIndex);
-
-        if (shape is not ISmartArt smartArt) throw new ArgumentException("The specified shape is not a SmartArt");
-
-        SmartArtNode? GetNode(int[]? pathArr)
+        return Task.Run(() =>
         {
-            if (pathArr == null || pathArr.Length == 0) return null;
-            var node = smartArt.AllNodes[pathArr[0]] as SmartArtNode;
-            for (var i = 1; node != null && i < pathArr.Length; i++)
-            {
-                if (pathArr[i] < 0 || pathArr[i] >= node.ChildNodes.Count) return null;
-                node = node.ChildNodes[pathArr[i]] as SmartArtNode;
-            }
+            var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
+            var action = ArgumentHelper.GetString(arguments, "action");
+            var targetPathArray = ArgumentHelper.GetArray(arguments, "targetPath");
+            var text = ArgumentHelper.GetStringNullable(arguments, "text");
 
-            return node;
-        }
+            using var presentation = new Presentation(path);
+            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
 
-        switch (action)
-        {
-            case "add":
+            PowerPointHelper.ValidateShapeIndex(shapeIndex, slide);
+            var shape = slide.Shapes[shapeIndex];
+
+            if (shape is not ISmartArt smartArt)
+                throw new ArgumentException(
+                    $"Shape at index {shapeIndex} is not a SmartArt shape. It is a {shape.GetType().Name}.");
+
+            // Convert targetPath array to list of indices
+            var targetPath = new List<int>();
+            foreach (var item in targetPathArray)
+                if (item != null && int.TryParse(item.ToString(), out var index))
+                    targetPath.Add(index);
+                else
+                    throw new ArgumentException(
+                        $"Invalid targetPath: all elements must be integers. Found: {item}");
+
+            if (targetPath.Count == 0) throw new ArgumentException("targetPath must contain at least one index");
+
+            // Navigate to target node
+            ISmartArtNode? targetNode = null;
+            var currentNode = smartArt.AllNodes[targetPath[0]];
+
+            if (targetPath.Count == 1)
             {
-                var parent = GetNode(targetPath) ?? smartArt.AllNodes.AddNode();
-                var newNode = parent.ChildNodes.AddNode();
-                newNode.TextFrame.Text = string.IsNullOrEmpty(text) ? "New Node" : text;
-                break;
+                targetNode = currentNode;
             }
-            case "remove":
+            else
             {
-                var node = GetNode(targetPath);
-                if (node == null) throw new ArgumentException("targetPath is invalid");
-                node.Remove();
-                break;
-            }
-            case "rename":
-            {
-                var node = GetNode(targetPath);
-                if (node == null) throw new ArgumentException("targetPath is invalid");
-                node.TextFrame.Text = text ?? string.Empty;
-                break;
-            }
-            case "move":
-            {
-                var node = GetNode(targetPath);
-                if (node == null) throw new ArgumentException("targetPath is invalid");
-                var parent = GetNode(moveParentPath) ?? smartArt.AllNodes.AddNode();
-                var clone = parent.ChildNodes.AddNode();
-                clone.TextFrame.Text = node.TextFrame.Text;
-                foreach (var child in node.ChildNodes.Cast<SmartArtNode>())
+                for (var i = 1; i < targetPath.Count; i++)
                 {
-                    var childClone = clone.ChildNodes.AddNode();
-                    childClone.TextFrame.Text = child.TextFrame.Text;
+                    var childIndex = targetPath[i];
+                    if (childIndex < 0 || childIndex >= currentNode.ChildNodes.Count)
+                        throw new ArgumentException(
+                            $"Child index {childIndex} is out of range (node has {currentNode.ChildNodes.Count} children)");
+
+                    currentNode = currentNode.ChildNodes[childIndex];
                 }
 
-                node.Remove();
-                break;
+                targetNode = currentNode;
             }
-            default:
-                throw new ArgumentException("action must be one of: add/remove/rename/move");
-        }
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        presentation.Save(outputPath, SaveFormat.Pptx);
-        return await Task.FromResult($"SmartArt {action} completed: slide {slideIndex}, shape {shapeIndex}");
+            if (targetNode == null) throw new InvalidOperationException("Unable to locate target node");
+
+            var sb = new StringBuilder();
+
+            switch (action.ToLower())
+            {
+                case "add":
+                    if (string.IsNullOrEmpty(text))
+                        throw new ArgumentException("text parameter is required for 'add' action");
+
+                    var newNode = targetNode.ChildNodes.AddNode();
+                    newNode.TextFrame.Text = text;
+                    sb.AppendLine("Node added successfully to SmartArt");
+                    sb.AppendLine($"Target path: [{string.Join(",", targetPath)}]");
+                    sb.AppendLine($"New node text: {text}");
+                    break;
+
+                case "edit":
+                    if (string.IsNullOrEmpty(text))
+                        throw new ArgumentException("text parameter is required for 'edit' action");
+
+                    targetNode.TextFrame.Text = text;
+                    sb.AppendLine("Node edited successfully");
+                    sb.AppendLine($"Target path: [{string.Join(",", targetPath)}]");
+                    sb.AppendLine($"New text: {text}");
+                    break;
+
+                case "delete":
+                    // Check if it's a root node (root nodes are directly in AllNodes, not in ChildNodes)
+                    if (targetPath.Count == 1) throw new InvalidOperationException("Cannot delete root node");
+
+                    var nodeText = targetNode.TextFrame?.Text ?? "(empty)";
+                    targetNode.Remove();
+                    sb.AppendLine("Node deleted successfully");
+                    sb.AppendLine($"Deleted node path: [{string.Join(",", targetPath)}]");
+                    sb.AppendLine($"Deleted node text: {nodeText}");
+                    break;
+
+                default:
+                    throw new ArgumentException($"Unknown action: {action}. Valid actions: add, edit, delete");
+            }
+
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
+
+            sb.AppendLine($"Output: {outputPath}");
+            return sb.ToString();
+        });
     }
 }

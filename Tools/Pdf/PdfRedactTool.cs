@@ -71,43 +71,46 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments object containing operation parameters</param>
     /// <returns>Result message as a string</returns>
-    public async Task<string> ExecuteAsync(JsonObject? arguments)
+    public Task<string> ExecuteAsync(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
-        var x = ArgumentHelper.GetDouble(arguments, "x");
-        var y = ArgumentHelper.GetDouble(arguments, "y");
-        var width = ArgumentHelper.GetDouble(arguments, "width");
-        var height = ArgumentHelper.GetDouble(arguments, "height");
-        var fillColor = ArgumentHelper.GetStringNullable(arguments, "fillColor");
-
-        using var document = new Document(path);
-        if (pageIndex < 1 || pageIndex > document.Pages.Count)
-            throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
-
-        var page = document.Pages[pageIndex];
-        var rect = new Rectangle(x, y, x + width, y + height);
-
-        var redactionAnnotation = new RedactionAnnotation(page, rect);
-
-        // Set fill color
-        if (!string.IsNullOrEmpty(fillColor))
+        return Task.Run(() =>
         {
-            // Parse color with fallback to black if parsing fails
-            var systemColor = ColorHelper.ParseColor(fillColor, Color.Black);
-            redactionAnnotation.FillColor = ColorHelper.ToPdfColor(systemColor);
-        }
-        else
-        {
-            redactionAnnotation.FillColor = Aspose.Pdf.Color.Black;
-        }
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
+            var x = ArgumentHelper.GetDouble(arguments, "x");
+            var y = ArgumentHelper.GetDouble(arguments, "y");
+            var width = ArgumentHelper.GetDouble(arguments, "width");
+            var height = ArgumentHelper.GetDouble(arguments, "height");
+            var fillColor = ArgumentHelper.GetStringNullable(arguments, "fillColor");
 
-        page.Annotations.Add(redactionAnnotation);
-        // The annotation is added and will be visible
+            using var document = new Document(path);
+            if (pageIndex < 1 || pageIndex > document.Pages.Count)
+                throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        document.Save(outputPath);
+            var page = document.Pages[pageIndex];
+            var rect = new Rectangle(x, y, x + width, y + height);
 
-        return await Task.FromResult($"Redaction applied to page {pageIndex}: {outputPath}");
+            var redactionAnnotation = new RedactionAnnotation(page, rect);
+
+            // Set fill color
+            if (!string.IsNullOrEmpty(fillColor))
+            {
+                // Parse color with fallback to black if parsing fails
+                var systemColor = ColorHelper.ParseColor(fillColor, Color.Black);
+                redactionAnnotation.FillColor = ColorHelper.ToPdfColor(systemColor);
+            }
+            else
+            {
+                redactionAnnotation.FillColor = Aspose.Pdf.Color.Black;
+            }
+
+            page.Annotations.Add(redactionAnnotation);
+            // The annotation is added and will be visible
+
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            document.Save(outputPath);
+
+            return $"Redaction applied to page {pageIndex}: {outputPath}";
+        });
     }
 }

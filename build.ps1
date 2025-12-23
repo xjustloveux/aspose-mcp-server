@@ -9,8 +9,15 @@ $OutputEncoding = [System.Text.Encoding]::UTF8
 # Set environment variable for .NET
 $env:DOTNET_CLI_UI_LANGUAGE = "en-US"
 
-# Run dotnet build
-dotnet build $args
+# Build only the main project, exclude test projects
+# If no arguments provided, default to Release configuration
+$buildArgs = $args
+if ($buildArgs.Count -eq 0) {
+    $buildArgs = @("--configuration", "Release")
+}
+
+# Build the main project explicitly
+dotnet build AsposeMcpServer.csproj $buildArgs
 
 # Exit with the same exit code as dotnet build
 exit $LASTEXITCODE

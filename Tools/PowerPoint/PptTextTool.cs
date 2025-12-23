@@ -125,27 +125,33 @@ Usage examples:
     /// </param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> AddTextAsync(JsonObject? arguments, string path)
+    private Task<string> AddTextAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
-        var text = ArgumentHelper.GetString(arguments, "text");
-        var x = ArgumentHelper.GetFloat(arguments, "x", "x", false, 50);
-        var y = ArgumentHelper.GetFloat(arguments, "y", "y", false, 50);
-        var width = ArgumentHelper.GetFloat(arguments, "width", "width", false, 400);
-        var height = ArgumentHelper.GetFloat(arguments, "height", "height", false, 100);
+        return Task.Run(() =>
+        {
+            var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
+            var text = ArgumentHelper.GetString(arguments, "text");
+            var x = ArgumentHelper.GetFloat(arguments, "x", "x", false, 50);
+            var y = ArgumentHelper.GetFloat(arguments, "y", "y", false, 50);
+            var width = ArgumentHelper.GetFloat(arguments, "width", "width", false, 400);
+            var height = ArgumentHelper.GetFloat(arguments, "height", "height", false, 100);
 
-        using var presentation = new Presentation(path);
-        if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
-            throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
+            using var presentation = new Presentation(path);
+            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
 
-        var slide = presentation.Slides[slideIndex];
-        var textBox = slide.Shapes.AddAutoShape(ShapeType.Rectangle, x, y, width, height);
-        textBox.TextFrame.Text = text;
+            // Create text box
+            var textBox = slide.Shapes.AddAutoShape(ShapeType.Rectangle, x, y, width, height);
+            textBox.TextFrame.Text = text;
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        presentation.Save(outputPath, SaveFormat.Pptx);
+            // Set fill and line to transparent for a clean text box appearance
+            textBox.FillFormat.FillType = FillType.NoFill;
+            textBox.LineFormat.FillFormat.FillType = FillType.NoFill;
 
-        return await Task.FromResult($"Text added to slide {slideIndex}: {outputPath}");
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
+
+            return $"Text added to slide {slideIndex}: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -154,23 +160,42 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing slideIndex, shapeIndex, text, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> EditTextAsync(JsonObject? arguments, string path)
+    private Task<string> EditTextAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
-        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
-        var text = ArgumentHelper.GetString(arguments, "text");
+        return Task.Run(() =>
+        {
+            var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
+            var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
+            var text = ArgumentHelper.GetString(arguments, "text");
 
-        using var presentation = new Presentation(path);
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-        var shape = PowerPointHelper.GetShape(slide, shapeIndex);
-        if (shape is IAutoShape { TextFrame: not null } autoShape)
-            autoShape.TextFrame.Text = text;
-        else
-            throw new ArgumentException($"Shape at index {shapeIndex} does not support text editing");
+            using var presentation = new Presentation(path);
+            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        presentation.Save(outputPath, SaveFormat.Pptx);
-        return await Task.FromResult($"Text updated on slide {slideIndex}, shape {shapeIndex}");
+            var shape = PowerPointHelper.GetShape(slide, shapeIndex);
+
+            if (shape is IAutoShape autoShape)
+            {
+                if (autoShape.TextFrame == null)
+                    autoShape.AddTextFrame("");
+
+                if (autoShape.TextFrame != null)
+                {
+                    autoShape.TextFrame.Paragraphs.Clear();
+                    var paragraph = new Paragraph();
+                    paragraph.Portions.Add(new Portion(text));
+                    autoShape.TextFrame.Paragraphs.Add(paragraph);
+                }
+            }
+            else
+            {
+                throw new ArgumentException(
+                    $"Shape at index {shapeIndex} (Type: {shape.GetType().Name}) is not an AutoShape and cannot contain text");
+            }
+
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
+            return $"Text updated on slide {slideIndex}, shape index {shapeIndex} (Name: {shape.Name})";
+        });
     }
 
     /// <summary>
@@ -179,39 +204,49 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing searchText, replaceText, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Success message with replacement count</returns>
-    private async Task<string> ReplaceTextAsync(JsonObject? arguments, string path)
+    private Task<string> ReplaceTextAsync(JsonObject? arguments, string path)
     {
-        var findText = ArgumentHelper.GetString(arguments, "findText");
-        var replaceText = ArgumentHelper.GetString(arguments, "replaceText");
-        var matchCase = ArgumentHelper.GetBool(arguments, "matchCase", false);
+        return Task.Run(() =>
+        {
+            var findText = ArgumentHelper.GetString(arguments, "findText");
+            var replaceText = ArgumentHelper.GetString(arguments, "replaceText");
+            var matchCase = ArgumentHelper.GetBool(arguments, "matchCase", false);
 
-        using var presentation = new Presentation(path);
-        var comparison = matchCase ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
-        var replacements = 0;
+            using var presentation = new Presentation(path);
+            var comparison = matchCase ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+            var replacements = 0;
 
-        foreach (var slide in presentation.Slides)
-        foreach (var shape in slide.Shapes)
-            if (shape is IAutoShape { TextFrame: not null } autoShape)
-                foreach (var paragraph in autoShape.TextFrame.Paragraphs)
-                foreach (var portion in paragraph.Portions)
+            // Iterate through all slides and shapes
+            foreach (var slide in presentation.Slides)
+            foreach (var shape in slide.Shapes)
+                if (shape is IAutoShape { TextFrame: not null } autoShape)
                 {
-                    var text = portion.Text;
-                    if (string.IsNullOrEmpty(text)) continue;
+                    // Replace text at TextFrame level to better preserve formatting
+                    // This approach handles text that spans multiple Portions better
+                    var originalText = autoShape.TextFrame.Text;
+                    if (string.IsNullOrEmpty(originalText)) continue;
 
-                    var newText = ReplaceAll(text, findText, replaceText, comparison);
-                    if (!ReferenceEquals(text, newText) && newText != text)
+                    var newText = ReplaceAll(originalText, findText, replaceText, comparison);
+                    if (newText != originalText)
                     {
-                        portion.Text = newText;
+                        // Replace the entire TextFrame text, which preserves paragraph structure
+                        // Note: This will reset formatting to default, but avoids breaking text across Portions
+                        // For better formatting preservation, we could use a more sophisticated approach
+                        autoShape.TextFrame.Text = newText;
                         replacements++;
                     }
                 }
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        presentation.Save(outputPath, SaveFormat.Pptx);
-        return await Task.FromResult(
-            $"Text replacement completed: {replacements} occurrences\nFind: {findText}\nReplace with: {replaceText}\nOutput: {outputPath}");
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
+            return
+                $"Text replacement completed: {replacements} occurrences\nFind: {findText}\nReplace with: {replaceText}\nOutput: {outputPath}";
+        });
     }
 
+    /// <summary>
+    ///     Replaces all occurrences of a string in source with replacement string
+    /// </summary>
     private static string ReplaceAll(string source, string find, string replace, StringComparison comparison)
     {
         if (string.IsNullOrEmpty(source) || string.IsNullOrEmpty(find)) return source;

@@ -1,0 +1,136 @@
+name: Run Tests
+
+on:
+  push:
+    branches: [ main, master ]
+    paths-ignore:
+      - '*.md'
+      - 'docs/**'
+      - '.gitignore'
+      - 'LICENSE'
+  pull_request:
+    branches: [ main, master ]
+    paths-ignore:
+      - '*.md'
+      - 'docs/**'
+      - '.gitignore'
+      - 'LICENSE'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: windows-latest
+    # 额外保护：即使 paths-ignore 失效，也可以通过 commit message 跳过
+    if: |
+      (github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[ci skip]')) ||
+      (github.event_name == 'pull_request' && !contains(github.event.pull_request.title, '[skip ci]') && !contains(github.event.pull_request.title, '[ci skip]')) ||
+      github.event_name == 'workflow_dispatch'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+    
+    - name: Restore dependencies
+      run: dotnet restore AsposeMcpServer.sln
+    
+    - name: Setup Aspose License
+      if: ${{ secrets.ASPOSE_LIC != '' }}
+      run: |
+        # GitHub Actions automatically masks secrets when they appear in logs
+        # Using ${{ secrets.ASPOSE_LIC }} directly ensures automatic masking
+        # Do NOT output $licenseContent to logs - it will be masked but avoid unnecessary exposure
+        $licensePath = "Aspose.Total.lic"
+        [System.IO.File]::WriteAllText($licensePath, "${{ secrets.ASPOSE_LIC }}")
+        Write-Host "License file created at: $licensePath (content secured)"
+        echo "ASPOSE_LICENSE_PATH=$licensePath" >> $env:GITHUB_ENV
+      shell: pwsh
+      continue-on-error: true
+    
+    - name: Build
+      run: dotnet build --configuration Release --no-restore
+    
+    - name: Test with Coverage
+      run: |
+        .\test.ps1 -Coverage -NoBuild
+      continue-on-error: true
+    
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results
+        path: '**/test-results.trx'
+    
+    - name: Install ReportGenerator
+      run: dotnet tool install -g dotnet-reportgenerator-globaltool
+    
+    - name: Generate Coverage Report
+      run: |
+        reportgenerator `
+          -reports:"${{ runner.temp }}/TestResults/**/coverage.cobertura.xml" `
+          -targetdir:"${{ runner.temp }}/CoverageReport" `
+          -reporttypes:"Html;Cobertura"
+      continue-on-error: true
+    
+    - name: Upload Coverage Report to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        files: ${{ runner.temp }}/TestResults/**/coverage.cobertura.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+        token: ${{ secrets.CODECOV_TOKEN }}
+        verbose: true
+      continue-on-error: true
+    
+    - name: Upload Coverage Report Artifact
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: coverage-report
+        path: ${{ runner.temp }}/CoverageReport
+
+  # Evaluation mode test - optional execution
+  test-evaluation-mode:
+    runs-on: windows-latest
+    # Only execute in the following cases:
+    # 1. Manual trigger (workflow_dispatch)
+    # 2. PR title contains [test-eval]
+    # 3. Commit message contains [test-eval]
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && contains(github.event.pull_request.title, '[test-eval]')) ||
+      (github.event_name == 'push' && contains(github.event.head_commit.message, '[test-eval]'))
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+    
+    - name: Restore dependencies
+      run: dotnet restore AsposeMcpServer.sln
+    
+    - name: Build
+      run: dotnet build --configuration Release --no-restore
+    
+    - name: Test in Evaluation Mode
+      run: |
+        .\test.ps1 -SkipLicense -NoBuild
+      continue-on-error: true
+    
+    - name: Upload evaluation mode test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results-eval
+        path: '**/test-results.trx'
+

@@ -128,28 +128,31 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message with cell location</returns>
-    private async Task<string> WriteCellAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> WriteCellAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var cell = ArgumentHelper.GetString(arguments, "cell");
-        var value = ArgumentHelper.GetString(arguments, "value");
+        return Task.Run(() =>
+        {
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var cell = ArgumentHelper.GetString(arguments, "cell");
+            var value = ArgumentHelper.GetString(arguments, "value");
 
-        using var workbook = new Workbook(path);
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var cellObj = worksheet.Cells[cell];
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            var cellObj = worksheet.Cells[cell];
 
-        // Parse value as number, boolean, or string
-        // Ensures formulas can correctly identify numeric values
-        if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var numValue))
-            cellObj.PutValue(numValue);
-        else if (bool.TryParse(value, out var boolValue))
-            cellObj.PutValue(boolValue);
-        else
-            cellObj.PutValue(value);
+            // Parse value as number, boolean, or string
+            // Ensures formulas can correctly identify numeric values
+            if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var numValue))
+                cellObj.PutValue(numValue);
+            else if (bool.TryParse(value, out var boolValue))
+                cellObj.PutValue(boolValue);
+            else
+                cellObj.PutValue(value);
 
-        workbook.Save(outputPath);
+            workbook.Save(outputPath);
 
-        return await Task.FromResult($"Cell {cell} updated in sheet {sheetIndex}: {outputPath}");
+            return $"Cell {cell} updated in sheet {sheetIndex}: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -159,44 +162,47 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message with cell location</returns>
-    private async Task<string> EditCellAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> EditCellAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var cell = ArgumentHelper.GetString(arguments, "cell");
-        var value = ArgumentHelper.GetStringNullable(arguments, "value");
-        var formula = ArgumentHelper.GetStringNullable(arguments, "formula");
-        var clearValue = ArgumentHelper.GetBool(arguments, "clearValue", false);
+        return Task.Run(() =>
+        {
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var cell = ArgumentHelper.GetString(arguments, "cell");
+            var value = ArgumentHelper.GetStringNullable(arguments, "value");
+            var formula = ArgumentHelper.GetStringNullable(arguments, "formula");
+            var clearValue = ArgumentHelper.GetBool(arguments, "clearValue", false);
 
-        using var workbook = new Workbook(path);
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var cellObj = worksheet.Cells[cell];
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            var cellObj = worksheet.Cells[cell];
 
-        if (clearValue)
-        {
-            cellObj.PutValue("");
-        }
-        else if (!string.IsNullOrEmpty(formula))
-        {
-            cellObj.Formula = formula;
-        }
-        else if (!string.IsNullOrEmpty(value))
-        {
-            // Parse value as number, boolean, or string
-            // Ensures formulas can correctly identify numeric values
-            if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var numValue))
-                cellObj.PutValue(numValue);
-            else if (bool.TryParse(value, out var boolValue))
-                cellObj.PutValue(boolValue);
+            if (clearValue)
+            {
+                cellObj.PutValue("");
+            }
+            else if (!string.IsNullOrEmpty(formula))
+            {
+                cellObj.Formula = formula;
+            }
+            else if (!string.IsNullOrEmpty(value))
+            {
+                // Parse value as number, boolean, or string
+                // Ensures formulas can correctly identify numeric values
+                if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var numValue))
+                    cellObj.PutValue(numValue);
+                else if (bool.TryParse(value, out var boolValue))
+                    cellObj.PutValue(boolValue);
+                else
+                    cellObj.PutValue(value);
+            }
             else
-                cellObj.PutValue(value);
-        }
-        else
-        {
-            throw new ArgumentException("Either value, formula, or clearValue must be provided");
-        }
+            {
+                throw new ArgumentException("Either value, formula, or clearValue must be provided");
+            }
 
-        workbook.Save(outputPath);
-        return await Task.FromResult($"Cell {cell} edited in sheet {sheetIndex}: {outputPath}");
+            workbook.Save(outputPath);
+            return $"Cell {cell} edited in sheet {sheetIndex}: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -206,34 +212,38 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Formatted string with cell information</returns>
-    private async Task<string> GetCellAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> GetCellAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var cell = ArgumentHelper.GetString(arguments, "cell");
-        var includeFormula = ArgumentHelper.GetBool(arguments, "includeFormula", true);
-        var includeFormat = ArgumentHelper.GetBool(arguments, "includeFormat", false);
-
-        using var workbook = new Workbook(path);
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var cellObj = worksheet.Cells[cell];
-
-        var result = new StringBuilder();
-        result.AppendLine($"Cell: {cell}");
-        result.AppendLine($"Value: {cellObj.Value ?? "(empty)"}");
-        result.AppendLine($"Value Type: {cellObj.Type}");
-
-        if (includeFormula && !string.IsNullOrEmpty(cellObj.Formula)) result.AppendLine($"Formula: {cellObj.Formula}");
-
-        if (includeFormat)
+        return Task.Run(() =>
         {
-            var style = cellObj.GetStyle();
-            result.AppendLine("Format:");
-            result.AppendLine($"  Font: {style.Font.Name}, Size: {style.Font.Size}");
-            result.AppendLine($"  Bold: {style.Font.IsBold}, Italic: {style.Font.IsItalic}");
-            result.AppendLine($"  Background Color: {style.ForegroundColor}");
-            result.AppendLine($"  Number Format: {style.Number}");
-        }
+            var cell = ArgumentHelper.GetString(arguments, "cell");
+            var includeFormula = ArgumentHelper.GetBool(arguments, "includeFormula", true);
+            var includeFormat = ArgumentHelper.GetBool(arguments, "includeFormat", false);
 
-        return await Task.FromResult(result.ToString());
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            var cellObj = worksheet.Cells[cell];
+
+            var result = new StringBuilder();
+            result.AppendLine($"Cell: {cell}");
+            result.AppendLine($"Value: {cellObj.Value ?? "(empty)"}");
+            result.AppendLine($"Value Type: {cellObj.Type}");
+
+            if (includeFormula && !string.IsNullOrEmpty(cellObj.Formula))
+                result.AppendLine($"Formula: {cellObj.Formula}");
+
+            if (includeFormat)
+            {
+                var style = cellObj.GetStyle();
+                result.AppendLine("Format:");
+                result.AppendLine($"  Font: {style.Font.Name}, Size: {style.Font.Size}");
+                result.AppendLine($"  Bold: {style.Font.IsBold}, Italic: {style.Font.IsItalic}");
+                result.AppendLine($"  Background Color: {style.ForegroundColor}");
+                result.AppendLine($"  Number Format: {style.Number}");
+            }
+
+            return result.ToString();
+        });
     }
 
     /// <summary>
@@ -243,34 +253,37 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> ClearCellAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> ClearCellAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var cell = ArgumentHelper.GetString(arguments, "cell");
-        var clearContent = ArgumentHelper.GetBool(arguments, "clearContent");
-        var clearFormat = ArgumentHelper.GetBool(arguments, "clearFormat", false);
-
-        using var workbook = new Workbook(path);
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var cellObj = worksheet.Cells[cell];
-
-        if (clearContent && clearFormat)
+        return Task.Run(() =>
         {
-            cellObj.PutValue("");
-            var defaultStyle = workbook.CreateStyle();
-            cellObj.SetStyle(defaultStyle);
-        }
-        else if (clearContent)
-        {
-            cellObj.PutValue("");
-        }
-        else if (clearFormat)
-        {
-            var defaultStyle = workbook.CreateStyle();
-            cellObj.SetStyle(defaultStyle);
-        }
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var cell = ArgumentHelper.GetString(arguments, "cell");
+            var clearContent = ArgumentHelper.GetBool(arguments, "clearContent", true);
+            var clearFormat = ArgumentHelper.GetBool(arguments, "clearFormat", false);
 
-        workbook.Save(outputPath);
-        return await Task.FromResult($"Cell {cell} cleared in sheet {sheetIndex}: {outputPath}");
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            var cellObj = worksheet.Cells[cell];
+
+            if (clearContent && clearFormat)
+            {
+                cellObj.PutValue("");
+                var defaultStyle = workbook.CreateStyle();
+                cellObj.SetStyle(defaultStyle);
+            }
+            else if (clearContent)
+            {
+                cellObj.PutValue("");
+            }
+            else if (clearFormat)
+            {
+                var defaultStyle = workbook.CreateStyle();
+                cellObj.SetStyle(defaultStyle);
+            }
+
+            workbook.Save(outputPath);
+            return $"Cell {cell} cleared in sheet {sheetIndex}: {outputPath}";
+        });
     }
 }

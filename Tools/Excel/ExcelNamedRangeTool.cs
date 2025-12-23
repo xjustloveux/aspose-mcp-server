@@ -94,116 +94,118 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message with named range details</returns>
-    private async Task<string> AddNamedRangeAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> AddNamedRangeAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var name = ArgumentHelper.GetString(arguments, "name");
-        var range = ArgumentHelper.GetString(arguments, "range");
-        var comment = ArgumentHelper.GetStringNullable(arguments, "comment");
-
-        using var workbook = new Workbook(path);
-        var names = workbook.Worksheets.Names;
-
-        // Get the correct worksheet using sheetIndex
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var actualSheetName = worksheet.Name;
-
-        // Use Range object approach instead of manually constructing RefersTo string
-        // This is the recommended way according to Aspose.Cells documentation
-        // It automatically handles sheet name escaping, absolute references, and special characters
-        try
+        return Task.Run(() =>
         {
-            // Check if name already exists using get operation's method
-            using var checkWorkbook = new Workbook(path);
-            var checkNames = checkWorkbook.Worksheets.Names;
-            foreach (var checkName in checkNames)
-                try
-                {
-                    var checkText = checkName.Text;
-                    if (!string.IsNullOrEmpty(checkText) && checkText == name)
-                        throw new ArgumentException($"Named range '{name}' already exists");
-                }
-                catch (ArgumentException)
-                {
-                    throw;
-                }
-                catch
-                {
-                    // Ignore if named range creation fails (will be handled by error handling)
-                }
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var name = ArgumentHelper.GetString(arguments, "name");
+            var range = ArgumentHelper.GetString(arguments, "range");
+            var comment = ArgumentHelper.GetStringNullable(arguments, "comment");
+
+            using var workbook = new Workbook(path);
+            var names = workbook.Worksheets.Names;
+
+            // Get the correct worksheet using sheetIndex
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
 
             // Use Range object approach instead of manually constructing RefersTo string
             // This is the recommended way according to Aspose.Cells documentation
             // It automatically handles sheet name escaping, absolute references, and special characters
-
-            Range rangeObject;
-            if (range.Contains("!"))
+            try
             {
-                // Range already contains sheet reference, parse it
-                var parts = range.Split('!');
-                if (parts.Length == 2)
+                // Check if name already exists using get operation's method
+                using var checkWorkbook = new Workbook(path);
+                var checkNames = checkWorkbook.Worksheets.Names;
+                foreach (var checkName in checkNames)
+                    try
+                    {
+                        var checkText = checkName.Text;
+                        if (!string.IsNullOrEmpty(checkText) && checkText == name)
+                            throw new ArgumentException($"Named range '{name}' already exists");
+                    }
+                    catch (ArgumentException)
+                    {
+                        throw;
+                    }
+                    catch (Exception ex)
+                    {
+                        // Ignore if named range creation fails (will be handled by error handling)
+                        Console.Error.WriteLine($"[WARN] Named range creation failed (will be handled by error handling): {ex.Message}");
+                    }
+
+                // Use Range object approach instead of manually constructing RefersTo string
+                // This is the recommended way according to Aspose.Cells documentation
+                // It automatically handles sheet name escaping, absolute references, and special characters
+
+                Range rangeObject;
+                if (range.Contains("!"))
                 {
-                    var sheetRef = parts[0].Trim().Trim('\'');
-                    var cellRange = parts[1].Trim();
+                    // Range already contains sheet reference, parse it
+                    var parts = range.Split('!');
+                    if (parts.Length == 2)
+                    {
+                        var sheetRef = parts[0].Trim().Trim('\'');
+                        var cellRange = parts[1].Trim();
 
-                    // Find the worksheet by name
-                    Worksheet? targetSheet = null;
-                    foreach (var ws in workbook.Worksheets)
-                        if (ws.Name == sheetRef)
-                        {
-                            targetSheet = ws;
-                            break;
-                        }
+                        // Find the worksheet by name
+                        Worksheet? targetSheet = null;
+                        foreach (var ws in workbook.Worksheets)
+                            if (ws.Name == sheetRef)
+                            {
+                                targetSheet = ws;
+                                break;
+                            }
 
-                    if (targetSheet == null)
-                        throw new ArgumentException($"Worksheet '{sheetRef}' not found");
+                        if (targetSheet == null)
+                            throw new ArgumentException($"Worksheet '{sheetRef}' not found");
 
-                    // Parse cell range (e.g., "A1:C1")
-                    var cellParts = cellRange.Split(':');
-                    rangeObject = targetSheet.Cells.CreateRange(cellParts[0].Trim(),
-                        cellParts.Length == 2 ? cellParts[1].Trim() : cellParts[0].Trim());
+                        // Parse cell range (e.g., "A1:C1")
+                        var cellParts = cellRange.Split(':');
+                        rangeObject = targetSheet.Cells.CreateRange(cellParts[0].Trim(),
+                            cellParts.Length == 2 ? cellParts[1].Trim() : cellParts[0].Trim());
+                    }
+                    else
+                    {
+                        throw new ArgumentException(
+                            $"Invalid range format with sheet reference: '{range}'. Expected format: 'SheetName!A1:C1' or 'SheetName!A1'");
+                    }
                 }
                 else
                 {
-                    throw new ArgumentException(
-                        $"Invalid range format with sheet reference: '{range}'. Expected format: 'SheetName!A1:C1' or 'SheetName!A1'");
+                    // Range without sheet reference, use the specified worksheet
+                    // Parse cell range (e.g., "A1:C1")
+                    var cellParts = range.Split(':');
+                    rangeObject = worksheet.Cells.CreateRange(cellParts[0].Trim(),
+                        cellParts.Length == 2 ? cellParts[1].Trim() : range.Trim());
                 }
+
+                // Set the name on the Range object - this automatically creates the named range
+                // with correct RefersTo format including sheet name, absolute references, etc.
+                rangeObject.Name = name;
+
+                // Get the actual named range to verify and get RefersTo
+                var namedRange = names[name];
+                var actualRefersTo = namedRange.RefersTo;
+
+                // Set comment if provided
+                if (!string.IsNullOrEmpty(comment)) namedRange.Comment = comment;
+
+                // Save the workbook to persist the changes
+                workbook.Save(outputPath);
+
+                return $"Successfully added named range '{name}'\nReference: {actualRefersTo}\nOutput: {outputPath}";
             }
-            else
+            catch (ArgumentException)
             {
-                // Range without sheet reference, use the specified worksheet
-                // Parse cell range (e.g., "A1:C1")
-                var cellParts = range.Split(':');
-                rangeObject = worksheet.Cells.CreateRange(cellParts[0].Trim(),
-                    cellParts.Length == 2 ? cellParts[1].Trim() : range.Trim());
+                throw;
             }
-
-            // Set the name on the Range object - this automatically creates the named range
-            // with correct RefersTo format including sheet name, absolute references, etc.
-            rangeObject.Name = name;
-
-            // Get the actual named range to verify and get RefersTo
-            var namedRange = names[name];
-            var actualRefersTo = namedRange.RefersTo;
-
-            // Set comment if provided
-            if (!string.IsNullOrEmpty(comment)) namedRange.Comment = comment;
-
-            // Save the workbook to persist the changes
-            workbook.Save(outputPath);
-
-            return await Task.FromResult(
-                $"Successfully added named range '{name}'\nReference: {actualRefersTo}\nOutput: {outputPath}");
-        }
-        catch (ArgumentException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException(
-                $"Unable to create named range '{name}', range: {range}. Error: {ex.Message}", ex);
-        }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException(
+                    $"Unable to create named range '{name}', range: {range}. Error: {ex.Message}", ex);
+            }
+        });
     }
 
     /// <summary>
@@ -212,43 +214,47 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing name</param>
     /// <param name="path">Excel file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> DeleteNamedRangeAsync(JsonObject? arguments, string path)
+    private Task<string> DeleteNamedRangeAsync(JsonObject? arguments, string path)
     {
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var name = ArgumentHelper.GetString(arguments, "name");
-
-        using var workbook = new Workbook(path);
-        var names = workbook.Worksheets.Names;
-
-        Name? namedRange;
-        try
+        return Task.Run(() =>
         {
-            namedRange = names[name];
-        }
-        catch
-        {
-            throw new ArgumentException($"Named range '{name}' does not exist");
-        }
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var name = ArgumentHelper.GetString(arguments, "name");
 
-        if (namedRange == null) throw new ArgumentException($"Named range '{name}' does not exist");
+            using var workbook = new Workbook(path);
+            var names = workbook.Worksheets.Names;
 
-        var refersTo = namedRange.RefersTo;
-        // Find the index of the named range
-        var indexToRemove = -1;
-        for (var i = 0; i < names.Count; i++)
-            if (names[i] == namedRange)
+            Name? namedRange;
+            try
             {
-                indexToRemove = i;
-                break;
+                namedRange = names[name];
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[ERROR] Error accessing named range '{name}': {ex.Message}");
+                throw new ArgumentException($"Named range '{name}' does not exist");
             }
 
-        if (indexToRemove >= 0) names.RemoveAt(indexToRemove);
-        workbook.Save(outputPath);
+            if (namedRange == null) throw new ArgumentException($"Named range '{name}' does not exist");
 
-        var remainingCount = names.Count;
+            var refersTo = namedRange.RefersTo;
+            // Find the index of the named range
+            var indexToRemove = -1;
+            for (var i = 0; i < names.Count; i++)
+                if (names[i] == namedRange)
+                {
+                    indexToRemove = i;
+                    break;
+                }
 
-        return await Task.FromResult(
-            $"Successfully deleted named range '{name}'\nOriginal reference: {refersTo}\nRemaining named ranges in workbook: {remainingCount}\nOutput: {outputPath}");
+            if (indexToRemove >= 0) names.RemoveAt(indexToRemove);
+            workbook.Save(outputPath);
+
+            var remainingCount = names.Count;
+
+            return
+                $"Successfully deleted named range '{name}'\nOriginal reference: {refersTo}\nRemaining named ranges in workbook: {remainingCount}\nOutput: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -257,90 +263,35 @@ Usage examples:
     /// <param name="_">Unused parameter</param>
     /// <param name="path">Excel file path</param>
     /// <returns>Formatted string with all named ranges</returns>
-    private async Task<string> GetNamedRangesAsync(JsonObject? _, string path)
+    private Task<string> GetNamedRangesAsync(JsonObject? _, string path)
     {
-        using var workbook = new Workbook(path);
-        var names = workbook.Worksheets.Names;
-        var result = new StringBuilder();
-
-        result.AppendLine("=== Named ranges information for Excel workbook ===\n");
-        result.AppendLine($"Total named ranges: {names.Count}\n");
-
-        if (names.Count == 0)
+        return Task.Run(() =>
         {
-            result.AppendLine("No named ranges found");
-            return await Task.FromResult(result.ToString());
-        }
+            using var workbook = new Workbook(path);
+            var names = workbook.Worksheets.Names;
+            var result = new StringBuilder();
 
-        for (var i = 0; i < names.Count; i++)
-        {
-            var name = names[i];
-            result.AppendLine($"[Named range {i}]");
-            result.AppendLine($"Name: {name.Text}");
-            result.AppendLine($"Reference: {name.RefersTo}");
-            result.AppendLine($"Comment: {name.Comment ?? "(none)"}");
-            result.AppendLine($"Is visible: {name.IsVisible}");
-            result.AppendLine();
-        }
+            result.AppendLine("=== Named ranges information for Excel workbook ===\n");
+            result.AppendLine($"Total named ranges: {names.Count}\n");
 
-        return await Task.FromResult(result.ToString());
-    }
-
-    /// <summary>
-    ///     Converts a relative cell reference to absolute reference format
-    ///     Example: "A1:C1" -> "$A$1:$C$1", "A1" -> "$A$1"
-    /// </summary>
-    /// <param name="range">Relative cell reference (e.g., "A1:C1")</param>
-    /// <returns>Absolute cell reference (e.g., "$A$1:$C$1")</returns>
-    private static string ConvertToAbsoluteReference(string range)
-    {
-        if (string.IsNullOrEmpty(range))
-            return range;
-
-        // Handle range format like "A1:C1" or single cell like "A1"
-        if (range.Contains(":"))
-        {
-            var parts = range.Split(':');
-            if (parts.Length == 2)
+            if (names.Count == 0)
             {
-                var startCell = ConvertCellToAbsolute(parts[0].Trim());
-                var endCell = ConvertCellToAbsolute(parts[1].Trim());
-                return $"{startCell}:{endCell}";
+                result.AppendLine("No named ranges found");
+                return result.ToString();
             }
-        }
 
-        // Single cell reference
-        return ConvertCellToAbsolute(range);
-    }
+            for (var i = 0; i < names.Count; i++)
+            {
+                var name = names[i];
+                result.AppendLine($"[Named range {i}]");
+                result.AppendLine($"Name: {name.Text}");
+                result.AppendLine($"Reference: {name.RefersTo}");
+                result.AppendLine($"Comment: {name.Comment ?? "(none)"}");
+                result.AppendLine($"Is visible: {name.IsVisible}");
+                result.AppendLine();
+            }
 
-    /// <summary>
-    ///     Converts a single cell reference to absolute format
-    ///     Example: "A1" -> "$A$1"
-    /// </summary>
-    /// <param name="cell">Cell reference (e.g., "A1")</param>
-    /// <returns>Absolute cell reference (e.g., "$A$1")</returns>
-    private static string ConvertCellToAbsolute(string cell)
-    {
-        if (string.IsNullOrEmpty(cell))
-            return cell;
-
-        // If already absolute, return as is
-        if (cell.Contains("$"))
-            return cell;
-
-        // Extract column and row parts
-        var columnPart = "";
-        var rowPart = "";
-
-        foreach (var c in cell)
-            if (char.IsLetter(c))
-                columnPart += c;
-            else if (char.IsDigit(c))
-                rowPart += c;
-
-        if (string.IsNullOrEmpty(columnPart) || string.IsNullOrEmpty(rowPart))
-            return cell; // Invalid format, return as is
-
-        return $"${columnPart}${rowPart}";
+            return result.ToString();
+        });
     }
 }

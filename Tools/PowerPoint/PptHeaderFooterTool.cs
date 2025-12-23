@@ -107,29 +107,32 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing headerText, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetHeaderAsync(JsonObject? arguments, string path)
+    private Task<string> SetHeaderAsync(JsonObject? arguments, string path)
     {
-        var headerText = ArgumentHelper.GetString(arguments, "headerText");
-        var slideIndicesArray = ArgumentHelper.GetArray(arguments, "slideIndices", false);
-        var slideIndices = slideIndicesArray?.Select(x => x?.GetValue<int>()).Where(x => x.HasValue)
-            .Select(x => x!.Value).ToArray();
-
-        using var presentation = new Presentation(path);
-        var slides = slideIndices?.Length > 0
-            ? slideIndices.Select(i => presentation.Slides[i]).ToList()
-            : presentation.Slides.ToList();
-
-        foreach (var slide in slides)
+        return Task.Run(() =>
         {
-            var headerFooter = slide.HeaderFooterManager;
-            headerFooter.SetFooterText(headerText);
-            headerFooter.SetFooterVisibility(true);
-        }
+            var headerText = ArgumentHelper.GetString(arguments, "headerText");
+            var slideIndicesArray = ArgumentHelper.GetArray(arguments, "slideIndices", false);
+            var slideIndices = slideIndicesArray?.Select(x => x?.GetValue<int>()).Where(x => x.HasValue)
+                .Select(x => x!.Value).ToArray();
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        presentation.Save(outputPath, SaveFormat.Pptx);
+            using var presentation = new Presentation(path);
+            var slides = slideIndices?.Length > 0
+                ? slideIndices.Select(i => presentation.Slides[i]).ToList()
+                : presentation.Slides.ToList();
 
-        return await Task.FromResult($"Header set for {slides.Count} slide(s): {outputPath}");
+            foreach (var slide in slides)
+            {
+                var headerFooter = slide.HeaderFooterManager;
+                headerFooter.SetFooterText(headerText);
+                headerFooter.SetFooterVisibility(true);
+            }
+
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
+
+            return $"Header set for {slides.Count} slide(s): {outputPath}";
+        });
     }
 
     /// <summary>
@@ -138,43 +141,46 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing footerText, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetFooterAsync(JsonObject? arguments, string path)
+    private Task<string> SetFooterAsync(JsonObject? arguments, string path)
     {
-        var footerText = ArgumentHelper.GetStringNullable(arguments, "footerText");
-        var showSlideNumber = ArgumentHelper.GetBool(arguments, "showSlideNumber");
-        var dateText = ArgumentHelper.GetStringNullable(arguments, "dateText");
-
-        using var presentation = new Presentation(path);
-        foreach (var slide in presentation.Slides)
+        return Task.Run(() =>
         {
-            var manager = slide.HeaderFooterManager;
+            var footerText = ArgumentHelper.GetStringNullable(arguments, "footerText");
+            var showSlideNumber = ArgumentHelper.GetBool(arguments, "showSlideNumber", true);
+            var dateText = ArgumentHelper.GetStringNullable(arguments, "dateText");
 
-            if (!string.IsNullOrEmpty(footerText))
+            using var presentation = new Presentation(path);
+            foreach (var slide in presentation.Slides)
             {
-                manager.SetFooterText(footerText);
-                manager.SetFooterVisibility(true);
-            }
-            else
-            {
-                manager.SetFooterVisibility(false);
+                var manager = slide.HeaderFooterManager;
+
+                if (!string.IsNullOrEmpty(footerText))
+                {
+                    manager.SetFooterText(footerText);
+                    manager.SetFooterVisibility(true);
+                }
+                else
+                {
+                    manager.SetFooterVisibility(false);
+                }
+
+                manager.SetSlideNumberVisibility(showSlideNumber);
+
+                if (!string.IsNullOrEmpty(dateText))
+                {
+                    manager.SetDateTimeText(dateText);
+                    manager.SetDateTimeVisibility(true);
+                }
+                else
+                {
+                    manager.SetDateTimeVisibility(false);
+                }
             }
 
-            manager.SetSlideNumberVisibility(showSlideNumber);
-
-            if (!string.IsNullOrEmpty(dateText))
-            {
-                manager.SetDateTimeText(dateText);
-                manager.SetDateTimeVisibility(true);
-            }
-            else
-            {
-                manager.SetDateTimeVisibility(false);
-            }
-        }
-
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        presentation.Save(outputPath, SaveFormat.Pptx);
-        return await Task.FromResult("Footer/page number settings updated");
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
+            return "Footer/page number settings updated";
+        });
     }
 
     /// <summary>
@@ -183,53 +189,56 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing headerText, footerText, optional slideIndexes, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> BatchSetHeaderFooterAsync(JsonObject? arguments, string path)
+    private Task<string> BatchSetHeaderFooterAsync(JsonObject? arguments, string path)
     {
-        var footerText = ArgumentHelper.GetStringNullable(arguments, "footerText");
-        var showSlideNumber = ArgumentHelper.GetBool(arguments, "showSlideNumber");
-        var dateText = ArgumentHelper.GetStringNullable(arguments, "dateText");
-        var slideIndicesArray = ArgumentHelper.GetArray(arguments, "slideIndices", false);
-        var slideIndices = slideIndicesArray?.Select(x => x?.GetValue<int>() ?? -1).ToArray();
-
-        using var presentation = new Presentation(path);
-        var targets = slideIndices?.Length > 0
-            ? slideIndices
-            : Enumerable.Range(0, presentation.Slides.Count).ToArray();
-
-        foreach (var idx in targets)
-            if (idx < 0 || idx >= presentation.Slides.Count)
-                throw new ArgumentException($"slide index {idx} out of range");
-
-        foreach (var idx in targets)
+        return Task.Run(() =>
         {
-            var manager = presentation.Slides[idx].HeaderFooterManager;
+            var footerText = ArgumentHelper.GetStringNullable(arguments, "footerText");
+            var showSlideNumber = ArgumentHelper.GetBool(arguments, "showSlideNumber", true);
+            var dateText = ArgumentHelper.GetStringNullable(arguments, "dateText");
+            var slideIndicesArray = ArgumentHelper.GetArray(arguments, "slideIndices", false);
+            var slideIndices = slideIndicesArray?.Select(x => x?.GetValue<int>() ?? -1).ToArray();
 
-            if (!string.IsNullOrEmpty(footerText))
+            using var presentation = new Presentation(path);
+            var targets = slideIndices?.Length > 0
+                ? slideIndices
+                : Enumerable.Range(0, presentation.Slides.Count).ToArray();
+
+            foreach (var idx in targets)
+                if (idx < 0 || idx >= presentation.Slides.Count)
+                    throw new ArgumentException($"slide index {idx} out of range");
+
+            foreach (var idx in targets)
             {
-                manager.SetFooterText(footerText);
-                manager.SetFooterVisibility(true);
-            }
-            else
-            {
-                manager.SetFooterVisibility(false);
+                var manager = presentation.Slides[idx].HeaderFooterManager;
+
+                if (!string.IsNullOrEmpty(footerText))
+                {
+                    manager.SetFooterText(footerText);
+                    manager.SetFooterVisibility(true);
+                }
+                else
+                {
+                    manager.SetFooterVisibility(false);
+                }
+
+                manager.SetSlideNumberVisibility(showSlideNumber);
+
+                if (!string.IsNullOrEmpty(dateText))
+                {
+                    manager.SetDateTimeText(dateText);
+                    manager.SetDateTimeVisibility(true);
+                }
+                else
+                {
+                    manager.SetDateTimeVisibility(false);
+                }
             }
 
-            manager.SetSlideNumberVisibility(showSlideNumber);
-
-            if (!string.IsNullOrEmpty(dateText))
-            {
-                manager.SetDateTimeText(dateText);
-                manager.SetDateTimeVisibility(true);
-            }
-            else
-            {
-                manager.SetDateTimeVisibility(false);
-            }
-        }
-
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        presentation.Save(outputPath, SaveFormat.Pptx);
-        return await Task.FromResult($"Batch updated footer/page number/date for {targets.Length} slides");
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
+            return $"Batch updated footer/page number/date for {targets.Length} slides";
+        });
     }
 
     /// <summary>
@@ -238,15 +247,18 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing isVisible, optional startNumber, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetSlideNumberingAsync(JsonObject? arguments, string path)
+    private Task<string> SetSlideNumberingAsync(JsonObject? arguments, string path)
     {
-        var firstNumber = ArgumentHelper.GetInt(arguments, "firstNumber", 1);
+        return Task.Run(() =>
+        {
+            var firstNumber = ArgumentHelper.GetInt(arguments, "firstNumber", 1);
 
-        using var presentation = new Presentation(path);
-        presentation.FirstSlideNumber = firstNumber;
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        presentation.Save(outputPath, SaveFormat.Pptx);
+            using var presentation = new Presentation(path);
+            presentation.FirstSlideNumber = firstNumber;
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
 
-        return await Task.FromResult($"Starting page number set to {firstNumber}");
+            return $"Starting page number set to {firstNumber}";
+        });
     }
 }

@@ -131,74 +131,77 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> AddDataValidationAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> AddDataValidationAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var range = ArgumentHelper.GetString(arguments, "range");
-        var validationType = ArgumentHelper.GetString(arguments, "validationType");
-        var formula1 = ArgumentHelper.GetString(arguments, "formula1");
-        var formula2 = ArgumentHelper.GetStringNullable(arguments, "formula2");
-        var errorMessage = ArgumentHelper.GetStringNullable(arguments, "errorMessage");
-        var inputMessage = ArgumentHelper.GetStringNullable(arguments, "inputMessage");
-
-        using var workbook = new Workbook(path);
-        var worksheet = workbook.Worksheets[sheetIndex];
-        var cells = worksheet.Cells;
-
-        var cellRange = ExcelHelper.CreateRange(cells, range);
-
-        var area = new CellArea
+        return Task.Run(() =>
         {
-            StartRow = cellRange.FirstRow,
-            StartColumn = cellRange.FirstColumn,
-            EndRow = cellRange.FirstRow + cellRange.RowCount - 1,
-            EndColumn = cellRange.FirstColumn + cellRange.ColumnCount - 1
-        };
-        var validationIndex = worksheet.Validations.Add(area);
-        var validation = worksheet.Validations[validationIndex];
+            var range = ArgumentHelper.GetString(arguments, "range");
+            var validationType = ArgumentHelper.GetString(arguments, "validationType");
+            var formula1 = ArgumentHelper.GetString(arguments, "formula1");
+            var formula2 = ArgumentHelper.GetStringNullable(arguments, "formula2");
+            var errorMessage = ArgumentHelper.GetStringNullable(arguments, "errorMessage");
+            var inputMessage = ArgumentHelper.GetStringNullable(arguments, "inputMessage");
 
-        var vType = validationType switch
-        {
-            "WholeNumber" => ValidationType.WholeNumber,
-            "Decimal" => ValidationType.Decimal,
-            "List" => ValidationType.List,
-            "Date" => ValidationType.Date,
-            "Time" => ValidationType.Time,
-            "TextLength" => ValidationType.TextLength,
-            "Custom" => ValidationType.Custom,
-            _ => throw new ArgumentException($"Unsupported validation type: {validationType}")
-        };
+            using var workbook = new Workbook(path);
+            var worksheet = workbook.Worksheets[sheetIndex];
+            var cells = worksheet.Cells;
 
-        validation.Type = vType;
-        validation.Formula1 = formula1;
+            var cellRange = ExcelHelper.CreateRange(cells, range);
 
-        if (!string.IsNullOrEmpty(formula2))
-        {
-            validation.Formula2 = formula2;
-            validation.Operator = OperatorType.Between;
-        }
-        else
-        {
-            validation.Operator = OperatorType.Equal;
-        }
+            var area = new CellArea
+            {
+                StartRow = cellRange.FirstRow,
+                StartColumn = cellRange.FirstColumn,
+                EndRow = cellRange.FirstRow + cellRange.RowCount - 1,
+                EndColumn = cellRange.FirstColumn + cellRange.ColumnCount - 1
+            };
+            var validationIndex = worksheet.Validations.Add(area);
+            var validation = worksheet.Validations[validationIndex];
 
-        if (!string.IsNullOrEmpty(errorMessage))
-        {
-            validation.ErrorMessage = errorMessage;
-            validation.ShowError = true;
-        }
+            var vType = validationType switch
+            {
+                "WholeNumber" => ValidationType.WholeNumber,
+                "Decimal" => ValidationType.Decimal,
+                "List" => ValidationType.List,
+                "Date" => ValidationType.Date,
+                "Time" => ValidationType.Time,
+                "TextLength" => ValidationType.TextLength,
+                "Custom" => ValidationType.Custom,
+                _ => throw new ArgumentException($"Unsupported validation type: {validationType}")
+            };
 
-        if (!string.IsNullOrEmpty(inputMessage))
-        {
-            validation.InputMessage = inputMessage;
-            validation.ShowInput = true;
-        }
+            validation.Type = vType;
+            validation.Formula1 = formula1;
 
-        validation.InCellDropDown = true;
+            if (!string.IsNullOrEmpty(formula2))
+            {
+                validation.Formula2 = formula2;
+                validation.Operator = OperatorType.Between;
+            }
+            else
+            {
+                validation.Operator = OperatorType.Equal;
+            }
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        workbook.Save(outputPath);
+            if (!string.IsNullOrEmpty(errorMessage))
+            {
+                validation.ErrorMessage = errorMessage;
+                validation.ShowError = true;
+            }
 
-        return await Task.FromResult($"Data validation added to range {range} ({validationType}): {outputPath}");
+            if (!string.IsNullOrEmpty(inputMessage))
+            {
+                validation.InputMessage = inputMessage;
+                validation.ShowInput = true;
+            }
+
+            validation.InCellDropDown = true;
+
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            workbook.Save(outputPath);
+
+            return $"Data validation added to range {range} ({validationType}): {outputPath}";
+        });
     }
 
     /// <summary>
@@ -211,88 +214,91 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> EditDataValidationAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> EditDataValidationAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var validationIndex = ArgumentHelper.GetInt(arguments, "validationIndex");
-        var validationTypeStr = ArgumentHelper.GetStringNullable(arguments, "validationType");
-        var formula1 = ArgumentHelper.GetStringNullable(arguments, "formula1");
-        var formula2 = ArgumentHelper.GetStringNullable(arguments, "formula2");
-        var errorMessage = ArgumentHelper.GetStringNullable(arguments, "errorMessage");
-        var inputMessage = ArgumentHelper.GetStringNullable(arguments, "inputMessage");
-
-        using var workbook = new Workbook(path);
-
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var validations = worksheet.Validations;
-
-        if (validationIndex < 0 || validationIndex >= validations.Count)
-            throw new ArgumentException(
-                $"Data validation index {validationIndex} is out of range (worksheet has {validations.Count} data validation rules)");
-
-        var validation = validations[validationIndex];
-        var changes = new List<string>();
-
-        if (!string.IsNullOrEmpty(validationTypeStr))
+        return Task.Run(() =>
         {
-            var vType = validationTypeStr switch
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var validationIndex = ArgumentHelper.GetInt(arguments, "validationIndex");
+            var validationTypeStr = ArgumentHelper.GetStringNullable(arguments, "validationType");
+            var formula1 = ArgumentHelper.GetStringNullable(arguments, "formula1");
+            var formula2 = ArgumentHelper.GetStringNullable(arguments, "formula2");
+            var errorMessage = ArgumentHelper.GetStringNullable(arguments, "errorMessage");
+            var inputMessage = ArgumentHelper.GetStringNullable(arguments, "inputMessage");
+
+            using var workbook = new Workbook(path);
+
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            var validations = worksheet.Validations;
+
+            if (validationIndex < 0 || validationIndex >= validations.Count)
+                throw new ArgumentException(
+                    $"Data validation index {validationIndex} is out of range (worksheet has {validations.Count} data validation rules)");
+
+            var validation = validations[validationIndex];
+            var changes = new List<string>();
+
+            if (!string.IsNullOrEmpty(validationTypeStr))
             {
-                "WholeNumber" => ValidationType.WholeNumber,
-                "Decimal" => ValidationType.Decimal,
-                "List" => ValidationType.List,
-                "Date" => ValidationType.Date,
-                "Time" => ValidationType.Time,
-                "TextLength" => ValidationType.TextLength,
-                "Custom" => ValidationType.Custom,
-                _ => validation.Type
-            };
-            validation.Type = vType;
-            changes.Add($"Validation type: {validationTypeStr}");
-        }
+                var vType = validationTypeStr switch
+                {
+                    "WholeNumber" => ValidationType.WholeNumber,
+                    "Decimal" => ValidationType.Decimal,
+                    "List" => ValidationType.List,
+                    "Date" => ValidationType.Date,
+                    "Time" => ValidationType.Time,
+                    "TextLength" => ValidationType.TextLength,
+                    "Custom" => ValidationType.Custom,
+                    _ => validation.Type
+                };
+                validation.Type = vType;
+                changes.Add($"Validation type: {validationTypeStr}");
+            }
 
-        if (!string.IsNullOrEmpty(formula1))
-        {
-            validation.Formula1 = formula1;
-            changes.Add($"Formula1: {formula1}");
-        }
+            if (!string.IsNullOrEmpty(formula1))
+            {
+                validation.Formula1 = formula1;
+                changes.Add($"Formula1: {formula1}");
+            }
 
-        if (formula2 != null)
-        {
-            validation.Formula2 = formula2;
-            if (!string.IsNullOrEmpty(formula2)) validation.Operator = OperatorType.Between;
-            changes.Add($"Formula2: {formula2}");
-        }
+            if (formula2 != null)
+            {
+                validation.Formula2 = formula2;
+                if (!string.IsNullOrEmpty(formula2)) validation.Operator = OperatorType.Between;
+                changes.Add($"Formula2: {formula2}");
+            }
 
-        if (errorMessage != null)
-        {
-            validation.ErrorMessage = errorMessage;
-            validation.ShowError = !string.IsNullOrEmpty(errorMessage);
-            changes.Add($"Error message: {errorMessage}");
-        }
+            if (errorMessage != null)
+            {
+                validation.ErrorMessage = errorMessage;
+                validation.ShowError = !string.IsNullOrEmpty(errorMessage);
+                changes.Add($"Error message: {errorMessage}");
+            }
 
-        if (inputMessage != null)
-        {
-            validation.InputMessage = inputMessage;
-            validation.ShowInput = !string.IsNullOrEmpty(inputMessage);
-            changes.Add($"Input message: {inputMessage}");
-        }
+            if (inputMessage != null)
+            {
+                validation.InputMessage = inputMessage;
+                validation.ShowInput = !string.IsNullOrEmpty(inputMessage);
+                changes.Add($"Input message: {inputMessage}");
+            }
 
-        workbook.Save(outputPath);
+            workbook.Save(outputPath);
 
-        var result = $"Successfully edited data validation rule #{validationIndex}\n";
-        if (changes.Count > 0)
-        {
-            result += "Changes:\n";
-            foreach (var change in changes) result += $"  - {change}\n";
-        }
-        else
-        {
-            result += "No changes.\n";
-        }
+            var result = $"Successfully edited data validation rule #{validationIndex}\n";
+            if (changes.Count > 0)
+            {
+                result += "Changes:\n";
+                foreach (var change in changes) result += $"  - {change}\n";
+            }
+            else
+            {
+                result += "No changes.\n";
+            }
 
-        result += $"Output: {outputPath}";
+            result += $"Output: {outputPath}";
 
-        return await Task.FromResult(result);
+            return result;
+        });
     }
 
     /// <summary>
@@ -302,25 +308,28 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> DeleteDataValidationAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> DeleteDataValidationAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var validationIndex = ArgumentHelper.GetInt(arguments, "validationIndex");
+        return Task.Run(() =>
+        {
+            var validationIndex = ArgumentHelper.GetInt(arguments, "validationIndex");
 
-        using var workbook = new Workbook(path);
+            using var workbook = new Workbook(path);
 
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var validations = worksheet.Validations;
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            var validations = worksheet.Validations;
 
-        PowerPointHelper.ValidateCollectionIndex(validationIndex, validations, "data validation");
+            PowerPointHelper.ValidateCollectionIndex(validationIndex, validations, "data validation");
 
-        validations.RemoveAt(validationIndex);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        workbook.Save(outputPath);
+            validations.RemoveAt(validationIndex);
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            workbook.Save(outputPath);
 
-        var remainingCount = validations.Count;
+            var remainingCount = validations.Count;
 
-        return await Task.FromResult(
-            $"Successfully deleted data validation #{validationIndex}\nRemaining data validations in worksheet: {remainingCount}\nOutput: {outputPath}");
+            return
+                $"Successfully deleted data validation #{validationIndex}\nRemaining data validations in worksheet: {remainingCount}\nOutput: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -330,45 +339,48 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Formatted string with data validation details</returns>
-    private async Task<string> GetDataValidationAsync(JsonObject? _, string path, int sheetIndex)
+    private Task<string> GetDataValidationAsync(JsonObject? _, string path, int sheetIndex)
     {
-        using var workbook = new Workbook(path);
-
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var validations = worksheet.Validations;
-        var result = new StringBuilder();
-
-        result.AppendLine($"=== Data validation information for worksheet '{worksheet.Name}' ===\n");
-        result.AppendLine($"Total data validations: {validations.Count}\n");
-
-        if (validations.Count == 0)
+        return Task.Run(() =>
         {
-            result.AppendLine("No data validations found");
-            return await Task.FromResult(result.ToString());
-        }
+            using var workbook = new Workbook(path);
 
-        for (var i = 0; i < validations.Count; i++)
-        {
-            var validation = validations[i];
-            result.AppendLine($"[Data validation {i}]");
-            result.AppendLine($"Type: {validation.Type}");
-            result.AppendLine($"Operator: {validation.Operator}");
-            result.AppendLine(
-                "Applied range: Applied (detailed range information needs to be obtained through other methods)");
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            var validations = worksheet.Validations;
+            var result = new StringBuilder();
 
-            if (!string.IsNullOrEmpty(validation.Formula1)) result.AppendLine($"Formula1: {validation.Formula1}");
-            if (!string.IsNullOrEmpty(validation.Formula2)) result.AppendLine($"Formula2: {validation.Formula2}");
-            if (!string.IsNullOrEmpty(validation.ErrorMessage))
-                result.AppendLine($"Error message: {validation.ErrorMessage}");
-            if (!string.IsNullOrEmpty(validation.InputMessage))
-                result.AppendLine($"Input message: {validation.InputMessage}");
-            result.AppendLine($"Show error: {validation.ShowError}");
-            result.AppendLine($"Show input: {validation.ShowInput}");
-            result.AppendLine($"Dropdown list: {validation.InCellDropDown}");
-            result.AppendLine();
-        }
+            result.AppendLine($"=== Data validation information for worksheet '{worksheet.Name}' ===\n");
+            result.AppendLine($"Total data validations: {validations.Count}\n");
 
-        return await Task.FromResult(result.ToString());
+            if (validations.Count == 0)
+            {
+                result.AppendLine("No data validations found");
+                return result.ToString();
+            }
+
+            for (var i = 0; i < validations.Count; i++)
+            {
+                var validation = validations[i];
+                result.AppendLine($"[Data validation {i}]");
+                result.AppendLine($"Type: {validation.Type}");
+                result.AppendLine($"Operator: {validation.Operator}");
+                result.AppendLine(
+                    "Applied range: Applied (detailed range information needs to be obtained through other methods)");
+
+                if (!string.IsNullOrEmpty(validation.Formula1)) result.AppendLine($"Formula1: {validation.Formula1}");
+                if (!string.IsNullOrEmpty(validation.Formula2)) result.AppendLine($"Formula2: {validation.Formula2}");
+                if (!string.IsNullOrEmpty(validation.ErrorMessage))
+                    result.AppendLine($"Error message: {validation.ErrorMessage}");
+                if (!string.IsNullOrEmpty(validation.InputMessage))
+                    result.AppendLine($"Input message: {validation.InputMessage}");
+                result.AppendLine($"Show error: {validation.ShowError}");
+                result.AppendLine($"Show input: {validation.ShowInput}");
+                result.AppendLine($"Dropdown list: {validation.InCellDropDown}");
+                result.AppendLine();
+            }
+
+            return result.ToString();
+        });
     }
 
     /// <summary>
@@ -378,43 +390,46 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetMessagesAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> SetMessagesAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var validationIndex = ArgumentHelper.GetInt(arguments, "validationIndex");
-        var errorMessage = ArgumentHelper.GetStringNullable(arguments, "errorMessage");
-        var inputMessage = ArgumentHelper.GetStringNullable(arguments, "inputMessage");
-
-        using var workbook = new Workbook(path);
-
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var validations = worksheet.Validations;
-
-        PowerPointHelper.ValidateCollectionIndex(validationIndex, validations, "data validation");
-
-        var validation = validations[validationIndex];
-        var changes = new List<string>();
-
-        if (errorMessage != null)
+        return Task.Run(() =>
         {
-            validation.ErrorMessage = errorMessage;
-            validation.ShowError = !string.IsNullOrEmpty(errorMessage);
-            changes.Add($"Error message: {errorMessage}");
-        }
+            var validationIndex = ArgumentHelper.GetInt(arguments, "validationIndex");
+            var errorMessage = ArgumentHelper.GetStringNullable(arguments, "errorMessage");
+            var inputMessage = ArgumentHelper.GetStringNullable(arguments, "inputMessage");
 
-        if (inputMessage != null)
-        {
-            validation.InputMessage = inputMessage;
-            validation.ShowInput = !string.IsNullOrEmpty(inputMessage);
-            changes.Add($"Input message: {inputMessage}");
-        }
+            using var workbook = new Workbook(path);
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        workbook.Save(outputPath);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            var validations = worksheet.Validations;
 
-        var result = changes.Count > 0
-            ? $"Data validation messages updated: {string.Join(", ", changes)}\nOutput: {outputPath}"
-            : $"No changes\nOutput: {outputPath}";
+            PowerPointHelper.ValidateCollectionIndex(validationIndex, validations, "data validation");
 
-        return await Task.FromResult(result);
+            var validation = validations[validationIndex];
+            var changes = new List<string>();
+
+            if (errorMessage != null)
+            {
+                validation.ErrorMessage = errorMessage;
+                validation.ShowError = !string.IsNullOrEmpty(errorMessage);
+                changes.Add($"Error message: {errorMessage}");
+            }
+
+            if (inputMessage != null)
+            {
+                validation.InputMessage = inputMessage;
+                validation.ShowInput = !string.IsNullOrEmpty(inputMessage);
+                changes.Add($"Input message: {inputMessage}");
+            }
+
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            workbook.Save(outputPath);
+
+            var result = changes.Count > 0
+                ? $"Data validation messages updated: {string.Join(", ", changes)}\nOutput: {outputPath}"
+                : $"No changes\nOutput: {outputPath}";
+
+            return result;
+        });
     }
 }

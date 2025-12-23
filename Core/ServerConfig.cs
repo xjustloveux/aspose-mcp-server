@@ -43,10 +43,8 @@ public class ServerConfig
             LicensePath = Environment.GetEnvironmentVariable("ASPOSE_LICENSE_PATH")
         };
 
-        // If no arguments provided, enable all tools by default
         if (args.Length == 0) return config;
 
-        // If arguments provided, disable all by default and only enable specified ones
         config.EnableWord = false;
         config.EnableExcel = false;
         config.EnablePowerPoint = false;

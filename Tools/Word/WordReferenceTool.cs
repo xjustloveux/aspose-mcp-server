@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Nodes;
+using System.Text.Json.Nodes;
 using Aspose.Words;
 using Aspose.Words.Fields;
 using AsposeMcpServer.Core;
@@ -161,52 +161,55 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, optional outputPath, headingLevels</param>
     /// <returns>Success message</returns>
-    private async Task<string> AddTableOfContents(JsonObject? arguments)
+    private Task<string> AddTableOfContents(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var position = ArgumentHelper.GetString(arguments, "position", "start");
-        var title = ArgumentHelper.GetString(arguments, "title", "Table of Contents");
-        var maxLevel = ArgumentHelper.GetInt(arguments, "maxLevel", 3);
-        var hyperlinks = ArgumentHelper.GetBool(arguments, "hyperlinks", true);
-        var pageNumbers = ArgumentHelper.GetBool(arguments, "pageNumbers", true);
-        var rightAlignPageNumbers = ArgumentHelper.GetBool(arguments, "rightAlignPageNumbers", true);
-
-        var doc = new Document(path);
-        var builder = new DocumentBuilder(doc);
-
-        if (position == "end")
-            builder.MoveToDocumentEnd();
-        else
-            builder.MoveToDocumentStart();
-
-        if (!string.IsNullOrEmpty(title))
+        return Task.Run(() =>
         {
-            builder.ParagraphFormat.StyleIdentifier = StyleIdentifier.Heading1;
-            builder.Writeln(title);
-            builder.ParagraphFormat.StyleIdentifier = StyleIdentifier.Normal;
-        }
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+            var position = ArgumentHelper.GetString(arguments, "position", "start");
+            var title = ArgumentHelper.GetString(arguments, "title", "Table of Contents");
+            var maxLevel = ArgumentHelper.GetInt(arguments, "maxLevel", 3);
+            var hyperlinks = ArgumentHelper.GetBool(arguments, "hyperlinks", true);
+            var pageNumbers = ArgumentHelper.GetBool(arguments, "pageNumbers", true);
+            var rightAlignPageNumbers = ArgumentHelper.GetBool(arguments, "rightAlignPageNumbers", true);
 
-        var switches = new List<string>
-        {
-            $"\\o \"1-{maxLevel}\""
-        };
+            var doc = new Document(path);
+            var builder = new DocumentBuilder(doc);
 
-        if (!hyperlinks)
-            switches.Add("\\n");
+            if (position == "end")
+                builder.MoveToDocumentEnd();
+            else
+                builder.MoveToDocumentStart();
 
-        if (!pageNumbers)
-            switches.Add("\\n");
+            if (!string.IsNullOrEmpty(title))
+            {
+                builder.ParagraphFormat.StyleIdentifier = StyleIdentifier.Heading1;
+                builder.Writeln(title);
+                builder.ParagraphFormat.StyleIdentifier = StyleIdentifier.Normal;
+            }
 
-        if (!rightAlignPageNumbers)
-            switches.Add("\\l");
+            var switches = new List<string>
+            {
+                $"\\o \"1-{maxLevel}\""
+            };
 
-        var fieldCode = $"TOC {string.Join(" ", switches)}";
-        builder.InsertField(fieldCode);
+            if (!hyperlinks)
+                switches.Add("\\n");
 
-        doc.Save(outputPath);
-        return await Task.FromResult($"Table of contents added: {outputPath}");
+            if (!pageNumbers)
+                switches.Add("\\n");
+
+            if (!rightAlignPageNumbers)
+                switches.Add("\\l");
+
+            var fieldCode = $"TOC {string.Join(" ", switches)}";
+            builder.InsertField(fieldCode);
+
+            doc.Save(outputPath);
+            return $"Table of contents added: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -214,47 +217,50 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, optional outputPath</param>
     /// <returns>Success message</returns>
-    private async Task<string> UpdateTableOfContents(JsonObject? arguments)
+    private Task<string> UpdateTableOfContents(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var tocIndex = ArgumentHelper.GetIntNullable(arguments, "tocIndex");
-
-        var doc = new Document(path);
-        // Search for TOC fields in the entire document (including headers/footers)
-        var tocFields = doc.Range.Fields
-            .Where(f => f.Type == FieldType.FieldTOC)
-            .ToList();
-
-        if (tocFields.Count == 0)
+        return Task.Run(() =>
         {
-            // Provide more helpful error message
-            var allFields = doc.Range.Fields.ToList();
-            var fieldTypes = allFields.Select(f => f.Type.ToString()).Distinct().ToList();
-            var message = "No table of contents fields found in document.";
-            if (allFields.Count > 0)
-                message += $" Found {allFields.Count} field(s) of other types: {string.Join(", ", fieldTypes)}.";
-            message += " Use 'add_table_of_contents' operation to add a table of contents first.";
-            return await Task.FromResult(message);
-        }
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+            var tocIndex = ArgumentHelper.GetIntNullable(arguments, "tocIndex");
 
-        if (tocIndex.HasValue)
-        {
-            if (tocIndex.Value < 0 || tocIndex.Value >= tocFields.Count)
-                throw new ArgumentException($"tocIndex must be between 0 and {tocFields.Count - 1}");
-            tocFields[tocIndex.Value].Update();
-        }
-        else
-        {
-            foreach (var tocField in tocFields)
-                tocField.Update();
-        }
+            var doc = new Document(path);
+            // Search for TOC fields in the entire document (including headers/footers)
+            var tocFields = doc.Range.Fields
+                .Where(f => f.Type == FieldType.FieldTOC)
+                .ToList();
 
-        doc.UpdateFields();
-        doc.Save(outputPath);
-        var updatedCount = tocIndex.HasValue ? 1 : tocFields.Count;
-        return await Task.FromResult($"Updated {updatedCount} table of contents field(s): {outputPath}");
+            if (tocFields.Count == 0)
+            {
+                // Provide more helpful error message
+                var allFields = doc.Range.Fields.ToList();
+                var fieldTypes = allFields.Select(f => f.Type.ToString()).Distinct().ToList();
+                var message = "No table of contents fields found in document.";
+                if (allFields.Count > 0)
+                    message += $" Found {allFields.Count} field(s) of other types: {string.Join(", ", fieldTypes)}.";
+                message += " Use 'add_table_of_contents' operation to add a table of contents first.";
+                return message;
+            }
+
+            if (tocIndex.HasValue)
+            {
+                if (tocIndex.Value < 0 || tocIndex.Value >= tocFields.Count)
+                    throw new ArgumentException($"tocIndex must be between 0 and {tocFields.Count - 1}");
+                tocFields[tocIndex.Value].Update();
+            }
+            else
+            {
+                foreach (var tocField in tocFields)
+                    tocField.Update();
+            }
+
+            doc.UpdateFields();
+            doc.Save(outputPath);
+            var updatedCount = tocIndex.HasValue ? 1 : tocFields.Count;
+            return $"Updated {updatedCount} table of contents field(s): {outputPath}";
+        });
     }
 
     /// <summary>
@@ -262,50 +268,52 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, optional outputPath, entries</param>
     /// <returns>Success message</returns>
-    private async Task<string> AddIndex(JsonObject? arguments)
+    private Task<string> AddIndex(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var indexEntriesArray = ArgumentHelper.GetArray(arguments, "indexEntries");
-        var insertIndexAtEnd = ArgumentHelper.GetBool(arguments, "insertIndexAtEnd");
-        var headingStyle = ArgumentHelper.GetString(arguments, "headingStyle", "Heading 1");
+        return Task.Run(() =>
+        {
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+            var indexEntriesArray = ArgumentHelper.GetArray(arguments, "indexEntries");
+            var insertIndexAtEnd = ArgumentHelper.GetBool(arguments, "insertIndexAtEnd", true);
+            var headingStyle = ArgumentHelper.GetString(arguments, "headingStyle", "Heading 1");
 
-        var doc = new Document(path);
-        var builder = new DocumentBuilder(doc);
+            var doc = new Document(path);
+            var builder = new DocumentBuilder(doc);
 
-        foreach (var entryObj in indexEntriesArray)
-            if (entryObj is JsonObject entry)
-            {
-                var text = entry["text"]?.GetValue<string>();
-                var subEntry = entry["subEntry"]?.GetValue<string>();
-                var pageRangeBookmark = entry["pageRangeBookmark"]?.GetValue<string>();
-
-                if (!string.IsNullOrEmpty(text))
+            foreach (var entryObj in indexEntriesArray)
+                if (entryObj is JsonObject entry)
                 {
-                    builder.MoveToDocumentEnd();
-                    var xeField = $"XE \"{text}\"";
-                    if (!string.IsNullOrEmpty(subEntry))
-                        xeField += $" \\t \"{subEntry}\"";
-                    if (!string.IsNullOrEmpty(pageRangeBookmark))
-                        xeField += $" \\r \"{pageRangeBookmark}\"";
-                    builder.InsertField(xeField);
+                    var text = entry["text"]?.GetValue<string>();
+                    var subEntry = entry["subEntry"]?.GetValue<string>();
+                    var pageRangeBookmark = entry["pageRangeBookmark"]?.GetValue<string>();
+
+                    if (!string.IsNullOrEmpty(text))
+                    {
+                        builder.MoveToDocumentEnd();
+                        var xeField = $"XE \"{text}\"";
+                        if (!string.IsNullOrEmpty(subEntry))
+                            xeField += $" \\t \"{subEntry}\"";
+                        if (!string.IsNullOrEmpty(pageRangeBookmark))
+                            xeField += $" \\r \"{pageRangeBookmark}\"";
+                        builder.InsertField(xeField);
+                    }
                 }
+
+            if (insertIndexAtEnd)
+            {
+                builder.MoveToDocumentEnd();
+                builder.InsertBreak(BreakType.PageBreak);
+                builder.ParagraphFormat.Style = doc.Styles[headingStyle];
+                builder.Writeln("Index");
+                builder.ParagraphFormat.Style = doc.Styles["Normal"];
+                builder.InsertField("INDEX \\e \" \" \\h \"A\"");
             }
 
-        if (insertIndexAtEnd)
-        {
-            builder.MoveToDocumentEnd();
-            builder.InsertBreak(BreakType.PageBreak);
-            builder.ParagraphFormat.Style = doc.Styles[headingStyle];
-            builder.Writeln("Index");
-            builder.ParagraphFormat.Style = doc.Styles["Normal"];
-            builder.InsertField("INDEX \\e \" \" \\h \"A\"");
-        }
-
-        doc.Save(outputPath);
-        return await Task.FromResult(
-            $"Index entries added. Total entries: {indexEntriesArray.Count}. Output: {outputPath}");
+            doc.Save(outputPath);
+            return $"Index entries added. Total entries: {indexEntriesArray.Count}. Output: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -313,28 +321,57 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, referenceType, target, optional outputPath</param>
     /// <returns>Success message</returns>
-    private async Task<string> AddCrossReference(JsonObject? arguments)
+    private Task<string> AddCrossReference(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        _ = ArgumentHelper.GetString(arguments, "referenceType");
-        var referenceText = ArgumentHelper.GetStringNullable(arguments, "referenceText");
-        var targetName = ArgumentHelper.GetString(arguments, "targetName");
-        _ = ArgumentHelper.GetBool(arguments, "insertAsHyperlink");
-        var includeAboveBelow = ArgumentHelper.GetBool(arguments, "includeAboveBelow", false);
+        return Task.Run(() =>
+        {
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var referenceType = ArgumentHelper.GetString(arguments, "referenceType");
+            var referenceText = ArgumentHelper.GetStringNullable(arguments, "referenceText");
+            var targetName = ArgumentHelper.GetString(arguments, "targetName");
+            var insertAsHyperlink = ArgumentHelper.GetBool(arguments, "insertAsHyperlink", true);
+            var includeAboveBelow = ArgumentHelper.GetBool(arguments, "includeAboveBelow", false);
 
-        var doc = new Document(path);
-        var builder = new DocumentBuilder(doc);
-        builder.MoveToDocumentEnd();
+            // Validate referenceType
+            var validTypes = new[] { "Heading", "Bookmark", "Figure", "Table", "Equation" };
+            if (!validTypes.Contains(referenceType, StringComparer.OrdinalIgnoreCase))
+                throw new ArgumentException(
+                    $"Invalid referenceType: {referenceType}. Valid types are: {string.Join(", ", validTypes)}");
 
-        if (!string.IsNullOrEmpty(referenceText))
-            builder.Write(referenceText);
+            var doc = new Document(path);
+            var builder = new DocumentBuilder(doc);
+            builder.MoveToDocumentEnd();
 
-        builder.InsertField($"REF {targetName} \\h");
-        if (includeAboveBelow)
-            builder.Write(" (above)");
+            if (!string.IsNullOrEmpty(referenceText))
+                builder.Write(referenceText);
 
-        doc.Save(outputPath);
-        return await Task.FromResult($"Cross-reference added: {outputPath}");
+            // Use appropriate field code based on reference type
+            string fieldCode;
+            switch (referenceType.ToLower())
+            {
+                case "heading":
+                case "bookmark":
+                    fieldCode = insertAsHyperlink ? $"REF {targetName} \\h" : $"REF {targetName}";
+                    break;
+                case "figure":
+                case "table":
+                case "equation":
+                    // For numbered items, use STYLEREF or SEQ fields
+                    // For now, use REF with bookmark name (targetName should be bookmark name)
+                    fieldCode = insertAsHyperlink ? $"REF {targetName} \\h" : $"REF {targetName}";
+                    break;
+                default:
+                    fieldCode = insertAsHyperlink ? $"REF {targetName} \\h" : $"REF {targetName}";
+                    break;
+            }
+
+            builder.InsertField(fieldCode);
+            if (includeAboveBelow)
+                builder.Write(" (above)");
+
+            doc.Save(outputPath);
+            return $"Cross-reference added (Type: {referenceType}): {outputPath}";
+        });
     }
 }

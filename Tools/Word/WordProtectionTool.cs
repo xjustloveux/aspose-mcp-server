@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Nodes;
+using System.Text.Json.Nodes;
 using Aspose.Words;
 using AsposeMcpServer.Core;
 
@@ -79,29 +79,32 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing password, optional protectionType, outputPath</param>
     /// <param name="path">Word document file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> ProtectAsync(JsonObject? arguments, string path)
+    private Task<string> ProtectAsync(JsonObject? arguments, string path)
     {
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var password = ArgumentHelper.GetString(arguments, "password");
-        var protectionTypeStr = ArgumentHelper.GetString(arguments, "protectionType", "ReadOnly");
-
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-
-        var doc = new Document(path);
-
-        var protectionType = protectionTypeStr switch
+        return Task.Run(() =>
         {
-            "ReadOnly" => ProtectionType.ReadOnly,
-            "AllowOnlyComments" => ProtectionType.AllowOnlyComments,
-            "AllowOnlyFormFields" => ProtectionType.AllowOnlyFormFields,
-            "AllowOnlyRevisions" => ProtectionType.AllowOnlyRevisions,
-            _ => ProtectionType.ReadOnly
-        };
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var password = ArgumentHelper.GetString(arguments, "password");
+            var protectionTypeStr = ArgumentHelper.GetString(arguments, "protectionType", "ReadOnly");
 
-        doc.Protect(protectionType, password);
-        doc.Save(outputPath);
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
-        return await Task.FromResult($"Document protected with {protectionType}: {outputPath}");
+            var doc = new Document(path);
+
+            var protectionType = protectionTypeStr switch
+            {
+                "ReadOnly" => ProtectionType.ReadOnly,
+                "AllowOnlyComments" => ProtectionType.AllowOnlyComments,
+                "AllowOnlyFormFields" => ProtectionType.AllowOnlyFormFields,
+                "AllowOnlyRevisions" => ProtectionType.AllowOnlyRevisions,
+                _ => ProtectionType.ReadOnly
+            };
+
+            doc.Protect(protectionType, password);
+            doc.Save(outputPath);
+
+            return $"Document protected with {protectionType}: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -110,34 +113,37 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing password, optional outputPath</param>
     /// <param name="path">Word document file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> UnprotectAsync(JsonObject? arguments, string path)
+    private Task<string> UnprotectAsync(JsonObject? arguments, string path)
     {
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var password = ArgumentHelper.GetStringNullable(arguments, "password");
-
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-
-        var doc = new Document(path);
-        var wasProtected = doc.ProtectionType != ProtectionType.NoProtection;
-
-        if (!wasProtected)
+        return Task.Run(() =>
         {
-            if (!string.Equals(path, outputPath, StringComparison.OrdinalIgnoreCase))
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var password = ArgumentHelper.GetStringNullable(arguments, "password");
+
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+
+            var doc = new Document(path);
+            var wasProtected = doc.ProtectionType != ProtectionType.NoProtection;
+
+            if (!wasProtected)
             {
-                doc.Save(outputPath);
-                return await Task.FromResult($"Document is not protected, saved to: {outputPath}");
+                if (!string.Equals(path, outputPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    doc.Save(outputPath);
+                    return $"Document is not protected, saved to: {outputPath}";
+                }
+
+                return "Document is not protected, no need to unprotect";
             }
 
-            return await Task.FromResult("Document is not protected, no need to unprotect");
-        }
+            doc.Unprotect(password);
 
-        doc.Unprotect(password);
+            if (doc.ProtectionType != ProtectionType.NoProtection)
+                throw new InvalidOperationException(
+                    "Unprotect failed, password may be incorrect or document is restricted");
 
-        if (doc.ProtectionType != ProtectionType.NoProtection)
-            throw new InvalidOperationException(
-                "Unprotect failed, password may be incorrect or document is restricted");
-
-        doc.Save(outputPath);
-        return await Task.FromResult($"Protection removed successfully\nOutput: {outputPath}");
+            doc.Save(outputPath);
+            return $"Protection removed successfully\nOutput: {outputPath}";
+        });
     }
 }

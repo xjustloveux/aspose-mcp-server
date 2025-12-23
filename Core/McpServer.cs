@@ -33,7 +33,6 @@ public class McpServer
         };
 
         // Use automatic tool discovery instead of manual registration
-        // This reduces code from 600+ lines to a single line and makes maintenance easier
         _tools = ToolRegistry.DiscoverTools(config);
 
         Console.Error.WriteLine($"[INFO] Registered {_tools.Count} tools using automatic discovery");
@@ -68,7 +67,6 @@ public class McpServer
                 await Console.Error.WriteLineAsync($"[ERROR] Error processing request: {ex.Message}");
                 await Console.Error.WriteLineAsync($"[ERROR] Stack trace: {ex.StackTrace}");
 
-                // For parse errors, we might not have a valid request ID
                 var errorResponse = new McpResponse
                 {
                     Jsonrpc = "2.0",

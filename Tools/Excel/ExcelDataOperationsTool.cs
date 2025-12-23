@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System.Data;
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -156,28 +157,84 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> SortDataAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> SortDataAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var range = ArgumentHelper.GetString(arguments, "range");
-        var sortColumn = ArgumentHelper.GetInt(arguments, "sortColumn");
-        var ascending = ArgumentHelper.GetBool(arguments, "ascending");
-        _ = ArgumentHelper.GetBool(arguments, "hasHeader", false);
+        return Task.Run(() =>
+        {
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var range = ArgumentHelper.GetString(arguments, "range");
+            var sortColumn = ArgumentHelper.GetInt(arguments, "sortColumn");
+            var ascending = ArgumentHelper.GetBool(arguments, "ascending", true);
+            var hasHeader = ArgumentHelper.GetBool(arguments, "hasHeader", false);
 
-        using var workbook = new Workbook(path);
-        var worksheet = workbook.Worksheets[sheetIndex];
-        var cells = worksheet.Cells;
+            using var workbook = new Workbook(path);
+            var worksheet = workbook.Worksheets[sheetIndex];
+            var cells = worksheet.Cells;
 
-        var cellRange = ExcelHelper.CreateRange(cells, range);
+            var cellRange = ExcelHelper.CreateRange(cells, range);
 
-        var dataSorter = workbook.DataSorter;
-        // Sort data - use the 5-parameter overload
-        dataSorter.Sort(cells, cellRange.FirstRow, cellRange.FirstColumn, cellRange.FirstRow + cellRange.RowCount - 1,
-            cellRange.FirstColumn + cellRange.ColumnCount - 1);
+            // Manual sorting implementation since DataSorter API may vary
+            // Collect all row data
+            var rows = new List<List<object?>>();
+            var startRow = hasHeader ? cellRange.FirstRow + 1 : cellRange.FirstRow;
 
-        workbook.Save(outputPath);
-        return await Task.FromResult(
-            $"Data sorted in range {range} by column {sortColumn} ({(ascending ? "ascending" : "descending")}): {outputPath}");
+            // Add header row if exists
+            if (hasHeader)
+            {
+                var headerRow = new List<object?>();
+                for (var col = cellRange.FirstColumn; col < cellRange.FirstColumn + cellRange.ColumnCount; col++)
+                    headerRow.Add(cells[cellRange.FirstRow, col].Value);
+                rows.Add(headerRow);
+            }
+
+            // Collect data rows
+            for (var row = startRow; row < cellRange.FirstRow + cellRange.RowCount; row++)
+            {
+                var rowData = new List<object?>();
+                for (var col = cellRange.FirstColumn; col < cellRange.FirstColumn + cellRange.ColumnCount; col++)
+                    rowData.Add(cells[row, col].Value);
+                rows.Add(rowData);
+            }
+
+            // Sort data rows (skip header if exists)
+            var dataRows = hasHeader ? rows.Skip(1).ToList() : rows;
+            dataRows.Sort((a, b) =>
+            {
+                var aVal = a[sortColumn];
+                var bVal = b[sortColumn];
+
+                if (aVal == null && bVal == null) return 0;
+                if (aVal == null) return ascending ? -1 : 1;
+                if (bVal == null) return ascending ? 1 : -1;
+
+                var comparison = Comparer<object>.Default.Compare(aVal, bVal);
+                return ascending ? comparison : -comparison;
+            });
+
+            // Reconstruct rows with header if exists
+            if (hasHeader)
+            {
+                rows = [rows[0]];
+                rows.AddRange(dataRows);
+            }
+            else
+            {
+                rows = dataRows;
+            }
+
+            // Write sorted data back
+            for (var i = 0; i < rows.Count; i++)
+            {
+                var rowData = rows[i];
+                var targetRow = cellRange.FirstRow + i;
+                for (var j = 0; j < rowData.Count; j++)
+                    cells[targetRow, cellRange.FirstColumn + j].Value = rowData[j];
+            }
+
+            workbook.Save(outputPath);
+            return
+                $"Data sorted in range {range} by column {sortColumn} ({(ascending ? "ascending" : "descending")}): {outputPath}";
+        });
     }
 
     /// <summary>
@@ -187,38 +244,41 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="_">Unused parameter</param>
     /// <returns>Success message with replacement count</returns>
-    private async Task<string> FindReplaceAsync(JsonObject? arguments, string path, int _)
+    private Task<string> FindReplaceAsync(JsonObject? arguments, string path, int _)
     {
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var findText = ArgumentHelper.GetString(arguments, "findText");
-        var replaceText = ArgumentHelper.GetString(arguments, "replaceText");
-        var sheetIndexParam = ArgumentHelper.GetIntNullable(arguments, "sheetIndex");
-        var matchCase = ArgumentHelper.GetBool(arguments, "matchCase", false);
-        var matchEntireCell = ArgumentHelper.GetBool(arguments, "matchEntireCell", false);
-
-        using var workbook = new Workbook(path);
-        var totalReplacements = 0;
-        var lookAt = matchEntireCell ? LookAtType.EntireContent : LookAtType.Contains;
-
-        if (sheetIndexParam.HasValue)
+        return Task.Run(() =>
         {
-            if (sheetIndexParam.Value < 0 || sheetIndexParam.Value >= workbook.Worksheets.Count)
-                throw new ArgumentException(
-                    $"Worksheet index {sheetIndexParam.Value} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var findText = ArgumentHelper.GetString(arguments, "findText");
+            var replaceText = ArgumentHelper.GetString(arguments, "replaceText");
+            var sheetIndexParam = ArgumentHelper.GetIntNullable(arguments, "sheetIndex");
+            var matchCase = ArgumentHelper.GetBool(arguments, "matchCase", false);
+            var matchEntireCell = ArgumentHelper.GetBool(arguments, "matchEntireCell", false);
 
-            var worksheet = workbook.Worksheets[sheetIndexParam.Value];
-            totalReplacements += ReplaceInWorksheet(worksheet, findText, replaceText, matchCase, lookAt);
-        }
-        else
-        {
-            foreach (var worksheet in workbook.Worksheets)
+            using var workbook = new Workbook(path);
+            var totalReplacements = 0;
+            var lookAt = matchEntireCell ? LookAtType.EntireContent : LookAtType.Contains;
+
+            if (sheetIndexParam.HasValue)
+            {
+                if (sheetIndexParam.Value < 0 || sheetIndexParam.Value >= workbook.Worksheets.Count)
+                    throw new ArgumentException(
+                        $"Worksheet index {sheetIndexParam.Value} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
+
+                var worksheet = workbook.Worksheets[sheetIndexParam.Value];
                 totalReplacements += ReplaceInWorksheet(worksheet, findText, replaceText, matchCase, lookAt);
-        }
+            }
+            else
+            {
+                foreach (var worksheet in workbook.Worksheets)
+                    totalReplacements += ReplaceInWorksheet(worksheet, findText, replaceText, matchCase, lookAt);
+            }
 
-        workbook.Save(outputPath);
+            workbook.Save(outputPath);
 
-        return await Task.FromResult(
-            $"Find and replace completed\nFind: '{findText}'\nReplace with: '{replaceText}'\nTotal replacements: {totalReplacements}\nOutput: {outputPath}");
+            return
+                $"Find and replace completed\nFind: '{findText}'\nReplace with: '{replaceText}'\nTotal replacements: {totalReplacements}\nOutput: {outputPath}";
+        });
     }
 
     private int ReplaceInWorksheet(Worksheet worksheet, string findText, string replaceText, bool matchCase,
@@ -250,40 +310,66 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message with write count</returns>
-    private async Task<string> BatchWriteAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> BatchWriteAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var dataArray = ArgumentHelper.GetArray(arguments, "data");
-
-        using var workbook = new Workbook(path);
-        var worksheet = workbook.Worksheets[sheetIndex];
-
-        foreach (var item in dataArray)
+        return Task.Run(() =>
         {
-            var itemObj = item?.AsObject();
-            if (itemObj != null)
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+
+            using var workbook = new Workbook(path);
+            var worksheet = workbook.Worksheets[sheetIndex];
+            var writeCount = 0;
+
+            // Support both array format and object format
+            if (arguments != null && arguments.TryGetPropertyValue("data", out var dataNode))
             {
-                var cell = itemObj["cell"]?.GetValue<string>();
-                var value = itemObj["value"]?.GetValue<string>() ?? "";
-                if (!string.IsNullOrEmpty(cell))
-                {
-                    var cellObj = worksheet.Cells[cell];
-
-                    // Parse value as number, boolean, or string
-                    // Ensures conditional formatting and charts can correctly identify numeric values
-                    if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var numValue))
-                        cellObj.PutValue(numValue);
-                    else if (bool.TryParse(value, out var boolValue))
-                        cellObj.PutValue(boolValue);
-                    else
-                        cellObj.PutValue(value);
-                }
+                if (dataNode is JsonArray dataArray)
+                    // Array format: [{"cell": "A1", "value": "Value1"}, ...]
+                    foreach (var item in dataArray)
+                    {
+                        var itemObj = item?.AsObject();
+                        if (itemObj != null)
+                        {
+                            var cell = itemObj["cell"]?.GetValue<string>();
+                            var value = itemObj["value"]?.GetValue<string>() ?? "";
+                            if (!string.IsNullOrEmpty(cell))
+                            {
+                                var cellObj = worksheet.Cells[cell];
+                                WriteCellValue(cellObj, value);
+                                writeCount++;
+                            }
+                        }
+                    }
+                else if (dataNode is JsonObject dataObject)
+                    // Object format: {"A1": "Value1", "B1": "Value2", ...}
+                    foreach (var kvp in dataObject)
+                    {
+                        var cell = kvp.Key;
+                        var value = kvp.Value?.GetValue<string>() ?? "";
+                        if (!string.IsNullOrEmpty(cell))
+                        {
+                            var cellObj = worksheet.Cells[cell];
+                            WriteCellValue(cellObj, value);
+                            writeCount++;
+                        }
+                    }
             }
-        }
 
-        workbook.Save(outputPath);
-        return await Task.FromResult(
-            $"Batch write completed: {dataArray.Count} cells written to sheet {sheetIndex}: {outputPath}");
+            workbook.Save(outputPath);
+            return $"Batch write completed: {writeCount} cells written to sheet {sheetIndex}: {outputPath}";
+        });
+    }
+
+    private void WriteCellValue(Cell cellObj, string value)
+    {
+        // Parse value as number, boolean, or string
+        // Ensures conditional formatting and charts can correctly identify numeric values
+        if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var numValue))
+            cellObj.PutValue(numValue);
+        else if (bool.TryParse(value, out var boolValue))
+            cellObj.PutValue(boolValue);
+        else
+            cellObj.PutValue(value);
     }
 
     /// <summary>
@@ -293,51 +379,92 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Formatted string with cell content</returns>
-    private async Task<string> GetContentAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> GetContentAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var range = ArgumentHelper.GetStringNullable(arguments, "range");
-
-        using var workbook = new Workbook(path);
-        var worksheet = workbook.Worksheets[sheetIndex];
-
-        if (!string.IsNullOrEmpty(range))
+        return Task.Run(() =>
         {
-            var cells = worksheet.Cells;
+            var range = ArgumentHelper.GetStringNullable(arguments, "range");
 
-            Range cellRange;
-            try
+            using var workbook = new Workbook(path);
+            var worksheet = workbook.Worksheets[sheetIndex];
+
+            if (!string.IsNullOrEmpty(range))
             {
-                cellRange = ExcelHelper.CreateRange(cells, range);
+                var cells = worksheet.Cells;
+
+                Range cellRange;
+                try
+                {
+                    cellRange = ExcelHelper.CreateRange(cells, range);
+                }
+                catch (Exception ex)
+                {
+                    throw new ArgumentException(
+                        $"Invalid range format: '{range}'. Range exceeds Excel limits (valid range: A1:XFD1048576). Error: {ex.Message}");
+                }
+
+                var options = new ExportTableOptions
+                {
+                    ExportColumnName = false
+                };
+                var dataTable = cells.ExportDataTable(cellRange.FirstRow, cellRange.FirstColumn, cellRange.RowCount,
+                    cellRange.ColumnCount, options);
+
+                // Convert DataTable to JSON manually to avoid System.Type serialization issues
+                var jsonOptions = new JsonSerializerOptions
+                {
+                    WriteIndented = false
+                };
+                var rows = new List<Dictionary<string, object?>>();
+                foreach (DataRow row in dataTable.Rows)
+                {
+                    var rowDict = new Dictionary<string, object?>();
+                    foreach (DataColumn column in dataTable.Columns)
+                    {
+                        var value = row[column];
+                        // Convert DBNull to null, and convert values to strings/numbers
+                        rowDict[column.ColumnName] = value == DBNull.Value ? null : value;
+                    }
+
+                    rows.Add(rowDict);
+                }
+
+                var json = JsonSerializer.Serialize(rows, jsonOptions);
+                return json;
             }
-            catch (Exception ex)
+            else
             {
-                throw new ArgumentException(
-                    $"Invalid range format: '{range}'. Range exceeds Excel limits (valid range: A1:XFD1048576). Error: {ex.Message}");
+                var maxRow = worksheet.Cells.MaxDataRow;
+                var maxCol = worksheet.Cells.MaxDataColumn;
+                var options = new ExportTableOptions
+                {
+                    ExportColumnName = false
+                };
+                var dataTable = worksheet.Cells.ExportDataTable(0, 0, maxRow + 1, maxCol + 1, options);
+
+                // Convert DataTable to JSON manually to avoid System.Type serialization issues
+                var jsonOptions = new JsonSerializerOptions
+                {
+                    WriteIndented = false
+                };
+                var rows = new List<Dictionary<string, object?>>();
+                foreach (DataRow row in dataTable.Rows)
+                {
+                    var rowDict = new Dictionary<string, object?>();
+                    foreach (DataColumn column in dataTable.Columns)
+                    {
+                        var value = row[column];
+                        // Convert DBNull to null, and convert values to strings/numbers
+                        rowDict[column.ColumnName] = value == DBNull.Value ? null : value;
+                    }
+
+                    rows.Add(rowDict);
+                }
+
+                var json = JsonSerializer.Serialize(rows, jsonOptions);
+                return json;
             }
-
-            var options = new ExportTableOptions
-            {
-                ExportColumnName = false
-            };
-            var dataTable = cells.ExportDataTable(cellRange.FirstRow, cellRange.FirstColumn, cellRange.RowCount,
-                cellRange.ColumnCount, options);
-
-            var json = JsonSerializer.Serialize(dataTable);
-            return await Task.FromResult(json);
-        }
-        else
-        {
-            var maxRow = worksheet.Cells.MaxDataRow;
-            var maxCol = worksheet.Cells.MaxDataColumn;
-            var options = new ExportTableOptions
-            {
-                ExportColumnName = false
-            };
-            var dataTable = worksheet.Cells.ExportDataTable(0, 0, maxRow + 1, maxCol + 1, options);
-
-            var json = JsonSerializer.Serialize(dataTable);
-            return await Task.FromResult(json);
-        }
+        });
     }
 
     /// <summary>
@@ -346,38 +473,41 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing optional range and sheetIndex</param>
     /// <param name="path">Excel file path</param>
     /// <returns>Formatted string with statistics</returns>
-    private async Task<string> GetStatisticsAsync(JsonObject? arguments, string path)
+    private Task<string> GetStatisticsAsync(JsonObject? arguments, string path)
     {
-        var sheetIndex = ArgumentHelper.GetIntNullable(arguments, "sheetIndex");
-        var range = ArgumentHelper.GetStringNullable(arguments, "range");
-
-        using var workbook = new Workbook(path);
-        var result = new StringBuilder();
-
-        result.AppendLine("=== Excel Workbook Statistics ===\n");
-
-        result.AppendLine("[Workbook Information]");
-        result.AppendLine($"Total worksheets: {workbook.Worksheets.Count}");
-        result.AppendLine($"File format: {workbook.FileFormat}");
-        result.AppendLine();
-
-        if (sheetIndex.HasValue)
+        return Task.Run(() =>
         {
-            if (sheetIndex.Value < 0 || sheetIndex.Value >= workbook.Worksheets.Count)
-                throw new ArgumentException(
-                    $"Worksheet index {sheetIndex.Value} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
-            AppendSheetStatistics(result, workbook.Worksheets[sheetIndex.Value], sheetIndex.Value, range);
-        }
-        else
-        {
-            for (var i = 0; i < workbook.Worksheets.Count; i++)
+            var sheetIndex = ArgumentHelper.GetIntNullable(arguments, "sheetIndex");
+            var range = ArgumentHelper.GetStringNullable(arguments, "range");
+
+            using var workbook = new Workbook(path);
+            var result = new StringBuilder();
+
+            result.AppendLine("=== Excel Workbook Statistics ===\n");
+
+            result.AppendLine("[Workbook Information]");
+            result.AppendLine($"Total worksheets: {workbook.Worksheets.Count}");
+            result.AppendLine($"File format: {workbook.FileFormat}");
+            result.AppendLine();
+
+            if (sheetIndex.HasValue)
             {
-                AppendSheetStatistics(result, workbook.Worksheets[i], i, range);
-                if (i < workbook.Worksheets.Count - 1) result.AppendLine();
+                if (sheetIndex.Value < 0 || sheetIndex.Value >= workbook.Worksheets.Count)
+                    throw new ArgumentException(
+                        $"Worksheet index {sheetIndex.Value} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
+                AppendSheetStatistics(result, workbook.Worksheets[sheetIndex.Value], sheetIndex.Value, range);
             }
-        }
+            else
+            {
+                for (var i = 0; i < workbook.Worksheets.Count; i++)
+                {
+                    AppendSheetStatistics(result, workbook.Worksheets[i], i, range);
+                    if (i < workbook.Worksheets.Count - 1) result.AppendLine();
+                }
+            }
 
-        return await Task.FromResult(result.ToString());
+            return result.ToString();
+        });
     }
 
     private void AppendSheetStatistics(StringBuilder result, Worksheet worksheet, int index, string? range)
@@ -456,26 +586,29 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Formatted string with used range details</returns>
-    private async Task<string> GetUsedRangeAsync(JsonObject? _, string path, int sheetIndex)
+    private Task<string> GetUsedRangeAsync(JsonObject? _, string path, int sheetIndex)
     {
-        using var workbook = new Workbook(path);
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var cells = worksheet.Cells;
-
-        var sb = new StringBuilder();
-        sb.AppendLine($"Used Range for Sheet '{worksheet.Name}':");
-        sb.AppendLine($"  First Row: {cells.MinDataRow}");
-        sb.AppendLine($"  Last Row: {cells.MaxDataRow}");
-        sb.AppendLine($"  First Column: {cells.MinDataColumn}");
-        sb.AppendLine($"  Last Column: {cells.MaxDataColumn}");
-
-        if (cells.MaxDataRow >= cells.MinDataRow && cells.MaxDataColumn >= cells.MinDataColumn)
+        return Task.Run(() =>
         {
-            var firstCell = CellsHelper.CellIndexToName(cells.MinDataRow, cells.MinDataColumn);
-            var lastCell = CellsHelper.CellIndexToName(cells.MaxDataRow, cells.MaxDataColumn);
-            sb.AppendLine($"  Range: {firstCell}:{lastCell}");
-        }
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            var cells = worksheet.Cells;
 
-        return await Task.FromResult(sb.ToString());
+            var sb = new StringBuilder();
+            sb.AppendLine($"Used Range for Sheet '{worksheet.Name}':");
+            sb.AppendLine($"  First Row: {cells.MinDataRow}");
+            sb.AppendLine($"  Last Row: {cells.MaxDataRow}");
+            sb.AppendLine($"  First Column: {cells.MinDataColumn}");
+            sb.AppendLine($"  Last Column: {cells.MaxDataColumn}");
+
+            if (cells.MaxDataRow >= cells.MinDataRow && cells.MaxDataColumn >= cells.MinDataColumn)
+            {
+                var firstCell = CellsHelper.CellIndexToName(cells.MinDataRow, cells.MinDataColumn);
+                var lastCell = CellsHelper.CellIndexToName(cells.MaxDataRow, cells.MaxDataColumn);
+                sb.AppendLine($"  Range: {firstCell}:{lastCell}");
+            }
+
+            return sb.ToString();
+        });
     }
 }

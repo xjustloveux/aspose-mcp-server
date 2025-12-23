@@ -117,32 +117,35 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing slideIndex, layoutType, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetLayoutAsync(JsonObject? arguments, string path)
+    private Task<string> SetLayoutAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
-        var layoutStr = ArgumentHelper.GetString(arguments, "layout");
-
-        using var presentation = new Presentation(path);
-        if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
-            throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
-
-        var layoutType = layoutStr.ToLower() switch
+        return Task.Run(() =>
         {
-            "title" => SlideLayoutType.Title,
-            "titleonly" => SlideLayoutType.TitleOnly,
-            "blank" => SlideLayoutType.Blank,
-            "twocolumn" => SlideLayoutType.TwoColumnText,
-            "sectionheader" => SlideLayoutType.SectionHeader,
-            _ => SlideLayoutType.Custom
-        };
+            var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
+            var layoutStr = ArgumentHelper.GetString(arguments, "layout");
 
-        var layout = presentation.LayoutSlides.FirstOrDefault(ls => ls.LayoutType == layoutType) ??
-                     presentation.LayoutSlides[0];
-        presentation.Slides[slideIndex].LayoutSlide = layout;
+            using var presentation = new Presentation(path);
+            if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
+                throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        presentation.Save(outputPath, SaveFormat.Pptx);
-        return await Task.FromResult($"Layout set for slide {slideIndex}: {layoutStr}");
+            var layoutType = layoutStr.ToLower() switch
+            {
+                "title" => SlideLayoutType.Title,
+                "titleonly" => SlideLayoutType.TitleOnly,
+                "blank" => SlideLayoutType.Blank,
+                "twocolumn" => SlideLayoutType.TwoColumnText,
+                "sectionheader" => SlideLayoutType.SectionHeader,
+                _ => SlideLayoutType.Custom
+            };
+
+            var layout = presentation.LayoutSlides.FirstOrDefault(ls => ls.LayoutType == layoutType) ??
+                         presentation.LayoutSlides[0];
+            presentation.Slides[slideIndex].LayoutSlide = layout;
+
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
+            return $"Layout set for slide {slideIndex}: {layoutStr}";
+        });
     }
 
     /// <summary>
@@ -151,42 +154,45 @@ Usage examples:
     /// <param name="arguments">JSON arguments (no specific parameters required)</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Formatted string with available layouts</returns>
-    private async Task<string> GetLayoutsAsync(JsonObject? arguments, string path)
+    private Task<string> GetLayoutsAsync(JsonObject? arguments, string path)
     {
-        var masterIndex = ArgumentHelper.GetIntNullable(arguments, "masterIndex");
-
-        using var presentation = new Presentation(path);
-        var sb = new StringBuilder();
-
-        if (masterIndex.HasValue)
+        return Task.Run(() =>
         {
-            if (masterIndex.Value < 0 || masterIndex.Value >= presentation.Masters.Count)
-                throw new ArgumentException($"masterIndex must be between 0 and {presentation.Masters.Count - 1}");
-            var master = presentation.Masters[masterIndex.Value];
-            sb.AppendLine($"=== Master {masterIndex.Value} Layouts ===");
-            sb.AppendLine($"Total: {master.LayoutSlides.Count}");
-            for (var i = 0; i < master.LayoutSlides.Count; i++)
+            var masterIndex = ArgumentHelper.GetIntNullable(arguments, "masterIndex");
+
+            using var presentation = new Presentation(path);
+            var sb = new StringBuilder();
+
+            if (masterIndex.HasValue)
             {
-                var layout = master.LayoutSlides[i];
-                sb.AppendLine($"  [{i}] {layout.Name ?? "(unnamed)"}");
-            }
-        }
-        else
-        {
-            sb.AppendLine("=== All Layouts ===");
-            for (var i = 0; i < presentation.Masters.Count; i++)
-            {
-                var master = presentation.Masters[i];
-                sb.AppendLine($"\nMaster {i}: {master.LayoutSlides.Count} layout(s)");
-                for (var j = 0; j < master.LayoutSlides.Count; j++)
+                if (masterIndex.Value < 0 || masterIndex.Value >= presentation.Masters.Count)
+                    throw new ArgumentException($"masterIndex must be between 0 and {presentation.Masters.Count - 1}");
+                var master = presentation.Masters[masterIndex.Value];
+                sb.AppendLine($"=== Master {masterIndex.Value} Layouts ===");
+                sb.AppendLine($"Total: {master.LayoutSlides.Count}");
+                for (var i = 0; i < master.LayoutSlides.Count; i++)
                 {
-                    var layout = master.LayoutSlides[j];
-                    sb.AppendLine($"  [{j}] {layout.Name ?? "(unnamed)"}");
+                    var layout = master.LayoutSlides[i];
+                    sb.AppendLine($"  [{i}] {layout.Name ?? "(unnamed)"}");
                 }
             }
-        }
+            else
+            {
+                sb.AppendLine("=== All Layouts ===");
+                for (var i = 0; i < presentation.Masters.Count; i++)
+                {
+                    var master = presentation.Masters[i];
+                    sb.AppendLine($"\nMaster {i}: {master.LayoutSlides.Count} layout(s)");
+                    for (var j = 0; j < master.LayoutSlides.Count; j++)
+                    {
+                        var layout = master.LayoutSlides[j];
+                        sb.AppendLine($"  [{j}] {layout.Name ?? "(unnamed)"}");
+                    }
+                }
+            }
 
-        return await Task.FromResult(sb.ToString());
+            return sb.ToString();
+        });
     }
 
     /// <summary>
@@ -195,28 +201,31 @@ Usage examples:
     /// <param name="_">Unused parameter</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Formatted string with master slides</returns>
-    private async Task<string> GetMastersAsync(JsonObject? _, string path)
+    private Task<string> GetMastersAsync(JsonObject? _, string path)
     {
-        using var presentation = new Presentation(path);
-        var sb = new StringBuilder();
-
-        sb.AppendLine("=== Master Slides ===");
-        sb.AppendLine($"Total: {presentation.Masters.Count}");
-
-        for (var i = 0; i < presentation.Masters.Count; i++)
+        return Task.Run(() =>
         {
-            var master = presentation.Masters[i];
-            sb.AppendLine($"\nMaster {i}:");
-            sb.AppendLine($"  Name: {master.Name ?? "(unnamed)"}");
-            sb.AppendLine($"  Layouts: {master.LayoutSlides.Count}");
-            for (var j = 0; j < master.LayoutSlides.Count; j++)
-            {
-                var layout = master.LayoutSlides[j];
-                sb.AppendLine($"    [{j}] {layout.Name ?? "(unnamed)"}");
-            }
-        }
+            using var presentation = new Presentation(path);
+            var sb = new StringBuilder();
 
-        return await Task.FromResult(sb.ToString());
+            sb.AppendLine("=== Master Slides ===");
+            sb.AppendLine($"Total: {presentation.Masters.Count}");
+
+            for (var i = 0; i < presentation.Masters.Count; i++)
+            {
+                var master = presentation.Masters[i];
+                sb.AppendLine($"\nMaster {i}:");
+                sb.AppendLine($"  Name: {master.Name ?? "(unnamed)"}");
+                sb.AppendLine($"  Layouts: {master.LayoutSlides.Count}");
+                for (var j = 0; j < master.LayoutSlides.Count; j++)
+                {
+                    var layout = master.LayoutSlides[j];
+                    sb.AppendLine($"    [{j}] {layout.Name ?? "(unnamed)"}");
+                }
+            }
+
+            return sb.ToString();
+        });
     }
 
     /// <summary>
@@ -225,33 +234,36 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing masterIndex, optional slideIndexes, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> ApplyMasterAsync(JsonObject? arguments, string path)
+    private Task<string> ApplyMasterAsync(JsonObject? arguments, string path)
     {
-        var slideIndicesArray = ArgumentHelper.GetArray(arguments, "slideIndices", false);
-        var slideIndices = slideIndicesArray?.Select(x => x?.GetValue<int>() ?? -1).ToArray();
-        var masterIndex = ArgumentHelper.GetInt(arguments, "masterIndex", 0);
-        var layoutIndex = ArgumentHelper.GetInt(arguments, "layoutIndex", 0);
+        return Task.Run(() =>
+        {
+            var slideIndicesArray = ArgumentHelper.GetArray(arguments, "slideIndices", false);
+            var slideIndices = slideIndicesArray?.Select(x => x?.GetValue<int>() ?? -1).ToArray();
+            var masterIndex = ArgumentHelper.GetInt(arguments, "masterIndex", 0);
+            var layoutIndex = ArgumentHelper.GetInt(arguments, "layoutIndex", 0);
 
-        using var presentation = new Presentation(path);
+            using var presentation = new Presentation(path);
 
-        PowerPointHelper.ValidateCollectionIndex(masterIndex, presentation.Masters.Count, "master");
-        var master = presentation.Masters[masterIndex];
-        PowerPointHelper.ValidateCollectionIndex(layoutIndex, master.LayoutSlides.Count, "layout");
+            PowerPointHelper.ValidateCollectionIndex(masterIndex, presentation.Masters.Count, "master");
+            var master = presentation.Masters[masterIndex];
+            PowerPointHelper.ValidateCollectionIndex(layoutIndex, master.LayoutSlides.Count, "layout");
 
-        var targets = slideIndices?.Length > 0
-            ? slideIndices
-            : Enumerable.Range(0, presentation.Slides.Count).ToArray();
+            var targets = slideIndices?.Length > 0
+                ? slideIndices
+                : Enumerable.Range(0, presentation.Slides.Count).ToArray();
 
-        foreach (var idx in targets)
-            if (idx < 0 || idx >= presentation.Slides.Count)
-                throw new ArgumentException($"slide index {idx} out of range");
+            foreach (var idx in targets)
+                if (idx < 0 || idx >= presentation.Slides.Count)
+                    throw new ArgumentException($"slide index {idx} out of range");
 
-        var layout = master.LayoutSlides[layoutIndex];
-        foreach (var idx in targets) presentation.Slides[idx].LayoutSlide = layout;
+            var layout = master.LayoutSlides[layoutIndex];
+            foreach (var idx in targets) presentation.Slides[idx].LayoutSlide = layout;
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        presentation.Save(outputPath, SaveFormat.Pptx);
-        return await Task.FromResult($"Master {masterIndex} / Layout {layoutIndex} applied to {targets.Length} slides");
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
+            return $"Master {masterIndex} / Layout {layoutIndex} applied to {targets.Length} slides";
+        });
     }
 
     /// <summary>
@@ -260,37 +272,40 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing layoutType, startIndex, endIndex, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> ApplyLayoutRangeAsync(JsonObject? arguments, string path)
+    private Task<string> ApplyLayoutRangeAsync(JsonObject? arguments, string path)
     {
-        var layoutStr = ArgumentHelper.GetString(arguments, "layout");
-        var slideIndicesArray = ArgumentHelper.GetArray(arguments, "slideIndices");
-
-        var slideIndices = slideIndicesArray.Select(x => x?.GetValue<int>() ?? -1).ToArray();
-
-        using var presentation = new Presentation(path);
-
-        foreach (var idx in slideIndices)
-            if (idx < 0 || idx >= presentation.Slides.Count)
-                throw new ArgumentException($"slide index {idx} out of range");
-
-        var layoutType = layoutStr.ToLower() switch
+        return Task.Run(() =>
         {
-            "title" => SlideLayoutType.Title,
-            "titleonly" => SlideLayoutType.TitleOnly,
-            "blank" => SlideLayoutType.Blank,
-            "twocolumn" => SlideLayoutType.TwoColumnText,
-            "sectionheader" => SlideLayoutType.SectionHeader,
-            _ => SlideLayoutType.Custom
-        };
+            var layoutStr = ArgumentHelper.GetString(arguments, "layout");
+            var slideIndicesArray = ArgumentHelper.GetArray(arguments, "slideIndices");
 
-        var layout = presentation.LayoutSlides.FirstOrDefault(ls => ls.LayoutType == layoutType) ??
-                     presentation.LayoutSlides[0];
+            var slideIndices = slideIndicesArray.Select(x => x?.GetValue<int>() ?? -1).ToArray();
 
-        foreach (var idx in slideIndices) presentation.Slides[idx].LayoutSlide = layout;
+            using var presentation = new Presentation(path);
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        presentation.Save(outputPath, SaveFormat.Pptx);
-        return await Task.FromResult($"Layout {layoutStr} applied to {slideIndices.Length} slides");
+            foreach (var idx in slideIndices)
+                if (idx < 0 || idx >= presentation.Slides.Count)
+                    throw new ArgumentException($"slide index {idx} out of range");
+
+            var layoutType = layoutStr.ToLower() switch
+            {
+                "title" => SlideLayoutType.Title,
+                "titleonly" => SlideLayoutType.TitleOnly,
+                "blank" => SlideLayoutType.Blank,
+                "twocolumn" => SlideLayoutType.TwoColumnText,
+                "sectionheader" => SlideLayoutType.SectionHeader,
+                _ => SlideLayoutType.Custom
+            };
+
+            var layout = presentation.LayoutSlides.FirstOrDefault(ls => ls.LayoutType == layoutType) ??
+                         presentation.LayoutSlides[0];
+
+            foreach (var idx in slideIndices) presentation.Slides[idx].LayoutSlide = layout;
+
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
+            return $"Layout {layoutStr} applied to {slideIndices.Length} slides";
+        });
     }
 
     /// <summary>
@@ -299,19 +314,22 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing themePath, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> ApplyThemeAsync(JsonObject? arguments, string path)
+    private Task<string> ApplyThemeAsync(JsonObject? arguments, string path)
     {
-        var themePath = ArgumentHelper.GetString(arguments, "themePath");
+        return Task.Run(() =>
+        {
+            var themePath = ArgumentHelper.GetString(arguments, "themePath");
 
-        using var presentation = new Presentation(path);
-        using var themePresentation = new Presentation(themePath);
+            using var presentation = new Presentation(path);
+            using var themePresentation = new Presentation(themePath);
 
-        // Copy theme from the first slide of theme presentation
-        presentation.Slides[0].LayoutSlide = themePresentation.Slides[0].LayoutSlide;
+            // Copy theme from the first slide of theme presentation
+            presentation.Slides[0].LayoutSlide = themePresentation.Slides[0].LayoutSlide;
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        presentation.Save(outputPath, SaveFormat.Pptx);
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
 
-        return await Task.FromResult($"Theme applied to presentation: {outputPath}");
+            return $"Theme applied to presentation: {outputPath}";
+        });
     }
 }

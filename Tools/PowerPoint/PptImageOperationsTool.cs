@@ -111,34 +111,38 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing outputDirectory, optional slideIndexes, format, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Success message with exported image count</returns>
-    private async Task<string> ExportSlidesAsImagesAsync(JsonObject? arguments, string path)
+    private Task<string> ExportSlidesAsImagesAsync(JsonObject? arguments, string path)
     {
-        var outputDir = ArgumentHelper.GetStringNullable(arguments, "outputDir") ?? Path.GetDirectoryName(path) ?? ".";
-        var formatStr = ArgumentHelper.GetString(arguments, "format", "png");
-        var scale = ArgumentHelper.GetFloat(arguments, "scale", 1.0f);
+        return Task.Run(() =>
+        {
+            var outputDir = ArgumentHelper.GetStringNullable(arguments, "outputDir") ??
+                            Path.GetDirectoryName(path) ?? ".";
+            var formatStr = ArgumentHelper.GetString(arguments, "format", "png");
+            var scale = ArgumentHelper.GetFloat(arguments, "scale", 1.0f);
 
 #pragma warning disable CA1416 // Validate platform compatibility
-        var format = formatStr.ToLower() switch
-        {
-            "jpeg" or "jpg" => ImageFormat.Jpeg,
-            _ => ImageFormat.Png
-        };
-        var extension = format.Equals(ImageFormat.Png) ? "png" : "jpg";
+            var format = formatStr.ToLower() switch
+            {
+                "jpeg" or "jpg" => ImageFormat.Jpeg,
+                _ => ImageFormat.Png
+            };
+            var extension = format.Equals(ImageFormat.Png) ? "png" : "jpg";
 #pragma warning restore CA1416 // Validate platform compatibility
 
-        Directory.CreateDirectory(outputDir);
+            Directory.CreateDirectory(outputDir);
 
-        using var presentation = new Presentation(path);
-        for (var i = 0; i < presentation.Slides.Count; i++)
-        {
-            var bmp = presentation.Slides[i].GetThumbnail(scale, scale);
-            var fileName = Path.Combine(outputDir, $"slide_{i + 1}.{extension}");
+            using var presentation = new Presentation(path);
+            for (var i = 0; i < presentation.Slides.Count; i++)
+            {
+                var bmp = presentation.Slides[i].GetThumbnail(scale, scale);
+                var fileName = Path.Combine(outputDir, $"slide_{i + 1}.{extension}");
 #pragma warning disable CA1416 // Validate platform compatibility
-            bmp.Save(fileName, format);
+                bmp.Save(fileName, format);
 #pragma warning restore CA1416 // Validate platform compatibility
-        }
+            }
 
-        return await Task.FromResult($"Exported {presentation.Slides.Count} slides to: {Path.GetFullPath(outputDir)}");
+            return $"Exported {presentation.Slides.Count} slides to: {Path.GetFullPath(outputDir)}";
+        });
     }
 
     /// <summary>
@@ -147,44 +151,48 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing outputDirectory, optional slideIndex</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Success message with extracted image count</returns>
-    private async Task<string> ExtractImagesAsync(JsonObject? arguments, string path)
+    private Task<string> ExtractImagesAsync(JsonObject? arguments, string path)
     {
-        var outputDir = ArgumentHelper.GetStringNullable(arguments, "outputDir") ?? Path.GetDirectoryName(path) ?? ".";
-        var formatStr = ArgumentHelper.GetString(arguments, "format", "png");
+        return Task.Run(() =>
+        {
+            var outputDir = ArgumentHelper.GetStringNullable(arguments, "outputDir") ??
+                            Path.GetDirectoryName(path) ?? ".";
+            var formatStr = ArgumentHelper.GetString(arguments, "format", "png");
 
 #pragma warning disable CA1416 // Validate platform compatibility
-        var format = formatStr.ToLower() switch
-        {
-            "jpeg" or "jpg" => ImageFormat.Jpeg,
-            _ => ImageFormat.Png
-        };
-        var extension = format.Equals(ImageFormat.Png) ? "png" : "jpg";
+            var format = formatStr.ToLower() switch
+            {
+                "jpeg" or "jpg" => ImageFormat.Jpeg,
+                _ => ImageFormat.Png
+            };
+            var extension = format.Equals(ImageFormat.Png) ? "png" : "jpg";
 #pragma warning restore CA1416 // Validate platform compatibility
 
-        Directory.CreateDirectory(outputDir);
+            Directory.CreateDirectory(outputDir);
 
-        using var presentation = new Presentation(path);
-        var count = 0;
+            using var presentation = new Presentation(path);
+            var count = 0;
 
-        var slideIndex = 0;
-        foreach (var slide in presentation.Slides)
-        {
-            slideIndex++;
-            foreach (var shape in slide.Shapes)
-                if (shape is PictureFrame { PictureFormat.Picture.Image: not null } pic)
-                {
-                    var image = pic.PictureFormat.Picture.Image;
-                    var fileName = Path.Combine(outputDir, $"slide{slideIndex}_img{++count}.{extension}");
-                    var systemImage = image.SystemImage;
+            var slideIndex = 0;
+            foreach (var slide in presentation.Slides)
+            {
+                slideIndex++;
+                foreach (var shape in slide.Shapes)
+                    if (shape is PictureFrame { PictureFormat.Picture.Image: not null } pic)
+                    {
+                        var image = pic.PictureFormat.Picture.Image;
+                        var fileName = Path.Combine(outputDir, $"slide{slideIndex}_img{++count}.{extension}");
+                        var systemImage = image.SystemImage;
 #pragma warning disable CA1416
-                    // Validate platform compatibility
-                    systemImage.Save(fileName, format);
+                        // Validate platform compatibility
+                        systemImage.Save(fileName, format);
 #pragma warning restore CA1416
-                    // Validate platform compatibility
-                }
-        }
+                        // Validate platform compatibility
+                    }
+            }
 
-        return await Task.FromResult($"Exported {count} images to: {Path.GetFullPath(outputDir)}");
+            return $"Exported {count} images to: {Path.GetFullPath(outputDir)}";
+        });
     }
 
     /// <summary>
@@ -196,49 +204,51 @@ Usage examples:
     /// </param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> ReplaceImageWithCompressionAsync(JsonObject? arguments, string path)
+    private Task<string> ReplaceImageWithCompressionAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
-        var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
-        var imagePath = ArgumentHelper.GetString(arguments, "imagePath");
-        var jpegQuality = ArgumentHelper.GetIntNullable(arguments, "jpegQuality");
-
-        using var presentation = new Presentation(path);
-        if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
-            throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
-
-        var slide = presentation.Slides[slideIndex];
-        if (shapeIndex < 0 || shapeIndex >= slide.Shapes.Count)
-            throw new ArgumentException($"shapeIndex must be between 0 and {slide.Shapes.Count - 1}");
-
-        if (slide.Shapes[shapeIndex] is not PictureFrame pic)
-            throw new ArgumentException("The specified shape is not a PictureFrame");
-
-        byte[] imageBytes;
-        if (jpegQuality.HasValue)
+        return Task.Run(async () =>
         {
-            var quality = Math.Clamp(jpegQuality.Value, 10, 100);
+            var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
+            var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
+            var imagePath = ArgumentHelper.GetString(arguments, "imagePath");
+            var jpegQuality = ArgumentHelper.GetIntNullable(arguments, "jpegQuality");
+
+            using var presentation = new Presentation(path);
+            if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
+                throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
+
+            var slide = presentation.Slides[slideIndex];
+            if (shapeIndex < 0 || shapeIndex >= slide.Shapes.Count)
+                throw new ArgumentException($"shapeIndex must be between 0 and {slide.Shapes.Count - 1}");
+
+            if (slide.Shapes[shapeIndex] is not PictureFrame pic)
+                throw new ArgumentException("The specified shape is not a PictureFrame");
+
+            byte[] imageBytes;
+            if (jpegQuality.HasValue)
+            {
+                var quality = Math.Clamp(jpegQuality.Value, 10, 100);
 #pragma warning disable CA1416 // Validate platform compatibility
-            using var src = Image.FromFile(imagePath);
-            var encoder = ImageCodecInfo.GetImageEncoders().First(c => c.FormatID == ImageFormat.Jpeg.Guid);
-            var encParams = new EncoderParameters(1);
-            encParams.Param[0] = new EncoderParameter(Encoder.Quality, quality);
-            using var ms = new MemoryStream();
-            src.Save(ms, encoder, encParams);
+                using var src = Image.FromFile(imagePath);
+                var encoder = ImageCodecInfo.GetImageEncoders().First(c => c.FormatID == ImageFormat.Jpeg.Guid);
+                var encParams = new EncoderParameters(1);
+                encParams.Param[0] = new EncoderParameter(Encoder.Quality, quality);
+                using var ms = new MemoryStream();
+                src.Save(ms, encoder, encParams);
 #pragma warning restore CA1416 // Validate platform compatibility
-            imageBytes = ms.ToArray();
-        }
-        else
-        {
-            imageBytes = await File.ReadAllBytesAsync(imagePath);
-        }
+                imageBytes = ms.ToArray();
+            }
+            else
+            {
+                imageBytes = await File.ReadAllBytesAsync(imagePath);
+            }
 
-        var newImage = presentation.Images.AddImage(imageBytes);
-        pic.PictureFormat.Picture.Image = newImage;
+            var newImage = presentation.Images.AddImage(imageBytes);
+            pic.PictureFormat.Picture.Image = newImage;
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        presentation.Save(outputPath, SaveFormat.Pptx);
-        return await Task.FromResult(
-            $"Image replaced with compression applied (quality={jpegQuality?.ToString() ?? "original"})");
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
+            return $"Image replaced with compression applied (quality={jpegQuality?.ToString() ?? "original"})";
+        });
     }
 }

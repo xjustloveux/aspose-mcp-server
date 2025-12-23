@@ -9,14 +9,14 @@
     <meta name="description" content="Aspose MCP Server 的功能特性：安全加固、MCP 協議支援、跨平台、按需啟用等。">
     <meta name="keywords" content="Aspose, MCP, 功能特性, 安全特性, 跨平台, 文檔處理">
     <link rel="canonical" href="https://xjustloveux.github.io/aspose-mcp-server/features.html">
-    
+
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://xjustloveux.github.io/aspose-mcp-server/features.html">
     <meta property="og:title" content="功能特性 - Aspose MCP Server">
     <meta property="og:description" content="Aspose MCP Server 的功能特性：安全加固、MCP 協議支援、跨平台、按需啟用等。">
     <meta property="og:site_name" content="Aspose MCP Server">
-    
+
     <!-- Twitter -->
     <meta property="twitter:card" content="summary">
     <meta property="twitter:url" content="https://xjustloveux.github.io/aspose-mcp-server/features.html">
@@ -342,134 +342,157 @@
     </style>
 </head>
 <body>
-    <nav>
-        <div class="nav-container">
-            <div class="nav-header">
-                <a href="index.html" class="nav-logo"><img src="favicon.svg" alt="Aspose MCP Server"> Aspose MCP Server</a>
-                <ul class="nav-menu" id="navMenu">
-                    <li><a href="index.html">首頁</a></li>
-                    <li><a href="features.html" class="active">功能特性</a></li>
-                    <li><a href="tools.html">工具列表</a></li>
-                    <li><a href="getting-started.html">快速開始</a></li>
-                    <li><a href="developers.html">開發者指南</a></li>
-                    <li><a href="faq.html">常見問答</a></li>
-                </ul>
-                <button class="menu-toggle" aria-label="Toggle menu">☰</button>
-            </div>
-        </div>
-    </nav>
-    
-    <div class="page-header">
-        <div class="container">
-            <h1>✨ 功能特性</h1>
-            <p>了解 Aspose MCP Server 的強大功能</p>
+<nav>
+    <div class="nav-container">
+        <div class="nav-header">
+            <a href="index.html" class="nav-logo"><img src="favicon.svg" alt="Aspose MCP Server"> Aspose MCP Server</a>
+            <ul class="nav-menu" id="navMenu">
+                <li>
+                    <a href="index.html">首頁</a>
+                </li>
+                <li>
+                    <a href="features.html" class="active">功能特性</a>
+                </li>
+                <li>
+                    <a href="tools.html">工具列表</a>
+                </li>
+                <li>
+                    <a href="getting-started.html">快速開始</a>
+                </li>
+                <li>
+                    <a href="developers.html">開發者指南</a>
+                </li>
+                <li>
+                    <a href="faq.html">常見問答</a>
+                </li>
+            </ul>
+            <button class="menu-toggle" aria-label="Toggle menu">☰</button>
         </div>
     </div>
-    
+</nav>
+
+<div class="page-header">
     <div class="container">
-        <div class="section">
-            <h2>🎯 核心特性</h2>
-            <ul class="feature-list">
-                <li><strong>90 個統一工具</strong> - Word(24)、Excel(25)、PowerPoint(24)、PDF(15)、轉換工具(2)已整合</li>
-                <li><strong>按需啟用</strong> - 只啟用需要的文檔類型，節省資源並提高效率</li>
-                <li><strong>跨平台支援</strong> - Windows、Linux、macOS (Intel + ARM) 全平台支援</li>
-                <li><strong>開箱即用</strong> - publish/ 包含預編譯版本，從 Releases 下載即可使用</li>
-                <li><strong>完整讀寫</strong> - 支援從A文檔讀取格式應用到B文檔，實現文檔格式的完整遷移</li>
-                <li><strong>安全加固</strong> - 全面的路徑驗證、輸入驗證和錯誤處理</li>
-            </ul>
-        </div>
+        <h1>✨ 功能特性</h1>
+        <p>了解 Aspose MCP Server 的強大功能</p>
+    </div>
+</div>
+
+<div class="container">
+    <div class="section">
+        <h2>🎯 核心特性</h2>
         
-        <div class="section">
-            <h2>🔒 安全特性</h2>
-            
-            <h3>路徑驗證</h3>
-            <ul class="feature-list">
-                <li>所有檔案路徑都經過 `SecurityHelper.ValidateFilePath()` 驗證</li>
-                <li>防止路徑遍歷攻擊（`../`, `..\`）</li>
-                <li>限制路徑長度（最大260字元）和檔案名稱長度（最大255字元）</li>
-                <li>驗證路徑中的非法字元</li>
-            </ul>
-            
-            <h3>輸入驗證</h3>
-            <ul class="feature-list">
-                <li>陣列大小驗證（`SecurityHelper.ValidateArraySize`，最大1000項）</li>
-                <li>字串長度驗證（`SecurityHelper.ValidateStringLength`，最大10000字元）</li>
-            </ul>
-            
-            <h3>錯誤處理</h3>
-            <ul class="feature-list">
-                <li>錯誤訊息清理（`McpErrorHandler.SanitizeErrorMessage`），防止資訊洩露</li>
-                <li>移除檔案路徑、堆疊追蹤等敏感資訊</li>
-                <li>生產環境不暴露詳細錯誤資訊</li>
-            </ul>
-            
-            <h3>安全限制</h3>
-            <div class="security-grid">
-                <div class="security-item">
-                    <strong>最大路徑長度</strong>
-                    260 字元
-                </div>
-                <div class="security-item">
-                    <strong>最大檔案名稱長度</strong>
-                    255 字元
-                </div>
-                <div class="security-item">
-                    <strong>最大陣列大小</strong>
-                    1000 項
-                </div>
-                <div class="security-item">
-                    <strong>最大字串長度</strong>
-                    10000 字元
-                </div>
+        <h3>核心功能</h3>
+        <ul class="feature-list">
+            <li><strong>90 個統一工具</strong> - Word(24)、Excel(25)、PowerPoint(24)、PDF(15)、轉換工具(2) 已整合</li>
+            <li><strong>按需啟用</strong> - 只啟用需要的文檔類型，減少資源佔用</li>
+            <li><strong>跨平台</strong> - Windows、Linux、macOS (Intel + ARM)，單一可執行檔案</li>
+            <li><strong>開箱即用</strong> - 預編譯版本無需安裝 .NET Runtime</li>
+            <li><strong>完整讀寫</strong> - 支援從A文檔讀取格式應用到B文檔</li>
+        </ul>
+
+        <h3>技術特性</h3>
+        <ul class="feature-list">
+            <li><strong>MCP 2025-11-25 規範支援</strong> - 完全符合最新 MCP 協議規範，自動工具註解（readonly/destructive）基於命名約定，完整的 JSON-RPC 2.0 錯誤處理</li>
+            <li><strong>統一字型設定</strong> - 多個工具支援中英文字型分別設定（<code>fontNameAscii</code> 和 <code>fontNameFarEast</code> 參數）</li>
+            <li><strong>靈活的授權配置</strong> - 支援總授權或單一組件授權，自動搜尋、環境變數或命令列參數配置，試用模式降級（找不到授權時）</li>
+            <li><strong>自動工具發現</strong> - 基於命名約定的自動工具註冊系統</li>
+            <li><strong>安全加固</strong> - 全面的路徑驗證、輸入驗證和錯誤處理</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>🔒 安全特性</h2>
+
+        <h3>路徑驗證</h3>
+        <ul class="feature-list">
+            <li>所有檔案路徑都經過 `SecurityHelper.ValidateFilePath()` 驗證</li>
+            <li>防止路徑遍歷攻擊（`../`, `..\`）</li>
+            <li>限制路徑長度（最大260字元）和檔案名稱長度（最大255字元）</li>
+            <li>驗證路徑中的非法字元</li>
+        </ul>
+
+        <h3>輸入驗證</h3>
+        <ul class="feature-list">
+            <li>陣列大小驗證（`SecurityHelper.ValidateArraySize`，最大1000項）</li>
+            <li>字串長度驗證（`SecurityHelper.ValidateStringLength`，最大10000字元）</li>
+        </ul>
+
+        <h3>錯誤處理</h3>
+        <ul class="feature-list">
+            <li>錯誤訊息清理（`McpErrorHandler.SanitizeErrorMessage`），防止資訊洩露</li>
+            <li>移除檔案路徑、堆疊追蹤等敏感資訊</li>
+            <li>生產環境不暴露詳細錯誤資訊</li>
+        </ul>
+
+        <h3>安全限制</h3>
+        <div class="security-grid">
+            <div class="security-item">
+                <strong>最大路徑長度</strong>
+                260 字元
+            </div>
+            <div class="security-item">
+                <strong>最大檔案名稱長度</strong>
+                255 字元
+            </div>
+            <div class="security-item">
+                <strong>最大陣列大小</strong>
+                1000 項
+            </div>
+            <div class="security-item">
+                <strong>最大字串長度</strong>
+                10000 字元
             </div>
         </div>
-        
-        <div class="section">
-            <h2>📡 MCP 協議支援</h2>
-            <h3>MCP 2025-11-25 規範支援</h3>
-            <ul class="feature-list">
-                <li>符合最新 MCP 協議規範（protocolVersion: 2025-11-25）</li>
-                <li>自動工具註解（readonly/destructive）基於命名約定</li>
-                <li>完整的 JSON-RPC 2.0 錯誤處理</li>
-            </ul>
-        </div>
-        
-        <div class="section">
-            <h2>🎨 其他特性</h2>
-            
-            <h3>統一字型設定</h3>
-            <p>多個工具支援中英文字型分別設定（`fontNameAscii` 和 `fontNameFarEast` 參數），確保中英文混排文檔的完美顯示。</p>
-            
-            <h3>靈活的授權配置</h3>
-            <ul class="feature-list">
-                <li>支援總授權或單一組件授權</li>
-                <li>自動搜尋、環境變數或命令列參數配置</li>
-                <li>試用模式降級（找不到授權時）</li>
-            </ul>
-            
-            <h3>跨格式轉換</h3>
-            <ul class="feature-list">
-                <li>啟用任何文檔工具時，自動包含 `convert_to_pdf`（轉換為PDF）</li>
-                <li>啟用兩個或以上文檔工具時，自動包含 `convert_document`（跨格式轉換，如Word轉Excel）</li>
-            </ul>
-        </div>
     </div>
-    
-    <footer>
-        <div class="container">
-            <p>基於 .NET 8.0 和 Aspose 構建</p>
-            <p style="margin-top: 10px;">
-                <a href="https://github.com/xjustloveux/aspose-mcp-server" style="color: #667eea; text-decoration: none;" target="_blank">GitHub</a> | 
-                <a href="https://www.aspose.com/" style="color: #667eea; text-decoration: none;" target="_blank">Aspose</a> | 
-                <a href="https://modelcontextprotocol.io/" style="color: #667eea; text-decoration: none;" target="_blank">MCP Protocol</a>
-            </p>
-            <p style="margin-top: 20px; color: #999; font-size: 0.9em;">
-                © 2025 JaJa. All rights reserved.
-            </p>
-        </div>
-    </footer>
-    
-    <script>
+
+    <div class="section">
+        <h2>📡 MCP 協議支援</h2>
+        <h3>MCP 2025-11-25 規範支援</h3>
+        <ul class="feature-list">
+            <li>符合最新 MCP 協議規範（protocolVersion: 2025-11-25）</li>
+            <li>自動工具註解（readonly/destructive）基於命名約定</li>
+            <li>完整的 JSON-RPC 2.0 錯誤處理</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>🎨 其他特性</h2>
+
+        <h3>統一字型設定</h3>
+        <p>多個工具支援中英文字型分別設定（`fontNameAscii` 和 `fontNameFarEast` 參數），確保中英文混排文檔的完美顯示。</p>
+
+        <h3>靈活的授權配置</h3>
+        <ul class="feature-list">
+            <li>支援總授權或單一組件授權</li>
+            <li>自動搜尋、環境變數或命令列參數配置</li>
+            <li>試用模式降級（找不到授權時）</li>
+        </ul>
+
+        <h3>跨格式轉換</h3>
+        <ul class="feature-list">
+            <li>啟用任何文檔工具時，自動包含 `convert_to_pdf`（轉換為PDF）</li>
+            <li>啟用兩個或以上文檔工具時，自動包含 `convert_document`（跨格式轉換，如Word轉Excel）</li>
+        </ul>
+    </div>
+</div>
+
+<footer>
+    <div class="container">
+        <p>基於 .NET 8.0 和 Aspose.Total 23.10.0 構建</p>
+        <p style="margin-top: 10px;">
+            <a href="https://github.com/xjustloveux/aspose-mcp-server" style="color: #667eea; text-decoration: none;" target="_blank">GitHub</a> |
+            <a href="https://www.aspose.com/" style="color: #667eea; text-decoration: none;" target="_blank">Aspose</a> |
+            <a href="https://modelcontextprotocol.io/" style="color: #667eea; text-decoration: none;" target="_blank">MCP Protocol</a> |
+            <a href="https://github.com/xjustloveux/aspose-mcp-server/releases" style="color: #667eea; text-decoration: none;" target="_blank">Releases</a>
+        </p>
+        <p style="margin-top: 20px; color: #999; font-size: 0.9em;">
+            © 2025 JaJa. All rights reserved. | MIT License
+        </p>
+    </div>
+</footer>
+
+<script>
         // 移动端菜单切换
         document.addEventListener('DOMContentLoaded', function() {
             const menuToggle = document.querySelector('.menu-toggle');
@@ -501,4 +524,3 @@
     </script>
 </body>
 </html>
-

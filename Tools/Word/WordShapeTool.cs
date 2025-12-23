@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Cells;
 using Aspose.Cells.Charts;
@@ -262,6 +262,9 @@ Usage examples:
             "edit_textbox_content" => await EditTextBoxContent(arguments),
             "set_textbox_border" => await SetTextBoxBorder(arguments),
             "add_chart" => await AddChart(arguments),
+            "add" => await AddShape(arguments),
+            "get" => await GetShapes(arguments),
+            "delete" => await DeleteShape(arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -274,127 +277,129 @@ Usage examples:
     ///     lineColor, width
     /// </param>
     /// <returns>Success message with line details</returns>
-    private async Task<string> AddLine(JsonObject? arguments)
+    private Task<string> AddLine(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        SecurityHelper.ValidateFilePath(path);
-        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var location = ArgumentHelper.GetString(arguments, "location", "body");
-        var position = ArgumentHelper.GetString(arguments, "position", "end");
-        var lineStyle = ArgumentHelper.GetString(arguments, "lineStyle", "shape");
-        var lineWidth = ArgumentHelper.GetDouble(arguments, "lineWidth", 1.0);
-        var lineColor = ArgumentHelper.GetString(arguments, "lineColor", "000000");
-        var width = ArgumentHelper.GetDoubleNullable(arguments, "width");
-
-        var doc = new Document(path);
-        var section = doc.FirstSection;
-        var calculatedWidth = width ?? section.PageSetup.PageWidth - section.PageSetup.LeftMargin -
-            section.PageSetup.RightMargin;
-
-        Node? targetNode;
-        string locationDesc;
-
-        switch (location.ToLower())
+        return Task.Run(() =>
         {
-            case "header":
-                var header = section.HeadersFooters[HeaderFooterType.HeaderPrimary];
-                if (header == null)
-                {
-                    header = new HeaderFooter(doc, HeaderFooterType.HeaderPrimary);
-                    section.HeadersFooters.Add(header);
-                }
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
+            var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+            var location = ArgumentHelper.GetString(arguments, "location", "body");
+            var position = ArgumentHelper.GetString(arguments, "position", "end");
+            var lineStyle = ArgumentHelper.GetString(arguments, "lineStyle", "shape");
+            var lineWidth = ArgumentHelper.GetDouble(arguments, "lineWidth", 1.0);
+            var lineColor = ArgumentHelper.GetString(arguments, "lineColor", "000000");
+            var width = ArgumentHelper.GetDoubleNullable(arguments, "width");
 
-                targetNode = header;
-                locationDesc = "header";
-                break;
+            var doc = new Document(path);
+            var section = doc.FirstSection;
+            var calculatedWidth = width ?? section.PageSetup.PageWidth - section.PageSetup.LeftMargin -
+                section.PageSetup.RightMargin;
 
-            case "footer":
-                var footer = section.HeadersFooters[HeaderFooterType.FooterPrimary];
-                if (footer == null)
-                {
-                    footer = new HeaderFooter(doc, HeaderFooterType.FooterPrimary);
-                    section.HeadersFooters.Add(footer);
-                }
+            Node? targetNode;
+            string locationDesc;
 
-                targetNode = footer;
-                locationDesc = "footer";
-                break;
-
-            default:
-                targetNode = section.Body;
-                locationDesc = "document body";
-                break;
-        }
-
-        if (targetNode == null)
-            throw new InvalidOperationException($"Could not access {location}");
-
-        if (lineStyle == "shape")
-        {
-            var linePara = new Paragraph(doc)
+            switch (location.ToLower())
             {
-                ParagraphFormat =
+                case "header":
+                    var header = section.HeadersFooters[HeaderFooterType.HeaderPrimary];
+                    if (header == null)
+                    {
+                        header = new HeaderFooter(doc, HeaderFooterType.HeaderPrimary);
+                        section.HeadersFooters.Add(header);
+                    }
+
+                    targetNode = header;
+                    locationDesc = "header";
+                    break;
+
+                case "footer":
+                    var footer = section.HeadersFooters[HeaderFooterType.FooterPrimary];
+                    if (footer == null)
+                    {
+                        footer = new HeaderFooter(doc, HeaderFooterType.FooterPrimary);
+                        section.HeadersFooters.Add(footer);
+                    }
+
+                    targetNode = footer;
+                    locationDesc = "footer";
+                    break;
+
+                default:
+                    targetNode = section.Body;
+                    locationDesc = "document body";
+                    break;
+            }
+
+            if (targetNode == null)
+                throw new InvalidOperationException($"Could not access {location}");
+
+            if (lineStyle == "shape")
+            {
+                var linePara = new Paragraph(doc)
                 {
-                    SpaceBefore = 0,
-                    SpaceAfter = 0,
-                    LineSpacing = 1,
-                    LineSpacingRule = LineSpacingRule.Exactly
+                    ParagraphFormat =
+                    {
+                        SpaceBefore = 0,
+                        SpaceAfter = 0,
+                        LineSpacing = 1,
+                        LineSpacingRule = LineSpacingRule.Exactly
+                    }
+                };
+
+                var shape = new Shape(doc, ShapeType.Line)
+                {
+                    Width = calculatedWidth,
+                    Height = 0
+                };
+                shape.StrokeWeight = lineWidth;
+                shape.StrokeColor = ColorHelper.ParseColor(lineColor);
+                shape.WrapType = WrapType.Inline;
+
+                linePara.AppendChild(shape);
+
+                if (position == "start")
+                {
+                    if (targetNode is HeaderFooter headerFooter)
+                        headerFooter.PrependChild(linePara);
+                    else if (targetNode is Body body)
+                        body.PrependChild(linePara);
                 }
-            };
-
-            var shape = new Shape(doc, ShapeType.Line)
-            {
-                Width = calculatedWidth,
-                Height = 0
-            };
-            shape.StrokeWeight = lineWidth;
-            shape.StrokeColor = ColorHelper.ParseColor(lineColor);
-            shape.WrapType = WrapType.Inline;
-
-            linePara.AppendChild(shape);
-
-            if (position == "start")
-            {
-                if (targetNode is HeaderFooter headerFooter)
-                    headerFooter.PrependChild(linePara);
-                else if (targetNode is Body body)
-                    body.PrependChild(linePara);
+                else
+                {
+                    if (targetNode is HeaderFooter headerFooter)
+                        headerFooter.AppendChild(linePara);
+                    else if (targetNode is Body body)
+                        body.AppendChild(linePara);
+                }
             }
             else
             {
-                if (targetNode is HeaderFooter headerFooter)
-                    headerFooter.AppendChild(linePara);
-                else if (targetNode is Body body)
-                    body.AppendChild(linePara);
-            }
-        }
-        else
-        {
-            var linePara = new Paragraph(doc);
-            linePara.ParagraphFormat.Borders.Bottom.LineStyle = LineStyle.Single;
-            linePara.ParagraphFormat.Borders.Bottom.LineWidth = lineWidth;
-            linePara.ParagraphFormat.Borders.Bottom.Color = ColorHelper.ParseColor(lineColor);
+                var linePara = new Paragraph(doc);
+                linePara.ParagraphFormat.Borders.Bottom.LineStyle = LineStyle.Single;
+                linePara.ParagraphFormat.Borders.Bottom.LineWidth = lineWidth;
+                linePara.ParagraphFormat.Borders.Bottom.Color = ColorHelper.ParseColor(lineColor);
 
-            if (position == "start")
-            {
-                if (targetNode is HeaderFooter headerFooter)
-                    headerFooter.PrependChild(linePara);
-                else if (targetNode is Body body)
-                    body.PrependChild(linePara);
+                if (position == "start")
+                {
+                    if (targetNode is HeaderFooter headerFooter)
+                        headerFooter.PrependChild(linePara);
+                    else if (targetNode is Body body)
+                        body.PrependChild(linePara);
+                }
+                else
+                {
+                    if (targetNode is HeaderFooter headerFooter)
+                        headerFooter.AppendChild(linePara);
+                    else if (targetNode is Body body)
+                        body.AppendChild(linePara);
+                }
             }
-            else
-            {
-                if (targetNode is HeaderFooter headerFooter)
-                    headerFooter.AppendChild(linePara);
-                else if (targetNode is Body body)
-                    body.AppendChild(linePara);
-            }
-        }
 
-        doc.Save(outputPath);
-        return await Task.FromResult(
-            $"Successfully inserted line in {locationDesc} at {position} position. Output: {outputPath}");
+            doc.Save(outputPath);
+            return $"Successfully inserted line in {locationDesc} at {position} position. Output: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -405,96 +410,99 @@ Usage examples:
     ///     positionX, positionY, outputPath
     /// </param>
     /// <returns>Success message with textbox details</returns>
-    private async Task<string> AddTextBox(JsonObject? arguments)
+    private Task<string> AddTextBox(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        SecurityHelper.ValidateFilePath(path);
-        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var text = ArgumentHelper.GetString(arguments, "text");
-        var textboxWidth = ArgumentHelper.GetDouble(arguments, "textboxWidth", "textboxWidth", false, 200);
-        var textboxHeight = ArgumentHelper.GetDouble(arguments, "textboxHeight", "textboxHeight", false, 100);
-        var positionX = ArgumentHelper.GetDouble(arguments, "positionX", "positionX", false, 100);
-        var positionY = ArgumentHelper.GetDouble(arguments, "positionY", "positionY", false, 100);
-        var backgroundColor = ArgumentHelper.GetStringNullable(arguments, "backgroundColor");
-        var borderColor = ArgumentHelper.GetStringNullable(arguments, "borderColor");
-        var borderWidth = ArgumentHelper.GetDouble(arguments, "borderWidth", "borderWidth", false, 1);
-        var fontName = ArgumentHelper.GetStringNullable(arguments, "fontName");
-        var fontNameAscii = ArgumentHelper.GetStringNullable(arguments, "fontNameAscii");
-        var fontNameFarEast = ArgumentHelper.GetStringNullable(arguments, "fontNameFarEast");
-        var fontSize = ArgumentHelper.GetDoubleNullable(arguments, "fontSize");
-        var bold = ArgumentHelper.GetBoolNullable(arguments, "bold");
-        var textAlignment = ArgumentHelper.GetString(arguments, "textAlignment", "left");
-
-        var doc = new Document(path);
-        var builder = new DocumentBuilder(doc);
-        builder.MoveToDocumentEnd();
-
-        var textBox = new Shape(doc, ShapeType.TextBox);
-        textBox.Width = textboxWidth;
-        textBox.Height = textboxHeight;
-        textBox.Left = positionX;
-        textBox.Top = positionY;
-        textBox.WrapType = WrapType.None;
-        textBox.RelativeHorizontalPosition = RelativeHorizontalPosition.Page;
-        textBox.RelativeVerticalPosition = RelativeVerticalPosition.Page;
-
-        if (!string.IsNullOrEmpty(backgroundColor))
+        return Task.Run(() =>
         {
-            textBox.Fill.Color = ColorHelper.ParseColor(backgroundColor);
-            textBox.Fill.Visible = true;
-        }
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
+            var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+            var text = ArgumentHelper.GetString(arguments, "text");
+            var textboxWidth = ArgumentHelper.GetDouble(arguments, "textboxWidth", "textboxWidth", false, 200);
+            var textboxHeight = ArgumentHelper.GetDouble(arguments, "textboxHeight", "textboxHeight", false, 100);
+            var positionX = ArgumentHelper.GetDouble(arguments, "positionX", "positionX", false, 100);
+            var positionY = ArgumentHelper.GetDouble(arguments, "positionY", "positionY", false, 100);
+            var backgroundColor = ArgumentHelper.GetStringNullable(arguments, "backgroundColor");
+            var borderColor = ArgumentHelper.GetStringNullable(arguments, "borderColor");
+            var borderWidth = ArgumentHelper.GetDouble(arguments, "borderWidth", "borderWidth", false, 1);
+            var fontName = ArgumentHelper.GetStringNullable(arguments, "fontName");
+            var fontNameAscii = ArgumentHelper.GetStringNullable(arguments, "fontNameAscii");
+            var fontNameFarEast = ArgumentHelper.GetStringNullable(arguments, "fontNameFarEast");
+            var fontSize = ArgumentHelper.GetDoubleNullable(arguments, "fontSize");
+            var bold = ArgumentHelper.GetBoolNullable(arguments, "bold");
+            var textAlignment = ArgumentHelper.GetString(arguments, "textAlignment", "left");
 
-        if (!string.IsNullOrEmpty(borderColor))
-        {
-            textBox.Stroke.Color = ColorHelper.ParseColor(borderColor);
-            textBox.Stroke.Weight = borderWidth;
-            textBox.Stroke.Visible = true;
-        }
+            var doc = new Document(path);
+            var builder = new DocumentBuilder(doc);
+            builder.MoveToDocumentEnd();
 
-        var para = new Paragraph(doc);
-        var run = new Run(doc, text);
+            var textBox = new Shape(doc, ShapeType.TextBox);
+            textBox.Width = textboxWidth;
+            textBox.Height = textboxHeight;
+            textBox.Left = positionX;
+            textBox.Top = positionY;
+            textBox.WrapType = WrapType.None;
+            textBox.RelativeHorizontalPosition = RelativeHorizontalPosition.Page;
+            textBox.RelativeVerticalPosition = RelativeVerticalPosition.Page;
 
-        if (!string.IsNullOrEmpty(fontNameAscii))
-            run.Font.NameAscii = fontNameAscii;
-
-        if (!string.IsNullOrEmpty(fontNameFarEast))
-            run.Font.NameFarEast = fontNameFarEast;
-
-        if (!string.IsNullOrEmpty(fontName))
-        {
-            if (string.IsNullOrEmpty(fontNameAscii) && string.IsNullOrEmpty(fontNameFarEast))
+            if (!string.IsNullOrEmpty(backgroundColor))
             {
-                run.Font.Name = fontName;
+                textBox.Fill.Color = ColorHelper.ParseColor(backgroundColor);
+                textBox.Fill.Visible = true;
             }
-            else
+
+            if (!string.IsNullOrEmpty(borderColor))
             {
-                if (string.IsNullOrEmpty(fontNameAscii))
-                    run.Font.NameAscii = fontName;
-                if (string.IsNullOrEmpty(fontNameFarEast))
-                    run.Font.NameFarEast = fontName;
+                textBox.Stroke.Color = ColorHelper.ParseColor(borderColor);
+                textBox.Stroke.Weight = borderWidth;
+                textBox.Stroke.Visible = true;
             }
-        }
 
-        if (fontSize.HasValue)
-            run.Font.Size = fontSize.Value;
+            var para = new Paragraph(doc);
+            var run = new Run(doc, text);
 
-        if (bold.HasValue)
-            run.Font.Bold = bold.Value;
+            if (!string.IsNullOrEmpty(fontNameAscii))
+                run.Font.NameAscii = fontNameAscii;
 
-        para.ParagraphFormat.Alignment = textAlignment.ToLower() switch
-        {
-            "center" => ParagraphAlignment.Center,
-            "right" => ParagraphAlignment.Right,
-            _ => ParagraphAlignment.Left
-        };
+            if (!string.IsNullOrEmpty(fontNameFarEast))
+                run.Font.NameFarEast = fontNameFarEast;
 
-        para.AppendChild(run);
-        textBox.AppendChild(para);
-        builder.InsertNode(textBox);
+            if (!string.IsNullOrEmpty(fontName))
+            {
+                if (string.IsNullOrEmpty(fontNameAscii) && string.IsNullOrEmpty(fontNameFarEast))
+                {
+                    run.Font.Name = fontName;
+                }
+                else
+                {
+                    if (string.IsNullOrEmpty(fontNameAscii))
+                        run.Font.NameAscii = fontName;
+                    if (string.IsNullOrEmpty(fontNameFarEast))
+                        run.Font.NameFarEast = fontName;
+                }
+            }
 
-        doc.Save(outputPath);
-        return await Task.FromResult($"Successfully added textbox. Output: {outputPath}");
+            if (fontSize.HasValue)
+                run.Font.Size = fontSize.Value;
+
+            if (bold.HasValue)
+                run.Font.Bold = bold.Value;
+
+            para.ParagraphFormat.Alignment = textAlignment.ToLower() switch
+            {
+                "center" => ParagraphAlignment.Center,
+                "right" => ParagraphAlignment.Right,
+                _ => ParagraphAlignment.Left
+            };
+
+            para.AppendChild(run);
+            textBox.AppendChild(para);
+            builder.InsertNode(textBox);
+
+            doc.Save(outputPath);
+            return $"Successfully added textbox. Output: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -502,52 +510,55 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments containing path</param>
     /// <returns>Formatted string with all textboxes</returns>
-    private async Task<string> GetTextboxes(JsonObject? arguments)
+    private Task<string> GetTextboxes(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        SecurityHelper.ValidateFilePath(path);
-        var includeContent = ArgumentHelper.GetBool(arguments, "includeContent");
-
-        var doc = new Document(path);
-        var shapes = FindAllTextboxes(doc);
-
-        var result = new StringBuilder();
-        result.AppendLine("=== Document Textboxes ===\n");
-        result.AppendLine($"Total Textboxes: {shapes.Count}\n");
-
-        if (shapes.Count == 0)
+        return Task.Run(() =>
         {
-            result.AppendLine("No textboxes found");
-            return await Task.FromResult(result.ToString());
-        }
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
+            var includeContent = ArgumentHelper.GetBool(arguments, "includeContent", true);
 
-        for (var i = 0; i < shapes.Count; i++)
-        {
-            var textbox = shapes[i];
-            result.AppendLine($"【Textbox {i}】");
-            result.AppendLine($"Name: {textbox.Name ?? "(No name)"}");
-            result.AppendLine($"Width: {textbox.Width} pt");
-            result.AppendLine($"Height: {textbox.Height} pt");
-            result.AppendLine($"Position: X={textbox.Left}, Y={textbox.Top}");
+            var doc = new Document(path);
+            var shapes = FindAllTextboxes(doc);
 
-            if (includeContent)
+            var result = new StringBuilder();
+            result.AppendLine("=== Document Textboxes ===\n");
+            result.AppendLine($"Total Textboxes: {shapes.Count}\n");
+
+            if (shapes.Count == 0)
             {
-                var textboxText = textbox.GetText().Trim();
-                if (!string.IsNullOrEmpty(textboxText))
-                {
-                    result.AppendLine("Content:");
-                    result.AppendLine($"  {textboxText.Replace("\n", "\n  ")}");
-                }
-                else
-                {
-                    result.AppendLine("Content: (empty)");
-                }
+                result.AppendLine("No textboxes found");
+                return result.ToString();
             }
 
-            result.AppendLine();
-        }
+            for (var i = 0; i < shapes.Count; i++)
+            {
+                var textbox = shapes[i];
+                result.AppendLine($"�iTextbox {i}�j");
+                result.AppendLine($"Name: {textbox.Name ?? "(No name)"}");
+                result.AppendLine($"Width: {textbox.Width} pt");
+                result.AppendLine($"Height: {textbox.Height} pt");
+                result.AppendLine($"Position: X={textbox.Left}, Y={textbox.Top}");
 
-        return await Task.FromResult(result.ToString());
+                if (includeContent)
+                {
+                    var textboxText = textbox.GetText().Trim();
+                    if (!string.IsNullOrEmpty(textboxText))
+                    {
+                        result.AppendLine("Content:");
+                        result.AppendLine($"  {textboxText.Replace("\n", "\n  ")}");
+                    }
+                    else
+                    {
+                        result.AppendLine("Content: (empty)");
+                    }
+                }
+
+                result.AppendLine();
+            }
+
+            return result.ToString();
+        });
     }
 
     /// <summary>
@@ -555,104 +566,107 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, shapeIndex, text, optional outputPath</param>
     /// <returns>Success message with updated textbox details</returns>
-    private async Task<string> EditTextBoxContent(JsonObject? arguments)
+    private Task<string> EditTextBoxContent(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        SecurityHelper.ValidateFilePath(path);
-        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var textboxIndex = ArgumentHelper.GetInt(arguments, "textboxIndex");
-        var text = ArgumentHelper.GetStringNullable(arguments, "text");
-        var appendText = ArgumentHelper.GetBool(arguments, "appendText", false);
-        var fontName = ArgumentHelper.GetStringNullable(arguments, "fontName");
-        var fontNameAscii = ArgumentHelper.GetStringNullable(arguments, "fontNameAscii");
-        var fontNameFarEast = ArgumentHelper.GetStringNullable(arguments, "fontNameFarEast");
-        var fontSize = ArgumentHelper.GetDoubleNullable(arguments, "fontSize");
-        var bold = ArgumentHelper.GetBoolNullable(arguments, "bold");
-        var italic = ArgumentHelper.GetBoolNullable(arguments, "italic");
-        var color = ArgumentHelper.GetStringNullable(arguments, "color");
-        var clearFormatting = ArgumentHelper.GetBool(arguments, "clearFormatting", false);
-
-        var doc = new Document(path);
-        var textboxes = FindAllTextboxes(doc);
-
-        if (textboxIndex < 0 || textboxIndex >= textboxes.Count)
-            throw new ArgumentException(
-                $"Textbox index {textboxIndex} out of range (total textboxes: {textboxes.Count})");
-
-        var textbox = textboxes[textboxIndex];
-
-        // Use false to get only direct child paragraphs of the textbox (not recursive)
-        var paragraphs = textbox.GetChildNodes(NodeType.Paragraph, false);
-        Paragraph para;
-
-        if (paragraphs.Count == 0)
+        return Task.Run(() =>
         {
-            // Create a new paragraph inside the textbox
-            para = new Paragraph(doc);
-            textbox.AppendChild(para);
-        }
-        else
-        {
-            // Use the first paragraph that is a direct child of the textbox
-            para = paragraphs[0] as Paragraph ?? throw new Exception("Cannot get textbox paragraph");
-        }
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
+            var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+            var textboxIndex = ArgumentHelper.GetInt(arguments, "textboxIndex");
+            var text = ArgumentHelper.GetStringNullable(arguments, "text");
+            var appendText = ArgumentHelper.GetBool(arguments, "appendText", false);
+            var fontName = ArgumentHelper.GetStringNullable(arguments, "fontName");
+            var fontNameAscii = ArgumentHelper.GetStringNullable(arguments, "fontNameAscii");
+            var fontNameFarEast = ArgumentHelper.GetStringNullable(arguments, "fontNameFarEast");
+            var fontSize = ArgumentHelper.GetDoubleNullable(arguments, "fontSize");
+            var bold = ArgumentHelper.GetBoolNullable(arguments, "bold");
+            var italic = ArgumentHelper.GetBoolNullable(arguments, "italic");
+            var color = ArgumentHelper.GetStringNullable(arguments, "color");
+            var clearFormatting = ArgumentHelper.GetBool(arguments, "clearFormatting", false);
 
-        // Ensure we're working only with content inside the textbox
-        // Get runs that are direct children of the paragraph (which is inside the textbox)
-        var runsCollection = para.GetChildNodes(NodeType.Run, false);
-        var runs = runsCollection.Cast<Run>().ToList();
+            var doc = new Document(path);
+            var textboxes = FindAllTextboxes(doc);
 
-        if (text != null)
-        {
-            if (appendText && runsCollection.Count > 0)
+            if (textboxIndex < 0 || textboxIndex >= textboxes.Count)
+                throw new ArgumentException(
+                    $"Textbox index {textboxIndex} out of range (total textboxes: {textboxes.Count})");
+
+            var textbox = textboxes[textboxIndex];
+
+            // Use false to get only direct child paragraphs of the textbox (not recursive)
+            var paragraphs = textbox.GetChildNodes(NodeType.Paragraph, false);
+            Paragraph para;
+
+            if (paragraphs.Count == 0)
             {
-                // Append new run to existing content
-                var newRun = new Run(doc, text);
-                para.AppendChild(newRun);
+                // Create a new paragraph inside the textbox
+                para = new Paragraph(doc);
+                textbox.AppendChild(para);
             }
             else
             {
-                // Clear existing content and set new text
-                // Only remove direct children of the paragraph (runs inside textbox)
-                para.RemoveAllChildren();
-                var newRun = new Run(doc, text);
-                para.AppendChild(newRun);
+                // Use the first paragraph that is a direct child of the textbox
+                para = paragraphs[0] as Paragraph ?? throw new Exception("Cannot get textbox paragraph");
             }
 
-            // Refresh runs list after modification
-            runs = para.GetChildNodes(NodeType.Run, false).Cast<Run>().ToList();
-        }
+            // Ensure we're working only with content inside the textbox
+            // Get runs that are direct children of the paragraph (which is inside the textbox)
+            var runsCollection = para.GetChildNodes(NodeType.Run, false);
+            var runs = runsCollection.Cast<Run>().ToList();
 
-        if (clearFormatting)
-            foreach (var run in runs)
-                run.Font.ClearFormatting();
-
-        var hasFormatting = !string.IsNullOrEmpty(fontName) || !string.IsNullOrEmpty(fontNameAscii) ||
-                            !string.IsNullOrEmpty(fontNameFarEast) || fontSize.HasValue ||
-                            bold.HasValue || italic.HasValue || !string.IsNullOrEmpty(color);
-
-        if (hasFormatting)
-            foreach (var run in runs)
+            if (text != null)
             {
-                // Apply font settings using FontHelper
-                FontHelper.Word.ApplyFontSettings(
-                    run,
-                    fontName,
-                    fontNameAscii,
-                    fontNameFarEast,
-                    fontSize,
-                    bold,
-                    italic
-                );
+                if (appendText && runsCollection.Count > 0)
+                {
+                    // Append new run to existing content
+                    var newRun = new Run(doc, text);
+                    para.AppendChild(newRun);
+                }
+                else
+                {
+                    // Clear existing content and set new text
+                    // Only remove direct children of the paragraph (runs inside textbox)
+                    para.RemoveAllChildren();
+                    var newRun = new Run(doc, text);
+                    para.AppendChild(newRun);
+                }
 
-                // Handle color separately to throw exception on parse error
-                if (!string.IsNullOrEmpty(color))
-                    run.Font.Color = ColorHelper.ParseColor(color, true);
+                // Refresh runs list after modification
+                runs = para.GetChildNodes(NodeType.Run, false).Cast<Run>().ToList();
             }
 
-        doc.Save(outputPath);
-        return await Task.FromResult($"Successfully edited textbox #{textboxIndex}. Output: {outputPath}");
+            if (clearFormatting)
+                foreach (var run in runs)
+                    run.Font.ClearFormatting();
+
+            var hasFormatting = !string.IsNullOrEmpty(fontName) || !string.IsNullOrEmpty(fontNameAscii) ||
+                                !string.IsNullOrEmpty(fontNameFarEast) || fontSize.HasValue ||
+                                bold.HasValue || italic.HasValue || !string.IsNullOrEmpty(color);
+
+            if (hasFormatting)
+                foreach (var run in runs)
+                {
+                    // Apply font settings using FontHelper
+                    FontHelper.Word.ApplyFontSettings(
+                        run,
+                        fontName,
+                        fontNameAscii,
+                        fontNameFarEast,
+                        fontSize,
+                        bold,
+                        italic
+                    );
+
+                    // Handle color separately to throw exception on parse error
+                    if (!string.IsNullOrEmpty(color))
+                        run.Font.Color = ColorHelper.ParseColor(color, true);
+                }
+
+            doc.Save(outputPath);
+            return $"Successfully edited textbox #{textboxIndex}. Output: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -660,42 +674,45 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, shapeIndex, optional color, width, style, outputPath</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetTextBoxBorder(JsonObject? arguments)
+    private Task<string> SetTextBoxBorder(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        SecurityHelper.ValidateFilePath(path);
-        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var textboxIndex = ArgumentHelper.GetInt(arguments, "textboxIndex");
-        var borderVisible = ArgumentHelper.GetBool(arguments, "borderVisible", true);
-        var borderColor = ArgumentHelper.GetString(arguments, "borderColor", "000000");
-        var borderWidth = ArgumentHelper.GetDouble(arguments, "borderWidth", "borderWidth", false, 1.0);
-
-        var doc = new Document(path);
-        var allTextboxes = FindAllTextboxes(doc);
-
-        if (textboxIndex < 0 || textboxIndex >= allTextboxes.Count)
-            throw new ArgumentException(
-                $"Textbox index {textboxIndex} out of range (total textboxes: {allTextboxes.Count})");
-
-        var textBox = allTextboxes[textboxIndex];
-        var stroke = textBox.Stroke;
-
-        stroke.Visible = borderVisible;
-
-        if (borderVisible)
+        return Task.Run(() =>
         {
-            stroke.Color = ColorHelper.ParseColor(borderColor);
-            stroke.Weight = borderWidth;
-        }
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
+            var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+            var textboxIndex = ArgumentHelper.GetInt(arguments, "textboxIndex");
+            var borderVisible = ArgumentHelper.GetBool(arguments, "borderVisible", true);
+            var borderColor = ArgumentHelper.GetString(arguments, "borderColor", "000000");
+            var borderWidth = ArgumentHelper.GetDouble(arguments, "borderWidth", "borderWidth", false, 1.0);
 
-        doc.Save(outputPath);
+            var doc = new Document(path);
+            var allTextboxes = FindAllTextboxes(doc);
 
-        var borderDesc = borderVisible
-            ? $"Border: {borderWidth}pt, Color: {borderColor}"
-            : "No border";
+            if (textboxIndex < 0 || textboxIndex >= allTextboxes.Count)
+                throw new ArgumentException(
+                    $"Textbox index {textboxIndex} out of range (total textboxes: {allTextboxes.Count})");
 
-        return await Task.FromResult($"Successfully set textbox {textboxIndex} {borderDesc}. Output: {outputPath}");
+            var textBox = allTextboxes[textboxIndex];
+            var stroke = textBox.Stroke;
+
+            stroke.Visible = borderVisible;
+
+            if (borderVisible)
+            {
+                stroke.Color = ColorHelper.ParseColor(borderColor);
+                stroke.Weight = borderWidth;
+            }
+
+            doc.Save(outputPath);
+
+            var borderDesc = borderVisible
+                ? $"Border: {borderWidth}pt, Color: {borderColor}"
+                : "No border";
+
+            return $"Successfully set textbox {textboxIndex} {borderDesc}. Output: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -703,151 +720,154 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, chartType, data, x, y, optional width, height, outputPath</param>
     /// <returns>Success message with chart details</returns>
-    private async Task<string> AddChart(JsonObject? arguments)
+    private Task<string> AddChart(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        SecurityHelper.ValidateFilePath(path);
-        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-        var chartType = ArgumentHelper.GetString(arguments, "chartType", "column");
-        var data = ArgumentHelper.GetArray(arguments, "data");
-        var chartTitle = ArgumentHelper.GetStringNullable(arguments, "chartTitle");
-        var chartWidth = ArgumentHelper.GetDouble(arguments, "chartWidth", "chartWidth", false, 432.0);
-        var chartHeight = ArgumentHelper.GetDouble(arguments, "chartHeight", "chartHeight", false, 252.0);
-        var paragraphIndex = ArgumentHelper.GetIntNullable(arguments, "paragraphIndex");
-        var alignment = ArgumentHelper.GetString(arguments, "alignment", "left");
-
-        if (data.Count == 0)
-            throw new ArgumentException("Chart data cannot be empty");
-
-        var tableData = new List<List<string>>();
-        foreach (var row in data)
-            if (row is JsonArray rowArray)
-            {
-                var rowData = new List<string>();
-                foreach (var cell in rowArray)
-                    rowData.Add(cell?.ToString() ?? "");
-                tableData.Add(rowData);
-            }
-
-        if (tableData.Count == 0)
-            throw new ArgumentException("Cannot parse chart data");
-
-        var tempExcelPath = Path.Combine(Path.GetTempPath(), $"chart_{Guid.NewGuid()}.xlsx");
-        try
+        return Task.Run(async () =>
         {
-            var workbook = new Workbook();
-            var worksheet = workbook.Worksheets[0];
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
+            var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+            var chartType = ArgumentHelper.GetString(arguments, "chartType", "column");
+            var data = ArgumentHelper.GetArray(arguments, "data");
+            var chartTitle = ArgumentHelper.GetStringNullable(arguments, "chartTitle");
+            var chartWidth = ArgumentHelper.GetDouble(arguments, "chartWidth", "chartWidth", false, 432.0);
+            var chartHeight = ArgumentHelper.GetDouble(arguments, "chartHeight", "chartHeight", false, 252.0);
+            var paragraphIndex = ArgumentHelper.GetIntNullable(arguments, "paragraphIndex");
+            var alignment = ArgumentHelper.GetString(arguments, "alignment", "left");
 
-            for (var i = 0; i < tableData.Count; i++)
-            for (var j = 0; j < tableData[i].Count; j++)
-            {
-                var cellValue = tableData[i][j];
-                if (double.TryParse(cellValue, out var numValue) && i > 0)
-                    worksheet.Cells[i, j].PutValue(numValue);
-                else
-                    worksheet.Cells[i, j].PutValue(cellValue);
-            }
+            if (data.Count == 0)
+                throw new ArgumentException("Chart data cannot be empty");
 
-            var maxCol = tableData.Max(r => r.Count);
-            var dataRange = $"A1:{Convert.ToChar(64 + maxCol)}{tableData.Count}";
-
-            var chartTypeEnum = chartType.ToLower() switch
-            {
-                "bar" => ChartType.Bar,
-                "line" => ChartType.Line,
-                "pie" => ChartType.Pie,
-                "area" => ChartType.Area,
-                "scatter" => ChartType.Scatter,
-                "doughnut" => ChartType.Doughnut,
-                _ => ChartType.Column
-            };
-
-            var chartIndex = worksheet.Charts.Add(chartTypeEnum, 0, tableData.Count + 2, 20, 10);
-            var chart = worksheet.Charts[chartIndex];
-            chart.SetChartDataRange(dataRange, true);
-
-            if (!string.IsNullOrEmpty(chartTitle))
-                chart.Title.Text = chartTitle;
-
-            workbook.Save(tempExcelPath);
-
-            var tempImagePath = Path.Combine(Path.GetTempPath(), $"chart_{Guid.NewGuid()}.png");
-            chart.ToImage(tempImagePath, ImageType.Png);
-
-            var doc = new Document(path);
-            var builder = new DocumentBuilder(doc);
-
-            if (paragraphIndex.HasValue)
-            {
-                var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
-                if (paragraphIndex.Value == -1)
+            var tableData = new List<List<string>>();
+            foreach (var row in data)
+                if (row is JsonArray rowArray)
                 {
-                    if (paragraphs.Count > 0)
-                        if (paragraphs[0] is Paragraph firstPara)
-                            builder.MoveTo(firstPara);
+                    var rowData = new List<string>();
+                    foreach (var cell in rowArray)
+                        rowData.Add(cell?.ToString() ?? "");
+                    tableData.Add(rowData);
                 }
-                else if (paragraphIndex.Value >= 0 && paragraphIndex.Value < paragraphs.Count)
+
+            if (tableData.Count == 0)
+                throw new ArgumentException("Cannot parse chart data");
+
+            var tempExcelPath = Path.Combine(Path.GetTempPath(), $"chart_{Guid.NewGuid()}.xlsx");
+            try
+            {
+                var workbook = new Workbook();
+                var worksheet = workbook.Worksheets[0];
+
+                for (var i = 0; i < tableData.Count; i++)
+                for (var j = 0; j < tableData[i].Count; j++)
                 {
-                    if (paragraphs[paragraphIndex.Value] is Paragraph targetPara)
-                        builder.MoveTo(targetPara);
+                    var cellValue = tableData[i][j];
+                    if (double.TryParse(cellValue, out var numValue) && i > 0)
+                        worksheet.Cells[i, j].PutValue(numValue);
                     else
-                        throw new ArgumentException($"Cannot find paragraph at index {paragraphIndex.Value}");
+                        worksheet.Cells[i, j].PutValue(cellValue);
+                }
+
+                var maxCol = tableData.Max(r => r.Count);
+                var dataRange = $"A1:{Convert.ToChar(64 + maxCol)}{tableData.Count}";
+
+                var chartTypeEnum = chartType.ToLower() switch
+                {
+                    "bar" => ChartType.Bar,
+                    "line" => ChartType.Line,
+                    "pie" => ChartType.Pie,
+                    "area" => ChartType.Area,
+                    "scatter" => ChartType.Scatter,
+                    "doughnut" => ChartType.Doughnut,
+                    _ => ChartType.Column
+                };
+
+                var chartIndex = worksheet.Charts.Add(chartTypeEnum, 0, tableData.Count + 2, 20, 10);
+                var chart = worksheet.Charts[chartIndex];
+                chart.SetChartDataRange(dataRange, true);
+
+                if (!string.IsNullOrEmpty(chartTitle))
+                    chart.Title.Text = chartTitle;
+
+                workbook.Save(tempExcelPath);
+
+                var tempImagePath = Path.Combine(Path.GetTempPath(), $"chart_{Guid.NewGuid()}.png");
+                chart.ToImage(tempImagePath, ImageType.Png);
+
+                var doc = new Document(path);
+                var builder = new DocumentBuilder(doc);
+
+                if (paragraphIndex.HasValue)
+                {
+                    var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
+                    if (paragraphIndex.Value == -1)
+                    {
+                        if (paragraphs.Count > 0)
+                            if (paragraphs[0] is Paragraph firstPara)
+                                builder.MoveTo(firstPara);
+                    }
+                    else if (paragraphIndex.Value >= 0 && paragraphIndex.Value < paragraphs.Count)
+                    {
+                        if (paragraphs[paragraphIndex.Value] is Paragraph targetPara)
+                            builder.MoveTo(targetPara);
+                        else
+                            throw new ArgumentException($"Cannot find paragraph at index {paragraphIndex.Value}");
+                    }
+                    else
+                    {
+                        throw new ArgumentException(
+                            $"Paragraph index {paragraphIndex.Value} out of range (total paragraphs: {paragraphs.Count})");
+                    }
                 }
                 else
                 {
-                    throw new ArgumentException(
-                        $"Paragraph index {paragraphIndex.Value} out of range (total paragraphs: {paragraphs.Count})");
+                    builder.MoveToDocumentEnd();
                 }
+
+                builder.ParagraphFormat.Alignment = alignment.ToLower() switch
+                {
+                    "center" => ParagraphAlignment.Center,
+                    "right" => ParagraphAlignment.Right,
+                    _ => ParagraphAlignment.Left
+                };
+
+                var shape = builder.InsertImage(tempImagePath);
+                shape.Width = chartWidth;
+                shape.Height = chartHeight;
+                shape.WrapType = WrapType.Inline;
+
+                if (File.Exists(tempImagePath))
+                    try
+                    {
+                        File.Delete(tempImagePath);
+                    }
+                    catch (Exception ex)
+                    {
+                        await Console.Error.WriteLineAsync($"[WARN] Error deleting temp image file: {ex.Message}");
+                    }
+
+                doc.Save(outputPath);
+
+                return
+                    $"Successfully added chart. Type: {chartType}, Data rows: {tableData.Count}. Output: {outputPath}";
             }
-            else
+            catch (Exception ex)
             {
-                builder.MoveToDocumentEnd();
+                throw new InvalidOperationException($"Error creating chart: {ex.Message}", ex);
             }
-
-            builder.ParagraphFormat.Alignment = alignment.ToLower() switch
+            finally
             {
-                "center" => ParagraphAlignment.Center,
-                "right" => ParagraphAlignment.Right,
-                _ => ParagraphAlignment.Left
-            };
-
-            var shape = builder.InsertImage(tempImagePath);
-            shape.Width = chartWidth;
-            shape.Height = chartHeight;
-            shape.WrapType = WrapType.Inline;
-
-            if (File.Exists(tempImagePath))
-                try
-                {
-                    File.Delete(tempImagePath);
-                }
-                catch (Exception ex)
-                {
-                    await Console.Error.WriteLineAsync($"[WARN] Error deleting temp image file: {ex.Message}");
-                }
-
-            doc.Save(outputPath);
-
-            return await Task.FromResult(
-                $"Successfully added chart. Type: {chartType}, Data rows: {tableData.Count}. Output: {outputPath}");
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Error creating chart: {ex.Message}", ex);
-        }
-        finally
-        {
-            if (File.Exists(tempExcelPath))
-                try
-                {
-                    File.Delete(tempExcelPath);
-                }
-                catch (Exception ex)
-                {
-                    await Console.Error.WriteLineAsync($"[WARN] Error deleting temp Excel file: {ex.Message}");
-                }
-        }
+                if (File.Exists(tempExcelPath))
+                    try
+                    {
+                        File.Delete(tempExcelPath);
+                    }
+                    catch (Exception ex)
+                    {
+                        await Console.Error.WriteLineAsync($"[WARN] Error deleting temp Excel file: {ex.Message}");
+                    }
+            }
+        });
     }
 
     /// <summary>
@@ -874,5 +894,110 @@ Usage examples:
         }
 
         return textboxes;
+    }
+
+    /// <summary>
+    ///     Adds a generic shape to the document
+    /// </summary>
+    private Task<string> AddShape(JsonObject? arguments)
+    {
+        return Task.Run(() =>
+        {
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
+            var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+
+            var shapeTypeStr = ArgumentHelper.GetString(arguments, "shapeType");
+            var width = ArgumentHelper.GetDouble(arguments, "width");
+            var height = ArgumentHelper.GetDouble(arguments, "height");
+            var x = ArgumentHelper.GetDoubleNullable(arguments, "x") ?? 100;
+            var y = ArgumentHelper.GetDoubleNullable(arguments, "y") ?? 100;
+
+            var shapeType = shapeTypeStr.ToLower() switch
+            {
+                "rectangle" => ShapeType.Rectangle,
+                "ellipse" => ShapeType.Ellipse,
+                "roundrectangle" => ShapeType.RoundRectangle,
+                "line" => ShapeType.Line,
+                _ => throw new ArgumentException($"Unknown shape type: {shapeTypeStr}")
+            };
+
+            var doc = new Document(path);
+            var builder = new DocumentBuilder(doc);
+            builder.InsertShape(shapeType, width, height);
+            var shape = (Shape)doc.GetChildNodes(NodeType.Shape, true).Last();
+            shape.Left = x;
+            shape.Top = y;
+
+            doc.Save(outputPath);
+            return $"Successfully added {shapeTypeStr} shape. Output: {outputPath}";
+        });
+    }
+
+    /// <summary>
+    ///     Gets all shapes from the document
+    /// </summary>
+    private Task<string> GetShapes(JsonObject? arguments)
+    {
+        return Task.Run(() =>
+        {
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
+
+            var doc = new Document(path);
+            var shapes = doc.GetChildNodes(NodeType.Shape, true).Cast<Shape>().ToList();
+
+            var result = new StringBuilder();
+            result.AppendLine("=== Document Shapes ===\n");
+            result.AppendLine($"Total Shapes: {shapes.Count}\n");
+
+            if (shapes.Count == 0)
+            {
+                result.AppendLine("No shapes found");
+                return result.ToString();
+            }
+
+            for (var i = 0; i < shapes.Count; i++)
+            {
+                var shape = shapes[i];
+                result.AppendLine($"Shape {i}:");
+                result.AppendLine($"  Type: {shape.ShapeType}");
+                result.AppendLine($"  Name: {shape.Name ?? "(No name)"}");
+                result.AppendLine($"  Size: {shape.Width} x {shape.Height} pt");
+                result.AppendLine($"  Position: X={shape.Left}, Y={shape.Top}");
+                result.AppendLine();
+            }
+
+            return result.ToString();
+        });
+    }
+
+    /// <summary>
+    ///     Deletes a shape from the document
+    /// </summary>
+    private Task<string> DeleteShape(JsonObject? arguments)
+    {
+        return Task.Run(() =>
+        {
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
+            var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+
+            var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
+
+            var doc = new Document(path);
+            var shapes = doc.GetChildNodes(NodeType.Shape, true).Cast<Shape>().ToList();
+
+            if (shapeIndex < 0 || shapeIndex >= shapes.Count)
+                throw new ArgumentException(
+                    $"Shape index {shapeIndex} is out of range. Document has {shapes.Count} shapes.");
+
+            shapes[shapeIndex].Remove();
+            doc.Save(outputPath);
+
+            return $"Successfully deleted shape at index {shapeIndex}. Output: {outputPath}";
+        });
     }
 }

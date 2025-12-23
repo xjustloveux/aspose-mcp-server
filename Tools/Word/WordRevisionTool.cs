@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using AsposeMcpServer.Core;
@@ -96,30 +96,33 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments containing path</param>
     /// <returns>Formatted string with all revisions</returns>
-    private async Task<string> GetRevisions(JsonObject? arguments)
+    private Task<string> GetRevisions(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-
-        var doc = new Document(path);
-        var sb = new StringBuilder();
-
-        sb.AppendLine("=== Revisions ===");
-        sb.AppendLine();
-
-        var revisions = doc.Revisions.ToList();
-        for (var i = 0; i < revisions.Count; i++)
+        return Task.Run(() =>
         {
-            var revision = revisions[i];
-            sb.AppendLine($"[{i + 1}] Type: {revision.RevisionType}");
-            sb.AppendLine($"    Author: {revision.Author}");
-            sb.AppendLine($"    Date: {revision.DateTime}");
-            sb.AppendLine($"    Text: {revision.ParentNode?.ToString(SaveFormat.Text)?.Trim() ?? "(none)"}");
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+
+            var doc = new Document(path);
+            var sb = new StringBuilder();
+
+            sb.AppendLine("=== Revisions ===");
             sb.AppendLine();
-        }
 
-        sb.AppendLine($"Total Revisions: {revisions.Count}");
+            var revisions = doc.Revisions.ToList();
+            for (var i = 0; i < revisions.Count; i++)
+            {
+                var revision = revisions[i];
+                sb.AppendLine($"[{i + 1}] Type: {revision.RevisionType}");
+                sb.AppendLine($"    Author: {revision.Author}");
+                sb.AppendLine($"    Date: {revision.DateTime}");
+                sb.AppendLine($"    Text: {revision.ParentNode?.ToString(SaveFormat.Text)?.Trim() ?? "(none)"}");
+                sb.AppendLine();
+            }
 
-        return await Task.FromResult(sb.ToString());
+            sb.AppendLine($"Total Revisions: {revisions.Count}");
+
+            return sb.ToString();
+        });
     }
 
     /// <summary>
@@ -127,19 +130,22 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, optional outputPath</param>
     /// <returns>Success message</returns>
-    private async Task<string> AcceptAllRevisions(JsonObject? arguments)
+    private Task<string> AcceptAllRevisions(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        return Task.Run(() =>
+        {
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
 
-        SecurityHelper.ValidateFilePath(path);
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
-        var doc = new Document(path);
-        doc.AcceptAllRevisions();
-        doc.Save(outputPath);
+            var doc = new Document(path);
+            doc.AcceptAllRevisions();
+            doc.Save(outputPath);
 
-        return await Task.FromResult($"All revisions accepted: {outputPath}");
+            return $"All revisions accepted: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -147,19 +153,22 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, optional outputPath</param>
     /// <returns>Success message</returns>
-    private async Task<string> RejectAllRevisions(JsonObject? arguments)
+    private Task<string> RejectAllRevisions(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        return Task.Run(() =>
+        {
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
 
-        SecurityHelper.ValidateFilePath(path);
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
-        var doc = new Document(path);
-        foreach (var revision in doc.Revisions) revision.Reject();
-        doc.Save(outputPath);
+            var doc = new Document(path);
+            foreach (var revision in doc.Revisions) revision.Reject();
+            doc.Save(outputPath);
 
-        return await Task.FromResult($"All revisions rejected: {outputPath}");
+            return $"All revisions rejected: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -167,44 +176,46 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, revisionIndex, action (accept/reject), optional outputPath</param>
     /// <returns>Success message</returns>
-    private async Task<string> ManageRevisions(JsonObject? arguments)
+    private Task<string> ManageRevisions(JsonObject? arguments)
     {
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var action = ArgumentHelper.GetString(arguments, "action", "accept").ToLowerInvariant();
-
-        SecurityHelper.ValidateFilePath(path);
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
-
-        var doc = new Document(path);
-        var revisionsCount = doc.Revisions.Count;
-
-        if (revisionsCount == 0)
+        return Task.Run(() =>
         {
-            if (!string.Equals(path, outputPath, StringComparison.OrdinalIgnoreCase))
+            var path = ArgumentHelper.GetAndValidatePath(arguments);
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            var action = ArgumentHelper.GetString(arguments, "action", "accept").ToLowerInvariant();
+
+            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+
+            var doc = new Document(path);
+            var revisionsCount = doc.Revisions.Count;
+
+            if (revisionsCount == 0)
             {
-                doc.Save(outputPath);
-                return await Task.FromResult($"Document has no revisions, saved to: {outputPath}");
+                if (!string.Equals(path, outputPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    doc.Save(outputPath);
+                    return $"Document has no revisions, saved to: {outputPath}";
+                }
+
+                return "Document has no revisions";
             }
 
-            return await Task.FromResult("Document has no revisions");
-        }
+            switch (action)
+            {
+                case "accept":
+                    doc.AcceptAllRevisions();
+                    break;
+                case "reject":
+                    doc.Revisions.RejectAll();
+                    break;
+                default:
+                    throw new ArgumentException("action must be 'accept' or 'reject'");
+            }
 
-        switch (action)
-        {
-            case "accept":
-                doc.AcceptAllRevisions();
-                break;
-            case "reject":
-                doc.Revisions.RejectAll();
-                break;
-            default:
-                throw new ArgumentException("action must be 'accept' or 'reject'");
-        }
-
-        doc.Save(outputPath);
-        return await Task.FromResult(
-            $"Processed revisions\nOriginal revisions: {revisionsCount}\nAction: {action}\nOutput: {outputPath}");
+            doc.Save(outputPath);
+            return $"Processed revisions\nOriginal revisions: {revisionsCount}\nAction: {action}\nOutput: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -212,23 +223,26 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments containing path, comparePath, optional outputPath</param>
     /// <returns>Success message with comparison result</returns>
-    private async Task<string> CompareDocuments(JsonObject? arguments)
+    private Task<string> CompareDocuments(JsonObject? arguments)
     {
-        var originalPath = ArgumentHelper.GetString(arguments, "originalPath");
-        var revisedPath = ArgumentHelper.GetString(arguments, "revisedPath");
-        var outputPath = ArgumentHelper.GetString(arguments, "outputPath");
-        var authorName = ArgumentHelper.GetString(arguments, "authorName", "Comparison");
+        return Task.Run(() =>
+        {
+            var originalPath = ArgumentHelper.GetString(arguments, "originalPath");
+            var revisedPath = ArgumentHelper.GetString(arguments, "revisedPath");
+            var outputPath = ArgumentHelper.GetString(arguments, "outputPath");
+            var authorName = ArgumentHelper.GetString(arguments, "authorName", "Comparison");
 
-        SecurityHelper.ValidateFilePath(originalPath, "originalPath");
-        SecurityHelper.ValidateFilePath(revisedPath, "revisedPath");
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath");
+            SecurityHelper.ValidateFilePath(originalPath, "originalPath", true);
+            SecurityHelper.ValidateFilePath(revisedPath, "revisedPath", true);
+            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
-        var originalDoc = new Document(originalPath);
-        var revisedDoc = new Document(revisedPath);
+            var originalDoc = new Document(originalPath);
+            var revisedDoc = new Document(revisedPath);
 
-        originalDoc.Compare(revisedDoc, authorName, DateTime.Now);
-        originalDoc.Save(outputPath);
+            originalDoc.Compare(revisedDoc, authorName, DateTime.Now);
+            originalDoc.Save(outputPath);
 
-        return await Task.FromResult($"Comparison document created: {outputPath}");
+            return $"Comparison document created: {outputPath}";
+        });
     }
 }

@@ -74,82 +74,85 @@ Usage examples:
     /// <param name="_">Unused parameter</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Formatted string with statistics</returns>
-    private async Task<string> GetStatisticsAsync(JsonObject? _, string path)
+    private Task<string> GetStatisticsAsync(JsonObject? _, string path)
     {
-        using var presentation = new Presentation(path);
-        var sb = new StringBuilder();
-
-        sb.AppendLine("Presentation Statistics:");
-        sb.AppendLine($"  Total Slides: {presentation.Slides.Count}");
-        sb.AppendLine($"  Total Layouts: {presentation.LayoutSlides.Count}");
-        sb.AppendLine($"  Total Masters: {presentation.Masters.Count}");
-        sb.AppendLine($"  Slide Size: {presentation.SlideSize.Size.Width} x {presentation.SlideSize.Size.Height}");
-
-        var totalShapes = 0;
-        var totalText = 0;
-        var totalImages = 0;
-        var totalTables = 0;
-        var totalCharts = 0;
-        var totalSmartArt = 0;
-        var totalAudio = 0;
-        var totalVideo = 0;
-        var totalAnimations = 0;
-        var totalHyperlinks = 0;
-
-        foreach (var slide in presentation.Slides)
+        return Task.Run(() =>
         {
-            totalShapes += slide.Shapes.Count;
-            totalAnimations += slide.Timeline.MainSequence.Count;
+            using var presentation = new Presentation(path);
+            var sb = new StringBuilder();
 
-            foreach (var shape in slide.Shapes)
+            sb.AppendLine("Presentation Statistics:");
+            sb.AppendLine($"  Total Slides: {presentation.Slides.Count}");
+            sb.AppendLine($"  Total Layouts: {presentation.LayoutSlides.Count}");
+            sb.AppendLine($"  Total Masters: {presentation.Masters.Count}");
+            sb.AppendLine($"  Slide Size: {presentation.SlideSize.Size.Width} x {presentation.SlideSize.Size.Height}");
+
+            var totalShapes = 0;
+            var totalText = 0;
+            var totalImages = 0;
+            var totalTables = 0;
+            var totalCharts = 0;
+            var totalSmartArt = 0;
+            var totalAudio = 0;
+            var totalVideo = 0;
+            var totalAnimations = 0;
+            var totalHyperlinks = 0;
+
+            foreach (var slide in presentation.Slides)
             {
-                if (shape is IAutoShape { TextFrame: not null } autoShape)
-                {
-                    totalText++;
-                    if (!string.IsNullOrWhiteSpace(autoShape.TextFrame.Text))
-                        totalText += autoShape.TextFrame.Text.Length;
-                }
-                else if (shape is PictureFrame)
-                {
-                    totalImages++;
-                }
-                else if (shape is ITable)
-                {
-                    totalTables++;
-                }
-                else if (shape is IChart)
-                {
-                    totalCharts++;
-                }
-                else if (shape is ISmartArt)
-                {
-                    totalSmartArt++;
-                }
-                else if (shape is IAudioFrame)
-                {
-                    totalAudio++;
-                }
-                else if (shape is IVideoFrame)
-                {
-                    totalVideo++;
-                }
+                totalShapes += slide.Shapes.Count;
+                totalAnimations += slide.Timeline.MainSequence.Count;
 
-                if (shape.HyperlinkClick != null) totalHyperlinks++;
+                foreach (var shape in slide.Shapes)
+                {
+                    if (shape is IAutoShape { TextFrame: not null } autoShape)
+                    {
+                        totalText++;
+                        if (!string.IsNullOrWhiteSpace(autoShape.TextFrame.Text))
+                            totalText += autoShape.TextFrame.Text.Length;
+                    }
+                    else if (shape is PictureFrame)
+                    {
+                        totalImages++;
+                    }
+                    else if (shape is ITable)
+                    {
+                        totalTables++;
+                    }
+                    else if (shape is IChart)
+                    {
+                        totalCharts++;
+                    }
+                    else if (shape is ISmartArt)
+                    {
+                        totalSmartArt++;
+                    }
+                    else if (shape is IAudioFrame)
+                    {
+                        totalAudio++;
+                    }
+                    else if (shape is IVideoFrame)
+                    {
+                        totalVideo++;
+                    }
+
+                    if (shape.HyperlinkClick != null) totalHyperlinks++;
+                }
             }
-        }
 
-        sb.AppendLine($"  Total Shapes: {totalShapes}");
-        sb.AppendLine($"  Total Text Characters: {totalText}");
-        sb.AppendLine($"  Total Images: {totalImages}");
-        sb.AppendLine($"  Total Tables: {totalTables}");
-        sb.AppendLine($"  Total Charts: {totalCharts}");
-        sb.AppendLine($"  Total SmartArt: {totalSmartArt}");
-        sb.AppendLine($"  Total Audio: {totalAudio}");
-        sb.AppendLine($"  Total Video: {totalVideo}");
-        sb.AppendLine($"  Total Animations: {totalAnimations}");
-        sb.AppendLine($"  Total Hyperlinks: {totalHyperlinks}");
+            sb.AppendLine($"  Total Shapes: {totalShapes}");
+            sb.AppendLine($"  Total Text Characters: {totalText}");
+            sb.AppendLine($"  Total Images: {totalImages}");
+            sb.AppendLine($"  Total Tables: {totalTables}");
+            sb.AppendLine($"  Total Charts: {totalCharts}");
+            sb.AppendLine($"  Total SmartArt: {totalSmartArt}");
+            sb.AppendLine($"  Total Audio: {totalAudio}");
+            sb.AppendLine($"  Total Video: {totalVideo}");
+            sb.AppendLine($"  Total Animations: {totalAnimations}");
+            sb.AppendLine($"  Total Hyperlinks: {totalHyperlinks}");
 
-        return await Task.FromResult(sb.ToString());
+            return sb.ToString();
+        });
     }
 
     /// <summary>
@@ -158,25 +161,28 @@ Usage examples:
     /// <param name="_">Unused parameter</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Formatted string with content</returns>
-    private async Task<string> GetContentAsync(JsonObject? _, string path)
+    private Task<string> GetContentAsync(JsonObject? _, string path)
     {
-        using var presentation = new Presentation(path);
-        var sb = new StringBuilder();
-
-        sb.AppendLine($"Total slides: {presentation.Slides.Count}");
-
-        var slideIndex = 0;
-        foreach (var slide in presentation.Slides)
+        return Task.Run(() =>
         {
-            slideIndex++;
-            sb.AppendLine($"\n--- Slide {slideIndex} ---");
+            using var presentation = new Presentation(path);
+            var sb = new StringBuilder();
 
-            foreach (var shape in slide.Shapes)
-                if (shape is IAutoShape { TextFrame.Text: var text })
-                    sb.AppendLine(text);
-        }
+            sb.AppendLine($"Total slides: {presentation.Slides.Count}");
 
-        return await Task.FromResult(sb.ToString());
+            var slideIndex = 0;
+            foreach (var slide in presentation.Slides)
+            {
+                slideIndex++;
+                sb.AppendLine($"\n--- Slide {slideIndex} ---");
+
+                foreach (var shape in slide.Shapes)
+                    if (shape is IAutoShape { TextFrame.Text: var text })
+                        sb.AppendLine(text);
+            }
+
+            return sb.ToString();
+        });
     }
 
     /// <summary>
@@ -185,54 +191,57 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing slideIndex</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Formatted string with slide details</returns>
-    private async Task<string> GetSlideDetailsAsync(JsonObject? arguments, string path)
+    private Task<string> GetSlideDetailsAsync(JsonObject? arguments, string path)
     {
-        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
-
-        using var presentation = new Presentation(path);
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-        var sb = new StringBuilder();
-
-        sb.AppendLine($"=== Slide {slideIndex} Details ===");
-        sb.AppendLine($"Hidden: {slide.Hidden}");
-        sb.AppendLine($"Layout: {slide.LayoutSlide?.Name ?? "None"}");
-        sb.AppendLine($"Shapes Count: {slide.Shapes.Count}");
-
-        // Transition
-        var transition = slide.SlideShowTransition;
-        if (transition != null)
+        return Task.Run(() =>
         {
-            sb.AppendLine("\nTransition:");
-            sb.AppendLine($"  Type: {transition.Type}");
-            sb.AppendLine($"  Speed: {transition.Speed}");
-            sb.AppendLine($"  AdvanceOnClick: {transition.AdvanceOnClick}");
-            sb.AppendLine($"  AdvanceAfterTime: {transition.AdvanceAfterTime}ms");
-        }
+            var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
 
-        // Animations
-        var animations = slide.Timeline.MainSequence;
-        sb.AppendLine($"\nAnimations: {animations.Count}");
-        for (var i = 0; i < animations.Count; i++)
-        {
-            var anim = animations[i];
-            sb.AppendLine($"  [{i}] Type: {anim.Type}, Shape: {anim.TargetShape?.GetType().Name}");
-        }
+            using var presentation = new Presentation(path);
+            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+            var sb = new StringBuilder();
 
-        // Background
-        var background = slide.Background;
-        if (background != null)
-        {
-            sb.AppendLine("\nBackground:");
-            sb.AppendLine($"  FillType: {background.FillFormat.FillType}");
-        }
+            sb.AppendLine($"=== Slide {slideIndex} Details ===");
+            sb.AppendLine($"Hidden: {slide.Hidden}");
+            sb.AppendLine($"Layout: {slide.LayoutSlide?.Name ?? "None"}");
+            sb.AppendLine($"Shapes Count: {slide.Shapes.Count}");
 
-        var notesSlide = slide.NotesSlideManager.NotesSlide;
-        if (notesSlide != null)
-        {
-            var notesText = notesSlide.NotesTextFrame?.Text;
-            sb.AppendLine($"\nNotes: {(string.IsNullOrWhiteSpace(notesText) ? "None" : notesText)}");
-        }
+            // Transition
+            var transition = slide.SlideShowTransition;
+            if (transition != null)
+            {
+                sb.AppendLine("\nTransition:");
+                sb.AppendLine($"  Type: {transition.Type}");
+                sb.AppendLine($"  Speed: {transition.Speed}");
+                sb.AppendLine($"  AdvanceOnClick: {transition.AdvanceOnClick}");
+                sb.AppendLine($"  AdvanceAfterTime: {transition.AdvanceAfterTime}ms");
+            }
 
-        return await Task.FromResult(sb.ToString());
+            // Animations
+            var animations = slide.Timeline.MainSequence;
+            sb.AppendLine($"\nAnimations: {animations.Count}");
+            for (var i = 0; i < animations.Count; i++)
+            {
+                var anim = animations[i];
+                sb.AppendLine($"  [{i}] Type: {anim.Type}, Shape: {anim.TargetShape?.GetType().Name}");
+            }
+
+            // Background
+            var background = slide.Background;
+            if (background != null)
+            {
+                sb.AppendLine("\nBackground:");
+                sb.AppendLine($"  FillType: {background.FillFormat.FillType}");
+            }
+
+            var notesSlide = slide.NotesSlideManager.NotesSlide;
+            if (notesSlide != null)
+            {
+                var notesText = notesSlide.NotesTextFrame?.Text;
+                sb.AppendLine($"\nNotes: {(string.IsNullOrWhiteSpace(notesText) ? "None" : notesText)}");
+            }
+
+            return sb.ToString();
+        });
     }
 }

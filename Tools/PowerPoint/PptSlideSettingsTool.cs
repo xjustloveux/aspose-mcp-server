@@ -90,38 +90,41 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing width, height, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetSlideSizeAsync(JsonObject? arguments, string path)
+    private Task<string> SetSlideSizeAsync(JsonObject? arguments, string path)
     {
-        var preset = ArgumentHelper.GetString(arguments, "preset", "OnScreen16x9");
-        var width = ArgumentHelper.GetDoubleNullable(arguments, "width");
-        var height = ArgumentHelper.GetDoubleNullable(arguments, "height");
-
-        using var presentation = new Presentation(path);
-        var slideSize = presentation.SlideSize;
-        var type = preset.ToLower() switch
+        return Task.Run(() =>
         {
-            "onscreen16x10" => SlideSizeType.OnScreen16x10,
-            "a4" => SlideSizeType.A4Paper,
-            "banner" => SlideSizeType.Banner,
-            "custom" => SlideSizeType.Custom,
-            _ => SlideSizeType.OnScreen
-        };
+            var preset = ArgumentHelper.GetString(arguments, "preset", "OnScreen16x9");
+            var width = ArgumentHelper.GetDoubleNullable(arguments, "width");
+            var height = ArgumentHelper.GetDoubleNullable(arguments, "height");
 
-        if (type == SlideSizeType.Custom)
-        {
-            if (!width.HasValue || !height.HasValue)
-                throw new ArgumentException("custom size requires width and height");
-            slideSize.SetSize((float)width.Value, (float)height.Value, SlideSizeScaleType.DoNotScale);
-        }
-        else
-        {
-            slideSize.SetSize(type, SlideSizeScaleType.DoNotScale);
-        }
+            using var presentation = new Presentation(path);
+            var slideSize = presentation.SlideSize;
+            var type = preset.ToLower() switch
+            {
+                "onscreen16x10" => SlideSizeType.OnScreen16x10,
+                "a4" => SlideSizeType.A4Paper,
+                "banner" => SlideSizeType.Banner,
+                "custom" => SlideSizeType.Custom,
+                _ => SlideSizeType.OnScreen
+            };
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        presentation.Save(outputPath, SaveFormat.Pptx);
-        return await Task.FromResult(
-            $"Slide size set: {slideSize.Type} {(slideSize.Type == SlideSizeType.Custom ? $"{slideSize.Size.Width}x{slideSize.Size.Height}" : string.Empty)}");
+            if (type == SlideSizeType.Custom)
+            {
+                if (!width.HasValue || !height.HasValue)
+                    throw new ArgumentException("custom size requires width and height");
+                slideSize.SetSize((float)width.Value, (float)height.Value, SlideSizeScaleType.DoNotScale);
+            }
+            else
+            {
+                slideSize.SetSize(type, SlideSizeScaleType.DoNotScale);
+            }
+
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
+            return
+                $"Slide size set: {slideSize.Type} {(slideSize.Type == SlideSizeType.Custom ? $"{slideSize.Size.Width}x{slideSize.Size.Height}" : string.Empty)}";
+        });
     }
 
     /// <summary>
@@ -130,19 +133,22 @@ Usage examples:
     /// <param name="arguments">JSON arguments containing orientation (portrait/landscape), optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetSlideOrientationAsync(JsonObject? arguments, string path)
+    private Task<string> SetSlideOrientationAsync(JsonObject? arguments, string path)
     {
-        var orientation = ArgumentHelper.GetString(arguments, "orientation");
+        return Task.Run(() =>
+        {
+            var orientation = ArgumentHelper.GetString(arguments, "orientation");
 
-        using var presentation = new Presentation(path);
+            using var presentation = new Presentation(path);
 
-        presentation.SlideSize.SetSize(
-            orientation.ToLower() == "portrait" ? SlideSizeType.A4Paper : SlideSizeType.OnScreen16x10,
-            SlideSizeScaleType.EnsureFit);
+            presentation.SlideSize.SetSize(
+                orientation.ToLower() == "portrait" ? SlideSizeType.A4Paper : SlideSizeType.OnScreen16x10,
+                SlideSizeScaleType.EnsureFit);
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        presentation.Save(outputPath, SaveFormat.Pptx);
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            presentation.Save(outputPath, SaveFormat.Pptx);
 
-        return await Task.FromResult($"Slide orientation set to {orientation}: {outputPath}");
+            return $"Slide orientation set to {orientation}: {outputPath}";
+        });
     }
 }

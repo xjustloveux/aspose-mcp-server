@@ -7,10 +7,8 @@ try
     Console.OutputEncoding = Encoding.UTF8;
     Console.InputEncoding = Encoding.UTF8;
 
-    // Load configuration from command line arguments
     var config = ServerConfig.LoadFromArgs(args);
 
-    // Validate configuration
     try
     {
         config.Validate();
@@ -27,7 +25,6 @@ try
     // Initialize Aspose License (with stdout suppression)
     LicenseManager.SetLicense(config);
 
-    // Create and run MCP server with configuration
     var server = new McpServer(config);
     await server.RunAsync();
 }

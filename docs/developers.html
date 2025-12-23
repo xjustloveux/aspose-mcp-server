@@ -9,14 +9,14 @@
     <meta name="description" content="Aspose MCP Server 開發者指南：倉庫結構、本地開發、多平台構建。">
     <meta name="keywords" content="Aspose, MCP, 開發者指南, 本地開發, 多平台構建, GitHub Actions">
     <link rel="canonical" href="https://xjustloveux.github.io/aspose-mcp-server/developers.html">
-    
+
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://xjustloveux.github.io/aspose-mcp-server/developers.html">
     <meta property="og:title" content="開發者指南 - Aspose MCP Server">
     <meta property="og:description" content="Aspose MCP Server 開發者指南：倉庫結構、本地開發、多平台構建。">
     <meta property="og:site_name" content="Aspose MCP Server">
-    
+
     <!-- Twitter -->
     <meta property="twitter:card" content="summary">
     <meta property="twitter:url" content="https://xjustloveux.github.io/aspose-mcp-server/developers.html">
@@ -391,142 +391,290 @@
     </style>
 </head>
 <body>
-    <nav>
-        <div class="nav-container">
-            <div class="nav-header">
-                <a href="index.html" class="nav-logo"><img src="favicon.svg" alt="Aspose MCP Server"> Aspose MCP Server</a>
-                <ul class="nav-menu" id="navMenu">
-                    <li><a href="index.html">首頁</a></li>
-                    <li><a href="features.html">功能特性</a></li>
-                    <li><a href="tools.html">工具列表</a></li>
-                    <li><a href="getting-started.html">快速開始</a></li>
-                    <li><a href="developers.html" class="active">開發者指南</a></li>
-                    <li><a href="faq.html">常見問答</a></li>
-                </ul>
-                <button class="menu-toggle" aria-label="Toggle menu">☰</button>
-            </div>
-        </div>
-    </nav>
-    
-    <div class="page-header">
-        <div class="container">
-            <h1>🛠️ 開發者指南</h1>
-            <p>了解項目結構和開發流程</p>
+<nav>
+    <div class="nav-container">
+        <div class="nav-header">
+            <a href="index.html" class="nav-logo"><img src="favicon.svg" alt="Aspose MCP Server"> Aspose MCP Server</a>
+            <ul class="nav-menu" id="navMenu">
+                <li>
+                    <a href="index.html">首頁</a>
+                </li>
+                <li>
+                    <a href="features.html">功能特性</a>
+                </li>
+                <li>
+                    <a href="tools.html">工具列表</a>
+                </li>
+                <li>
+                    <a href="getting-started.html">快速開始</a>
+                </li>
+                <li>
+                    <a href="developers.html" class="active">開發者指南</a>
+                </li>
+                <li>
+                    <a href="faq.html">常見問答</a>
+                </li>
+            </ul>
+            <button class="menu-toggle" aria-label="Toggle menu">☰</button>
         </div>
     </div>
-    
+</nav>
+
+<div class="page-header">
     <div class="container">
-        <div class="section">
-            <h2>📁 倉庫結構</h2>
-            <div class="structure-tree">aspose-mcp-server/
-├── Tools/            📁 工具原始碼
-│   ├── Word/         24 個工具
-│   ├── Excel/        25 個工具
-│   ├── PowerPoint/   24 個工具
-│   ├── PDF/          15 個工具
-│   └── Conversion/   2 個工具
-├── Core/             🔧 MCP 伺服器核心
-│   ├── SecurityHelper.cs      - 安全驗證工具
-│   ├── McpErrorHandler.cs     - 錯誤處理
-│   ├── ToolRegistry.cs        - 工具註冊
-│   └── ServerConfig.cs        - 伺服器配置
+        <h1>🛠️ 開發者指南</h1>
+        <p>了解項目結構和開發流程</p>
+    </div>
+</div>
+
+<div class="container">
+    <div class="section">
+        <h2>📁 倉庫結構</h2>
+        <div class="structure-tree">aspose-mcp-server/
+├── Tools/ 📁 工具原始碼
+│ ├── Word/ 24 個工具
+│ ├── Excel/ 25 個工具
+│ ├── PowerPoint/ 24 個工具
+│ ├── PDF/ 15 個工具
+│ └── Conversion/ 2 個工具
+├── Core/ 🔧 MCP 伺服器核心
+│ ├── SecurityHelper.cs - 安全驗證工具
+│ ├── McpErrorHandler.cs - 錯誤處理
+│ ├── ToolRegistry.cs - 工具註冊
+│ └── ServerConfig.cs - 伺服器配置
+├── Tests/ 🧪 單元測試
+│ ├── Word/ 24 個測試類
+│ ├── Excel/ 25 個測試類
+│ ├── PowerPoint/ 24 個測試類
+│ ├── Pdf/ 15 個測試類
+│ ├── Conversion/ 2 個測試類
+│ └── Helpers/ 測試基礎設施
 ├── .github/
-│   └── workflows/    🔄 GitHub Actions 工作流程
-└── bin/              ❌ 本地編譯輸出（不在版本控制）</div>
-        </div>
-        
-        <div class="section">
-            <h2>💻 本地開發</h2>
-            
-            <h3>1. 複製倉庫</h3>
-            <div class="code-wrapper">
-                <div class="code-block" data-code="git clone https://github.com/xjustloveux/aspose-mcp-server.git
+│ └── workflows/ 🔄 GitHub Actions 工作流程
+└── bin/ ❌ 本地編譯輸出（不在版本控制）</div>
+    </div>
+
+    <div class="section">
+        <h2>💻 本地開發</h2>
+
+        <h3>1. 複製倉庫</h3>
+        <div class="code-wrapper">
+            <div class="code-block" data-code="git clone https://github.com/xjustloveux/aspose-mcp-server.git
 cd aspose-mcp-server">git clone https://github.com/xjustloveux/aspose-mcp-server.git
 cd aspose-mcp-server</div>
-                <button class="copy-button" onclick="copyCode(this)" title="複製指令">
-                    <span>📋</span>
-                    <span>複製</span>
-                </button>
-            </div>
-            
-            <h3>2. 編譯 Release 版本</h3>
-            <div class="code-wrapper">
-                <div class="code-block" data-code="pwsh build.ps1 --configuration Release">pwsh build.ps1 --configuration Release</div>
-                <button class="copy-button" onclick="copyCode(this)" title="複製指令">
-                    <span>📋</span>
-                    <span>複製</span>
-                </button>
-            </div>
-            
-            <h3>3. 發布版本</h3>
-            <p>發布 Windows 版本：</p>
-            <div class="code-wrapper">
-                <div class="code-block" data-code="pwsh publish.ps1 -Windows">pwsh publish.ps1 -Windows</div>
-                <button class="copy-button" onclick="copyCode(this)" title="複製指令">
-                    <span>📋</span>
-                    <span>複製</span>
-                </button>
-            </div>
-            
-            <p>發布所有平台：</p>
-            <div class="code-wrapper">
-                <div class="code-block" data-code="pwsh publish.ps1 -All">pwsh publish.ps1 -All</div>
-                <button class="copy-button" onclick="copyCode(this)" title="複製指令">
-                    <span>📋</span>
-                    <span>複製</span>
-                </button>
-            </div>
+            <button class="copy-button" onclick="copyCode(this)" title="複製指令">
+                <span>📋</span>
+                <span>複製</span>
+            </button>
         </div>
-        
-        <div class="section">
-            <h2>🌍 多平台構建</h2>
-            <p>所有平台由 <strong>GitHub Actions</strong> 自動構建：</p>
-            <ul style="margin-top: 15px; padding-left: 25px;">
-                <li>推送到 main/master 分支時自動觸發</li>
-                <li>構建產物：從 Actions 頁面或 Releases 頁面下載</li>
-            </ul>
-            
-            <h3>支援的平台</h3>
-            <ul style="margin-top: 15px; padding-left: 25px;">
-                <li>✅ Windows (x64)</li>
-                <li>✅ Linux (x64)</li>
-                <li>✅ macOS Intel (x64)</li>
-                <li>✅ macOS ARM (arm64 - M1/M2/M3)</li>
-            </ul>
+
+        <h3>2. 編譯 Release 版本</h3>
+        <div class="code-wrapper">
+            <div class="code-block" data-code="pwsh build.ps1 --configuration Release">pwsh build.ps1 --configuration Release</div>
+            <button class="copy-button" onclick="copyCode(this)" title="複製指令">
+                <span>📋</span>
+                <span>複製</span>
+            </button>
         </div>
-        
-        <div class="section">
-            <h2>🔧 核心組件</h2>
-            
-            <h3>SecurityHelper.cs</h3>
-            <p>安全驗證工具，提供路徑驗證、輸入驗證等功能。</p>
-            
-            <h3>McpErrorHandler.cs</h3>
-            <p>錯誤處理機制，清理錯誤訊息，防止資訊洩露。</p>
-            
-            <h3>ToolRegistry.cs</h3>
-            <p>工具註冊系統，管理所有可用工具的註冊和查找。</p>
-            
-            <h3>ServerConfig.cs</h3>
-            <p>伺服器配置管理，處理命令行參數和環境變數。</p>
+
+        <h3>3. 發布版本</h3>
+        <p>發布 Windows 版本：</p>
+        <div class="code-wrapper">
+            <div class="code-block" data-code="pwsh publish.ps1 -Windows">pwsh publish.ps1 -Windows</div>
+            <button class="copy-button" onclick="copyCode(this)" title="複製指令">
+                <span>📋</span>
+                <span>複製</span>
+            </button>
+        </div>
+
+        <p>發布所有平台：</p>
+        <div class="code-wrapper">
+            <div class="code-block" data-code="pwsh publish.ps1 -All">pwsh publish.ps1 -All</div>
+            <button class="copy-button" onclick="copyCode(this)" title="複製指令">
+                <span>📋</span>
+                <span>複製</span>
+            </button>
         </div>
     </div>
-    
-    <footer>
-        <div class="container">
-            <p>基於 .NET 8.0 和 Aspose 構建</p>
-            <p style="margin-top: 10px;">
-                <a href="https://github.com/xjustloveux/aspose-mcp-server" style="color: #667eea; text-decoration: none;" target="_blank">GitHub</a> | 
-                <a href="https://www.aspose.com/" style="color: #667eea; text-decoration: none;" target="_blank">Aspose</a> | 
-                <a href="https://modelcontextprotocol.io/" style="color: #667eea; text-decoration: none;" target="_blank">MCP Protocol</a>
-            </p>
-            <p style="margin-top: 20px; color: #999; font-size: 0.9em;">
-                © 2025 JaJa. All rights reserved.
-            </p>
+
+    <div class="section">
+        <h2>🌍 多平台構建</h2>
+        <p><strong>GitHub Actions</strong> 會在推送到 main/master 分支時自動構建所有平台版本。</p>
+
+        <h3>支援的平台</h3>
+        <ul style="margin-top: 15px; padding-left: 25px;">
+            <li>✅ Windows (x64) - <code>win-x64</code></li>
+            <li>✅ Linux (x64) - <code>linux-x64</code></li>
+            <li>✅ macOS Intel (x64) - <code>osx-x64</code></li>
+            <li>✅ macOS ARM (arm64 - M1/M2/M3) - <code>osx-arm64</code></li>
+        </ul>
+
+        <h3>本地構建</h3>
+        <p>發布 Windows 版本：</p>
+        <div class="code-wrapper">
+            <div class="code-block" data-code="pwsh publish.ps1 -Windows">pwsh publish.ps1 -Windows</div>
+            <button class="copy-button" onclick="copyCode(this)" title="複製指令">
+                <span>📋</span>
+                <span>複製</span>
+            </button>
         </div>
-    </footer>
-    
-    <script>
+
+        <p>發布 Linux 版本：</p>
+        <div class="code-wrapper">
+            <div class="code-block" data-code="pwsh publish.ps1 -Linux">pwsh publish.ps1 -Linux</div>
+            <button class="copy-button" onclick="copyCode(this)" title="複製指令">
+                <span>📋</span>
+                <span>複製</span>
+            </button>
+        </div>
+
+        <p>發布 macOS 版本（Intel + ARM）：</p>
+        <div class="code-wrapper">
+            <div class="code-block" data-code="pwsh publish.ps1 -MacOS">pwsh publish.ps1 -MacOS</div>
+            <button class="copy-button" onclick="copyCode(this)" title="複製指令">
+                <span>📋</span>
+                <span>複製</span>
+            </button>
+        </div>
+
+        <p>發布所有平台：</p>
+        <div class="code-wrapper">
+            <div class="code-block" data-code="pwsh publish.ps1 -All">pwsh publish.ps1 -All</div>
+            <button class="copy-button" onclick="copyCode(this)" title="複製指令">
+                <span>📋</span>
+                <span>複製</span>
+            </button>
+        </div>
+
+        <p>清理後構建：</p>
+        <div class="code-wrapper">
+            <div class="code-block" data-code="pwsh publish.ps1 -All -Clean">pwsh publish.ps1 -All -Clean</div>
+            <button class="copy-button" onclick="copyCode(this)" title="複製指令">
+                <span>📋</span>
+                <span>複製</span>
+            </button>
+        </div>
+
+        <h3>構建產物位置</h3>
+        <ul style="margin-top: 15px; padding-left: 25px;">
+            <li>Windows: <code>publish/windows-x64/AsposeMcpServer.exe</code></li>
+            <li>Linux: <code>publish/linux-x64/AsposeMcpServer</code></li>
+            <li>macOS Intel: <code>publish/macos-x64/AsposeMcpServer</code></li>
+            <li>macOS ARM: <code>publish/macos-arm64/AsposeMcpServer</code></li>
+        </ul>
+
+        <p style="margin-top: 15px;"><strong>注意：</strong> 構建產物為自包含單一可執行檔案，無需安裝 .NET Runtime 即可運行。</p>
+    </div>
+
+    <div class="section">
+        <h2 id="運行測試">🧪 運行測試</h2>
+        <p>本專案包含完整的單元測試套件，使用 xUnit 測試框架。推薦使用 <code>test.ps1</code> 腳本運行測試，它提供了 UTF-8 編碼支援和便捷的參數選項。</p>
+
+        <h3>測試統計</h3>
+        <ul style="margin-top: 15px; padding-left: 25px;">
+            <li><strong>測試類</strong>: 90 個測試類</li>
+            <li><strong>測試用例</strong>: 約 450+ 個測試用例</li>
+            <li><strong>測試覆蓋率</strong>: 85.6% (77/90 工具)</li>
+            <li><strong>測試框架</strong>: xUnit 2.9.2</li>
+        </ul>
+
+        <h3>運行測試</h3>
+        <p>運行所有測試：</p>
+        <div class="code-wrapper">
+            <div class="code-block" data-code="pwsh test.ps1">pwsh test.ps1</div>
+            <button class="copy-button" onclick="copyCode(this)" title="複製指令">
+                <span>📋</span>
+                <span>複製</span>
+            </button>
+        </div>
+
+        <p>運行測試（詳細輸出）：</p>
+        <div class="code-wrapper">
+            <div class="code-block" data-code="pwsh test.ps1 -Verbose">pwsh test.ps1 -Verbose</div>
+            <button class="copy-button" onclick="copyCode(this)" title="複製指令">
+                <span>📋</span>
+                <span>複製</span>
+            </button>
+        </div>
+
+        <p>運行測試並收集覆蓋率：</p>
+        <div class="code-wrapper">
+            <div class="code-block" data-code="pwsh test.ps1 -Coverage">pwsh test.ps1 -Coverage</div>
+            <button class="copy-button" onclick="copyCode(this)" title="複製指令">
+                <span>📋</span>
+                <span>複製</span>
+            </button>
+        </div>
+
+        <p>運行特定類別的測試：</p>
+        <div class="code-wrapper">
+            <div class="code-block" data-code="pwsh test.ps1 -Filter &quot;FullyQualifiedName~Word&quot;">pwsh test.ps1 -Filter "FullyQualifiedName~Word"</div>
+            <button class="copy-button" onclick="copyCode(this)" title="複製指令">
+                <span>📋</span>
+                <span>複製</span>
+            </button>
+        </div>
+
+        <h3>test.ps1 參數說明</h3>
+        <ul style="margin-top: 15px; padding-left: 25px;">
+            <li><code>-Verbose</code> - 顯示詳細測試輸出</li>
+            <li><code>-NoBuild</code> - 跳過構建步驟（使用已構建的版本）</li>
+            <li><code>-Coverage</code> - 收集測試覆蓋率數據</li>
+            <li><code>-Filter &lt;filter&gt;</code> - 過濾特定測試（支援 dotnet test 的過濾語法）</li>
+            <li><code>-SkipLicense</code> - 跳過授權載入，強制使用評估模式</li>
+        </ul>
+
+        <h3>測試結構</h3>
+        <ul style="margin-top: 15px; padding-left: 25px;">
+            <li><code>Tests/Word/</code> - Word 工具測試（24 個測試類）</li>
+            <li><code>Tests/Excel/</code> - Excel 工具測試（25 個測試類）</li>
+            <li><code>Tests/PowerPoint/</code> - PowerPoint 工具測試（24 個測試類）</li>
+            <li><code>Tests/Pdf/</code> - PDF 工具測試（15 個測試類）</li>
+            <li><code>Tests/Conversion/</code> - 轉換工具測試（2 個測試類）</li>
+            <li><code>Tests/Helpers/</code> - 測試基礎設施（TestBase、WordTestBase、ExcelTestBase、PdfTestBase）</li>
+        </ul>
+
+        <h3>CI/CD 集成</h3>
+        <ul style="margin-top: 15px; padding-left: 25px;">
+            <li>測試已集成到 GitHub Actions 工作流中</li>
+            <li>每次推送或創建 Pull Request 時會自動運行測試</li>
+            <li>測試在評估模式下運行（無需授權檔案）</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>🔧 核心組件</h2>
+
+        <h3>SecurityHelper.cs</h3>
+        <p>安全驗證工具，提供路徑驗證、輸入驗證等功能。</p>
+
+        <h3>McpErrorHandler.cs</h3>
+        <p>錯誤處理機制，清理錯誤訊息，防止資訊洩露。</p>
+
+        <h3>ToolRegistry.cs</h3>
+        <p>工具註冊系統，管理所有可用工具的註冊和查找。</p>
+
+        <h3>ServerConfig.cs</h3>
+        <p>伺服器配置管理，處理命令行參數和環境變數。</p>
+    </div>
+</div>
+
+<footer>
+    <div class="container">
+        <p>基於 .NET 8.0 和 Aspose.Total 23.10.0 構建</p>
+        <p style="margin-top: 10px;">
+            <a href="https://github.com/xjustloveux/aspose-mcp-server" style="color: #667eea; text-decoration: none;" target="_blank">GitHub</a> |
+            <a href="https://www.aspose.com/" style="color: #667eea; text-decoration: none;" target="_blank">Aspose</a> |
+            <a href="https://modelcontextprotocol.io/" style="color: #667eea; text-decoration: none;" target="_blank">MCP Protocol</a> |
+            <a href="https://github.com/xjustloveux/aspose-mcp-server/releases" style="color: #667eea; text-decoration: none;" target="_blank">Releases</a>
+        </p>
+        <p style="margin-top: 20px; color: #999; font-size: 0.9em;">
+            © 2025 JaJa. All rights reserved. | MIT License
+        </p>
+    </div>
+</footer>
+
+<script>
         function copyCode(button) {
             const codeBlock = button.previousElementSibling;
             const text = codeBlock.getAttribute('data-code') || codeBlock.textContent.trim();
@@ -552,8 +700,8 @@ cd aspose-mcp-server</div>
             });
         }
     </script>
-    
-    <script>
+
+<script>
         // 移动端菜单切换
         document.addEventListener('DOMContentLoaded', function() {
             const menuToggle = document.querySelector('.menu-toggle');
@@ -585,4 +733,3 @@ cd aspose-mcp-server</div>
     </script>
 </body>
 </html>
-

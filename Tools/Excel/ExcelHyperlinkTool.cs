@@ -118,23 +118,26 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message with hyperlink details</returns>
-    private async Task<string> AddHyperlinkAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> AddHyperlinkAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var cell = ArgumentHelper.GetString(arguments, "cell");
-        var url = ArgumentHelper.GetString(arguments, "url");
-        var displayText = ArgumentHelper.GetStringNullable(arguments, "displayText");
+        return Task.Run(() =>
+        {
+            var cell = ArgumentHelper.GetString(arguments, "cell");
+            var url = ArgumentHelper.GetString(arguments, "url");
+            var displayText = ArgumentHelper.GetStringNullable(arguments, "displayText");
 
-        using var workbook = new Workbook(path);
-        var worksheet = workbook.Worksheets[sheetIndex];
-        var cellObj = worksheet.Cells[cell];
+            using var workbook = new Workbook(path);
+            var worksheet = workbook.Worksheets[sheetIndex];
+            var cellObj = worksheet.Cells[cell];
 
-        if (!string.IsNullOrEmpty(displayText)) cellObj.PutValue(displayText);
+            if (!string.IsNullOrEmpty(displayText)) cellObj.PutValue(displayText);
 
-        worksheet.Hyperlinks.Add(cell, 1, 1, url);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        workbook.Save(outputPath);
+            worksheet.Hyperlinks.Add(cell, 1, 1, url);
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            workbook.Save(outputPath);
 
-        return await Task.FromResult($"Hyperlink added to cell {cell}: {url}");
+            return $"Hyperlink added to cell {cell}: {url}";
+        });
     }
 
     /// <summary>
@@ -144,79 +147,83 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message with updated hyperlink details</returns>
-    private async Task<string> EditHyperlinkAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> EditHyperlinkAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var hyperlinkIndex = ArgumentHelper.GetIntNullable(arguments, "hyperlinkIndex");
-        var cell = ArgumentHelper.GetStringNullable(arguments, "cell");
-        var address = ArgumentHelper.GetStringNullable(arguments, "address");
-        var textToDisplay = ArgumentHelper.GetStringNullable(arguments, "textToDisplay");
-
-        if (!hyperlinkIndex.HasValue && string.IsNullOrEmpty(cell))
-            throw new ArgumentException("Either hyperlinkIndex or cell is required for edit operation");
-
-        using var workbook = new Workbook(path);
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var hyperlinks = worksheet.Hyperlinks;
-
-        var foundIndex = hyperlinkIndex;
-
-        // If cell is provided, find the hyperlink index by cell address
-        if (!hyperlinkIndex.HasValue && !string.IsNullOrEmpty(cell))
+        return Task.Run(() =>
         {
-            foundIndex = null;
-            int rowIndex, colIndex;
-            try
-            {
-                CellsHelper.CellNameToIndex(cell, out rowIndex, out colIndex);
-            }
-            catch
-            {
-                throw new ArgumentException($"Invalid cell address: {cell}");
-            }
+            var hyperlinkIndex = ArgumentHelper.GetIntNullable(arguments, "hyperlinkIndex");
+            var cell = ArgumentHelper.GetStringNullable(arguments, "cell");
+            var address = ArgumentHelper.GetStringNullable(arguments, "address");
+            var textToDisplay = ArgumentHelper.GetStringNullable(arguments, "textToDisplay");
 
-            for (var i = 0; i < hyperlinks.Count; i++)
+            if (!hyperlinkIndex.HasValue && string.IsNullOrEmpty(cell))
+                throw new ArgumentException("Either hyperlinkIndex or cell is required for edit operation");
+
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            var hyperlinks = worksheet.Hyperlinks;
+
+            var foundIndex = hyperlinkIndex;
+
+            // If cell is provided, find the hyperlink index by cell address
+            if (!hyperlinkIndex.HasValue && !string.IsNullOrEmpty(cell))
             {
-                var link = hyperlinks[i];
-                var area = link.Area;
-                if (rowIndex >= area.StartRow && rowIndex <= area.EndRow &&
-                    colIndex >= area.StartColumn && colIndex <= area.EndColumn)
+                foundIndex = null;
+                int rowIndex, colIndex;
+                try
                 {
-                    foundIndex = i;
-                    break;
+                    CellsHelper.CellNameToIndex(cell, out rowIndex, out colIndex);
                 }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"[ERROR] Invalid cell address format '{cell}': {ex.Message}");
+                    throw new ArgumentException($"Invalid cell address: {cell}");
+                }
+
+                for (var i = 0; i < hyperlinks.Count; i++)
+                {
+                    var link = hyperlinks[i];
+                    var area = link.Area;
+                    if (rowIndex >= area.StartRow && rowIndex <= area.EndRow &&
+                        colIndex >= area.StartColumn && colIndex <= area.EndColumn)
+                    {
+                        foundIndex = i;
+                        break;
+                    }
+                }
+
+                if (!foundIndex.HasValue) throw new ArgumentException($"No hyperlink found at cell {cell}");
             }
 
-            if (!foundIndex.HasValue) throw new ArgumentException($"No hyperlink found at cell {cell}");
-        }
+            if (!foundIndex.HasValue) throw new ArgumentException("hyperlinkIndex is required");
 
-        if (!foundIndex.HasValue) throw new ArgumentException("hyperlinkIndex is required");
+            var index = foundIndex.Value;
+            if (index < 0 || index >= hyperlinks.Count)
+                throw new ArgumentException(
+                    $"Hyperlink index {index} is out of range (worksheet has {hyperlinks.Count} hyperlinks)");
 
-        var index = foundIndex.Value;
-        if (index < 0 || index >= hyperlinks.Count)
-            throw new ArgumentException(
-                $"Hyperlink index {index} is out of range (worksheet has {hyperlinks.Count} hyperlinks)");
+            var hyperlink = hyperlinks[index];
+            var oldAddress = hyperlink.Address ?? "";
+            var oldText = hyperlink.TextToDisplay ?? "";
 
-        var hyperlink = hyperlinks[index];
-        var oldAddress = hyperlink.Address ?? "";
-        var oldText = hyperlink.TextToDisplay ?? "";
+            if (!string.IsNullOrEmpty(address)) hyperlink.Address = address;
 
-        if (!string.IsNullOrEmpty(address)) hyperlink.Address = address;
+            if (!string.IsNullOrEmpty(textToDisplay)) hyperlink.TextToDisplay = textToDisplay;
 
-        if (!string.IsNullOrEmpty(textToDisplay)) hyperlink.TextToDisplay = textToDisplay;
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            workbook.Save(outputPath);
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        workbook.Save(outputPath);
+            var result = $"Successfully edited hyperlink #{index}";
+            if (!string.IsNullOrEmpty(cell)) result += $" (cell: {cell})";
+            result += "\n";
+            result += $"Old address: {oldAddress}\n";
+            result += $"New address: {hyperlink.Address ?? oldAddress}\n";
+            result += $"Old display text: {oldText}\n";
+            result += $"New display text: {hyperlink.TextToDisplay ?? oldText}\n";
+            result += $"Output: {outputPath}";
 
-        var result = $"Successfully edited hyperlink #{index}";
-        if (!string.IsNullOrEmpty(cell)) result += $" (cell: {cell})";
-        result += "\n";
-        result += $"Old address: {oldAddress}\n";
-        result += $"New address: {hyperlink.Address ?? oldAddress}\n";
-        result += $"Old display text: {oldText}\n";
-        result += $"New display text: {hyperlink.TextToDisplay ?? oldText}\n";
-        result += $"Output: {outputPath}";
-
-        return await Task.FromResult(result);
+            return result;
+        });
     }
 
     /// <summary>
@@ -226,70 +233,75 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> DeleteHyperlinkAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> DeleteHyperlinkAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var hyperlinkIndex = ArgumentHelper.GetIntNullable(arguments, "hyperlinkIndex");
-        var cell = ArgumentHelper.GetStringNullable(arguments, "cell");
-
-        if (!hyperlinkIndex.HasValue && string.IsNullOrEmpty(cell))
-            throw new ArgumentException("Either hyperlinkIndex or cell is required for delete operation");
-
-        using var workbook = new Workbook(path);
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var hyperlinks = worksheet.Hyperlinks;
-
-        var foundIndex = hyperlinkIndex;
-
-        // If cell is provided, find the hyperlink index by cell address
-        if (!hyperlinkIndex.HasValue && !string.IsNullOrEmpty(cell))
+        return Task.Run(() =>
         {
-            foundIndex = null;
-            int rowIndex, colIndex;
-            try
-            {
-                CellsHelper.CellNameToIndex(cell, out rowIndex, out colIndex);
-            }
-            catch
-            {
-                throw new ArgumentException($"Invalid cell address: {cell}");
-            }
+            var hyperlinkIndex = ArgumentHelper.GetIntNullable(arguments, "hyperlinkIndex");
+            var cell = ArgumentHelper.GetStringNullable(arguments, "cell");
 
-            for (var i = 0; i < hyperlinks.Count; i++)
+            if (!hyperlinkIndex.HasValue && string.IsNullOrEmpty(cell))
+                throw new ArgumentException("Either hyperlinkIndex or cell is required for delete operation");
+
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            var hyperlinks = worksheet.Hyperlinks;
+
+            var foundIndex = hyperlinkIndex;
+
+            // If cell is provided, find the hyperlink index by cell address
+            if (!hyperlinkIndex.HasValue && !string.IsNullOrEmpty(cell))
             {
-                var link = hyperlinks[i];
-                var area = link.Area;
-                if (rowIndex >= area.StartRow && rowIndex <= area.EndRow &&
-                    colIndex >= area.StartColumn && colIndex <= area.EndColumn)
+                foundIndex = null;
+                int rowIndex, colIndex;
+                try
                 {
-                    foundIndex = i;
-                    break;
+                    CellsHelper.CellNameToIndex(cell, out rowIndex, out colIndex);
                 }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"[ERROR] Invalid cell address format '{cell}': {ex.Message}");
+                    throw new ArgumentException($"Invalid cell address: {cell}");
+                }
+
+                for (var i = 0; i < hyperlinks.Count; i++)
+                {
+                    var link = hyperlinks[i];
+                    var area = link.Area;
+                    if (rowIndex >= area.StartRow && rowIndex <= area.EndRow &&
+                        colIndex >= area.StartColumn && colIndex <= area.EndColumn)
+                    {
+                        foundIndex = i;
+                        break;
+                    }
+                }
+
+                if (!foundIndex.HasValue) throw new ArgumentException($"No hyperlink found at cell {cell}");
             }
 
-            if (!foundIndex.HasValue) throw new ArgumentException($"No hyperlink found at cell {cell}");
-        }
+            if (!foundIndex.HasValue) throw new ArgumentException("hyperlinkIndex is required");
 
-        if (!foundIndex.HasValue) throw new ArgumentException("hyperlinkIndex is required");
+            var index = foundIndex.Value;
+            if (index < 0 || index >= hyperlinks.Count)
+                throw new ArgumentException(
+                    $"Hyperlink index {index} is out of range (worksheet has {hyperlinks.Count} hyperlinks)");
 
-        var index = foundIndex.Value;
-        if (index < 0 || index >= hyperlinks.Count)
-            throw new ArgumentException(
-                $"Hyperlink index {index} is out of range (worksheet has {hyperlinks.Count} hyperlinks)");
+            var hyperlink = hyperlinks[index];
+            var address = hyperlink.Address ?? "";
 
-        var hyperlink = hyperlinks[index];
-        var address = hyperlink.Address ?? "";
+            hyperlinks.RemoveAt(index);
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            workbook.Save(outputPath);
 
-        hyperlinks.RemoveAt(index);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        workbook.Save(outputPath);
+            var remainingCount = hyperlinks.Count;
 
-        var remainingCount = hyperlinks.Count;
+            var result = $"Successfully deleted hyperlink #{index}";
+            if (!string.IsNullOrEmpty(cell)) result += $" (cell: {cell})";
+            result +=
+                $"\nAddress: {address}\nRemaining hyperlinks in worksheet: {remainingCount}\nOutput: {outputPath}";
 
-        var result = $"Successfully deleted hyperlink #{index}";
-        if (!string.IsNullOrEmpty(cell)) result += $" (cell: {cell})";
-        result += $"\nAddress: {address}\nRemaining hyperlinks in worksheet: {remainingCount}\nOutput: {outputPath}";
-
-        return await Task.FromResult(result);
+            return result;
+        });
     }
 
     /// <summary>
@@ -299,34 +311,37 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Formatted string with all hyperlinks</returns>
-    private async Task<string> GetHyperlinksAsync(JsonObject? _, string path, int sheetIndex)
+    private Task<string> GetHyperlinksAsync(JsonObject? _, string path, int sheetIndex)
     {
-        using var workbook = new Workbook(path);
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var hyperlinks = worksheet.Hyperlinks;
-        var result = new StringBuilder();
-
-        result.AppendLine($"=== Hyperlink information for worksheet '{worksheet.Name}' ===\n");
-        result.AppendLine($"Total hyperlinks: {hyperlinks.Count}\n");
-
-        if (hyperlinks.Count == 0)
+        return Task.Run(() =>
         {
-            result.AppendLine("No hyperlinks found");
-            return await Task.FromResult(result.ToString());
-        }
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            var hyperlinks = worksheet.Hyperlinks;
+            var result = new StringBuilder();
 
-        for (var i = 0; i < hyperlinks.Count; i++)
-        {
-            var hyperlink = hyperlinks[i];
-            result.AppendLine($"[Hyperlink {i}]");
-            result.AppendLine($"Address: {hyperlink.Address ?? "(none)"}");
-            result.AppendLine($"Display text: {hyperlink.TextToDisplay ?? "(none)"}");
-            var area = hyperlink.Area;
-            result.AppendLine(
-                $"Location: rows {area.StartRow}-{area.EndRow}, columns {area.StartColumn}-{area.EndColumn}");
-            result.AppendLine();
-        }
+            result.AppendLine($"=== Hyperlink information for worksheet '{worksheet.Name}' ===\n");
+            result.AppendLine($"Total hyperlinks: {hyperlinks.Count}\n");
 
-        return await Task.FromResult(result.ToString());
+            if (hyperlinks.Count == 0)
+            {
+                result.AppendLine("No hyperlinks found");
+                return result.ToString();
+            }
+
+            for (var i = 0; i < hyperlinks.Count; i++)
+            {
+                var hyperlink = hyperlinks[i];
+                result.AppendLine($"[Hyperlink {i}]");
+                result.AppendLine($"Address: {hyperlink.Address ?? "(none)"}");
+                result.AppendLine($"Display text: {hyperlink.TextToDisplay ?? "(none)"}");
+                var area = hyperlink.Area;
+                result.AppendLine(
+                    $"Location: rows {area.StartRow}-{area.EndRow}, columns {area.StartColumn}-{area.EndColumn}");
+                result.AppendLine();
+            }
+
+            return result.ToString();
+        });
     }
 }

@@ -168,26 +168,29 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetPrintAreaAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> SetPrintAreaAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var range = ArgumentHelper.GetStringNullable(arguments, "range");
-        var clearPrintArea = ArgumentHelper.GetBool(arguments, "clearPrintArea", false);
+        return Task.Run(() =>
+        {
+            var range = ArgumentHelper.GetStringNullable(arguments, "range");
+            var clearPrintArea = ArgumentHelper.GetBool(arguments, "clearPrintArea", false);
 
-        using var workbook = new Workbook(path);
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
 
-        if (clearPrintArea)
-            worksheet.PageSetup.PrintArea = "";
-        else if (!string.IsNullOrEmpty(range))
-            worksheet.PageSetup.PrintArea = range;
-        else
-            throw new ArgumentException("Either range or clearPrintArea must be provided");
+            if (clearPrintArea)
+                worksheet.PageSetup.PrintArea = "";
+            else if (!string.IsNullOrEmpty(range))
+                worksheet.PageSetup.PrintArea = range;
+            else
+                throw new ArgumentException("Either range or clearPrintArea must be provided");
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        workbook.Save(outputPath);
-        return await Task.FromResult(clearPrintArea
-            ? $"Print area cleared for sheet {sheetIndex}: {outputPath}"
-            : $"Print area set to {range} for sheet {sheetIndex}: {outputPath}");
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            workbook.Save(outputPath);
+            return clearPrintArea
+                ? $"Print area cleared for sheet {sheetIndex}: {outputPath}"
+                : $"Print area set to {range} for sheet {sheetIndex}: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -197,29 +200,32 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetPrintTitlesAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> SetPrintTitlesAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var rows = ArgumentHelper.GetStringNullable(arguments, "rows");
-        var columns = ArgumentHelper.GetStringNullable(arguments, "columns");
-        var clearTitles = ArgumentHelper.GetBool(arguments, "clearTitles", false);
-
-        using var workbook = new Workbook(path);
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-
-        if (clearTitles)
+        return Task.Run(() =>
         {
-            worksheet.PageSetup.PrintTitleRows = "";
-            worksheet.PageSetup.PrintTitleColumns = "";
-        }
-        else
-        {
-            if (!string.IsNullOrEmpty(rows)) worksheet.PageSetup.PrintTitleRows = rows;
-            if (!string.IsNullOrEmpty(columns)) worksheet.PageSetup.PrintTitleColumns = columns;
-        }
+            var rows = ArgumentHelper.GetStringNullable(arguments, "rows");
+            var columns = ArgumentHelper.GetStringNullable(arguments, "columns");
+            var clearTitles = ArgumentHelper.GetBool(arguments, "clearTitles", false);
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        workbook.Save(outputPath);
-        return await Task.FromResult($"Print titles updated for sheet {sheetIndex}: {outputPath}");
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+
+            if (clearTitles)
+            {
+                worksheet.PageSetup.PrintTitleRows = "";
+                worksheet.PageSetup.PrintTitleColumns = "";
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(rows)) worksheet.PageSetup.PrintTitleRows = rows;
+                if (!string.IsNullOrEmpty(columns)) worksheet.PageSetup.PrintTitleColumns = columns;
+            }
+
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            workbook.Save(outputPath);
+            return $"Print titles updated for sheet {sheetIndex}: {outputPath}";
+        });
     }
 
     /// <summary>
@@ -229,62 +235,65 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetPageSetupAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> SetPageSetupAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var orientation = ArgumentHelper.GetStringNullable(arguments, "orientation");
-        var paperSize = ArgumentHelper.GetStringNullable(arguments, "paperSize");
-        var leftMargin = ArgumentHelper.GetDoubleNullable(arguments, "leftMargin");
-        var rightMargin = ArgumentHelper.GetDoubleNullable(arguments, "rightMargin");
-        var topMargin = ArgumentHelper.GetDoubleNullable(arguments, "topMargin");
-        var bottomMargin = ArgumentHelper.GetDoubleNullable(arguments, "bottomMargin");
-        var header = ArgumentHelper.GetStringNullable(arguments, "header");
-        var footer = ArgumentHelper.GetStringNullable(arguments, "footer");
-
-        using var workbook = new Workbook(path);
-        var worksheet = workbook.Worksheets[sheetIndex];
-        var pageSetup = worksheet.PageSetup;
-
-        if (!string.IsNullOrEmpty(orientation))
-            pageSetup.Orientation =
-                orientation == "Landscape" ? PageOrientationType.Landscape : PageOrientationType.Portrait;
-
-        if (!string.IsNullOrEmpty(paperSize))
+        return Task.Run(() =>
         {
-            var size = paperSize.ToUpper() switch
+            var orientation = ArgumentHelper.GetStringNullable(arguments, "orientation");
+            var paperSize = ArgumentHelper.GetStringNullable(arguments, "paperSize");
+            var leftMargin = ArgumentHelper.GetDoubleNullable(arguments, "leftMargin");
+            var rightMargin = ArgumentHelper.GetDoubleNullable(arguments, "rightMargin");
+            var topMargin = ArgumentHelper.GetDoubleNullable(arguments, "topMargin");
+            var bottomMargin = ArgumentHelper.GetDoubleNullable(arguments, "bottomMargin");
+            var header = ArgumentHelper.GetStringNullable(arguments, "header");
+            var footer = ArgumentHelper.GetStringNullable(arguments, "footer");
+
+            using var workbook = new Workbook(path);
+            var worksheet = workbook.Worksheets[sheetIndex];
+            var pageSetup = worksheet.PageSetup;
+
+            if (!string.IsNullOrEmpty(orientation))
+                pageSetup.Orientation =
+                    orientation == "Landscape" ? PageOrientationType.Landscape : PageOrientationType.Portrait;
+
+            if (!string.IsNullOrEmpty(paperSize))
             {
-                "A4" => PaperSizeType.PaperA4,
-                "LETTER" => PaperSizeType.PaperLetter,
-                "LEGAL" => PaperSizeType.PaperLegal,
-                "A3" => PaperSizeType.PaperA3,
-                "A5" => PaperSizeType.PaperA5,
-                "B4" => PaperSizeType.PaperB4,
-                "B5" => PaperSizeType.PaperB5,
-                _ => PaperSizeType.PaperA4
-            };
-            pageSetup.PaperSize = size;
-        }
+                var size = paperSize.ToUpper() switch
+                {
+                    "A4" => PaperSizeType.PaperA4,
+                    "LETTER" => PaperSizeType.PaperLetter,
+                    "LEGAL" => PaperSizeType.PaperLegal,
+                    "A3" => PaperSizeType.PaperA3,
+                    "A5" => PaperSizeType.PaperA5,
+                    "B4" => PaperSizeType.PaperB4,
+                    "B5" => PaperSizeType.PaperB5,
+                    _ => PaperSizeType.PaperA4
+                };
+                pageSetup.PaperSize = size;
+            }
 
-        if (leftMargin.HasValue) pageSetup.LeftMargin = leftMargin.Value;
-        if (rightMargin.HasValue) pageSetup.RightMargin = rightMargin.Value;
-        if (topMargin.HasValue) pageSetup.TopMargin = topMargin.Value;
-        if (bottomMargin.HasValue) pageSetup.BottomMargin = bottomMargin.Value;
+            if (leftMargin.HasValue) pageSetup.LeftMargin = leftMargin.Value;
+            if (rightMargin.HasValue) pageSetup.RightMargin = rightMargin.Value;
+            if (topMargin.HasValue) pageSetup.TopMargin = topMargin.Value;
+            if (bottomMargin.HasValue) pageSetup.BottomMargin = bottomMargin.Value;
 
-        if (!string.IsNullOrEmpty(header)) pageSetup.SetHeader(0, header);
+            if (!string.IsNullOrEmpty(header)) pageSetup.SetHeader(0, header);
 
-        if (!string.IsNullOrEmpty(footer)) pageSetup.SetFooter(0, footer);
+            if (!string.IsNullOrEmpty(footer)) pageSetup.SetFooter(0, footer);
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        workbook.Save(outputPath);
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            workbook.Save(outputPath);
 
-        var changes = new List<string>();
-        if (!string.IsNullOrEmpty(orientation)) changes.Add($"Orientation: {orientation}");
-        if (!string.IsNullOrEmpty(paperSize)) changes.Add($"Paper size: {paperSize}");
-        if (leftMargin.HasValue || rightMargin.HasValue || topMargin.HasValue || bottomMargin.HasValue)
-            changes.Add("Margins set");
-        if (!string.IsNullOrEmpty(header)) changes.Add("Header set");
-        if (!string.IsNullOrEmpty(footer)) changes.Add("Footer set");
+            var changes = new List<string>();
+            if (!string.IsNullOrEmpty(orientation)) changes.Add($"Orientation: {orientation}");
+            if (!string.IsNullOrEmpty(paperSize)) changes.Add($"Paper size: {paperSize}");
+            if (leftMargin.HasValue || rightMargin.HasValue || topMargin.HasValue || bottomMargin.HasValue)
+                changes.Add("Margins set");
+            if (!string.IsNullOrEmpty(header)) changes.Add("Header set");
+            if (!string.IsNullOrEmpty(footer)) changes.Add("Footer set");
 
-        return await Task.FromResult($"Page setup updated: {string.Join(", ", changes)}");
+            return $"Page setup updated: {string.Join(", ", changes)}";
+        });
     }
 
     /// <summary>
@@ -294,54 +303,57 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private async Task<string> SetAllAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> SetAllAsync(JsonObject? arguments, string path, int sheetIndex)
     {
-        var printArea = ArgumentHelper.GetStringNullable(arguments, "range");
-        var printTitleRows = ArgumentHelper.GetStringNullable(arguments, "rows");
-        var printTitleColumns = ArgumentHelper.GetStringNullable(arguments, "columns");
-        var fitToPage = ArgumentHelper.GetBoolNullable(arguments, "fitToPage");
-        var fitToPagesWide = ArgumentHelper.GetIntNullable(arguments, "fitToPagesWide");
-        var fitToPagesTall = ArgumentHelper.GetIntNullable(arguments, "fitToPagesTall");
-        var orientation = ArgumentHelper.GetStringNullable(arguments, "orientation");
-        var paperSize = ArgumentHelper.GetStringNullable(arguments, "paperSize");
-
-        using var workbook = new Workbook(path);
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var pageSetup = worksheet.PageSetup;
-
-        if (!string.IsNullOrEmpty(printArea)) pageSetup.PrintArea = printArea;
-
-        if (!string.IsNullOrEmpty(printTitleRows)) pageSetup.PrintTitleRows = printTitleRows;
-
-        if (!string.IsNullOrEmpty(printTitleColumns)) pageSetup.PrintTitleColumns = printTitleColumns;
-
-        if (fitToPage.HasValue)
+        return Task.Run(() =>
         {
-            pageSetup.FitToPagesWide = fitToPagesWide ?? 1;
-            pageSetup.FitToPagesTall = fitToPagesTall ?? 1;
-        }
+            var printArea = ArgumentHelper.GetStringNullable(arguments, "range");
+            var printTitleRows = ArgumentHelper.GetStringNullable(arguments, "rows");
+            var printTitleColumns = ArgumentHelper.GetStringNullable(arguments, "columns");
+            var fitToPage = ArgumentHelper.GetBoolNullable(arguments, "fitToPage");
+            var fitToPagesWide = ArgumentHelper.GetIntNullable(arguments, "fitToPagesWide");
+            var fitToPagesTall = ArgumentHelper.GetIntNullable(arguments, "fitToPagesTall");
+            var orientation = ArgumentHelper.GetStringNullable(arguments, "orientation");
+            var paperSize = ArgumentHelper.GetStringNullable(arguments, "paperSize");
 
-        if (!string.IsNullOrEmpty(orientation))
-            pageSetup.Orientation = orientation.ToLower() == "landscape"
-                ? PageOrientationType.Landscape
-                : PageOrientationType.Portrait;
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            var pageSetup = worksheet.PageSetup;
 
-        if (!string.IsNullOrEmpty(paperSize))
-        {
-            var paperSizeEnum = paperSize.ToUpper() switch
+            if (!string.IsNullOrEmpty(printArea)) pageSetup.PrintArea = printArea;
+
+            if (!string.IsNullOrEmpty(printTitleRows)) pageSetup.PrintTitleRows = printTitleRows;
+
+            if (!string.IsNullOrEmpty(printTitleColumns)) pageSetup.PrintTitleColumns = printTitleColumns;
+
+            if (fitToPage.HasValue)
             {
-                "A4" => PaperSizeType.PaperA4,
-                "LETTER" => PaperSizeType.PaperLetter,
-                "LEGAL" => PaperSizeType.PaperLegal,
-                "A3" => PaperSizeType.PaperA3,
-                "A5" => PaperSizeType.PaperA5,
-                _ => PaperSizeType.PaperA4
-            };
-            pageSetup.PaperSize = paperSizeEnum;
-        }
+                pageSetup.FitToPagesWide = fitToPagesWide ?? 1;
+                pageSetup.FitToPagesTall = fitToPagesTall ?? 1;
+            }
 
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        workbook.Save(outputPath);
-        return await Task.FromResult($"Print settings updated for sheet {sheetIndex}: {outputPath}");
+            if (!string.IsNullOrEmpty(orientation))
+                pageSetup.Orientation = orientation.ToLower() == "landscape"
+                    ? PageOrientationType.Landscape
+                    : PageOrientationType.Portrait;
+
+            if (!string.IsNullOrEmpty(paperSize))
+            {
+                var paperSizeEnum = paperSize.ToUpper() switch
+                {
+                    "A4" => PaperSizeType.PaperA4,
+                    "LETTER" => PaperSizeType.PaperLetter,
+                    "LEGAL" => PaperSizeType.PaperLegal,
+                    "A3" => PaperSizeType.PaperA3,
+                    "A5" => PaperSizeType.PaperA5,
+                    _ => PaperSizeType.PaperA4
+                };
+                pageSetup.PaperSize = paperSizeEnum;
+            }
+
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+            workbook.Save(outputPath);
+            return $"Print settings updated for sheet {sheetIndex}: {outputPath}";
+        });
     }
 }

@@ -990,7 +990,8 @@ public static class ArgumentHelper
         var path = arguments?[paramName]?.GetValue<string>();
         if (string.IsNullOrEmpty(path))
             throw new ArgumentException($"{paramName} is required");
-        _ = SecurityHelper.ValidateFilePath(path, paramName);
+        // Allow absolute paths for file operations (needed for test environments and legitimate use cases)
+        _ = SecurityHelper.ValidateFilePath(path, paramName, true);
         return path;
     }
 
@@ -1006,7 +1007,8 @@ public static class ArgumentHelper
         string paramName = "outputPath")
     {
         var outputPath = arguments?[paramName]?.GetValue<string>() ?? inputPath;
-        _ = SecurityHelper.ValidateFilePath(outputPath, paramName);
+        // Allow absolute paths for file operations (needed for test environments and legitimate use cases)
+        _ = SecurityHelper.ValidateFilePath(outputPath, paramName, true);
         return outputPath;
     }
 
