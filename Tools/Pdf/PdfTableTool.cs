@@ -247,7 +247,8 @@ Usage examples:
                                 catch (Exception ex)
                                 {
                                     // Skip invalid indices
-                                    Console.Error.WriteLine($"[WARN] Error accessing paragraph at index {i}: {ex.Message}");
+                                    Console.Error.WriteLine(
+                                        $"[WARN] Error accessing paragraph at index {i}: {ex.Message}");
                                 }
                     }
                 }

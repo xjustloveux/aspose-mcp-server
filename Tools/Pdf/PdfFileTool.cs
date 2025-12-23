@@ -219,7 +219,8 @@ Usage examples:
             var path = ArgumentHelper.GetAndValidatePath(arguments);
             var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var compressImages = ArgumentHelper.GetBool(arguments, "compressImages", true);
-            ArgumentHelper.GetBool(arguments, "compressFonts", true); // Parameter read but not used in current implementation
+            ArgumentHelper.GetBool(arguments, "compressFonts",
+                true); // Parameter read but not used in current implementation
             var removeUnusedObjects = ArgumentHelper.GetBool(arguments, "removeUnusedObjects", true);
 
             SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);

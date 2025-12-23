@@ -338,10 +338,10 @@ Usage examples:
                             break;
                         }
                 }
-                catch (Exception ex)
+                catch (Exception cleanupEx)
                 {
                     // Ignore cleanup errors
-                    Console.Error.WriteLine($"[WARN] Error during sheet cleanup: {ex.Message}");
+                    Console.Error.WriteLine($"[WARN] Error during sheet cleanup: {cleanupEx.Message}");
                 }
 
                 throw new ArgumentException(

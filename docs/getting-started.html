@@ -221,17 +221,20 @@
             background: #2d2d2d;
             color: #f8f8f2;
             padding: 20px;
+            padding-right: 100px;
             border-radius: 5px;
             overflow-x: auto;
             margin: 15px 0;
             font-family: 'Courier New', monospace;
             font-size: 0.9em;
-            white-space: pre;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            display: block;
         }
         
         .code-wrapper .code-block {
             margin: 0;
-            padding-top: 50px;
         }
         
         .code-block code {
@@ -402,6 +405,7 @@
             
             .code-block {
                 padding: 15px;
+                padding-right: 90px;
                 font-size: 0.85em;
             }
             
@@ -675,6 +679,109 @@
                 alert('複製失敗，請手動複製');
             });
         }
+    </script>
+
+<script>
+        // 移除 code-block 和 structure-tree 內容的縮排，解決格式化後左邊空白的問題
+        document.addEventListener('DOMContentLoaded', function() {
+            const codeBlocks = document.querySelectorAll('.code-block, .structure-tree');
+            codeBlocks.forEach(function(block) {
+                const text = block.textContent || block.innerText;
+                // 檢測是否為 JSON 格式
+                const trimmedText = text.trim();
+                const isJson = (trimmedText.startsWith('{') || trimmedText.startsWith('[')) && 
+                               (trimmedText.includes('":') || trimmedText.includes('": '));
+                
+                // 移除所有行的前導空白，但保留相對縮排
+                let lines = text.split('\n');
+                // 移除開頭和結尾的空行
+                while (lines.length > 0 && lines[0].trim().length === 0) {
+                    lines.shift();
+                }
+                while (lines.length > 0 && lines[lines.length - 1].trim().length === 0) {
+                    lines.pop();
+                }
+                if (lines.length > 0) {
+                    if (isJson) {
+                        // JSON 格式：根據 JSON 結構重新計算縮排
+                        // 移除 HTML 格式化產生的統一縮排
+                        let minIndent = Infinity;
+                        lines.forEach(function(line) {
+                            if (line.trim().length > 0) {
+                                const trimmed = line.trimStart ? line.trimStart() : line.replace(/^\s+/, '');
+                                const indent = line.length - trimmed.length;
+                                if (indent < minIndent) {
+                                    minIndent = indent;
+                                }
+                            }
+                        });
+                        // 移除 HTML 縮排，獲取純 JSON 內容
+                        const jsonLines = lines.map(function(line) {
+                            if (line.trim().length === 0) {
+                                return '';
+                            }
+                            return minIndent > 0 && minIndent < Infinity ? line.substring(minIndent) : line;
+                        });
+                        
+                        // 根據 JSON 結構重新計算縮排
+                        let indentLevel = 0;
+                        const formattedLines = [];
+                        for (let i = 0; i < jsonLines.length; i++) {
+                            const line = jsonLines[i];
+                            const trimmed = line.trim();
+                            if (trimmed.length === 0) {
+                                formattedLines.push('');
+                                continue;
+                            }
+                            
+                            // 如果行以 } 或 ] 開頭，先減少縮排
+                            if (trimmed.startsWith('}') || trimmed.startsWith(']')) {
+                                indentLevel = Math.max(0, indentLevel - 1);
+                            }
+                            
+                            // 應用縮排
+                            const indented = '  '.repeat(indentLevel) + trimmed;
+                            formattedLines.push(indented);
+                            
+                            // 如果行以 { 或 [ 結尾，下一行需要增加縮排
+                            if (trimmed.endsWith('{') || trimmed.endsWith('[')) {
+                                indentLevel++;
+                            }
+                            // 如果行是單獨的 { 或 [，下一行需要縮排
+                            else if (trimmed === '{' || trimmed === '[') {
+                                indentLevel++;
+                            }
+                        }
+                        
+                        block.textContent = formattedLines.join('\n');
+                    } else {
+                        // 非 JSON 格式：移除最小縮排
+                        let minIndent = Infinity;
+                        lines.forEach(function(line) {
+                            if (line.trim().length > 0) {
+                                const trimmed = line.trimStart ? line.trimStart() : line.replace(/^\s+/, '');
+                                const indent = line.length - trimmed.length;
+                                if (indent < minIndent) {
+                                    minIndent = indent;
+                                }
+                            }
+                        });
+                        // 移除最小縮排
+                        if (minIndent > 0 && minIndent < Infinity) {
+                            const normalizedLines = lines.map(function(line) {
+                                if (line.trim().length === 0) {
+                                    return '';
+                                }
+                                return line.substring(minIndent);
+                            });
+                            block.textContent = normalizedLines.join('\n');
+                        } else {
+                            block.textContent = lines.join('\n');
+                        }
+                    }
+                }
+            });
+        });
     </script>
 
 <script>

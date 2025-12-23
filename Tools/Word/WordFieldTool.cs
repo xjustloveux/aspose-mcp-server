@@ -313,7 +313,8 @@ Usage examples:
                                 {
                                     // If that fails, just stay at the run position
                                     // The field will be inserted after the run
-                                    Console.Error.WriteLine($"[WARN] Failed to move to paragraph {paragraphIndex.Value}, staying at run position: {ex.Message}");
+                                    Console.Error.WriteLine(
+                                        $"[WARN] Failed to move to paragraph {paragraphIndex.Value}, staying at run position: {ex.Message}");
                                 }
                             }
                             else
@@ -371,7 +372,8 @@ Usage examples:
             catch (Exception ex)
             {
                 // Field.Result may fail for some field types, but this is not critical
-                Console.Error.WriteLine($"[WARN] Failed to get field result (may be normal for some field types): {ex.Message}");
+                Console.Error.WriteLine(
+                    $"[WARN] Failed to get field result (may be normal for some field types): {ex.Message}");
                 // Continue without the result information
             }
 

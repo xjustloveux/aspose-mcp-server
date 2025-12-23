@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Runtime.Versioning;
 using System.Text.Json.Nodes;
 using Aspose.Cells;
 using AsposeMcpServer.Tests.Helpers;
@@ -7,6 +8,7 @@ using AsposeMcpServer.Tools.Excel;
 
 namespace AsposeMcpServer.Tests.Excel;
 
+[SupportedOSPlatform("windows")]
 public class ExcelImageToolTests : ExcelTestBase
 {
     private readonly ExcelImageTool _tool = new();

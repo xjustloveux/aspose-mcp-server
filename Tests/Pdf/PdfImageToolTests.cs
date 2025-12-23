@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Runtime.Versioning;
 using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using AsposeMcpServer.Tests.Helpers;
@@ -9,6 +10,7 @@ using Rectangle = Aspose.Pdf.Rectangle;
 
 namespace AsposeMcpServer.Tests.Pdf;
 
+[SupportedOSPlatform("windows")]
 public class PdfImageToolTests : PdfTestBase
 {
     private readonly PdfImageTool _tool = new();

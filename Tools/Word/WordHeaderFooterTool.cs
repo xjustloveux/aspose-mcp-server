@@ -950,30 +950,31 @@ Usage examples:
             var fieldCode = match.Groups[1].Value.ToUpper();
             if (fieldCodes.Contains(fieldCode))
             {
+                var fieldType = fieldCode switch
+                {
+                    "PAGE" => FieldType.FieldPage,
+                    "NUMPAGES" => FieldType.FieldNumPages,
+                    "DATE" => FieldType.FieldDate,
+                    "TIME" => FieldType.FieldTime,
+                    "AUTHOR" => FieldType.FieldAuthor,
+                    "FILENAME" => FieldType.FieldFileName,
+                    "TITLE" => FieldType.FieldTitle,
+                    "CREATEDATE" => FieldType.FieldCreateDate,
+                    "SAVEDATE" => FieldType.FieldSaveDate,
+                    "PRINTDATE" => FieldType.FieldPrintDate,
+                    _ => throw new ArgumentException($"Unknown field code: {fieldCode}")
+                };
+
                 try
                 {
-                    var fieldType = fieldCode switch
-                    {
-                        "PAGE" => FieldType.FieldPage,
-                        "NUMPAGES" => FieldType.FieldNumPages,
-                        "DATE" => FieldType.FieldDate,
-                        "TIME" => FieldType.FieldTime,
-                        "AUTHOR" => FieldType.FieldAuthor,
-                        "FILENAME" => FieldType.FieldFileName,
-                        "TITLE" => FieldType.FieldTitle,
-                        "CREATEDATE" => FieldType.FieldCreateDate,
-                        "SAVEDATE" => FieldType.FieldSaveDate,
-                        "PRINTDATE" => FieldType.FieldPrintDate,
-                        _ => throw new ArgumentException($"Unknown field code: {fieldCode}")
-                    };
-
                     var field = builder.InsertField(fieldType, false);
                     field.Update();
                 }
                 catch (Exception ex)
                 {
                     // Field insertion failed, restore font settings if they were modified
-                    Console.Error.WriteLine($"[WARN] Failed to insert field '{fieldType}' in header/footer: {ex.Message}");
+                    Console.Error.WriteLine(
+                        $"[WARN] Failed to insert field '{fieldType}' in header/footer: {ex.Message}");
                     if (fontName != null || fontSize.HasValue)
                         // Apply font settings using FontHelper
                         FontHelper.Word.ApplyFontSettings(

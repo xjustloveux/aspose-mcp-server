@@ -1405,7 +1405,8 @@ Usage examples:
                         catch (Exception ex)
                         {
                             // Fallback: try setting StyleName directly
-                            Console.Error.WriteLine($"[WARN] Failed to set paragraph style, trying fallback method: {ex.Message}");
+                            Console.Error.WriteLine(
+                                $"[WARN] Failed to set paragraph style, trying fallback method: {ex.Message}");
                             try
                             {
                                 nextPara.ParagraphFormat.ClearFormatting();
@@ -1415,7 +1416,8 @@ Usage examples:
                             catch (Exception ex2)
                             {
                                 // If that also fails, skip this paragraph
-                                Console.Error.WriteLine($"[WARN] Fallback method also failed, skipping paragraph: {ex2.Message}");
+                                Console.Error.WriteLine(
+                                    $"[WARN] Fallback method also failed, skipping paragraph: {ex2.Message}");
                             }
                         }
                     else

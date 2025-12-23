@@ -200,17 +200,20 @@
             background: #2d2d2d;
             color: #f8f8f2;
             padding: 20px;
+            padding-right: 100px;
             border-radius: 5px;
             overflow-x: auto;
             margin: 15px 0;
             font-family: 'Courier New', monospace;
             font-size: 0.9em;
-            white-space: pre;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            display: block;
         }
         
         .code-wrapper .code-block {
             margin: 0;
-            padding-top: 50px;
         }
         
         .code-block code {
@@ -344,6 +347,7 @@
             
             .code-block {
                 padding: 15px;
+                padding-right: 90px;
                 font-size: 0.85em;
             }
             
@@ -428,235 +432,287 @@
 </div>
 
 <div class="container">
-    <div class="section">
-        <h2>📁 倉庫結構</h2>
-        <div class="structure-tree">aspose-mcp-server/
-├── Tools/ 📁 工具原始碼
-│ ├── Word/ 24 個工具
-│ ├── Excel/ 25 個工具
-│ ├── PowerPoint/ 24 個工具
-│ ├── PDF/ 15 個工具
-│ └── Conversion/ 2 個工具
-├── Core/ 🔧 MCP 伺服器核心
-│ ├── SecurityHelper.cs - 安全驗證工具
-│ ├── McpErrorHandler.cs - 錯誤處理
-│ ├── ToolRegistry.cs - 工具註冊
-│ └── ServerConfig.cs - 伺服器配置
-├── Tests/ 🧪 單元測試
-│ ├── Word/ 24 個測試類
-│ ├── Excel/ 25 個測試類
-│ ├── PowerPoint/ 24 個測試類
-│ ├── Pdf/ 15 個測試類
-│ ├── Conversion/ 2 個測試類
-│ └── Helpers/ 測試基礎設施
-├── .github/
-│ └── workflows/ 🔄 GitHub Actions 工作流程
-└── bin/ ❌ 本地編譯輸出（不在版本控制）</div>
+<div class="section">
+    <h2>📁 倉庫結構</h2>
+    <div class="structure-tree">
+        aspose-mcp-server/
+        ├── Tools/ 📁 工具原始碼
+        │ ├── Word/ 24 個工具
+        │ ├── Excel/ 25 個工具
+        │ ├── PowerPoint/ 24 個工具
+        │ ├── PDF/ 15 個工具
+        │ └── Conversion/ 2 個工具
+        ├── Core/ 🔧 MCP 伺服器核心
+        │ ├── SecurityHelper.cs - 安全驗證工具
+        │ ├── McpErrorHandler.cs - 錯誤處理
+        │ ├── ToolRegistry.cs - 工具註冊
+        │ └── ServerConfig.cs - 伺服器配置
+        ├── Tests/ 🧪 單元測試
+        │ ├── Word/ 24 個測試類
+        │ ├── Excel/ 25 個測試類
+        │ ├── PowerPoint/ 24 個測試類
+        │ ├── Pdf/ 15 個測試類
+        │ ├── Conversion/ 2 個測試類
+        │ └── Helpers/ 測試基礎設施
+        ├── .github/
+        │ └── workflows/ 🔄 GitHub Actions 工作流程
+        └── bin/ ❌ 本地編譯輸出（不在版本控制）
+    </div>
+</div>
+
+<div class="section">
+    <h2>💻 本地開發</h2>
+
+    <h3>1. 複製倉庫</h3>
+    <div class="code-wrapper">
+        <div class="code-block" data-code="git clone https://github.com/xjustloveux/aspose-mcp-server.git
+cd aspose-mcp-server">
+            git clone https://github.com/xjustloveux/aspose-mcp-server.git
+            cd aspose-mcp-server
+        </div>
+        <button class="copy-button" onclick="copyCode(this)" title="複製指令">
+            <span>📋</span>
+            <span>複製</span>
+        </button>
     </div>
 
-    <div class="section">
-        <h2>💻 本地開發</h2>
-
-        <h3>1. 複製倉庫</h3>
-        <div class="code-wrapper">
-            <div class="code-block" data-code="git clone https://github.com/xjustloveux/aspose-mcp-server.git
-cd aspose-mcp-server">git clone https://github.com/xjustloveux/aspose-mcp-server.git
-cd aspose-mcp-server</div>
-            <button class="copy-button" onclick="copyCode(this)" title="複製指令">
-                <span>📋</span>
-                <span>複製</span>
-            </button>
-        </div>
-
-        <h3>2. 編譯 Release 版本</h3>
-        <div class="code-wrapper">
-            <div class="code-block" data-code="pwsh build.ps1 --configuration Release">pwsh build.ps1 --configuration Release</div>
-            <button class="copy-button" onclick="copyCode(this)" title="複製指令">
-                <span>📋</span>
-                <span>複製</span>
-            </button>
-        </div>
-
-        <h3>3. 發布版本</h3>
-        <p>發布 Windows 版本：</p>
-        <div class="code-wrapper">
-            <div class="code-block" data-code="pwsh publish.ps1 -Windows">pwsh publish.ps1 -Windows</div>
-            <button class="copy-button" onclick="copyCode(this)" title="複製指令">
-                <span>📋</span>
-                <span>複製</span>
-            </button>
-        </div>
-
-        <p>發布所有平台：</p>
-        <div class="code-wrapper">
-            <div class="code-block" data-code="pwsh publish.ps1 -All">pwsh publish.ps1 -All</div>
-            <button class="copy-button" onclick="copyCode(this)" title="複製指令">
-                <span>📋</span>
-                <span>複製</span>
-            </button>
-        </div>
+    <h3>2. 編譯 Release 版本</h3>
+    <div class="code-wrapper">
+        <div class="code-block" data-code="pwsh build.ps1 --configuration Release">pwsh build.ps1 --configuration Release</div>
+        <button class="copy-button" onclick="copyCode(this)" title="複製指令">
+            <span>📋</span>
+            <span>複製</span>
+        </button>
     </div>
 
-    <div class="section">
-        <h2>🌍 多平台構建</h2>
-        <p><strong>GitHub Actions</strong> 會在推送到 main/master 分支時自動構建所有平台版本。</p>
-
-        <h3>支援的平台</h3>
-        <ul style="margin-top: 15px; padding-left: 25px;">
-            <li>✅ Windows (x64) - <code>win-x64</code></li>
-            <li>✅ Linux (x64) - <code>linux-x64</code></li>
-            <li>✅ macOS Intel (x64) - <code>osx-x64</code></li>
-            <li>✅ macOS ARM (arm64 - M1/M2/M3) - <code>osx-arm64</code></li>
-        </ul>
-
-        <h3>本地構建</h3>
-        <p>發布 Windows 版本：</p>
-        <div class="code-wrapper">
-            <div class="code-block" data-code="pwsh publish.ps1 -Windows">pwsh publish.ps1 -Windows</div>
-            <button class="copy-button" onclick="copyCode(this)" title="複製指令">
-                <span>📋</span>
-                <span>複製</span>
-            </button>
-        </div>
-
-        <p>發布 Linux 版本：</p>
-        <div class="code-wrapper">
-            <div class="code-block" data-code="pwsh publish.ps1 -Linux">pwsh publish.ps1 -Linux</div>
-            <button class="copy-button" onclick="copyCode(this)" title="複製指令">
-                <span>📋</span>
-                <span>複製</span>
-            </button>
-        </div>
-
-        <p>發布 macOS 版本（Intel + ARM）：</p>
-        <div class="code-wrapper">
-            <div class="code-block" data-code="pwsh publish.ps1 -MacOS">pwsh publish.ps1 -MacOS</div>
-            <button class="copy-button" onclick="copyCode(this)" title="複製指令">
-                <span>📋</span>
-                <span>複製</span>
-            </button>
-        </div>
-
-        <p>發布所有平台：</p>
-        <div class="code-wrapper">
-            <div class="code-block" data-code="pwsh publish.ps1 -All">pwsh publish.ps1 -All</div>
-            <button class="copy-button" onclick="copyCode(this)" title="複製指令">
-                <span>📋</span>
-                <span>複製</span>
-            </button>
-        </div>
-
-        <p>清理後構建：</p>
-        <div class="code-wrapper">
-            <div class="code-block" data-code="pwsh publish.ps1 -All -Clean">pwsh publish.ps1 -All -Clean</div>
-            <button class="copy-button" onclick="copyCode(this)" title="複製指令">
-                <span>📋</span>
-                <span>複製</span>
-            </button>
-        </div>
-
-        <h3>構建產物位置</h3>
-        <ul style="margin-top: 15px; padding-left: 25px;">
-            <li>Windows: <code>publish/windows-x64/AsposeMcpServer.exe</code></li>
-            <li>Linux: <code>publish/linux-x64/AsposeMcpServer</code></li>
-            <li>macOS Intel: <code>publish/macos-x64/AsposeMcpServer</code></li>
-            <li>macOS ARM: <code>publish/macos-arm64/AsposeMcpServer</code></li>
-        </ul>
-
-        <p style="margin-top: 15px;"><strong>注意：</strong> 構建產物為自包含單一可執行檔案，無需安裝 .NET Runtime 即可運行。</p>
+    <h3>3. 發布版本</h3>
+    <p>發布 Windows 版本：</p>
+    <div class="code-wrapper">
+        <div class="code-block" data-code="pwsh publish.ps1 -Windows">pwsh publish.ps1 -Windows</div>
+        <button class="copy-button" onclick="copyCode(this)" title="複製指令">
+            <span>📋</span>
+            <span>複製</span>
+        </button>
     </div>
 
-    <div class="section">
-        <h2 id="運行測試">🧪 運行測試</h2>
-        <p>本專案包含完整的單元測試套件，使用 xUnit 測試框架。推薦使用 <code>test.ps1</code> 腳本運行測試，它提供了 UTF-8 編碼支援和便捷的參數選項。</p>
+    <p>發布所有平台：</p>
+    <div class="code-wrapper">
+        <div class="code-block" data-code="pwsh publish.ps1 -All">pwsh publish.ps1 -All</div>
+        <button class="copy-button" onclick="copyCode(this)" title="複製指令">
+            <span>📋</span>
+            <span>複製</span>
+        </button>
+    </div>
+</div>
 
-        <h3>測試統計</h3>
-        <ul style="margin-top: 15px; padding-left: 25px;">
-            <li><strong>測試類</strong>: 90 個測試類</li>
-            <li><strong>測試用例</strong>: 約 450+ 個測試用例</li>
-            <li><strong>測試覆蓋率</strong>: 85.6% (77/90 工具)</li>
-            <li><strong>測試框架</strong>: xUnit 2.9.2</li>
-        </ul>
+<div class="section">
+    <h2>🌍 多平台構建</h2>
+    <p><strong>GitHub Actions</strong> 會在推送到 main/master 分支時自動構建所有平台版本。</p>
 
-        <h3>運行測試</h3>
-        <p>運行所有測試：</p>
-        <div class="code-wrapper">
-            <div class="code-block" data-code="pwsh test.ps1">pwsh test.ps1</div>
-            <button class="copy-button" onclick="copyCode(this)" title="複製指令">
-                <span>📋</span>
-                <span>複製</span>
-            </button>
-        </div>
+    <h3>支援的平台</h3>
+    <ul style="margin-top: 15px; padding-left: 25px;">
+        <li>✅ Windows (x64) - <code>win-x64</code></li>
+        <li>✅ Linux (x64) - <code>linux-x64</code></li>
+        <li>✅ macOS Intel (x64) - <code>osx-x64</code></li>
+        <li>✅ macOS ARM (arm64 - M1/M2/M3) - <code>osx-arm64</code></li>
+    </ul>
 
-        <p>運行測試（詳細輸出）：</p>
-        <div class="code-wrapper">
-            <div class="code-block" data-code="pwsh test.ps1 -Verbose">pwsh test.ps1 -Verbose</div>
-            <button class="copy-button" onclick="copyCode(this)" title="複製指令">
-                <span>📋</span>
-                <span>複製</span>
-            </button>
-        </div>
-
-        <p>運行測試並收集覆蓋率：</p>
-        <div class="code-wrapper">
-            <div class="code-block" data-code="pwsh test.ps1 -Coverage">pwsh test.ps1 -Coverage</div>
-            <button class="copy-button" onclick="copyCode(this)" title="複製指令">
-                <span>📋</span>
-                <span>複製</span>
-            </button>
-        </div>
-
-        <p>運行特定類別的測試：</p>
-        <div class="code-wrapper">
-            <div class="code-block" data-code="pwsh test.ps1 -Filter &quot;FullyQualifiedName~Word&quot;">pwsh test.ps1 -Filter "FullyQualifiedName~Word"</div>
-            <button class="copy-button" onclick="copyCode(this)" title="複製指令">
-                <span>📋</span>
-                <span>複製</span>
-            </button>
-        </div>
-
-        <h3>test.ps1 參數說明</h3>
-        <ul style="margin-top: 15px; padding-left: 25px;">
-            <li><code>-Verbose</code> - 顯示詳細測試輸出</li>
-            <li><code>-NoBuild</code> - 跳過構建步驟（使用已構建的版本）</li>
-            <li><code>-Coverage</code> - 收集測試覆蓋率數據</li>
-            <li><code>-Filter &lt;filter&gt;</code> - 過濾特定測試（支援 dotnet test 的過濾語法）</li>
-            <li><code>-SkipLicense</code> - 跳過授權載入，強制使用評估模式</li>
-        </ul>
-
-        <h3>測試結構</h3>
-        <ul style="margin-top: 15px; padding-left: 25px;">
-            <li><code>Tests/Word/</code> - Word 工具測試（24 個測試類）</li>
-            <li><code>Tests/Excel/</code> - Excel 工具測試（25 個測試類）</li>
-            <li><code>Tests/PowerPoint/</code> - PowerPoint 工具測試（24 個測試類）</li>
-            <li><code>Tests/Pdf/</code> - PDF 工具測試（15 個測試類）</li>
-            <li><code>Tests/Conversion/</code> - 轉換工具測試（2 個測試類）</li>
-            <li><code>Tests/Helpers/</code> - 測試基礎設施（TestBase、WordTestBase、ExcelTestBase、PdfTestBase）</li>
-        </ul>
-
-        <h3>CI/CD 集成</h3>
-        <ul style="margin-top: 15px; padding-left: 25px;">
-            <li>測試已集成到 GitHub Actions 工作流中</li>
-            <li>每次推送或創建 Pull Request 時會自動運行測試</li>
-            <li>測試在評估模式下運行（無需授權檔案）</li>
-        </ul>
+    <h3>本地構建</h3>
+    <p>發布 Windows 版本：</p>
+    <div class="code-wrapper">
+        <div class="code-block" data-code="pwsh publish.ps1 -Windows">pwsh publish.ps1 -Windows</div>
+        <button class="copy-button" onclick="copyCode(this)" title="複製指令">
+            <span>📋</span>
+            <span>複製</span>
+        </button>
     </div>
 
-    <div class="section">
-        <h2>🔧 核心組件</h2>
-
-        <h3>SecurityHelper.cs</h3>
-        <p>安全驗證工具，提供路徑驗證、輸入驗證等功能。</p>
-
-        <h3>McpErrorHandler.cs</h3>
-        <p>錯誤處理機制，清理錯誤訊息，防止資訊洩露。</p>
-
-        <h3>ToolRegistry.cs</h3>
-        <p>工具註冊系統，管理所有可用工具的註冊和查找。</p>
-
-        <h3>ServerConfig.cs</h3>
-        <p>伺服器配置管理，處理命令行參數和環境變數。</p>
+    <p>發布 Linux 版本：</p>
+    <div class="code-wrapper">
+        <div class="code-block" data-code="pwsh publish.ps1 -Linux">pwsh publish.ps1 -Linux</div>
+        <button class="copy-button" onclick="copyCode(this)" title="複製指令">
+            <span>📋</span>
+            <span>複製</span>
+        </button>
     </div>
+
+    <p>發布 macOS 版本（Intel + ARM）：</p>
+    <div class="code-wrapper">
+        <div class="code-block" data-code="pwsh publish.ps1 -MacOS">pwsh publish.ps1 -MacOS</div>
+        <button class="copy-button" onclick="copyCode(this)" title="複製指令">
+            <span>📋</span>
+            <span>複製</span>
+        </button>
+    </div>
+
+    <p>發布所有平台：</p>
+    <div class="code-wrapper">
+        <div class="code-block" data-code="pwsh publish.ps1 -All">pwsh publish.ps1 -All</div>
+        <button class="copy-button" onclick="copyCode(this)" title="複製指令">
+            <span>📋</span>
+            <span>複製</span>
+        </button>
+    </div>
+
+    <p>清理後構建：</p>
+    <div class="code-wrapper">
+        <div class="code-block" data-code="pwsh publish.ps1 -All -Clean">pwsh publish.ps1 -All -Clean</div>
+        <button class="copy-button" onclick="copyCode(this)" title="複製指令">
+            <span>📋</span>
+            <span>複製</span>
+        </button>
+    </div>
+
+    <h3>構建產物位置</h3>
+    <ul style="margin-top: 15px; padding-left: 25px;">
+        <li>Windows: <code>publish/windows-x64/AsposeMcpServer.exe</code></li>
+        <li>Linux: <code>publish/linux-x64/AsposeMcpServer</code></li>
+        <li>macOS Intel: <code>publish/macos-x64/AsposeMcpServer</code></li>
+        <li>macOS ARM: <code>publish/macos-arm64/AsposeMcpServer</code></li>
+    </ul>
+
+    <p style="margin-top: 15px;"><strong>注意：</strong> 構建產物為自包含單一可執行檔案，無需安裝 .NET Runtime 即可運行。</p>
+</div>
+
+<div class="section">
+    <h2 id="運行測試">🧪 運行測試</h2>
+    <p>本專案包含完整的單元測試套件，使用 xUnit 測試框架。推薦使用 <code>test.ps1</code> 腳本運行測試，它提供了 UTF-8 編碼支援和便捷的參數選項。</p>
+
+    <h3>測試統計</h3>
+    <ul style="margin-top: 15px; padding-left: 25px;">
+        <li><strong>測試類</strong>: 90 個測試類</li>
+        <li><strong>測試用例</strong>: 約 450+ 個測試用例</li>
+        <li><strong>測試覆蓋率</strong>: 85.6% (77/90 工具)</li>
+        <li><strong>測試框架</strong>: xUnit 2.9.2</li>
+    </ul>
+
+    <h3>運行測試</h3>
+    <p>運行所有測試：</p>
+    <div class="code-wrapper">
+        <div class="code-block" data-code="pwsh test.ps1">pwsh test.ps1</div>
+        <button class="copy-button" onclick="copyCode(this)" title="複製指令">
+            <span>📋</span>
+            <span>複製</span>
+        </button>
+    </div>
+
+    <p>運行測試（詳細輸出）：</p>
+    <div class="code-wrapper">
+        <div class="code-block" data-code="pwsh test.ps1 -Verbose">pwsh test.ps1 -Verbose</div>
+        <button class="copy-button" onclick="copyCode(this)" title="複製指令">
+            <span>📋</span>
+            <span>複製</span>
+        </button>
+    </div>
+
+    <p>運行測試並收集覆蓋率：</p>
+    <div class="code-wrapper">
+        <div class="code-block" data-code="pwsh test.ps1 -Coverage">pwsh test.ps1 -Coverage</div>
+        <button class="copy-button" onclick="copyCode(this)" title="複製指令">
+            <span>📋</span>
+            <span>複製</span>
+        </button>
+    </div>
+
+    <p>運行特定類別的測試：</p>
+    <div class="code-wrapper">
+        <div class="code-block" data-code="pwsh test.ps1 -Filter &quot;FullyQualifiedName~Word&quot;">pwsh test.ps1 -Filter "FullyQualifiedName~Word"</div>
+        <button class="copy-button" onclick="copyCode(this)" title="複製指令">
+            <span>📋</span>
+            <span>複製</span>
+        </button>
+    </div>
+
+    <h3>test.ps1 參數說明</h3>
+    <ul style="margin-top: 15px; padding-left: 25px;">
+        <li><code>-Verbose</code> - 顯示詳細測試輸出</li>
+        <li><code>-NoBuild</code> - 跳過構建步驟（使用已構建的版本）</li>
+        <li><code>-Coverage</code> - 收集測試覆蓋率數據</li>
+        <li><code>-Filter &lt;filter&gt;</code> - 過濾特定測試（支援 dotnet test 的過濾語法）</li>
+        <li><code>-SkipLicense</code> - 跳過授權載入，強制使用評估模式</li>
+    </ul>
+
+    <h3>測試結構</h3>
+    <ul style="margin-top: 15px; padding-left: 25px;">
+        <li><code>Tests/Word/</code> - Word 工具測試（24 個測試類）</li>
+        <li><code>Tests/Excel/</code> - Excel 工具測試（25 個測試類）</li>
+        <li><code>Tests/PowerPoint/</code> - PowerPoint 工具測試（24 個測試類）</li>
+        <li><code>Tests/Pdf/</code> - PDF 工具測試（15 個測試類）</li>
+        <li><code>Tests/Conversion/</code> - 轉換工具測試（2 個測試類）</li>
+        <li><code>Tests/Helpers/</code> - 測試基礎設施（TestBase、WordTestBase、ExcelTestBase、PdfTestBase）</li>
+    </ul>
+
+    <h3>CI/CD 集成</h3>
+    <ul style="margin-top: 15px; padding-left: 25px;">
+        <li>測試已集成到 GitHub Actions 工作流中</li>
+        <li>每次推送或創建 Pull Request 時會自動運行測試</li>
+        <li>測試在評估模式下運行（無需授權檔案）</li>
+    </ul>
+</div>
+
+<div class="section">
+    <h2>🔍 代碼質量檢查</h2>
+    <p>本專案使用 JetBrains 工具進行代碼質量檢查和格式化。推薦使用 <code>code-quality.ps1</code> 腳本運行代碼檢查。</p>
+
+    <h3>運行代碼質量檢查</h3>
+    <p>執行 CleanupCode 和 InspectCode（預設）：</p>
+    <div class="code-wrapper">
+        <div class="code-block" data-code="pwsh code-quality.ps1">pwsh code-quality.ps1</div>
+        <button class="copy-button" onclick="copyCode(this)" title="複製指令">
+            <span>📋</span>
+            <span>複製</span>
+        </button>
+    </div>
+
+    <p>只執行 CleanupCode（代碼格式化）：</p>
+    <div class="code-wrapper">
+        <div class="code-block" data-code="pwsh code-quality.ps1 -CleanupCode">pwsh code-quality.ps1 -CleanupCode</div>
+        <button class="copy-button" onclick="copyCode(this)" title="複製指令">
+            <span>📋</span>
+            <span>複製</span>
+        </button>
+    </div>
+
+    <p>只執行 InspectCode（代碼檢查）：</p>
+    <div class="code-wrapper">
+        <div class="code-block" data-code="pwsh code-quality.ps1 -InspectCode">pwsh code-quality.ps1 -InspectCode</div>
+        <button class="copy-button" onclick="copyCode(this)" title="複製指令">
+            <span>📋</span>
+            <span>複製</span>
+        </button>
+    </div>
+
+    <h3>code-quality.ps1 參數說明</h3>
+    <ul style="margin-top: 15px; padding-left: 25px;">
+        <li><code>-CleanupCode</code> - 執行 JetBrains CleanupCode（代碼格式化）</li>
+        <li><code>-InspectCode</code> - 執行 JetBrains InspectCode（代碼檢查，輸出到 <code>report.xml</code>）</li>
+        <li><code>-Profile &lt;profile&gt;</code> - 指定 CleanupCode 配置檔（預設：<code>Built-in: Full Cleanup</code>）</li>
+        <li><code>-Exclude &lt;patterns&gt;</code> - 排除的文件模式（預設：<code>*.txt</code>）</li>
+    </ul>
+
+    <h3>注意事項</h3>
+    <ul style="margin-top: 15px; padding-left: 25px;">
+        <li><code>code-quality.ps1</code> 腳本會自動設置 UTF-8 編碼，確保中文輸出正常顯示</li>
+        <li>CleanupCode 會格式化代碼，HTML 文件也會被格式化（但 CSS 確保程式碼區塊不會跑版）</li>
+        <li>InspectCode 會生成 <code>report.xml</code> 報告文件，可用於分析代碼問題</li>
+    </ul>
+</div>
+
+<div class="section">
+    <h2>🔧 核心組件</h2>
+
+    <h3>SecurityHelper.cs</h3>
+    <p>安全驗證工具，提供路徑驗證、輸入驗證等功能。</p>
+
+    <h3>McpErrorHandler.cs</h3>
+    <p>錯誤處理機制，清理錯誤訊息，防止資訊洩露。</p>
+
+    <h3>ToolRegistry.cs</h3>
+    <p>工具註冊系統，管理所有可用工具的註冊和查找。</p>
+
+    <h3>ServerConfig.cs</h3>
+    <p>伺服器配置管理，處理命令行參數和環境變數。</p>
+</div>
 </div>
 
 <footer>
@@ -699,6 +755,109 @@ cd aspose-mcp-server</div>
                 alert('複製失敗，請手動複製');
             });
         }
+    </script>
+
+<script>
+        // 移除 code-block 和 structure-tree 內容的縮排，解決格式化後左邊空白的問題
+        document.addEventListener('DOMContentLoaded', function() {
+            const codeBlocks = document.querySelectorAll('.code-block, .structure-tree');
+            codeBlocks.forEach(function(block) {
+                const text = block.textContent || block.innerText;
+                // 檢測是否為 JSON 格式
+                const trimmedText = text.trim();
+                const isJson = (trimmedText.startsWith('{') || trimmedText.startsWith('[')) && 
+                               (trimmedText.includes('":') || trimmedText.includes('": '));
+                
+                // 移除所有行的前導空白，但保留相對縮排
+                let lines = text.split('\n');
+                // 移除開頭和結尾的空行
+                while (lines.length > 0 && lines[0].trim().length === 0) {
+                    lines.shift();
+                }
+                while (lines.length > 0 && lines[lines.length - 1].trim().length === 0) {
+                    lines.pop();
+                }
+                if (lines.length > 0) {
+                    if (isJson) {
+                        // JSON 格式：根據 JSON 結構重新計算縮排
+                        // 移除 HTML 格式化產生的統一縮排
+                        let minIndent = Infinity;
+                        lines.forEach(function(line) {
+                            if (line.trim().length > 0) {
+                                const trimmed = line.trimStart ? line.trimStart() : line.replace(/^\s+/, '');
+                                const indent = line.length - trimmed.length;
+                                if (indent < minIndent) {
+                                    minIndent = indent;
+                                }
+                            }
+                        });
+                        // 移除 HTML 縮排，獲取純 JSON 內容
+                        const jsonLines = lines.map(function(line) {
+                            if (line.trim().length === 0) {
+                                return '';
+                            }
+                            return minIndent > 0 && minIndent < Infinity ? line.substring(minIndent) : line;
+                        });
+                        
+                        // 根據 JSON 結構重新計算縮排
+                        let indentLevel = 0;
+                        const formattedLines = [];
+                        for (let i = 0; i < jsonLines.length; i++) {
+                            const line = jsonLines[i];
+                            const trimmed = line.trim();
+                            if (trimmed.length === 0) {
+                                formattedLines.push('');
+                                continue;
+                            }
+                            
+                            // 如果行以 } 或 ] 開頭，先減少縮排
+                            if (trimmed.startsWith('}') || trimmed.startsWith(']')) {
+                                indentLevel = Math.max(0, indentLevel - 1);
+                            }
+                            
+                            // 應用縮排
+                            const indented = '  '.repeat(indentLevel) + trimmed;
+                            formattedLines.push(indented);
+                            
+                            // 如果行以 { 或 [ 結尾，下一行需要增加縮排
+                            if (trimmed.endsWith('{') || trimmed.endsWith('[')) {
+                                indentLevel++;
+                            }
+                            // 如果行是單獨的 { 或 [，下一行需要縮排
+                            else if (trimmed === '{' || trimmed === '[') {
+                                indentLevel++;
+                            }
+                        }
+                        
+                        block.textContent = formattedLines.join('\n');
+                    } else {
+                        // 非 JSON 格式：移除最小縮排
+                        let minIndent = Infinity;
+                        lines.forEach(function(line) {
+                            if (line.trim().length > 0) {
+                                const trimmed = line.trimStart ? line.trimStart() : line.replace(/^\s+/, '');
+                                const indent = line.length - trimmed.length;
+                                if (indent < minIndent) {
+                                    minIndent = indent;
+                                }
+                            }
+                        });
+                        // 移除最小縮排
+                        if (minIndent > 0 && minIndent < Infinity) {
+                            const normalizedLines = lines.map(function(line) {
+                                if (line.trim().length === 0) {
+                                    return '';
+                                }
+                                return line.substring(minIndent);
+                            });
+                            block.textContent = normalizedLines.join('\n');
+                        } else {
+                            block.textContent = lines.join('\n');
+                        }
+                    }
+                }
+            });
+        });
     </script>
 
 <script>

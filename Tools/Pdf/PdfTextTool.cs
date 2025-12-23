@@ -256,7 +256,8 @@ Usage examples:
                         catch (Exception ex)
                         {
                             // Skip fragments that cause errors
-                            Console.Error.WriteLine($"[WARN] Error processing text fragment during search: {ex.Message}");
+                            Console.Error.WriteLine(
+                                $"[WARN] Error processing text fragment during search: {ex.Message}");
                         }
 
                     if (matchingFragments.Count > 0)

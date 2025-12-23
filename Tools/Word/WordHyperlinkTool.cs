@@ -341,7 +341,8 @@ Usage examples:
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[WARN] Failed to delete hyperlink using field components, trying alternative method: {ex.Message}");
+                Console.Error.WriteLine(
+                    $"[WARN] Failed to delete hyperlink using field components, trying alternative method: {ex.Message}");
                 try
                 {
                     hyperlinkField.Remove();
@@ -349,7 +350,8 @@ Usage examples:
                 catch (Exception ex2)
                 {
                     Console.Error.WriteLine($"[ERROR] Alternative method also failed: {ex2.Message}");
-                    throw new InvalidOperationException($"Unable to delete hyperlink, please check document structure. Original error: {ex.Message}");
+                    throw new InvalidOperationException(
+                        $"Unable to delete hyperlink, please check document structure. Original error: {ex.Message}");
                 }
             }
 

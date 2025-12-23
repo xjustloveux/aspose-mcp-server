@@ -201,7 +201,8 @@ Usage examples:
                 catch (Exception ex)
                 {
                     sb.AppendLine("    Valid: Unknown");
-                    Console.Error.WriteLine($"[WARN] Failed to extract certificate for signature '{signatureName}': {ex.Message}");
+                    Console.Error.WriteLine(
+                        $"[WARN] Failed to extract certificate for signature '{signatureName}': {ex.Message}");
                 }
 
                 sb.AppendLine();

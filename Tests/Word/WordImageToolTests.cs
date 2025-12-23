@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Runtime.Versioning;
 using Aspose.Words;
 using Aspose.Words.Drawing;
 using AsposeMcpServer.Tests.Helpers;
@@ -7,6 +8,7 @@ using AsposeMcpServer.Tools.Word;
 
 namespace AsposeMcpServer.Tests.Word;
 
+[SupportedOSPlatform("windows")]
 public class WordImageToolTests : WordTestBase
 {
     private readonly WordImageTool _tool = new();

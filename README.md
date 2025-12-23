@@ -335,6 +335,36 @@ pwsh test.ps1 -Verbose -Coverage -Filter "FullyQualifiedName~Word"
 - 測試檔案會保存在系統臨時目錄中
 - 測試結果會保存為 `Tests/TestResults/test-results.trx`（TRX 格式）
 
+### 代碼質量檢查
+
+本專案使用 JetBrains 工具進行代碼質量檢查和格式化。推薦使用 `code-quality.ps1` 腳本運行代碼檢查。
+
+**運行代碼質量檢查：**
+```powershell
+# 執行 CleanupCode 和 InspectCode（預設）
+pwsh code-quality.ps1
+
+# 只執行 CleanupCode（代碼格式化）
+pwsh code-quality.ps1 -CleanupCode
+
+# 只執行 InspectCode（代碼檢查）
+pwsh code-quality.ps1 -InspectCode
+
+# 執行兩個（明確指定）
+pwsh code-quality.ps1 -CleanupCode -InspectCode
+```
+
+**code-quality.ps1 參數說明：**
+- `-CleanupCode` - 執行 JetBrains CleanupCode（代碼格式化）
+- `-InspectCode` - 執行 JetBrains InspectCode（代碼檢查，輸出到 `report.xml`）
+- `-Profile <profile>` - 指定 CleanupCode 配置檔（預設：`Built-in: Full Cleanup`）
+- `-Exclude <patterns>` - 排除的文件模式（預設：`*.txt`）
+
+**注意事項：**
+- `code-quality.ps1` 腳本會自動設置 UTF-8 編碼，確保中文輸出正常顯示
+- CleanupCode 會格式化代碼，HTML 文件也會被格式化（但 CSS 確保程式碼區塊不會跑版）
+- InspectCode 會生成 `report.xml` 報告文件，可用於分析代碼問題
+
 ## 📋 工具列表
 
 ### Word 文檔處理 (24 個工具)

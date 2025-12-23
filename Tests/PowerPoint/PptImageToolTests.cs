@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Runtime.Versioning;
 using System.Text.Json.Nodes;
 using Aspose.Slides;
 using Aspose.Slides.Export;
@@ -8,6 +9,7 @@ using AsposeMcpServer.Tools.PowerPoint;
 
 namespace AsposeMcpServer.Tests.PowerPoint;
 
+[SupportedOSPlatform("windows")]
 public class PptImageToolTests : TestBase
 {
     private readonly PptImageTool _tool = new();

@@ -611,7 +611,8 @@ Note: To check paragraph styles in table cells (e.g., after using add_table with
                             catch (Exception ex)
                             {
                                 // If StyleIdentifier fails, continue with Style and StyleName
-                                Console.Error.WriteLine($"[WARN] Failed to set StyleIdentifier for style '{styleName}': {ex.Message}");
+                                Console.Error.WriteLine(
+                                    $"[WARN] Failed to set StyleIdentifier for style '{styleName}': {ex.Message}");
                             }
                         }
 
@@ -634,7 +635,8 @@ Note: To check paragraph styles in table cells (e.g., after using add_table with
                             catch (Exception ex)
                             {
                                 // Ignore StyleIdentifier errors
-                                Console.Error.WriteLine($"[WARN] Failed to set StyleIdentifier for style '{styleName}': {ex.Message}");
+                                Console.Error.WriteLine(
+                                    $"[WARN] Failed to set StyleIdentifier for style '{styleName}': {ex.Message}");
                             }
                         }
                     }

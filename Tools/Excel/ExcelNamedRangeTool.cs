@@ -131,7 +131,8 @@ Usage examples:
                     catch (Exception ex)
                     {
                         // Ignore if named range creation fails (will be handled by error handling)
-                        Console.Error.WriteLine($"[WARN] Named range creation failed (will be handled by error handling): {ex.Message}");
+                        Console.Error.WriteLine(
+                            $"[WARN] Named range creation failed (will be handled by error handling): {ex.Message}");
                     }
 
                 // Use Range object approach instead of manually constructing RefersTo string

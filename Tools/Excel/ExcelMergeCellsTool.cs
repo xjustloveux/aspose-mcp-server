@@ -252,7 +252,8 @@ Usage examples:
                                         catch (Exception ex)
                                         {
                                             // If parsing fails, keep mergedCellName as is
-                                            Console.Error.WriteLine($"[WARN] Failed to parse cell names '{startCell}' or '{endCell}': {ex.Message}");
+                                            Console.Error.WriteLine(
+                                                $"[WARN] Failed to parse cell names '{startCell}' or '{endCell}': {ex.Message}");
                                         }
                                     }
                                 }
@@ -294,7 +295,8 @@ Usage examples:
                         catch (Exception ex)
                         {
                             result.AppendLine("Value: (unable to read)");
-                            Console.Error.WriteLine($"[WARN] Failed to read cell value at [{startRow}, {startCol}]: {ex.Message}");
+                            Console.Error.WriteLine(
+                                $"[WARN] Failed to read cell value at [{startRow}, {startCol}]: {ex.Message}");
                         }
                     }
 

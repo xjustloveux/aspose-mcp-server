@@ -165,10 +165,10 @@ Usage examples:
                         {
                             document.Info.Title = title;
                         }
-                        catch (Exception ex)
+                        catch (Exception innerEx)
                         {
                             // If both methods fail, skip setting Title - this is a limitation of some PDF files
-                            Console.Error.WriteLine($"[WARN] Failed to set PDF Title property: {ex.Message}");
+                            Console.Error.WriteLine($"[WARN] Failed to set PDF Title property: {innerEx.Message}");
                         }
                     }
                     catch (Exception ex)
@@ -181,7 +181,8 @@ Usage examples:
                         catch (Exception ex2)
                         {
                             // If both methods fail, skip setting Title
-                            Console.Error.WriteLine($"[WARN] Failed to set PDF Title property (both methods failed): {ex.Message}, {ex2.Message}");
+                            Console.Error.WriteLine(
+                                $"[WARN] Failed to set PDF Title property (both methods failed): {ex.Message}, {ex2.Message}");
                         }
                     }
 
@@ -197,10 +198,10 @@ Usage examples:
                         {
                             document.Info.Author = author;
                         }
-                        catch (Exception ex)
+                        catch (Exception innerEx)
                         {
                             // If both methods fail, skip setting Author - this is a limitation of some PDF files
-                            Console.Error.WriteLine($"[WARN] Failed to set PDF Author property: {ex.Message}");
+                            Console.Error.WriteLine($"[WARN] Failed to set PDF Author property: {innerEx.Message}");
                         }
                     }
                     catch (Exception ex)
@@ -213,7 +214,8 @@ Usage examples:
                         catch (Exception ex2)
                         {
                             // If both methods fail, skip setting Author
-                            Console.Error.WriteLine($"[WARN] Failed to set PDF Author property (both methods failed): {ex.Message}, {ex2.Message}");
+                            Console.Error.WriteLine(
+                                $"[WARN] Failed to set PDF Author property (both methods failed): {ex.Message}, {ex2.Message}");
                         }
                     }
 
@@ -229,10 +231,10 @@ Usage examples:
                         {
                             document.Info.Subject = subject;
                         }
-                        catch (Exception ex)
+                        catch (Exception innerEx)
                         {
                             // If both methods fail, skip setting Subject - this is a limitation of some PDF files
-                            Console.Error.WriteLine($"[WARN] Failed to set PDF Subject property: {ex.Message}");
+                            Console.Error.WriteLine($"[WARN] Failed to set PDF Subject property: {innerEx.Message}");
                         }
                     }
                     catch (Exception ex)
@@ -245,7 +247,8 @@ Usage examples:
                         catch (Exception ex2)
                         {
                             // If both methods fail, skip setting Subject
-                            Console.Error.WriteLine($"[WARN] Failed to set PDF Subject property (both methods failed): {ex.Message}, {ex2.Message}");
+                            Console.Error.WriteLine(
+                                $"[WARN] Failed to set PDF Subject property (both methods failed): {ex.Message}, {ex2.Message}");
                         }
                     }
 
@@ -272,7 +275,8 @@ Usage examples:
                     catch (Exception ex)
                     {
                         // Creator may be read-only, skip if it fails
-                        Console.Error.WriteLine($"[WARN] Failed to set PDF Creator property (may be read-only): {ex.Message}");
+                        Console.Error.WriteLine(
+                            $"[WARN] Failed to set PDF Creator property (may be read-only): {ex.Message}");
                     }
 
                 if (!string.IsNullOrEmpty(producer))
@@ -283,7 +287,8 @@ Usage examples:
                     catch (Exception ex)
                     {
                         // Producer may be read-only, skip if it fails
-                        Console.Error.WriteLine($"[WARN] Failed to set PDF Producer property (may be read-only): {ex.Message}");
+                        Console.Error.WriteLine(
+                            $"[WARN] Failed to set PDF Producer property (may be read-only): {ex.Message}");
                     }
             }
             catch (ArgumentException)

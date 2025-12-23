@@ -451,7 +451,8 @@ Usage examples:
                         catch (Exception ex)
                         {
                             // Ignore StyleIdentifier errors
-                            Console.Error.WriteLine($"[WARN] Failed to set StyleIdentifier for style '{styleName}': {ex.Message}");
+                            Console.Error.WriteLine(
+                                $"[WARN] Failed to set StyleIdentifier for style '{styleName}': {ex.Message}");
                         }
                     }
 
@@ -471,7 +472,8 @@ Usage examples:
                         catch (Exception ex)
                         {
                             // Ignore StyleIdentifier errors
-                            Console.Error.WriteLine($"[WARN] Failed to set StyleIdentifier for style '{styleName}': {ex.Message}");
+                            Console.Error.WriteLine(
+                                $"[WARN] Failed to set StyleIdentifier for style '{styleName}': {ex.Message}");
                         }
                     }
 
@@ -507,7 +509,8 @@ Usage examples:
                             catch (Exception ex)
                             {
                                 // Ignore StyleIdentifier errors
-                                Console.Error.WriteLine($"[WARN] Failed to set StyleIdentifier for style '{styleName}': {ex.Message}");
+                                Console.Error.WriteLine(
+                                    $"[WARN] Failed to set StyleIdentifier for style '{styleName}': {ex.Message}");
                             }
                         }
 
@@ -527,7 +530,8 @@ Usage examples:
                             catch (Exception ex)
                             {
                                 // Ignore StyleIdentifier errors
-                                Console.Error.WriteLine($"[WARN] Failed to set StyleIdentifier for style '{styleName}': {ex.Message}");
+                                Console.Error.WriteLine(
+                                    $"[WARN] Failed to set StyleIdentifier for style '{styleName}': {ex.Message}");
                             }
                         }
 

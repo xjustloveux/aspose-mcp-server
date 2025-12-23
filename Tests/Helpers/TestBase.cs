@@ -95,7 +95,7 @@ public abstract class TestBase : IDisposable
             Path.Combine(currentDirectory, "Aspose.Cells.lic"),
             Path.Combine(currentDirectory, "Aspose.Slides.lic"),
             Path.Combine(currentDirectory, "Aspose.Pdf.lic")
-        });
+        ]);
 
         // Search for all .lic files
         var searchDirectories = new[] { baseDirectory, currentDirectory };
