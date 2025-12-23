@@ -39,7 +39,7 @@ jobs:
       run: dotnet restore AsposeMcpServer.sln
     
     - name: Setup Aspose License
-      if: ${{ secrets.ASPOSE_LIC != '' }}
+      if: secrets.ASPOSE_LIC != ''
       run: |
         # GitHub Actions automatically masks secrets when they appear in logs
         # Using ${{ secrets.ASPOSE_LIC }} directly ensures automatic masking

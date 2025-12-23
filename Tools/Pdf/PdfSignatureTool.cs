@@ -203,7 +203,6 @@ Usage examples:
                     sb.AppendLine("    Valid: Unknown");
                     Console.Error.WriteLine($"[WARN] Failed to extract certificate for signature '{signatureName}': {ex.Message}");
                 }
-                }
 
                 sb.AppendLine();
             }
