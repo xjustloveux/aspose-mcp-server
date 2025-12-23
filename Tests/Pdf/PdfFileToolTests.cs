@@ -130,4 +130,149 @@ public class PdfFileToolTests : PdfTestBase
         // Assert
         Assert.True(File.Exists(outputPath), "Encrypted PDF should be created");
     }
+
+    [Fact]
+    public async Task CompressPdf_WithCompressFonts_ShouldCompressWithFontSubsetting()
+    {
+        // Arrange
+        var pdfPath = CreateTestPdf("test_compress_fonts.pdf");
+        var outputPath = CreateTestFilePath("test_compress_fonts_output.pdf");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "compress",
+            ["path"] = pdfPath,
+            ["outputPath"] = outputPath,
+            ["compressImages"] = true,
+            ["compressFonts"] = true
+        };
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.True(File.Exists(outputPath), "Compressed PDF with font subsetting should be created");
+    }
+
+    [Fact]
+    public async Task CompressPdf_WithRemoveUnusedObjects_ShouldRemoveUnused()
+    {
+        // Arrange
+        var pdfPath = CreateTestPdf("test_compress_unused.pdf");
+        var outputPath = CreateTestFilePath("test_compress_unused_output.pdf");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "compress",
+            ["path"] = pdfPath,
+            ["outputPath"] = outputPath,
+            ["removeUnusedObjects"] = true
+        };
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.True(File.Exists(outputPath), "Compressed PDF with unused objects removed should be created");
+    }
+
+    [Fact]
+    public async Task CompressPdf_WithAllOptions_ShouldApplyAllCompression()
+    {
+        // Arrange
+        var pdfPath = CreateTestPdf("test_compress_all.pdf");
+        var outputPath = CreateTestFilePath("test_compress_all_output.pdf");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "compress",
+            ["path"] = pdfPath,
+            ["outputPath"] = outputPath,
+            ["compressImages"] = true,
+            ["compressFonts"] = true,
+            ["removeUnusedObjects"] = true
+        };
+
+        // Act
+        var result = await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.True(File.Exists(outputPath), "Fully compressed PDF should be created");
+        Assert.Contains("compressed", result, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task CompressPdf_WithNoCompression_ShouldStillCreateOutput()
+    {
+        // Arrange
+        var pdfPath = CreateTestPdf("test_compress_none.pdf");
+        var outputPath = CreateTestFilePath("test_compress_none_output.pdf");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "compress",
+            ["path"] = pdfPath,
+            ["outputPath"] = outputPath,
+            ["compressImages"] = false,
+            ["compressFonts"] = false,
+            ["removeUnusedObjects"] = false
+        };
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.True(File.Exists(outputPath), "PDF should be created even with no compression");
+    }
+
+    [Fact]
+    public async Task SplitPdf_WithMultiplePagesPerFile_ShouldSplitCorrectly()
+    {
+        // Arrange
+        var pdfPath = CreateTestPdf("test_split_multi.pdf");
+        var document = new Document(pdfPath);
+        // Add multiple pages
+        document.Pages.Add();
+        document.Pages.Add();
+        document.Pages.Add();
+        document.Pages.Add(); // Total 5 pages
+        document.Save(pdfPath);
+
+        var outputDir = Path.Combine(TestDir, "split_multi_output");
+        Directory.CreateDirectory(outputDir);
+        var arguments = new JsonObject
+        {
+            ["operation"] = "split",
+            ["path"] = pdfPath,
+            ["outputDir"] = outputDir,
+            ["pagesPerFile"] = 2
+        };
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        var files = Directory.GetFiles(outputDir, "*.pdf");
+        Assert.True(files.Length >= 2, "Should create multiple files when splitting with 2 pages per file");
+    }
+
+    [Fact]
+    public async Task MergePdfs_WithThreePdfs_ShouldMergeAll()
+    {
+        // Arrange
+        var pdf1Path = CreateTestPdf("test_merge3_1.pdf");
+        var pdf2Path = CreateTestPdf("test_merge3_2.pdf");
+        var pdf3Path = CreateTestPdf("test_merge3_3.pdf");
+        var outputPath = CreateTestFilePath("test_merge3_output.pdf");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "merge",
+            ["inputPaths"] = new JsonArray { pdf1Path, pdf2Path, pdf3Path },
+            ["outputPath"] = outputPath
+        };
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.True(File.Exists(outputPath), "Merged PDF should be created");
+        var document = new Document(outputPath);
+        Assert.True(document.Pages.Count >= 3, "Merged PDF should have at least 3 pages");
+    }
 }

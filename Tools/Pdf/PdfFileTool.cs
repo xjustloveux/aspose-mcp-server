@@ -219,14 +219,13 @@ Usage examples:
             var path = ArgumentHelper.GetAndValidatePath(arguments);
             var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var compressImages = ArgumentHelper.GetBool(arguments, "compressImages", true);
-            ArgumentHelper.GetBool(arguments, "compressFonts",
-                true); // Parameter read but not used in current implementation
+            var compressFonts = ArgumentHelper.GetBool(arguments, "compressFonts", true);
             var removeUnusedObjects = ArgumentHelper.GetBool(arguments, "removeUnusedObjects", true);
 
             SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
             SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
-            var document = new Document(path);
+            using var document = new Document(path);
             var optimizationOptions = new OptimizationOptions();
 
             if (compressImages)
@@ -234,6 +233,8 @@ Usage examples:
                 optimizationOptions.ImageCompressionOptions.CompressImages = true;
                 optimizationOptions.ImageCompressionOptions.ImageQuality = 75;
             }
+
+            if (compressFonts) optimizationOptions.SubsetFonts = true;
 
             if (removeUnusedObjects)
             {
@@ -243,7 +244,6 @@ Usage examples:
 
             document.OptimizeResources(optimizationOptions);
             document.Save(outputPath);
-            document.Dispose();
 
             var originalSize = new FileInfo(path).Length;
             var compressedSize = new FileInfo(outputPath).Length;

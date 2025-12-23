@@ -135,7 +135,7 @@ Note: shapeIndex for edit operation refers to the image index (0-based) among al
                     // Additional check: compare first and last bytes for quick verification
                     if (img.BinaryData.Length > 0 &&
                         img.BinaryData[0] == imageBytes[0] &&
-                        img.BinaryData[img.BinaryData.Length - 1] == imageBytes[imageBytes.Length - 1])
+                        img.BinaryData[^1] == imageBytes[^1])
                     {
                         existingImage = img;
                         break;
@@ -163,7 +163,7 @@ Note: shapeIndex for edit operation refers to the image index (0-based) among al
                 var pixelWidth = pictureImage.Width;
                 var pixelHeight = pictureImage.Height;
                 if (pixelWidth > 0)
-                    finalHeight = finalWidth * (pixelHeight / pixelWidth);
+                    finalHeight = finalWidth * ((float)pixelHeight / pixelWidth);
                 else
                     finalHeight = finalWidth; // Fallback to square if width is 0
             }
@@ -174,7 +174,7 @@ Note: shapeIndex for edit operation refers to the image index (0-based) among al
                 var pixelWidth = pictureImage.Width;
                 var pixelHeight = pictureImage.Height;
                 if (pixelHeight > 0)
-                    finalWidth = finalHeight * (pixelWidth / pixelHeight);
+                    finalWidth = finalHeight * ((float)pixelWidth / pixelHeight);
                 else
                     finalWidth = finalHeight; // Fallback to square if height is 0
             }
@@ -185,7 +185,7 @@ Note: shapeIndex for edit operation refers to the image index (0-based) among al
                 var pixelWidth = pictureImage.Width;
                 var pixelHeight = pictureImage.Height;
                 if (pixelWidth > 0)
-                    finalHeight = finalWidth * (pixelHeight / pixelWidth);
+                    finalHeight = finalWidth * ((float)pixelHeight / pixelWidth);
                 else
                     finalHeight = 300; // Fallback to square
             }
@@ -243,7 +243,7 @@ Note: shapeIndex for edit operation refers to the image index (0-based) among al
                     if (img.BinaryData.Length == imageBytes.Length)
                         if (img.BinaryData.Length > 0 &&
                             img.BinaryData[0] == imageBytes[0] &&
-                            img.BinaryData[img.BinaryData.Length - 1] == imageBytes[imageBytes.Length - 1])
+                            img.BinaryData[^1] == imageBytes[^1])
                         {
                             existingImage = img;
                             break;

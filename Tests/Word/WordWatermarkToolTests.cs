@@ -37,4 +37,91 @@ public class WordWatermarkToolTests : WordTestBase
         Assert.True(hasWatermarkShapes || doc.Watermark != null,
             "Document should contain watermark (checking shapes or watermark property)");
     }
+
+    [Fact]
+    public async Task AddWatermark_WithFontFamily_ShouldApplyFontFamily()
+    {
+        // Arrange
+        var docPath = CreateWordDocument("test_watermark_font.docx");
+        var outputPath = CreateTestFilePath("test_watermark_font_output.docx");
+        var arguments = CreateArguments("add", docPath, outputPath);
+        arguments["text"] = "DRAFT";
+        arguments["fontFamily"] = "Times New Roman";
+        arguments["fontSize"] = 48;
+
+        // Act
+        var result = await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.True(File.Exists(outputPath), "Output document should be created");
+        Assert.NotNull(result);
+        Assert.Contains("Watermark", result, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task AddWatermark_WithHorizontalLayout_ShouldApplyHorizontalLayout()
+    {
+        // Arrange
+        var docPath = CreateWordDocument("test_watermark_horizontal.docx");
+        var outputPath = CreateTestFilePath("test_watermark_horizontal_output.docx");
+        var arguments = CreateArguments("add", docPath, outputPath);
+        arguments["text"] = "SAMPLE";
+        arguments["layout"] = "Horizontal";
+        arguments["fontSize"] = 60;
+
+        // Act
+        var result = await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.True(File.Exists(outputPath), "Output document should be created");
+        Assert.NotNull(result);
+        Assert.Contains("Watermark", result, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task AddWatermark_WithDiagonalLayout_ShouldApplyDiagonalLayout()
+    {
+        // Arrange
+        var docPath = CreateWordDocument("test_watermark_diagonal.docx");
+        var outputPath = CreateTestFilePath("test_watermark_diagonal_output.docx");
+        var arguments = CreateArguments("add", docPath, outputPath);
+        arguments["text"] = "DO NOT COPY";
+        arguments["layout"] = "Diagonal";
+        arguments["fontSize"] = 54;
+        arguments["isSemitransparent"] = false;
+
+        // Act
+        var result = await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.True(File.Exists(outputPath), "Output document should be created");
+        Assert.NotNull(result);
+        Assert.Contains("Watermark", result, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task AddWatermark_WithAllOptions_ShouldApplyAllOptions()
+    {
+        // Arrange
+        var docPath = CreateWordDocument("test_watermark_all_options.docx");
+        var outputPath = CreateTestFilePath("test_watermark_all_options_output.docx");
+        var arguments = CreateArguments("add", docPath, outputPath);
+        arguments["text"] = "CONFIDENTIAL";
+        arguments["fontFamily"] = "Arial";
+        arguments["fontSize"] = 80;
+        arguments["isSemitransparent"] = true;
+        arguments["layout"] = "Diagonal";
+
+        // Act
+        var result = await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.True(File.Exists(outputPath), "Output document should be created");
+        Assert.NotNull(result);
+        Assert.Contains("Watermark", result, StringComparison.OrdinalIgnoreCase);
+
+        // Verify watermark exists
+        var doc = new Document(outputPath);
+        Assert.NotNull(doc.Watermark);
+    }
 }
