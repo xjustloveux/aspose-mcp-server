@@ -25,6 +25,8 @@ jobs:
       (github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[ci skip]')) ||
       (github.event_name == 'pull_request' && !contains(github.event.pull_request.title, '[skip ci]') && !contains(github.event.pull_request.title, '[ci skip]')) ||
       github.event_name == 'workflow_dispatch'
+    env:
+      ASPOSE_LIC: ${{ secrets.ASPOSE_LIC }}
     
     steps:
     - name: Checkout code
@@ -39,7 +41,7 @@ jobs:
       run: dotnet restore AsposeMcpServer.sln
     
     - name: Setup Aspose License
-      if: ${{ secrets.ASPOSE_LIC }}
+      if: env.ASPOSE_LIC != ''
       run: |
         # GitHub Actions automatically masks secrets when they appear in logs
         # Using ${{ secrets.ASPOSE_LIC }} directly ensures automatic masking
