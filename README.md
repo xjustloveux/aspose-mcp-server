@@ -1,12 +1,12 @@
 # Aspose MCP Server
 
 [![GitHub release](https://img.shields.io/github/v/release/xjustloveux/aspose-mcp-server?include_prereleases&style=flat-square)](https://github.com/xjustloveux/aspose-mcp-server/releases)
-[![GitHub license](https://img.shields.io/github/license/xjustloveux/aspose-mcp-server?style=flat-square)](LICENSE)
+[![GitHub license](https://img.shields.io/github/license/xjustloveux/aspose-mcp-server?branch=master&style=flat-square)](LICENSE)
 [![.NET Version](https://img.shields.io/badge/.NET-8.0-512BD4?style=flat-square&logo=dotnet)](https://dotnet.microsoft.com/)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/xjustloveux/aspose-mcp-server/build-multi-platform.yml?branch=main&label=build&style=flat-square)](https://github.com/xjustloveux/aspose-mcp-server/actions/workflows/build-multi-platform.yml)
-[![Test Status](https://img.shields.io/github/actions/workflow/status/xjustloveux/aspose-mcp-server/test.yml?branch=main&label=tests&style=flat-square)](https://github.com/xjustloveux/aspose-mcp-server/actions/workflows/test.yml)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/xjustloveux/aspose-mcp-server/build-multi-platform.yml?branch=master&label=build&style=flat-square)](https://github.com/xjustloveux/aspose-mcp-server/actions/workflows/build-multi-platform.yml)
+[![Test Status](https://img.shields.io/github/actions/workflow/status/xjustloveux/aspose-mcp-server/test.yml?branch=master&label=tests&style=flat-square)](https://github.com/xjustloveux/aspose-mcp-server/actions/workflows/test.yml)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey?style=flat-square)](https://github.com/xjustloveux/aspose-mcp-server/releases)
-[![Test Coverage](https://codecov.io/gh/xjustloveux/aspose-mcp-server/branch/main/graph/badge.svg)](https://codecov.io/gh/xjustloveux/aspose-mcp-server)
+[![Test Coverage](https://codecov.io/gh/xjustloveux/aspose-mcp-server/branch/master/graph/badge.svg)](https://codecov.io/gh/xjustloveux/aspose-mcp-server)
 [![MCP Version](https://img.shields.io/badge/MCP-2025--11--25-blue?style=flat-square)](https://modelcontextprotocol.io/)
 [![Aspose Version](https://img.shields.io/badge/Aspose-23.10.0-orange?style=flat-square)](https://products.aspose.com/total/net/)
 [![xUnit](https://img.shields.io/badge/xUnit-2.9.2-blue?style=flat-square&logo=xunit)](https://xunit.net/)

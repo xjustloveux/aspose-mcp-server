@@ -43,11 +43,17 @@ jobs:
     - name: Setup Aspose License
       if: env.ASPOSE_LIC != ''
       run: |
-        # GitHub Actions automatically masks secrets when they appear in logs
+        # Security: GitHub Actions automatically masks secrets in logs
+        # Note: For PRs from forks, secrets are not available (GitHub security feature)
         # Using ${{ secrets.ASPOSE_LIC }} directly ensures automatic masking
         # Do NOT output $licenseContent to logs - it will be masked but avoid unnecessary exposure
         $licensePath = "Aspose.Total.lic"
-        [System.IO.File]::WriteAllText($licensePath, "${{ secrets.ASPOSE_LIC }}")
+        $licenseContent = "${{ secrets.ASPOSE_LIC }}"
+        if ([string]::IsNullOrWhiteSpace($licenseContent)) {
+          Write-Host "Warning: ASPOSE_LIC secret is empty or not set (this is normal for PRs from forks)"
+          exit 0
+        }
+        [System.IO.File]::WriteAllText($licensePath, $licenseContent)
         Write-Host "License file created at: $licensePath (content secured)"
         echo "ASPOSE_LICENSE_PATH=$licensePath" >> $env:GITHUB_ENV
       shell: pwsh
@@ -57,8 +63,63 @@ jobs:
       run: dotnet build --configuration Release --no-restore
     
     - name: Test with Coverage
+      id: test
       run: |
         .\test.ps1 -Coverage -NoBuild
+      continue-on-error: true
+    
+    - name: Check Test Results
+      if: always() && steps.test.outcome == 'failure'
+      run: |
+        Write-Host "=== Test Execution Summary ===" -ForegroundColor Yellow
+        Write-Host "Exit Code: $LASTEXITCODE" -ForegroundColor Yellow
+        
+        # Check if test results file exists
+        $testResults = Get-ChildItem -Path . -Recurse -Filter "test-results.trx" -ErrorAction SilentlyContinue
+        if ($testResults) {
+          Write-Host "Test results file found: $($testResults.FullName)" -ForegroundColor Green
+          # Try to extract failure information from TRX file if possible
+          $trxContent = Get-Content $testResults.FullName -Raw -ErrorAction SilentlyContinue
+          if ($trxContent -match 'outcome="Failed"') {
+            Write-Host "Some tests failed. Check the test results artifact for details." -ForegroundColor Red
+          }
+        } else {
+          Write-Host "No test results file found. Tests may have failed before completion." -ForegroundColor Red
+        }
+        
+        # Check for coverage files
+        $coverageFiles = Get-ChildItem -Path . -Recurse -Filter "coverage.cobertura.xml" -ErrorAction SilentlyContinue
+        if ($coverageFiles) {
+          Write-Host "Coverage files found: $($coverageFiles.Count)" -ForegroundColor Green
+        } else {
+          Write-Host "No coverage files found. Coverage collection may have failed." -ForegroundColor Yellow
+        }
+      shell: pwsh
+    
+    - name: Find Test Results
+      if: always()
+      run: |
+        $testResults = Get-ChildItem -Path . -Recurse -Filter "test-results.trx" -ErrorAction SilentlyContinue
+        if ($testResults) {
+          Write-Host "Found test results files:"
+          $testResults | ForEach-Object { Write-Host "  - $($_.FullName)" }
+        } else {
+          Write-Host "No test-results.trx file found"
+        }
+      shell: pwsh
+      continue-on-error: true
+    
+    - name: Clean up license file before artifact upload
+      if: always()
+      run: |
+        # Security: Remove license file before uploading artifacts to prevent accidental exposure
+        if (Test-Path "Aspose.Total.lic") {
+          Remove-Item "Aspose.Total.lic" -Force -ErrorAction SilentlyContinue
+          Write-Host "License file removed for security"
+        }
+        # Also check for other license files in the root directory
+        Get-ChildItem -Path . -Filter "*.lic" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+      shell: pwsh
       continue-on-error: true
     
     - name: Upload test results
@@ -67,22 +128,46 @@ jobs:
       with:
         name: test-results
         path: '**/test-results.trx'
+        if-no-files-found: ignore
+        retention-days: 7
     
     - name: Install ReportGenerator
       run: dotnet tool install -g dotnet-reportgenerator-globaltool
     
-    - name: Generate Coverage Report
+    - name: Find Coverage Files
+      id: coverage
       run: |
+        $coverageFiles = Get-ChildItem -Path . -Recurse -Filter "coverage.cobertura.xml" -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($coverageFiles) {
+          $relativePath = $coverageFiles.FullName.Replace((Get-Location).Path + '\', '').Replace('\', '/')
+          Write-Host "Found coverage file: $relativePath"
+          echo "coverage_file=$relativePath" >> $env:GITHUB_OUTPUT
+          echo "has_coverage=true" >> $env:GITHUB_OUTPUT
+        } else {
+          Write-Host "No coverage file found"
+          echo "has_coverage=false" >> $env:GITHUB_OUTPUT
+        }
+      shell: pwsh
+      continue-on-error: true
+    
+    - name: Generate Coverage Report
+      if: steps.coverage.outputs.has_coverage == 'true'
+      run: |
+        $coverageFile = "${{ steps.coverage.outputs.coverage_file }}"
+        $reportDir = "${{ runner.temp }}/CoverageReport"
+        New-Item -ItemType Directory -Path $reportDir -Force | Out-Null
+        Write-Host "Generating coverage report from: $coverageFile"
         reportgenerator `
-          -reports:"${{ runner.temp }}/TestResults/**/coverage.cobertura.xml" `
-          -targetdir:"${{ runner.temp }}/CoverageReport" `
+          -reports:"$coverageFile" `
+          -targetdir:"$reportDir" `
           -reporttypes:"Html;Cobertura"
       continue-on-error: true
     
     - name: Upload Coverage Report to Codecov
+      if: steps.coverage.outputs.has_coverage == 'true'
       uses: codecov/codecov-action@v4
       with:
-        files: ${{ runner.temp }}/TestResults/**/coverage.cobertura.xml
+        files: ${{ steps.coverage.outputs.coverage_file }}
         flags: unittests
         name: codecov-umbrella
         fail_ci_if_error: false
@@ -91,11 +176,13 @@ jobs:
       continue-on-error: true
     
     - name: Upload Coverage Report Artifact
+      if: always() && steps.coverage.outputs.has_coverage == 'true'
       uses: actions/upload-artifact@v4
-      if: always()
       with:
         name: coverage-report
         path: ${{ runner.temp }}/CoverageReport
+        if-no-files-found: ignore
+        retention-days: 7
 
   # Evaluation mode test - optional execution
   test-evaluation-mode:
@@ -135,4 +222,6 @@ jobs:
       with:
         name: test-results-eval
         path: '**/test-results.trx'
+        if-no-files-found: ignore
+        retention-days: 7
 

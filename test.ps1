@@ -42,7 +42,7 @@ if ($NoBuild) {
 }
 
 if ($Coverage) {
-    $testArgs += "--collect:`"XPlat Code Coverage`""
+    $testArgs += "--collect", "XPlat Code Coverage"
 }
 
 if ($Filter) {

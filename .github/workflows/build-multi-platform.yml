@@ -68,6 +68,34 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore AsposeMcpServer.csproj
     
+    - name: Clean up license files before build (Unix)
+      if: runner.os != 'Windows'
+      run: |
+        # Security: Remove any license files before building to prevent them from being included in artifacts
+        if [ -f "Aspose.Total.lic" ]; then
+          rm -f "Aspose.Total.lic"
+          echo "Removed Aspose.Total.lic for security"
+        fi
+        # Remove any other license files
+        find . -maxdepth 1 -name "*.lic" -type f -delete 2>/dev/null || true
+        echo "License files cleaned before build"
+      shell: bash
+      continue-on-error: true
+    
+    - name: Clean up license files before build (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        # Security: Remove any license files before building to prevent them from being included in artifacts
+        if (Test-Path "Aspose.Total.lic") {
+          Remove-Item "Aspose.Total.lic" -Force -ErrorAction SilentlyContinue
+          Write-Host "Removed Aspose.Total.lic for security"
+        }
+        # Remove any other license files
+        Get-ChildItem -Path . -Filter "*.lic" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+        Write-Host "License files cleaned before build"
+      shell: pwsh
+      continue-on-error: true
+    
     - name: Make publish script executable (Unix)
       if: runner.os != 'Windows'
       run: chmod +x publish.sh
@@ -77,13 +105,32 @@ jobs:
       env:
         VERSION: ${{ steps.get_version.outputs.version }}
     
+    - name: Clean up license files from build output (Unix)
+      if: runner.os != 'Windows'
+      run: |
+        # Security: Ensure no license files are included in build artifacts
+        find "publish/${{ matrix.platform }}" -name "*.lic" -type f -delete 2>/dev/null || true
+        echo "License files removed from build output"
+      shell: bash
+      continue-on-error: true
+    
+    - name: Clean up license files from build output (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        # Security: Ensure no license files are included in build artifacts
+        Get-ChildItem -Path "publish\${{ matrix.platform }}" -Filter "*.lic" -Recurse -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+        Write-Host "License files removed from build output"
+      shell: pwsh
+      continue-on-error: true
+    
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.platform }}
         path: publish/${{ matrix.platform }}/
-        # 不設定 retention-days，使用預設值（通常1天）
-        # Artifact 僅用於在 jobs 之間傳遞檔案，release 建立完成後即可刪除
+        retention-days: 1
+        # Security: Artifact only used for job-to-job file transfer
+        # Release creation completes before artifact expires
     
     - name: Display build info
       run: |
@@ -103,9 +150,11 @@ jobs:
     name: Create Release
     needs: build
     runs-on: ubuntu-latest
+    # Security: Only create releases for pushes to main/master branches, not for PRs
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
     permissions:
       contents: write
+      # Minimal permissions required for creating releases
     
     steps:
     - name: Checkout code
@@ -154,6 +203,14 @@ jobs:
     - name: Display structure
       shell: bash
       run: ls -R artifacts
+    
+    - name: Clean up license files from artifacts
+      shell: bash
+      run: |
+        # Security: Final check to ensure no license files are included in release archives
+        find artifacts -name "*.lic" -type f -delete 2>/dev/null || true
+        echo "License files removed from artifacts before creating release archives"
+      continue-on-error: true
     
     - name: Create ZIP archives
       shell: bash
