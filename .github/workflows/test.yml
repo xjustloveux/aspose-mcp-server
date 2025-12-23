@@ -45,10 +45,9 @@ jobs:
       run: |
         # Security: GitHub Actions automatically masks secrets in logs
         # Note: For PRs from forks, secrets are not available (GitHub security feature)
-        # Using ${{ secrets.ASPOSE_LIC }} directly ensures automatic masking
-        # Do NOT output $licenseContent to logs - it will be masked but avoid unnecessary exposure
+        # Use $env:ASPOSE_LIC to avoid PowerShell string parsing issues with XML content
         $licensePath = "Aspose.Total.lic"
-        $licenseContent = "${{ secrets.ASPOSE_LIC }}"
+        $licenseContent = $env:ASPOSE_LIC
         if ([string]::IsNullOrWhiteSpace($licenseContent)) {
           Write-Host "Warning: ASPOSE_LIC secret is empty or not set (this is normal for PRs from forks)"
           exit 0
@@ -132,7 +131,7 @@ jobs:
         name: test-results
         path: '**/test-results.trx'
         if-no-files-found: ignore
-        retention-days: 7
+        retention-days: 1
     
     - name: Install ReportGenerator
       run: dotnet tool install -g dotnet-reportgenerator-globaltool
@@ -185,7 +184,7 @@ jobs:
         name: coverage-report
         path: ${{ runner.temp }}/CoverageReport
         if-no-files-found: ignore
-        retention-days: 7
+        retention-days: 1
 
   # Evaluation mode test - optional execution
   test-evaluation-mode:
@@ -226,5 +225,5 @@ jobs:
         name: test-results-eval
         path: '**/test-results.trx'
         if-no-files-found: ignore
-        retention-days: 7
+        retention-days: 1
 

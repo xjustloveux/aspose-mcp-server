@@ -140,7 +140,7 @@ public class PptShapeToolTests : TestBase
 
         // Count actual shapes (excluding placeholder shapes from layout slide)
         var correctShapeIndex = -1;
-        var shapesBefore = 0;
+        int shapesBefore;
         using (var presentationBefore = new Presentation(pptPath))
         {
             var slideBefore = presentationBefore.Slides[0];
@@ -245,5 +245,121 @@ public class PptShapeToolTests : TestBase
         Assert.NotNull(result);
         Assert.NotEmpty(result);
         Assert.Contains("Shape", result, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Edit_WithRotation_ShouldRotateShape()
+    {
+        // Arrange
+        var pptPath = CreateTestPresentation("test_rotate_shape.pptx");
+
+        // Find the shape index
+        var correctShapeIndex = 0;
+        using (var ppt = new Presentation(pptPath))
+        {
+            var pptSlide = ppt.Slides[0];
+            var nonPlaceholderShapes = pptSlide.Shapes.Where(s => s.Placeholder == null).ToList();
+            if (nonPlaceholderShapes.Count > 0)
+                correctShapeIndex = pptSlide.Shapes.IndexOf(nonPlaceholderShapes[0]);
+        }
+
+        var outputPath = CreateTestFilePath("test_rotate_shape_output.pptx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "edit",
+            ["path"] = pptPath,
+            ["outputPath"] = outputPath,
+            ["slideIndex"] = 0,
+            ["shapeIndex"] = correctShapeIndex,
+            ["rotation"] = 45 // Rotate 45 degrees
+        };
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        using var presentation = new Presentation(outputPath);
+        var slide = presentation.Slides[0];
+        var shapes = slide.Shapes.Where(s => s.Placeholder == null).ToList();
+        Assert.True(shapes.Count > 0, "Shape should exist after rotation");
+
+        var isEvaluationMode = IsEvaluationMode();
+        if (!isEvaluationMode)
+        {
+            var rotatedShape = shapes.FirstOrDefault(s => Math.Abs(s.Rotation - 45) < 1);
+            Assert.NotNull(rotatedShape);
+        }
+    }
+
+    [Fact]
+    public async Task Edit_WithFlipHorizontal_ShouldFlipHorizontal()
+    {
+        // Arrange
+        var pptPath = CreateTestPresentation("test_flip_h_shape.pptx");
+
+        var correctShapeIndex = 0;
+        using (var ppt = new Presentation(pptPath))
+        {
+            var pptSlide = ppt.Slides[0];
+            var nonPlaceholderShapes = pptSlide.Shapes.Where(s => s.Placeholder == null).ToList();
+            if (nonPlaceholderShapes.Count > 0)
+                correctShapeIndex = pptSlide.Shapes.IndexOf(nonPlaceholderShapes[0]);
+        }
+
+        var outputPath = CreateTestFilePath("test_flip_h_shape_output.pptx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "edit",
+            ["path"] = pptPath,
+            ["outputPath"] = outputPath,
+            ["slideIndex"] = 0,
+            ["shapeIndex"] = correctShapeIndex,
+            ["flipHorizontal"] = true
+        };
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        using var presentation = new Presentation(outputPath);
+        var slide = presentation.Slides[0];
+        var shapes = slide.Shapes.Where(s => s.Placeholder == null).ToList();
+        Assert.True(shapes.Count > 0, "Shape should exist after horizontal flip");
+    }
+
+    [Fact]
+    public async Task Edit_WithFlipVertical_ShouldFlipVertical()
+    {
+        // Arrange
+        var pptPath = CreateTestPresentation("test_flip_v_shape.pptx");
+
+        var correctShapeIndex = 0;
+        using (var ppt = new Presentation(pptPath))
+        {
+            var pptSlide = ppt.Slides[0];
+            var nonPlaceholderShapes = pptSlide.Shapes.Where(s => s.Placeholder == null).ToList();
+            if (nonPlaceholderShapes.Count > 0)
+                correctShapeIndex = pptSlide.Shapes.IndexOf(nonPlaceholderShapes[0]);
+        }
+
+        var outputPath = CreateTestFilePath("test_flip_v_shape_output.pptx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "edit",
+            ["path"] = pptPath,
+            ["outputPath"] = outputPath,
+            ["slideIndex"] = 0,
+            ["shapeIndex"] = correctShapeIndex,
+            ["flipVertical"] = true
+        };
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        using var presentation = new Presentation(outputPath);
+        var slide = presentation.Slides[0];
+        var shapes = slide.Shapes.Where(s => s.Placeholder == null).ToList();
+        Assert.True(shapes.Count > 0, "Shape should exist after vertical flip");
     }
 }

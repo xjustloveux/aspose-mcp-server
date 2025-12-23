@@ -191,7 +191,7 @@ Usage examples:
             if (targetPath.Count == 0) throw new ArgumentException("targetPath must contain at least one index");
 
             // Navigate to target node
-            ISmartArtNode? targetNode = null;
+            ISmartArtNode targetNode;
             var currentNode = smartArt.AllNodes[targetPath[0]];
 
             if (targetPath.Count == 1)
@@ -212,8 +212,6 @@ Usage examples:
 
                 targetNode = currentNode;
             }
-
-            if (targetNode == null) throw new InvalidOperationException("Unable to locate target node");
 
             var sb = new StringBuilder();
 

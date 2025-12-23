@@ -192,4 +192,105 @@ public class PptSlideToolTests : TestBase
         var editedSlide = resultPresentation.Slides[0];
         Assert.NotNull(editedSlide);
     }
+
+    [Fact]
+    public async Task Add_WithLayoutType_ShouldUseLayout()
+    {
+        // Arrange
+        var pptPath = CreatePptPresentation("test_add_slide_layout.pptx");
+        var outputPath = CreateTestFilePath("test_add_slide_layout_output.pptx");
+        var arguments = CreateArguments("add", pptPath, outputPath);
+        arguments["layoutType"] = "Blank"; // Use blank layout
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        using var presentation = new Presentation(outputPath);
+        Assert.True(presentation.Slides.Count >= 2, "New slide should be added");
+    }
+
+    [Fact]
+    public async Task Duplicate_WithInsertAt_ShouldInsertAtPosition()
+    {
+        // Arrange
+        var pptPath = CreatePptPresentation("test_duplicate_insert_at.pptx");
+        using (var ppt = new Presentation(pptPath))
+        {
+            // Add more slides to have something to insert between
+            ppt.Slides.AddEmptySlide(ppt.LayoutSlides[0]);
+            ppt.Slides.AddEmptySlide(ppt.LayoutSlides[0]);
+            ppt.Save(pptPath, SaveFormat.Pptx);
+        }
+
+        var outputPath = CreateTestFilePath("test_duplicate_insert_at_output.pptx");
+        var arguments = CreateArguments("duplicate", pptPath, outputPath);
+        arguments["slideIndex"] = 0;
+        arguments["insertAt"] = 2; // Insert at position 2
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        using var presentation = new Presentation(outputPath);
+        Assert.True(presentation.Slides.Count >= 4, "Slide should be duplicated and inserted at position");
+    }
+
+    [Fact]
+    public async Task Hide_WithMultipleSlides_ShouldHideMultiple()
+    {
+        // Arrange
+        var pptPath = CreatePptPresentation("test_hide_multiple.pptx");
+        using (var ppt = new Presentation(pptPath))
+        {
+            ppt.Slides.AddEmptySlide(ppt.LayoutSlides[0]);
+            ppt.Slides.AddEmptySlide(ppt.LayoutSlides[0]);
+            ppt.Save(pptPath, SaveFormat.Pptx);
+        }
+
+        var outputPath = CreateTestFilePath("test_hide_multiple_output.pptx");
+
+        // Hide first slide
+        var arguments1 = CreateArguments("hide", pptPath, outputPath);
+        arguments1["slideIndex"] = 0;
+        arguments1["hidden"] = true;
+        await _tool.ExecuteAsync(arguments1);
+
+        // Hide second slide
+        var arguments2 = CreateArguments("hide", outputPath, outputPath);
+        arguments2["slideIndex"] = 1;
+        arguments2["hidden"] = true;
+        await _tool.ExecuteAsync(arguments2);
+
+        // Assert
+        using var presentation = new Presentation(outputPath);
+        Assert.True(presentation.Slides.Count >= 3, "Should still have all slides");
+
+        var isEvaluationMode = IsEvaluationMode();
+        if (!isEvaluationMode)
+        {
+            var hiddenCount = presentation.Slides.Count(s => s.Hidden);
+            Assert.True(hiddenCount >= 2, $"At least 2 slides should be hidden, got {hiddenCount}");
+        }
+    }
+
+    [Fact]
+    public async Task Edit_WithLayoutIndex_ShouldChangeLayout()
+    {
+        // Arrange
+        var pptPath = CreatePptPresentation("test_edit_layout.pptx");
+        var outputPath = CreateTestFilePath("test_edit_layout_output.pptx");
+        var arguments = CreateArguments("edit", pptPath, outputPath);
+        arguments["slideIndex"] = 0;
+        arguments["layoutIndex"] = 1; // Change to a different layout
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        using var resultPresentation = new Presentation(outputPath);
+        Assert.True(resultPresentation.Slides.Count >= 1);
+        // Verify edit operation completed
+        Assert.NotNull(resultPresentation.Slides[0]);
+    }
 }

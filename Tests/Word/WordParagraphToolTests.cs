@@ -1,3 +1,5 @@
+using System.Drawing;
+using System.Text.Json.Nodes;
 using Aspose.Words;
 using AsposeMcpServer.Tests.Helpers;
 using AsposeMcpServer.Tools.Word;
@@ -599,5 +601,125 @@ public class WordParagraphToolTests : WordTestBase
             Assert.True(File.Exists(outputPath), "Output file should be created");
         else
             Assert.Equal(ParagraphAlignment.Right, resultParagraphs[1].ParagraphFormat.Alignment);
+    }
+
+    [Fact]
+    public async Task Edit_WithFontName_ShouldApplyFontName()
+    {
+        // Arrange
+        var docPath = CreateWordDocumentWithContent("test_edit_fontname.docx", "Test Text");
+        var outputPath = CreateTestFilePath("test_edit_fontname_output.docx");
+        var arguments = CreateArguments("edit", docPath, outputPath);
+        arguments["paragraphIndex"] = 0;
+        arguments["fontName"] = "Arial";
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        var doc = new Document(outputPath);
+        var runs = doc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+        var run = runs.FirstOrDefault(r => r.Text.Contains("Test Text"));
+        Assert.NotNull(run);
+        Assert.Equal("Arial", run.Font.Name);
+    }
+
+    [Fact]
+    public async Task Edit_WithFontSize_ShouldApplyFontSize()
+    {
+        // Arrange
+        var docPath = CreateWordDocumentWithContent("test_edit_fontsize.docx", "Test Text");
+        var outputPath = CreateTestFilePath("test_edit_fontsize_output.docx");
+        var arguments = CreateArguments("edit", docPath, outputPath);
+        arguments["paragraphIndex"] = 0;
+        arguments["fontSize"] = 18;
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        var doc = new Document(outputPath);
+        var runs = doc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+        var run = runs.FirstOrDefault(r => r.Text.Contains("Test Text"));
+        Assert.NotNull(run);
+        Assert.Equal(18, run.Font.Size);
+    }
+
+    [Fact]
+    public async Task Edit_WithColor_ShouldApplyColor()
+    {
+        // Arrange
+        var docPath = CreateWordDocumentWithContent("test_edit_color.docx", "Test Text");
+        var outputPath = CreateTestFilePath("test_edit_color_output.docx");
+        var arguments = CreateArguments("edit", docPath, outputPath);
+        arguments["paragraphIndex"] = 0;
+        arguments["color"] = "FF0000"; // Red
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        var doc = new Document(outputPath);
+        var runs = doc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+        var run = runs.FirstOrDefault(r => r.Text.Contains("Test Text"));
+        Assert.NotNull(run);
+        Assert.Equal(Color.FromArgb(255, 0, 0), run.Font.Color);
+    }
+
+    [Fact]
+    public async Task Edit_WithLineSpacing_ShouldApplyLineSpacing()
+    {
+        // Arrange
+        var docPath = CreateWordDocumentWithContent("test_edit_linespacing.docx", "Test Text");
+        var outputPath = CreateTestFilePath("test_edit_linespacing_output.docx");
+        var arguments = CreateArguments("edit", docPath, outputPath);
+        arguments["paragraphIndex"] = 0;
+        arguments["lineSpacing"] = 24; // 24 points = double spacing
+        arguments["lineSpacingRule"] = "exactly";
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        var doc = new Document(outputPath);
+        var paragraphs = GetParagraphs(doc);
+        Assert.True(paragraphs.Count > 0);
+        Assert.Equal(24, paragraphs[0].ParagraphFormat.LineSpacing);
+        Assert.Equal(LineSpacingRule.Exactly, paragraphs[0].ParagraphFormat.LineSpacingRule);
+    }
+
+    [Fact]
+    public async Task Edit_WithTabStops_ShouldApplyTabStops()
+    {
+        // Arrange
+        var docPath = CreateWordDocumentWithContent("test_edit_tabstops.docx", "Test\tText");
+        var outputPath = CreateTestFilePath("test_edit_tabstops_output.docx");
+        var arguments = CreateArguments("edit", docPath, outputPath);
+        arguments["paragraphIndex"] = 0;
+        arguments["tabStops"] = new JsonArray
+        {
+            new JsonObject
+            {
+                ["position"] = 72.0,
+                ["alignment"] = "Center",
+                ["leader"] = "Dots"
+            },
+            new JsonObject
+            {
+                ["position"] = 144.0,
+                ["alignment"] = "Right",
+                ["leader"] = "None"
+            }
+        };
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        var doc = new Document(outputPath);
+        var paragraphs = GetParagraphs(doc);
+        Assert.True(paragraphs.Count > 0);
+        var tabStops = paragraphs[0].ParagraphFormat.TabStops;
+        Assert.True(tabStops.Count >= 2, $"Should have at least 2 tab stops, got {tabStops.Count}");
     }
 }

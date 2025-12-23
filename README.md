@@ -1,11 +1,10 @@
 # Aspose MCP Server
 
 [![GitHub release](https://img.shields.io/github/v/release/xjustloveux/aspose-mcp-server?include_prereleases&style=flat-square)](https://github.com/xjustloveux/aspose-mcp-server/releases)
-[![GitHub license](https://img.shields.io/github/license/xjustloveux/aspose-mcp-server?branch=master&style=flat-square)](LICENSE)
+[![GitHub license](https://img.shields.io/github/license/xjustloveux/aspose-mcp-server?style=flat-square&cacheSeconds=3600)](LICENSE)
 [![.NET Version](https://img.shields.io/badge/.NET-8.0-512BD4?style=flat-square&logo=dotnet)](https://dotnet.microsoft.com/)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/xjustloveux/aspose-mcp-server/build-multi-platform.yml?branch=master&label=build&style=flat-square)](https://github.com/xjustloveux/aspose-mcp-server/actions/workflows/build-multi-platform.yml)
 [![Test Status](https://img.shields.io/github/actions/workflow/status/xjustloveux/aspose-mcp-server/test.yml?branch=master&label=tests&style=flat-square)](https://github.com/xjustloveux/aspose-mcp-server/actions/workflows/test.yml)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey?style=flat-square)](https://github.com/xjustloveux/aspose-mcp-server/releases)
 [![Test Coverage](https://codecov.io/gh/xjustloveux/aspose-mcp-server/branch/master/graph/badge.svg)](https://codecov.io/gh/xjustloveux/aspose-mcp-server)
 [![MCP Version](https://img.shields.io/badge/MCP-2025--11--25-blue?style=flat-square)](https://modelcontextprotocol.io/)
 [![Aspose Version](https://img.shields.io/badge/Aspose-23.10.0-orange?style=flat-square)](https://products.aspose.com/total/net/)
@@ -271,7 +270,6 @@ pwsh publish.ps1 -All -Clean
 **測試統計：**
 - **測試類**: 90 個測試類
 - **測試用例**: 約 450+ 個測試用例
-- **測試覆蓋率**: 85.6% (77/90 工具)
 - **測試框架**: xUnit 2.9.2
 
 **運行測試：**
@@ -697,7 +695,6 @@ A: 可以。工具基於命名約定自動發現，您可以：
 - **程式碼行數：** ~15,000+ 行
 - **測試類數：** 90 個測試類
 - **測試用例數：** 約 450+ 個測試用例
-- **測試覆蓋率：** 85.6% (77/90 工具)
 - **測試框架：** xUnit 2.9.2
 - **CI/CD：** GitHub Actions 自動測試
 - **支援格式：** Word、Excel、PowerPoint、PDF 及其相互轉換

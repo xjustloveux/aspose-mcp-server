@@ -185,4 +185,105 @@ public class ExcelCellToolTests : ExcelTestBase
     // Note: ExcelCellTool doesn't support setting cell format directly
     // Format operations would require a separate tool or direct Aspose.Cells API usage
     // This test is skipped as the operation doesn't exist in ExcelCellTool
+
+    [Fact]
+    public async Task Write_WithDifferentDataTypes_ShouldHandleTypes()
+    {
+        // Arrange
+        var workbookPath = CreateExcelWorkbook("test_data_types.xlsx");
+        var outputPath = CreateTestFilePath("test_data_types_output.xlsx");
+
+        // Test numeric value as string (tool converts to appropriate type)
+        var arguments1 = CreateArguments("write", workbookPath, outputPath);
+        arguments1["cell"] = "A1";
+        arguments1["value"] = "123.45";
+        await _tool.ExecuteAsync(arguments1);
+
+        // Test boolean value as string
+        var arguments2 = CreateArguments("write", outputPath, outputPath);
+        arguments2["cell"] = "A2";
+        arguments2["value"] = "true";
+        await _tool.ExecuteAsync(arguments2);
+
+        // Test date value as string
+        var arguments3 = CreateArguments("write", outputPath, outputPath);
+        arguments3["cell"] = "A3";
+        arguments3["value"] = "2024-01-15";
+        await _tool.ExecuteAsync(arguments3);
+
+        // Assert
+        var workbook = new Workbook(outputPath);
+        var worksheet = workbook.Worksheets[0];
+
+        // Verify values were written
+        var numValue = worksheet.Cells["A1"].Value;
+        Assert.NotNull(numValue);
+
+        var boolValue = worksheet.Cells["A2"].Value;
+        Assert.NotNull(boolValue);
+
+        // Verify date/string
+        var dateValue = worksheet.Cells["A3"].Value;
+        Assert.NotNull(dateValue);
+    }
+
+    [Fact]
+    public async Task Get_FromDifferentSheet_ShouldGetFromSheet()
+    {
+        // Arrange
+        var workbookPath = CreateExcelWorkbook("test_get_from_sheet.xlsx");
+        var workbook = new Workbook(workbookPath);
+
+        // Add data to first sheet
+        workbook.Worksheets[0].Cells["A1"].Value = "Sheet1Data";
+
+        // Add second sheet with data
+        var sheet2 = workbook.Worksheets.Add("Sheet2");
+        sheet2.Cells["A1"].Value = "Sheet2Data";
+
+        workbook.Save(workbookPath);
+
+        // Get from second sheet
+        var arguments = CreateArguments("get", workbookPath);
+        arguments["cell"] = "A1";
+        arguments["sheetIndex"] = 1;
+
+        // Act
+        var result = await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.Contains("Sheet2Data", result);
+    }
+
+    [Fact]
+    public async Task Write_WithRange_ShouldWriteMultipleCells()
+    {
+        // Arrange
+        var workbookPath = CreateExcelWorkbook("test_write_range.xlsx");
+        var outputPath = CreateTestFilePath("test_write_range_output.xlsx");
+        var arguments = CreateArguments("write", workbookPath, outputPath);
+        arguments["cell"] = "A1";
+        arguments["value"] = "MultiCell";
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Add more cells
+        var arguments2 = CreateArguments("write", outputPath, outputPath);
+        arguments2["cell"] = "B1";
+        arguments2["value"] = "Second";
+        await _tool.ExecuteAsync(arguments2);
+
+        var arguments3 = CreateArguments("write", outputPath, outputPath);
+        arguments3["cell"] = "C1";
+        arguments3["value"] = "Third";
+        await _tool.ExecuteAsync(arguments3);
+
+        // Assert
+        var workbook = new Workbook(outputPath);
+        var worksheet = workbook.Worksheets[0];
+        Assert.Equal("MultiCell", worksheet.Cells["A1"].Value);
+        Assert.Equal("Second", worksheet.Cells["B1"].Value);
+        Assert.Equal("Third", worksheet.Cells["C1"].Value);
+    }
 }

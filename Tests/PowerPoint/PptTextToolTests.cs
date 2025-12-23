@@ -154,4 +154,43 @@ public class PptTextToolTests : TestBase
         var hasNewText = textFrames.Any(tf => tf.TextFrame.Text.Contains("New", StringComparison.OrdinalIgnoreCase));
         Assert.True(hasNewText, "Text should be replaced");
     }
+
+    [Fact]
+    public async Task Replace_WithMatchCase_ShouldMatchCase()
+    {
+        // Arrange
+        var pptPath = CreateTestPresentation("test_replace_match_case.pptx");
+        using (var ppt = new Presentation(pptPath))
+        {
+            var pptSlide = ppt.Slides[0];
+            var pptShape = pptSlide.Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 50);
+            pptShape.TextFrame.Text = "Test TEXT test Test";
+            ppt.Save(pptPath, SaveFormat.Pptx);
+        }
+
+        var outputPath = CreateTestFilePath("test_replace_match_case_output.pptx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "replace",
+            ["path"] = pptPath,
+            ["outputPath"] = outputPath,
+            ["findText"] = "Test",
+            ["replaceText"] = "Case",
+            ["matchCase"] = true
+        };
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        using var presentation = new Presentation(outputPath);
+        var slide = presentation.Slides[0];
+        var textFrames = slide.Shapes.OfType<IAutoShape>().Where(s => s.TextFrame != null).ToList();
+        var text = string.Join(" ", textFrames.Select(tf => tf.TextFrame.Text));
+
+        // When matchCase is true, only "Test" should be replaced, not "test" or "TEST"
+        Assert.Contains("Case", text, StringComparison.Ordinal);
+        // "TEXT" should remain unchanged (different case)
+        Assert.Contains("TEXT", text, StringComparison.Ordinal);
+    }
 }

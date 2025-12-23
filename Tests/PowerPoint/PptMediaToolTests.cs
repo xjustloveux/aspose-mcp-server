@@ -25,7 +25,7 @@ public class PptMediaToolTests : TestBase
         // Arrange - PptMediaTool doesn't have a "get" operation, test add_audio instead
         var pptPath = CreateTestPresentation("test_add_audio.pptx");
         var audioPath = CreateTestFilePath("test_audio.mp3");
-        File.WriteAllText(audioPath, "fake audio content");
+        await File.WriteAllTextAsync(audioPath, "fake audio content");
 
         var outputPath = CreateTestFilePath("test_add_audio_output.pptx");
         var arguments = new JsonObject

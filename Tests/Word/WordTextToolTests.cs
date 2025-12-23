@@ -660,4 +660,134 @@ public class WordTextToolTests : WordTestBase
         Assert.Equal(18, run.Font.Size);
         Assert.Equal(Color.FromArgb(255, 0, 0), run.Font.Color);
     }
+
+    [Fact]
+    public async Task Replace_WithUseRegex_ShouldReplaceUsingRegex()
+    {
+        // Arrange
+        var docPath = CreateWordDocumentWithContent("test_replace_regex.docx", "Test123 and Test456 and Test789");
+        var outputPath = CreateTestFilePath("test_replace_regex_output.docx");
+        var arguments = CreateArguments("replace", docPath, outputPath);
+        arguments["find"] = @"Test\d+";
+        arguments["replace"] = "Number";
+        arguments["useRegex"] = true;
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        var doc = new Document(outputPath);
+        var text = doc.GetText();
+        Assert.Contains("Number", text);
+        Assert.DoesNotContain("Test123", text);
+        Assert.DoesNotContain("Test456", text);
+        Assert.DoesNotContain("Test789", text);
+    }
+
+    [Fact]
+    public async Task Replace_WithReplaceInFields_ShouldReplaceInFields()
+    {
+        // Arrange
+        var docPath = CreateWordDocument("test_replace_in_fields.docx");
+        var doc = new Document(docPath);
+        var builder = new DocumentBuilder(doc);
+        builder.Write("Click here: ");
+        builder.InsertHyperlink("TestLink", "http://example.com", false);
+        builder.Write(" End of document");
+        doc.Save(docPath);
+
+        var outputPath = CreateTestFilePath("test_replace_in_fields_output.docx");
+        var arguments = CreateArguments("replace", docPath, outputPath);
+        arguments["find"] = "TestLink";
+        arguments["replace"] = "NewLink";
+        arguments["replaceInFields"] = true;
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        var resultDoc = new Document(outputPath);
+        var text = resultDoc.GetText();
+        // When replaceInFields is true, the hyperlink text should be replaced
+        Assert.Contains("NewLink", text);
+    }
+
+    [Fact]
+    public async Task Search_WithUseRegex_ShouldSearchUsingRegex()
+    {
+        // Arrange
+        var docPath =
+            CreateWordDocumentWithContent("test_search_regex.docx", "Email: test@example.com and admin@test.org");
+        var arguments = CreateArguments("search", docPath);
+        arguments["searchText"] = @"\w+@\w+\.\w+";
+        arguments["useRegex"] = true;
+
+        // Act
+        var result = await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.Contains("Found", result, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("test@example.com", result);
+        Assert.Contains("admin@test.org", result);
+    }
+
+    [Fact]
+    public async Task Search_WithCaseSensitive_ShouldMatchCase()
+    {
+        // Arrange
+        var docPath = CreateWordDocumentWithContent("test_search_case.docx", "Hello HELLO hello HeLLo");
+        var arguments = CreateArguments("search", docPath);
+        arguments["searchText"] = "Hello";
+        arguments["caseSensitive"] = true;
+
+        // Act
+        var result = await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.Contains("Found", result, StringComparison.OrdinalIgnoreCase);
+        // Should only find exact case match "Hello", not "HELLO", "hello", or "HeLLo"
+        Assert.Contains("1 matches", result);
+    }
+
+    [Fact]
+    public async Task Search_WithMaxResults_ShouldLimitResults()
+    {
+        // Arrange
+        var docPath = CreateWordDocumentWithContent("test_search_max.docx",
+            "word word word word word word word word word word");
+        var arguments = CreateArguments("search", docPath);
+        arguments["searchText"] = "word";
+        arguments["maxResults"] = 3;
+
+        // Act
+        var result = await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.Contains("Found", result, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("3 matches", result);
+        Assert.Contains("limited to first 3", result);
+    }
+
+    [Fact]
+    public async Task InsertAtPosition_WithInsertBefore_ShouldInsertBeforePosition()
+    {
+        // Arrange
+        var docPath = CreateWordDocumentWithContent("test_insert_before.docx", "Original Text");
+        var outputPath = CreateTestFilePath("test_insert_before_output.docx");
+        var arguments = CreateArguments("insert_at_position", docPath, outputPath);
+        arguments["insertParagraphIndex"] = 0;
+        arguments["charIndex"] = 0;
+        arguments["text"] = "Prefix: ";
+        arguments["insertBefore"] = true;
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.True(File.Exists(outputPath), "Output document should be created");
+        var doc = new Document(outputPath);
+        var text = doc.GetText();
+        Assert.Contains("Prefix:", text);
+        Assert.Contains("Original Text", text);
+    }
 }

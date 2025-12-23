@@ -143,7 +143,7 @@ public class PptChartToolTests : TestBase
             ppt.Save(pptPath, SaveFormat.Pptx);
         }
 
-        var chartsBefore = 0;
+        int chartsBefore;
         using (var ppt = new Presentation(pptPath))
         {
             chartsBefore = ppt.Slides[0].Shapes.OfType<IChart>().Count();

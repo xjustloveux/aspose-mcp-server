@@ -169,4 +169,132 @@ public class ExcelChartToolTests : ExcelTestBase
         var resultWorksheet = resultWorkbook.Worksheets[0];
         Assert.True(resultWorksheet.Charts.Count > 0, "Chart should exist after setting properties");
     }
+
+    [Fact]
+    public async Task Add_WithPieChart_ShouldAddPieChart()
+    {
+        // Arrange
+        var workbookPath = CreateWorkbookWithData("test_add_pie_chart.xlsx", 5);
+        var outputPath = CreateTestFilePath("test_add_pie_chart_output.xlsx");
+        var arguments = CreateArguments("add", workbookPath, outputPath);
+        arguments["chartType"] = "Pie";
+        arguments["dataRange"] = "B1:B5";
+        arguments["categoryAxisDataRange"] = "A1:A5";
+        arguments["position"] = "D1";
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        var workbook = new Workbook(outputPath);
+        var worksheet = workbook.Worksheets[0];
+        Assert.True(worksheet.Charts.Count > 0, "Pie chart should be added");
+        Assert.Equal(ChartType.Pie, worksheet.Charts[0].Type);
+    }
+
+    [Fact]
+    public async Task Add_WithLineChart_ShouldAddLineChart()
+    {
+        // Arrange
+        var workbookPath = CreateWorkbookWithData("test_add_line_chart.xlsx");
+        var outputPath = CreateTestFilePath("test_add_line_chart_output.xlsx");
+        var arguments = CreateArguments("add", workbookPath, outputPath);
+        arguments["chartType"] = "Line";
+        arguments["dataRange"] = "B1:B10";
+        arguments["categoryAxisDataRange"] = "A1:A10";
+        arguments["position"] = "D1";
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        var workbook = new Workbook(outputPath);
+        var worksheet = workbook.Worksheets[0];
+        Assert.True(worksheet.Charts.Count > 0, "Line chart should be added");
+        Assert.Equal(ChartType.Line, worksheet.Charts[0].Type);
+    }
+
+    [Fact]
+    public async Task Add_WithBarChart_ShouldAddBarChart()
+    {
+        // Arrange
+        var workbookPath = CreateWorkbookWithData("test_add_bar_chart.xlsx", 5);
+        var outputPath = CreateTestFilePath("test_add_bar_chart_output.xlsx");
+        var arguments = CreateArguments("add", workbookPath, outputPath);
+        arguments["chartType"] = "Bar";
+        arguments["dataRange"] = "B1:B5";
+        arguments["categoryAxisDataRange"] = "A1:A5";
+        arguments["position"] = "D1";
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        var workbook = new Workbook(outputPath);
+        var worksheet = workbook.Worksheets[0];
+        Assert.True(worksheet.Charts.Count > 0, "Bar chart should be added");
+        Assert.Equal(ChartType.Bar, worksheet.Charts[0].Type);
+    }
+
+    [Fact]
+    public async Task SetChartProperties_WithTitle_ShouldUpdateTitle()
+    {
+        // Arrange
+        var workbookPath = CreateWorkbookWithData("test_chart_title.xlsx");
+        var workbook = new Workbook(workbookPath);
+        var worksheet = workbook.Worksheets[0];
+        worksheet.Charts.Add(ChartType.Column, 0, 0, 20, 10);
+        workbook.Save(workbookPath);
+
+        var outputPath = CreateTestFilePath("test_chart_title_output.xlsx");
+        var arguments = CreateArguments("set_properties", workbookPath, outputPath);
+        arguments["chartIndex"] = 0;
+        arguments["title"] = "Sales Report 2024";
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        var resultWorkbook = new Workbook(outputPath);
+        var chart = resultWorkbook.Worksheets[0].Charts[0];
+        Assert.Equal("Sales Report 2024", chart.Title.Text);
+    }
+
+    [Fact]
+    public async Task Add_WithMultipleSeries_ShouldAddMultipleSeries()
+    {
+        // Arrange - Create workbook with multiple data columns
+        var workbookPath = CreateTestFilePath("test_multi_series_chart.xlsx");
+        var workbook = new Workbook();
+        var worksheet = workbook.Worksheets[0];
+
+        // Add category labels
+        for (var i = 0; i < 5; i++)
+            worksheet.Cells[i, 0].Value = $"Month{i + 1}";
+
+        // Add first series data
+        for (var i = 0; i < 5; i++)
+            worksheet.Cells[i, 1].Value = (i + 1) * 10;
+
+        // Add second series data
+        for (var i = 0; i < 5; i++)
+            worksheet.Cells[i, 2].Value = (i + 1) * 15;
+
+        workbook.Save(workbookPath);
+
+        var outputPath = CreateTestFilePath("test_multi_series_chart_output.xlsx");
+        var arguments = CreateArguments("add", workbookPath, outputPath);
+        arguments["chartType"] = "Column";
+        arguments["dataRange"] = "B1:C5";
+        arguments["categoryAxisDataRange"] = "A1:A5";
+        arguments["position"] = "E1";
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        var resultWorkbook = new Workbook(outputPath);
+        var chart = resultWorkbook.Worksheets[0].Charts[0];
+        Assert.True(chart.NSeries.Count >= 1, $"Chart should have series, got {chart.NSeries.Count}");
+    }
 }
