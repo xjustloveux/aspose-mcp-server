@@ -59,13 +59,16 @@ jobs:
       shell: pwsh
       continue-on-error: true
     
-    - name: Build
-      run: dotnet build --configuration Release --no-restore
+    - name: Build Solution
+      run: dotnet build AsposeMcpServer.sln --configuration Release --no-restore
+    
+    - name: Build Test Project
+      run: dotnet build Tests/AsposeMcpServer.Tests.csproj --configuration Release --no-restore
     
     - name: Test with Coverage
       id: test
       run: |
-        .\test.ps1 -Coverage -NoBuild
+        .\test.ps1 -Coverage -NoBuild -Configuration Release
       continue-on-error: true
     
     - name: Check Test Results

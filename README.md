@@ -589,7 +589,12 @@ word_style(path="B.docx", operation="copy_styles", sourceDocument="A.docx")
 
 ## 📄 授權
 
-本專案需要有效的 Aspose 授權檔案。支援以下授權類型：
+**本專案源代碼授權：**
+- 本專案的源代碼採用 [MIT License](LICENSE) 授權
+- 您可以自由使用、修改和分發本專案的源代碼
+
+**使用本專案需要 Aspose 授權：**
+本專案需要有效的 Aspose 授權檔案才能正常運行。支援以下授權類型：
 - `Aspose.Total.lic` - 總授權（包含所有組件，推薦）
 - `Aspose.Words.lic` - Word 組件授權
 - `Aspose.Cells.lic` - Excel 組件授權

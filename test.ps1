@@ -6,7 +6,8 @@ param(
     [switch]$NoBuild,
     [switch]$Coverage,
     [string]$Filter,
-    [switch]$SkipLicense  # Skip license loading, force evaluation mode
+    [switch]$SkipLicense,  # Skip license loading, force evaluation mode
+    [string]$Configuration = "Release"  # Build configuration (Debug or Release)
 )
 
 # Set console encoding to UTF-8
@@ -40,6 +41,8 @@ if ($Verbose) {
 if ($NoBuild) {
     $testArgs += "--no-build"
 }
+# Always specify configuration to ensure correct DLL location
+$testArgs += "--configuration", $Configuration
 
 if ($Coverage) {
     $testArgs += "--collect", "XPlat Code Coverage"
