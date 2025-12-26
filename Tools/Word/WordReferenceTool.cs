@@ -16,8 +16,13 @@ public class WordReferenceTool : IAsposeTool
 Usage examples:
 - Add table of contents: word_reference(operation='add_table_of_contents', path='doc.docx', title='Table of Contents', maxLevel=3)
 - Update table of contents: word_reference(operation='update_table_of_contents', path='doc.docx')
-- Add index: word_reference(operation='add_index', path='doc.docx', entries=[{'text':'Index term','page':1}])
-- Add cross-reference: word_reference(operation='add_cross_reference', path='doc.docx', referenceType='Heading', targetText='Chapter 1', displayText='See Chapter 1')";
+- Add index: word_reference(operation='add_index', path='doc.docx', indexEntries=[{'text':'Index term'}])
+- Add cross-reference: word_reference(operation='add_cross_reference', path='doc.docx', referenceType='Bookmark', targetName='Chapter1', referenceText='See ')
+
+Notes:
+- TOC is automatically updated after insertion using UpdateFields()
+- For cross-references, targetName must be an existing bookmark name in the document
+- If headingStyle doesn't exist in the document, it falls back to 'Heading 1'";
 
     public object InputSchema => new
     {
@@ -145,13 +150,16 @@ Usage examples:
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
         return operation.ToLower() switch
         {
-            "add_table_of_contents" => await AddTableOfContents(arguments),
-            "update_table_of_contents" => await UpdateTableOfContents(arguments),
-            "add_index" => await AddIndex(arguments),
-            "add_cross_reference" => await AddCrossReference(arguments),
+            "add_table_of_contents" => await AddTableOfContentsAsync(path, outputPath, arguments),
+            "update_table_of_contents" => await UpdateTableOfContentsAsync(path, outputPath, arguments),
+            "add_index" => await AddIndexAsync(path, outputPath, arguments),
+            "add_cross_reference" => await AddCrossReferenceAsync(path, outputPath, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -159,15 +167,17 @@ Usage examples:
     /// <summary>
     ///     Adds a table of contents to the document
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, optional outputPath, headingLevels</param>
-    /// <returns>Success message</returns>
-    private Task<string> AddTableOfContents(JsonObject? arguments)
+    /// <param name="path">Source document file path</param>
+    /// <param name="outputPath">Output document file path</param>
+    /// <param name="arguments">
+    ///     JSON arguments containing position, title, maxLevel, hyperlinks, pageNumbers,
+    ///     rightAlignPageNumbers
+    /// </param>
+    /// <returns>Success message with output path</returns>
+    private Task<string> AddTableOfContentsAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
             var position = ArgumentHelper.GetString(arguments, "position", "start");
             var title = ArgumentHelper.GetString(arguments, "title", "Table of Contents");
             var maxLevel = ArgumentHelper.GetInt(arguments, "maxLevel", 3);
@@ -190,22 +200,23 @@ Usage examples:
                 builder.ParagraphFormat.StyleIdentifier = StyleIdentifier.Normal;
             }
 
-            var switches = new List<string>
-            {
-                $"\\o \"1-{maxLevel}\""
-            };
+            // Build TOC switches
+            var switches = $"\\o \"1-{maxLevel}\"";
 
             if (!hyperlinks)
-                switches.Add("\\n");
+                switches += " \\n";
 
             if (!pageNumbers)
-                switches.Add("\\n");
+                switches += " \\p \"\"";
 
             if (!rightAlignPageNumbers)
-                switches.Add("\\l");
+                switches += " \\l";
 
-            var fieldCode = $"TOC {string.Join(" ", switches)}";
-            builder.InsertField(fieldCode);
+            // Use InsertTableOfContents for clearer semantics
+            builder.InsertTableOfContents(switches);
+
+            // Update fields to populate TOC content immediately
+            doc.UpdateFields();
 
             doc.Save(outputPath);
             return $"Table of contents added: {outputPath}";
@@ -213,28 +224,25 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Updates the table of contents
+    ///     Updates the table of contents fields in the document
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, optional outputPath</param>
-    /// <returns>Success message</returns>
-    private Task<string> UpdateTableOfContents(JsonObject? arguments)
+    /// <param name="path">Source document file path</param>
+    /// <param name="outputPath">Output document file path</param>
+    /// <param name="arguments">JSON arguments containing optional tocIndex</param>
+    /// <returns>Success message with number of updated TOC fields, or helpful message if no TOC found</returns>
+    private Task<string> UpdateTableOfContentsAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
             var tocIndex = ArgumentHelper.GetIntNullable(arguments, "tocIndex");
 
             var doc = new Document(path);
-            // Search for TOC fields in the entire document (including headers/footers)
             var tocFields = doc.Range.Fields
                 .Where(f => f.Type == FieldType.FieldTOC)
                 .ToList();
 
             if (tocFields.Count == 0)
             {
-                // Provide more helpful error message
                 var allFields = doc.Range.Fields.ToList();
                 var fieldTypes = allFields.Select(f => f.Type.ToString()).Distinct().ToList();
                 var message = "No table of contents fields found in document.";
@@ -264,17 +272,16 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Adds an index to the document
+    ///     Adds index entries and optionally an INDEX field to the document
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, optional outputPath, entries</param>
-    /// <returns>Success message</returns>
-    private Task<string> AddIndex(JsonObject? arguments)
+    /// <param name="path">Source document file path</param>
+    /// <param name="outputPath">Output document file path</param>
+    /// <param name="arguments">JSON arguments containing indexEntries array, insertIndexAtEnd, headingStyle</param>
+    /// <returns>Success message with entry count and output path</returns>
+    private Task<string> AddIndexAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
             var indexEntriesArray = ArgumentHelper.GetArray(arguments, "indexEntries");
             var insertIndexAtEnd = ArgumentHelper.GetBool(arguments, "insertIndexAtEnd", true);
             var headingStyle = ArgumentHelper.GetString(arguments, "headingStyle", "Heading 1");
@@ -305,7 +312,14 @@ Usage examples:
             {
                 builder.MoveToDocumentEnd();
                 builder.InsertBreak(BreakType.PageBreak);
-                builder.ParagraphFormat.Style = doc.Styles[headingStyle];
+
+                // Check if headingStyle exists, fallback to Heading1 if not found
+                var style = doc.Styles[headingStyle];
+                if (style == null)
+                    builder.ParagraphFormat.StyleIdentifier = StyleIdentifier.Heading1;
+                else
+                    builder.ParagraphFormat.Style = style;
+
                 builder.Writeln("Index");
                 builder.ParagraphFormat.Style = doc.Styles["Normal"];
                 builder.InsertField("INDEX \\e \" \" \\h \"A\"");
@@ -317,23 +331,26 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Adds a cross-reference to the document
+    ///     Adds a cross-reference (REF field) to the document
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, referenceType, target, optional outputPath</param>
-    /// <returns>Success message</returns>
-    private Task<string> AddCrossReference(JsonObject? arguments)
+    /// <param name="path">Source document file path</param>
+    /// <param name="outputPath">Output document file path</param>
+    /// <param name="arguments">
+    ///     JSON arguments containing referenceType, targetName, referenceText, insertAsHyperlink,
+    ///     includeAboveBelow
+    /// </param>
+    /// <returns>Success message with reference type and output path</returns>
+    /// <exception cref="ArgumentException">Thrown when referenceType is invalid</exception>
+    private Task<string> AddCrossReferenceAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var referenceType = ArgumentHelper.GetString(arguments, "referenceType");
             var referenceText = ArgumentHelper.GetStringNullable(arguments, "referenceText");
             var targetName = ArgumentHelper.GetString(arguments, "targetName");
             var insertAsHyperlink = ArgumentHelper.GetBool(arguments, "insertAsHyperlink", true);
             var includeAboveBelow = ArgumentHelper.GetBool(arguments, "includeAboveBelow", false);
 
-            // Validate referenceType
             var validTypes = new[] { "Heading", "Bookmark", "Figure", "Table", "Equation" };
             if (!validTypes.Contains(referenceType, StringComparer.OrdinalIgnoreCase))
                 throw new ArgumentException(
@@ -346,25 +363,7 @@ Usage examples:
             if (!string.IsNullOrEmpty(referenceText))
                 builder.Write(referenceText);
 
-            // Use appropriate field code based on reference type
-            string fieldCode;
-            switch (referenceType.ToLower())
-            {
-                case "heading":
-                case "bookmark":
-                    fieldCode = insertAsHyperlink ? $"REF {targetName} \\h" : $"REF {targetName}";
-                    break;
-                case "figure":
-                case "table":
-                case "equation":
-                    // For numbered items, use STYLEREF or SEQ fields
-                    // For now, use REF with bookmark name (targetName should be bookmark name)
-                    fieldCode = insertAsHyperlink ? $"REF {targetName} \\h" : $"REF {targetName}";
-                    break;
-                default:
-                    fieldCode = insertAsHyperlink ? $"REF {targetName} \\h" : $"REF {targetName}";
-                    break;
-            }
+            var fieldCode = insertAsHyperlink ? $"REF {targetName} \\h" : $"REF {targetName}";
 
             builder.InsertField(fieldCode);
             if (includeAboveBelow)

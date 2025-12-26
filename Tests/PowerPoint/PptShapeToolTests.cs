@@ -59,15 +59,12 @@ public class PptShapeToolTests : TestBase
             Assert.True(nonPlaceholderShapes.Count > 0,
                 $"Should find at least one shape. Total shapes: {pptSlide.Shapes.Count}, Non-placeholder: {pptSlide.Shapes.Count(s => s.Placeholder == null)}");
             // The added shape should be the one with original coordinates (100, 100)
-            for (var i = 0; i < nonPlaceholderShapes.Count; i++)
-            {
-                var s = nonPlaceholderShapes[i];
+            foreach (var s in nonPlaceholderShapes)
                 if (Math.Abs(s.X - 100) < 1 && Math.Abs(s.Y - 100) < 1)
                 {
                     correctShapeIndex = pptSlide.Shapes.IndexOf(s);
                     break;
                 }
-            }
 
             if (correctShapeIndex < 0)
                 correctShapeIndex =
@@ -213,15 +210,12 @@ public class PptShapeToolTests : TestBase
             Assert.True(nonPlaceholderShapes.Count > 0,
                 $"Should find at least one shape. Total shapes: {pptSlide.Shapes.Count}, Non-placeholder: {pptSlide.Shapes.Count(s => s.Placeholder == null)}");
             // The added shape should be the one with original coordinates (100, 100)
-            for (var i = 0; i < nonPlaceholderShapes.Count; i++)
-            {
-                var s = nonPlaceholderShapes[i];
+            foreach (var s in nonPlaceholderShapes)
                 if (Math.Abs(s.X - 100) < 1 && Math.Abs(s.Y - 100) < 1)
                 {
                     correctShapeIndex = pptSlide.Shapes.IndexOf(s);
                     break;
                 }
-            }
 
             if (correctShapeIndex < 0)
                 correctShapeIndex =

@@ -1,4 +1,4 @@
-using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using AsposeMcpServer.Core;
@@ -91,14 +91,16 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
         return operation.ToLower() switch
         {
-            "add" => await AddBookmarkAsync(arguments, path),
-            "edit" => await EditBookmarkAsync(arguments, path),
-            "delete" => await DeleteBookmarkAsync(arguments, path),
-            "get" => await GetBookmarksAsync(arguments, path),
-            "goto" => await GotoBookmarkAsync(arguments, path),
+            "add" => await AddBookmarkAsync(path, outputPath, arguments),
+            "edit" => await EditBookmarkAsync(path, outputPath, arguments),
+            "delete" => await DeleteBookmarkAsync(path, outputPath, arguments),
+            "get" => await GetBookmarksAsync(path),
+            "goto" => await GotoBookmarkAsync(path, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -106,37 +108,48 @@ Usage examples:
     /// <summary>
     ///     Adds a bookmark to the document
     /// </summary>
-    /// <param name="arguments">JSON arguments containing name, optional text, paragraphIndex, outputPath</param>
-    /// <param name="path">Word document file path</param>
+    /// <param name="path">Document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing name, optional text, paragraphIndex</param>
     /// <returns>Success message</returns>
-    private Task<string> AddBookmarkAsync(JsonObject? arguments, string path)
+    private Task<string> AddBookmarkAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var name = ArgumentHelper.GetString(arguments, "name");
             var text = ArgumentHelper.GetStringNullable(arguments, "text");
             var paragraphIndex = ArgumentHelper.GetIntNullable(arguments, "paragraphIndex");
 
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+            var outputDir = Path.GetDirectoryName(outputPath);
+            if (!string.IsNullOrEmpty(outputDir))
+                Directory.CreateDirectory(outputDir);
 
             var doc = new Document(path);
             var builder = new DocumentBuilder(doc);
 
-            // Check if bookmark already exists
-            if (doc.Range.Bookmarks[name] != null)
-                throw new InvalidOperationException($"Bookmark '{name}' already exists");
+            // Check if bookmark already exists (case-insensitive in Word)
+            var existingBookmark = doc.Range.Bookmarks
+                .FirstOrDefault(b => b.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+            if (existingBookmark != null)
+                throw new InvalidOperationException(
+                    $"Bookmark '{existingBookmark.Name}' already exists (bookmark names are case-insensitive)");
 
             // Determine insertion position
             if (paragraphIndex.HasValue)
             {
                 var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
-                if (paragraphIndex.Value == -1)
+
+                // Protection for empty document
+                if (paragraphs.Count == 0)
+                {
+                    // Document is empty, move to document end (will create content there)
+                    builder.MoveToDocumentEnd();
+                }
+                else if (paragraphIndex.Value == -1)
                 {
                     // Insert at the beginning
-                    if (paragraphs.Count > 0)
-                        if (paragraphs[0] is Paragraph firstPara)
-                            builder.MoveTo(firstPara);
+                    if (paragraphs[0] is Paragraph firstPara)
+                        builder.MoveTo(firstPara);
                 }
                 else if (paragraphIndex.Value >= 0 && paragraphIndex.Value < paragraphs.Count)
                 {
@@ -193,20 +206,22 @@ Usage examples:
     /// <summary>
     ///     Edits a bookmark (renames or changes text)
     /// </summary>
-    /// <param name="arguments">JSON arguments containing name, optional newName, text or newText, outputPath</param>
-    /// <param name="path">Word document file path</param>
+    /// <param name="path">Document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing name, optional newName, newText or text</param>
     /// <returns>Success message</returns>
-    private Task<string> EditBookmarkAsync(JsonObject? arguments, string path)
+    private Task<string> EditBookmarkAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var bookmarkName = ArgumentHelper.GetString(arguments, "name");
             var newName = ArgumentHelper.GetStringNullable(arguments, "newName");
             // Accept both text and newText for compatibility, text is required for edit operation
             var newText = ArgumentHelper.GetString(arguments, "newText", "text", "newText or text");
 
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+            var outputDir = Path.GetDirectoryName(outputPath);
+            if (!string.IsNullOrEmpty(outputDir))
+                Directory.CreateDirectory(outputDir);
 
             var doc = new Document(path);
             var bookmarks = doc.Range.Bookmarks;
@@ -246,21 +261,14 @@ Usage examples:
             var changes = new List<string>();
 
             // Rename bookmark if new name provided
-            if (!string.IsNullOrEmpty(newName) && newName != bookmarkName)
+            if (!string.IsNullOrEmpty(newName) && !newName.Equals(bookmarkName, StringComparison.OrdinalIgnoreCase))
             {
-                // Check if new name already exists
-                Bookmark? existingBookmark = null;
-                try
-                {
-                    existingBookmark = bookmarks[newName];
-                }
-                catch (Exception ex)
-                {
-                    // New name doesn't exist, continue
-                    Console.Error.WriteLine($"[WARN] Error checking bookmark name '{newName}': {ex.Message}");
-                }
-
-                if (existingBookmark != null) throw new ArgumentException($"Bookmark name '{newName}' already exists");
+                // Check if new name already exists (case-insensitive in Word)
+                var existingWithNewName = bookmarks
+                    .FirstOrDefault(b => b.Name.Equals(newName, StringComparison.OrdinalIgnoreCase));
+                if (existingWithNewName != null)
+                    throw new ArgumentException(
+                        $"Bookmark name '{existingWithNewName.Name}' already exists (bookmark names are case-insensitive)");
 
                 try
                 {
@@ -274,36 +282,12 @@ Usage examples:
             }
 
             // Update bookmark text if new text provided
+            // Use Aspose's built-in Text property which handles node deletion and insertion automatically
             if (!string.IsNullOrEmpty(newText))
-                try
-                {
-                    // Get the bookmark range and replace its content
-                    var bookmarkRange = bookmark.BookmarkStart;
-                    var bookmarkEnd = bookmark.BookmarkEnd;
-
-                    if (bookmarkRange != null && bookmarkEnd != null)
-                    {
-                        // Remove existing content between bookmark start and end
-                        var currentNode = bookmarkRange.NextSibling;
-                        while (currentNode != null && currentNode != bookmarkEnd)
-                        {
-                            var nextNode = currentNode.NextSibling;
-                            currentNode.Remove();
-                            currentNode = nextNode;
-                        }
-
-                        // Insert new text
-                        var builder = new DocumentBuilder(doc);
-                        builder.MoveTo(bookmarkRange);
-                        builder.Write(newText);
-
-                        changes.Add("Bookmark content updated");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    throw new InvalidOperationException($"Unable to update bookmark content: {ex.Message}", ex);
-                }
+            {
+                bookmark.Text = newText;
+                changes.Add("Bookmark content updated");
+            }
 
             if (changes.Count == 0)
                 return "No changes made. Please provide newName or newText parameter.";
@@ -325,18 +309,20 @@ Usage examples:
     /// <summary>
     ///     Deletes a bookmark from the document
     /// </summary>
-    /// <param name="arguments">JSON arguments containing name, optional outputPath</param>
-    /// <param name="path">Word document file path</param>
+    /// <param name="path">Document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing name, optional keepText</param>
     /// <returns>Success message</returns>
-    private Task<string> DeleteBookmarkAsync(JsonObject? arguments, string path)
+    private Task<string> DeleteBookmarkAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var name = ArgumentHelper.GetString(arguments, "name");
             var keepText = ArgumentHelper.GetBool(arguments, "keepText");
 
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+            var outputDir = Path.GetDirectoryName(outputPath);
+            if (!string.IsNullOrEmpty(outputDir))
+                Directory.CreateDirectory(outputDir);
 
             var doc = new Document(path);
 
@@ -380,10 +366,9 @@ Usage examples:
     /// <summary>
     ///     Gets all bookmarks from the document
     /// </summary>
-    /// <param name="_">Unused parameter</param>
-    /// <param name="path">Word document file path</param>
-    /// <returns>Formatted string with all bookmarks</returns>
-    private Task<string> GetBookmarksAsync(JsonObject? _, string path)
+    /// <param name="path">Document file path</param>
+    /// <returns>JSON formatted string with all bookmarks for better LLM processing</returns>
+    private Task<string> GetBookmarksAsync(string path)
     {
         return Task.Run(() =>
         {
@@ -392,33 +377,42 @@ Usage examples:
             // Get all bookmarks
             var bookmarks = doc.Range.Bookmarks;
 
-            if (bookmarks.Count == 0) return "No bookmarks found in document";
+            if (bookmarks.Count == 0)
+                return JsonSerializer.Serialize(new
+                    { count = 0, bookmarks = Array.Empty<object>(), message = "No bookmarks found in document" });
 
-            var result = new StringBuilder();
-            result.AppendLine($"Found {bookmarks.Count} bookmarks:\n");
-
+            // Build JSON response for better LLM processing
+            var bookmarkList = new List<object>();
             var index = 0;
             foreach (var bookmark in bookmarks)
             {
-                result.AppendLine($"Bookmark #{index}:");
-                result.AppendLine($"  Name: {bookmark.Name}");
-                result.AppendLine($"  Text: {bookmark.Text}");
-                result.AppendLine($"  Length: {bookmark.Text.Length} characters");
-                result.AppendLine();
+                bookmarkList.Add(new
+                {
+                    index,
+                    name = bookmark.Name,
+                    text = bookmark.Text,
+                    length = bookmark.Text.Length
+                });
                 index++;
             }
 
-            return result.ToString().TrimEnd();
+            var result = new
+            {
+                count = bookmarks.Count,
+                bookmarks = bookmarkList
+            };
+
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 
     /// <summary>
     ///     Gets bookmark content and position
     /// </summary>
+    /// <param name="path">Document file path</param>
     /// <param name="arguments">JSON arguments containing name</param>
-    /// <param name="path">Word document file path</param>
     /// <returns>Formatted string with bookmark information</returns>
-    private Task<string> GotoBookmarkAsync(JsonObject? arguments, string path)
+    private Task<string> GotoBookmarkAsync(string path, JsonObject? arguments)
     {
         return Task.Run(() =>
         {

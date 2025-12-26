@@ -88,4 +88,57 @@ public class WordFormatToolTests : WordTestBase
         var paragraphs = GetParagraphs(doc);
         Assert.True(paragraphs.Count > 0, "Document should have paragraphs");
     }
+
+    [Fact]
+    public async Task AddTabStop_ShouldAddTabStop()
+    {
+        // Arrange
+        var docPath = CreateWordDocumentWithContent("test_add_tab_stop.docx", "Test text with tab");
+        var outputPath = CreateTestFilePath("test_add_tab_stop_output.docx");
+        var arguments = CreateArguments("add_tab_stop", docPath, outputPath);
+        arguments["paragraphIndex"] = 0;
+        arguments["tabPosition"] = 72.0; // 1 inch in points
+        arguments["alignment"] = "left";
+        arguments["leader"] = "none";
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.True(File.Exists(outputPath), "Output document should be created");
+        var doc = new Document(outputPath);
+        var paragraphs = GetParagraphs(doc);
+        Assert.True(paragraphs.Count > 0, "Document should have paragraphs");
+        var tabStops = paragraphs[0].ParagraphFormat.TabStops;
+        Assert.True(tabStops.Count > 0, "Paragraph should have at least one tab stop");
+    }
+
+    [Fact]
+    public async Task ClearTabStops_ShouldClearTabStops()
+    {
+        // Arrange
+        var docPath = CreateWordDocumentWithContent("test_clear_tab_stops.docx", "Test text");
+        var doc = new Document(docPath);
+        var paragraphs = GetParagraphs(doc);
+        if (paragraphs.Count > 0)
+        {
+            paragraphs[0].ParagraphFormat.TabStops.Add(72.0, TabAlignment.Left, TabLeader.None);
+            doc.Save(docPath);
+        }
+
+        var outputPath = CreateTestFilePath("test_clear_tab_stops_output.docx");
+        var arguments = CreateArguments("clear_tab_stops", docPath, outputPath);
+        arguments["paragraphIndex"] = 0;
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.True(File.Exists(outputPath), "Output document should be created");
+        var resultDoc = new Document(outputPath);
+        var resultParagraphs = GetParagraphs(resultDoc);
+        Assert.True(resultParagraphs.Count > 0, "Document should have paragraphs");
+        var tabStops = resultParagraphs[0].ParagraphFormat.TabStops;
+        Assert.Equal(0, tabStops.Count);
+    }
 }

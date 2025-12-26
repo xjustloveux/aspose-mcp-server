@@ -1,5 +1,5 @@
 using System.Globalization;
-using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using Aspose.Words.Drawing;
@@ -77,12 +77,12 @@ Usage examples:
             width = new
             {
                 type = "number",
-                description = "Image width in points (optional, for add/edit operations)"
+                description = "Image width in points (72 pts = 1 inch, optional, for add/edit operations)"
             },
             height = new
             {
                 type = "number",
-                description = "Image height in points (optional, for add/edit operations)"
+                description = "Image height in points (72 pts = 1 inch, optional, for add/edit operations)"
             },
             alignment = new
             {
@@ -130,12 +130,18 @@ Usage examples:
             alternativeText = new
             {
                 type = "string",
-                description = "Alternative text for accessibility (optional, for edit operation)"
+                description = "Alternative text for accessibility (optional, for add/edit operation)"
             },
             title = new
             {
                 type = "string",
-                description = "Image title (optional, for edit operation)"
+                description = "Image title (optional, for add/edit operation)"
+            },
+            linkUrl = new
+            {
+                type = "string",
+                description =
+                    "Hyperlink URL for the image. When clicked, opens the specified URL (optional, for add/edit operation). Use empty string to remove existing hyperlink."
             },
             newImagePath = new
             {
@@ -147,6 +153,12 @@ Usage examples:
                 type = "boolean",
                 description = "Preserve original image size (default: true, for replace operation)"
             },
+            smartFit = new
+            {
+                type = "boolean",
+                description =
+                    "When true, keeps original width and calculates height proportionally based on new image aspect ratio (avoids distortion when aspect ratios differ, default: false, for replace operation). Only applies when preserveSize is true."
+            },
             preservePosition = new
             {
                 type = "boolean",
@@ -156,6 +168,12 @@ Usage examples:
             {
                 type = "string",
                 description = "Filename prefix for extracted images (optional, default: 'image', for extract operation)"
+            },
+            extractImageIndex = new
+            {
+                type = "number",
+                description =
+                    "Specific image index to extract (0-based, optional, for extract operation). If not provided, extracts all images."
             }
         },
         required = new[] { "operation", "path" }
@@ -170,17 +188,17 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-
-        SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
+        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
         return operation.ToLower() switch
         {
-            "add" => await AddImageAsync(arguments, path),
-            "edit" => await EditImageAsync(arguments, path),
-            "delete" => await DeleteImageAsync(arguments, path),
-            "get" => await GetImagesAsync(arguments, path),
-            "replace" => await ReplaceImageAsync(arguments, path),
-            "extract" => await ExtractImagesAsync(arguments, path),
+            "add" => await AddImageAsync(path, outputPath, arguments),
+            "edit" => await EditImageAsync(path, outputPath, arguments),
+            "delete" => await DeleteImageAsync(path, outputPath, arguments),
+            "get" => await GetImagesAsync(path, arguments),
+            "replace" => await ReplaceImageAsync(path, outputPath, arguments),
+            "extract" => await ExtractImagesAsync(path, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -188,14 +206,14 @@ Usage examples:
     /// <summary>
     ///     Adds an image to the document
     /// </summary>
-    /// <param name="arguments">JSON arguments containing imagePath, optional width, height, position, outputPath</param>
-    /// <param name="path">Word document file path</param>
+    /// <param name="path">Document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing imagePath, optional width, height, alignment, textWrapping</param>
     /// <returns>Success message</returns>
-    private Task<string> AddImageAsync(JsonObject? arguments, string path)
+    private Task<string> AddImageAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var imagePath = ArgumentHelper.GetString(arguments, "imagePath");
             var width = ArgumentHelper.GetDoubleNullable(arguments, "width");
             var height = ArgumentHelper.GetDoubleNullable(arguments, "height");
@@ -203,6 +221,9 @@ Usage examples:
             var textWrapping = ArgumentHelper.GetString(arguments, "textWrapping", "inline");
             var caption = ArgumentHelper.GetStringNullable(arguments, "caption");
             var captionPosition = ArgumentHelper.GetString(arguments, "captionPosition", "below");
+            var linkUrl = ArgumentHelper.GetStringNullable(arguments, "linkUrl");
+            var alternativeText = ArgumentHelper.GetStringNullable(arguments, "alternativeText");
+            var title = ArgumentHelper.GetStringNullable(arguments, "title");
 
             if (!File.Exists(imagePath)) throw new FileNotFoundException($"Image file not found: {imagePath}");
 
@@ -210,15 +231,9 @@ Usage examples:
             var builder = new DocumentBuilder(doc);
             builder.MoveToDocumentEnd();
 
-            // Add caption above if specified
+            // Add caption above if specified (using professional Caption style with SEQ field)
             if (!string.IsNullOrEmpty(caption) && captionPosition == "above")
-            {
-                builder.ParagraphFormat.Alignment = GetAlignment(alignment);
-                builder.Font.Italic = true;
-                builder.Writeln(caption);
-                builder.Font.Italic = false;
-                builder.ParagraphFormat.Alignment = ParagraphAlignment.Left;
-            }
+                InsertCaption(builder, caption, alignment);
 
             // Insert image
             Shape shape;
@@ -261,35 +276,36 @@ Usage examples:
                 if (height.HasValue)
                     shape.Height = height.Value;
 
-                // Set horizontal alignment for floating images
+                // Set alignment for floating images (relative to Column/Paragraph for better text flow)
+                shape.RelativeHorizontalPosition = RelativeHorizontalPosition.Column;
+                shape.RelativeVerticalPosition = RelativeVerticalPosition.Paragraph;
                 if (alignment == "center")
-                {
-                    shape.RelativeHorizontalPosition = RelativeHorizontalPosition.Page;
                     shape.HorizontalAlignment = HorizontalAlignment.Center;
-                }
                 else if (alignment == "right")
-                {
-                    shape.RelativeHorizontalPosition = RelativeHorizontalPosition.Page;
                     shape.HorizontalAlignment = HorizontalAlignment.Right;
-                }
                 else
-                {
-                    shape.RelativeHorizontalPosition = RelativeHorizontalPosition.Page;
                     shape.HorizontalAlignment = HorizontalAlignment.Left;
-                }
             }
+
+            // Set hyperlink if provided
+            if (!string.IsNullOrEmpty(linkUrl))
+                shape.HRef = linkUrl;
+
+            // Set alternative text if provided
+            if (!string.IsNullOrEmpty(alternativeText))
+                shape.AlternativeText = alternativeText;
+
+            // Set title if provided
+            if (!string.IsNullOrEmpty(title))
+                shape.Title = title;
 
             // Reset paragraph alignment only after caption (if any) is added
 
-            // Add caption below if specified
+            // Add caption below if specified (using professional Caption style with SEQ field)
             if (!string.IsNullOrEmpty(caption) && captionPosition == "below")
             {
-                if (textWrapping == "inline")
-                    // For inline images, caption should be in a new paragraph with same alignment
-                    builder.ParagraphFormat.Alignment = GetAlignment(alignment);
-                builder.Font.Italic = true;
-                builder.Writeln(caption);
-                builder.Font.Italic = false;
+                builder.Writeln(); // New line after image
+                InsertCaption(builder, caption, alignment);
             }
 
             if (textWrapping != "inline")
@@ -316,6 +332,9 @@ Usage examples:
                     $"Size: {(width.HasValue ? width.Value.ToString(CultureInfo.InvariantCulture) : "auto")} x {(height.HasValue ? height.Value.ToString(CultureInfo.InvariantCulture) : "auto")} pt\n";
             result += $"Alignment: {alignment}\n";
             result += $"Text wrapping: {textWrapping}\n";
+            if (!string.IsNullOrEmpty(linkUrl)) result += $"Hyperlink: {linkUrl}\n";
+            if (!string.IsNullOrEmpty(alternativeText)) result += $"Alt text: {alternativeText}\n";
+            if (!string.IsNullOrEmpty(title)) result += $"Title: {title}\n";
             if (!string.IsNullOrEmpty(caption)) result += $"Caption: {caption} ({captionPosition})\n";
             result += $"Output: {outputPath}";
 
@@ -326,18 +345,16 @@ Usage examples:
     /// <summary>
     ///     Edits image properties
     /// </summary>
-    /// <param name="arguments">JSON arguments containing imageIndex, optional width, height, position, outputPath</param>
-    /// <param name="path">Word document file path</param>
+    /// <param name="path">Document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing imageIndex, optional width, height, alignment, textWrapping</param>
     /// <returns>Success message</returns>
-    private Task<string> EditImageAsync(JsonObject? arguments, string path)
+    private Task<string> EditImageAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
             var imageIndex = ArgumentHelper.GetInt(arguments, "imageIndex");
             var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
-
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
             var doc = new Document(path);
 
@@ -376,36 +393,28 @@ Usage examples:
 
                 if (textWrapping != "inline")
                 {
+                    // Use Column/Paragraph positioning for better text flow
+                    shape.RelativeHorizontalPosition = RelativeHorizontalPosition.Column;
+                    shape.RelativeVerticalPosition = RelativeVerticalPosition.Paragraph;
+
                     var hAlign = ArgumentHelper.GetStringNullable(arguments, "horizontalAlignment") ?? "left";
-                    if (!string.IsNullOrEmpty(hAlign))
-                    {
-                        shape.RelativeHorizontalPosition = RelativeHorizontalPosition.Page;
-                        shape.HorizontalAlignment = GetHorizontalAlignment(hAlign);
-                    }
+                    if (!string.IsNullOrEmpty(hAlign)) shape.HorizontalAlignment = GetHorizontalAlignment(hAlign);
 
                     var vAlign = ArgumentHelper.GetStringNullable(arguments, "verticalAlignment") ?? "top";
-                    if (!string.IsNullOrEmpty(vAlign))
-                    {
-                        shape.RelativeVerticalPosition = RelativeVerticalPosition.Page;
-                        shape.VerticalAlignment = GetVerticalAlignment(vAlign);
-                    }
+                    if (!string.IsNullOrEmpty(vAlign)) shape.VerticalAlignment = GetVerticalAlignment(vAlign);
                 }
             }
             else if (shape.WrapType != WrapType.Inline)
             {
+                // Use Column/Paragraph positioning for better text flow
+                shape.RelativeHorizontalPosition = RelativeHorizontalPosition.Column;
+                shape.RelativeVerticalPosition = RelativeVerticalPosition.Paragraph;
+
                 var hAlign = ArgumentHelper.GetStringNullable(arguments, "horizontalAlignment") ?? "left";
-                if (!string.IsNullOrEmpty(hAlign))
-                {
-                    shape.RelativeHorizontalPosition = RelativeHorizontalPosition.Page;
-                    shape.HorizontalAlignment = GetHorizontalAlignment(hAlign);
-                }
+                if (!string.IsNullOrEmpty(hAlign)) shape.HorizontalAlignment = GetHorizontalAlignment(hAlign);
 
                 var vAlign = ArgumentHelper.GetStringNullable(arguments, "verticalAlignment") ?? "top";
-                if (!string.IsNullOrEmpty(vAlign))
-                {
-                    shape.RelativeVerticalPosition = RelativeVerticalPosition.Page;
-                    shape.VerticalAlignment = GetVerticalAlignment(vAlign);
-                }
+                if (!string.IsNullOrEmpty(vAlign)) shape.VerticalAlignment = GetVerticalAlignment(vAlign);
             }
 
             // Apply alternative text
@@ -418,6 +427,12 @@ Usage examples:
             if (!string.IsNullOrEmpty(title))
                 shape.Title = title;
 
+            // Apply hyperlink
+            var linkUrl = ArgumentHelper.GetStringNullable(arguments, "linkUrl");
+            if (linkUrl != null)
+                // Note: HRef property doesn't accept null, use empty string to clear
+                shape.HRef = linkUrl;
+
             doc.Save(outputPath);
 
             var changes = new List<string>();
@@ -429,6 +444,10 @@ Usage examples:
             if (heightValue.HasValue) changes.Add($"Height: {heightValue.Value}");
             if (alignmentValue != null) changes.Add($"Alignment: {alignmentValue}");
             if (textWrappingValue != null) changes.Add($"Text wrapping: {textWrappingValue}");
+            if (linkUrl != null)
+                changes.Add(string.IsNullOrEmpty(linkUrl) ? "Hyperlink: removed" : $"Hyperlink: {linkUrl}");
+            if (altText != null) changes.Add($"Alt text: {altText}");
+            if (title != null) changes.Add($"Title: {title}");
 
             var changesDesc = changes.Count > 0 ? string.Join(", ", changes) : "properties";
 
@@ -439,18 +458,16 @@ Usage examples:
     /// <summary>
     ///     Deletes an image from the document
     /// </summary>
-    /// <param name="arguments">JSON arguments containing imageIndex, optional outputPath</param>
-    /// <param name="path">Word document file path</param>
+    /// <param name="path">Document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing imageIndex, optional sectionIndex</param>
     /// <returns>Success message</returns>
-    private Task<string> DeleteImageAsync(JsonObject? arguments, string path)
+    private Task<string> DeleteImageAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
             var imageIndex = ArgumentHelper.GetInt(arguments, "imageIndex");
             var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
-
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
             var doc = new Document(path);
 
@@ -492,10 +509,10 @@ Usage examples:
     /// <summary>
     ///     Gets all images from the document
     /// </summary>
-    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
-    /// <param name="path">Word document file path</param>
-    /// <returns>Formatted string with all images</returns>
-    private Task<string> GetImagesAsync(JsonObject? arguments, string path)
+    /// <param name="path">Document file path</param>
+    /// <param name="arguments">JSON arguments containing optional sectionIndex</param>
+    /// <returns>JSON formatted string with all images</returns>
+    private Task<string> GetImagesAsync(string path, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -504,87 +521,117 @@ Usage examples:
 
             var shapes = GetAllImages(doc, sectionIndex);
 
-            var result = new StringBuilder();
-
-            result.AppendLine("=== Document Image Information ===\n");
-            if (sectionIndex == -1)
-                result.AppendLine($"Total images: {shapes.Count}\n");
-            else
-                result.AppendLine($"Section {sectionIndex} images: {shapes.Count}\n");
-
             if (shapes.Count == 0)
             {
-                result.AppendLine("No images found");
-                if (sectionIndex != -1)
-                    result.AppendLine(
-                        $"(No images found in section {sectionIndex}, use sectionIndex=-1 to search all sections)");
-                return result.ToString();
+                var emptyResult = new
+                {
+                    count = 0,
+                    sectionIndex = sectionIndex == -1 ? (int?)null : sectionIndex,
+                    images = Array.Empty<object>(),
+                    message = sectionIndex == -1
+                        ? "No images found in document"
+                        : $"No images found in section {sectionIndex}, use sectionIndex=-1 to search all sections"
+                };
+                return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
             }
 
+            var imageList = new List<object>();
             for (var i = 0; i < shapes.Count; i++)
             {
                 var shape = shapes[i];
-                result.AppendLine($"[Image {i}]");
-                result.AppendLine($"Name: {shape.Name ?? "(No name)"}");
-                result.AppendLine($"Width: {shape.Width} points");
-                result.AppendLine($"Height: {shape.Height} points");
+                string? context = null;
+                string? alignment = null;
+                object? position = null;
 
                 if (shape.IsInline)
                 {
-                    // For inline images, show paragraph alignment instead of position
                     if (shape.ParentNode is Paragraph parentPara)
                     {
-                        result.AppendLine($"Alignment: {parentPara.ParagraphFormat.Alignment} (paragraph alignment)");
-                        result.AppendLine(
-                            "Position: Inline in paragraph (X/Y position not applicable for inline images)");
+                        alignment = parentPara.ParagraphFormat.Alignment.ToString();
+                        var paraText = parentPara.GetText().Trim();
+                        if (paraText.Length > 30) paraText = paraText[..30] + "...";
+                        if (!string.IsNullOrEmpty(paraText)) context = paraText;
                     }
                     else
                     {
-                        result.AppendLine($"Position: X={shape.Left}, Y={shape.Top}");
+                        position = new { x = shape.Left, y = shape.Top };
                     }
                 }
                 else
                 {
-                    // For floating images, show position and alignment
-                    result.AppendLine($"Position: X={shape.Left}, Y={shape.Top}");
-                    result.AppendLine($"Horizontal alignment: {shape.HorizontalAlignment}");
-                    result.AppendLine($"Vertical alignment: {shape.VerticalAlignment}");
-                    result.AppendLine($"Text wrapping: {shape.WrapType}");
+                    position = new
+                    {
+                        x = Math.Round(shape.Left, 1),
+                        y = Math.Round(shape.Top, 1),
+                        horizontalAlignment = shape.HorizontalAlignment.ToString(),
+                        verticalAlignment = shape.VerticalAlignment.ToString(),
+                        wrapType = shape.WrapType.ToString()
+                    };
+                    if (shape.GetAncestor(NodeType.Paragraph) is Paragraph nearestPara)
+                    {
+                        var paraText = nearestPara.GetText().Trim();
+                        if (paraText.Length > 30) paraText = paraText[..30] + "...";
+                        if (!string.IsNullOrEmpty(paraText)) context = paraText;
+                    }
                 }
+
+                var imageInfo = new Dictionary<string, object?>
+                {
+                    ["index"] = i,
+                    ["name"] = string.IsNullOrEmpty(shape.Name) ? null : shape.Name,
+                    ["width"] = shape.Width,
+                    ["height"] = shape.Height,
+                    ["isInline"] = shape.IsInline
+                };
+
+                if (alignment != null) imageInfo["alignment"] = alignment;
+                if (position != null) imageInfo["position"] = position;
+                if (context != null) imageInfo["context"] = context;
 
                 if (shape.ImageData != null)
                 {
-                    result.AppendLine($"Image type: {shape.ImageData.ImageType}");
+                    imageInfo["imageType"] = shape.ImageData.ImageType.ToString();
                     var imageSize = shape.ImageData.ImageSize;
-                    result.AppendLine($"Original size: {imageSize.WidthPixels} �� {imageSize.HeightPixels} pixels");
+                    imageInfo["originalSize"] = new
+                        { widthPixels = imageSize.WidthPixels, heightPixels = imageSize.HeightPixels };
                 }
 
-                result.AppendLine($"Is inline: {shape.IsInline}");
-                result.AppendLine();
+                if (!string.IsNullOrEmpty(shape.HRef)) imageInfo["hyperlink"] = shape.HRef;
+                if (!string.IsNullOrEmpty(shape.AlternativeText)) imageInfo["altText"] = shape.AlternativeText;
+                if (!string.IsNullOrEmpty(shape.Title)) imageInfo["title"] = shape.Title;
+
+                imageList.Add(imageInfo);
             }
 
-            return result.ToString();
+            var result = new
+            {
+                count = shapes.Count,
+                sectionIndex = sectionIndex == -1 ? (int?)null : sectionIndex,
+                images = imageList
+            };
+
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 
     /// <summary>
     ///     Replaces an existing image with a new one
     /// </summary>
-    /// <param name="arguments">JSON arguments containing imageIndex, newImagePath, optional outputPath</param>
-    /// <param name="path">Word document file path</param>
+    /// <param name="path">Document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing imageIndex, newImagePath, optional preserveSize, smartFit</param>
     /// <returns>Success message</returns>
-    private Task<string> ReplaceImageAsync(JsonObject? arguments, string path)
+    private Task<string> ReplaceImageAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
             var imageIndex = ArgumentHelper.GetInt(arguments, "imageIndex");
             var newImagePath = ArgumentHelper.GetString(arguments, "newImagePath");
             var preserveSize = ArgumentHelper.GetBool(arguments, "preserveSize", true);
+            var smartFit = ArgumentHelper.GetBool(arguments, "smartFit", false);
             var preservePosition = ArgumentHelper.GetBool(arguments, "preservePosition", true);
             var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
 
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
             SecurityHelper.ValidateFilePath(newImagePath, "newImagePath", true);
 
             if (!File.Exists(newImagePath)) throw new FileNotFoundException($"Image file not found: {newImagePath}");
@@ -625,8 +672,28 @@ Usage examples:
 
                 if (preserveSize)
                 {
-                    shapeToReplace.Width = originalWidth;
-                    shapeToReplace.Height = originalHeight;
+                    if (smartFit)
+                    {
+                        // Calculate proportional height based on new image's aspect ratio
+                        var newImageSize = shapeToReplace.ImageData.ImageSize;
+                        if (newImageSize.WidthPixels > 0)
+                        {
+                            var newAspectRatio = (double)newImageSize.HeightPixels / newImageSize.WidthPixels;
+                            shapeToReplace.Width = originalWidth;
+                            shapeToReplace.Height = originalWidth * newAspectRatio;
+                        }
+                        else
+                        {
+                            // Fallback to original size if aspect ratio can't be calculated
+                            shapeToReplace.Width = originalWidth;
+                            shapeToReplace.Height = originalHeight;
+                        }
+                    }
+                    else
+                    {
+                        shapeToReplace.Width = originalWidth;
+                        shapeToReplace.Height = originalHeight;
+                    }
                 }
 
                 if (preservePosition)
@@ -655,7 +722,15 @@ Usage examples:
 
             var result = $"Image #{imageIndex} replaced successfully\n";
             result += $"New image: {Path.GetFileName(newImagePath)}\n";
-            if (preserveSize) result += $"Preserved size: {originalWidth:F1} pt x {originalHeight:F1} pt\n";
+            if (preserveSize)
+            {
+                if (smartFit)
+                    result +=
+                        $"Smart fit: width preserved ({originalWidth:F1} pt), height calculated proportionally ({shapeToReplace.Height:F1} pt)\n";
+                else
+                    result += $"Preserved size: {originalWidth:F1} pt x {originalHeight:F1} pt\n";
+            }
+
             if (preservePosition) result += "Preserved position and wrapping\n";
             result += $"Output: {outputPath}";
 
@@ -666,15 +741,16 @@ Usage examples:
     /// <summary>
     ///     Extracts images from the document
     /// </summary>
-    /// <param name="arguments">JSON arguments containing outputDirectory, optional imageIndex</param>
-    /// <param name="path">Word document file path</param>
+    /// <param name="path">Document file path</param>
+    /// <param name="arguments">JSON arguments containing outputDir, optional prefix, extractImageIndex</param>
     /// <returns>Success message with extracted image count</returns>
-    private Task<string> ExtractImagesAsync(JsonObject? arguments, string path)
+    private Task<string> ExtractImagesAsync(string path, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
             var outputDir = ArgumentHelper.GetString(arguments, "outputDir");
             var prefix = ArgumentHelper.GetString(arguments, "prefix", "image");
+            var extractImageIndex = ArgumentHelper.GetIntNullable(arguments, "extractImageIndex");
 
             SecurityHelper.ValidateFilePath(outputDir, "outputDir", true);
 
@@ -685,28 +761,30 @@ Usage examples:
 
             if (shapes.Count == 0) return "No images found in document";
 
+            // Validate extractImageIndex if provided
+            if (extractImageIndex.HasValue)
+                if (extractImageIndex.Value < 0 || extractImageIndex.Value >= shapes.Count)
+                    throw new ArgumentException(
+                        $"Image index {extractImageIndex.Value} is out of range (document has {shapes.Count} images)");
+
             var extractedFiles = new List<string>();
 
-            for (var i = 0; i < shapes.Count; i++)
+            // Determine which images to extract
+            var startIndex = extractImageIndex ?? 0;
+            var endIndex = extractImageIndex.HasValue ? extractImageIndex.Value + 1 : shapes.Count;
+
+            for (var i = startIndex; i < endIndex; i++)
             {
                 var shape = shapes[i];
                 var imageData = shape.ImageData;
 
-                var imageBytes = imageData.ImageBytes;
-                var extension = "img";
-
-                if (imageBytes is { Length: > 4 })
-                {
-                    if (imageBytes[0] == 0xFF && imageBytes[1] == 0xD8)
-                        extension = "jpg";
-                    else if (imageBytes[0] == 0x89 && imageBytes[1] == 0x50 && imageBytes[2] == 0x4E &&
-                             imageBytes[3] == 0x47)
-                        extension = "png";
-                    else if (imageBytes[0] == 0x42 && imageBytes[1] == 0x4D)
-                        extension = "bmp";
-                    else if (imageBytes[0] == 0x47 && imageBytes[1] == 0x49 && imageBytes[2] == 0x46)
-                        extension = "gif";
-                }
+                // Use FileFormatUtil for reliable image type detection
+                var extension = FileFormatUtil.ImageTypeToExtension(imageData.ImageType);
+                if (string.IsNullOrEmpty(extension) || extension == ".")
+                    extension = ".img";
+                // Remove leading dot if present for consistent filename handling
+                if (extension.StartsWith('.'))
+                    extension = extension.Substring(1);
 
                 var safePrefix = SecurityHelper.SanitizeFileName(prefix);
                 var filename = $"{safePrefix}_{i + 1:D3}.{extension}";
@@ -720,12 +798,22 @@ Usage examples:
                 extractedFiles.Add(outputPath);
             }
 
+            if (extractImageIndex.HasValue)
+                return $"Successfully extracted image #{extractImageIndex.Value} to: {outputDir}\n" +
+                       $"File: {Path.GetFileName(extractedFiles[0])}";
+
             return $"Successfully extracted {shapes.Count} images to: {outputDir}\n" +
                    $"File list:\n" + string.Join("\n",
                        extractedFiles.Select(f => $"  - {Path.GetFileName(f)}"));
         });
     }
 
+    /// <summary>
+    ///     Gets all images from the document or a specific section
+    /// </summary>
+    /// <param name="doc">Word document</param>
+    /// <param name="sectionIndex">Section index (-1 for all sections)</param>
+    /// <returns>List of Shape objects containing images</returns>
     private List<Shape> GetAllImages(Document doc, int sectionIndex)
     {
         var allImages = new List<Shape>();
@@ -751,6 +839,11 @@ Usage examples:
         return allImages;
     }
 
+    /// <summary>
+    ///     Converts alignment string to ParagraphAlignment enum
+    /// </summary>
+    /// <param name="alignment">Alignment string (left, center, right)</param>
+    /// <returns>ParagraphAlignment enum value</returns>
     private ParagraphAlignment GetAlignment(string alignment)
     {
         return alignment.ToLower() switch
@@ -761,6 +854,11 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    ///     Converts wrap type string to WrapType enum
+    /// </summary>
+    /// <param name="wrapType">Wrap type string (inline, square, tight, through, topAndBottom, none)</param>
+    /// <returns>WrapType enum value</returns>
     private WrapType GetWrapType(string wrapType)
     {
         return wrapType.ToLower() switch
@@ -774,6 +872,11 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    ///     Converts alignment string to HorizontalAlignment enum for floating images
+    /// </summary>
+    /// <param name="alignment">Alignment string (left, center, right)</param>
+    /// <returns>HorizontalAlignment enum value</returns>
     private HorizontalAlignment GetHorizontalAlignment(string alignment)
     {
         return alignment.ToLower() switch
@@ -785,6 +888,11 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    ///     Converts alignment string to VerticalAlignment enum for floating images
+    /// </summary>
+    /// <param name="alignment">Alignment string (top, center, bottom)</param>
+    /// <returns>VerticalAlignment enum value</returns>
     private VerticalAlignment GetVerticalAlignment(string alignment)
     {
         return alignment.ToLower() switch
@@ -794,5 +902,25 @@ Usage examples:
             "bottom" => VerticalAlignment.Bottom,
             _ => VerticalAlignment.Top
         };
+    }
+
+    /// <summary>
+    ///     Inserts a professional caption with automatic figure numbering
+    /// </summary>
+    /// <param name="builder">DocumentBuilder for inserting content</param>
+    /// <param name="caption">Caption text</param>
+    /// <param name="alignment">Caption alignment (left, center, right)</param>
+    private void InsertCaption(DocumentBuilder builder, string caption, string alignment)
+    {
+        // Use professional Caption style with SEQ field for automatic figure numbering
+        builder.ParagraphFormat.StyleIdentifier = StyleIdentifier.Caption;
+        builder.ParagraphFormat.Alignment = GetAlignment(alignment);
+        builder.Write("Figure ");
+        builder.InsertField("SEQ Figure \\* ARABIC");
+        builder.Write(": " + caption);
+        builder.Writeln();
+        // Reset to normal style after caption
+        builder.ParagraphFormat.StyleIdentifier = StyleIdentifier.Normal;
+        builder.ParagraphFormat.Alignment = ParagraphAlignment.Left;
     }
 }

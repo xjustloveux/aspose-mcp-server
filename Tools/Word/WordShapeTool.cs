@@ -12,15 +12,22 @@ namespace AsposeMcpServer.Tools.Word;
 public class WordShapeTool : IAsposeTool
 {
     public string Description =>
-        @"Manage shapes in Word documents. Supports 6 operations: add_line, add_textbox, get_textboxes, edit_textbox_content, set_textbox_border, add_chart.
+        @"Manage shapes in Word documents. Supports 9 operations: add_line, add_textbox, get_textboxes, edit_textbox_content, set_textbox_border, add_chart, add, get, delete.
+
+Note: All position/size values are in points (1 point = 1/72 inch, 72 points = 1 inch).
+Important: Textbox operations (get_textboxes, edit_textbox_content, set_textbox_border) use a separate textbox-only index system.
+General shape operations (add, get, delete) use an index that includes ALL shapes (lines, rectangles, textboxes, images, etc.).
 
 Usage examples:
-- Add line: word_shape(operation='add_line', path='doc.docx', x1=100, y1=100, x2=200, y2=200)
-- Add textbox: word_shape(operation='add_textbox', path='doc.docx', text='Textbox content', x=100, y=100, width=200, height=100)
+- Add line: word_shape(operation='add_line', path='doc.docx')
+- Add textbox: word_shape(operation='add_textbox', path='doc.docx', text='Textbox content', positionX=100, positionY=100, textboxWidth=200, textboxHeight=100)
 - Get textboxes: word_shape(operation='get_textboxes', path='doc.docx')
-- Edit textbox: word_shape(operation='edit_textbox_content', path='doc.docx', shapeIndex=0, text='Updated content')
-- Set border: word_shape(operation='set_textbox_border', path='doc.docx', shapeIndex=0, color='#FF0000', width=2)
-- Add chart: word_shape(operation='add_chart', path='doc.docx', chartType='Column', data=[['A','B'],['1','2']], x=100, y=100)";
+- Edit textbox: word_shape(operation='edit_textbox_content', path='doc.docx', textboxIndex=0, text='Updated content')
+- Set border: word_shape(operation='set_textbox_border', path='doc.docx', textboxIndex=0, borderColor='#FF0000', borderWidth=2)
+- Add chart: word_shape(operation='add_chart', path='doc.docx', chartType='Column', data=[['A','B'],['1','2']])
+- Add generic shape: word_shape(operation='add', path='doc.docx', shapeType='Rectangle', width=100, height=50)
+- Get all shapes: word_shape(operation='get', path='doc.docx')
+- Delete shape: word_shape(operation='delete', path='doc.docx', shapeIndex=0)";
 
     public object InputSchema => new
     {
@@ -31,16 +38,19 @@ Usage examples:
             {
                 type = "string",
                 description = @"Operation to perform.
-- 'add_line': Add a line shape (required params: path, x1, y1, x2, y2)
-- 'add_textbox': Add a textbox (required params: path, text, x, y, width, height)
-- 'get_textboxes': Get all textboxes (required params: path)
-- 'edit_textbox_content': Edit textbox content (required params: path, shapeIndex, text)
-- 'set_textbox_border': Set textbox border (required params: path, shapeIndex)
-- 'add_chart': Add a chart (required params: path, chartType, data)",
+- 'add_line': Add a line shape (required params: path)
+- 'add_textbox': Add a textbox (required params: path, text)
+- 'get_textboxes': Get all textboxes with textbox-only index (required params: path)
+- 'edit_textbox_content': Edit textbox content using textbox-only index (required params: path, textboxIndex)
+- 'set_textbox_border': Set textbox border using textbox-only index (required params: path, textboxIndex)
+- 'add_chart': Add a chart (required params: path, data)
+- 'add': Add a generic shape (required params: path, shapeType, width, height)
+- 'get': Get all shapes with global shape index (required params: path)
+- 'delete': Delete a shape using global shape index (required params: path, shapeIndex)",
                 @enum = new[]
                 {
                     "add_line", "add_textbox", "get_textboxes", "edit_textbox_content", "set_textbox_border",
-                    "add_chart"
+                    "add_chart", "add", "get", "delete"
                 }
             },
             path = new
@@ -84,7 +94,8 @@ Usage examples:
             width = new
             {
                 type = "number",
-                description = "Line length in points (for add_line, optional)"
+                description =
+                    "Width/length in points (for add_line: line length; for add: shape width. 1 point = 1/72 inch)"
             },
             text = new
             {
@@ -170,7 +181,33 @@ Usage examples:
             textboxIndex = new
             {
                 type = "number",
-                description = "Textbox index (0-based, for edit_textbox_content, set_textbox_border)"
+                description = "Textbox index (0-based, textbox-only index for edit_textbox_content, set_textbox_border)"
+            },
+            shapeIndex = new
+            {
+                type = "number",
+                description = "Shape index (0-based, global index including all shapes, for delete operation)"
+            },
+            shapeType = new
+            {
+                type = "string",
+                description = "Shape type (for add operation)",
+                @enum = new[] { "rectangle", "ellipse", "roundrectangle", "line" }
+            },
+            height = new
+            {
+                type = "number",
+                description = "Shape height in points (for add operation, 1 point = 1/72 inch)"
+            },
+            x = new
+            {
+                type = "number",
+                description = "Shape X position in points (for add operation, default: 100)"
+            },
+            y = new
+            {
+                type = "number",
+                description = "Shape Y position in points (for add operation, default: 100)"
             },
             appendText = new
             {
@@ -253,18 +290,21 @@ Usage examples:
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
         return operation.ToLower() switch
         {
-            "add_line" => await AddLine(arguments),
-            "add_textbox" => await AddTextBox(arguments),
-            "get_textboxes" => await GetTextboxes(arguments),
-            "edit_textbox_content" => await EditTextBoxContent(arguments),
-            "set_textbox_border" => await SetTextBoxBorder(arguments),
-            "add_chart" => await AddChart(arguments),
-            "add" => await AddShape(arguments),
-            "get" => await GetShapes(arguments),
-            "delete" => await DeleteShape(arguments),
+            "add_line" => await AddLine(path, outputPath, arguments),
+            "add_textbox" => await AddTextBox(path, outputPath, arguments),
+            "get_textboxes" => await GetTextboxes(path, arguments),
+            "edit_textbox_content" => await EditTextBoxContent(path, outputPath, arguments),
+            "set_textbox_border" => await SetTextBoxBorder(path, outputPath, arguments),
+            "add_chart" => await AddChart(path, outputPath, arguments),
+            "add" => await AddShape(path, outputPath, arguments),
+            "get" => await GetShapes(path),
+            "delete" => await DeleteShape(path, outputPath, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -272,19 +312,14 @@ Usage examples:
     /// <summary>
     ///     Adds a line shape to the document
     /// </summary>
-    /// <param name="arguments">
-    ///     JSON arguments containing x1, y1, x2, y2, optional location, position, lineStyle, lineWidth,
-    ///     lineColor, width
-    /// </param>
+    /// <param name="path">Document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing optional location, position, lineStyle, lineWidth, lineColor, width</param>
     /// <returns>Success message with line details</returns>
-    private Task<string> AddLine(JsonObject? arguments)
+    private Task<string> AddLine(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
-            var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
             var location = ArgumentHelper.GetString(arguments, "location", "body");
             var position = ArgumentHelper.GetString(arguments, "position", "end");
             var lineStyle = ArgumentHelper.GetString(arguments, "lineStyle", "shape");
@@ -351,11 +386,11 @@ Usage examples:
                 var shape = new Shape(doc, ShapeType.Line)
                 {
                     Width = calculatedWidth,
-                    Height = 0
+                    Height = 0,
+                    StrokeWeight = lineWidth,
+                    StrokeColor = ColorHelper.ParseColor(lineColor),
+                    WrapType = WrapType.Inline
                 };
-                shape.StrokeWeight = lineWidth;
-                shape.StrokeColor = ColorHelper.ParseColor(lineColor);
-                shape.WrapType = WrapType.Inline;
 
                 linePara.AppendChild(shape);
 
@@ -405,19 +440,14 @@ Usage examples:
     /// <summary>
     ///     Adds a textbox to the document
     /// </summary>
-    /// <param name="arguments">
-    ///     JSON arguments containing text, x, y, optional width, height, textboxWidth, textboxHeight,
-    ///     positionX, positionY, outputPath
-    /// </param>
+    /// <param name="path">Document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing text, optional textboxWidth, textboxHeight, positionX, positionY</param>
     /// <returns>Success message with textbox details</returns>
-    private Task<string> AddTextBox(JsonObject? arguments)
+    private Task<string> AddTextBox(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
-            var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
             var text = ArgumentHelper.GetString(arguments, "text");
             var textboxWidth = ArgumentHelper.GetDouble(arguments, "textboxWidth", "textboxWidth", false, 200);
             var textboxHeight = ArgumentHelper.GetDouble(arguments, "textboxHeight", "textboxHeight", false, 100);
@@ -437,14 +467,16 @@ Usage examples:
             var builder = new DocumentBuilder(doc);
             builder.MoveToDocumentEnd();
 
-            var textBox = new Shape(doc, ShapeType.TextBox);
-            textBox.Width = textboxWidth;
-            textBox.Height = textboxHeight;
-            textBox.Left = positionX;
-            textBox.Top = positionY;
-            textBox.WrapType = WrapType.None;
-            textBox.RelativeHorizontalPosition = RelativeHorizontalPosition.Page;
-            textBox.RelativeVerticalPosition = RelativeVerticalPosition.Page;
+            var textBox = new Shape(doc, ShapeType.TextBox)
+            {
+                Width = textboxWidth,
+                Height = textboxHeight,
+                Left = positionX,
+                Top = positionY,
+                WrapType = WrapType.None,
+                RelativeHorizontalPosition = RelativeHorizontalPosition.Page,
+                RelativeVerticalPosition = RelativeVerticalPosition.Page
+            };
 
             if (!string.IsNullOrEmpty(backgroundColor))
             {
@@ -508,14 +540,13 @@ Usage examples:
     /// <summary>
     ///     Gets all textboxes from the document
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path</param>
+    /// <param name="path">Document file path</param>
+    /// <param name="arguments">JSON arguments containing optional includeContent</param>
     /// <returns>Formatted string with all textboxes</returns>
-    private Task<string> GetTextboxes(JsonObject? arguments)
+    private Task<string> GetTextboxes(string path, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
             var includeContent = ArgumentHelper.GetBool(arguments, "includeContent", true);
 
             var doc = new Document(path);
@@ -564,16 +595,14 @@ Usage examples:
     /// <summary>
     ///     Edits the content of a textbox
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, shapeIndex, text, optional outputPath</param>
+    /// <param name="path">Document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing textboxIndex, text, optional formatting options</param>
     /// <returns>Success message with updated textbox details</returns>
-    private Task<string> EditTextBoxContent(JsonObject? arguments)
+    private Task<string> EditTextBoxContent(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
-            var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
             var textboxIndex = ArgumentHelper.GetInt(arguments, "textboxIndex");
             var text = ArgumentHelper.GetStringNullable(arguments, "text");
             var appendText = ArgumentHelper.GetBool(arguments, "appendText", false);
@@ -672,16 +701,14 @@ Usage examples:
     /// <summary>
     ///     Sets border properties for a textbox
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, shapeIndex, optional color, width, style, outputPath</param>
+    /// <param name="path">Document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing textboxIndex, optional borderColor, borderWidth</param>
     /// <returns>Success message</returns>
-    private Task<string> SetTextBoxBorder(JsonObject? arguments)
+    private Task<string> SetTextBoxBorder(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
-            var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
             var textboxIndex = ArgumentHelper.GetInt(arguments, "textboxIndex");
             var borderVisible = ArgumentHelper.GetBool(arguments, "borderVisible", true);
             var borderColor = ArgumentHelper.GetString(arguments, "borderColor", "000000");
@@ -718,16 +745,14 @@ Usage examples:
     /// <summary>
     ///     Adds a chart to the document
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, chartType, data, x, y, optional width, height, outputPath</param>
+    /// <param name="path">Document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing chartType, data, optional chartTitle, chartWidth, chartHeight</param>
     /// <returns>Success message with chart details</returns>
-    private Task<string> AddChart(JsonObject? arguments)
+    private Task<string> AddChart(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(async () =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
-            var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
             var chartType = ArgumentHelper.GetString(arguments, "chartType", "column");
             var data = ArgumentHelper.GetArray(arguments, "data");
             var chartTitle = ArgumentHelper.GetStringNullable(arguments, "chartTitle");
@@ -899,15 +924,14 @@ Usage examples:
     /// <summary>
     ///     Adds a generic shape to the document
     /// </summary>
-    private Task<string> AddShape(JsonObject? arguments)
+    /// <param name="path">Document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing shapeType, width, height, optional x, y</param>
+    /// <returns>Success message with shape details</returns>
+    private Task<string> AddShape(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
-            var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
-
             var shapeTypeStr = ArgumentHelper.GetString(arguments, "shapeType");
             var width = ArgumentHelper.GetDouble(arguments, "width");
             var height = ArgumentHelper.GetDouble(arguments, "height");
@@ -925,8 +949,7 @@ Usage examples:
 
             var doc = new Document(path);
             var builder = new DocumentBuilder(doc);
-            builder.InsertShape(shapeType, width, height);
-            var shape = (Shape)doc.GetChildNodes(NodeType.Shape, true).Last();
+            var shape = builder.InsertShape(shapeType, width, height);
             shape.Left = x;
             shape.Top = y;
 
@@ -938,13 +961,12 @@ Usage examples:
     /// <summary>
     ///     Gets all shapes from the document
     /// </summary>
-    private Task<string> GetShapes(JsonObject? arguments)
+    /// <param name="path">Document file path</param>
+    /// <returns>Formatted string with all shapes</returns>
+    private Task<string> GetShapes(string path)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
-
             var doc = new Document(path);
             var shapes = doc.GetChildNodes(NodeType.Shape, true).Cast<Shape>().ToList();
 
@@ -976,15 +998,14 @@ Usage examples:
     /// <summary>
     ///     Deletes a shape from the document
     /// </summary>
-    private Task<string> DeleteShape(JsonObject? arguments)
+    /// <param name="path">Document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing shapeIndex</param>
+    /// <returns>Success message</returns>
+    private Task<string> DeleteShape(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
-            var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
-
             var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
 
             var doc = new Document(path);

@@ -269,7 +269,7 @@ pwsh publish.ps1 -All -Clean
 
 **測試統計：**
 - **測試類**: 90 個測試類
-- **測試用例**: 約 450+ 個測試用例
+- **測試用例**: 683 個測試用例
 - **測試框架**: xUnit 2.9.2
 
 **運行測試：**
@@ -333,11 +333,11 @@ pwsh test.ps1 -Verbose -Coverage -Filter "FullyQualifiedName~Word"
 - 測試檔案會保存在系統臨時目錄中
 - 測試結果會保存為 `Tests/TestResults/test-results.trx`（TRX 格式）
 
-### 代碼質量檢查
+### 代碼品質檢查
 
-本專案使用 JetBrains 工具進行代碼質量檢查和格式化。推薦使用 `code-quality.ps1` 腳本運行代碼檢查。
+本專案使用 JetBrains 工具進行代碼品質檢查和格式化。推薦使用 `code-quality.ps1` 腳本運行代碼檢查。
 
-**運行代碼質量檢查：**
+**運行代碼品質檢查：**
 ```powershell
 # 執行 CleanupCode 和 InspectCode（預設）
 pwsh code-quality.ps1
@@ -368,18 +368,19 @@ pwsh code-quality.ps1 -CleanupCode -InspectCode
 ### Word 文檔處理 (24 個工具)
 
 **檔案操作 (1)**
-- `word_file` - 創建、讀取、轉換、合併、拆分、從範本創建（5個操作：create, create_from_template, convert, merge, split）
+- `word_file` - 創建、轉換、合併、拆分、從範本創建（5個操作：create, create_from_template, convert, merge, split）
+  - `create_from_template` 使用 LINQ Reporting Engine，支援 `<<[ds.Name]>>`、`<<foreach [item in ds.Items]>>...<</foreach>>` 等語法
 
 **內容編輯 (6)**
 - `word_text` - 添加、刪除、替換、搜尋、格式化文字（8個操作：add, delete, replace, search, format, insert_at_position, delete_range, add_with_style）
 - `word_paragraph` - 插入、刪除、編輯段落格式（7個操作：insert, delete, edit, get, get_format, copy_format, merge）
 - `word_table` - 添加、編輯、刪除表格，插入/刪除行列，合併/拆分單元格（17個操作：add_table, edit_table_format, delete_table, get_tables, insert_row, delete_row, insert_column, delete_column, merge_cells, split_cell, edit_cell_format, move_table, copy_table, get_table_structure, set_table_border, set_column_width, set_row_height）
 - `word_image` - 添加、編輯、刪除、替換圖片，提取圖片（6個操作：add, edit, delete, get, replace, extract）
-- `word_shape` - 添加線條、文字框、圖表（6個操作：add_line, add_textbox, get_textboxes, edit_textbox_content, set_textbox_border, add_chart）
-- `word_list` - 添加、編輯、刪除清單項目（6個操作：add_list, add_item, delete_item, edit_item, set_format, get_format）
+- `word_shape` - 添加線條、文字框、圖表、形狀管理（9個操作：add_line, add_textbox, get_textboxes, edit_textbox_content, set_textbox_border, add_chart, add, get, delete）
+- `word_list` - 添加、編輯、刪除清單項目，重新編號、轉換為清單（8個操作：add_list, add_item, delete_item, edit_item, set_format, get_format, restart_numbering, convert_to_list）
 
 **格式設定 (4)**
-- `word_format` - 獲取/設定 Run 格式，獲取定位點，設定段落邊框（4個操作：get_run_format, set_run_format, get_tab_stops, set_paragraph_border）
+- `word_format` - 獲取/設定 Run 格式，獲取/添加/清除定位點，設定段落邊框（6個操作：get_run_format, set_run_format, get_tab_stops, add_tab_stop, clear_tab_stops, set_paragraph_border）
 - `word_style` - 獲取、創建、應用樣式，從其他文檔複製樣式（4個操作：get_styles, create_style, apply_style, copy_styles）
 - `word_page` - 設定頁邊距、方向、大小、頁碼、刪除頁面、插入空白頁、添加分頁符（8個操作：set_margins, set_orientation, set_size, set_page_number, set_page_setup, delete_page, insert_blank_page, add_page_break）
 - `word_header_footer` - 設定頁首頁尾文字、圖片、線條、定位點（10個操作：set_header_text, set_footer_text, set_header_image, set_footer_image, set_header_line, set_footer_line, set_header_tabs, set_footer_tabs, set_header_footer, get）
@@ -395,7 +396,7 @@ pwsh code-quality.ps1 -CleanupCode -InspectCode
 - `word_protection` - 保護、解除保護文檔（2個操作：protect, unprotect）
 - `word_revision` - 獲取、接受、拒絕修訂，比較文檔（5個操作：get_revisions, accept_all, reject_all, manage, compare）
 - `word_section` - 插入、刪除、獲取節資訊（3個操作：insert, delete, get）
-- `word_watermark` - 添加水印（1個操作：add）
+- `word_watermark` - 添加文字/圖片水印、移除水印（3個操作：add, add_image, remove）
 - `word_mail_merge` - 郵件合併
 - `word_content` - 獲取內容、詳細內容、統計資訊、文檔資訊（4個操作：get_content, get_content_detailed, get_statistics, get_document_info）
 
@@ -611,6 +612,22 @@ word_style(path="B.docx", operation="copy_styles", sourceDocument="A.docx")
 **試用模式：**
 如果找不到授權檔案，系統會以試用模式運行（生成的文檔會有試用版標記）。建議配置有效授權以移除標記。
 
+### 評估模式限制
+
+在無授權（評估模式）下運行時，Aspose 組件會有以下限制：
+
+| 組件 | 限制說明 |
+|------|----------|
+| **Aspose.Words** | 字型格式（名稱、大小、顏色）可能無法正確應用；文檔會包含評估版水印 |
+| **Aspose.Cells** | 多工作表操作受限（如跨工作表存取）；工作簿會包含評估版工作表 |
+| **Aspose.Slides** | 文字替換時可能包含水印文字；投影片可能包含評估版標記 |
+| **Aspose.PDF** | 集合限制為最多 4 個元素（如頁面數限制）；PDF 會包含評估版水印 |
+
+**注意事項：**
+- 大部分基本操作（讀取、創建、簡單編輯）在評估模式下仍可正常運行
+- 評估模式適合測試和開發，但不建議用於生產環境
+- 使用 `test.ps1 -SkipLicense` 可在評估模式下運行單元測試
+
 **授權版本相容性：**
 - 當前使用的 Aspose 版本：23.10.0
 - 授權檔案需與使用的 Aspose 版本相容
@@ -694,7 +711,7 @@ A: 可以。工具基於命名約定自動發現，您可以：
 - **總工具數：** 90 個
 - **程式碼行數：** ~15,000+ 行
 - **測試類數：** 90 個測試類
-- **測試用例數：** 約 450+ 個測試用例
+- **測試用例數：** 683 個測試用例
 - **測試框架：** xUnit 2.9.2
 - **CI/CD：** GitHub Actions 自動測試
 - **支援格式：** Word、Excel、PowerPoint、PDF 及其相互轉換

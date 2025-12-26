@@ -31,7 +31,7 @@ public class ExcelDataValidationToolTests : ExcelTestBase
         // Assert
         var workbook = new Workbook(outputPath);
         var worksheet = workbook.Worksheets[0];
-        var validation = worksheet.Validations[worksheet.Validations.Count - 1];
+        var validation = worksheet.Validations[^1];
         Assert.NotNull(validation);
         Assert.Equal(ValidationType.List, validation.Type);
     }

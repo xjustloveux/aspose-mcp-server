@@ -55,8 +55,10 @@ public class PdfLinkToolTests : PdfTestBase
         var pdfPath = CreateTestPdf("test_get_links.pdf");
         var document = new Document(pdfPath);
         var page = document.Pages[1];
-        var link = new LinkAnnotation(page, new Rectangle(100, 100, 300, 130));
-        link.Action = new GoToURIAction("https://test.com");
+        var link = new LinkAnnotation(page, new Rectangle(100, 100, 300, 130))
+        {
+            Action = new GoToURIAction("https://test.com")
+        };
         page.Annotations.Add(link);
         document.Save(pdfPath);
 
@@ -83,8 +85,10 @@ public class PdfLinkToolTests : PdfTestBase
         var pdfPath = CreateTestPdf("test_delete_link.pdf");
         var document = new Document(pdfPath);
         var page = document.Pages[1];
-        var link = new LinkAnnotation(page, new Rectangle(100, 100, 300, 130));
-        link.Action = new GoToURIAction("https://delete.com");
+        var link = new LinkAnnotation(page, new Rectangle(100, 100, 300, 130))
+        {
+            Action = new GoToURIAction("https://delete.com")
+        };
         page.Annotations.Add(link);
         document.Save(pdfPath);
 
@@ -109,5 +113,40 @@ public class PdfLinkToolTests : PdfTestBase
         var linksAfter = resultDocument.Pages[1].Annotations.Count;
         Assert.True(linksAfter < linksBefore,
             $"Link should be deleted. Before: {linksBefore}, After: {linksAfter}");
+    }
+
+    [Fact]
+    public async Task EditLink_ShouldEditLink()
+    {
+        // Arrange
+        var pdfPath = CreateTestPdf("test_edit_link.pdf");
+        var document = new Document(pdfPath);
+        var page = document.Pages[1];
+        var link = new LinkAnnotation(page, new Rectangle(100, 100, 300, 130))
+        {
+            Action = new GoToURIAction("https://original.com")
+        };
+        page.Annotations.Add(link);
+        document.Save(pdfPath);
+
+        var outputPath = CreateTestFilePath("test_edit_link_output.pdf");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "edit",
+            ["path"] = pdfPath,
+            ["outputPath"] = outputPath,
+            ["pageIndex"] = 1,
+            ["linkIndex"] = 0,
+            ["url"] = "https://updated.com"
+        };
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.True(File.Exists(outputPath), "Output file should be created");
+        var resultDocument = new Document(outputPath);
+        var annotations = resultDocument.Pages[1].Annotations;
+        Assert.True(annotations.Count > 0, "Page should still have annotations");
     }
 }

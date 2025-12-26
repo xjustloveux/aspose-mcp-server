@@ -397,7 +397,8 @@
     <h3>檔案操作 (1)</h3>
     <ul class="tool-list">
         <li>
-            <span class="tool-name">word_file</span><span class="tool-desc">- 創建、讀取、轉換、合併、拆分、從範本創建</span><span class="tool-ops">（5個操作：create, create_from_template, convert, merge, split）</span>
+            <span class="tool-name">word_file</span><span class="tool-desc">- 創建、轉換、合併、拆分、從範本創建（LINQ Reporting Engine）</span><span class="tool-ops">（5個操作：create, create_from_template, convert, merge, split）</span>
+            <br><small style="margin-left: 20px; color: #666;">create_from_template 語法：<code>&lt;&lt;[ds.Name]&gt;&gt;</code>、<code>&lt;&lt;foreach [item in ds.Items]&gt;&gt;...&lt;&lt;/foreach&gt;&gt;</code></small>
         </li>
     </ul>
 
@@ -416,17 +417,17 @@
             <span class="tool-name">word_image</span><span class="tool-desc">- 添加、編輯、刪除、替換圖片，提取圖片</span><span class="tool-ops">（6個操作：add, edit, delete, get, replace, extract）</span>
         </li>
         <li>
-            <span class="tool-name">word_shape</span><span class="tool-desc">- 添加線條、文字框、圖表</span><span class="tool-ops">（6個操作：add_line, add_textbox, get_textboxes, edit_textbox_content, set_textbox_border, add_chart）</span>
+            <span class="tool-name">word_shape</span><span class="tool-desc">- 添加線條、文字框、圖表、形狀管理</span><span class="tool-ops">（9個操作：add_line, add_textbox, get_textboxes, edit_textbox_content, set_textbox_border, add_chart, add, get, delete）</span>
         </li>
         <li>
-            <span class="tool-name">word_list</span><span class="tool-desc">- 添加、編輯、刪除清單項目</span><span class="tool-ops">（6個操作：add_list, add_item, delete_item, edit_item, set_format, get_format）</span>
+            <span class="tool-name">word_list</span><span class="tool-desc">- 添加、編輯、刪除清單項目，重新編號、轉換為清單</span><span class="tool-ops">（8個操作：add_list, add_item, delete_item, edit_item, set_format, get_format, restart_numbering, convert_to_list）</span>
         </li>
     </ul>
 
     <h3>格式設定 (4)</h3>
     <ul class="tool-list">
         <li>
-            <span class="tool-name">word_format</span><span class="tool-desc">- 獲取/設定 Run 格式，獲取定位點，設定段落邊框</span><span class="tool-ops">（4個操作：get_run_format, set_run_format, get_tab_stops, set_paragraph_border）</span>
+            <span class="tool-name">word_format</span><span class="tool-desc">- 獲取/設定 Run 格式，獲取/添加/清除定位點，設定段落邊框</span><span class="tool-ops">（6個操作：get_run_format, set_run_format, get_tab_stops, add_tab_stop, clear_tab_stops, set_paragraph_border）</span>
         </li>
         <li>
             <span class="tool-name">word_style</span><span class="tool-desc">- 獲取、創建、應用樣式，從其他文檔複製樣式</span><span class="tool-ops">（4個操作：get_styles, create_style, apply_style, copy_styles）</span>
@@ -472,7 +473,7 @@
             <span class="tool-name">word_section</span><span class="tool-desc">- 插入、刪除、獲取節資訊</span><span class="tool-ops">（3個操作：insert, delete, get）</span>
         </li>
         <li>
-            <span class="tool-name">word_watermark</span><span class="tool-desc">- 添加水印</span><span class="tool-ops">（1個操作：add）</span>
+            <span class="tool-name">word_watermark</span><span class="tool-desc">- 添加文字/圖片水印、移除水印</span><span class="tool-ops">（3個操作：add, add_image, remove）</span>
         </li>
         <li>
             <span class="tool-name">word_mail_merge</span><span class="tool-desc">- 郵件合併</span>
@@ -784,6 +785,47 @@
         <li>
             <span class="tool-name">convert_document</span><span class="tool-desc">- 跨格式轉換（啟用兩個或以上文檔工具時自動可用）</span>
         </li>
+    </ul>
+
+    <h2 id="evaluation-mode">⚠️ 評估模式限制</h2>
+    <p style="margin-bottom: 15px;">在無授權（評估模式）下運行時，Aspose 組件會有以下限制：</p>
+    <table class="tool-detail-table" style="margin-bottom: 15px;">
+        <tr>
+            <th style="width: 150px;">組件</th>
+            <th>限制說明</th>
+        </tr>
+        <tr>
+            <td>
+                <strong>Aspose.Words</strong>
+            </td>
+            <td>字型格式（名稱、大小、顏色）可能無法正確應用；文檔會包含評估版水印</td>
+        </tr>
+        <tr>
+            <td>
+                <strong>Aspose.Cells</strong>
+            </td>
+            <td>多工作表操作受限（如跨工作表存取）；工作簿會包含評估版工作表</td>
+        </tr>
+        <tr>
+            <td>
+                <strong>Aspose.Slides</strong>
+            </td>
+            <td>文字替換時可能包含水印文字；投影片可能包含評估版標記</td>
+        </tr>
+        <tr>
+            <td>
+                <strong>Aspose.PDF</strong>
+            </td>
+            <td>集合限制為最多 4 個元素（如頁面數限制）；PDF 會包含評估版水印</td>
+        </tr>
+    </table>
+    <p>
+        <strong>注意事項：</strong>
+    </p>
+    <ul class="tool-list">
+        <li>大部分基本操作（讀取、創建、簡單編輯）在評估模式下仍可正常運行</li>
+        <li>評估模式適合測試和開發，但不建議用於生產環境</li>
+        <li>使用 <code style="background: #f0f0f0; padding: 2px 6px; border-radius: 3px;">test.ps1 -SkipLicense</code> 可在評估模式下運行單元測試</li>
     </ul>
 </div>
 </div>

@@ -324,14 +324,14 @@ Usage examples:
 
         return operation switch
         {
-            "add" => await AddTextAsync(arguments, path, outputPath),
-            "delete" => await DeleteTextAsync(arguments, path, outputPath),
-            "replace" => await ReplaceTextAsync(arguments, path, outputPath),
-            "search" => await SearchTextAsync(arguments, path),
-            "format" => await FormatTextAsync(arguments, path, outputPath),
-            "insert_at_position" => await InsertTextAtPositionAsync(arguments, path, outputPath),
-            "delete_range" => await DeleteTextRangeAsync(arguments, path, outputPath),
-            "add_with_style" => await AddTextWithStyleAsync(arguments, path, outputPath),
+            "add" => await AddTextAsync(path, outputPath, arguments),
+            "delete" => await DeleteTextAsync(path, outputPath, arguments),
+            "replace" => await ReplaceTextAsync(path, outputPath, arguments),
+            "search" => await SearchTextAsync(path, arguments),
+            "format" => await FormatTextAsync(path, outputPath, arguments),
+            "insert_at_position" => await InsertTextAtPositionAsync(path, outputPath, arguments),
+            "delete_range" => await DeleteTextRangeAsync(path, outputPath, arguments),
+            "add_with_style" => await AddTextWithStyleAsync(path, outputPath, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -339,11 +339,11 @@ Usage examples:
     /// <summary>
     ///     Adds text to the document
     /// </summary>
-    /// <param name="arguments">JSON arguments containing text, optional fontName, fontSize, fontColor, formatting options</param>
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing text, optional fontName, fontSize, fontColor, formatting options</param>
     /// <returns>Success message</returns>
-    private Task<string> AddTextAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> AddTextAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -512,11 +512,11 @@ Usage examples:
     /// <summary>
     ///     Deletes text from the document
     /// </summary>
-    /// <param name="arguments">JSON arguments containing searchText, optional matchCase, matchWholeWord, outputPath</param>
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing searchText, optional matchCase, matchWholeWord, outputPath</param>
     /// <returns>Success message with deletion count</returns>
-    private Task<string> DeleteTextAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> DeleteTextAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -705,14 +705,14 @@ Usage examples:
     /// <summary>
     ///     Replaces text in the document
     /// </summary>
+    /// <param name="path">Word document file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="arguments">
     ///     JSON arguments containing searchText, replaceText, optional matchCase, matchWholeWord,
     ///     outputPath
     /// </param>
-    /// <param name="path">Word document file path</param>
-    /// <param name="outputPath">Output file path</param>
     /// <returns>Success message with replacement count</returns>
-    private Task<string> ReplaceTextAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> ReplaceTextAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -746,10 +746,10 @@ Usage examples:
     /// <summary>
     ///     Searches for text in the document
     /// </summary>
-    /// <param name="arguments">JSON arguments containing searchText, optional matchCase, matchWholeWord</param>
     /// <param name="path">Word document file path</param>
+    /// <param name="arguments">JSON arguments containing searchText, optional matchCase, matchWholeWord</param>
     /// <returns>Formatted string with search results</returns>
-    private Task<string> SearchTextAsync(JsonObject? arguments, string path)
+    private Task<string> SearchTextAsync(string path, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -825,6 +825,14 @@ Usage examples:
         });
     }
 
+    /// <summary>
+    ///     Extracts context around a matched text for search results display
+    /// </summary>
+    /// <param name="text">The full paragraph text</param>
+    /// <param name="matchIndex">Starting index of the match</param>
+    /// <param name="matchLength">Length of the matched text</param>
+    /// <param name="contextLength">Number of characters to include before and after the match</param>
+    /// <returns>Context string with the match highlighted using 【】 brackets</returns>
     private string GetContext(string text, int matchIndex, int matchLength, int contextLength)
     {
         var start = Math.Max(0, matchIndex - contextLength);
@@ -848,11 +856,11 @@ Usage examples:
     /// <summary>
     ///     Formats text in the document
     /// </summary>
-    /// <param name="arguments">JSON arguments containing searchText, optional formatting options, matchCase, matchWholeWord</param>
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing searchText, optional formatting options, matchCase, matchWholeWord</param>
     /// <returns>Success message with format count</returns>
-    private Task<string> FormatTextAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> FormatTextAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -937,10 +945,6 @@ Usage examples:
                     }
                 }
 
-                if (!string.IsNullOrEmpty(underline))
-                {
-                }
-
                 FontHelper.Word.ApplyFontSettings(
                     run,
                     fontName,
@@ -1015,11 +1019,11 @@ Usage examples:
     /// <summary>
     ///     Inserts text at a specific position
     /// </summary>
-    /// <param name="arguments">JSON arguments containing text, paragraphIndex, runIndex, optional formatting options</param>
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing text, paragraphIndex, runIndex, optional formatting options</param>
     /// <returns>Success message</returns>
-    private Task<string> InsertTextAtPositionAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> InsertTextAtPositionAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -1088,11 +1092,11 @@ Usage examples:
     /// <summary>
     ///     Deletes text in a range
     /// </summary>
-    /// <param name="arguments">JSON arguments containing startParagraphIndex, startRunIndex, endParagraphIndex, endRunIndex</param>
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing startParagraphIndex, startRunIndex, endParagraphIndex, endRunIndex</param>
     /// <returns>Success message</returns>
-    private Task<string> DeleteTextRangeAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> DeleteTextRangeAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -1190,11 +1194,11 @@ Usage examples:
     /// <summary>
     ///     Adds text with a specific style
     /// </summary>
-    /// <param name="arguments">JSON arguments containing text, styleName, optional formatting options</param>
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing text, styleName, optional formatting options</param>
     /// <returns>Success message</returns>
-    private Task<string> AddTextWithStyleAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> AddTextWithStyleAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {

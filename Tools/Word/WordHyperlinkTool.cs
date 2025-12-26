@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using Aspose.Words.Fields;
@@ -53,7 +53,14 @@ Usage examples:
             url = new
             {
                 type = "string",
-                description = "URL or target address (required for add operation, optional for edit operation)"
+                description =
+                    "URL or target address (required for add operation unless subAddress is provided, optional for edit operation)"
+            },
+            subAddress = new
+            {
+                type = "string",
+                description =
+                    "Internal bookmark name for document navigation (e.g., '_Toc123456'). Use with empty url for internal links. (optional, for add/edit operations)"
             },
             paragraphIndex = new
             {
@@ -75,6 +82,12 @@ Usage examples:
             {
                 type = "string",
                 description = "New display text (optional, for edit operation)"
+            },
+            keepText = new
+            {
+                type = "boolean",
+                description =
+                    "Keep display text when deleting hyperlink (unlink instead of remove, optional, default: false, for delete operation)"
             }
         },
         required = new[] { "operation", "path" }
@@ -89,13 +102,15 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
         return operation.ToLower() switch
         {
-            "add" => await AddHyperlinkAsync(arguments, path),
-            "edit" => await EditHyperlinkAsync(arguments, path),
-            "delete" => await DeleteHyperlinkAsync(arguments, path),
-            "get" => await GetHyperlinksAsync(arguments, path),
+            "add" => await AddHyperlinkAsync(path, outputPath, arguments),
+            "edit" => await EditHyperlinkAsync(path, outputPath, arguments),
+            "delete" => await DeleteHyperlinkAsync(path, outputPath, arguments),
+            "get" => await GetHyperlinksAsync(path),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -103,18 +118,27 @@ Usage examples:
     /// <summary>
     ///     Adds a hyperlink to the document
     /// </summary>
-    /// <param name="arguments">JSON arguments containing text, address, optional displayText, outputPath</param>
-    /// <param name="path">Word document file path</param>
+    /// <param name="path">Document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing text, url, optional subAddress, paragraphIndex, tooltip</param>
     /// <returns>Success message</returns>
-    private Task<string> AddHyperlinkAsync(JsonObject? arguments, string path)
+    private Task<string> AddHyperlinkAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var text = ArgumentHelper.GetString(arguments, "text");
-            var url = ArgumentHelper.GetString(arguments, "url");
+            var url = ArgumentHelper.GetStringNullable(arguments, "url");
+            var subAddress = ArgumentHelper.GetStringNullable(arguments, "subAddress");
             var paragraphIndex = ArgumentHelper.GetIntNullable(arguments, "paragraphIndex");
             var tooltip = ArgumentHelper.GetStringNullable(arguments, "tooltip");
+
+            // Validate: either url or subAddress must be provided
+            if (string.IsNullOrEmpty(url) && string.IsNullOrEmpty(subAddress))
+                throw new ArgumentException("Either 'url' or 'subAddress' must be provided for add operation");
+
+            // Validate URL format if provided
+            if (!string.IsNullOrEmpty(url))
+                ValidateUrlFormat(url);
 
             var doc = new Document(path);
             var builder = new DocumentBuilder(doc);
@@ -183,17 +207,28 @@ Usage examples:
             }
 
             // Insert hyperlink
-            builder.InsertHyperlink(text, url, false);
+            if (!string.IsNullOrEmpty(subAddress))
+                // Internal bookmark link
+                builder.InsertHyperlink(text, subAddress, true);
+            else
+                // External URL link
+                builder.InsertHyperlink(text, url!, false);
 
-            // Set tooltip if provided
-            if (!string.IsNullOrEmpty(tooltip))
+            // Set tooltip and subAddress if provided
+            var fields = doc.Range.Fields;
+            if (fields.Count > 0)
             {
-                // Get the last inserted field (should be the hyperlink field)
-                var fields = doc.Range.Fields;
-                if (fields.Count > 0)
+                var lastField = fields[^1];
+                if (lastField is FieldHyperlink hyperlinkField)
                 {
-                    var lastField = fields[^1];
-                    if (lastField is FieldHyperlink hyperlinkField) hyperlinkField.ScreenTip = tooltip;
+                    if (!string.IsNullOrEmpty(tooltip))
+                        hyperlinkField.ScreenTip = tooltip;
+                    // Set both Address and SubAddress for combined links
+                    if (!string.IsNullOrEmpty(url) && !string.IsNullOrEmpty(subAddress))
+                    {
+                        hyperlinkField.Address = url;
+                        hyperlinkField.SubAddress = subAddress;
+                    }
                 }
             }
 
@@ -201,7 +236,8 @@ Usage examples:
 
             var result = "Hyperlink added successfully\n";
             result += $"Display text: {text}\n";
-            result += $"URL: {url}\n";
+            if (!string.IsNullOrEmpty(url)) result += $"URL: {url}\n";
+            if (!string.IsNullOrEmpty(subAddress)) result += $"SubAddress (bookmark): {subAddress}\n";
             if (!string.IsNullOrEmpty(tooltip)) result += $"Tooltip: {tooltip}\n";
             if (paragraphIndex.HasValue)
             {
@@ -224,26 +260,22 @@ Usage examples:
     /// <summary>
     ///     Edits an existing hyperlink
     /// </summary>
-    /// <param name="arguments">JSON arguments containing hyperlinkIndex, optional text, address, displayText, outputPath</param>
-    /// <param name="path">Word document file path</param>
+    /// <param name="path">Document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing hyperlinkIndex, optional url, subAddress, displayText, tooltip</param>
     /// <returns>Success message</returns>
-    private Task<string> EditHyperlinkAsync(JsonObject? arguments, string path)
+    private Task<string> EditHyperlinkAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var hyperlinkIndex = ArgumentHelper.GetInt(arguments, "hyperlinkIndex");
             var url = ArgumentHelper.GetStringNullable(arguments, "url");
+            var subAddress = ArgumentHelper.GetStringNullable(arguments, "subAddress");
             var displayText = ArgumentHelper.GetStringNullable(arguments, "displayText");
             var tooltip = ArgumentHelper.GetStringNullable(arguments, "tooltip");
 
             var doc = new Document(path);
-
-            // Get all hyperlink fields
-            var hyperlinkFields = new List<FieldHyperlink>();
-            foreach (var field in doc.Range.Fields)
-                if (field is FieldHyperlink linkField)
-                    hyperlinkFields.Add(linkField);
+            var hyperlinkFields = GetAllHyperlinks(doc);
 
             if (hyperlinkIndex < 0 || hyperlinkIndex >= hyperlinkFields.Count)
             {
@@ -260,8 +292,16 @@ Usage examples:
             // Update URL if provided
             if (!string.IsNullOrEmpty(url))
             {
+                ValidateUrlFormat(url);
                 hyperlinkField.Address = url;
                 changes.Add($"URL: {url}");
+            }
+
+            // Update subAddress if provided
+            if (!string.IsNullOrEmpty(subAddress))
+            {
+                hyperlinkField.SubAddress = subAddress;
+                changes.Add($"SubAddress: {subAddress}");
             }
 
             // Update display text if provided
@@ -297,23 +337,19 @@ Usage examples:
     /// <summary>
     ///     Deletes a hyperlink from the document
     /// </summary>
-    /// <param name="arguments">JSON arguments containing hyperlinkIndex, optional outputPath</param>
-    /// <param name="path">Word document file path</param>
+    /// <param name="path">Document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing hyperlinkIndex, optional keepText</param>
     /// <returns>Success message</returns>
-    private Task<string> DeleteHyperlinkAsync(JsonObject? arguments, string path)
+    private Task<string> DeleteHyperlinkAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var hyperlinkIndex = ArgumentHelper.GetInt(arguments, "hyperlinkIndex");
+            var keepText = ArgumentHelper.GetBool(arguments, "keepText", false);
 
             var doc = new Document(path);
-
-            // Get all hyperlink fields
-            var hyperlinkFields = new List<FieldHyperlink>();
-            foreach (var field in doc.Range.Fields)
-                if (field is FieldHyperlink linkField)
-                    hyperlinkFields.Add(linkField);
+            var hyperlinkFields = GetAllHyperlinks(doc);
 
             if (hyperlinkIndex < 0 || hyperlinkIndex >= hyperlinkFields.Count)
             {
@@ -331,41 +367,21 @@ Usage examples:
             var address = hyperlinkField.Address ?? "";
 
             // Delete the hyperlink field
-            try
-            {
-                var fieldStart = hyperlinkField.Start;
-                var fieldEnd = hyperlinkField.End;
-
-                fieldStart.Remove();
-                if (fieldEnd != null) fieldEnd.Remove();
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine(
-                    $"[WARN] Failed to delete hyperlink using field components, trying alternative method: {ex.Message}");
-                try
-                {
-                    hyperlinkField.Remove();
-                }
-                catch (Exception ex2)
-                {
-                    Console.Error.WriteLine($"[ERROR] Alternative method also failed: {ex2.Message}");
-                    throw new InvalidOperationException(
-                        $"Unable to delete hyperlink, please check document structure. Original error: {ex.Message}");
-                }
-            }
+            if (keepText)
+                // Unlink: remove hyperlink but keep display text
+                hyperlinkField.Unlink();
+            else
+                // Remove: delete hyperlink and its content
+                hyperlinkField.Remove();
 
             doc.Save(outputPath);
 
-            // Count remaining hyperlinks
-            var remainingCount = 0;
-            foreach (var field in doc.Range.Fields)
-                if (field is FieldHyperlink)
-                    remainingCount++;
+            var remainingCount = GetAllHyperlinks(doc).Count;
 
             var result = $"Hyperlink #{hyperlinkIndex} deleted successfully\n";
             result += $"Display text: {displayText}\n";
             result += $"Address: {address}\n";
+            result += $"Keep text: {(keepText ? "Yes (unlinked)" : "No (removed)")}\n";
             result += $"Remaining hyperlinks in document: {remainingCount}\n";
             result += $"Output: {outputPath}";
 
@@ -374,59 +390,94 @@ Usage examples:
     }
 
     /// <summary>
+    ///     Gets all hyperlink fields from the document
+    /// </summary>
+    /// <param name="doc">The Word document</param>
+    /// <returns>List of FieldHyperlink objects</returns>
+    private static List<FieldHyperlink> GetAllHyperlinks(Document doc)
+    {
+        return doc.Range.Fields.OfType<FieldHyperlink>().ToList();
+    }
+
+    /// <summary>
+    ///     Validates URL format to prevent invalid field commands
+    /// </summary>
+    /// <param name="url">The URL to validate</param>
+    private static void ValidateUrlFormat(string url)
+    {
+        var validPrefixes = new[] { "http://", "https://", "mailto:", "ftp://", "file://", "#" };
+        if (!validPrefixes.Any(prefix => url.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
+            throw new ArgumentException(
+                $"Invalid URL format: '{url}'. URL must start with http://, https://, mailto:, ftp://, file://, or # (for internal links)");
+    }
+
+    /// <summary>
     ///     Gets all hyperlinks from the document
     /// </summary>
-    /// <param name="_">Unused parameter</param>
-    /// <param name="path">Word document file path</param>
-    /// <returns>Formatted string with all hyperlinks</returns>
-    private Task<string> GetHyperlinksAsync(JsonObject? _, string path)
+    /// <param name="path">Document file path</param>
+    /// <returns>JSON formatted string with all hyperlinks</returns>
+    private Task<string> GetHyperlinksAsync(string path)
     {
         return Task.Run(() =>
         {
             var doc = new Document(path);
+            var hyperlinkFields = GetAllHyperlinks(doc);
 
-            // Get all hyperlink fields
-            var hyperlinks = new List<(int index, string displayText, string address, string tooltip)>();
-            var index = 0;
+            if (hyperlinkFields.Count == 0)
+                return JsonSerializer.Serialize(new
+                    { count = 0, hyperlinks = Array.Empty<object>(), message = "No hyperlinks found in document" });
 
-            foreach (var field in doc.Range.Fields)
-                if (field is FieldHyperlink hyperlinkField)
+            // Build paragraph lookup for finding hyperlink positions
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
+
+            var hyperlinkList = new List<object>();
+            for (var index = 0; index < hyperlinkFields.Count; index++)
+            {
+                var hyperlinkField = hyperlinkFields[index];
+                var displayText = "";
+                var address = "";
+                var subAddress = "";
+                var tooltip = "";
+                int? paragraphIndex = null;
+
+                try
                 {
-                    var displayText = "";
-                    var address = "";
-                    var tooltip = "";
+                    displayText = hyperlinkField.Result ?? "";
+                    address = hyperlinkField.Address ?? "";
+                    subAddress = hyperlinkField.SubAddress ?? "";
+                    tooltip = hyperlinkField.ScreenTip ?? "";
 
-                    try
+                    // Find paragraph index
+                    var fieldStart = hyperlinkField.Start;
+                    if (fieldStart?.ParentNode is Paragraph para)
                     {
-                        displayText = field.Result ?? "";
-                        address = hyperlinkField.Address ?? "";
-                        tooltip = hyperlinkField.ScreenTip ?? "";
+                        paragraphIndex = paragraphs.IndexOf(para);
+                        if (paragraphIndex == -1) paragraphIndex = null;
                     }
-                    catch (Exception ex)
-                    {
-                        // Ignore errors
-                        Console.Error.WriteLine($"[WARN] Error reading hyperlink properties: {ex.Message}");
-                    }
-
-                    hyperlinks.Add((index, displayText, address, tooltip));
-                    index++;
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"[WARN] Error reading hyperlink properties: {ex.Message}");
                 }
 
-            if (hyperlinks.Count == 0) return "No hyperlinks found in document";
-
-            var result = new StringBuilder();
-            result.AppendLine($"Found {hyperlinks.Count} hyperlinks:\n");
-
-            foreach (var (idx, displayText, address, tooltip) in hyperlinks)
-            {
-                result.AppendLine($"Hyperlink #{idx}:");
-                result.AppendLine($"  Display text: {displayText}");
-                result.AppendLine($"  Address: {address}");
-                if (!string.IsNullOrEmpty(tooltip)) result.AppendLine($"  Tooltip: {tooltip}");
-                result.AppendLine();
+                hyperlinkList.Add(new
+                {
+                    index,
+                    displayText,
+                    address,
+                    subAddress = string.IsNullOrEmpty(subAddress) ? null : subAddress,
+                    tooltip = string.IsNullOrEmpty(tooltip) ? null : tooltip,
+                    paragraphIndex
+                });
             }
 
-            return result.ToString().TrimEnd();
+            var result = new
+            {
+                count = hyperlinkFields.Count,
+                hyperlinks = hyperlinkList
+            };
+
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 }

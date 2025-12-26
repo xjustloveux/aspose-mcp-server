@@ -470,26 +470,29 @@ When true, format settings will be applied to all cells in the table. This is us
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
         return operation.ToLower() switch
         {
-            "add_table" => await AddTable(arguments),
-            "edit_table_format" => await EditTableFormat(arguments),
-            "delete_table" => await DeleteTable(arguments),
-            "get_tables" => await GetTables(arguments),
-            "insert_row" => await InsertRow(arguments),
-            "delete_row" => await DeleteRow(arguments),
-            "insert_column" => await InsertColumn(arguments),
-            "delete_column" => await DeleteColumn(arguments),
-            "merge_cells" => await MergeCells(arguments),
-            "split_cell" => await SplitCell(arguments),
-            "edit_cell_format" => await EditCellFormat(arguments),
-            "move_table" => await MoveTable(arguments),
-            "copy_table" => await CopyTable(arguments),
-            "get_table_structure" => await GetTableStructure(arguments),
-            "set_table_border" => await SetTableBorder(arguments),
-            "set_column_width" => await SetColumnWidth(arguments),
-            "set_row_height" => await SetRowHeight(arguments),
+            "add_table" => await AddTable(path, outputPath, arguments),
+            "edit_table_format" => await EditTableFormat(path, outputPath, arguments),
+            "delete_table" => await DeleteTable(path, outputPath, arguments),
+            "get_tables" => await GetTables(path, arguments),
+            "insert_row" => await InsertRow(path, outputPath, arguments),
+            "delete_row" => await DeleteRow(path, outputPath, arguments),
+            "insert_column" => await InsertColumn(path, outputPath, arguments),
+            "delete_column" => await DeleteColumn(path, outputPath, arguments),
+            "merge_cells" => await MergeCells(path, outputPath, arguments),
+            "split_cell" => await SplitCell(path, outputPath, arguments),
+            "edit_cell_format" => await EditCellFormat(path, outputPath, arguments),
+            "move_table" => await MoveTable(path, outputPath, arguments),
+            "copy_table" => await CopyTable(path, outputPath, arguments),
+            "get_table_structure" => await GetTableStructure(path, arguments),
+            "set_table_border" => await SetTableBorder(path, outputPath, arguments),
+            "set_column_width" => await SetColumnWidth(path, outputPath, arguments),
+            "set_row_height" => await SetRowHeight(path, outputPath, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -497,17 +500,14 @@ When true, format settings will be applied to all cells in the table. This is us
     /// <summary>
     ///     Adds a new table to the document
     /// </summary>
-    /// <param name="arguments">
-    ///     JSON arguments containing path, rows, columns, optional data, headerRow, formatting options,
-    ///     outputPath
-    /// </param>
+    /// <param name="path">Document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing rows, columns, optional data, headerRow, formatting options</param>
     /// <returns>Success message with table index</returns>
-    private Task<string> AddTable(JsonObject? arguments)
+    private Task<string> AddTable(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var rows = ArgumentHelper.GetInt(arguments, "rows");
             var columns = ArgumentHelper.GetInt(arguments, "columns");
             var headerRow = ArgumentHelper.GetBool(arguments, "headerRow", false);
@@ -789,14 +789,14 @@ When true, format settings will be applied to all cells in the table. This is us
     /// <summary>
     ///     Edits table format properties
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, tableIndex, optional formatting options, outputPath</param>
+    /// <param name="path">Document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing tableIndex, optional formatting options</param>
     /// <returns>Success message</returns>
-    private Task<string> EditTableFormat(JsonObject? arguments)
+    private Task<string> EditTableFormat(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex");
             var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
 
@@ -855,14 +855,14 @@ When true, format settings will be applied to all cells in the table. This is us
     /// <summary>
     ///     Deletes a table from the document
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, tableIndex, optional outputPath</param>
+    /// <param name="path">Document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing tableIndex, optional sectionIndex</param>
     /// <returns>Success message with remaining table count</returns>
-    private Task<string> DeleteTable(JsonObject? arguments)
+    private Task<string> DeleteTable(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex");
             var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
 
@@ -889,13 +889,13 @@ When true, format settings will be applied to all cells in the table. This is us
     /// <summary>
     ///     Gets all tables from the document
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, optional sectionIndex</param>
+    /// <param name="path">Document file path</param>
+    /// <param name="arguments">JSON arguments containing optional sectionIndex, includeContent</param>
     /// <returns>Formatted string with all tables</returns>
-    private Task<string> GetTables(JsonObject? arguments)
+    private Task<string> GetTables(string path, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
             var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
             var includeContent = ArgumentHelper.GetBool(arguments, "includeContent", false);
 
@@ -922,6 +922,12 @@ When true, format settings will be applied to all cells in the table. This is us
                 var table = tables[i];
                 sb.AppendLine($"[{i}] Rows: {table.Rows.Count}, Columns: {table.FirstRow?.Cells?.Count ?? 0}");
                 sb.AppendLine($"    Style: {table.Style?.Name ?? "(none)"}");
+
+                // Add context: text before table (helps LLM identify the correct table)
+                var precedingText = GetPrecedingText(table, 50);
+                if (!string.IsNullOrWhiteSpace(precedingText))
+                    sb.AppendLine($"    Preceding text: \"{precedingText}\"");
+
                 if (includeContent)
                 {
                     sb.AppendLine("    Content:");
@@ -947,17 +953,14 @@ When true, format settings will be applied to all cells in the table. This is us
     /// <summary>
     ///     Inserts a row into a table
     /// </summary>
-    /// <param name="arguments">
-    ///     JSON arguments containing path, tableIndex, rowIndex, optional insertBefore, rowData,
-    ///     outputPath
-    /// </param>
+    /// <param name="path">Document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing tableIndex, rowIndex, optional insertBefore, rowData</param>
     /// <returns>Success message</returns>
-    private Task<string> InsertRow(JsonObject? arguments)
+    private Task<string> InsertRow(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex");
             var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex");
             var insertBefore = ArgumentHelper.GetBool(arguments, "insertBefore", false);
@@ -991,8 +994,22 @@ When true, format settings will be applied to all cells in the table. This is us
                     if (!string.IsNullOrEmpty(cellText))
                     {
                         var para = new Paragraph(doc);
-                        var run = new Run(doc, cellText);
-                        para.AppendChild(run);
+                        // Handle multi-line text: split by \n and insert line breaks
+                        if (cellText.Contains('\n'))
+                        {
+                            var lines = cellText.Split('\n');
+                            for (var lineIdx = 0; lineIdx < lines.Length; lineIdx++)
+                            {
+                                if (lineIdx > 0)
+                                    para.AppendChild(new Run(doc, ControlChar.LineBreak));
+                                para.AppendChild(new Run(doc, lines[lineIdx]));
+                            }
+                        }
+                        else
+                        {
+                            para.AppendChild(new Run(doc, cellText));
+                        }
+
                         newCell.AppendChild(para);
                     }
                 }
@@ -1012,14 +1029,14 @@ When true, format settings will be applied to all cells in the table. This is us
     /// <summary>
     ///     Deletes a row from a table
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, tableIndex, rowIndex, optional outputPath</param>
+    /// <param name="path">Document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing tableIndex, rowIndex, optional sectionIndex</param>
     /// <returns>Success message</returns>
-    private Task<string> DeleteRow(JsonObject? arguments)
+    private Task<string> DeleteRow(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex");
             var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex");
             var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
@@ -1048,17 +1065,14 @@ When true, format settings will be applied to all cells in the table. This is us
     /// <summary>
     ///     Inserts a column into a table
     /// </summary>
-    /// <param name="arguments">
-    ///     JSON arguments containing path, tableIndex, colIndex, optional insertBefore, columnData,
-    ///     outputPath
-    /// </param>
+    /// <param name="path">Document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing tableIndex, columnIndex, optional insertBefore, columnData</param>
     /// <returns>Success message</returns>
-    private Task<string> InsertColumn(JsonObject? arguments)
+    private Task<string> InsertColumn(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex");
             int columnIndex;
             var columnIndexNode = arguments?["columnIndex"];
@@ -1137,8 +1151,22 @@ When true, format settings will be applied to all cells in the table. This is us
                     if (!string.IsNullOrEmpty(cellText))
                     {
                         var para = new Paragraph(doc);
-                        var run = new Run(doc, cellText);
-                        para.AppendChild(run);
+                        // Handle multi-line text: split by \n and insert line breaks
+                        if (cellText.Contains('\n'))
+                        {
+                            var lines = cellText.Split('\n');
+                            for (var lineIdx = 0; lineIdx < lines.Length; lineIdx++)
+                            {
+                                if (lineIdx > 0)
+                                    para.AppendChild(new Run(doc, ControlChar.LineBreak));
+                                para.AppendChild(new Run(doc, lines[lineIdx]));
+                            }
+                        }
+                        else
+                        {
+                            para.AppendChild(new Run(doc, cellText));
+                        }
+
                         newCell.AppendChild(para);
                     }
                 }
@@ -1168,14 +1196,14 @@ When true, format settings will be applied to all cells in the table. This is us
     /// <summary>
     ///     Deletes a column from a table
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, tableIndex, colIndex, optional outputPath</param>
+    /// <param name="path">Document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing tableIndex, columnIndex, optional sectionIndex</param>
     /// <returns>Success message</returns>
-    private Task<string> DeleteColumn(JsonObject? arguments)
+    private Task<string> DeleteColumn(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex");
             int columnIndex;
             var columnIndexNode = arguments?["columnIndex"];
@@ -1245,18 +1273,14 @@ When true, format settings will be applied to all cells in the table. This is us
     /// <summary>
     ///     Merges cells in a table
     /// </summary>
-    /// <param name="arguments">
-    ///     JSON arguments containing path, tableIndex, startRow, startCol, endRow, endCol, optional
-    ///     outputPath
-    /// </param>
+    /// <param name="path">Document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing tableIndex, startRow, startCol, endRow, endCol</param>
     /// <returns>Success message</returns>
-    private Task<string> MergeCells(JsonObject? arguments)
+    private Task<string> MergeCells(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
             var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex");
             var startRow = ArgumentHelper.GetInt(arguments, "startRow");
             var startCol = ArgumentHelper.GetInt(arguments, "startCol", "startColumn", "startCol or startColumn");
@@ -1335,14 +1359,14 @@ When true, format settings will be applied to all cells in the table. This is us
     /// <summary>
     ///     Splits a cell in a table
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, tableIndex, rowIndex, colIndex, optional outputPath</param>
+    /// <param name="path">Document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing tableIndex, rowIndex, colIndex, optional splitRows, splitCols</param>
     /// <returns>Success message</returns>
-    private Task<string> SplitCell(JsonObject? arguments)
+    private Task<string> SplitCell(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex");
 
             var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex");
@@ -1453,17 +1477,14 @@ When true, format settings will be applied to all cells in the table. This is us
     /// <summary>
     ///     Edits cell format properties
     /// </summary>
-    /// <param name="arguments">
-    ///     JSON arguments containing path, tableIndex, rowIndex, colIndex, optional formatting options,
-    ///     outputPath
-    /// </param>
+    /// <param name="path">Document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing tableIndex, optional rowIndex, colIndex, formatting options</param>
     /// <returns>Success message</returns>
-    private Task<string> EditCellFormat(JsonObject? arguments)
+    private Task<string> EditCellFormat(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex");
             var applyToRow = ArgumentHelper.GetBool(arguments, "applyToRow", false);
             var applyToColumn = ArgumentHelper.GetBool(arguments, "applyToColumn", false);
@@ -1609,17 +1630,14 @@ When true, format settings will be applied to all cells in the table. This is us
     /// <summary>
     ///     Moves a table to a different position
     /// </summary>
-    /// <param name="arguments">
-    ///     JSON arguments containing path, tableIndex, optional targetParagraphIndex, sectionIndex,
-    ///     outputPath
-    /// </param>
+    /// <param name="path">Document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing tableIndex, targetParagraphIndex, optional sectionIndex</param>
     /// <returns>Success message</returns>
-    private Task<string> MoveTable(JsonObject? arguments)
+    private Task<string> MoveTable(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex");
             var targetParagraphIndex = ArgumentHelper.GetInt(arguments, "targetParagraphIndex");
             var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
@@ -1671,17 +1689,14 @@ When true, format settings will be applied to all cells in the table. This is us
     /// <summary>
     ///     Copies a table to another location
     /// </summary>
-    /// <param name="arguments">
-    ///     JSON arguments containing path, tableIndex or sourceTableIndex, optional targetParagraphIndex,
-    ///     sectionIndex, outputPath
-    /// </param>
+    /// <param name="path">Document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing sourceTableIndex, targetParagraphIndex, optional section indices</param>
     /// <returns>Success message</returns>
-    private Task<string> CopyTable(JsonObject? arguments)
+    private Task<string> CopyTable(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             // Accept both sourceTableIndex and tableIndex for compatibility
             var sourceTableIndex =
                 ArgumentHelper.GetInt(arguments, "sourceTableIndex", "tableIndex", "sourceTableIndex or tableIndex");
@@ -1773,13 +1788,13 @@ When true, format settings will be applied to all cells in the table. This is us
     /// <summary>
     ///     Gets detailed table structure information
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, tableIndex, optional includeCellFormatting</param>
+    /// <param name="path">Document file path</param>
+    /// <param name="arguments">JSON arguments containing tableIndex, optional includeContent, includeCellFormatting</param>
     /// <returns>Formatted string with table structure</returns>
-    private Task<string> GetTableStructure(JsonObject? arguments)
+    private Task<string> GetTableStructure(string path, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
             var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex");
             var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
             var includeContent = ArgumentHelper.GetBool(arguments, "includeContent", false);
@@ -1856,17 +1871,14 @@ When true, format settings will be applied to all cells in the table. This is us
     /// <summary>
     ///     Sets table border properties
     /// </summary>
-    /// <param name="arguments">
-    ///     JSON arguments containing path, tableIndex, optional borderType, style, width, color,
-    ///     outputPath
-    /// </param>
+    /// <param name="path">Document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing tableIndex, optional border flags, lineStyle, lineWidth, lineColor</param>
     /// <returns>Success message</returns>
-    private Task<string> SetTableBorder(JsonObject? arguments)
+    private Task<string> SetTableBorder(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex");
             var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
             var rowIndex = ArgumentHelper.GetIntNullable(arguments, "rowIndex");
@@ -1973,14 +1985,14 @@ When true, format settings will be applied to all cells in the table. This is us
     /// <summary>
     ///     Sets column width for a table
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, tableIndex, colIndex, width, optional outputPath</param>
+    /// <param name="path">Document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing tableIndex, columnIndex, columnWidth</param>
     /// <returns>Success message</returns>
-    private Task<string> SetColumnWidth(JsonObject? arguments)
+    private Task<string> SetColumnWidth(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex");
             var columnIndex = ArgumentHelper.GetInt(arguments, "columnIndex");
             var columnWidth = ArgumentHelper.GetDouble(arguments, "columnWidth");
@@ -2024,14 +2036,14 @@ When true, format settings will be applied to all cells in the table. This is us
     /// <summary>
     ///     Sets row height for a table
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, tableIndex, rowIndex, height, optional outputPath</param>
+    /// <param name="path">Document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing tableIndex, rowIndex, rowHeight, optional heightRule</param>
     /// <returns>Success message</returns>
-    private Task<string> SetRowHeight(JsonObject? arguments)
+    private Task<string> SetRowHeight(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex");
             var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex");
             var rowHeight = ArgumentHelper.GetDouble(arguments, "rowHeight");
@@ -2156,5 +2168,36 @@ When true, format settings will be applied to all cells in the table. This is us
             "thick" => LineStyle.Thick,
             _ => LineStyle.Single
         };
+    }
+
+    /// <summary>
+    ///     Gets the text content preceding a table node for context identification
+    /// </summary>
+    /// <param name="table">The table node</param>
+    /// <param name="maxLength">Maximum characters to return</param>
+    /// <returns>Preceding text trimmed to maxLength, or empty string if none found</returns>
+    private static string GetPrecedingText(Table table, int maxLength)
+    {
+        var precedingSibling = table.PreviousSibling;
+        while (precedingSibling != null)
+        {
+            if (precedingSibling is Paragraph para)
+            {
+                var text = para.GetText().Trim();
+                // Skip empty paragraphs and section breaks
+                if (!string.IsNullOrWhiteSpace(text) && !text.StartsWith("\f"))
+                {
+                    // Clean control characters
+                    text = text.Replace("\r", "").Replace("\a", "");
+                    if (text.Length > maxLength)
+                        return text.Substring(0, maxLength) + "...";
+                    return text;
+                }
+            }
+
+            precedingSibling = precedingSibling.PreviousSibling;
+        }
+
+        return string.Empty;
     }
 }

@@ -53,9 +53,11 @@ public class PdfAnnotationToolTests : PdfTestBase
         var pdfPath = CreateTestPdf("test_get_annotations.pdf");
         var document = new Document(pdfPath);
         var page = document.Pages[1];
-        var annotation = new TextAnnotation(page, new Rectangle(100, 100, 200, 130));
-        annotation.Title = "Test";
-        annotation.Contents = "Test Note";
+        var annotation = new TextAnnotation(page, new Rectangle(100, 100, 200, 130))
+        {
+            Title = "Test",
+            Contents = "Test Note"
+        };
         page.Annotations.Add(annotation);
         document.Save(pdfPath);
 
@@ -82,8 +84,10 @@ public class PdfAnnotationToolTests : PdfTestBase
         var pdfPath = CreateTestPdf("test_delete_annotation.pdf");
         var document = new Document(pdfPath);
         var page = document.Pages[1];
-        var annotation = new TextAnnotation(page, new Rectangle(100, 100, 200, 130));
-        annotation.Contents = "Note to Delete";
+        var annotation = new TextAnnotation(page, new Rectangle(100, 100, 200, 130))
+        {
+            Contents = "Note to Delete"
+        };
         page.Annotations.Add(annotation);
         document.Save(pdfPath);
 
@@ -117,8 +121,10 @@ public class PdfAnnotationToolTests : PdfTestBase
         var pdfPath = CreateTestPdf("test_edit_annotation.pdf");
         var document = new Document(pdfPath);
         var page = document.Pages[1];
-        var annotation = new TextAnnotation(page, new Rectangle(100, 100, 200, 130));
-        annotation.Contents = "Original Note";
+        var annotation = new TextAnnotation(page, new Rectangle(100, 100, 200, 130))
+        {
+            Contents = "Original Note"
+        };
         page.Annotations.Add(annotation);
         document.Save(pdfPath);
 

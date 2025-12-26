@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using Aspose.Words;
+using Aspose.Words.Loading;
 using AsposeMcpServer.Core;
 
 namespace AsposeMcpServer.Tools.Word;
@@ -14,7 +15,19 @@ public class WordProtectionTool : IAsposeTool
 
 Usage examples:
 - Protect document: word_protection(operation='protect', path='doc.docx', password='password', protectionType='ReadOnly')
-- Unprotect document: word_protection(operation='unprotect', path='doc.docx', password='password')";
+- Unprotect document: word_protection(operation='unprotect', path='doc.docx', password='password')
+
+Protection types:
+- ReadOnly: Prevent all modifications (most restrictive)
+- AllowOnlyComments: Allow only adding comments
+- AllowOnlyFormFields: Allow only filling in form fields
+- AllowOnlyRevisions: Allow only tracked changes
+
+Notes:
+- Password is required for 'protect' operation (cannot be empty)
+- Password is optional for 'unprotect' (some documents may not require password)
+- If unprotect fails, verify the password is correct
+- For encrypted documents (with open password), the same password will be used to open the file";
 
     public object InputSchema => new
     {
@@ -64,41 +77,37 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
         return operation.ToLower() switch
         {
-            "protect" => await ProtectAsync(arguments, path),
-            "unprotect" => await UnprotectAsync(arguments, path),
+            "protect" => await ProtectAsync(path, outputPath, arguments),
+            "unprotect" => await UnprotectAsync(path, outputPath, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
 
     /// <summary>
-    ///     Protects the document with password
+    ///     Protects the document with specified protection type and password
     /// </summary>
-    /// <param name="arguments">JSON arguments containing password, optional protectionType, outputPath</param>
     /// <param name="path">Word document file path</param>
-    /// <returns>Success message</returns>
-    private Task<string> ProtectAsync(JsonObject? arguments, string path)
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing password and protectionType</param>
+    /// <returns>Success message with protection type and output path</returns>
+    private Task<string> ProtectAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-            var password = ArgumentHelper.GetString(arguments, "password");
+            var password = ArgumentHelper.GetStringNullable(arguments, "password");
             var protectionTypeStr = ArgumentHelper.GetString(arguments, "protectionType", "ReadOnly");
 
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+            if (string.IsNullOrWhiteSpace(password))
+                throw new ArgumentException(
+                    "Password is required for protect operation. Please provide a non-empty password.");
 
-            var doc = new Document(path);
-
-            var protectionType = protectionTypeStr switch
-            {
-                "ReadOnly" => ProtectionType.ReadOnly,
-                "AllowOnlyComments" => ProtectionType.AllowOnlyComments,
-                "AllowOnlyFormFields" => ProtectionType.AllowOnlyFormFields,
-                "AllowOnlyRevisions" => ProtectionType.AllowOnlyRevisions,
-                _ => ProtectionType.ReadOnly
-            };
+            var doc = LoadDocument(path, password);
+            var protectionType = GetProtectionType(protectionTypeStr);
 
             doc.Protect(protectionType, password);
             doc.Save(outputPath);
@@ -108,24 +117,86 @@ Usage examples:
     }
 
     /// <summary>
+    ///     Loads a Word document with optional password for encrypted files
+    /// </summary>
+    /// <param name="path">Document file path</param>
+    /// <param name="password">Optional password for encrypted documents</param>
+    /// <returns>Loaded Document object</returns>
+    /// <exception cref="InvalidOperationException">Thrown when document cannot be loaded</exception>
+    private static Document LoadDocument(string path, string? password)
+    {
+        try
+        {
+            // First try with password if provided (for encrypted documents)
+            if (!string.IsNullOrEmpty(password))
+                try
+                {
+                    var loadOptions = new LoadOptions { Password = password };
+                    return new Document(path, loadOptions);
+                }
+                catch (IncorrectPasswordException)
+                {
+                    // Password didn't work for opening, try without password
+                    // (file might not be encrypted, password is for protection)
+                }
+
+            // Try loading without password
+            return new Document(path);
+        }
+        catch (FileNotFoundException)
+        {
+            throw new InvalidOperationException($"Document not found: {path}");
+        }
+        catch (IncorrectPasswordException)
+        {
+            throw new InvalidOperationException(
+                $"Document is encrypted and requires a password to open: {path}");
+        }
+        catch (UnsupportedFileFormatException ex)
+        {
+            throw new InvalidOperationException(
+                $"Unsupported file format or corrupted document: {path}. Details: {ex.Message}");
+        }
+        catch (Exception ex) when (ex is not InvalidOperationException)
+        {
+            throw new InvalidOperationException(
+                $"Failed to load document: {path}. Details: {ex.Message}", ex);
+        }
+    }
+
+    /// <summary>
+    ///     Converts a protection type string to ProtectionType enum using Enum.TryParse
+    /// </summary>
+    /// <param name="protectionTypeStr">
+    ///     Protection type string: ReadOnly, AllowOnlyComments, AllowOnlyFormFields,
+    ///     AllowOnlyRevisions
+    /// </param>
+    /// <returns>Corresponding ProtectionType enum value, defaults to ReadOnly</returns>
+    private static ProtectionType GetProtectionType(string protectionTypeStr)
+    {
+        if (Enum.TryParse<ProtectionType>(protectionTypeStr, true, out var result))
+            return result;
+
+        return ProtectionType.ReadOnly;
+    }
+
+    /// <summary>
     ///     Removes protection from the document
     /// </summary>
-    /// <param name="arguments">JSON arguments containing password, optional outputPath</param>
     /// <param name="path">Word document file path</param>
-    /// <returns>Success message</returns>
-    private Task<string> UnprotectAsync(JsonObject? arguments, string path)
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing optional password</param>
+    /// <returns>Success message with output path, or error message if unprotect failed</returns>
+    private Task<string> UnprotectAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var password = ArgumentHelper.GetStringNullable(arguments, "password");
 
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+            var doc = LoadDocument(path, password);
+            var previousProtectionType = doc.ProtectionType;
 
-            var doc = new Document(path);
-            var wasProtected = doc.ProtectionType != ProtectionType.NoProtection;
-
-            if (!wasProtected)
+            if (previousProtectionType == ProtectionType.NoProtection)
             {
                 if (!string.Equals(path, outputPath, StringComparison.OrdinalIgnoreCase))
                 {
@@ -136,14 +207,23 @@ Usage examples:
                 return "Document is not protected, no need to unprotect";
             }
 
-            doc.Unprotect(password);
+            try
+            {
+                doc.Unprotect(password);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException(
+                    $"Failed to unprotect document: The password may be incorrect or the document has additional restrictions. Details: {ex.Message}",
+                    ex);
+            }
 
             if (doc.ProtectionType != ProtectionType.NoProtection)
                 throw new InvalidOperationException(
-                    "Unprotect failed, password may be incorrect or document is restricted");
+                    "Failed to unprotect document: The password may be incorrect. Please verify the password and try again.");
 
             doc.Save(outputPath);
-            return $"Protection removed successfully\nOutput: {outputPath}";
+            return $"Protection removed successfully (was: {previousProtectionType})\nOutput: {outputPath}";
         });
     }
 }

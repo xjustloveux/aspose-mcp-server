@@ -1,6 +1,7 @@
+using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Words;
-using Aspose.Words.Replacing;
+using Aspose.Words.Reporting;
 using Aspose.Words.Settings;
 using AsposeMcpServer.Core;
 
@@ -16,10 +17,18 @@ public class WordFileTool : IAsposeTool
 
 Usage examples:
 - Create document: word_file(operation='create', outputPath='new.docx')
-- Create from template: word_file(operation='create_from_template', templatePath='template.docx', outputPath='output.docx', replacements={'name':'John'})
+- Create from template: word_file(operation='create_from_template', templatePath='template.docx', outputPath='output.docx', data={'Name':'John','Items':[{'Product':'Apple','Price':25}]})
 - Convert format: word_file(operation='convert', path='doc.docx', outputPath='doc.pdf', format='pdf')
 - Merge documents: word_file(operation='merge', inputPaths=['doc1.docx','doc2.docx'], outputPath='merged.docx')
-- Split document: word_file(operation='split', path='doc.docx', outputDir='output/', splitBy='page')";
+- Split document: word_file(operation='split', path='doc.docx', outputDir='output/', splitBy='page')
+
+Template syntax (LINQ Reporting Engine, use 'ds' as data source prefix):
+- Simple value: <<[ds.Name]>>
+- Nested object: <<[ds.Customer.Address.City]>>
+- Array iteration: <<foreach [item in ds.Items]>><<[item.Product]>>: <<[item.Price]>><</foreach>>
+- Root array iteration: <<foreach [item in ds]>><<[item.Name]>><</foreach>>
+- Conditional: <<if [ds.Total > 1000]>>VIP<<else>>Normal<</if>>
+- Image: <<image [ds.ImageBytes]>>";
 
     public object InputSchema => new
     {
@@ -53,16 +62,12 @@ Usage examples:
                 type = "string",
                 description = "Template file path (required for create_from_template)"
             },
-            replacements = new
+            data = new
             {
                 type = "object",
-                description = "Key-value pairs for placeholder replacements (for create_from_template)"
-            },
-            placeholderStyle = new
-            {
-                type = "string",
-                description = "Placeholder format: doubleCurly, singleCurly, square (default: doubleCurly)",
-                @enum = new[] { "doubleCurly", "singleCurly", "square" }
+                description = @"Data object for template rendering using LINQ Reporting Engine.
+Use 'ds' prefix to access data: <<[ds.PropertyName]>>, <<foreach [item in ds.Items]>>...<</foreach>>.
+For root arrays: <<foreach [item in ds]>><<[item.Name]>><</foreach>>"
             },
             format = new
             {
@@ -74,6 +79,18 @@ Usage examples:
                 type = "array",
                 description = "Array of input file paths to merge (for merge)",
                 items = new { type = "string" }
+            },
+            importFormatMode = new
+            {
+                type = "string",
+                description =
+                    "Format mode when merging: KeepSourceFormatting (default), UseDestinationStyles, KeepDifferentStyles (for merge)",
+                @enum = new[] { "KeepSourceFormatting", "UseDestinationStyles", "KeepDifferentStyles" }
+            },
+            unlinkHeadersFooters = new
+            {
+                type = "boolean",
+                description = "Unlink headers/footers after merge to prevent confusion (for merge, default: false)"
             },
             outputDir = new
             {
@@ -188,6 +205,11 @@ Usage examples:
         {
             var outputPath = ArgumentHelper.GetString(arguments, "outputPath");
             SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+
+            // Ensure output directory exists
+            var outputDir = Path.GetDirectoryName(outputPath);
+            if (!string.IsNullOrEmpty(outputDir))
+                Directory.CreateDirectory(outputDir);
             var content = ArgumentHelper.GetStringNullable(arguments, "content");
             var skipInitialContent = ArgumentHelper.GetBool(arguments, "skipInitialContent", false);
             var marginTop = ArgumentHelper.GetDouble(arguments, "marginTop", 70.87);
@@ -222,37 +244,27 @@ Usage examples:
                 // Set page size (paper size or custom dimensions)
                 if (!string.IsNullOrEmpty(paperSize) && pageWidth == null && pageHeight == null)
                 {
-                    // Use predefined paper size
-                    switch (paperSize.ToUpper())
+                    // Use Aspose's built-in PaperSize enum for accurate dimensions
+                    pageSetup.PaperSize = paperSize.ToUpper() switch
                     {
-                        case "A4":
-                            pageSetup.PageWidth = 595.3; // 21.0 cm
-                            pageSetup.PageHeight = 841.9; // 29.7 cm
-                            break;
-                        case "LETTER":
-                            pageSetup.PageWidth = 612; // 8.5 inch
-                            pageSetup.PageHeight = 792; // 11 inch
-                            break;
-                        case "A3":
-                            pageSetup.PageWidth = 841.9; // 29.7 cm
-                            pageSetup.PageHeight = 1190.55; // 42.0 cm
-                            break;
-                        case "LEGAL":
-                            pageSetup.PageWidth = 612; // 8.5 inch
-                            pageSetup.PageHeight = 1008; // 14 inch
-                            break;
-                        default:
-                            pageSetup.PageWidth = 595.3; // Default to A4
-                            pageSetup.PageHeight = 841.9;
-                            break;
-                    }
+                        "A4" => PaperSize.A4,
+                        "LETTER" => PaperSize.Letter,
+                        "A3" => PaperSize.A3,
+                        "LEGAL" => PaperSize.Legal,
+                        _ => PaperSize.A4
+                    };
+                }
+                else if (pageWidth != null || pageHeight != null)
+                {
+                    // Use custom dimensions if specified
+                    pageSetup.PaperSize = PaperSize.Custom;
+                    pageSetup.PageWidth = pageWidth ?? 595.3; // Default to A4 width
+                    pageSetup.PageHeight = pageHeight ?? 841.9; // Default to A4 height
                 }
                 else
                 {
-                    // Use custom dimensions if specified
-                    pageSetup.PageWidth = pageWidth ?? 595.3; // Default to A4 width
-
-                    pageSetup.PageHeight = pageHeight ?? 841.9; // Default to A4 height
+                    // Default to A4
+                    pageSetup.PaperSize = PaperSize.A4;
                 }
 
                 // Set margins
@@ -296,9 +308,9 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Creates a document from a template
+    ///     Creates a document from a template using LINQ Reporting Engine
     /// </summary>
-    /// <param name="arguments">JSON arguments containing templatePath, outputPath, optional data</param>
+    /// <param name="arguments">JSON arguments containing templatePath, outputPath, data object</param>
     /// <returns>Success message with output path</returns>
     private Task<string> CreateFromTemplate(JsonObject? arguments)
     {
@@ -306,41 +318,44 @@ Usage examples:
         {
             var templatePath = ArgumentHelper.GetString(arguments, "templatePath");
             var outputPath = ArgumentHelper.GetString(arguments, "outputPath");
-            var placeholderStyle = ArgumentHelper.GetString(arguments, "placeholderStyle", "doubleCurly");
 
             SecurityHelper.ValidateFilePath(templatePath, "templatePath", true);
             SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
+            // Ensure output directory exists
+            var outputDir = Path.GetDirectoryName(outputPath);
+            if (!string.IsNullOrEmpty(outputDir))
+                Directory.CreateDirectory(outputDir);
+
             if (!File.Exists(templatePath))
                 throw new FileNotFoundException($"Template file not found: {templatePath}");
 
-            var replacements = new Dictionary<string, string>();
-            if (arguments?.ContainsKey("replacements") == true)
-            {
-                var replacementsObj = arguments["replacements"]?.AsObject();
-                if (replacementsObj != null)
-                    foreach (var kvp in replacementsObj)
-                    {
-                        var key = kvp.Key;
-                        var value = kvp.Value?.GetValue<string>() ?? "";
-
-                        if (!IsValidPlaceholder(key, placeholderStyle))
-                            key = FormatPlaceholder(key, placeholderStyle);
-
-                        replacements[key] = value;
-                    }
-            }
-
-            if (replacements.Count == 0)
-                throw new ArgumentException("replacements cannot be empty");
+            // Get data object
+            var dataNode = arguments?["data"];
+            if (dataNode == null)
+                throw new ArgumentException("data parameter is required for create_from_template");
 
             var doc = new Document(templatePath);
+            var engine = new ReportingEngine
+            {
+                Options = ReportBuildOptions.AllowMissingMembers | ReportBuildOptions.RemoveEmptyParagraphs
+            };
 
-            foreach (var kvp in replacements)
-                doc.Range.Replace(kvp.Key, kvp.Value, new FindReplaceOptions());
+            // Use Aspose's JsonDataSource for proper JSON handling
+            var jsonString = dataNode.ToJsonString();
+            using var jsonStream = new MemoryStream(Encoding.UTF8.GetBytes(jsonString));
+            var loadOptions = new JsonDataLoadOptions
+            {
+                ExactDateTimeParseFormats = new List<string> { "yyyy-MM-dd", "yyyy-MM-ddTHH:mm:ss" },
+                SimpleValueParseMode = JsonSimpleValueParseMode.Strict
+            };
+            var dataSource = new JsonDataSource(jsonStream, loadOptions);
+
+            // Build report with the data
+            engine.BuildReport(doc, dataSource, "ds");
 
             doc.Save(outputPath);
-            return $"Document created from template: {outputPath} (replaced {replacements.Count} placeholders)";
+            return $"Document created from template using LINQ Reporting Engine: {outputPath}";
         });
     }
 
@@ -355,10 +370,36 @@ Usage examples:
         {
             var path = ArgumentHelper.GetAndValidatePath(arguments);
             var outputPath = ArgumentHelper.GetAndValidatePath(arguments, "outputPath");
-            var format = ArgumentHelper.GetString(arguments, "format").ToLower();
+            var formatParam = ArgumentHelper.GetStringNullable(arguments, "format");
 
             SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
             SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+
+            // Ensure output directory exists
+            var outputDir = Path.GetDirectoryName(outputPath);
+            if (!string.IsNullOrEmpty(outputDir))
+                Directory.CreateDirectory(outputDir);
+
+            // Auto-infer format from file extension if not specified
+            var format = formatParam?.ToLower();
+            if (string.IsNullOrEmpty(format))
+            {
+                var extension = Path.GetExtension(outputPath).TrimStart('.').ToLower();
+                format = extension switch
+                {
+                    "pdf" => "pdf",
+                    "html" or "htm" => "html",
+                    "docx" => "docx",
+                    "doc" => "doc",
+                    "txt" => "txt",
+                    "rtf" => "rtf",
+                    "odt" => "odt",
+                    "epub" => "epub",
+                    "xps" => "xps",
+                    _ => throw new ArgumentException(
+                        $"Cannot infer format from extension '.{extension}'. Please specify format parameter.")
+                };
+            }
 
             var doc = new Document(path);
 
@@ -392,9 +433,16 @@ Usage examples:
         {
             var inputPathsArray = ArgumentHelper.GetArray(arguments, "inputPaths");
             var outputPath = ArgumentHelper.GetString(arguments, "outputPath");
+            var importFormatModeStr = ArgumentHelper.GetString(arguments, "importFormatMode", "KeepSourceFormatting");
+            var unlinkHeadersFooters = ArgumentHelper.GetBool(arguments, "unlinkHeadersFooters", false);
 
             SecurityHelper.ValidateArraySize(inputPathsArray, "inputPaths");
             SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+
+            // Ensure output directory exists
+            var outputDir = Path.GetDirectoryName(outputPath);
+            if (!string.IsNullOrEmpty(outputDir))
+                Directory.CreateDirectory(outputDir);
 
             var inputPaths = inputPathsArray.Select(p => p?.GetValue<string>()).Where(p => p != null).ToList();
 
@@ -403,16 +451,29 @@ Usage examples:
 
             foreach (var inputPath in inputPaths) SecurityHelper.ValidateFilePath(inputPath!, "inputPaths", true);
 
+            // Parse import format mode
+            var importFormatMode = importFormatModeStr switch
+            {
+                "UseDestinationStyles" => ImportFormatMode.UseDestinationStyles,
+                "KeepDifferentStyles" => ImportFormatMode.KeepDifferentStyles,
+                _ => ImportFormatMode.KeepSourceFormatting
+            };
+
             var mergedDoc = new Document(inputPaths[0]);
 
             for (var i = 1; i < inputPaths.Count; i++)
             {
                 var doc = new Document(inputPaths[i]);
-                mergedDoc.AppendDocument(doc, ImportFormatMode.KeepSourceFormatting);
+                mergedDoc.AppendDocument(doc, importFormatMode);
             }
 
+            // Unlink headers/footers if requested to prevent confusion after merge
+            if (unlinkHeadersFooters)
+                foreach (var section in mergedDoc.Sections.Cast<Section>())
+                    section.HeadersFooters.LinkToPrevious(false);
+
             mergedDoc.Save(outputPath);
-            return $"Merged {inputPaths.Count} documents into: {outputPath}";
+            return $"Merged {inputPaths.Count} documents into: {outputPath} (format mode: {importFormatModeStr})";
         });
     }
 
@@ -441,10 +502,10 @@ Usage examples:
             {
                 for (var i = 0; i < doc.Sections.Count; i++)
                 {
+                    // Use RemoveAllChildren + ImportNode for cleaner section cloning
                     var sectionDoc = new Document();
-                    sectionDoc.FirstSection.Remove();
-                    var importedSection = sectionDoc.ImportNode(doc.Sections[i], true);
-                    sectionDoc.AppendChild(importedSection);
+                    sectionDoc.RemoveAllChildren();
+                    sectionDoc.AppendChild(sectionDoc.ImportNode(doc.Sections[i], true));
 
                     var outputPath = Path.Combine(outputDir, $"{fileBaseName}_section_{i + 1}.docx");
                     sectionDoc.Save(outputPath);
@@ -452,6 +513,9 @@ Usage examples:
 
                 return $"Document split into {doc.Sections.Count} sections in: {outputDir}";
             }
+
+            // For page split, update page layout first for accurate pagination
+            doc.UpdatePageLayout();
 
             var pageCount = doc.PageCount;
             for (var i = 0; i < pageCount; i++)
@@ -463,38 +527,5 @@ Usage examples:
 
             return $"Document split into {pageCount} pages in: {outputDir}";
         });
-    }
-
-    /// <summary>
-    ///     Checks if a placeholder key matches the expected format for the given style
-    /// </summary>
-    /// <param name="key">Placeholder key to validate</param>
-    /// <param name="style">Placeholder style (doubleCurly, singleCurly, square)</param>
-    /// <returns>True if the key matches the expected format</returns>
-    private bool IsValidPlaceholder(string key, string style)
-    {
-        return style.ToLower() switch
-        {
-            "singlecurly" => key.StartsWith("{") && key.EndsWith("}"),
-            "square" => key.StartsWith("[") && key.EndsWith("]"),
-            _ => key.StartsWith("{{") && key.EndsWith("}}")
-        };
-    }
-
-    /// <summary>
-    ///     Formats a placeholder key according to the specified style
-    /// </summary>
-    /// <param name="key">Placeholder key (may already contain brackets)</param>
-    /// <param name="style">Placeholder style (doubleCurly, singleCurly, square)</param>
-    /// <returns>Formatted placeholder string</returns>
-    private string FormatPlaceholder(string key, string style)
-    {
-        key = key.Trim('{', '}', '[', ']');
-        return style.ToLower() switch
-        {
-            "singlecurly" => $"{{{key}}}",
-            "square" => $"[{key}]",
-            _ => $"{{{{{key}}}}}"
-        };
     }
 }

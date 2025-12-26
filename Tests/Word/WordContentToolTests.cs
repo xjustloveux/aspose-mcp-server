@@ -53,7 +53,10 @@ public class WordContentToolTests : WordTestBase
         // Assert
         Assert.NotNull(result);
         Assert.NotEmpty(result);
-        Assert.Contains("Statistics", result, StringComparison.OrdinalIgnoreCase);
+        // Check for JSON properties instead of plain text header
+        Assert.Contains("\"pages\"", result);
+        Assert.Contains("\"words\"", result);
+        Assert.Contains("\"paragraphs\"", result);
     }
 
     [Fact]
@@ -69,7 +72,10 @@ public class WordContentToolTests : WordTestBase
         // Assert
         Assert.NotNull(result);
         Assert.NotEmpty(result);
-        Assert.Contains("Document", result, StringComparison.OrdinalIgnoreCase);
+        // Check for JSON properties instead of plain text header
+        Assert.Contains("\"title\"", result);
+        Assert.Contains("\"author\"", result);
+        Assert.Contains("\"sections\"", result);
     }
 
     [Fact]
@@ -86,7 +92,8 @@ public class WordContentToolTests : WordTestBase
         // Assert
         Assert.NotNull(result);
         Assert.NotEmpty(result);
-        Assert.Contains("excluded", result, StringComparison.OrdinalIgnoreCase);
+        // Check for JSON property indicating footnotes are not included
+        Assert.Contains("\"footnotesIncluded\": false", result);
     }
 
     [Fact]

@@ -89,4 +89,91 @@ public class WordPageToolTests : WordTestBase
         Assert.True(section.PageSetup.RestartPageNumbering || section.PageSetup.PageStartingNumber == 5,
             "Page starting number should be set");
     }
+
+    [Fact]
+    public async Task DeletePage_ShouldRemoveSpecifiedPage()
+    {
+        // Arrange - Create a multi-page document
+        var docPath = CreateTestFilePath("test_delete_page.docx");
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        builder.Writeln("Page 1 content");
+        builder.InsertBreak(BreakType.PageBreak);
+        builder.Writeln("Page 2 content");
+        builder.InsertBreak(BreakType.PageBreak);
+        builder.Writeln("Page 3 content");
+        doc.Save(docPath);
+
+        var pageCountBefore = doc.PageCount;
+        Assert.True(pageCountBefore >= 3, "Document should have at least 3 pages");
+
+        var outputPath = CreateTestFilePath("test_delete_page_output.docx");
+        var arguments = CreateArguments("delete_page", docPath, outputPath);
+        arguments["pageIndex"] = 1; // Delete middle page
+
+        // Act
+        var result = await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.Contains("deleted successfully", result);
+        var resultDoc = new Document(outputPath);
+        Assert.True(resultDoc.PageCount < pageCountBefore, "Page count should decrease after deletion");
+    }
+
+    [Fact]
+    public async Task InsertBlankPage_ShouldInsertPageAtSpecifiedPosition()
+    {
+        // Arrange
+        var docPath = CreateWordDocumentWithContent("test_insert_blank.docx", "Existing content");
+        var outputPath = CreateTestFilePath("test_insert_blank_output.docx");
+        var arguments = CreateArguments("insert_blank_page", docPath, outputPath);
+
+        // Act
+        var result = await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.Contains("inserted", result);
+        Assert.True(File.Exists(outputPath));
+    }
+
+    [Fact]
+    public async Task AddPageBreak_ShouldAddPageBreakAtDocumentEnd()
+    {
+        // Arrange
+        var docPath = CreateWordDocumentWithContent("test_add_page_break.docx", "Content before break");
+        var outputPath = CreateTestFilePath("test_add_page_break_output.docx");
+        var arguments = CreateArguments("add_page_break", docPath, outputPath);
+
+        // Act
+        var result = await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.Contains("Page break added", result);
+        var doc = new Document(outputPath);
+        // Verify page break was added (document should have increased content)
+        Assert.True(doc.GetText().Length > 0);
+    }
+
+    [Fact]
+    public async Task AddPageBreak_WithParagraphIndex_ShouldAddBreakAtSpecifiedPosition()
+    {
+        // Arrange
+        var docPath = CreateTestFilePath("test_add_break_at_para.docx");
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        builder.Writeln("Paragraph 0");
+        builder.Writeln("Paragraph 1");
+        builder.Writeln("Paragraph 2");
+        doc.Save(docPath);
+
+        var outputPath = CreateTestFilePath("test_add_break_at_para_output.docx");
+        var arguments = CreateArguments("add_page_break", docPath, outputPath);
+        arguments["paragraphIndex"] = 1;
+
+        // Act
+        var result = await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.Contains("after paragraph 1", result);
+    }
 }

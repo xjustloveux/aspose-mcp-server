@@ -55,8 +55,10 @@ public class PdfFormFieldToolTests : PdfTestBase
         var pdfPath = CreateTestPdf("test_get_form_fields.pdf");
         var document = new Document(pdfPath);
         var page = document.Pages[1];
-        var textField = new TextBoxField(page, new Rectangle(100, 700, 300, 720));
-        textField.PartialName = "testField";
+        var textField = new TextBoxField(page, new Rectangle(100, 700, 300, 720))
+        {
+            PartialName = "testField"
+        };
         document.Form.Add(textField);
         document.Save(pdfPath);
 
@@ -82,8 +84,10 @@ public class PdfFormFieldToolTests : PdfTestBase
         var pdfPath = CreateTestPdf("test_delete_form_field.pdf");
         var document = new Document(pdfPath);
         var page = document.Pages[1];
-        var textField = new TextBoxField(page, new Rectangle(100, 700, 300, 720));
-        textField.PartialName = "fieldToDelete";
+        var textField = new TextBoxField(page, new Rectangle(100, 700, 300, 720))
+        {
+            PartialName = "fieldToDelete"
+        };
         document.Form.Add(textField);
         document.Save(pdfPath);
 
@@ -107,5 +111,40 @@ public class PdfFormFieldToolTests : PdfTestBase
         var fieldsAfter = resultDocument.Form.Count;
         Assert.True(fieldsAfter < fieldsBefore,
             $"Field should be deleted. Before: {fieldsBefore}, After: {fieldsAfter}");
+    }
+
+    [Fact]
+    public async Task EditFormField_ShouldEditField()
+    {
+        // Arrange
+        var pdfPath = CreateTestPdf("test_edit_form_field.pdf");
+        var document = new Document(pdfPath);
+        var page = document.Pages[1];
+        var textField = new TextBoxField(page, new Rectangle(100, 700, 300, 720))
+        {
+            PartialName = "fieldToEdit",
+            Value = "Original Value"
+        };
+        document.Form.Add(textField);
+        document.Save(pdfPath);
+
+        var outputPath = CreateTestFilePath("test_edit_form_field_output.pdf");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "edit",
+            ["path"] = pdfPath,
+            ["outputPath"] = outputPath,
+            ["fieldName"] = "fieldToEdit",
+            ["value"] = "Updated Value"
+        };
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        var resultDocument = new Document(outputPath);
+        var field = resultDocument.Form["fieldToEdit"] as TextBoxField;
+        Assert.NotNull(field);
+        Assert.Equal("Updated Value", field.Value);
     }
 }

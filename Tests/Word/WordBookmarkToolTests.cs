@@ -86,6 +86,33 @@ public class WordBookmarkToolTests : WordTestBase
     }
 
     [Fact]
+    public async Task EditBookmark_ShouldEditBookmark()
+    {
+        // Arrange
+        var docPath = CreateWordDocument("test_edit_bookmark.docx");
+        var doc = new Document(docPath);
+        var builder = new DocumentBuilder(doc);
+        builder.StartBookmark("BookmarkToEdit");
+        builder.Write("Original text");
+        builder.EndBookmark("BookmarkToEdit");
+        doc.Save(docPath);
+
+        var outputPath = CreateTestFilePath("test_edit_bookmark_output.docx");
+        var arguments = CreateArguments("edit", docPath, outputPath);
+        arguments["name"] = "BookmarkToEdit";
+        arguments["text"] = "Updated text";
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        var resultDoc = new Document(outputPath);
+        var bookmark = resultDoc.Range.Bookmarks["BookmarkToEdit"];
+        Assert.NotNull(bookmark);
+        Assert.Contains("Updated text", bookmark.Text, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task GotoBookmark_ShouldNavigateToBookmark()
     {
         // Arrange

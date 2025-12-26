@@ -257,10 +257,9 @@ public class WordTextToolTests : WordTestBase
         if (parentNode != null)
         {
             var nextSibling = textPara.NextSibling;
-            while (nextSibling != null && nextSibling.NodeType == NodeType.Paragraph)
+            while (nextSibling is Paragraph nextPara)
             {
-                var nextPara = nextSibling as Paragraph;
-                if (nextPara != null && string.IsNullOrWhiteSpace(nextPara.GetText()))
+                if (string.IsNullOrWhiteSpace(nextPara.GetText()))
                 {
                     var actualStyle = nextPara.ParagraphFormat.StyleName ?? "";
                     Assert.True(actualStyle == "Normal",
@@ -325,15 +324,11 @@ public class WordTextToolTests : WordTestBase
         var currentNode = firstTextPara.NextSibling;
         while (currentNode != null && currentNode != secondTextPara.ParentNode)
         {
-            if (currentNode.NodeType == NodeType.Paragraph)
+            if (currentNode is Paragraph para && string.IsNullOrWhiteSpace(para.GetText()))
             {
-                var para = currentNode as Paragraph;
-                if (para != null && string.IsNullOrWhiteSpace(para.GetText()))
-                {
-                    var actualStyle = para.ParagraphFormat.StyleName ?? "";
-                    Assert.True(actualStyle == "Normal",
-                        $"Empty paragraph between styled texts should use Normal style, but got: {actualStyle}");
-                }
+                var actualStyle = para.ParagraphFormat.StyleName ?? "";
+                Assert.True(actualStyle == "Normal",
+                    $"Empty paragraph between styled texts should use Normal style, but got: {actualStyle}");
             }
             else if (currentNode.NodeType == NodeType.Table)
             {
@@ -789,5 +784,143 @@ public class WordTextToolTests : WordTestBase
         var text = doc.GetText();
         Assert.Contains("Prefix:", text);
         Assert.Contains("Original Text", text);
+    }
+
+    [Fact]
+    public async Task FormatText_WithSuperscript_ShouldClearSubscript()
+    {
+        // Skip in evaluation mode as font formatting may be limited
+        if (IsEvaluationMode()) return;
+
+        // Arrange - Create document with subscript text
+        var docPath = CreateWordDocument("test_format_superscript.docx");
+        var doc = new Document(docPath);
+        var builder = new DocumentBuilder(doc) { Font = { Subscript = true } };
+        builder.Write("Subscript Text");
+        doc.Save(docPath);
+
+        var outputPath = CreateTestFilePath("test_format_superscript_output.docx");
+        var arguments = CreateArguments("format", docPath, outputPath);
+        arguments["paragraphIndex"] = 0;
+        arguments["runIndex"] = 0;
+        arguments["superscript"] = true;
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert - Superscript should be true, subscript should be false (mutual exclusion)
+        var resultDoc = new Document(outputPath);
+        var runs = resultDoc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+        var run = runs.FirstOrDefault(r => r.Text.Contains("Subscript Text"));
+        Assert.NotNull(run);
+        Assert.True(run.Font.Superscript, "Superscript should be enabled");
+        Assert.False(run.Font.Subscript, "Subscript should be cleared when superscript is set");
+    }
+
+    [Fact]
+    public async Task FormatText_WithSubscript_ShouldClearSuperscript()
+    {
+        // Skip in evaluation mode as font formatting may be limited
+        if (IsEvaluationMode()) return;
+
+        // Arrange - Create document with superscript text
+        var docPath = CreateWordDocument("test_format_subscript.docx");
+        var doc = new Document(docPath);
+        var builder = new DocumentBuilder(doc) { Font = { Superscript = true } };
+        builder.Write("Superscript Text");
+        doc.Save(docPath);
+
+        var outputPath = CreateTestFilePath("test_format_subscript_output.docx");
+        var arguments = CreateArguments("format", docPath, outputPath);
+        arguments["paragraphIndex"] = 0;
+        arguments["runIndex"] = 0;
+        arguments["subscript"] = true;
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert - Subscript should be true, superscript should be false (mutual exclusion)
+        var resultDoc = new Document(outputPath);
+        var runs = resultDoc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
+        var run = runs.FirstOrDefault(r => r.Text.Contains("Superscript Text"));
+        Assert.NotNull(run);
+        Assert.True(run.Font.Subscript, "Subscript should be enabled");
+        Assert.False(run.Font.Superscript, "Superscript should be cleared when subscript is set");
+    }
+
+    [Fact]
+    public async Task DeleteText_WithNotFoundText_ShouldThrowArgumentException()
+    {
+        // Arrange
+        var docPath = CreateWordDocumentWithContent("test_delete_not_found.docx", "Hello World");
+        var outputPath = CreateTestFilePath("test_delete_not_found_output.docx");
+        var arguments = CreateArguments("delete", docPath, outputPath);
+        arguments["searchText"] = "NonExistentText";
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+        Assert.Contains("not found", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task FormatText_WithInvalidParagraphIndex_ShouldThrowArgumentException()
+    {
+        // Arrange
+        var docPath = CreateWordDocumentWithContent("test_format_invalid_para.docx", "Test");
+        var outputPath = CreateTestFilePath("test_format_invalid_para_output.docx");
+        var arguments = CreateArguments("format", docPath, outputPath);
+        arguments["paragraphIndex"] = 999;
+        arguments["bold"] = true;
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+        Assert.Contains("out of range", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task FormatText_WithInvalidRunIndex_ShouldThrowArgumentException()
+    {
+        // Arrange
+        var docPath = CreateWordDocumentWithContent("test_format_invalid_run.docx", "Test");
+        var outputPath = CreateTestFilePath("test_format_invalid_run_output.docx");
+        var arguments = CreateArguments("format", docPath, outputPath);
+        arguments["paragraphIndex"] = 0;
+        arguments["runIndex"] = 999;
+        arguments["bold"] = true;
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+        Assert.Contains("out of range", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task AddWithStyle_WithInvalidStyle_ShouldThrowException()
+    {
+        // Arrange
+        var docPath = CreateWordDocument("test_add_invalid_style.docx");
+        var outputPath = CreateTestFilePath("test_add_invalid_style_output.docx");
+        var arguments = CreateArguments("add_with_style", docPath, outputPath);
+        arguments["text"] = "Test";
+        arguments["styleName"] = "NonExistentStyle12345";
+
+        // Act & Assert - InvalidOperationException wraps the inner ArgumentException
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => _tool.ExecuteAsync(arguments));
+        Assert.Contains("not found", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Search_WithNoResults_ShouldReturnNoMatchMessage()
+    {
+        // Arrange
+        var docPath = CreateWordDocumentWithContent("test_search_no_results.docx", "Hello World");
+        var arguments = CreateArguments("search", docPath);
+        arguments["searchText"] = "NonExistentText";
+
+        // Act
+        var result = await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.Contains("0 matches", result);
+        Assert.Contains("No matching text found", result);
     }
 }

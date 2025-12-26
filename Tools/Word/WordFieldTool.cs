@@ -1,4 +1,4 @@
-using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using Aspose.Words.Fields;
@@ -84,7 +84,7 @@ Usage examples:
             {
                 type = "number",
                 description =
-                    "Paragraph index to insert into (0-based, optional, for insert_field operation). Valid range: 0 to (total paragraphs - 1), or -1 for document start. When not specified, inserts at document end."
+                    "Paragraph index to insert into (0-based, optional, for insert_field operation). Valid range: 0 to (total paragraphs - 1), or -1 for document end (last paragraph). When not specified, inserts at document end."
             },
             insertAtStart = new
             {
@@ -201,6 +201,11 @@ Usage examples:
         var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
         SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
+        // Ensure output directory exists for write operations
+        var outputDir = Path.GetDirectoryName(outputPath);
+        if (!string.IsNullOrEmpty(outputDir))
+            Directory.CreateDirectory(outputDir);
+
         // Normalize operation name: update_all is an alias for update_field with updateAll=true
         if (operation == "update_all")
         {
@@ -211,16 +216,16 @@ Usage examples:
 
         return operation switch
         {
-            "insert_field" => await InsertFieldAsync(arguments, path, outputPath),
-            "edit_field" => await EditFieldAsync(arguments, path, outputPath),
-            "delete_field" => await DeleteFieldAsync(arguments, path, outputPath),
-            "update_field" => await UpdateFieldAsync(arguments, path, outputPath),
-            "get_fields" => await GetFieldsAsync(arguments, path),
-            "get_field_detail" => await GetFieldDetailAsync(arguments, path),
-            "add_form_field" => await AddFormFieldAsync(arguments, path, outputPath),
-            "edit_form_field" => await EditFormFieldAsync(arguments, path, outputPath),
-            "delete_form_field" => await DeleteFormFieldAsync(arguments, path, outputPath),
-            "get_form_fields" => await GetFormFieldsAsync(arguments, path),
+            "insert_field" => await InsertFieldAsync(path, outputPath, arguments),
+            "edit_field" => await EditFieldAsync(path, outputPath, arguments),
+            "delete_field" => await DeleteFieldAsync(path, outputPath, arguments),
+            "update_field" => await UpdateFieldAsync(path, outputPath, arguments),
+            "get_fields" => await GetFieldsAsync(path, arguments),
+            "get_field_detail" => await GetFieldDetailAsync(path, arguments),
+            "add_form_field" => await AddFormFieldAsync(path, outputPath, arguments),
+            "edit_form_field" => await EditFormFieldAsync(path, outputPath, arguments),
+            "delete_form_field" => await DeleteFormFieldAsync(path, outputPath, arguments),
+            "get_form_fields" => await GetFormFieldsAsync(path),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -228,11 +233,11 @@ Usage examples:
     /// <summary>
     ///     Inserts a field into the document
     /// </summary>
-    /// <param name="arguments">JSON arguments containing fieldType, optional fieldArgument, paragraphIndex, runIndex</param>
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing fieldType, optional fieldArgument, paragraphIndex, runIndex</param>
     /// <returns>Success message</returns>
-    private Task<string> InsertFieldAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> InsertFieldAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -249,39 +254,7 @@ Usage examples:
                 var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
                 if (paragraphIndex.Value == -1)
                 {
-                    // paragraphIndex=-1 means document end, not document start
-                    // Move to the last paragraph in the document body
-                    var lastSection = doc.LastSection;
-                    var bodyParagraphs = lastSection.Body.GetChildNodes(NodeType.Paragraph, false);
-                    if (bodyParagraphs.Count > 0)
-                    {
-                        if (bodyParagraphs[^1] is Paragraph lastPara)
-                        {
-                            builder.MoveTo(lastPara);
-                            if (insertAtStart)
-                            {
-                                // Move to start of last paragraph
-                                if (lastPara.Runs.Count > 0) builder.MoveTo(lastPara.Runs[0]);
-                            }
-                            else
-                            {
-                                // Move to end of last paragraph
-                                if (lastPara.Runs.Count > 0)
-                                {
-                                    var lastRun = lastPara.Runs[^1];
-                                    builder.MoveTo(lastRun);
-                                }
-                            }
-                        }
-                        else
-                        {
-                            builder.MoveToDocumentEnd();
-                        }
-                    }
-                    else
-                    {
-                        builder.MoveToDocumentEnd();
-                    }
+                    builder.MoveToDocumentEnd();
                 }
                 else if (paragraphIndex.Value >= 0 && paragraphIndex.Value < paragraphs.Count)
                 {
@@ -380,7 +353,7 @@ Usage examples:
             if (paragraphIndex.HasValue)
             {
                 if (paragraphIndex.Value == -1)
-                    result += "Insert position: beginning of document\n";
+                    result += "Insert position: end of document (last paragraph)\n";
                 else
                     result += $"Insert position: paragraph #{paragraphIndex.Value}\n";
             }
@@ -398,11 +371,11 @@ Usage examples:
     /// <summary>
     ///     Edits an existing field
     /// </summary>
-    /// <param name="arguments">JSON arguments containing fieldIndex, optional fieldType, fieldArgument</param>
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing fieldIndex, optional fieldType, fieldArgument</param>
     /// <returns>Success message</returns>
-    private Task<string> EditFieldAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> EditFieldAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -491,11 +464,11 @@ Usage examples:
     /// <summary>
     ///     Deletes a field from the document
     /// </summary>
-    /// <param name="arguments">JSON arguments containing fieldIndex</param>
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing fieldIndex</param>
     /// <returns>Success message</returns>
-    private Task<string> DeleteFieldAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> DeleteFieldAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -517,55 +490,11 @@ Usage examples:
             try
             {
                 if (keepResult)
-                {
-                    var fieldStart = field.Start;
-                    var fieldEnd = field.End;
-
-                    if (fieldStart != null && fieldEnd != null)
-                    {
-                        var nodesToRemove = new List<Node>();
-                        var currentNode = (Node)fieldStart;
-                        var endNode = (Node)fieldEnd;
-
-                        while (currentNode != null && currentNode != endNode.NextSibling)
-                        {
-                            if (currentNode.NodeType == NodeType.FieldStart ||
-                                currentNode.NodeType == NodeType.FieldSeparator)
-                                nodesToRemove.Add(currentNode);
-                            currentNode = currentNode.NextSibling;
-
-                            if (currentNode == endNode) break;
-                        }
-
-                        foreach (var node in nodesToRemove) node.Remove();
-
-                        endNode.Remove();
-                    }
-                }
+                    // Unlink converts the field to plain text (keeps Result, removes field markers)
+                    field.Unlink();
                 else
-                {
-                    var fieldStart = field.Start;
-                    var fieldEnd = field.End;
-
-                    if (fieldStart != null && fieldEnd != null)
-                    {
-                        var nodesToRemove = new List<Node>();
-                        var currentNode = (Node)fieldStart;
-                        var endNode = (Node)fieldEnd;
-
-                        while (currentNode != null)
-                        {
-                            var nextNode = currentNode.NextSibling;
-                            nodesToRemove.Add(currentNode);
-
-                            if (currentNode == endNode) break;
-
-                            currentNode = nextNode;
-                        }
-
-                        foreach (var node in nodesToRemove) node.Remove();
-                    }
-                }
+                    // Remove deletes the entire field including its content
+                    field.Remove();
 
                 doc.Save(outputPath);
 
@@ -575,7 +504,7 @@ Usage examples:
                 result += $"Type: {fieldType}\n";
                 result += $"Code: {fieldCode}\n";
                 if (!string.IsNullOrEmpty(fieldResult)) result += $"Result: {fieldResult}\n";
-                result += $"Keep result text: {(keepResult ? "Yes" : "No")}\n";
+                result += $"Keep result text: {(keepResult ? "Yes (converted to plain text)" : "No")}\n";
                 result += $"Remaining fields in document: {remainingFields}\n";
                 result += $"Output: {outputPath}";
 
@@ -591,11 +520,11 @@ Usage examples:
     /// <summary>
     ///     Updates field values
     /// </summary>
-    /// <param name="arguments">JSON arguments containing optional fieldIndex (if null, updates all)</param>
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing optional fieldIndex (if null, updates all)</param>
     /// <returns>Success message with update count</returns>
-    private Task<string> UpdateFieldAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> UpdateFieldAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -605,8 +534,7 @@ Usage examples:
 
             var doc = new Document(path);
             var fields = doc.Range.Fields.ToList();
-            var updatedCount = 0;
-            var errors = new List<string>();
+            var lockedFields = new List<string>();
 
             if (fieldIndex.HasValue && !updateAll)
             {
@@ -615,6 +543,13 @@ Usage examples:
                         $"Field index {fieldIndex.Value} is out of range (document has {fields.Count} fields)");
 
                 var field = fields[fieldIndex.Value];
+
+                if (field.IsLocked)
+                    return $"Warning: Field #{fieldIndex.Value} is locked and cannot be updated.\n" +
+                           $"Type: {field.Type}\n" +
+                           $"Code: {field.GetFieldCode()}\n" +
+                           "Use edit_field with unlockField=true to unlock it first.";
+
                 try
                 {
                     var oldResult = field.Result ?? "";
@@ -639,6 +574,7 @@ Usage examples:
                 }
             }
 
+            // First, collect locked fields for warning
             foreach (var field in fields)
             {
                 if (!string.IsNullOrEmpty(fieldTypeFilter))
@@ -648,26 +584,23 @@ Usage examples:
                     if (!fieldTypeName.Contains(filterType)) continue;
                 }
 
-                try
-                {
-                    field.Update();
-                    updatedCount++;
-                }
-                catch (Exception ex)
-                {
-                    errors.Add($"Field {field.Type} (index {fields.IndexOf(field)}): {ex.Message}");
-                }
+                if (field.IsLocked)
+                    lockedFields.Add($"Field {field.Type} (index {fields.IndexOf(field)})");
             }
+
+            // Use doc.UpdateFields() for bulk update - more efficient than individual updates
+            doc.UpdateFields();
+            var updatedCount = fields.Count - lockedFields.Count;
 
             doc.Save(outputPath);
 
-            var result = $"Successfully updated {updatedCount} fields\n";
+            var result = $"Successfully updated {updatedCount} field(s)\n";
             if (!string.IsNullOrEmpty(fieldTypeFilter)) result += $"Filter type: {fieldTypeFilter}\n";
 
-            if (errors.Count > 0)
+            if (lockedFields.Count > 0)
             {
-                result += $"\nFailed to update fields ({errors.Count}):\n";
-                foreach (var error in errors) result += $"  - {error}\n";
+                result += $"\nLocked fields (skipped, {lockedFields.Count}):\n";
+                foreach (var locked in lockedFields) result += $"  - {locked}\n";
             }
 
             result += $"Output: {outputPath}";
@@ -679,10 +612,10 @@ Usage examples:
     /// <summary>
     ///     Gets all fields from the document
     /// </summary>
-    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
     /// <param name="path">Word document file path</param>
-    /// <returns>Formatted string with all fields</returns>
-    private Task<string> GetFieldsAsync(JsonObject? arguments, string path)
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <returns>JSON formatted string with all fields for better LLM processing</returns>
+    private Task<string> GetFieldsAsync(string path, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -691,7 +624,7 @@ Usage examples:
             var includeResult = ArgumentHelper.GetBool(arguments, "includeResult", true);
 
             var doc = new Document(path);
-            var fields = new List<FieldInfo>();
+            var fieldsList = new List<object>();
             var fieldIndex = 0;
 
             foreach (var field in doc.Range.Fields)
@@ -703,67 +636,49 @@ Usage examples:
                     if (!fieldTypeName.Contains(filterType) && filterType != "ALL") continue;
                 }
 
-                var fieldInfo = new FieldInfo
-                {
-                    Index = fieldIndex++,
-                    Type = field.Type.ToString(),
-                    Code = field.GetFieldCode(),
-                    Result = includeResult ? field.Result ?? "" : null,
-                    IsLocked = field.IsLocked,
-                    IsDirty = field.IsDirty
-                };
-
+                string? extraInfo = null;
                 if (field is FieldHyperlink hyperlinkField)
-                    fieldInfo.ExtraInfo =
-                        $"Address: {hyperlinkField.Address ?? ""}, ScreenTip: {hyperlinkField.ScreenTip ?? ""}";
-                else if (field is FieldRef refField) fieldInfo.ExtraInfo = $"Bookmark: {refField.BookmarkName ?? ""}";
+                    extraInfo = $"Address: {hyperlinkField.Address ?? ""}, ScreenTip: {hyperlinkField.ScreenTip ?? ""}";
+                else if (field is FieldRef refField)
+                    extraInfo = $"Bookmark: {refField.BookmarkName ?? ""}";
 
-                fields.Add(fieldInfo);
+                fieldsList.Add(new
+                {
+                    index = fieldIndex++,
+                    type = field.Type.ToString(),
+                    code = includeCode ? field.GetFieldCode() : null,
+                    result = includeResult ? field.Result ?? "" : null,
+                    isLocked = field.IsLocked,
+                    isDirty = field.IsDirty,
+                    extraInfo
+                });
             }
 
-            var result = new StringBuilder();
-            result.AppendLine($"Document has {fields.Count} fields\n");
+            // Build statistics by type
+            var statistics = fieldsList
+                .GroupBy(f => ((dynamic)f).type as string)
+                .OrderBy(g => g.Key)
+                .Select(g => new { type = g.Key, count = g.Count() })
+                .ToList();
 
-            if (fields.Count == 0)
+            var result = new
             {
-                result.AppendLine("No fields found");
-                return result.ToString();
-            }
+                count = fieldsList.Count,
+                fields = fieldsList,
+                statisticsByType = statistics
+            };
 
-            result.AppendLine("[Field List]");
-            result.AppendLine(new string('-', 80));
-
-            foreach (var fieldInfo in fields)
-            {
-                result.AppendLine($"Index: {fieldInfo.Index}");
-                result.AppendLine($"Type: {fieldInfo.Type}");
-
-                if (includeCode) result.AppendLine($"Code: {fieldInfo.Code}");
-
-                if (includeResult && fieldInfo.Result != null) result.AppendLine($"Result: {fieldInfo.Result}");
-
-                if (fieldInfo.ExtraInfo != null) result.AppendLine($"Extra info: {fieldInfo.ExtraInfo}");
-
-                result.AppendLine($"Locked: {(fieldInfo.IsLocked ? "Yes" : "No")}");
-                result.AppendLine($"Needs update: {(fieldInfo.IsDirty ? "Yes" : "No")}");
-                result.AppendLine(new string('-', 80));
-            }
-
-            var typeGroups = fields.GroupBy(f => f.Type).OrderBy(g => g.Key);
-            result.AppendLine("\n[Statistics by Type]");
-            foreach (var group in typeGroups) result.AppendLine($"{group.Key}: {group.Count()}");
-
-            return result.ToString();
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 
     /// <summary>
     ///     Gets detailed information about a specific field
     /// </summary>
-    /// <param name="arguments">JSON arguments containing fieldIndex</param>
     /// <param name="path">Word document file path</param>
-    /// <returns>Formatted string with field details</returns>
-    private Task<string> GetFieldDetailAsync(JsonObject? arguments, string path)
+    /// <param name="arguments">JSON arguments containing fieldIndex</param>
+    /// <returns>JSON formatted string with field details for better LLM processing</returns>
+    private Task<string> GetFieldDetailAsync(string path, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -777,42 +692,48 @@ Usage examples:
                     $"Field index {fieldIndex} is out of range (document has {fields.Count} fields)");
 
             var field = fields[fieldIndex];
-            var result = new StringBuilder();
 
-            result.AppendLine("[Field Details]");
-            result.AppendLine(new string('=', 80));
-            result.AppendLine($"Index: {fieldIndex}");
-            result.AppendLine($"Type: {field.Type}");
-            result.AppendLine($"Type code: {(int)field.Type}");
-            result.AppendLine($"Code: {field.GetFieldCode()}");
-            result.AppendLine($"Result: {field.Result ?? "(No result)"}");
-            result.AppendLine($"Locked: {(field.IsLocked ? "Yes" : "No")}");
-            result.AppendLine($"Needs update: {(field.IsDirty ? "Yes" : "No")}");
+            // Build extra info based on field type
+            string? address = null;
+            string? screenTip = null;
+            string? bookmarkName = null;
 
             if (field is FieldHyperlink hyperlinkField)
             {
-                result.AppendLine($"Address: {hyperlinkField.Address ?? "(None)"}");
-                result.AppendLine($"Screen tip: {hyperlinkField.ScreenTip ?? "(None)"}");
+                address = hyperlinkField.Address;
+                screenTip = hyperlinkField.ScreenTip;
             }
             else if (field is FieldRef refField)
             {
-                result.AppendLine($"Bookmark name: {refField.BookmarkName ?? "(None)"}");
+                bookmarkName = refField.BookmarkName;
             }
 
-            result.AppendLine(new string('=', 80));
+            var result = new
+            {
+                index = fieldIndex,
+                type = field.Type.ToString(),
+                typeCode = (int)field.Type,
+                code = field.GetFieldCode(),
+                result = field.Result,
+                isLocked = field.IsLocked,
+                isDirty = field.IsDirty,
+                hyperlinkAddress = address,
+                hyperlinkScreenTip = screenTip,
+                bookmarkName
+            };
 
-            return result.ToString();
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 
     /// <summary>
     ///     Adds a form field to the document
     /// </summary>
-    /// <param name="arguments">JSON arguments containing fieldType, name, optional defaultValue, paragraphIndex</param>
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing fieldType, name, optional defaultValue, paragraphIndex</param>
     /// <returns>Success message</returns>
-    private Task<string> AddFormFieldAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> AddFormFieldAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -857,11 +778,11 @@ Usage examples:
     /// <summary>
     ///     Edits an existing form field
     /// </summary>
-    /// <param name="arguments">JSON arguments containing fieldIndex, optional name, defaultValue</param>
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing fieldIndex, optional name, defaultValue</param>
     /// <returns>Success message</returns>
-    private Task<string> EditFormFieldAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> EditFormFieldAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -891,11 +812,11 @@ Usage examples:
     /// <summary>
     ///     Deletes a form field from the document
     /// </summary>
-    /// <param name="arguments">JSON arguments containing fieldIndex</param>
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing fieldIndex</param>
     /// <returns>Success message</returns>
-    private Task<string> DeleteFormFieldAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> DeleteFormFieldAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -933,57 +854,61 @@ Usage examples:
     /// <summary>
     ///     Gets all form fields from the document
     /// </summary>
-    /// <param name="_">Unused parameter</param>
     /// <param name="path">Word document file path</param>
-    /// <returns>Formatted string with all form fields</returns>
-    private Task<string> GetFormFieldsAsync(JsonObject? _, string path)
+    /// <returns>JSON formatted string with all form fields for better LLM processing</returns>
+    private Task<string> GetFormFieldsAsync(string path)
     {
         return Task.Run(() =>
         {
             var doc = new Document(path);
-            var sb = new StringBuilder();
-
-            sb.AppendLine("=== Form Fields ===");
-            sb.AppendLine();
-
             var formFields = doc.Range.FormFields.ToList();
+            var formFieldsList = new List<object>();
+
             for (var i = 0; i < formFields.Count; i++)
             {
                 var field = formFields[i];
-                sb.AppendLine($"[{i + 1}] Name: {field.Name}");
-                sb.AppendLine($"    Type: {field.Type}");
-
-                switch (field.Type)
+                object fieldData = field.Type switch
                 {
-                    case FieldType.FieldFormTextInput:
-                        sb.AppendLine($"    Value: {field.Result ?? "(empty)"}");
-                        break;
-                    case FieldType.FieldFormCheckBox:
-                        sb.AppendLine($"    Checked: {field.Checked}");
-                        break;
-                    case FieldType.FieldFormDropDown:
-                        sb.AppendLine($"    Selected Index: {field.DropDownSelectedIndex}");
-                        sb.AppendLine($"    Options: {string.Join(", ", field.DropDownItems)}");
-                        break;
-                }
+                    FieldType.FieldFormTextInput => new
+                    {
+                        index = i,
+                        name = field.Name,
+                        type = field.Type.ToString(),
+                        value = field.Result
+                    },
+                    FieldType.FieldFormCheckBox => new
+                    {
+                        index = i,
+                        name = field.Name,
+                        type = field.Type.ToString(),
+                        isChecked = field.Checked
+                    },
+                    FieldType.FieldFormDropDown => new
+                    {
+                        index = i,
+                        name = field.Name,
+                        type = field.Type.ToString(),
+                        selectedIndex = field.DropDownSelectedIndex,
+                        options = field.DropDownItems.ToList()
+                    },
+                    _ => new
+                    {
+                        index = i,
+                        name = field.Name,
+                        type = field.Type.ToString()
+                    }
+                };
 
-                sb.AppendLine();
+                formFieldsList.Add(fieldData);
             }
 
-            sb.AppendLine($"Total Form Fields: {formFields.Count}");
+            var result = new
+            {
+                count = formFields.Count,
+                formFields = formFieldsList
+            };
 
-            return sb.ToString();
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
-    }
-
-    private class FieldInfo
-    {
-        public int Index { get; init; }
-        public string Type { get; init; } = "";
-        public string Code { get; init; } = "";
-        public string? Result { get; init; }
-        public bool IsLocked { get; init; }
-        public bool IsDirty { get; init; }
-        public string? ExtraInfo { get; set; }
     }
 }

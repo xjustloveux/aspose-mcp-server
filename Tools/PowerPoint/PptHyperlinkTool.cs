@@ -145,7 +145,7 @@ Usage examples:
             var slide = presentation.Slides[slideIndex];
             IShape shape;
 
-            if (shapeIndex.HasValue && shapeIndex.Value >= 0 && shapeIndex.Value < slide.Shapes.Count)
+            if (shapeIndex is >= 0 && shapeIndex.Value < slide.Shapes.Count)
             {
                 // Use existing shape
                 shape = slide.Shapes[shapeIndex.Value];
@@ -164,7 +164,7 @@ Usage examples:
             shape.HyperlinkClick = new Hyperlink(url);
 
             // Also set display text if provided
-            if (!string.IsNullOrEmpty(displayText) && shape is IAutoShape autoShape && autoShape.TextFrame != null)
+            if (!string.IsNullOrEmpty(displayText) && shape is IAutoShape { TextFrame: not null } autoShape)
                 autoShape.TextFrame.Text = displayText;
 
             var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);

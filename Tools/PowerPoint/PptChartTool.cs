@@ -424,10 +424,10 @@ Note: shapeIndex refers to the chart index (0-based) among all charts on the sli
                 var categoriesArray = ArgumentHelper.GetArray(dataObject, "categories", false);
                 var seriesArray = ArgumentHelper.GetArray(dataObject, "series", false);
 
-                if (categoriesArray != null && categoriesArray.Count > 0)
+                if (categoriesArray is { Count: > 0 })
                     categories = categoriesArray.Select(c => c?.GetValue<string>() ?? "").ToArray();
 
-                if (seriesArray != null && seriesArray.Count > 0)
+                if (seriesArray is { Count: > 0 })
                 {
                     seriesList = new List<(string name, double[] values)>();
                     foreach (var seriesNode in seriesArray)
@@ -468,7 +468,7 @@ Note: shapeIndex refers to the chart index (0-based) among all charts on the sli
             }
 
             // Write categories to column A (starting from row 1, which is A2 in Excel)
-            if (categories != null && categories.Length > 0)
+            if (categories is { Length: > 0 })
                 for (var i = 0; i < categories.Length; i++)
                 {
                     var cell = workbook.GetCell(0, i + 1, 0, categories[i]);
@@ -476,7 +476,7 @@ Note: shapeIndex refers to the chart index (0-based) among all charts on the sli
                 }
 
             // Write series data
-            if (seriesList != null && seriesList.Count > 0)
+            if (seriesList is { Count: > 0 })
             {
                 // Write series names to header row (row 0, starting from column B)
                 // For Bubble charts, we need extra columns: Y values and Size values

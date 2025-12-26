@@ -1457,11 +1457,108 @@ public class WordTableToolTests : WordTestBase
         // Check that paragraph after table uses Normal style (if exists)
         var tableNode = tables[0];
         var afterTableNode = tableNode.NextSibling;
-        if (afterTableNode != null && afterTableNode.NodeType == NodeType.Paragraph)
-        {
-            var afterPara = afterTableNode as Paragraph;
-            if (afterPara != null && string.IsNullOrWhiteSpace(afterPara.GetText()))
-                Assert.Equal("Normal", afterPara.ParagraphFormat.StyleName);
-        }
+        if (afterTableNode is Paragraph afterPara && string.IsNullOrWhiteSpace(afterPara.GetText()))
+            Assert.Equal("Normal", afterPara.ParagraphFormat.StyleName);
+    }
+
+    [Fact]
+    public async Task GetTables_ShouldIncludePrecedingText()
+    {
+        // Arrange
+        var docPath = CreateWordDocument("test_get_tables_preceding.docx");
+        var builder = new DocumentBuilder(new Document());
+        builder.Writeln("This is the text before the first table");
+        builder.StartTable();
+        builder.InsertCell();
+        builder.Write("Table 1");
+        builder.EndRow();
+        builder.EndTable();
+        builder.InsertParagraph();
+        builder.Writeln("This is the text before the second table");
+        builder.StartTable();
+        builder.InsertCell();
+        builder.Write("Table 2");
+        builder.EndRow();
+        builder.EndTable();
+        builder.Document.Save(docPath);
+
+        var arguments = CreateArguments("get_tables", docPath);
+
+        // Act
+        var result = await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.Contains("Preceding text", result);
+        Assert.Contains("first table", result);
+        Assert.Contains("second table", result);
+    }
+
+    [Fact]
+    public async Task InsertRow_WithMultiLineData_ShouldHandleLineBreaks()
+    {
+        // Arrange
+        var docPath = CreateWordDocument("test_insert_row_multiline.docx");
+        var builder = new DocumentBuilder(new Document());
+        builder.StartTable();
+        builder.InsertCell();
+        builder.Write("Existing");
+        builder.InsertCell();
+        builder.Write("Row");
+        builder.EndRow();
+        builder.EndTable();
+        builder.Document.Save(docPath);
+
+        var outputPath = CreateTestFilePath("test_insert_row_multiline_output.docx");
+        var arguments = CreateArguments("insert_row", docPath, outputPath);
+        arguments["tableIndex"] = 0;
+        arguments["rowIndex"] = 0;
+        arguments["rowData"] = new JsonArray("Line1\nLine2", "Single Line");
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        var doc = new Document(outputPath);
+        var tables = doc.GetChildNodes(NodeType.Table, true).Cast<Table>().ToList();
+        Assert.Equal(2, tables[0].Rows.Count);
+        var newRowCell = tables[0].Rows[1].Cells[0];
+        var cellText = newRowCell.GetText();
+        Assert.Contains("Line1", cellText);
+        Assert.Contains("Line2", cellText);
+    }
+
+    [Fact]
+    public async Task InsertColumn_WithMultiLineData_ShouldHandleLineBreaks()
+    {
+        // Arrange
+        var docPath = CreateWordDocument("test_insert_column_multiline.docx");
+        var builder = new DocumentBuilder(new Document());
+        builder.StartTable();
+        builder.InsertCell();
+        builder.Write("Row 1");
+        builder.EndRow();
+        builder.InsertCell();
+        builder.Write("Row 2");
+        builder.EndRow();
+        builder.EndTable();
+        builder.Document.Save(docPath);
+
+        var outputPath = CreateTestFilePath("test_insert_column_multiline_output.docx");
+        var arguments = CreateArguments("insert_column", docPath, outputPath);
+        arguments["tableIndex"] = 0;
+        arguments["columnIndex"] = 0;
+        arguments["columnData"] = new JsonArray("First\nSecond", "Third\nFourth");
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        var doc = new Document(outputPath);
+        var tables = doc.GetChildNodes(NodeType.Table, true).Cast<Table>().ToList();
+        Assert.Equal(2, tables[0].FirstRow.Cells.Count);
+        var newColCell = tables[0].Rows[0].Cells[1];
+        var cellText = newColCell.GetText();
+        Assert.Contains("First", cellText);
+        Assert.Contains("Second", cellText);
     }
 }

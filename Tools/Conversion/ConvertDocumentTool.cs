@@ -92,21 +92,41 @@ Usage examples:
         });
     }
 
+    /// <summary>
+    ///     Checks if the file extension indicates a Word document
+    /// </summary>
+    /// <param name="extension">File extension (including dot)</param>
+    /// <returns>True if Word document</returns>
     private bool IsWordDocument(string extension)
     {
         return extension is ".doc" or ".docx" or ".rtf" or ".odt" or ".txt";
     }
 
+    /// <summary>
+    ///     Checks if the file extension indicates an Excel document
+    /// </summary>
+    /// <param name="extension">File extension (including dot)</param>
+    /// <returns>True if Excel document</returns>
     private bool IsExcelDocument(string extension)
     {
         return extension is ".xls" or ".xlsx" or ".csv" or ".ods";
     }
 
+    /// <summary>
+    ///     Checks if the file extension indicates a PowerPoint presentation
+    /// </summary>
+    /// <param name="extension">File extension (including dot)</param>
+    /// <returns>True if PowerPoint presentation</returns>
     private bool IsPresentationDocument(string extension)
     {
         return extension is ".ppt" or ".pptx" or ".odp";
     }
 
+    /// <summary>
+    ///     Gets the Word save format from file extension
+    /// </summary>
+    /// <param name="extension">Output file extension (including dot)</param>
+    /// <returns>Word SaveFormat enum value</returns>
     private SaveFormat GetWordSaveFormat(string extension)
     {
         return extension switch
@@ -122,6 +142,11 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    ///     Gets the Excel save format from file extension
+    /// </summary>
+    /// <param name="extension">Output file extension (including dot)</param>
+    /// <returns>Excel SaveFormat enum value</returns>
     private Aspose.Cells.SaveFormat GetExcelSaveFormat(string extension)
     {
         return extension switch
@@ -136,6 +161,11 @@ Usage examples:
         };
     }
 
+    /// <summary>
+    ///     Gets the PowerPoint save format from file extension
+    /// </summary>
+    /// <param name="extension">Output file extension (including dot)</param>
+    /// <returns>PowerPoint SaveFormat enum value</returns>
     private Aspose.Slides.Export.SaveFormat GetPresentationSaveFormat(string extension)
     {
         return extension switch

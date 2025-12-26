@@ -371,7 +371,7 @@ Usage examples:
                 {
                     var page = document.Pages[pageNum];
                     var images = page.Resources?.Images;
-                    if (images != null && images.Count > 0)
+                    if (images is { Count: > 0 })
                     {
                         totalImages += images.Count;
                         sb.AppendLine($"Page {pageNum} Images ({images.Count}):");

@@ -207,8 +207,10 @@ public class WordStyleToolTests : WordTestBase
         customStyle.Font.Size = 14;
         customStyle.Font.Bold = true;
 
-        var para = new Paragraph(doc);
-        para.ParagraphFormat.StyleName = "!標題3-國字括弧小寫 - (一)(二)(三)";
+        var para = new Paragraph(doc)
+        {
+            ParagraphFormat = { StyleName = "!標題3-國字括弧小寫 - (一)(二)(三)" }
+        };
         doc.FirstSection.Body.AppendChild(para);
         doc.Save(docPath);
 
@@ -257,8 +259,10 @@ public class WordStyleToolTests : WordTestBase
 
         for (var i = 0; i < 3; i++)
         {
-            var para = new Paragraph(doc);
-            para.ParagraphFormat.StyleName = "!標題3-國字括弧小寫 - (一)(二)(三)";
+            var para = new Paragraph(doc)
+            {
+                ParagraphFormat = { StyleName = "!標題3-國字括弧小寫 - (一)(二)(三)" }
+            };
             doc.FirstSection.Body.AppendChild(para);
         }
 
@@ -388,5 +392,258 @@ public class WordStyleToolTests : WordTestBase
         var style = doc.Styles["TableStyle"];
         Assert.NotNull(style);
         Assert.Equal(StyleType.Table, style.Type);
+    }
+
+    [Fact]
+    public async Task CreateStyle_DuplicateName_ShouldThrowException()
+    {
+        // Arrange
+        var docPath = CreateWordDocument("test_create_style_duplicate.docx");
+        var doc = new Document(docPath);
+        doc.Styles.Add(StyleType.Paragraph, "ExistingStyle");
+        doc.Save(docPath);
+
+        var arguments = CreateArguments("create_style", docPath);
+        arguments["styleName"] = "ExistingStyle";
+        arguments["styleType"] = "paragraph";
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _tool.ExecuteAsync(arguments));
+    }
+
+    [Fact]
+    public async Task ApplyStyle_InvalidStyleName_ShouldThrowException()
+    {
+        // Arrange
+        var docPath = CreateWordDocumentWithContent("test_apply_invalid_style.docx", "Test");
+        var arguments = CreateArguments("apply_style", docPath);
+        arguments["styleName"] = "NonExistentStyle";
+        arguments["paragraphIndex"] = 0;
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+    }
+
+    [Fact]
+    public async Task ApplyStyle_InvalidParagraphIndex_ShouldThrowException()
+    {
+        // Arrange
+        var docPath = CreateWordDocumentWithContent("test_apply_invalid_index.docx", "Test");
+        var arguments = CreateArguments("apply_style", docPath);
+        arguments["styleName"] = "Normal";
+        arguments["paragraphIndex"] = 999;
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+    }
+
+    [Fact]
+    public async Task ApplyStyle_InvalidTableIndex_ShouldThrowException()
+    {
+        // Arrange
+        var docPath = CreateWordDocument("test_apply_invalid_table.docx");
+        var arguments = CreateArguments("apply_style", docPath);
+        arguments["styleName"] = "Normal";
+        arguments["tableIndex"] = 999;
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+    }
+
+    [Fact]
+    public async Task ApplyStyle_NoTargetSpecified_ShouldThrowException()
+    {
+        // Arrange
+        var docPath = CreateWordDocument("test_apply_no_target.docx");
+        var arguments = CreateArguments("apply_style", docPath);
+        arguments["styleName"] = "Normal";
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+    }
+
+    [Fact]
+    public async Task CopyStyles_WithStyleNames_ShouldCopyOnlySpecifiedStyles()
+    {
+        // Arrange
+        var sourcePath = CreateWordDocument("test_copy_specific_source.docx");
+        var doc = new Document(sourcePath);
+        doc.Styles.Add(StyleType.Paragraph, "StyleA");
+        doc.Styles.Add(StyleType.Paragraph, "StyleB");
+        doc.Styles.Add(StyleType.Paragraph, "StyleC");
+        doc.Save(sourcePath);
+
+        var targetPath = CreateWordDocument("test_copy_specific_target.docx");
+        var outputPath = CreateTestFilePath("test_copy_specific_output.docx");
+        var arguments = CreateArguments("copy_styles", targetPath, outputPath);
+        arguments["sourceDocument"] = sourcePath;
+        arguments["styleNames"] = new JsonArray { "StyleA", "StyleC" };
+
+        // Act
+        var result = await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.Contains("Copied 2 style(s)", result);
+        var resultDoc = new Document(outputPath);
+        Assert.NotNull(resultDoc.Styles["StyleA"]);
+        Assert.Null(resultDoc.Styles["StyleB"]);
+        Assert.NotNull(resultDoc.Styles["StyleC"]);
+    }
+
+    [Fact]
+    public async Task CopyStyles_WithOverwrite_ShouldOverwriteExistingStyles()
+    {
+        // Arrange
+        var sourcePath = CreateWordDocument("test_copy_overwrite_source.docx");
+        var sourceDoc = new Document(sourcePath);
+        var sourceStyle = sourceDoc.Styles.Add(StyleType.Paragraph, "SharedStyle");
+        sourceStyle.Font.Size = 20;
+        sourceDoc.Save(sourcePath);
+
+        var targetPath = CreateWordDocument("test_copy_overwrite_target.docx");
+        var targetDoc = new Document(targetPath);
+        var targetStyle = targetDoc.Styles.Add(StyleType.Paragraph, "SharedStyle");
+        targetStyle.Font.Size = 12;
+        targetDoc.Save(targetPath);
+
+        var outputPath = CreateTestFilePath("test_copy_overwrite_output.docx");
+        var arguments = CreateArguments("copy_styles", targetPath, outputPath);
+        arguments["sourceDocument"] = sourcePath;
+        arguments["styleNames"] = new JsonArray { "SharedStyle" };
+        arguments["overwriteExisting"] = true;
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        var resultDoc = new Document(outputPath);
+        var resultStyle = resultDoc.Styles["SharedStyle"];
+        Assert.NotNull(resultStyle);
+        Assert.Equal(20, resultStyle.Font.Size);
+    }
+
+    [Fact]
+    public async Task CopyStyles_WithoutOverwrite_ShouldSkipExistingStyles()
+    {
+        // Arrange
+        var sourcePath = CreateWordDocument("test_copy_no_overwrite_source.docx");
+        var sourceDoc = new Document(sourcePath);
+        var sourceStyle = sourceDoc.Styles.Add(StyleType.Paragraph, "SharedStyle");
+        sourceStyle.Font.Size = 20;
+        sourceDoc.Save(sourcePath);
+
+        var targetPath = CreateWordDocument("test_copy_no_overwrite_target.docx");
+        var targetDoc = new Document(targetPath);
+        var targetStyle = targetDoc.Styles.Add(StyleType.Paragraph, "SharedStyle");
+        targetStyle.Font.Size = 12;
+        targetDoc.Save(targetPath);
+
+        var outputPath = CreateTestFilePath("test_copy_no_overwrite_output.docx");
+        var arguments = CreateArguments("copy_styles", targetPath, outputPath);
+        arguments["sourceDocument"] = sourcePath;
+        arguments["styleNames"] = new JsonArray { "SharedStyle" };
+        arguments["overwriteExisting"] = false;
+
+        // Act
+        var result = await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.Contains("Skipped: 1", result);
+        var resultDoc = new Document(outputPath);
+        var resultStyle = resultDoc.Styles["SharedStyle"];
+        Assert.NotNull(resultStyle);
+        Assert.Equal(12, resultStyle.Font.Size);
+    }
+
+    [Fact]
+    public async Task CopyStyles_SourceNotFound_ShouldThrowException()
+    {
+        // Arrange
+        var targetPath = CreateWordDocument("test_copy_source_not_found.docx");
+        var arguments = CreateArguments("copy_styles", targetPath);
+        arguments["sourceDocument"] = "nonexistent_file.docx";
+
+        // Act & Assert
+        await Assert.ThrowsAsync<FileNotFoundException>(() => _tool.ExecuteAsync(arguments));
+    }
+
+    [Fact]
+    public async Task GetStyles_ShouldReturnJsonFormat()
+    {
+        // Arrange
+        var docPath = CreateWordDocument("test_get_styles_json.docx");
+        var arguments = CreateArguments("get_styles", docPath);
+
+        // Act
+        var result = await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.Contains("\"count\"", result);
+        Assert.Contains("\"paragraphStyles\"", result);
+    }
+
+    [Fact]
+    public async Task CreateStyle_WithListType_ShouldCreateListStyle()
+    {
+        // Arrange
+        var docPath = CreateWordDocument("test_create_style_list.docx");
+        var outputPath = CreateTestFilePath("test_create_style_list_output.docx");
+        var arguments = CreateArguments("create_style", docPath, outputPath);
+        arguments["styleName"] = "ListStyle";
+        arguments["styleType"] = "list";
+        // Note: List styles don't support font settings directly
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        var doc = new Document(outputPath);
+        var style = doc.Styles["ListStyle"];
+        Assert.NotNull(style);
+        Assert.Equal(StyleType.List, style.Type);
+    }
+
+    [Fact]
+    public async Task CreateStyle_WithInvalidColor_ShouldThrowException()
+    {
+        // Arrange
+        var docPath = CreateWordDocument("test_create_style_invalid_color.docx");
+        var arguments = CreateArguments("create_style", docPath);
+        arguments["styleName"] = "InvalidColorStyle";
+        arguments["styleType"] = "paragraph";
+        arguments["color"] = "not_a_color";
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+    }
+
+    [Fact]
+    public async Task ApplyStyle_WithSectionIndex_ShouldApplyToSpecificSection()
+    {
+        // Arrange
+        var docPath = CreateWordDocument("test_apply_section.docx");
+        var doc = new Document(docPath);
+        var builder = new DocumentBuilder(doc);
+        builder.Writeln("Section 0 Para");
+        builder.InsertBreak(BreakType.SectionBreakNewPage);
+        builder.Writeln("Section 1 Para");
+        var customStyle = doc.Styles.Add(StyleType.Paragraph, "SectionStyle");
+        customStyle.Font.Size = 18;
+        doc.Save(docPath);
+
+        var outputPath = CreateTestFilePath("test_apply_section_output.docx");
+        var arguments = CreateArguments("apply_style", docPath, outputPath);
+        arguments["styleName"] = "SectionStyle";
+        arguments["paragraphIndex"] = 0;
+        arguments["sectionIndex"] = 1;
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        var resultDoc = new Document(outputPath);
+        var section1Paras = resultDoc.Sections[1].Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>()
+            .ToList();
+        Assert.Equal("SectionStyle", section1Paras[0].ParagraphFormat.StyleName);
     }
 }

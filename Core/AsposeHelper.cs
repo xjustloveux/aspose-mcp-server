@@ -1,6 +1,5 @@
 using Aspose.Cells;
 using Aspose.Slides;
-using AsposePdf = Aspose.Pdf;
 using Range = Aspose.Cells.Range;
 
 namespace AsposeMcpServer.Core;
@@ -218,59 +217,5 @@ public static class PowerPointHelper
         if (index < 0 || index >= count)
             throw new ArgumentException(
                 $"{itemName} index {index} is out of range (collection has {count} {itemName.ToLower()}s)");
-    }
-}
-
-/// <summary>
-///     Helper class for common Word operations to reduce code duplication
-///     Most operations work directly on the document without index validation
-///     This class can be extended if common patterns emerge
-/// </summary>
-public static class WordHelper;
-
-/// <summary>
-///     Helper class for common PDF operations to reduce code duplication
-/// </summary>
-public static class PdfHelper
-{
-    /// <summary>
-    ///     Validates page index and throws exception if invalid
-    /// </summary>
-    /// <param name="pageIndex">Page index to validate</param>
-    /// <param name="document">Document to check against</param>
-    /// <exception cref="ArgumentException">Thrown if page index is invalid</exception>
-    public static void ValidatePageIndex(int pageIndex, AsposePdf.Document document)
-    {
-        if (pageIndex < 0 || pageIndex >= document.Pages.Count)
-            throw new ArgumentException(
-                $"Page index {pageIndex} is out of range (document has {document.Pages.Count} pages)");
-    }
-
-    /// <summary>
-    ///     Gets a page with validation
-    /// </summary>
-    /// <param name="document">Document to get page from</param>
-    /// <param name="pageIndex">Page index</param>
-    /// <returns>Page</returns>
-    /// <exception cref="ArgumentException">Thrown if page index is invalid</exception>
-    public static AsposePdf.Page GetPage(AsposePdf.Document document, int pageIndex)
-    {
-        ValidatePageIndex(pageIndex, document);
-        return document.Pages[pageIndex + 1]; // PDF pages are 1-based
-    }
-
-    /// <summary>
-    ///     Validates collection index and throws exception if invalid
-    /// </summary>
-    /// <typeparam name="T">Collection item type</typeparam>
-    /// <param name="index">Index to validate</param>
-    /// <param name="collection">Collection to check against</param>
-    /// <param name="itemName">Name of the item type for error message</param>
-    /// <exception cref="ArgumentException">Thrown if index is invalid</exception>
-    public static void ValidateCollectionIndex<T>(int index, ICollection<T> collection, string itemName = "Item")
-    {
-        if (index < 0 || index >= collection.Count)
-            throw new ArgumentException(
-                $"{itemName} index {index} is out of range (collection has {collection.Count} {itemName.ToLower()}s)");
     }
 }

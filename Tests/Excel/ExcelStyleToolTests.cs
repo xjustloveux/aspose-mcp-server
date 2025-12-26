@@ -23,13 +23,13 @@ public class ExcelStyleToolTests : ExcelTestBase
         {
             ["operation"] = "format",
             ["path"] = workbookPath,
-            ["outputPath"] = outputPath
+            ["outputPath"] = outputPath,
+            ["range"] = "A1",
+            ["fontName"] = "Arial",
+            ["fontSize"] = 14,
+            ["bold"] = true,
+            ["italic"] = true
         };
-        arguments["range"] = "A1";
-        arguments["fontName"] = "Arial";
-        arguments["fontSize"] = 14;
-        arguments["bold"] = true;
-        arguments["italic"] = true;
 
         // Act
         await _tool.ExecuteAsync(arguments);
@@ -58,11 +58,11 @@ public class ExcelStyleToolTests : ExcelTestBase
         {
             ["operation"] = "format",
             ["path"] = workbookPath,
-            ["outputPath"] = outputPath
+            ["outputPath"] = outputPath,
+            ["range"] = "A1",
+            ["fontColor"] = "#FF0000",
+            ["backgroundColor"] = "#FFFF00"
         };
-        arguments["range"] = "A1";
-        arguments["fontColor"] = "#FF0000";
-        arguments["backgroundColor"] = "#FFFF00";
 
         // Act
         await _tool.ExecuteAsync(arguments);
@@ -92,11 +92,11 @@ public class ExcelStyleToolTests : ExcelTestBase
         {
             ["operation"] = "format",
             ["path"] = workbookPath,
-            ["outputPath"] = outputPath
+            ["outputPath"] = outputPath,
+            ["range"] = "A1",
+            ["horizontalAlignment"] = "Center",
+            ["verticalAlignment"] = "Center"
         };
-        arguments["range"] = "A1";
-        arguments["horizontalAlignment"] = "Center";
-        arguments["verticalAlignment"] = "Center";
 
         // Act
         await _tool.ExecuteAsync(arguments);
@@ -123,11 +123,11 @@ public class ExcelStyleToolTests : ExcelTestBase
         {
             ["operation"] = "format",
             ["path"] = workbookPath,
-            ["outputPath"] = outputPath
+            ["outputPath"] = outputPath,
+            ["range"] = "A1",
+            ["borderStyle"] = "Thin",
+            ["borderColor"] = "#000000"
         };
-        arguments["range"] = "A1";
-        arguments["borderStyle"] = "Thin";
-        arguments["borderColor"] = "#000000";
 
         // Act
         await _tool.ExecuteAsync(arguments);
@@ -158,10 +158,10 @@ public class ExcelStyleToolTests : ExcelTestBase
         {
             ["operation"] = "format",
             ["path"] = workbookPath,
-            ["outputPath"] = outputPath
+            ["outputPath"] = outputPath,
+            ["range"] = "A1",
+            ["numberFormat"] = "#,##0.00"
         };
-        arguments["range"] = "A1";
-        arguments["numberFormat"] = "#,##0.00";
 
         // Act
         await _tool.ExecuteAsync(arguments);
@@ -189,18 +189,18 @@ public class ExcelStyleToolTests : ExcelTestBase
         {
             ["operation"] = "format",
             ["path"] = workbookPath,
-            ["outputPath"] = outputPath
+            ["outputPath"] = outputPath,
+            ["range"] = "A1",
+            ["fontName"] = "Arial",
+            ["fontSize"] = 14,
+            ["bold"] = true,
+            ["italic"] = true,
+            ["fontColor"] = "#FF0000",
+            ["backgroundColor"] = "#FFFF00",
+            ["horizontalAlignment"] = "Center",
+            ["verticalAlignment"] = "Center",
+            ["borderStyle"] = "Thin"
         };
-        arguments["range"] = "A1";
-        arguments["fontName"] = "Arial";
-        arguments["fontSize"] = 14;
-        arguments["bold"] = true;
-        arguments["italic"] = true;
-        arguments["fontColor"] = "#FF0000";
-        arguments["backgroundColor"] = "#FFFF00";
-        arguments["horizontalAlignment"] = "Center";
-        arguments["verticalAlignment"] = "Center";
-        arguments["borderStyle"] = "Thin";
 
         // Act
         await _tool.ExecuteAsync(arguments);
@@ -269,12 +269,12 @@ public class ExcelStyleToolTests : ExcelTestBase
         {
             ["operation"] = "copy_sheet_format",
             ["path"] = workbookPath,
-            ["outputPath"] = outputPath
+            ["outputPath"] = outputPath,
+            ["sourceSheetIndex"] = 0,
+            ["targetSheetIndex"] = 1,
+            ["copyColumnWidths"] = true,
+            ["copyRowHeights"] = true
         };
-        arguments["sourceSheetIndex"] = 0;
-        arguments["targetSheetIndex"] = 1;
-        arguments["copyColumnWidths"] = true;
-        arguments["copyRowHeights"] = true;
 
         // Act
         await _tool.ExecuteAsync(arguments);

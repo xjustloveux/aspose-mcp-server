@@ -1,4 +1,4 @@
-using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using AsposeMcpServer.Core;
@@ -58,7 +58,14 @@ Usage examples:
             author = new
             {
                 type = "string",
-                description = "Comment author name (optional, defaults to 'Comment Author', for add/reply operations)"
+                description =
+                    "Comment author name, shown in Word revision history (optional, defaults to 'Comment Author', for add/reply operations)"
+            },
+            authorInitial = new
+            {
+                type = "string",
+                description =
+                    "Author initials (e.g., 'JD'), shown as abbreviation in Word. If not provided, auto-generated from first 2 characters of author name (optional, for add/reply operations)"
             },
             paragraphIndex = new
             {
@@ -98,15 +105,15 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-
-        SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
+        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
         return operation.ToLower() switch
         {
-            "add" => await AddCommentAsync(arguments, path),
-            "delete" => await DeleteCommentAsync(arguments, path),
-            "get" => await GetCommentsAsync(arguments, path),
-            "reply" => await ReplyCommentAsync(arguments, path),
+            "add" => await AddCommentAsync(path, outputPath, arguments),
+            "delete" => await DeleteCommentAsync(path, outputPath, arguments),
+            "get" => await GetCommentsAsync(path),
+            "reply" => await ReplyCommentAsync(path, outputPath, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -114,24 +121,25 @@ Usage examples:
     /// <summary>
     ///     Adds a new comment to the document
     /// </summary>
-    /// <param name="arguments">
-    ///     JSON arguments containing text, optional author, paragraphIndex, startRunIndex, endRunIndex,
-    ///     outputPath
-    /// </param>
-    /// <param name="path">Word document file path</param>
+    /// <param name="path">Document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing text, optional author, paragraphIndex, startRunIndex, endRunIndex</param>
     /// <returns>Success message with comment details</returns>
-    private Task<string> AddCommentAsync(JsonObject? arguments, string path)
+    private Task<string> AddCommentAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
             var text = ArgumentHelper.GetString(arguments, "text");
             var author = ArgumentHelper.GetString(arguments, "author", "Comment Author");
+            var authorInitial = ArgumentHelper.GetStringNullable(arguments, "authorInitial");
             var paragraphIndex = ArgumentHelper.GetIntNullable(arguments, "paragraphIndex");
             var startRunIndex = ArgumentHelper.GetIntNullable(arguments, "startRunIndex");
             var endRunIndex = ArgumentHelper.GetIntNullable(arguments, "endRunIndex");
 
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+            // Ensure output directory exists
+            var outputDir = Path.GetDirectoryName(outputPath);
+            if (!string.IsNullOrEmpty(outputDir))
+                Directory.CreateDirectory(outputDir);
 
             var doc = new Document(path);
             // Only get paragraphs from document Body, not from Comment objects (to avoid index errors)
@@ -233,9 +241,8 @@ Usage examples:
 
             if (para == null) throw new InvalidOperationException("Unable to find paragraph node containing Run");
 
-            var comment = new Comment(doc, author,
-                author.Length >= 2 ? author.Substring(0, 2).ToUpper() : author.ToUpper(),
-                DateTime.Now);
+            var initial = authorInitial ?? (author.Length >= 2 ? author.Substring(0, 2).ToUpper() : author.ToUpper());
+            var comment = new Comment(doc, author, initial, DateTime.UtcNow);
             comment.Paragraphs.Add(new Paragraph(doc));
             comment.FirstParagraph.AppendChild(new Run(doc, text));
 
@@ -348,17 +355,20 @@ Usage examples:
     /// <summary>
     ///     Deletes a comment from the document
     /// </summary>
-    /// <param name="arguments">JSON arguments containing commentIndex and optional outputPath</param>
-    /// <param name="path">Word document file path</param>
+    /// <param name="path">Document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing commentIndex</param>
     /// <returns>Success message with remaining comment count</returns>
-    private Task<string> DeleteCommentAsync(JsonObject? arguments, string path)
+    private Task<string> DeleteCommentAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
             var commentIndex = ArgumentHelper.GetInt(arguments, "commentIndex");
 
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+            // Ensure output directory exists
+            var outputDir = Path.GetDirectoryName(outputPath);
+            if (!string.IsNullOrEmpty(outputDir))
+                Directory.CreateDirectory(outputDir);
 
             var doc = new Document(path);
 
@@ -406,141 +416,134 @@ Usage examples:
     /// <summary>
     ///     Gets all top-level comments from the document
     /// </summary>
-    /// <param name="_">Unused parameter</param>
-    /// <param name="path">Word document file path</param>
-    /// <returns>Formatted string with all comments and their replies</returns>
-    private Task<string> GetCommentsAsync(JsonObject? _, string path)
+    /// <param name="doc">The Word document</param>
+    /// <returns>List of top-level comments (comments without Ancestor)</returns>
+    private static List<Comment> GetTopLevelComments(Document doc)
+    {
+        var allComments = doc.GetChildNodes(NodeType.Comment, true).Cast<Comment>().ToList();
+
+        // Build set of reply comment IDs (comments that are replies to other comments)
+        var replyCommentIds = new HashSet<int>();
+        foreach (var comment in allComments)
+            if (comment.Replies is { Count: > 0 })
+                foreach (var reply in comment.Replies.Cast<Comment>())
+                    replyCommentIds.Add(reply.Id);
+
+        // Filter to get only top-level comments (no ancestor and not in Replies collection)
+        var topLevelComments = new List<Comment>();
+        foreach (var comment in allComments)
+            if (comment.Ancestor == null && !replyCommentIds.Contains(comment.Id))
+                if (topLevelComments.All(c => c.Id != comment.Id))
+                    topLevelComments.Add(comment);
+
+        // Also check comments from CommentRangeStart nodes
+        var rangeStarts = doc.GetChildNodes(NodeType.CommentRangeStart, true).Cast<CommentRangeStart>();
+        foreach (var rangeStart in rangeStarts)
+        {
+            var commentById = allComments.FirstOrDefault(c => c.Id == rangeStart.Id);
+            if (commentById is { Ancestor: null } &&
+                !replyCommentIds.Contains(commentById.Id) &&
+                topLevelComments.All(c => c.Id != commentById.Id))
+                topLevelComments.Add(commentById);
+        }
+
+        return topLevelComments.OrderBy(c => c.DateTime).ToList();
+    }
+
+    /// <summary>
+    ///     Gets all top-level comments from the document
+    /// </summary>
+    /// <param name="path">Document file path</param>
+    /// <returns>JSON formatted string with all comments and their replies for better LLM processing</returns>
+    private Task<string> GetCommentsAsync(string path)
     {
         return Task.Run(() =>
         {
             var doc = new Document(path);
-            var allComments = doc.GetChildNodes(NodeType.Comment, true).Cast<Comment>().ToList();
+            var topLevelComments = GetTopLevelComments(doc);
 
-            // Build set of reply comment IDs (comments that are replies to other comments)
-            var replyCommentIds = new HashSet<int>();
-            foreach (var comment in allComments)
-                if (comment.Replies is { Count: > 0 })
-                    foreach (var reply in comment.Replies.Cast<Comment>())
-                        replyCommentIds.Add(reply.Id);
+            if (topLevelComments.Count == 0)
+                return JsonSerializer.Serialize(new
+                    { count = 0, comments = Array.Empty<object>(), message = "No comments found in document" });
 
-            // Filter to get only top-level comments (no ancestor and not in Replies collection)
-            var topLevelComments = new List<Comment>();
-            foreach (var comment in allComments)
-                if (comment.Ancestor == null && !replyCommentIds.Contains(comment.Id))
-                    if (topLevelComments.All(c => c.Id != comment.Id))
-                        topLevelComments.Add(comment);
-
-            // Also check comments from CommentRangeStart nodes
-            var rangeStarts = doc.GetChildNodes(NodeType.CommentRangeStart, true).Cast<CommentRangeStart>();
-            foreach (var rangeStart in rangeStarts)
-            {
-                var commentById = allComments.FirstOrDefault(c => c.Id == rangeStart.Id);
-                if (commentById is { Ancestor: null } &&
-                    !replyCommentIds.Contains(commentById.Id) &&
-                    topLevelComments.All(c => c.Id != commentById.Id))
-                    topLevelComments.Add(commentById);
-            }
-
-            if (topLevelComments.Count == 0) return "No comments found in document";
-
-            var result = new StringBuilder();
-            result.AppendLine($"Found {topLevelComments.Count} top-level comments:\n");
-
+            // Build JSON response for better LLM processing
+            var commentList = new List<object>();
             var index = 0;
             foreach (var comment in topLevelComments)
             {
-                AppendCommentInfo(result, comment, doc, index, 0);
+                commentList.Add(BuildCommentInfo(comment, doc, index));
                 index++;
             }
 
-            return result.ToString().TrimEnd();
+            var result = new
+            {
+                count = topLevelComments.Count,
+                comments = commentList
+            };
+
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 
-    private void AppendCommentInfo(StringBuilder result, Comment comment, Document doc, int index, int indentLevel)
+    /// <summary>
+    ///     Builds comment information object for JSON serialization
+    /// </summary>
+    /// <param name="comment">Comment to build info for</param>
+    /// <param name="doc">Word document containing the comment</param>
+    /// <param name="index">Comment index (-1 for replies)</param>
+    /// <returns>Anonymous object with comment information</returns>
+    private object BuildCommentInfo(Comment comment, Document doc, int index)
     {
-        var indent = new string(' ', indentLevel * 2);
-        var prefix = indentLevel == 0 ? $"Comment #{index}" : "  �|�w Reply";
-
-        result.AppendLine($"{indent}{prefix}:");
-        result.AppendLine($"{indent}  Author: {comment.Author}");
-        result.AppendLine($"{indent}  Initial: {comment.Initial}");
-        result.AppendLine($"{indent}  Date: {comment.DateTime:yyyy-MM-dd HH:mm:ss}");
-
         var commentText = comment.GetText().Trim();
-        if (commentText.Length > 100) commentText = commentText.Substring(0, 100) + "...";
-        result.AppendLine($"{indent}  Content: {commentText}");
 
-        // Get commented text range if available
+        // Check if comment has range marker
         var commentRangeStarts = doc.GetChildNodes(NodeType.CommentRangeStart, true).Cast<CommentRangeStart>();
-        var hasRange = false;
-        foreach (var rangeStart in commentRangeStarts)
-            if (rangeStart.Id == comment.Id)
-            {
-                result.AppendLine($"{indent}  Range: Marked text");
-                hasRange = true;
-                break;
-            }
+        var hasRange = commentRangeStarts.Any(rangeStart => rangeStart.Id == comment.Id);
 
-        if (!hasRange) result.AppendLine($"{indent}  Range: Range marker not found");
-
+        // Build replies list recursively
+        var replies = new List<object>();
         if (comment.Replies is { Count: > 0 })
-        {
-            result.AppendLine($"{indent}  Replies: {comment.Replies.Count}");
             foreach (var reply in comment.Replies.Cast<Comment>())
-                AppendCommentInfo(result, reply, doc, -1, indentLevel + 1);
-        }
+                replies.Add(BuildCommentInfo(reply, doc, -1));
 
-        result.AppendLine();
+        return new
+        {
+            index,
+            author = comment.Author,
+            initial = comment.Initial,
+            date = comment.DateTime.ToString("yyyy-MM-dd HH:mm:ss"),
+            content = commentText,
+            hasRange,
+            replyCount = comment.Replies?.Count ?? 0,
+            replies
+        };
     }
 
     /// <summary>
     ///     Adds a reply to an existing comment
     /// </summary>
-    /// <param name="arguments">JSON arguments containing commentIndex, replyText or text, optional author, outputPath</param>
-    /// <param name="path">Word document file path</param>
+    /// <param name="path">Document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing commentIndex, replyText or text, optional author</param>
     /// <returns>Success message with reply details</returns>
-    private Task<string> ReplyCommentAsync(JsonObject? arguments, string path)
+    private Task<string> ReplyCommentAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
             var commentIndex = ArgumentHelper.GetInt(arguments, "commentIndex");
             // Accept both replyText and text for compatibility
             var replyText = ArgumentHelper.GetString(arguments, "replyText", "text", "replyText or text");
             var author = ArgumentHelper.GetString(arguments, "author", "Reply Author");
+            var authorInitial = ArgumentHelper.GetStringNullable(arguments, "authorInitial");
 
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+            // Ensure output directory exists
+            var outputDir = Path.GetDirectoryName(outputPath);
+            if (!string.IsNullOrEmpty(outputDir))
+                Directory.CreateDirectory(outputDir);
 
             var doc = new Document(path);
 
-            // Get all comments and filter to top-level comments only (same logic as GetCommentsAsync)
-            var allComments = doc.GetChildNodes(NodeType.Comment, true).Cast<Comment>().ToList();
-
-            // Build set of reply comment IDs
-            var replyCommentIds = new HashSet<int>();
-            foreach (var comment in allComments)
-                if (comment.Replies is { Count: > 0 })
-                    foreach (var reply in comment.Replies.Cast<Comment>())
-                        replyCommentIds.Add(reply.Id);
-
-            // Filter to get only top-level comments (no ancestor and not in Replies collection)
-            var topLevelComments = new List<Comment>();
-            foreach (var comment in allComments)
-                if (comment.Ancestor == null && !replyCommentIds.Contains(comment.Id))
-                    if (topLevelComments.All(c => c.Id != comment.Id))
-                        topLevelComments.Add(comment);
-
-            // Also check comments from CommentRangeStart nodes
-            var rangeStarts = doc.GetChildNodes(NodeType.CommentRangeStart, true).Cast<CommentRangeStart>();
-            foreach (var rangeStart in rangeStarts)
-            {
-                var commentById = allComments.FirstOrDefault(c => c.Id == rangeStart.Id);
-                if (commentById is { Ancestor: null } &&
-                    !replyCommentIds.Contains(commentById.Id) &&
-                    topLevelComments.All(c => c.Id != commentById.Id))
-                    topLevelComments.Add(commentById);
-            }
+            var topLevelComments = GetTopLevelComments(doc);
 
             // Validate commentIndex against top-level comments only
             if (commentIndex < 0 || commentIndex >= topLevelComments.Count)
@@ -554,10 +557,8 @@ Usage examples:
                 throw new InvalidOperationException(
                     $"Comment index {commentIndex} points to a reply. Cannot add reply to a reply. Please use the top-level comment index.");
 
-            // Use AddReply() method to create reply comment
-            // It does NOT insert the reply content into the document body
-            var initial = author.Length >= 2 ? author.Substring(0, 2).ToUpper() : author.ToUpper();
-            _ = parentComment.AddReply(author, initial, DateTime.Now, replyText);
+            var initial = authorInitial ?? (author.Length >= 2 ? author.Substring(0, 2).ToUpper() : author.ToUpper());
+            _ = parentComment.AddReply(author, initial, DateTime.UtcNow, replyText);
             doc.Save(outputPath);
 
             var result = $"Reply to comment #{commentIndex} added successfully\n";

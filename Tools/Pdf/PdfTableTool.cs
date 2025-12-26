@@ -206,7 +206,7 @@ Usage examples:
                 try
                 {
                     var paragraphs = page.Paragraphs;
-                    if (paragraphs != null && paragraphs.Count > 0)
+                    if (paragraphs is { Count: > 0 })
                         foreach (var paragraph in paragraphs)
                             if (paragraph is Table foundTable)
                                 tables.Add(foundTable);
@@ -237,7 +237,7 @@ Usage examples:
                     foreach (var page in document.Pages)
                     {
                         var paragraphs = page.Paragraphs;
-                        if (paragraphs != null && paragraphs.Count > 0)
+                        if (paragraphs is { Count: > 0 })
                             for (var i = 1; i <= paragraphs.Count; i++)
                                 try
                                 {

@@ -1,4 +1,4 @@
-﻿using System.Text;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using Aspose.Words.Tables;
@@ -125,7 +125,8 @@ Usage examples:
             lineSpacing = new
             {
                 type = "number",
-                description = "Line spacing multiplier (for create_style)"
+                description =
+                    "Line spacing multiplier, e.g., 1.0 = single, 1.5 = 1.5 lines, 2.0 = double (for create_style)"
             },
             paragraphIndex = new
             {
@@ -181,13 +182,16 @@ Usage examples:
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
         return operation.ToLower() switch
         {
-            "get_styles" => await GetStyles(arguments),
-            "create_style" => await CreateStyle(arguments),
-            "apply_style" => await ApplyStyle(arguments),
-            "copy_styles" => await CopyStyles(arguments),
+            "get_styles" => await GetStyles(path, arguments),
+            "create_style" => await CreateStyle(path, outputPath, arguments),
+            "apply_style" => await ApplyStyle(path, outputPath, arguments),
+            "copy_styles" => await CopyStyles(path, outputPath, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -195,20 +199,16 @@ Usage examples:
     /// <summary>
     ///     Gets all styles from the document
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, optional includeBuiltIn</param>
-    /// <returns>Formatted string with all styles</returns>
-    private Task<string> GetStyles(JsonObject? arguments)
+    /// <param name="path">Document file path</param>
+    /// <param name="arguments">JSON arguments containing optional includeBuiltIn</param>
+    /// <returns>JSON formatted string with all styles</returns>
+    private Task<string> GetStyles(string path, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
             var includeBuiltIn = ArgumentHelper.GetBool(arguments, "includeBuiltIn", false);
 
             var doc = new Document(path);
-            var result = new StringBuilder();
-
-            result.AppendLine("=== Document Styles ===\n");
 
             List<Style> paraStyles;
 
@@ -235,64 +235,68 @@ Usage examples:
                     .ToList();
             }
 
-            result.AppendLine("【Paragraph Styles】");
-            if (paraStyles.Count == 0)
-                result.AppendLine("(No paragraph styles found)");
-            else
-                foreach (var style in paraStyles)
+            var styleList = new List<object>();
+            foreach (var style in paraStyles)
+            {
+                var font = style.Font;
+                var paraFormat = style.ParagraphFormat;
+
+                var styleInfo = new Dictionary<string, object?>
                 {
-                    result.AppendLine($"\nStyle Name: {style.Name}");
-                    result.AppendLine($"  Built-in: {(style.BuiltIn ? "Yes" : "No")}");
-                    if (!string.IsNullOrEmpty(style.BaseStyleName))
-                        result.AppendLine($"  Based on: {style.BaseStyleName}");
+                    ["name"] = style.Name,
+                    ["builtIn"] = style.BuiltIn
+                };
 
-                    var font = style.Font;
-                    if (font.NameAscii != font.NameFarEast)
-                    {
-                        result.AppendLine($"  Font (ASCII): {font.NameAscii}");
-                        result.AppendLine($"  Font (Far East): {font.NameFarEast}");
-                    }
-                    else
-                    {
-                        result.AppendLine($"  Font: {font.Name}");
-                    }
+                if (!string.IsNullOrEmpty(style.BaseStyleName))
+                    styleInfo["basedOn"] = style.BaseStyleName;
 
-                    result.AppendLine($"  Size: {font.Size} pt");
-                    if (font.Bold) result.AppendLine("  Bold: Yes");
-                    if (font.Italic) result.AppendLine("  Italic: Yes");
-
-                    var paraFormat = style.ParagraphFormat;
-                    result.AppendLine($"  Alignment: {paraFormat.Alignment}");
-                    if (paraFormat.SpaceBefore != 0)
-                        result.AppendLine($"  Space Before: {paraFormat.SpaceBefore} pt");
-                    if (paraFormat.SpaceAfter != 0)
-                        result.AppendLine($"  Space After: {paraFormat.SpaceAfter} pt");
+                // Font information
+                if (font.NameAscii != font.NameFarEast)
+                {
+                    styleInfo["fontAscii"] = font.NameAscii;
+                    styleInfo["fontFarEast"] = font.NameFarEast;
+                }
+                else
+                {
+                    styleInfo["font"] = font.Name;
                 }
 
-            result.AppendLine($"\n\nTotal Paragraph Styles: {paraStyles.Count}");
-            if (!includeBuiltIn)
-                result.AppendLine("(Showing custom styles and built-in styles actually used in the document)");
+                styleInfo["fontSize"] = font.Size;
+                if (font.Bold) styleInfo["bold"] = true;
+                if (font.Italic) styleInfo["italic"] = true;
 
-            return result.ToString();
+                styleInfo["alignment"] = paraFormat.Alignment.ToString();
+                if (paraFormat.SpaceBefore != 0) styleInfo["spaceBefore"] = paraFormat.SpaceBefore;
+                if (paraFormat.SpaceAfter != 0) styleInfo["spaceAfter"] = paraFormat.SpaceAfter;
+
+                styleList.Add(styleInfo);
+            }
+
+            var result = new
+            {
+                count = paraStyles.Count,
+                includeBuiltIn,
+                note = includeBuiltIn
+                    ? null
+                    : "Showing custom styles and built-in styles actually used in the document",
+                paragraphStyles = styleList
+            };
+
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 
     /// <summary>
     ///     Creates a new style
     /// </summary>
-    /// <param name="arguments">
-    ///     JSON arguments containing path, styleName, styleType, optional baseStyleName, formatting
-    ///     options, outputPath
-    /// </param>
+    /// <param name="path">Document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing styleName, styleType, optional baseStyle, formatting options</param>
     /// <returns>Success message</returns>
-    private Task<string> CreateStyle(JsonObject? arguments)
+    private Task<string> CreateStyle(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
-            var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
             var styleName = ArgumentHelper.GetString(arguments, "styleName");
             var styleTypeStr = ArgumentHelper.GetString(arguments, "styleType", "paragraph");
             var baseStyle = ArgumentHelper.GetStringNullable(arguments, "baseStyle");
@@ -329,44 +333,51 @@ Usage examples:
                 var baseStyleObj = doc.Styles[baseStyle];
                 if (baseStyleObj != null)
                     style.BaseStyleName = baseStyle;
-            }
-
-            if (!string.IsNullOrEmpty(fontNameAscii))
-                style.Font.NameAscii = fontNameAscii;
-
-            if (!string.IsNullOrEmpty(fontNameFarEast))
-                style.Font.NameFarEast = fontNameFarEast;
-
-            if (!string.IsNullOrEmpty(fontName))
-            {
-                if (string.IsNullOrEmpty(fontNameAscii) && string.IsNullOrEmpty(fontNameFarEast))
-                {
-                    style.Font.Name = fontName;
-                }
                 else
-                {
-                    if (string.IsNullOrEmpty(fontNameAscii))
-                        style.Font.NameAscii = fontName;
-                    if (string.IsNullOrEmpty(fontNameFarEast))
-                        style.Font.NameFarEast = fontName;
-                }
+                    Console.Error.WriteLine(
+                        $"[WARN] Base style '{baseStyle}' not found, style will not inherit from it");
             }
 
-            if (fontSize.HasValue)
-                style.Font.Size = fontSize.Value;
+            // Font settings are only applicable to Paragraph, Character, and Table styles
+            // List styles don't support direct font settings
+            if (styleType != StyleType.List)
+            {
+                if (!string.IsNullOrEmpty(fontNameAscii))
+                    style.Font.NameAscii = fontNameAscii;
 
-            if (bold.HasValue)
-                style.Font.Bold = bold.Value;
+                if (!string.IsNullOrEmpty(fontNameFarEast))
+                    style.Font.NameFarEast = fontNameFarEast;
 
-            if (italic.HasValue)
-                style.Font.Italic = italic.Value;
+                if (!string.IsNullOrEmpty(fontName))
+                {
+                    if (string.IsNullOrEmpty(fontNameAscii) && string.IsNullOrEmpty(fontNameFarEast))
+                    {
+                        style.Font.Name = fontName;
+                    }
+                    else
+                    {
+                        if (string.IsNullOrEmpty(fontNameAscii))
+                            style.Font.NameAscii = fontName;
+                        if (string.IsNullOrEmpty(fontNameFarEast))
+                            style.Font.NameFarEast = fontName;
+                    }
+                }
 
-            if (underline.HasValue)
-                style.Font.Underline = underline.Value ? Underline.Single : Underline.None;
+                if (fontSize.HasValue)
+                    style.Font.Size = fontSize.Value;
 
-            if (!string.IsNullOrEmpty(color))
-                // Parse color with error handling - throws ArgumentException on failure
-                style.Font.Color = ColorHelper.ParseColor(color, true);
+                if (bold.HasValue)
+                    style.Font.Bold = bold.Value;
+
+                if (italic.HasValue)
+                    style.Font.Italic = italic.Value;
+
+                if (underline.HasValue)
+                    style.Font.Underline = underline.Value ? Underline.Single : Underline.None;
+
+                if (!string.IsNullOrEmpty(color))
+                    style.Font.Color = ColorHelper.ParseColor(color, true);
+            }
 
             if (styleType == StyleType.Paragraph || styleType == StyleType.List)
             {
@@ -400,16 +411,14 @@ Usage examples:
     /// <summary>
     ///     Applies a style to paragraphs or runs
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, styleName, optional paragraphIndex, runIndex, outputPath</param>
+    /// <param name="path">Document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing styleName, optional paragraphIndex, paragraphIndices, tableIndex</param>
     /// <returns>Success message</returns>
-    private Task<string> ApplyStyle(JsonObject? arguments)
+    private Task<string> ApplyStyle(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
-            var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
             var styleName = ArgumentHelper.GetString(arguments, "styleName");
             var paragraphIndex = ArgumentHelper.GetIntNullable(arguments, "paragraphIndex");
             var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
@@ -437,46 +446,7 @@ Usage examples:
                 var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
                 foreach (var para in paragraphs)
                 {
-                    var paraFormat = para.ParagraphFormat;
-                    var isEmpty = string.IsNullOrWhiteSpace(para.GetText());
-
-                    if (isEmpty)
-                    {
-                        paraFormat.ClearFormatting();
-                        try
-                        {
-                            if (style.StyleIdentifier != StyleIdentifier.Normal || styleName == "Normal")
-                                paraFormat.StyleIdentifier = style.StyleIdentifier;
-                        }
-                        catch (Exception ex)
-                        {
-                            // Ignore StyleIdentifier errors
-                            Console.Error.WriteLine(
-                                $"[WARN] Failed to set StyleIdentifier for style '{styleName}': {ex.Message}");
-                        }
-                    }
-
-                    paraFormat.Style = style;
-                    paraFormat.StyleName = styleName;
-
-                    if (isEmpty)
-                    {
-                        paraFormat.ClearFormatting();
-                        paraFormat.Style = style;
-                        paraFormat.StyleName = styleName;
-                        try
-                        {
-                            if (style.StyleIdentifier != StyleIdentifier.Normal || styleName == "Normal")
-                                paraFormat.StyleIdentifier = style.StyleIdentifier;
-                        }
-                        catch (Exception ex)
-                        {
-                            // Ignore StyleIdentifier errors
-                            Console.Error.WriteLine(
-                                $"[WARN] Failed to set StyleIdentifier for style '{styleName}': {ex.Message}");
-                        }
-                    }
-
+                    ApplyStyleToParagraph(para, style, styleName);
                     appliedCount++;
                 }
             }
@@ -494,47 +464,7 @@ Usage examples:
                     var idx = idxObj?.GetValue<int>();
                     if (idx is >= 0 && idx.Value < paragraphs.Count)
                     {
-                        var para = paragraphs[idx.Value];
-                        var paraFormat = para.ParagraphFormat;
-                        var isEmpty = string.IsNullOrWhiteSpace(para.GetText());
-
-                        if (isEmpty)
-                        {
-                            paraFormat.ClearFormatting();
-                            try
-                            {
-                                if (style.StyleIdentifier != StyleIdentifier.Normal || styleName == "Normal")
-                                    paraFormat.StyleIdentifier = style.StyleIdentifier;
-                            }
-                            catch (Exception ex)
-                            {
-                                // Ignore StyleIdentifier errors
-                                Console.Error.WriteLine(
-                                    $"[WARN] Failed to set StyleIdentifier for style '{styleName}': {ex.Message}");
-                            }
-                        }
-
-                        paraFormat.Style = style;
-                        paraFormat.StyleName = styleName;
-
-                        if (isEmpty)
-                        {
-                            paraFormat.ClearFormatting();
-                            paraFormat.Style = style;
-                            paraFormat.StyleName = styleName;
-                            try
-                            {
-                                if (style.StyleIdentifier != StyleIdentifier.Normal || styleName == "Normal")
-                                    paraFormat.StyleIdentifier = style.StyleIdentifier;
-                            }
-                            catch (Exception ex)
-                            {
-                                // Ignore StyleIdentifier errors
-                                Console.Error.WriteLine(
-                                    $"[WARN] Failed to set StyleIdentifier for style '{styleName}': {ex.Message}");
-                            }
-                        }
-
+                        ApplyStyleToParagraph(paragraphs[idx.Value], style, styleName);
                         appliedCount++;
                     }
                 }
@@ -552,52 +482,7 @@ Usage examples:
                     throw new ArgumentException(
                         $"paragraphIndex must be between 0 and {paragraphs.Count - 1} (section {sectionIdx} has {paragraphs.Count} paragraphs, total document paragraphs: {doc.GetChildNodes(NodeType.Paragraph, true).Count})");
 
-                var para = paragraphs[paragraphIndex.Value];
-                var paraFormat = para.ParagraphFormat;
-
-                // For empty paragraphs, we need to ensure the style is properly applied
-                // Use StyleIdentifier for more reliable style application
-                var isEmpty = string.IsNullOrWhiteSpace(para.GetText());
-
-                if (isEmpty)
-                {
-                    // For empty paragraphs, clear formatting first, then apply style using StyleIdentifier
-                    paraFormat.ClearFormatting();
-
-                    // Try to use StyleIdentifier if the style has one
-                    try
-                    {
-                        if (style.StyleIdentifier != StyleIdentifier.Normal || styleName == "Normal")
-                            paraFormat.StyleIdentifier = style.StyleIdentifier;
-                    }
-                    catch
-                    {
-                        // If StyleIdentifier fails, continue with Style and StyleName
-                    }
-                }
-
-                // Apply style directly to paragraph format
-                paraFormat.Style = style;
-                // Also set StyleName to ensure it's properly applied (especially for empty paragraphs)
-                paraFormat.StyleName = styleName;
-
-                // For empty paragraphs, force style application by clearing and re-applying
-                if (isEmpty)
-                {
-                    paraFormat.ClearFormatting();
-                    paraFormat.Style = style;
-                    paraFormat.StyleName = styleName;
-                    try
-                    {
-                        if (style.StyleIdentifier != StyleIdentifier.Normal || styleName == "Normal")
-                            paraFormat.StyleIdentifier = style.StyleIdentifier;
-                    }
-                    catch
-                    {
-                        // Ignore StyleIdentifier errors
-                    }
-                }
-
+                ApplyStyleToParagraph(paragraphs[paragraphIndex.Value], style, styleName);
                 appliedCount = 1;
             }
             else
@@ -614,16 +499,14 @@ Usage examples:
     /// <summary>
     ///     Copies styles from source document to destination document
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, sourcePath, optional outputPath</param>
+    /// <param name="path">Document file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing sourceDocument, optional styleNames, overwriteExisting</param>
     /// <returns>Success message</returns>
-    private Task<string> CopyStyles(JsonObject? arguments)
+    private Task<string> CopyStyles(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
-            var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
             var sourceDocument = ArgumentHelper.GetString(arguments, "sourceDocument");
             SecurityHelper.ValidateFilePath(sourceDocument, "sourceDocument", true);
             var overwriteExisting = ArgumentHelper.GetBool(arguments, "overwriteExisting", false);
@@ -691,6 +574,56 @@ Usage examples:
         });
     }
 
+    /// <summary>
+    ///     Applies a style to a single paragraph, handling empty paragraphs specially
+    /// </summary>
+    /// <param name="para">The paragraph to apply style to</param>
+    /// <param name="style">The style to apply</param>
+    /// <param name="styleName">The style name</param>
+    private void ApplyStyleToParagraph(Paragraph para, Style style, string styleName)
+    {
+        var paraFormat = para.ParagraphFormat;
+        var isEmpty = string.IsNullOrWhiteSpace(para.GetText());
+
+        if (isEmpty)
+        {
+            paraFormat.ClearFormatting();
+            try
+            {
+                if (style.StyleIdentifier != StyleIdentifier.Normal || styleName == "Normal")
+                    paraFormat.StyleIdentifier = style.StyleIdentifier;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[WARN] Failed to set StyleIdentifier for style '{styleName}': {ex.Message}");
+            }
+        }
+
+        paraFormat.Style = style;
+        paraFormat.StyleName = styleName;
+
+        if (isEmpty)
+        {
+            paraFormat.ClearFormatting();
+            paraFormat.Style = style;
+            paraFormat.StyleName = styleName;
+            try
+            {
+                if (style.StyleIdentifier != StyleIdentifier.Normal || styleName == "Normal")
+                    paraFormat.StyleIdentifier = style.StyleIdentifier;
+            }
+            catch
+            {
+                // Ignore StyleIdentifier errors for empty paragraphs
+            }
+        }
+    }
+
+    /// <summary>
+    ///     Copies style properties from source to target style
+    /// </summary>
+    /// <param name="sourceStyle">Source style to copy from</param>
+    /// <param name="targetStyle">Target style to copy to</param>
     private void CopyStyleProperties(Style sourceStyle, Style targetStyle)
     {
         targetStyle.Font.Name = sourceStyle.Font.Name;
@@ -712,6 +645,18 @@ Usage examples:
             targetStyle.ParagraphFormat.LeftIndent = sourceStyle.ParagraphFormat.LeftIndent;
             targetStyle.ParagraphFormat.RightIndent = sourceStyle.ParagraphFormat.RightIndent;
             targetStyle.ParagraphFormat.FirstLineIndent = sourceStyle.ParagraphFormat.FirstLineIndent;
+        }
+        else if (sourceStyle.Type == StyleType.Table)
+        {
+            // Copy table-specific properties when available
+            try
+            {
+                targetStyle.ParagraphFormat.Alignment = sourceStyle.ParagraphFormat.Alignment;
+            }
+            catch
+            {
+                // Table styles may not support all paragraph properties
+            }
         }
     }
 }

@@ -50,9 +50,11 @@ public class PdfBookmarkToolTests : PdfTestBase
         // Arrange
         var pdfPath = CreateTestPdf("test_get_bookmarks.pdf");
         var document = new Document(pdfPath);
-        var outlineItem = new OutlineItemCollection(document.Outlines);
-        outlineItem.Title = "Test Bookmark";
-        outlineItem.Destination = new XYZExplicitDestination(document.Pages[1], 0, 0, 1);
+        var outlineItem = new OutlineItemCollection(document.Outlines)
+        {
+            Title = "Test Bookmark",
+            Destination = new XYZExplicitDestination(document.Pages[1], 0, 0, 1)
+        };
         document.Outlines.Add(outlineItem);
         document.Save(pdfPath);
 
@@ -77,9 +79,11 @@ public class PdfBookmarkToolTests : PdfTestBase
         // Arrange
         var pdfPath = CreateTestPdf("test_delete_bookmark.pdf");
         var document = new Document(pdfPath);
-        var outlineItem = new OutlineItemCollection(document.Outlines);
-        outlineItem.Title = "Bookmark to Delete";
-        outlineItem.Destination = new XYZExplicitDestination(document.Pages[1], 0, 0, 1);
+        var outlineItem = new OutlineItemCollection(document.Outlines)
+        {
+            Title = "Bookmark to Delete",
+            Destination = new XYZExplicitDestination(document.Pages[1], 0, 0, 1)
+        };
         document.Outlines.Add(outlineItem);
         document.Save(pdfPath);
 
@@ -103,5 +107,39 @@ public class PdfBookmarkToolTests : PdfTestBase
         var bookmarksAfter = resultDocument.Outlines.Count;
         Assert.True(bookmarksAfter < bookmarksBefore,
             $"Bookmark should be deleted. Before: {bookmarksBefore}, After: {bookmarksAfter}");
+    }
+
+    [Fact]
+    public async Task EditBookmark_ShouldEditBookmark()
+    {
+        // Arrange
+        var pdfPath = CreateTestPdf("test_edit_bookmark.pdf");
+        var document = new Document(pdfPath);
+        var outlineItem = new OutlineItemCollection(document.Outlines)
+        {
+            Title = "Original Title",
+            Destination = new XYZExplicitDestination(document.Pages[1], 0, 0, 1)
+        };
+        document.Outlines.Add(outlineItem);
+        document.Save(pdfPath);
+
+        var outputPath = CreateTestFilePath("test_edit_bookmark_output.pdf");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "edit",
+            ["path"] = pdfPath,
+            ["outputPath"] = outputPath,
+            ["bookmarkIndex"] = 1,
+            ["title"] = "Updated Title"
+        };
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        var resultDocument = new Document(outputPath);
+        Assert.True(resultDocument.Outlines.Count > 0, "Document should have bookmarks");
+        var firstBookmark = resultDocument.Outlines[1];
+        Assert.Equal("Updated Title", firstBookmark.Title);
     }
 }

@@ -28,11 +28,11 @@ public class WordFileToolTests : WordTestBase
     [Fact]
     public async Task CreateFromTemplate_ShouldCreateDocumentFromTemplate()
     {
-        // Arrange
+        // Arrange - Using LINQ Reporting Engine syntax <<[ds.PropertyName]>>
         var templatePath = CreateWordDocument("test_template.docx");
         var doc = new Document(templatePath);
         var builder = new DocumentBuilder(doc);
-        builder.Write("Hello {{name}}");
+        builder.Write("Hello <<[ds.Name]>>");
         doc.Save(templatePath);
 
         var outputPath = CreateTestFilePath("test_create_from_template_output.docx");
@@ -42,11 +42,11 @@ public class WordFileToolTests : WordTestBase
             ["templatePath"] = templatePath,
             ["outputPath"] = outputPath
         };
-        var replacements = new JsonObject
+        var data = new JsonObject
         {
-            ["{{name}}"] = "World"
+            ["Name"] = "World"
         };
-        arguments["replacements"] = replacements;
+        arguments["data"] = data;
 
         // Act
         await _tool.ExecuteAsync(arguments);
@@ -268,28 +268,32 @@ public class WordFileToolTests : WordTestBase
     }
 
     [Fact]
-    public async Task CreateFromTemplate_WithPlaceholderStyle_ShouldHandleDifferentStyles()
+    public async Task CreateFromTemplate_WithArrayData_ShouldIterateItems()
     {
-        // Arrange
-        var templatePath = CreateWordDocument("test_template_style.docx");
+        // Arrange - Using LINQ Reporting Engine with foreach iteration
+        var templatePath = CreateWordDocument("test_template_array.docx");
         var doc = new Document(templatePath);
         var builder = new DocumentBuilder(doc);
-        builder.Write("Hello {name}");
+        // Template with foreach iteration
+        builder.Write("Items: <<foreach [item in ds]>><<[item.Product]>> ");
+        builder.Write("<</foreach>>");
         doc.Save(templatePath);
 
-        var outputPath = CreateTestFilePath("test_create_from_template_style_output.docx");
+        var outputPath = CreateTestFilePath("test_create_from_template_array_output.docx");
         var arguments = new JsonObject
         {
             ["operation"] = "create_from_template",
             ["templatePath"] = templatePath,
-            ["outputPath"] = outputPath,
-            ["placeholderStyle"] = "singleCurly"
+            ["outputPath"] = outputPath
         };
-        var replacements = new JsonObject
+        // Array as root data
+        var data = new JsonArray
         {
-            ["name"] = "World"
+            new JsonObject { ["Product"] = "Apple" },
+            new JsonObject { ["Product"] = "Banana" },
+            new JsonObject { ["Product"] = "Cherry" }
         };
-        arguments["replacements"] = replacements;
+        arguments["data"] = data;
 
         // Act
         await _tool.ExecuteAsync(arguments);
@@ -298,7 +302,9 @@ public class WordFileToolTests : WordTestBase
         Assert.True(File.Exists(outputPath));
         var resultDoc = new Document(outputPath);
         var text = resultDoc.GetText();
-        Assert.Contains("Hello World", text, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Apple", text, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Banana", text, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Cherry", text, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

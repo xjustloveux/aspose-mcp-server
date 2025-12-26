@@ -1,5 +1,5 @@
 ﻿using System.Drawing;
-using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using Aspose.Words.Drawing;
@@ -23,8 +23,8 @@ Usage examples:
 - Edit format: word_paragraph(operation='edit', path='doc.docx', paragraphIndex=0, alignment='center', fontSize=14)
 - Get paragraph: word_paragraph(operation='get', path='doc.docx', paragraphIndex=0)
 - Get format: word_paragraph(operation='get_format', path='doc.docx', paragraphIndex=0)
-- Copy format: word_paragraph(operation='copy_format', path='doc.docx', sourceIndex=0, targetIndex=1)
-- Merge paragraphs: word_paragraph(operation='merge', path='doc.docx', startIndex=0, endIndex=2)
+- Copy format: word_paragraph(operation='copy_format', path='doc.docx', sourceParagraphIndex=0, targetParagraphIndex=1)
+- Merge paragraphs: word_paragraph(operation='merge', path='doc.docx', startParagraphIndex=0, endParagraphIndex=2)
 
 Important notes for 'get' operation:
 - By default, returns ALL paragraphs in the document structure, including paragraphs inside Comment objects, table cells, and TextBoxes
@@ -44,13 +44,13 @@ Important notes for 'get' operation:
             {
                 type = "string",
                 description = @"Operation to perform.
-- 'insert': Insert a new paragraph (required params: path, paragraphIndex, text)
+- 'insert': Insert a new paragraph (required params: path, text; optional: paragraphIndex)
 - 'delete': Delete a paragraph (required params: path, paragraphIndex)
 - 'edit': Edit paragraph format (required params: path, paragraphIndex)
-- 'get': Get paragraph content (required params: path, paragraphIndex)
+- 'get': Get paragraph content (required params: path; optional: paragraphIndex)
 - 'get_format': Get paragraph format (required params: path, paragraphIndex)
-- 'copy_format': Copy paragraph format (required params: path, sourceIndex, targetIndex)
-- 'merge': Merge paragraphs (required params: path, startIndex, endIndex)",
+- 'copy_format': Copy paragraph format (required params: path, sourceParagraphIndex, targetParagraphIndex)
+- 'merge': Merge paragraphs (required params: path, startParagraphIndex, endParagraphIndex)",
                 @enum = new[] { "insert", "delete", "edit", "get", "get_format", "copy_format", "merge" }
             },
             path = new
@@ -202,13 +202,13 @@ Note: To check paragraph styles in table cells (e.g., after using add_table with
             {
                 type = "number",
                 description =
-                    "Line spacing (points or multiplier depending on lineSpacingRule, optional, for edit operation)"
+                    "Line spacing value. For 'multiple/single/oneAndHalf/double' rules, use multiplier (e.g., 1.0, 1.5, 2.0). For 'atLeast/exactly' rules, use points. Optional, for edit operation."
             },
             lineSpacingRule = new
             {
                 type = "string",
                 description =
-                    "Line spacing rule: single, oneAndHalf, double, atLeast, exactly, multiple (optional, for edit operation)",
+                    "Line spacing rule: 'single' (1x), 'oneAndHalf' (1.5x), 'double' (2x), 'atLeast' (minimum points), 'exactly' (fixed points), 'multiple' (custom multiplier). Optional, for edit operation.",
                 @enum = new[] { "single", "oneAndHalf", "double", "atLeast", "exactly", "multiple" }
             },
             tabStops = new
@@ -270,13 +270,13 @@ Note: To check paragraph styles in table cells (e.g., after using add_table with
 
         return operation switch
         {
-            "insert" => await InsertParagraphAsync(arguments, path, outputPath),
-            "delete" => await DeleteParagraphAsync(arguments, path, outputPath),
-            "edit" => await EditParagraphAsync(arguments, path, outputPath),
-            "get" => await GetParagraphsAsync(arguments, path),
-            "get_format" => await GetParagraphFormatAsync(arguments, path),
-            "copy_format" => await CopyParagraphFormatAsync(arguments, path, outputPath),
-            "merge" => await MergeParagraphsAsync(arguments, path, outputPath),
+            "insert" => await InsertParagraphAsync(path, outputPath, arguments),
+            "delete" => await DeleteParagraphAsync(path, outputPath, arguments),
+            "edit" => await EditParagraphAsync(path, outputPath, arguments),
+            "get" => await GetParagraphsAsync(path, arguments),
+            "get_format" => await GetParagraphFormatAsync(path, arguments),
+            "copy_format" => await CopyParagraphFormatAsync(path, outputPath, arguments),
+            "merge" => await MergeParagraphsAsync(path, outputPath, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -284,11 +284,11 @@ Note: To check paragraph styles in table cells (e.g., after using add_table with
     /// <summary>
     ///     Inserts a paragraph into the document
     /// </summary>
-    /// <param name="arguments">JSON arguments containing text, optional paragraphIndex, styleName, formatting options</param>
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing text, optional paragraphIndex, styleName, formatting options</param>
     /// <returns>Success message</returns>
-    private Task<string> InsertParagraphAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> InsertParagraphAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -325,8 +325,9 @@ Note: To check paragraph styles in table cells (e.g., after using add_table with
                 }
                 else
                 {
+                    var validRange = paragraphs.Count > 0 ? $"0-{paragraphs.Count - 1}" : "none (document is empty)";
                     throw new ArgumentException(
-                        $"Paragraph index {paragraphIndex.Value} is out of range (document has {paragraphs.Count} paragraphs)");
+                        $"Paragraph index {paragraphIndex.Value} is out of range. The document has {paragraphs.Count} paragraphs (valid indices: {validRange}, or -1 for beginning).");
                 }
             }
 
@@ -414,7 +415,8 @@ Note: To check paragraph styles in table cells (e.g., after using add_table with
                 result += string.Join(", ", spaceParts) + "\n";
             }
 
-            result += $"Document paragraph count: {doc.GetChildNodes(NodeType.Paragraph, true).Count}\n";
+            // Use previously cached paragraphs.Count + 1 to avoid redundant GetChildNodes call
+            result += $"Document paragraph count: {paragraphs.Count + 1}\n";
             result += $"Output: {outputPath}";
 
             return result;
@@ -424,11 +426,11 @@ Note: To check paragraph styles in table cells (e.g., after using add_table with
     /// <summary>
     ///     Deletes a paragraph from the document
     /// </summary>
-    /// <param name="arguments">JSON arguments containing paragraphIndex, optional sectionIndex</param>
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
-    /// <returns>Success message</returns>
-    private Task<string> DeleteParagraphAsync(JsonObject? arguments, string path, string outputPath)
+    /// <param name="arguments">JSON arguments containing paragraphIndex (0-based, or -1 for last paragraph)</param>
+    /// <returns>Success message with deleted paragraph preview</returns>
+    private Task<string> DeleteParagraphAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -447,7 +449,7 @@ Note: To check paragraph styles in table cells (e.g., after using add_table with
 
             if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
                 throw new ArgumentException(
-                    $"Paragraph index {paragraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
+                    $"Paragraph index {paragraphIndex} is out of range. The document has {paragraphs.Count} paragraphs (valid indices: 0-{paragraphs.Count - 1}, or -1 for last).");
 
             var paragraphToDelete = paragraphs[paragraphIndex] as Paragraph;
             if (paragraphToDelete == null)
@@ -472,11 +474,11 @@ Note: To check paragraph styles in table cells (e.g., after using add_table with
     /// <summary>
     ///     Edits paragraph properties
     /// </summary>
-    /// <param name="arguments">JSON arguments containing paragraphIndex, optional text, formatting options, sectionIndex</param>
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing paragraphIndex, optional text, formatting options, sectionIndex</param>
     /// <returns>Success message</returns>
-    private Task<string> EditParagraphAsync(JsonObject? arguments, string path, string outputPath)
+    private Task<string> EditParagraphAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -519,7 +521,6 @@ Note: To check paragraph styles in table cells (e.g., after using add_table with
             // Move to first child if exists, otherwise move to paragraph itself
             builder.MoveTo(para.FirstChild ?? para);
 
-            // Apply font properties using FontHelper
             var fontName = ArgumentHelper.GetStringNullable(arguments, "fontName");
             var fontNameAscii = ArgumentHelper.GetStringNullable(arguments, "fontNameAscii");
             var fontNameFarEast = ArgumentHelper.GetStringNullable(arguments, "fontNameFarEast");
@@ -542,7 +543,6 @@ Note: To check paragraph styles in table cells (e.g., after using add_table with
                 colorStr
             );
 
-            // Apply paragraph properties
             var paraFormat = para.ParagraphFormat;
 
             var alignment = ArgumentHelper.GetStringNullable(arguments, "alignment") ?? "left";
@@ -579,11 +579,16 @@ Note: To check paragraph styles in table cells (e.g., after using add_table with
 
                 if (lineSpacing.HasValue)
                     paraFormat.LineSpacing = lineSpacing.Value;
-                else if (lineSpacingRule == "single")
-                    paraFormat.LineSpacing = 12;
-                else if (lineSpacingRule == "oneAndHalf")
-                    paraFormat.LineSpacing = 18;
-                else if (lineSpacingRule == "double") paraFormat.LineSpacing = 24;
+                else
+                    // For Multiple rule, LineSpacing is a multiplier (1.0, 1.5, 2.0)
+                    // For AtLeast/Exactly, LineSpacing is in points
+                    paraFormat.LineSpacing = lineSpacingRule.ToLower() switch
+                    {
+                        "single" => 1.0,
+                        "oneandhalf" => 1.5,
+                        "double" => 2.0,
+                        _ => 1.0
+                    };
             }
 
             var styleName = ArgumentHelper.GetStringNullable(arguments, "styleName");
@@ -602,7 +607,6 @@ Note: To check paragraph styles in table cells (e.g., after using add_table with
                             // For empty paragraphs, clear formatting first, then apply style using StyleIdentifier
                             paraFormat.ClearFormatting();
 
-                            // Try to use StyleIdentifier if the style has one
                             try
                             {
                                 if (style.StyleIdentifier != StyleIdentifier.Normal || styleName == "Normal")
@@ -657,7 +661,6 @@ Note: To check paragraph styles in table cells (e.g., after using add_table with
                         ex);
                 }
 
-            // Apply tab stops
             var tabStops = ArgumentHelper.GetArray(arguments, "tabStops", false);
             if (tabStops is { Count: > 0 })
             {
@@ -687,7 +690,6 @@ Note: To check paragraph styles in table cells (e.g., after using add_table with
                 para.RemoveAllChildren();
                 var newRun = new Run(doc, textParam);
 
-                // Apply font settings to the new run using FontHelper (reuse underlineStr from outer scope)
                 FontHelper.Word.ApplyFontSettings(
                     newRun,
                     fontName,
@@ -708,13 +710,33 @@ Note: To check paragraph styles in table cells (e.g., after using add_table with
                 var runs = para.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
                 if (runs.Count == 0)
                 {
-                    // Paragraph has no runs, but user didn't provide text - this is OK, just apply formatting
-                    // Formatting will be applied when text is added later
+                    // For empty paragraphs, check if user specified any font settings
+                    var hasFontSettings = fontName != null || fontNameAscii != null || fontNameFarEast != null ||
+                                          fontSize.HasValue || bold.HasValue || italic.HasValue ||
+                                          underlineStr != null || colorStr != null;
+
+                    if (hasFontSettings)
+                    {
+                        // Create a sentinel Run to preserve font settings for future user input in Word
+                        // Using zero-width space (U+200B) so it's invisible but preserves formatting
+                        var sentinelRun = new Run(doc, "\u200B");
+                        FontHelper.Word.ApplyFontSettings(
+                            sentinelRun,
+                            fontName,
+                            fontNameAscii,
+                            fontNameFarEast,
+                            fontSize,
+                            bold,
+                            italic,
+                            underlineStr,
+                            colorStr
+                        );
+                        para.AppendChild(sentinelRun);
+                    }
                 }
                 else
                 {
                     foreach (var run in runs)
-                        // Apply font settings using FontHelper (reuse underlineStr from outer scope)
                         FontHelper.Word.ApplyFontSettings(
                             run,
                             fontName,
@@ -741,13 +763,13 @@ Note: To check paragraph styles in table cells (e.g., after using add_table with
     /// <summary>
     ///     Gets all paragraphs from the document
     /// </summary>
-    /// <param name="arguments">
-    ///     JSON arguments containing optional sectionIndex, includeCommentParagraphs,
-    ///     includeTextboxParagraphs
-    /// </param>
     /// <param name="path">Word document file path</param>
-    /// <returns>Formatted string with all paragraphs</returns>
-    private Task<string> GetParagraphsAsync(JsonObject? arguments, string path)
+    /// <param name="arguments">
+    ///     JSON arguments containing optional: sectionIndex, includeEmpty, styleFilter,
+    ///     includeCommentParagraphs, includeTextboxParagraphs
+    /// </param>
+    /// <returns>JSON formatted string with all paragraphs including their location, style, and text preview</returns>
+    private Task<string> GetParagraphsAsync(string path, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -758,14 +780,12 @@ Note: To check paragraph styles in table cells (e.g., after using add_table with
             var includeTextboxParagraphs = ArgumentHelper.GetBool(arguments, "includeTextboxParagraphs", true);
 
             var doc = new Document(path);
-            var sb = new StringBuilder();
 
             List<Paragraph> paragraphs;
             if (sectionIndex.HasValue)
             {
                 if (sectionIndex.Value < 0 || sectionIndex.Value >= doc.Sections.Count)
                     throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
-                // When sectionIndex is specified, only get paragraphs from that section's Body
                 paragraphs = doc.Sections[sectionIndex.Value].Body
                     .GetChildNodes(NodeType.Paragraph, includeCommentParagraphs).Cast<Paragraph>().ToList();
             }
@@ -773,12 +793,10 @@ Note: To check paragraph styles in table cells (e.g., after using add_table with
             {
                 if (includeCommentParagraphs)
                 {
-                    // Get all paragraphs including those inside Comment objects
                     paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
                 }
                 else
                 {
-                    // Get only paragraphs from document Body (visible in document body)
                     paragraphs = new List<Paragraph>();
                     foreach (var section in doc.Sections.Cast<Section>())
                     {
@@ -794,116 +812,97 @@ Note: To check paragraph styles in table cells (e.g., after using add_table with
             if (!string.IsNullOrEmpty(styleFilter))
                 paragraphs = paragraphs.Where(p => p.ParagraphFormat.Style?.Name == styleFilter).ToList();
 
-            // Filter out textbox paragraphs if includeTextboxParagraphs is false
             if (!includeTextboxParagraphs)
                 paragraphs = paragraphs.Where(p =>
                 {
-                    // Check if paragraph is inside a Shape (including nested structures)
                     var shapeAncestor = p.GetAncestor(NodeType.Shape);
                     if (shapeAncestor is Shape { ShapeType: ShapeType.TextBox })
-                        return false; // Exclude textbox paragraphs
+                        return false;
 
-                    // Also check if paragraph's parent node chain contains a Shape
-                    // This handles cases where textbox content might be structured differently
                     var currentNode = p.ParentNode;
                     while (currentNode != null)
                     {
                         if (currentNode.NodeType == NodeType.Shape)
                             if (currentNode is Shape { ShapeType: ShapeType.TextBox })
-                                return false; // Exclude textbox paragraphs
-
+                                return false;
                         currentNode = currentNode.ParentNode;
                     }
 
                     return true;
                 }).ToList();
 
-            sb.AppendLine($"=== Paragraphs ({paragraphs.Count}) ===");
-            if (!includeCommentParagraphs && !includeTextboxParagraphs)
-                sb.AppendLine(
-                    "(Only Body paragraphs - visible in document body, excluding Comment, table cell, and TextBox paragraphs)");
-            else if (!includeCommentParagraphs)
-                sb.AppendLine(
-                    "(Only Body paragraphs - visible in document body, excluding Comment and table cell paragraphs)");
-            else if (!includeTextboxParagraphs)
-                sb.AppendLine(
-                    "(Includes all paragraphs in document structure, including Comment objects and table cells, excluding TextBox paragraphs)");
-            else
-                sb.AppendLine(
-                    "(Includes all paragraphs in document structure, including Comment objects, table cells, and TextBoxes)");
-            sb.AppendLine();
-
+            var paragraphList = new List<object>();
             for (var i = 0; i < paragraphs.Count; i++)
             {
                 var para = paragraphs[i];
                 var text = para.GetText().Trim();
-
-                // Determine paragraph location
                 var location = "Body";
-                var parentNodeInfo = "";
+                string? commentInfo = null;
 
                 if (para.ParentNode != null)
                 {
-                    var parentNodeType = para.ParentNode.NodeType;
-                    parentNodeInfo = $"ParentNode: {parentNodeType}";
-
-                    // Check if paragraph is inside a Comment object
                     var commentAncestor = para.GetAncestor(NodeType.Comment);
                     if (commentAncestor != null)
                     {
-                        location = "[Comment]";
+                        location = "Comment";
                         if (commentAncestor is Comment comment)
-                            parentNodeInfo += $" (Comment ID: {comment.Id}, Author: {comment.Author})";
+                            commentInfo = $"ID: {comment.Id}, Author: {comment.Author}";
                     }
                     else
                     {
-                        // Check if paragraph is inside a TextBox/Shape
                         var shapeAncestor = para.GetAncestor(NodeType.Shape);
                         if (shapeAncestor != null)
                         {
-                            if (shapeAncestor is Shape { ShapeType: ShapeType.TextBox })
-                            {
-                                location = "[TextBox]";
-                                parentNodeInfo += " (TextBox)";
-                            }
-                            else
-                            {
-                                location = "[Shape]";
-                            }
+                            location = shapeAncestor is Shape { ShapeType: ShapeType.TextBox } ? "TextBox" : "Shape";
                         }
                         else
                         {
-                            // Check if paragraph is directly in Body
                             var bodyAncestor = para.GetAncestor(NodeType.Body);
-                            if (bodyAncestor != null && para.ParentNode.NodeType == NodeType.Body)
-                                location = "Body";
-                            else if (para.ParentNode.NodeType == NodeType.Body)
-                                location = "Body";
-                            else
-                                location = $"[{parentNodeType}]";
+                            if (bodyAncestor == null || para.ParentNode.NodeType != NodeType.Body)
+                                location = para.ParentNode.NodeType.ToString();
                         }
                     }
                 }
 
-                sb.AppendLine($"[{i}] Location: {location}");
-                sb.AppendLine($"    Style: {para.ParagraphFormat.Style?.Name ?? "(none)"}");
-                if (!string.IsNullOrEmpty(parentNodeInfo)) sb.AppendLine($"    {parentNodeInfo}");
-                sb.AppendLine(
-                    $"    Text: {text.Substring(0, Math.Min(100, text.Length))}{(text.Length > 100 ? "..." : "")}");
-                sb.AppendLine();
+                var paraInfo = new Dictionary<string, object?>
+                {
+                    ["index"] = i,
+                    ["location"] = location,
+                    ["style"] = para.ParagraphFormat.Style?.Name,
+                    ["text"] = text.Length > 100 ? text[..100] + "..." : text,
+                    ["textLength"] = text.Length
+                };
+
+                if (commentInfo != null) paraInfo["commentInfo"] = commentInfo;
+
+                paragraphList.Add(paraInfo);
             }
 
-            return sb.ToString();
+            var result = new
+            {
+                count = paragraphs.Count,
+                filters = new
+                {
+                    sectionIndex,
+                    includeEmpty,
+                    styleFilter,
+                    includeCommentParagraphs,
+                    includeTextboxParagraphs
+                },
+                paragraphs = paragraphList
+            };
+
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 
     /// <summary>
     ///     Gets format information for a paragraph
     /// </summary>
-    /// <param name="arguments">JSON arguments containing paragraphIndex, optional sectionIndex</param>
     /// <param name="path">Word document file path</param>
-    /// <returns>Formatted string with paragraph format details</returns>
-    private Task<string> GetParagraphFormatAsync(JsonObject? arguments, string path)
+    /// <param name="arguments">JSON arguments containing paragraphIndex (0-based), optional includeRunDetails</param>
+    /// <returns>JSON formatted string with paragraph format details including alignment, indentation, spacing, and font info</returns>
+    private Task<string> GetParagraphFormatAsync(string path, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -915,188 +914,184 @@ Note: To check paragraph styles in table cells (e.g., after using add_table with
 
             if (paragraphIndex < 0 || paragraphIndex >= paragraphs.Count)
                 throw new ArgumentException(
-                    $"Paragraph index {paragraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
+                    $"Paragraph index {paragraphIndex} is out of range. The document has {paragraphs.Count} paragraphs (valid indices: 0-{paragraphs.Count - 1}).");
 
             var para = paragraphs[paragraphIndex] as Paragraph;
             if (para == null)
                 throw new InvalidOperationException($"Unable to find paragraph at index {paragraphIndex}");
 
-            var result = new StringBuilder();
-            result.AppendLine($"=== Paragraph #{paragraphIndex} Format Information ===\n");
-
-            result.AppendLine("[Basic Information]");
-            result.AppendLine($"Paragraph text: {para.GetText().Trim()}");
-            result.AppendLine($"Text length: {para.GetText().Trim().Length} characters");
-            result.AppendLine($"Run count: {para.Runs.Count}");
-            result.AppendLine();
-
             var format = para.ParagraphFormat;
-            result.AppendLine("[Paragraph Format]");
-            result.AppendLine($"Style name: {format.StyleName}");
-            result.AppendLine($"Alignment: {format.Alignment}");
-            result.AppendLine($"Left indent: {format.LeftIndent:F2} pt ({format.LeftIndent / 28.35:F2} cm)");
-            result.AppendLine($"Right indent: {format.RightIndent:F2} pt ({format.RightIndent / 28.35:F2} cm)");
-            result.AppendLine(
-                $"First line indent: {format.FirstLineIndent:F2} pt ({format.FirstLineIndent / 28.35:F2} cm)");
-            result.AppendLine($"Space before: {format.SpaceBefore:F2} pt");
-            result.AppendLine($"Space after: {format.SpaceAfter:F2} pt");
-            result.AppendLine($"Line spacing: {format.LineSpacing:F2} pt");
-            result.AppendLine($"Line spacing rule: {format.LineSpacingRule}");
-            result.AppendLine();
+            var text = para.GetText().Trim();
 
+            // Build result object
+            var resultDict = new Dictionary<string, object?>
+            {
+                ["paragraphIndex"] = paragraphIndex,
+                ["text"] = text,
+                ["textLength"] = text.Length,
+                ["runCount"] = para.Runs.Count,
+                ["paragraphFormat"] = new
+                {
+                    styleName = format.StyleName,
+                    alignment = format.Alignment.ToString(),
+                    leftIndent = Math.Round(format.LeftIndent, 2),
+                    rightIndent = Math.Round(format.RightIndent, 2),
+                    firstLineIndent = Math.Round(format.FirstLineIndent, 2),
+                    spaceBefore = Math.Round(format.SpaceBefore, 2),
+                    spaceAfter = Math.Round(format.SpaceAfter, 2),
+                    lineSpacing = Math.Round(format.LineSpacing, 2),
+                    lineSpacingRule = format.LineSpacingRule.ToString()
+                }
+            };
+
+            // List format
             if (para.ListFormat is { IsListItem: true })
-            {
-                result.AppendLine("[List Format]");
-                result.AppendLine("Is list item: Yes");
-                result.AppendLine($"List level: {para.ListFormat.ListLevelNumber}");
-                if (para.ListFormat.List != null) result.AppendLine($"List ID: {para.ListFormat.List.ListId}");
-                result.AppendLine();
-            }
+                resultDict["listFormat"] = new
+                {
+                    isListItem = true,
+                    listLevel = para.ListFormat.ListLevelNumber,
+                    listId = para.ListFormat.List?.ListId
+                };
 
-            if (format.Borders.Count > 0)
-            {
-                result.AppendLine("[Borders]");
-                if (format.Borders.Top.LineStyle != LineStyle.None)
-                    result.AppendLine(
-                        $"Top border: {format.Borders.Top.LineStyle}, {format.Borders.Top.LineWidth} pt, Color: {format.Borders.Top.Color.Name}");
-                if (format.Borders.Bottom.LineStyle != LineStyle.None)
-                    result.AppendLine(
-                        $"Bottom border: {format.Borders.Bottom.LineStyle}, {format.Borders.Bottom.LineWidth} pt, Color: {format.Borders.Bottom.Color.Name}");
-                if (format.Borders.Left.LineStyle != LineStyle.None)
-                    result.AppendLine(
-                        $"Left border: {format.Borders.Left.LineStyle}, {format.Borders.Left.LineWidth} pt, Color: {format.Borders.Left.Color.Name}");
-                if (format.Borders.Right.LineStyle != LineStyle.None)
-                    result.AppendLine(
-                        $"Right border: {format.Borders.Right.LineStyle}, {format.Borders.Right.LineWidth} pt, Color: {format.Borders.Right.Color.Name}");
-                result.AppendLine();
-            }
+            // Borders
+            var borders = new Dictionary<string, object>();
+            if (format.Borders.Top.LineStyle != LineStyle.None)
+                borders["top"] = new
+                {
+                    lineStyle = format.Borders.Top.LineStyle.ToString(), lineWidth = format.Borders.Top.LineWidth,
+                    color = format.Borders.Top.Color.Name
+                };
+            if (format.Borders.Bottom.LineStyle != LineStyle.None)
+                borders["bottom"] = new
+                {
+                    lineStyle = format.Borders.Bottom.LineStyle.ToString(), lineWidth = format.Borders.Bottom.LineWidth,
+                    color = format.Borders.Bottom.Color.Name
+                };
+            if (format.Borders.Left.LineStyle != LineStyle.None)
+                borders["left"] = new
+                {
+                    lineStyle = format.Borders.Left.LineStyle.ToString(), lineWidth = format.Borders.Left.LineWidth,
+                    color = format.Borders.Left.Color.Name
+                };
+            if (format.Borders.Right.LineStyle != LineStyle.None)
+                borders["right"] = new
+                {
+                    lineStyle = format.Borders.Right.LineStyle.ToString(), lineWidth = format.Borders.Right.LineWidth,
+                    color = format.Borders.Right.Color.Name
+                };
+            if (borders.Count > 0)
+                resultDict["borders"] = borders;
 
+            // Background color
             if (format.Shading.BackgroundPatternColor.ToArgb() != Color.Empty.ToArgb())
             {
-                result.AppendLine("[Background Color]");
                 var color = format.Shading.BackgroundPatternColor;
-                result.AppendLine($"Background color: #{color.R:X2}{color.G:X2}{color.B:X2}");
-                result.AppendLine();
+                resultDict["backgroundColor"] = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
             }
 
+            // Tab stops
             if (format.TabStops.Count > 0)
             {
-                result.AppendLine("[Tab Stops]");
+                var tabStops = new List<object>();
                 for (var i = 0; i < format.TabStops.Count; i++)
                 {
                     var tab = format.TabStops[i];
-                    result.AppendLine(
-                        $"  Tab {i + 1}: Position={tab.Position:F2} pt, Alignment={tab.Alignment}, Leader={tab.Leader}");
+                    tabStops.Add(new
+                    {
+                        position = Math.Round(tab.Position, 2), alignment = tab.Alignment.ToString(),
+                        leader = tab.Leader.ToString()
+                    });
                 }
 
-                result.AppendLine();
+                resultDict["tabStops"] = tabStops;
             }
 
+            // First run font format
             if (para.Runs.Count > 0)
             {
                 var firstRun = para.Runs[0];
-                result.AppendLine("[Font Format (First Run)]");
+                var fontInfo = new Dictionary<string, object?>
+                {
+                    ["fontSize"] = firstRun.Font.Size
+                };
 
                 if (firstRun.Font.NameAscii != firstRun.Font.NameFarEast)
                 {
-                    result.AppendLine($"Font (ASCII): {firstRun.Font.NameAscii}");
-                    result.AppendLine($"Font (Far East): {firstRun.Font.NameFarEast}");
+                    fontInfo["fontAscii"] = firstRun.Font.NameAscii;
+                    fontInfo["fontFarEast"] = firstRun.Font.NameFarEast;
                 }
                 else
                 {
-                    result.AppendLine($"Font: {firstRun.Font.Name}");
+                    fontInfo["font"] = firstRun.Font.Name;
                 }
 
-                result.AppendLine($"Font size: {firstRun.Font.Size} pt");
-
-                if (firstRun.Font.Bold) result.AppendLine("Bold: Yes");
-                if (firstRun.Font.Italic) result.AppendLine("Italic: Yes");
+                if (firstRun.Font.Bold) fontInfo["bold"] = true;
+                if (firstRun.Font.Italic) fontInfo["italic"] = true;
                 if (firstRun.Font.Underline != Underline.None)
-                    result.AppendLine($"Underline: {firstRun.Font.Underline}");
-                if (firstRun.Font.StrikeThrough) result.AppendLine("Strikethrough: Yes");
-                if (firstRun.Font.Superscript) result.AppendLine("Superscript: Yes");
-                if (firstRun.Font.Subscript) result.AppendLine("Subscript: Yes");
-
+                    fontInfo["underline"] = firstRun.Font.Underline.ToString();
+                if (firstRun.Font.StrikeThrough) fontInfo["strikethrough"] = true;
+                if (firstRun.Font.Superscript) fontInfo["superscript"] = true;
+                if (firstRun.Font.Subscript) fontInfo["subscript"] = true;
                 if (firstRun.Font.Color.ToArgb() != Color.Empty.ToArgb())
-                {
-                    var color = firstRun.Font.Color;
-                    result.AppendLine($"Color: #{color.R:X2}{color.G:X2}{color.B:X2}");
-                }
-
+                    fontInfo["color"] =
+                        $"#{firstRun.Font.Color.R:X2}{firstRun.Font.Color.G:X2}{firstRun.Font.Color.B:X2}";
                 if (firstRun.Font.HighlightColor != Color.Empty)
-                    result.AppendLine($"Highlight: {firstRun.Font.HighlightColor.Name}");
-                result.AppendLine();
+                    fontInfo["highlightColor"] = firstRun.Font.HighlightColor.Name;
+
+                resultDict["fontFormat"] = fontInfo;
             }
 
+            // Run details
             if (includeRunDetails && para.Runs.Count > 1)
             {
-                result.AppendLine("[Run Details]");
-                result.AppendLine($"Total {para.Runs.Count} Runs:");
-
+                var runs = new List<object>();
                 for (var i = 0; i < Math.Min(para.Runs.Count, 10); i++)
                 {
                     var run = para.Runs[i];
-                    result.AppendLine($"\n  Run #{i}:");
-                    result.AppendLine($"    Text: {run.Text.Replace("\r", "\\r").Replace("\n", "\\n")}");
+                    var runInfo = new Dictionary<string, object?>
+                    {
+                        ["index"] = i,
+                        ["text"] = run.Text.Replace("\r", "\\r").Replace("\n", "\\n"),
+                        ["fontSize"] = run.Font.Size
+                    };
 
                     if (run.Font.NameAscii != run.Font.NameFarEast)
                     {
-                        result.AppendLine($"    Font (ASCII): {run.Font.NameAscii}");
-                        result.AppendLine($"    Font (Far East): {run.Font.NameFarEast}");
+                        runInfo["fontAscii"] = run.Font.NameAscii;
+                        runInfo["fontFarEast"] = run.Font.NameFarEast;
                     }
                     else
                     {
-                        result.AppendLine($"    Font: {run.Font.Name}");
+                        runInfo["font"] = run.Font.Name;
                     }
 
-                    result.AppendLine($"    Font size: {run.Font.Size} pt");
+                    if (run.Font.Bold) runInfo["bold"] = true;
+                    if (run.Font.Italic) runInfo["italic"] = true;
+                    if (run.Font.Underline != Underline.None) runInfo["underline"] = run.Font.Underline.ToString();
 
-                    var styles = new List<string>();
-                    if (run.Font.Bold) styles.Add("Bold");
-                    if (run.Font.Italic) styles.Add("Italic");
-                    if (run.Font.Underline != Underline.None) styles.Add($"Underline({run.Font.Underline})");
-                    if (styles.Count > 0)
-                        result.AppendLine($"    Styles: {string.Join(", ", styles)}");
+                    runs.Add(runInfo);
                 }
 
-                if (para.Runs.Count > 10) result.AppendLine($"\n  ... {para.Runs.Count - 10} more Runs (omitted)");
-                result.AppendLine();
+                resultDict["runs"] = new
+                {
+                    total = para.Runs.Count,
+                    displayed = Math.Min(para.Runs.Count, 10),
+                    details = runs
+                };
             }
 
-            result.AppendLine("[JSON Format (for word_edit_paragraph)]");
-            result.AppendLine("{");
-            result.AppendLine($"  \"alignment\": \"{format.Alignment.ToString().ToLower()}\",");
-            result.AppendLine($"  \"leftIndent\": {format.LeftIndent:F2},");
-            result.AppendLine($"  \"rightIndent\": {format.RightIndent:F2},");
-            result.AppendLine($"  \"firstLineIndent\": {format.FirstLineIndent:F2},");
-            result.AppendLine($"  \"spaceBefore\": {format.SpaceBefore:F2},");
-            result.AppendLine($"  \"spaceAfter\": {format.SpaceAfter:F2},");
-            result.AppendLine($"  \"lineSpacing\": {format.LineSpacing:F2}");
-
-            if (para.Runs.Count > 0)
-            {
-                var run = para.Runs[0];
-                result.AppendLine($"  \"fontNameAscii\": \"{run.Font.NameAscii}\",");
-                result.AppendLine($"  \"fontNameFarEast\": \"{run.Font.NameFarEast}\",");
-                result.AppendLine($"  \"fontSize\": {run.Font.Size},");
-                result.AppendLine($"  \"bold\": {run.Font.Bold.ToString().ToLower()},");
-                result.AppendLine($"  \"italic\": {run.Font.Italic.ToString().ToLower()}");
-            }
-
-            result.AppendLine("}");
-
-            return result.ToString();
+            return JsonSerializer.Serialize(resultDict, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 
     /// <summary>
-    ///     Copies paragraph format from source to target
+    ///     Copies paragraph format from source to target paragraph
     /// </summary>
-    /// <param name="arguments">JSON arguments containing sourceIndex, targetIndex, optional sectionIndex</param>
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
-    /// <returns>Success message</returns>
-    private Task<string> CopyParagraphFormatAsync(JsonObject? arguments, string path, string outputPath)
+    /// <param name="arguments">JSON arguments containing sourceParagraphIndex and targetParagraphIndex (0-based)</param>
+    /// <returns>Success message with source and target paragraph indices</returns>
+    private Task<string> CopyParagraphFormatAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -1108,11 +1103,11 @@ Note: To check paragraph styles in table cells (e.g., after using add_table with
 
             if (sourceParagraphIndex < 0 || sourceParagraphIndex >= paragraphs.Count)
                 throw new ArgumentException(
-                    $"Source paragraph index {sourceParagraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
+                    $"Source paragraph index {sourceParagraphIndex} is out of range. The document has {paragraphs.Count} paragraphs (valid indices: 0-{paragraphs.Count - 1}).");
 
             if (targetParagraphIndex < 0 || targetParagraphIndex >= paragraphs.Count)
                 throw new ArgumentException(
-                    $"Target paragraph index {targetParagraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
+                    $"Target paragraph index {targetParagraphIndex} is out of range. The document has {paragraphs.Count} paragraphs (valid indices: 0-{paragraphs.Count - 1}).");
 
             var sourcePara = paragraphs[sourceParagraphIndex] as Paragraph;
             var targetPara = paragraphs[targetParagraphIndex] as Paragraph;
@@ -1149,13 +1144,13 @@ Note: To check paragraph styles in table cells (e.g., after using add_table with
     }
 
     /// <summary>
-    ///     Merges multiple paragraphs into one
+    ///     Merges multiple paragraphs into one by combining their content
     /// </summary>
-    /// <param name="arguments">JSON arguments containing startIndex, endIndex, optional sectionIndex</param>
     /// <param name="path">Word document file path</param>
     /// <param name="outputPath">Output file path</param>
-    /// <returns>Success message</returns>
-    private Task<string> MergeParagraphsAsync(JsonObject? arguments, string path, string outputPath)
+    /// <param name="arguments">JSON arguments containing startParagraphIndex and endParagraphIndex (0-based, inclusive)</param>
+    /// <returns>Success message with merge range and remaining paragraph count</returns>
+    private Task<string> MergeParagraphsAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -1167,11 +1162,11 @@ Note: To check paragraph styles in table cells (e.g., after using add_table with
 
             if (startParagraphIndex < 0 || startParagraphIndex >= paragraphs.Count)
                 throw new ArgumentException(
-                    $"Start paragraph index {startParagraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
+                    $"Start paragraph index {startParagraphIndex} is out of range. The document has {paragraphs.Count} paragraphs (valid indices: 0-{paragraphs.Count - 1}).");
 
             if (endParagraphIndex < 0 || endParagraphIndex >= paragraphs.Count)
                 throw new ArgumentException(
-                    $"End paragraph index {endParagraphIndex} is out of range (document has {paragraphs.Count} paragraphs)");
+                    $"End paragraph index {endParagraphIndex} is out of range. The document has {paragraphs.Count} paragraphs (valid indices: 0-{paragraphs.Count - 1}).");
 
             if (startParagraphIndex > endParagraphIndex)
                 throw new ArgumentException(
@@ -1210,6 +1205,11 @@ Note: To check paragraph styles in table cells (e.g., after using add_table with
         });
     }
 
+    /// <summary>
+    ///     Converts an alignment string to ParagraphAlignment enum
+    /// </summary>
+    /// <param name="alignment">Alignment string: left, center, right, or justify</param>
+    /// <returns>Corresponding ParagraphAlignment enum value, defaults to Left</returns>
     private ParagraphAlignment GetAlignment(string alignment)
     {
         return alignment.ToLower() switch
@@ -1222,20 +1222,29 @@ Note: To check paragraph styles in table cells (e.g., after using add_table with
         };
     }
 
+    /// <summary>
+    ///     Converts a line spacing rule string to LineSpacingRule enum.
+    ///     Note: For "single", "oneAndHalf", and "double", we use Multiple rule
+    ///     with appropriate LineSpacing values (1.0, 1.5, 2.0 respectively as multipliers).
+    ///     Using Exactly for these would cause fixed line height issues when font size changes.
+    /// </summary>
+    /// <param name="rule">Line spacing rule string: single, oneandhalf, double, atleast, exactly, or multiple</param>
+    /// <returns>Corresponding LineSpacingRule enum value, defaults to Multiple</returns>
     private LineSpacingRule GetLineSpacingRule(string rule)
     {
         return rule.ToLower() switch
         {
-            "single" => LineSpacingRule.Exactly,
-            "oneAndHalf" => LineSpacingRule.Exactly,
-            "double" => LineSpacingRule.Exactly,
-            "atLeast" => LineSpacingRule.AtLeast,
+            "atleast" => LineSpacingRule.AtLeast,
             "exactly" => LineSpacingRule.Exactly,
-            "multiple" => LineSpacingRule.Multiple,
-            _ => LineSpacingRule.Exactly
+            _ => LineSpacingRule.Multiple
         };
     }
 
+    /// <summary>
+    ///     Converts a tab alignment string to TabAlignment enum
+    /// </summary>
+    /// <param name="alignment">Tab alignment string: left, center, right, decimal, bar, or clear</param>
+    /// <returns>Corresponding TabAlignment enum value, defaults to Left</returns>
     private TabAlignment GetTabAlignment(string alignment)
     {
         return alignment.ToLower() switch
@@ -1250,6 +1259,11 @@ Note: To check paragraph styles in table cells (e.g., after using add_table with
         };
     }
 
+    /// <summary>
+    ///     Converts a tab leader string to TabLeader enum
+    /// </summary>
+    /// <param name="leader">Tab leader string: none, dots, dashes, line, heavy, or middledot</param>
+    /// <returns>Corresponding TabLeader enum value, defaults to None</returns>
     private TabLeader GetTabLeader(string leader)
     {
         return leader.ToLower() switch
@@ -1259,7 +1273,7 @@ Note: To check paragraph styles in table cells (e.g., after using add_table with
             "dashes" => TabLeader.Dashes,
             "line" => TabLeader.Line,
             "heavy" => TabLeader.Heavy,
-            "middleDot" => TabLeader.MiddleDot,
+            "middledot" => TabLeader.MiddleDot,
             _ => TabLeader.None
         };
     }
