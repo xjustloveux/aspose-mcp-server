@@ -1,4 +1,4 @@
-﻿using System.Text;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Slides;
 using Aspose.Slides.Export;
@@ -99,15 +99,16 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
         var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
 
         return operation.ToLower() switch
         {
-            "set" => await SetShapeFormatAsync(arguments, path, slideIndex, shapeIndex),
-            "get" => await GetShapeFormatAsync(arguments, path, slideIndex, shapeIndex),
-            "set_line" => await SetShapeLineAsync(arguments, path, slideIndex, shapeIndex),
-            "set_fill" => await SetShapeFillAsync(arguments, path, slideIndex, shapeIndex),
+            "set" => await SetShapeFormatAsync(path, outputPath, slideIndex, shapeIndex, arguments),
+            "get" => await GetShapeFormatAsync(path, slideIndex, shapeIndex),
+            "set_line" => await SetShapeLineAsync(path, outputPath, slideIndex, shapeIndex, arguments),
+            "set_fill" => await SetShapeFillAsync(path, outputPath, slideIndex, shapeIndex, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -115,12 +116,14 @@ Usage examples:
     /// <summary>
     ///     Sets shape format properties
     /// </summary>
-    /// <param name="arguments">JSON arguments containing optional fillColor, lineColor, lineWidth, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
     /// <param name="shapeIndex">Shape index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing optional fillColor, lineColor, lineWidth</param>
     /// <returns>Success message</returns>
-    private Task<string> SetShapeFormatAsync(JsonObject? arguments, string path, int slideIndex, int shapeIndex)
+    private Task<string> SetShapeFormatAsync(string path, string outputPath, int slideIndex, int shapeIndex,
+        JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -156,88 +159,112 @@ Usage examples:
                 shape.LineFormat.FillFormat.SolidFillColor.Color = color;
             }
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Shape format updated: slide {slideIndex}, shape {shapeIndex}";
+            return $"Shape format updated: slide {slideIndex}, shape {shapeIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Gets shape format information
     /// </summary>
-    /// <param name="_">Unused parameter</param>
     /// <param name="path">PowerPoint file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
     /// <param name="shapeIndex">Shape index (0-based)</param>
-    /// <returns>Formatted string with shape format details</returns>
-    private Task<string> GetShapeFormatAsync(JsonObject? _, string path, int slideIndex, int shapeIndex)
+    /// <returns>JSON string with shape format details</returns>
+    private Task<string> GetShapeFormatAsync(string path, int slideIndex, int shapeIndex)
     {
         return Task.Run(() =>
         {
             using var presentation = new Presentation(path);
             var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
             var shape = PowerPointHelper.GetShape(slide, shapeIndex);
-            var sb = new StringBuilder();
-
-            sb.AppendLine($"Shape [{shapeIndex}] Format:");
-            sb.AppendLine($"  Type: {shape.GetType().Name}");
-            sb.AppendLine($"  Position: X={shape.X}, Y={shape.Y}");
-            sb.AppendLine($"  Size: Width={shape.Width}, Height={shape.Height}");
-            sb.AppendLine($"  Rotation: {shape.Rotation}°");
 
             // Fill format
-            sb.AppendLine($"  Fill Type: {shape.FillFormat.FillType}");
+            string? fillColorHex = null;
             if (shape.FillFormat.FillType == FillType.Solid)
             {
                 var color = shape.FillFormat.SolidFillColor.Color;
-                sb.AppendLine(
-                    $"  Fill Color: RGB({color.R}, {color.G}, {color.B}), Hex: #{color.R:X2}{color.G:X2}{color.B:X2}");
+                fillColorHex = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
             }
 
             // Line format
-            sb.AppendLine($"  Line Width: {shape.LineFormat.Width}");
+            string? lineColorHex = null;
             if (shape.LineFormat.FillFormat.FillType == FillType.Solid)
             {
                 var color = shape.LineFormat.FillFormat.SolidFillColor.Color;
-                sb.AppendLine(
-                    $"  Line Color: RGB({color.R}, {color.G}, {color.B}), Hex: #{color.R:X2}{color.G:X2}{color.B:X2}");
+                lineColorHex = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
             }
 
             // Text format (if applicable)
+            object? textFormat = null;
             if (shape is IAutoShape { TextFrame: not null } autoShape)
             {
-                sb.AppendLine($"  Text: {autoShape.TextFrame.Text}");
+                string? fontName = null;
+                float? fontSize = null;
+                bool? isBold = null;
+                bool? isItalic = null;
+
                 if (autoShape.TextFrame.Paragraphs.Count > 0)
                 {
                     var firstPara = autoShape.TextFrame.Paragraphs[0];
                     if (firstPara.Portions.Count > 0)
                     {
                         var portion = firstPara.Portions[0];
-                        sb.AppendLine($"  Font: {portion.PortionFormat.LatinFont?.FontName ?? "(default)"}");
-                        sb.AppendLine($"  Font Size: {portion.PortionFormat.FontHeight}");
-                        sb.AppendLine(
-                            $"  Bold: {portion.PortionFormat.FontBold}, Italic: {portion.PortionFormat.FontItalic}");
+                        fontName = portion.PortionFormat.LatinFont?.FontName;
+                        fontSize = portion.PortionFormat.FontHeight;
+                        isBold = portion.PortionFormat.FontBold == NullableBool.True;
+                        isItalic = portion.PortionFormat.FontItalic == NullableBool.True;
                     }
                 }
+
+                textFormat = new
+                {
+                    text = autoShape.TextFrame.Text,
+                    fontName,
+                    fontSize,
+                    isBold,
+                    isItalic
+                };
             }
 
             // Hyperlink
+            string? hyperlink = null;
             if (shape.HyperlinkClick != null)
-            {
-                var url = shape.HyperlinkClick.ExternalUrl ?? (shape.HyperlinkClick.TargetSlide != null
+                hyperlink = shape.HyperlinkClick.ExternalUrl ?? (shape.HyperlinkClick.TargetSlide != null
                     ? $"Slide {presentation.Slides.IndexOf(shape.HyperlinkClick.TargetSlide)}"
                     : "Internal link");
-                sb.AppendLine($"  Hyperlink: {url}");
-            }
 
-            return sb.ToString();
+            var result = new
+            {
+                slideIndex,
+                shapeIndex,
+                type = shape.GetType().Name,
+                position = new { x = shape.X, y = shape.Y },
+                size = new { width = shape.Width, height = shape.Height },
+                rotation = shape.Rotation,
+                fill = new
+                {
+                    type = shape.FillFormat.FillType.ToString(),
+                    color = fillColorHex
+                },
+                line = new
+                {
+                    width = shape.LineFormat.Width,
+                    color = lineColorHex
+                },
+                textFormat,
+                hyperlink
+            };
+
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 
     /// <summary>
     ///     Sets shape line properties
     /// </summary>
-    private Task<string> SetShapeLineAsync(JsonObject? arguments, string path, int slideIndex, int shapeIndex)
+    private Task<string> SetShapeLineAsync(string path, string outputPath, int slideIndex, int shapeIndex,
+        JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -257,16 +284,16 @@ Usage examples:
 
             if (lineWidth.HasValue) shape.LineFormat.Width = lineWidth.Value;
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Shape line format updated: slide {slideIndex}, shape {shapeIndex}";
+            return $"Shape line format updated: slide {slideIndex}, shape {shapeIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Sets shape fill properties
     /// </summary>
-    private Task<string> SetShapeFillAsync(JsonObject? arguments, string path, int slideIndex, int shapeIndex)
+    private Task<string> SetShapeFillAsync(string path, string outputPath, int slideIndex, int shapeIndex,
+        JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -284,9 +311,8 @@ Usage examples:
                 shape.FillFormat.SolidFillColor.Color = fillColor;
             }
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Shape fill format updated: slide {slideIndex}, shape {shapeIndex}";
+            return $"Shape fill format updated: slide {slideIndex}, shape {shapeIndex}. Output: {outputPath}";
         });
     }
 }

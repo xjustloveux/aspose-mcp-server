@@ -78,6 +78,7 @@ Usage examples:
         return Task.Run(() =>
         {
             var path = ArgumentHelper.GetAndValidatePath(arguments);
+            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var slideIndicesArray = ArgumentHelper.GetArray(arguments, "slideIndices", false);
             var slideIndices = slideIndicesArray?.Select(x => x?.GetValue<int>() ?? -1).ToArray();
             var fontName = ArgumentHelper.GetStringNullable(arguments, "fontName");
@@ -121,9 +122,8 @@ Usage examples:
                         }
             }
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Batch formatted text, applied to {targets.Length} slides";
+            return $"Batch formatted text applied to {targets.Length} slides. Output: {outputPath}";
         });
     }
 }

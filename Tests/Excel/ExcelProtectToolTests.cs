@@ -109,7 +109,7 @@ public class ExcelProtectToolTests : ExcelTestBase
         // Assert
         Assert.NotNull(result);
         Assert.NotEmpty(result);
-        Assert.Contains("Protection", result, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("worksheets", result);
     }
 
     [Fact]

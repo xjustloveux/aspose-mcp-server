@@ -1,4 +1,4 @@
-﻿using System.Text;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
@@ -96,13 +96,14 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
 
         return operation.ToLower() switch
         {
-            "protect" => await ProtectAsync(arguments, path),
-            "unprotect" => await UnprotectAsync(arguments, path),
-            "get" => await GetProtectionAsync(arguments, path),
-            "set_cell_locked" => await SetCellLockedAsync(arguments, path),
+            "protect" => await ProtectAsync(path, outputPath, arguments),
+            "unprotect" => await UnprotectAsync(path, outputPath, arguments),
+            "get" => await GetProtectionAsync(path, arguments),
+            "set_cell_locked" => await SetCellLockedAsync(path, outputPath, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -110,14 +111,14 @@ Usage examples:
     /// <summary>
     ///     Protects workbook or worksheet with password
     /// </summary>
-    /// <param name="arguments">JSON arguments containing password, optional sheetIndex, protectWorkbook, protectionType</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing password, optional sheetIndex, protectWorkbook, protectionType</param>
     /// <returns>Success message</returns>
-    private Task<string> ProtectAsync(JsonObject? arguments, string path)
+    private Task<string> ProtectAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var password = ArgumentHelper.GetString(arguments, "password");
             var sheetIndex = ArgumentHelper.GetIntNullable(arguments, "sheetIndex");
             var protectWorkbook = ArgumentHelper.GetBool(arguments, "protectWorkbook", false);
@@ -150,24 +151,21 @@ Usage examples:
 
             var target = protectWorkbook ? "workbook" :
                 sheetIndex.HasValue ? $"worksheet {sheetIndex.Value}" : "workbook";
-            var result = $"Excel {target} protected with password: {outputPath}";
-            if (protectWorkbook)
-                result += $"\nProtect structure: {protectStructure}\nProtect windows: {protectWindows}";
-            return result;
+            return $"Excel {target} protected with password successfully. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Removes protection from workbook or worksheet
     /// </summary>
-    /// <param name="arguments">JSON arguments containing password, optional sheetIndex</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing password, optional sheetIndex</param>
     /// <returns>Success message</returns>
-    private Task<string> UnprotectAsync(JsonObject? arguments, string path)
+    private Task<string> UnprotectAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var password = ArgumentHelper.GetStringNullable(arguments, "password");
             var sheetIndex = ArgumentHelper.GetIntNullable(arguments, "sheetIndex");
 
@@ -184,7 +182,7 @@ Usage examples:
                 if (!wasProtected)
                 {
                     workbook.Save(outputPath);
-                    return $"Worksheet '{worksheet.Name}' is not protected. No password needed.\nOutput: {outputPath}";
+                    return $"Worksheet '{worksheet.Name}' is not protected. Output: {outputPath}";
                 }
 
                 try
@@ -199,89 +197,96 @@ Usage examples:
                 }
 
                 workbook.Save(outputPath);
-                return $"Worksheet protection removed: {worksheet.Name}\nOutput: {outputPath}";
+                return $"Worksheet '{worksheet.Name}' protection removed successfully. Output: {outputPath}";
             }
 
             workbook.Unprotect(password);
             workbook.Save(outputPath);
-            return $"Workbook protection removed\nOutput: {outputPath}";
+            return $"Workbook protection removed successfully. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Gets protection status for workbook or worksheet
     /// </summary>
-    /// <param name="arguments">JSON arguments containing optional sheetIndex</param>
     /// <param name="path">Excel file path</param>
-    /// <returns>Formatted string with protection status</returns>
-    private Task<string> GetProtectionAsync(JsonObject? arguments, string path)
+    /// <param name="arguments">JSON arguments containing optional sheetIndex</param>
+    /// <returns>JSON formatted string with protection status</returns>
+    private Task<string> GetProtectionAsync(string path, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
             var sheetIndex = ArgumentHelper.GetIntNullable(arguments, "sheetIndex");
 
             using var workbook = new Workbook(path);
-            var result = new StringBuilder();
-
-            result.AppendLine("=== Excel Protection Settings Information ===\n");
-
-            result.AppendLine("[Workbook Protection]");
-            result.AppendLine("Note: Workbook protection status needs to be checked through protection methods");
-            result.AppendLine();
+            var worksheets = new List<object>();
 
             if (sheetIndex.HasValue)
             {
                 if (sheetIndex.Value < 0 || sheetIndex.Value >= workbook.Worksheets.Count)
                     throw new ArgumentException(
                         $"Worksheet index {sheetIndex.Value} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
-                AppendSheetProtection(result, workbook.Worksheets[sheetIndex.Value], sheetIndex.Value);
+                worksheets.Add(GetSheetProtectionInfo(workbook.Worksheets[sheetIndex.Value], sheetIndex.Value));
             }
             else
             {
                 for (var i = 0; i < workbook.Worksheets.Count; i++)
-                {
-                    AppendSheetProtection(result, workbook.Worksheets[i], i);
-                    if (i < workbook.Worksheets.Count - 1) result.AppendLine();
-                }
+                    worksheets.Add(GetSheetProtectionInfo(workbook.Worksheets[i], i));
             }
 
-            return result.ToString();
+            var result = new
+            {
+                count = worksheets.Count,
+                worksheets
+            };
+
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 
-    private void AppendSheetProtection(StringBuilder result, Worksheet worksheet, int index)
+    /// <summary>
+    ///     Gets protection information for a worksheet
+    /// </summary>
+    /// <param name="worksheet">Worksheet to get protection info from</param>
+    /// <param name="index">Worksheet index</param>
+    /// <returns>Anonymous object with protection details</returns>
+    private object GetSheetProtectionInfo(Worksheet worksheet, int index)
     {
         var protection = worksheet.Protection;
-        result.AppendLine($"[Worksheet {index}: {worksheet.Name}]");
-        result.AppendLine($"Protection status: {(protection.IsProtectedWithPassword ? "Protected" : "Not protected")}");
-        result.AppendLine($"Allow selecting locked cells: {protection.AllowSelectingLockedCell}");
-        result.AppendLine($"Allow selecting unlocked cells: {protection.AllowSelectingUnlockedCell}");
-        result.AppendLine($"Allow formatting cells: {protection.AllowFormattingCell}");
-        result.AppendLine($"Allow formatting columns: {protection.AllowFormattingColumn}");
-        result.AppendLine($"Allow formatting rows: {protection.AllowFormattingRow}");
-        result.AppendLine($"Allow inserting columns: {protection.AllowInsertingColumn}");
-        result.AppendLine($"Allow inserting rows: {protection.AllowInsertingRow}");
-        result.AppendLine($"Allow inserting hyperlinks: {protection.AllowInsertingHyperlink}");
-        result.AppendLine($"Allow deleting columns: {protection.AllowDeletingColumn}");
-        result.AppendLine($"Allow deleting rows: {protection.AllowDeletingRow}");
-        result.AppendLine($"Allow sorting: {protection.AllowSorting}");
-        result.AppendLine($"Allow auto filtering: {protection.AllowFiltering}");
-        result.AppendLine($"Allow using pivot tables: {protection.AllowUsingPivotTable}");
-        result.AppendLine($"Allow editing objects: {protection.AllowEditingObject}");
-        result.AppendLine($"Allow editing scenarios: {protection.AllowEditingScenario}");
+        return new
+        {
+            index,
+            name = worksheet.Name,
+            isProtected = protection.IsProtectedWithPassword,
+            allowSelectingLockedCell = protection.AllowSelectingLockedCell,
+            allowSelectingUnlockedCell = protection.AllowSelectingUnlockedCell,
+            allowFormattingCell = protection.AllowFormattingCell,
+            allowFormattingColumn = protection.AllowFormattingColumn,
+            allowFormattingRow = protection.AllowFormattingRow,
+            allowInsertingColumn = protection.AllowInsertingColumn,
+            allowInsertingRow = protection.AllowInsertingRow,
+            allowInsertingHyperlink = protection.AllowInsertingHyperlink,
+            allowDeletingColumn = protection.AllowDeletingColumn,
+            allowDeletingRow = protection.AllowDeletingRow,
+            allowSorting = protection.AllowSorting,
+            allowFiltering = protection.AllowFiltering,
+            allowUsingPivotTable = protection.AllowUsingPivotTable,
+            allowEditingObject = protection.AllowEditingObject,
+            allowEditingScenario = protection.AllowEditingScenario
+        };
     }
 
     /// <summary>
     ///     Sets cell locked status
     /// </summary>
-    /// <param name="arguments">JSON arguments containing range, isLocked, optional sheetIndex</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing range, isLocked, optional sheetIndex</param>
     /// <returns>Success message</returns>
-    private Task<string> SetCellLockedAsync(JsonObject? arguments, string path)
+    private Task<string> SetCellLockedAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
             var range = ArgumentHelper.GetString(arguments, "range");
             var locked = ArgumentHelper.GetBool(arguments, "locked", false);
@@ -300,7 +305,7 @@ Usage examples:
 
             workbook.Save(outputPath);
             return
-                $"Cell lock status set to {(locked ? "locked" : "unlocked")} for range {range} in sheet {sheetIndex}: {outputPath}";
+                $"Cell lock status set to {(locked ? "locked" : "unlocked")} for range {range} in sheet {sheetIndex}. Output: {outputPath}";
         });
     }
 }

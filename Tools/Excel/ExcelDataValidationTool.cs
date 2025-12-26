@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
@@ -108,15 +108,16 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
 
         return operation.ToLower() switch
         {
-            "add" => await AddDataValidationAsync(arguments, path, sheetIndex),
-            "edit" => await EditDataValidationAsync(arguments, path, sheetIndex),
-            "delete" => await DeleteDataValidationAsync(arguments, path, sheetIndex),
-            "get" => await GetDataValidationAsync(arguments, path, sheetIndex),
-            "set_messages" => await SetMessagesAsync(arguments, path, sheetIndex),
+            "add" => await AddDataValidationAsync(path, outputPath, sheetIndex, arguments),
+            "edit" => await EditDataValidationAsync(path, outputPath, sheetIndex, arguments),
+            "delete" => await DeleteDataValidationAsync(path, outputPath, sheetIndex, arguments),
+            "get" => await GetDataValidationAsync(path, sheetIndex),
+            "set_messages" => await SetMessagesAsync(path, outputPath, sheetIndex, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -124,14 +125,15 @@ Usage examples:
     /// <summary>
     ///     Adds data validation to a range
     /// </summary>
+    /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <param name="arguments">
     ///     JSON arguments containing range, validationType, formula1, optional formula2, showError,
     ///     errorTitle, errorMessage
     /// </param>
-    /// <param name="path">Excel file path</param>
-    /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private Task<string> AddDataValidationAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> AddDataValidationAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -197,28 +199,27 @@ Usage examples:
 
             validation.InCellDropDown = true;
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             workbook.Save(outputPath);
 
-            return $"Data validation added to range {range} ({validationType}): {outputPath}";
+            return $"Data validation added to range {range} ({validationType}). Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Edits existing data validation
     /// </summary>
+    /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <param name="arguments">
     ///     JSON arguments containing range, optional validationType, formula1, formula2, showError,
     ///     errorTitle, errorMessage
     /// </param>
-    /// <param name="path">Excel file path</param>
-    /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private Task<string> EditDataValidationAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> EditDataValidationAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var validationIndex = ArgumentHelper.GetInt(arguments, "validationIndex");
             var validationTypeStr = ArgumentHelper.GetStringNullable(arguments, "validationType");
             var formula1 = ArgumentHelper.GetStringNullable(arguments, "formula1");
@@ -252,63 +253,53 @@ Usage examples:
                     _ => validation.Type
                 };
                 validation.Type = vType;
-                changes.Add($"Validation type: {validationTypeStr}");
+                changes.Add($"Type={validationTypeStr}");
             }
 
             if (!string.IsNullOrEmpty(formula1))
             {
                 validation.Formula1 = formula1;
-                changes.Add($"Formula1: {formula1}");
+                changes.Add($"Formula1={formula1}");
             }
 
             if (formula2 != null)
             {
                 validation.Formula2 = formula2;
                 if (!string.IsNullOrEmpty(formula2)) validation.Operator = OperatorType.Between;
-                changes.Add($"Formula2: {formula2}");
+                changes.Add($"Formula2={formula2}");
             }
 
             if (errorMessage != null)
             {
                 validation.ErrorMessage = errorMessage;
                 validation.ShowError = !string.IsNullOrEmpty(errorMessage);
-                changes.Add($"Error message: {errorMessage}");
+                changes.Add($"ErrorMessage={errorMessage}");
             }
 
             if (inputMessage != null)
             {
                 validation.InputMessage = inputMessage;
                 validation.ShowInput = !string.IsNullOrEmpty(inputMessage);
-                changes.Add($"Input message: {inputMessage}");
+                changes.Add($"InputMessage={inputMessage}");
             }
 
             workbook.Save(outputPath);
 
-            var result = $"Successfully edited data validation rule #{validationIndex}\n";
-            if (changes.Count > 0)
-            {
-                result += "Changes:\n";
-                foreach (var change in changes) result += $"  - {change}\n";
-            }
-            else
-            {
-                result += "No changes.\n";
-            }
-
-            result += $"Output: {outputPath}";
-
-            return result;
+            var changesStr = changes.Count > 0 ? string.Join(", ", changes) : "No changes";
+            return $"Edited data validation #{validationIndex} ({changesStr}). Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Deletes data validation from a range
     /// </summary>
-    /// <param name="arguments">JSON arguments containing range</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing range</param>
     /// <returns>Success message</returns>
-    private Task<string> DeleteDataValidationAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> DeleteDataValidationAsync(string path, string outputPath, int sheetIndex,
+        JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -322,24 +313,21 @@ Usage examples:
             PowerPointHelper.ValidateCollectionIndex(validationIndex, validations, "data validation");
 
             validations.RemoveAt(validationIndex);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             workbook.Save(outputPath);
 
             var remainingCount = validations.Count;
 
-            return
-                $"Successfully deleted data validation #{validationIndex}\nRemaining data validations in worksheet: {remainingCount}\nOutput: {outputPath}";
+            return $"Deleted data validation #{validationIndex} (remaining: {remainingCount}). Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Gets data validation information for a range
     /// </summary>
-    /// <param name="_">Unused parameter</param>
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <returns>Formatted string with data validation details</returns>
-    private Task<string> GetDataValidationAsync(JsonObject? _, string path, int sheetIndex)
+    /// <returns>JSON string with data validation details</returns>
+    private Task<string> GetDataValidationAsync(string path, int sheetIndex)
     {
         return Task.Run(() =>
         {
@@ -347,50 +335,58 @@ Usage examples:
 
             var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
             var validations = worksheet.Validations;
-            var result = new StringBuilder();
-
-            result.AppendLine($"=== Data validation information for worksheet '{worksheet.Name}' ===\n");
-            result.AppendLine($"Total data validations: {validations.Count}\n");
 
             if (validations.Count == 0)
             {
-                result.AppendLine("No data validations found");
-                return result.ToString();
+                var emptyResult = new
+                {
+                    count = 0,
+                    worksheetName = worksheet.Name,
+                    items = Array.Empty<object>(),
+                    message = "No data validations found"
+                };
+                return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
             }
 
+            var validationList = new List<object>();
             for (var i = 0; i < validations.Count; i++)
             {
                 var validation = validations[i];
-                result.AppendLine($"[Data validation {i}]");
-                result.AppendLine($"Type: {validation.Type}");
-                result.AppendLine($"Operator: {validation.Operator}");
-                result.AppendLine(
-                    "Applied range: Applied (detailed range information needs to be obtained through other methods)");
-
-                if (!string.IsNullOrEmpty(validation.Formula1)) result.AppendLine($"Formula1: {validation.Formula1}");
-                if (!string.IsNullOrEmpty(validation.Formula2)) result.AppendLine($"Formula2: {validation.Formula2}");
-                if (!string.IsNullOrEmpty(validation.ErrorMessage))
-                    result.AppendLine($"Error message: {validation.ErrorMessage}");
-                if (!string.IsNullOrEmpty(validation.InputMessage))
-                    result.AppendLine($"Input message: {validation.InputMessage}");
-                result.AppendLine($"Show error: {validation.ShowError}");
-                result.AppendLine($"Show input: {validation.ShowInput}");
-                result.AppendLine($"Dropdown list: {validation.InCellDropDown}");
-                result.AppendLine();
+                validationList.Add(new
+                {
+                    index = i,
+                    type = validation.Type.ToString(),
+                    operatorType = validation.Operator.ToString(),
+                    formula1 = validation.Formula1,
+                    formula2 = validation.Formula2,
+                    errorMessage = validation.ErrorMessage,
+                    inputMessage = validation.InputMessage,
+                    showError = validation.ShowError,
+                    showInput = validation.ShowInput,
+                    inCellDropDown = validation.InCellDropDown
+                });
             }
 
-            return result.ToString();
+            var result = new
+            {
+                count = validations.Count,
+                worksheetName = worksheet.Name,
+                items = validationList
+            };
+
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 
     /// <summary>
     ///     Sets input/error messages for data validation
     /// </summary>
-    /// <param name="arguments">JSON arguments containing range, optional inputTitle, inputMessage, errorTitle, errorMessage</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing range, optional inputTitle, inputMessage, errorTitle, errorMessage</param>
     /// <returns>Success message</returns>
-    private Task<string> SetMessagesAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> SetMessagesAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -412,24 +408,20 @@ Usage examples:
             {
                 validation.ErrorMessage = errorMessage;
                 validation.ShowError = !string.IsNullOrEmpty(errorMessage);
-                changes.Add($"Error message: {errorMessage}");
+                changes.Add($"ErrorMessage={errorMessage}");
             }
 
             if (inputMessage != null)
             {
                 validation.InputMessage = inputMessage;
                 validation.ShowInput = !string.IsNullOrEmpty(inputMessage);
-                changes.Add($"Input message: {inputMessage}");
+                changes.Add($"InputMessage={inputMessage}");
             }
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             workbook.Save(outputPath);
 
-            var result = changes.Count > 0
-                ? $"Data validation messages updated: {string.Join(", ", changes)}\nOutput: {outputPath}"
-                : $"No changes\nOutput: {outputPath}";
-
-            return result;
+            var changesStr = changes.Count > 0 ? string.Join(", ", changes) : "No changes";
+            return $"Updated data validation #{validationIndex} messages ({changesStr}). Output: {outputPath}";
         });
     }
 }

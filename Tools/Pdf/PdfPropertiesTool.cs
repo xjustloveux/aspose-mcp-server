@@ -1,4 +1,4 @@
-using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using AsposeMcpServer.Core;
@@ -81,11 +81,17 @@ Usage examples:
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+
+        // Only get outputPath for operations that modify the document
+        string? outputPath = null;
+        if (operation.ToLower() == "set")
+            outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
 
         return operation.ToLower() switch
         {
-            "get" => await GetProperties(arguments),
-            "set" => await SetProperties(arguments),
+            "get" => await GetProperties(path),
+            "set" => await SetProperties(path, outputPath!, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -93,56 +99,51 @@ Usage examples:
     /// <summary>
     ///     Gets PDF properties
     /// </summary>
-    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
-    /// <returns>Formatted string with properties</returns>
-    private Task<string> GetProperties(JsonObject? arguments)
+    /// <param name="path">Input file path</param>
+    /// <returns>JSON string with properties</returns>
+    private Task<string> GetProperties(string path)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-
             using var document = new Document(path);
             var metadata = document.Metadata;
-            var sb = new StringBuilder();
 
-            sb.AppendLine("=== Document Properties ===");
-            sb.AppendLine($"Title: {metadata["Title"] ?? "(none)"}");
-            sb.AppendLine($"Author: {metadata["Author"] ?? "(none)"}");
-            sb.AppendLine($"Subject: {metadata["Subject"] ?? "(none)"}");
-            sb.AppendLine($"Keywords: {metadata["Keywords"] ?? "(none)"}");
-            sb.AppendLine($"Creator: {metadata["Creator"] ?? "(none)"}");
-            sb.AppendLine($"Producer: {metadata["Producer"] ?? "(none)"}");
-            sb.AppendLine($"Creation Date: {metadata["CreationDate"] ?? "(none)"}");
-            sb.AppendLine($"Modification Date: {metadata["ModDate"] ?? "(none)"}");
-            sb.AppendLine();
-            sb.AppendLine($"Total Pages: {document.Pages.Count}");
-            sb.AppendLine($"Is Encrypted: {document.IsEncrypted}");
-            sb.AppendLine($"Is Linearized: {document.IsLinearized}");
+            var result = new
+            {
+                title = metadata["Title"]?.ToString(),
+                author = metadata["Author"]?.ToString(),
+                subject = metadata["Subject"]?.ToString(),
+                keywords = metadata["Keywords"]?.ToString(),
+                creator = metadata["Creator"]?.ToString(),
+                producer = metadata["Producer"]?.ToString(),
+                creationDate = metadata["CreationDate"]?.ToString(),
+                modificationDate = metadata["ModDate"]?.ToString(),
+                totalPages = document.Pages.Count,
+                isEncrypted = document.IsEncrypted,
+                isLinearized = document.IsLinearized
+            };
 
-            return sb.ToString();
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 
     /// <summary>
     ///     Sets PDF properties
     /// </summary>
-    /// <param name="arguments">JSON arguments containing various property values, optional outputPath</param>
+    /// <param name="path">Input file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing various property values</param>
     /// <returns>Success message</returns>
-    private Task<string> SetProperties(JsonObject? arguments)
+    private Task<string> SetProperties(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var title = ArgumentHelper.GetStringNullable(arguments, "title");
             var author = ArgumentHelper.GetStringNullable(arguments, "author");
             var subject = ArgumentHelper.GetStringNullable(arguments, "subject");
             var keywords = ArgumentHelper.GetStringNullable(arguments, "keywords");
             var creator = ArgumentHelper.GetStringNullable(arguments, "creator");
             var producer = ArgumentHelper.GetStringNullable(arguments, "producer");
-
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
             using var document = new Document(path);
             var metadata = document.Metadata;

@@ -1,4 +1,4 @@
-﻿using System.Text;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Slides;
 using Aspose.Slides.Charts;
@@ -106,14 +106,15 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
 
         return operation.ToLower() switch
         {
-            "edit" => await EditShapeAsync(arguments, path, slideIndex),
-            "delete" => await DeleteShapeAsync(arguments, path, slideIndex),
-            "get" => await GetShapesAsync(arguments, path, slideIndex),
-            "get_details" => await GetShapeDetailsAsync(arguments, path, slideIndex),
+            "edit" => await EditShapeAsync(path, outputPath, slideIndex, arguments),
+            "delete" => await DeleteShapeAsync(path, outputPath, slideIndex, arguments),
+            "get" => await GetShapesAsync(path, slideIndex),
+            "get_details" => await GetShapeDetailsAsync(path, slideIndex, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -121,11 +122,12 @@ Usage examples:
     /// <summary>
     ///     Edits shape properties
     /// </summary>
-    /// <param name="arguments">JSON arguments containing shapeIndex, optional x, y, width, height, text, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing shapeIndex, optional x, y, width, height</param>
     /// <returns>Success message</returns>
-    private Task<string> EditShapeAsync(JsonObject? arguments, string path, int slideIndex)
+    private Task<string> EditShapeAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -154,38 +156,35 @@ Usage examples:
             }
 
             var targetShape = nonPlaceholderShapes[shapeIndex];
-            var shapeDescription = targetShape.Placeholder != null
-                ? $"Placeholder:{targetShape.Placeholder.Type}"
-                : "NormalShape";
             var changes = new List<string>();
             if (x.HasValue)
             {
                 targetShape.X = x.Value;
-                changes.Add($"X: {x.Value}");
+                changes.Add($"X={x.Value}");
             }
 
             if (y.HasValue)
             {
                 targetShape.Y = y.Value;
-                changes.Add($"Y: {y.Value}");
+                changes.Add($"Y={y.Value}");
             }
 
             if (width.HasValue)
             {
                 targetShape.Width = width.Value;
-                changes.Add($"Width: {width.Value}");
+                changes.Add($"Width={width.Value}");
             }
 
             if (height.HasValue)
             {
                 targetShape.Height = height.Value;
-                changes.Add($"Height: {height.Value}");
+                changes.Add($"Height={height.Value}");
             }
 
             if (rotation.HasValue)
             {
                 targetShape.Rotation = rotation.Value;
-                changes.Add($"Rotation: {rotation.Value}°");
+                changes.Add($"Rotation={rotation.Value}");
             }
 
             if (flipHorizontal.HasValue || flipVertical.HasValue)
@@ -209,27 +208,27 @@ Usage examples:
                 );
 
                 if (flipHorizontal.HasValue)
-                    changes.Add($"FlipHorizontal: {flipHorizontal.Value}");
+                    changes.Add($"FlipH={flipHorizontal.Value}");
                 if (flipVertical.HasValue)
-                    changes.Add($"FlipVertical: {flipVertical.Value}");
+                    changes.Add($"FlipV={flipVertical.Value}");
             }
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
 
             return
-                $"Shape {shapeIndex} ({shapeDescription}) edited on slide {slideIndex}: {string.Join(", ", changes)} - {outputPath}";
+                $"Shape {shapeIndex} on slide {slideIndex} edited ({string.Join(", ", changes)}). Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Deletes a shape from a slide
     /// </summary>
-    /// <param name="arguments">JSON arguments containing shapeIndex, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing shapeIndex</param>
     /// <returns>Success message</returns>
-    private Task<string> DeleteShapeAsync(JsonObject? arguments, string path, int slideIndex)
+    private Task<string> DeleteShapeAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -265,29 +264,26 @@ Usage examples:
             else
                 slide.Shapes.Remove(shapeToDelete);
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return
-                $"Shape {shapeIndex} deleted. Remaining non-placeholder shapes: {slide.Shapes.Count(s => s.Placeholder == null)}";
+            var remaining = slide.Shapes.Count(s => s.Placeholder == null);
+            return $"Shape {shapeIndex} on slide {slideIndex} deleted ({remaining} remaining). Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Gets all shapes from a slide
     /// </summary>
-    /// <param name="_">Unused parameter</param>
     /// <param name="path">PowerPoint file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
-    /// <returns>Formatted string with all shapes</returns>
-    private Task<string> GetShapesAsync(JsonObject? _, string path, int slideIndex)
+    /// <returns>JSON string with all shapes</returns>
+    private Task<string> GetShapesAsync(string path, int slideIndex)
     {
         return Task.Run(() =>
         {
             using var presentation = new Presentation(path);
             var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-            var sb = new StringBuilder();
-            sb.AppendLine($"Slide {slideIndex} shapes: {slide.Shapes.Count}");
 
+            var shapesList = new List<object>();
             for (var i = 0; i < slide.Shapes.Count; i++)
             {
                 var s = slide.Shapes[i];
@@ -305,23 +301,37 @@ Usage examples:
                 };
 
                 var text = (s as IAutoShape)?.TextFrame?.Text;
-                var isPlaceholder = s.Placeholder != null ? " [PLACEHOLDER]" : "";
-                sb.AppendLine(
-                    $"[{i}] {kind}{isPlaceholder} pos=({s.X},{s.Y}) size=({s.Width},{s.Height}) text={(string.IsNullOrWhiteSpace(text) ? "(none)" : text)}");
+
+                shapesList.Add(new
+                {
+                    index = i,
+                    type = kind,
+                    isPlaceholder = s.Placeholder != null,
+                    position = new { x = s.X, y = s.Y },
+                    size = new { width = s.Width, height = s.Height },
+                    text = string.IsNullOrWhiteSpace(text) ? null : text
+                });
             }
 
-            return sb.ToString();
+            var result = new
+            {
+                slideIndex,
+                count = slide.Shapes.Count,
+                shapes = shapesList
+            };
+
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 
     /// <summary>
     ///     Gets detailed information about a specific shape
     /// </summary>
-    /// <param name="arguments">JSON arguments containing shapeIndex</param>
     /// <param name="path">PowerPoint file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
-    /// <returns>Formatted string with shape details</returns>
-    private Task<string> GetShapeDetailsAsync(JsonObject? arguments, string path, int slideIndex)
+    /// <param name="arguments">JSON arguments containing shapeIndex</param>
+    /// <returns>JSON string with shape details</returns>
+    private Task<string> GetShapeDetailsAsync(string path, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -330,52 +340,66 @@ Usage examples:
             using var presentation = new Presentation(path);
             var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
             var shape = PowerPointHelper.GetShape(slide, shapeIndex);
-            var sb = new StringBuilder();
-
-            sb.AppendLine($"=== Shape {shapeIndex} Details ===");
-            sb.AppendLine($"Type: {shape.GetType().Name}");
-            sb.AppendLine($"IsPlaceholder: {shape.Placeholder != null}");
-            sb.AppendLine($"Position: ({shape.X}, {shape.Y})");
-            sb.AppendLine($"Size: ({shape.Width}, {shape.Height})");
-            sb.AppendLine($"Rotation: {shape.Rotation}°");
 
             // Flip properties are accessed through Frame
             var frame = shape.Frame;
-            sb.AppendLine($"FlipH: {frame.FlipH}");
-            sb.AppendLine($"FlipV: {frame.FlipV}");
+
+            object? typeSpecificProperties = null;
 
             if (shape is IAutoShape autoShape)
             {
-                sb.AppendLine("\nAutoShape Properties:");
-                sb.AppendLine($"  ShapeType: {autoShape.ShapeType}");
-                sb.AppendLine($"  Text: {autoShape.TextFrame?.Text ?? "(none)"}");
+                string? hyperlink = null;
                 if (autoShape.HyperlinkClick != null)
-                {
-                    var url = autoShape.HyperlinkClick.ExternalUrl ?? (autoShape.HyperlinkClick.TargetSlide != null
+                    hyperlink = autoShape.HyperlinkClick.ExternalUrl ?? (autoShape.HyperlinkClick.TargetSlide != null
                         ? $"Slide {presentation.Slides.IndexOf(autoShape.HyperlinkClick.TargetSlide)}"
                         : "Internal link");
-                    sb.AppendLine($"  Hyperlink: {url}");
-                }
+
+                typeSpecificProperties = new
+                {
+                    shapeType = autoShape.ShapeType.ToString(),
+                    text = autoShape.TextFrame?.Text,
+                    hyperlink
+                };
             }
             else if (shape is PictureFrame picture)
             {
-                sb.AppendLine("\nPicture Properties:");
-                sb.AppendLine($"  AlternativeText: {picture.AlternativeText ?? "(none)"}");
+                typeSpecificProperties = new
+                {
+                    alternativeText = picture.AlternativeText
+                };
             }
             else if (shape is ITable table)
             {
-                sb.AppendLine("\nTable Properties:");
-                sb.AppendLine($"  Rows: {table.Rows.Count}");
-                sb.AppendLine($"  Columns: {table.Columns.Count}");
+                typeSpecificProperties = new
+                {
+                    rows = table.Rows.Count,
+                    columns = table.Columns.Count
+                };
             }
             else if (shape is IChart chart)
             {
-                sb.AppendLine("\nChart Properties:");
-                sb.AppendLine($"  ChartType: {chart.Type}");
-                sb.AppendLine($"  Title: {chart.ChartTitle?.TextFrameForOverriding?.Text ?? "(none)"}");
+                typeSpecificProperties = new
+                {
+                    chartType = chart.Type.ToString(),
+                    title = chart.ChartTitle?.TextFrameForOverriding?.Text
+                };
             }
 
-            return sb.ToString();
+            var result = new
+            {
+                slideIndex,
+                shapeIndex,
+                type = shape.GetType().Name,
+                isPlaceholder = shape.Placeholder != null,
+                position = new { x = shape.X, y = shape.Y },
+                size = new { width = shape.Width, height = shape.Height },
+                rotation = shape.Rotation,
+                flipH = frame.FlipH.ToString(),
+                flipV = frame.FlipV.ToString(),
+                properties = typeSpecificProperties
+            };
+
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 }

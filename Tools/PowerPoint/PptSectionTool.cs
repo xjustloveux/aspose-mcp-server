@@ -1,4 +1,4 @@
-﻿using System.Text;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Slides;
 using Aspose.Slides.Export;
@@ -83,13 +83,14 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
 
         return operation.ToLower() switch
         {
-            "add" => await AddSectionAsync(arguments, path),
-            "rename" => await RenameSectionAsync(arguments, path),
-            "delete" => await DeleteSectionAsync(arguments, path),
-            "get" => await GetSectionsAsync(arguments, path),
+            "add" => await AddSectionAsync(path, outputPath, arguments),
+            "rename" => await RenameSectionAsync(path, outputPath, arguments),
+            "delete" => await DeleteSectionAsync(path, outputPath, arguments),
+            "get" => await GetSectionsAsync(path),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -97,10 +98,11 @@ Usage examples:
     /// <summary>
     ///     Adds a section to the presentation
     /// </summary>
-    /// <param name="arguments">JSON arguments containing sectionName, slideIndex, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing sectionName, slideIndex</param>
     /// <returns>Success message</returns>
-    private Task<string> AddSectionAsync(JsonObject? arguments, string path)
+    private Task<string> AddSectionAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -110,19 +112,19 @@ Usage examples:
             using var presentation = new Presentation(path);
             var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
             presentation.Sections.AddSection(name, slide);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Section '{name}' added starting at slide {slideIndex}";
+            return $"Section '{name}' added starting at slide {slideIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Renames a section
     /// </summary>
-    /// <param name="arguments">JSON arguments containing sectionIndex, newName, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing sectionIndex, newName</param>
     /// <returns>Success message</returns>
-    private Task<string> RenameSectionAsync(JsonObject? arguments, string path)
+    private Task<string> RenameSectionAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -134,19 +136,19 @@ Usage examples:
                 throw new ArgumentException($"sectionIndex must be between 0 and {presentation.Sections.Count - 1}");
 
             presentation.Sections[sectionIndex].Name = newName;
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Section {sectionIndex} renamed to '{newName}'";
+            return $"Section {sectionIndex} renamed to '{newName}'. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Deletes a section from the presentation
     /// </summary>
-    /// <param name="arguments">JSON arguments containing sectionIndex, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing sectionIndex</param>
     /// <returns>Success message</returns>
-    private Task<string> DeleteSectionAsync(JsonObject? arguments, string path)
+    private Task<string> DeleteSectionAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -160,32 +162,51 @@ Usage examples:
                 presentation.Sections.RemoveSection(section);
             else
                 presentation.Sections.RemoveSectionWithSlides(section);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Section {sectionIndex} removed, keep slides: {keepSlides}";
+            return $"Section {sectionIndex} removed (keep slides: {keepSlides}). Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Gets all sections from the presentation
     /// </summary>
-    /// <param name="_">Unused parameter</param>
     /// <param name="path">PowerPoint file path</param>
-    /// <returns>Formatted string with all sections</returns>
-    private Task<string> GetSectionsAsync(JsonObject? _, string path)
+    /// <returns>JSON string with all sections</returns>
+    private Task<string> GetSectionsAsync(string path)
     {
         return Task.Run(() =>
         {
             using var presentation = new Presentation(path);
-            var sb = new StringBuilder();
-            sb.AppendLine($"Sections: {presentation.Sections.Count}");
+
+            if (presentation.Sections.Count == 0)
+            {
+                var emptyResult = new
+                {
+                    count = 0,
+                    sections = Array.Empty<object>(),
+                    message = "No sections found"
+                };
+                return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
+            }
+
+            var sectionsList = new List<object>();
             for (var i = 0; i < presentation.Sections.Count; i++)
             {
                 var sec = presentation.Sections[i];
-                sb.AppendLine($"[{i}] {sec.Name}");
+                sectionsList.Add(new
+                {
+                    index = i,
+                    name = sec.Name
+                });
             }
 
-            return sb.ToString();
+            var result = new
+            {
+                count = presentation.Sections.Count,
+                sections = sectionsList
+            };
+
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 }

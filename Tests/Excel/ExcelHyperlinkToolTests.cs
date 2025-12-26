@@ -57,7 +57,7 @@ public class ExcelHyperlinkToolTests : ExcelTestBase
         // Assert
         Assert.NotNull(result);
         Assert.NotEmpty(result);
-        Assert.Contains("Hyperlink", result, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("count", result);
     }
 
     [Fact]

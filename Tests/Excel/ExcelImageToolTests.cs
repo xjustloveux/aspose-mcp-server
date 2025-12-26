@@ -107,7 +107,7 @@ public class ExcelImageToolTests : ExcelTestBase
         // Assert
         Assert.NotNull(result);
         Assert.NotEmpty(result);
-        Assert.Contains("Image", result, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("count", result);
     }
 
     [Fact]

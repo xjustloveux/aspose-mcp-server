@@ -121,15 +121,16 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
 
         return operation.ToLower() switch
         {
-            "add_audio" => await AddAudioAsync(arguments, path, slideIndex),
-            "delete_audio" => await DeleteAudioAsync(arguments, path, slideIndex),
-            "add_video" => await AddVideoAsync(arguments, path, slideIndex),
-            "delete_video" => await DeleteVideoAsync(arguments, path, slideIndex),
-            "set_playback" => await SetPlaybackAsync(arguments, path, slideIndex),
+            "add_audio" => await AddAudioAsync(path, outputPath, slideIndex, arguments),
+            "delete_audio" => await DeleteAudioAsync(path, outputPath, slideIndex, arguments),
+            "add_video" => await AddVideoAsync(path, outputPath, slideIndex, arguments),
+            "delete_video" => await DeleteVideoAsync(path, outputPath, slideIndex, arguments),
+            "set_playback" => await SetPlaybackAsync(path, outputPath, slideIndex, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -137,11 +138,12 @@ Usage examples:
     /// <summary>
     ///     Adds audio to a slide
     /// </summary>
-    /// <param name="arguments">JSON arguments containing audioPath, optional x, y, width, height, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing audioPath, optional x, y, width, height</param>
     /// <returns>Success message</returns>
-    private Task<string> AddAudioAsync(JsonObject? arguments, string path, int slideIndex)
+    private Task<string> AddAudioAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -159,20 +161,20 @@ Usage examples:
             using var audioStream = File.OpenRead(audioPath);
             slide.Shapes.AddAudioFrameEmbedded(x, y, width, height, audioStream);
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Audio inserted into slide {slideIndex}: {audioPath}";
+            return $"Audio inserted into slide {slideIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Deletes audio from a slide
     /// </summary>
-    /// <param name="arguments">JSON arguments containing audioIndex, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing audioIndex</param>
     /// <returns>Success message</returns>
-    private Task<string> DeleteAudioAsync(JsonObject? arguments, string path, int slideIndex)
+    private Task<string> DeleteAudioAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -186,20 +188,20 @@ Usage examples:
 
             slide.Shapes.Remove(shape);
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Audio deleted from slide {slideIndex}, shape {shapeIndex}";
+            return $"Audio deleted from slide {slideIndex}, shape {shapeIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Adds video to a slide
     /// </summary>
-    /// <param name="arguments">JSON arguments containing videoPath, optional x, y, width, height, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing videoPath, optional x, y, width, height</param>
     /// <returns>Success message</returns>
-    private Task<string> AddVideoAsync(JsonObject? arguments, string path, int slideIndex)
+    private Task<string> AddVideoAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -216,20 +218,20 @@ Usage examples:
             var slide = presentation.Slides[slideIndex];
             _ = slide.Shapes.AddVideoFrame(x, y, width, height, videoPath);
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Video inserted into slide {slideIndex}: {videoPath}";
+            return $"Video inserted into slide {slideIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Deletes video from a slide
     /// </summary>
-    /// <param name="arguments">JSON arguments containing videoIndex, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing videoIndex</param>
     /// <returns>Success message</returns>
-    private Task<string> DeleteVideoAsync(JsonObject? arguments, string path, int slideIndex)
+    private Task<string> DeleteVideoAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -243,20 +245,20 @@ Usage examples:
 
             slide.Shapes.Remove(shape);
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Video deleted from slide {slideIndex}, shape {shapeIndex}";
+            return $"Video deleted from slide {slideIndex}, shape {shapeIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Sets media playback options
     /// </summary>
-    /// <param name="arguments">JSON arguments containing mediaIndex, optional playMode, loop, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing shapeIndex, optional playMode, loop, volume</param>
     /// <returns>Success message</returns>
-    private Task<string> SetPlaybackAsync(JsonObject? arguments, string path, int slideIndex)
+    private Task<string> SetPlaybackAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -307,9 +309,8 @@ Usage examples:
                 throw new ArgumentException("The specified shape is not audio or video");
             }
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Media playback settings updated: slide {slideIndex}, shape {shapeIndex}";
+            return $"Playback settings updated. Output: {outputPath}";
         });
     }
 }

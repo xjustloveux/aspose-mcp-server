@@ -86,10 +86,12 @@ Usage examples:
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
 
         return operation.ToLower() switch
         {
-            "add" => await AddWatermark(arguments),
+            "add" => await AddWatermark(path, outputPath, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -97,22 +99,19 @@ Usage examples:
     /// <summary>
     ///     Adds a watermark to the PDF
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, optional text, imagePath, outputPath</param>
+    /// <param name="path">Input file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing text, optional opacity, fontSize, fontName, rotation, alignment</param>
     /// <returns>Success message</returns>
-    private Task<string> AddWatermark(JsonObject? arguments)
+    private Task<string> AddWatermark(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var text = ArgumentHelper.GetString(arguments, "text");
             var opacity = ArgumentHelper.GetDouble(arguments, "opacity", "opacity", false, 0.3);
             var fontSize = ArgumentHelper.GetDouble(arguments, "fontSize", "fontSize", false, 72);
             var fontName = ArgumentHelper.GetString(arguments, "fontName", "Arial");
             var rotation = ArgumentHelper.GetDouble(arguments, "rotation", "rotation", false, 45);
-
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
             var horizontalAlignment = ArgumentHelper.GetString(arguments, "horizontalAlignment", "Center");
             var verticalAlignment = ArgumentHelper.GetString(arguments, "verticalAlignment", "Center");
 

@@ -89,7 +89,7 @@ public class ExcelDataValidationToolTests : ExcelTestBase
         // Assert
         Assert.NotNull(result);
         Assert.NotEmpty(result);
-        Assert.Contains("Validation", result, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("count", result);
     }
 
     [Fact]

@@ -95,12 +95,13 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
 
         return operation.ToLower() switch
         {
-            "export_slides" => await ExportSlidesAsImagesAsync(arguments, path),
-            "extract_images" => await ExtractImagesAsync(arguments, path),
-            "replace_with_compression" => await ReplaceImageWithCompressionAsync(arguments, path),
+            "export_slides" => await ExportSlidesAsImagesAsync(path, arguments),
+            "extract_images" => await ExtractImagesAsync(path, arguments),
+            "replace_with_compression" => await ReplaceImageWithCompressionAsync(path, outputPath, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -108,10 +109,10 @@ Usage examples:
     /// <summary>
     ///     Exports slides as images
     /// </summary>
-    /// <param name="arguments">JSON arguments containing outputDirectory, optional slideIndexes, format, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="arguments">JSON arguments containing outputDirectory, optional slideIndexes, format, outputPath</param>
     /// <returns>Success message with exported image count</returns>
-    private Task<string> ExportSlidesAsImagesAsync(JsonObject? arguments, string path)
+    private Task<string> ExportSlidesAsImagesAsync(string path, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -141,17 +142,17 @@ Usage examples:
 #pragma warning restore CA1416 // Validate platform compatibility
             }
 
-            return $"Exported {presentation.Slides.Count} slides to: {Path.GetFullPath(outputDir)}";
+            return $"Exported {presentation.Slides.Count} slides. Output: {Path.GetFullPath(outputDir)}";
         });
     }
 
     /// <summary>
     ///     Extracts images from the presentation
     /// </summary>
-    /// <param name="arguments">JSON arguments containing outputDirectory, optional slideIndex</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="arguments">JSON arguments containing outputDirectory, optional slideIndex</param>
     /// <returns>Success message with extracted image count</returns>
-    private Task<string> ExtractImagesAsync(JsonObject? arguments, string path)
+    private Task<string> ExtractImagesAsync(string path, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -191,20 +192,20 @@ Usage examples:
                     }
             }
 
-            return $"Exported {count} images to: {Path.GetFullPath(outputDir)}";
+            return $"Exported {count} images. Output: {Path.GetFullPath(outputDir)}";
         });
     }
 
     /// <summary>
     ///     Replaces image with compression
     /// </summary>
-    /// <param name="arguments">
-    ///     JSON arguments containing slideIndex, imageIndex, newImagePath, optional compressionLevel,
-    ///     outputPath
-    /// </param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">
+    ///     JSON arguments containing slideIndex, imageIndex, newImagePath, optional compressionLevel
+    /// </param>
     /// <returns>Success message</returns>
-    private Task<string> ReplaceImageWithCompressionAsync(JsonObject? arguments, string path)
+    private Task<string> ReplaceImageWithCompressionAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(async () =>
         {
@@ -246,9 +247,9 @@ Usage examples:
             var newImage = presentation.Images.AddImage(imageBytes);
             pic.PictureFormat.Picture.Image = newImage;
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Image replaced with compression applied (quality={jpegQuality?.ToString() ?? "original"})";
+            return
+                $"Image replaced with compression applied (quality={jpegQuality?.ToString() ?? "original"}). Output: {outputPath}";
         });
     }
 }

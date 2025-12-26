@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
@@ -76,13 +76,14 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
 
         return operation.ToLower() switch
         {
-            "add" => await AddNamedRangeAsync(arguments, path, sheetIndex),
-            "delete" => await DeleteNamedRangeAsync(arguments, path),
-            "get" => await GetNamedRangesAsync(arguments, path),
+            "add" => await AddNamedRangeAsync(path, outputPath, sheetIndex, arguments),
+            "delete" => await DeleteNamedRangeAsync(path, outputPath, arguments),
+            "get" => await GetNamedRangesAsync(path),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -90,15 +91,15 @@ Usage examples:
     /// <summary>
     ///     Adds a named range to the workbook
     /// </summary>
-    /// <param name="arguments">JSON arguments containing name and range</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing name and range</param>
     /// <returns>Success message with named range details</returns>
-    private Task<string> AddNamedRangeAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> AddNamedRangeAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var name = ArgumentHelper.GetString(arguments, "name");
             var range = ArgumentHelper.GetString(arguments, "range");
             var comment = ArgumentHelper.GetStringNullable(arguments, "comment");
@@ -195,7 +196,7 @@ Usage examples:
                 // Save the workbook to persist the changes
                 workbook.Save(outputPath);
 
-                return $"Successfully added named range '{name}'\nReference: {actualRefersTo}\nOutput: {outputPath}";
+                return $"Named range '{name}' added with reference {actualRefersTo}. Output: {outputPath}";
             }
             catch (ArgumentException)
             {
@@ -212,14 +213,14 @@ Usage examples:
     /// <summary>
     ///     Deletes a named range from the workbook
     /// </summary>
-    /// <param name="arguments">JSON arguments containing name</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing name</param>
     /// <returns>Success message</returns>
-    private Task<string> DeleteNamedRangeAsync(JsonObject? arguments, string path)
+    private Task<string> DeleteNamedRangeAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var name = ArgumentHelper.GetString(arguments, "name");
 
             using var workbook = new Workbook(path);
@@ -238,7 +239,6 @@ Usage examples:
 
             if (namedRange == null) throw new ArgumentException($"Named range '{name}' does not exist");
 
-            var refersTo = namedRange.RefersTo;
             // Find the index of the named range
             var indexToRemove = -1;
             for (var i = 0; i < names.Count; i++)
@@ -251,48 +251,54 @@ Usage examples:
             if (indexToRemove >= 0) names.RemoveAt(indexToRemove);
             workbook.Save(outputPath);
 
-            var remainingCount = names.Count;
-
-            return
-                $"Successfully deleted named range '{name}'\nOriginal reference: {refersTo}\nRemaining named ranges in workbook: {remainingCount}\nOutput: {outputPath}";
+            return $"Named range '{name}' deleted. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Gets all named ranges from the workbook
     /// </summary>
-    /// <param name="_">Unused parameter</param>
     /// <param name="path">Excel file path</param>
-    /// <returns>Formatted string with all named ranges</returns>
-    private Task<string> GetNamedRangesAsync(JsonObject? _, string path)
+    /// <returns>JSON string with all named ranges</returns>
+    private Task<string> GetNamedRangesAsync(string path)
     {
         return Task.Run(() =>
         {
             using var workbook = new Workbook(path);
             var names = workbook.Worksheets.Names;
-            var result = new StringBuilder();
-
-            result.AppendLine("=== Named ranges information for Excel workbook ===\n");
-            result.AppendLine($"Total named ranges: {names.Count}\n");
 
             if (names.Count == 0)
             {
-                result.AppendLine("No named ranges found");
-                return result.ToString();
+                var emptyResult = new
+                {
+                    count = 0,
+                    items = Array.Empty<object>(),
+                    message = "No named ranges found"
+                };
+                return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
             }
 
+            var nameList = new List<object>();
             for (var i = 0; i < names.Count; i++)
             {
                 var name = names[i];
-                result.AppendLine($"[Named range {i}]");
-                result.AppendLine($"Name: {name.Text}");
-                result.AppendLine($"Reference: {name.RefersTo}");
-                result.AppendLine($"Comment: {name.Comment ?? "(none)"}");
-                result.AppendLine($"Is visible: {name.IsVisible}");
-                result.AppendLine();
+                nameList.Add(new
+                {
+                    index = i,
+                    name = name.Text,
+                    reference = name.RefersTo,
+                    comment = name.Comment,
+                    isVisible = name.IsVisible
+                });
             }
 
-            return result.ToString();
+            var result = new
+            {
+                count = names.Count,
+                items = nameList
+            };
+
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 }

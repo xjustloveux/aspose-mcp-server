@@ -149,14 +149,15 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
 
         return operation.ToLower() switch
         {
-            "set_print_area" => await SetPrintAreaAsync(arguments, path, sheetIndex),
-            "set_print_titles" => await SetPrintTitlesAsync(arguments, path, sheetIndex),
-            "set_page_setup" => await SetPageSetupAsync(arguments, path, sheetIndex),
-            "set_all" => await SetAllAsync(arguments, path, sheetIndex),
+            "set_print_area" => await SetPrintAreaAsync(path, outputPath, sheetIndex, arguments),
+            "set_print_titles" => await SetPrintTitlesAsync(path, outputPath, sheetIndex, arguments),
+            "set_page_setup" => await SetPageSetupAsync(path, outputPath, sheetIndex, arguments),
+            "set_all" => await SetAllAsync(path, outputPath, sheetIndex, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -164,11 +165,12 @@ Usage examples:
     /// <summary>
     ///     Sets print area for the worksheet
     /// </summary>
-    /// <param name="arguments">JSON arguments containing optional range, clearPrintArea</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing optional range, clearPrintArea</param>
     /// <returns>Success message</returns>
-    private Task<string> SetPrintAreaAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> SetPrintAreaAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -185,22 +187,22 @@ Usage examples:
             else
                 throw new ArgumentException("Either range or clearPrintArea must be provided");
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             workbook.Save(outputPath);
             return clearPrintArea
-                ? $"Print area cleared for sheet {sheetIndex}: {outputPath}"
-                : $"Print area set to {range} for sheet {sheetIndex}: {outputPath}";
+                ? $"Print area cleared for sheet {sheetIndex}. Output: {outputPath}"
+                : $"Print area set to {range} for sheet {sheetIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Sets print titles (rows/columns to repeat on each page)
     /// </summary>
-    /// <param name="arguments">JSON arguments containing optional rowsToRepeatAtTop, columnsToRepeatAtLeft</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing optional rowsToRepeatAtTop, columnsToRepeatAtLeft</param>
     /// <returns>Success message</returns>
-    private Task<string> SetPrintTitlesAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> SetPrintTitlesAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -222,20 +224,20 @@ Usage examples:
                 if (!string.IsNullOrEmpty(columns)) worksheet.PageSetup.PrintTitleColumns = columns;
             }
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             workbook.Save(outputPath);
-            return $"Print titles updated for sheet {sheetIndex}: {outputPath}";
+            return $"Print titles updated for sheet {sheetIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Sets page setup options
     /// </summary>
-    /// <param name="arguments">JSON arguments containing various page setup properties</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing various page setup properties</param>
     /// <returns>Success message</returns>
-    private Task<string> SetPageSetupAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> SetPageSetupAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -281,29 +283,30 @@ Usage examples:
 
             if (!string.IsNullOrEmpty(footer)) pageSetup.SetFooter(0, footer);
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             workbook.Save(outputPath);
 
             var changes = new List<string>();
-            if (!string.IsNullOrEmpty(orientation)) changes.Add($"Orientation: {orientation}");
-            if (!string.IsNullOrEmpty(paperSize)) changes.Add($"Paper size: {paperSize}");
+            if (!string.IsNullOrEmpty(orientation)) changes.Add($"orientation={orientation}");
+            if (!string.IsNullOrEmpty(paperSize)) changes.Add($"paperSize={paperSize}");
             if (leftMargin.HasValue || rightMargin.HasValue || topMargin.HasValue || bottomMargin.HasValue)
-                changes.Add("Margins set");
-            if (!string.IsNullOrEmpty(header)) changes.Add("Header set");
-            if (!string.IsNullOrEmpty(footer)) changes.Add("Footer set");
+                changes.Add("margins");
+            if (!string.IsNullOrEmpty(header)) changes.Add("header");
+            if (!string.IsNullOrEmpty(footer)) changes.Add("footer");
 
-            return $"Page setup updated: {string.Join(", ", changes)}";
+            var changesStr = changes.Count > 0 ? string.Join(", ", changes) : "no changes";
+            return $"Page setup updated ({changesStr}). Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Sets all print settings at once
     /// </summary>
-    /// <param name="arguments">JSON arguments containing all print settings</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing all print settings</param>
     /// <returns>Success message</returns>
-    private Task<string> SetAllAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> SetAllAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -351,9 +354,8 @@ Usage examples:
                 pageSetup.PaperSize = paperSizeEnum;
             }
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             workbook.Save(outputPath);
-            return $"Print settings updated for sheet {sheetIndex}: {outputPath}";
+            return $"Print settings updated for sheet {sheetIndex}. Output: {outputPath}";
         });
     }
 }

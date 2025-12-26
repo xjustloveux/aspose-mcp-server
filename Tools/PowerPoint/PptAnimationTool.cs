@@ -93,13 +93,14 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
 
         return operation.ToLower() switch
         {
-            "add" => await AddAnimationAsync(arguments, path, slideIndex),
-            "edit" => await EditAnimationAsync(arguments, path, slideIndex),
-            "delete" => await DeleteAnimationAsync(arguments, path, slideIndex),
+            "add" => await AddAnimationAsync(path, outputPath, slideIndex, arguments),
+            "edit" => await EditAnimationAsync(path, outputPath, slideIndex, arguments),
+            "delete" => await DeleteAnimationAsync(path, outputPath, slideIndex, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -107,11 +108,12 @@ Usage examples:
     /// <summary>
     ///     Adds animation to a shape
     /// </summary>
-    /// <param name="arguments">JSON arguments containing shapeIndex, animationType, optional effectType, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing shapeIndex, animationType, optional effectType</param>
     /// <returns>Success message</returns>
-    private Task<string> AddAnimationAsync(JsonObject? arguments, string path, int slideIndex)
+    private Task<string> AddAnimationAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -134,21 +136,22 @@ Usage examples:
 
             slide.Timeline.MainSequence.AddEffect(shape, effectType, EffectSubtype.None, EffectTriggerType.OnClick);
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
 
-            return $"Animation added to shape on slide {slideIndex}: {outputPath}";
+            return
+                $"Animation '{effectTypeStr}' added to shape {shapeIndex} on slide {slideIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Edits animation properties
     /// </summary>
-    /// <param name="arguments">JSON arguments containing shapeIndex, optional animationType, effectType, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing shapeIndex, optional animationType, effectType</param>
     /// <returns>Success message</returns>
-    private Task<string> EditAnimationAsync(JsonObject? arguments, string path, int slideIndex)
+    private Task<string> EditAnimationAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -202,20 +205,20 @@ Usage examples:
                 if (delay.HasValue) effect.Timing.TriggerDelayTime = delay.Value;
             }
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Animation updated on slide {slideIndex}, shape {shapeIndex}";
+            return $"Animation updated on slide {slideIndex}, shape {shapeIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Deletes animation from a shape
     /// </summary>
-    /// <param name="arguments">JSON arguments containing shapeIndex, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing shapeIndex</param>
     /// <returns>Success message</returns>
-    private Task<string> DeleteAnimationAsync(JsonObject? arguments, string path, int slideIndex)
+    private Task<string> DeleteAnimationAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -251,9 +254,8 @@ Usage examples:
                 sequence.Clear();
             }
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Animation(s) deleted from slide {slideIndex}";
+            return $"Animation(s) deleted from slide {slideIndex}. Output: {outputPath}";
         });
     }
 }

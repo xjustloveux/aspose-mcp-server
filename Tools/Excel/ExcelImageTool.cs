@@ -1,4 +1,4 @@
-using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
@@ -91,13 +91,14 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
 
         return operation.ToLower() switch
         {
-            "add" => await AddImageAsync(arguments, path, sheetIndex),
-            "delete" => await DeleteImageAsync(arguments, path, sheetIndex),
-            "get" => await GetImagesAsync(arguments, path, sheetIndex),
+            "add" => await AddImageAsync(path, outputPath, sheetIndex, arguments),
+            "delete" => await DeleteImageAsync(path, outputPath, sheetIndex, arguments),
+            "get" => await GetImagesAsync(path, sheetIndex),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -105,11 +106,12 @@ Usage examples:
     /// <summary>
     ///     Adds an image to the worksheet
     /// </summary>
-    /// <param name="arguments">JSON arguments containing imagePath, cell, optional width, height</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing imagePath, cell, optional width, height</param>
     /// <returns>Success message</returns>
-    private Task<string> AddImageAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> AddImageAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -134,21 +136,21 @@ Usage examples:
                 if (height.HasValue) picture.Height = height.Value;
             }
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             workbook.Save(outputPath);
 
-            return $"Image added to cell {cell}: {outputPath}";
+            return $"Image added to cell {cell}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Deletes an image from the worksheet
     /// </summary>
-    /// <param name="arguments">JSON arguments containing imageIndex</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing imageIndex</param>
     /// <returns>Success message</returns>
-    private Task<string> DeleteImageAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> DeleteImageAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -163,53 +165,65 @@ Usage examples:
                     $"Image index {imageIndex} is out of range (worksheet has {pictures.Count} images)");
 
             pictures.RemoveAt(imageIndex);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             workbook.Save(outputPath);
 
-            var remainingCount = pictures.Count;
-
-            return
-                $"Successfully deleted image #{imageIndex}\nRemaining images in worksheet: {remainingCount}\nOutput: {outputPath}";
+            return $"Image #{imageIndex} deleted, {pictures.Count} remaining. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Gets all images from the worksheet
     /// </summary>
-    /// <param name="_">Unused parameter</param>
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <returns>Formatted string with all images</returns>
-    private Task<string> GetImagesAsync(JsonObject? _, string path, int sheetIndex)
+    /// <returns>JSON string with all images</returns>
+    private Task<string> GetImagesAsync(string path, int sheetIndex)
     {
         return Task.Run(() =>
         {
             using var workbook = new Workbook(path);
             var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
             var pictures = worksheet.Pictures;
-            var result = new StringBuilder();
-
-            result.AppendLine($"=== Image information for worksheet '{worksheet.Name}' ===\n");
-            result.AppendLine($"Total images: {pictures.Count}\n");
 
             if (pictures.Count == 0)
             {
-                result.AppendLine("No images found");
-                return result.ToString();
+                var emptyResult = new
+                {
+                    count = 0,
+                    worksheetName = worksheet.Name,
+                    items = Array.Empty<object>(),
+                    message = "No images found"
+                };
+                return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
             }
 
+            var imageList = new List<object>();
             for (var i = 0; i < pictures.Count; i++)
             {
                 var picture = pictures[i];
-                result.AppendLine($"[Image {i}]");
-                result.AppendLine(
-                    $"Location: rows {picture.UpperLeftRow}-{picture.LowerRightRow}, columns {picture.UpperLeftColumn}-{picture.LowerRightColumn}");
-                result.AppendLine($"Width: {picture.Width} pixels");
-                result.AppendLine($"Height: {picture.Height} pixels");
-                result.AppendLine();
+                imageList.Add(new
+                {
+                    index = i,
+                    location = new
+                    {
+                        upperLeftRow = picture.UpperLeftRow,
+                        lowerRightRow = picture.LowerRightRow,
+                        upperLeftColumn = picture.UpperLeftColumn,
+                        lowerRightColumn = picture.LowerRightColumn
+                    },
+                    width = picture.Width,
+                    height = picture.Height
+                });
             }
 
-            return result.ToString();
+            var result = new
+            {
+                count = pictures.Count,
+                worksheetName = worksheet.Name,
+                items = imageList
+            };
+
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 }

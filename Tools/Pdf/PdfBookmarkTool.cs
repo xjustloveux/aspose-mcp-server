@@ -1,4 +1,4 @@
-using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
@@ -71,13 +71,19 @@ Usage examples:
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+
+        // Only get outputPath for operations that modify the document
+        string? outputPath = null;
+        if (operation.ToLower() != "get")
+            outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
 
         return operation.ToLower() switch
         {
-            "add" => await AddBookmark(arguments),
-            "delete" => await DeleteBookmark(arguments),
-            "edit" => await EditBookmark(arguments),
-            "get" => await GetBookmarks(arguments),
+            "add" => await AddBookmark(path, outputPath!, arguments),
+            "delete" => await DeleteBookmark(path, outputPath!, arguments),
+            "edit" => await EditBookmark(path, outputPath!, arguments),
+            "get" => await GetBookmarks(path),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -85,19 +91,16 @@ Usage examples:
     /// <summary>
     ///     Adds a bookmark to the PDF
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, title, pageIndex, optional parentIndex, outputPath</param>
+    /// <param name="path">Input file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing title, pageIndex</param>
     /// <returns>Success message</returns>
-    private Task<string> AddBookmark(JsonObject? arguments)
+    private Task<string> AddBookmark(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var title = ArgumentHelper.GetString(arguments, "title");
             var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
-
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
             using var document = new Document(path);
             if (pageIndex < 1 || pageIndex > document.Pages.Count)
@@ -111,26 +114,22 @@ Usage examples:
 
             document.Outlines.Add(bookmark);
             document.Save(outputPath);
-            return
-                $"Successfully added bookmark '{title}' pointing to page {pageIndex}. Output: {outputPath}";
+            return $"Added bookmark '{title}' pointing to page {pageIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Deletes a bookmark from the PDF
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, bookmarkIndex, optional outputPath</param>
+    /// <param name="path">Input file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing bookmarkIndex</param>
     /// <returns>Success message</returns>
-    private Task<string> DeleteBookmark(JsonObject? arguments)
+    private Task<string> DeleteBookmark(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var bookmarkIndex = ArgumentHelper.GetInt(arguments, "bookmarkIndex");
-
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
             using var document = new Document(path);
             if (bookmarkIndex < 1 || bookmarkIndex > document.Outlines.Count)
@@ -140,28 +139,24 @@ Usage examples:
             var title = bookmark.Title;
             document.Outlines.Delete(title);
             document.Save(outputPath);
-            return
-                $"Successfully deleted bookmark '{title}' (index {bookmarkIndex}). Output: {outputPath}";
+            return $"Deleted bookmark '{title}' (index {bookmarkIndex}). Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Edits a bookmark
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, bookmarkIndex, optional title, pageIndex, outputPath</param>
+    /// <param name="path">Input file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing bookmarkIndex, optional title, pageIndex</param>
     /// <returns>Success message</returns>
-    private Task<string> EditBookmark(JsonObject? arguments)
+    private Task<string> EditBookmark(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var bookmarkIndex = ArgumentHelper.GetInt(arguments, "bookmarkIndex");
             var title = ArgumentHelper.GetStringNullable(arguments, "title");
             var pageIndex = ArgumentHelper.GetIntNullable(arguments, "pageIndex");
-
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
             using var document = new Document(path);
             if (bookmarkIndex < 1 || bookmarkIndex > document.Outlines.Count)
@@ -180,49 +175,56 @@ Usage examples:
             }
 
             document.Save(outputPath);
-            return $"Successfully edited bookmark (index {bookmarkIndex}). Output: {outputPath}";
+            return $"Edited bookmark (index {bookmarkIndex}). Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Gets all bookmarks from the PDF
     /// </summary>
-    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
-    /// <returns>Formatted string with all bookmarks</returns>
-    private Task<string> GetBookmarks(JsonObject? arguments)
+    /// <param name="path">Input file path</param>
+    /// <returns>JSON string with all bookmarks</returns>
+    private Task<string> GetBookmarks(string path)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-
             using var document = new Document(path);
-            var sb = new StringBuilder();
-            sb.AppendLine("=== PDF Bookmarks ===");
-            sb.AppendLine();
 
             if (document.Outlines.Count == 0)
             {
-                sb.AppendLine("No bookmarks found.");
-                return sb.ToString();
+                var emptyResult = new
+                {
+                    count = 0,
+                    items = Array.Empty<object>(),
+                    message = "No bookmarks found"
+                };
+                return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
             }
 
-            sb.AppendLine($"Total Bookmarks: {document.Outlines.Count}");
-            sb.AppendLine();
-
+            var bookmarkList = new List<object>();
             for (var i = 1; i <= document.Outlines.Count; i++)
             {
                 var bookmark = document.Outlines[i];
-                sb.AppendLine($"[{i}] Title: {bookmark.Title}");
+                var bookmarkInfo = new Dictionary<string, object?>
+                {
+                    ["index"] = i,
+                    ["title"] = bookmark.Title
+                };
                 if (bookmark.Action is GoToAction { Destination: XYZExplicitDestination xyzDest })
                 {
                     var pageNum = document.Pages.IndexOf(xyzDest.Page) + 1;
-                    sb.AppendLine($"    Page: {pageNum}");
+                    bookmarkInfo["pageIndex"] = pageNum;
                 }
 
-                sb.AppendLine();
+                bookmarkList.Add(bookmarkInfo);
             }
 
-            return sb.ToString();
+            var result = new
+            {
+                count = bookmarkList.Count,
+                items = bookmarkList
+            };
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 }

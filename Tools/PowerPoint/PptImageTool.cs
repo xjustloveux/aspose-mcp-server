@@ -91,13 +91,14 @@ Note: shapeIndex for edit operation refers to the image index (0-based) among al
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
         var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
 
         return operation.ToLower() switch
         {
-            "add" => await AddImageAsync(arguments, path, slideIndex),
-            "edit" => await EditImageAsync(arguments, path, slideIndex),
+            "add" => await AddImageAsync(path, outputPath, slideIndex, arguments),
+            "edit" => await EditImageAsync(path, outputPath, slideIndex, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -105,11 +106,12 @@ Note: shapeIndex for edit operation refers to the image index (0-based) among al
     /// <summary>
     ///     Adds an image to a slide
     /// </summary>
-    /// <param name="arguments">JSON arguments containing imagePath, optional x, y, width, height, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing imagePath, optional x, y, width, height</param>
     /// <returns>Success message</returns>
-    private Task<string> AddImageAsync(JsonObject? arguments, string path, int slideIndex)
+    private Task<string> AddImageAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(async () =>
         {
@@ -192,21 +194,21 @@ Note: shapeIndex for edit operation refers to the image index (0-based) among al
 
             slide.Shapes.AddPictureFrame(ShapeType.Rectangle, x, y, finalWidth, finalHeight, pictureImage);
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
 
-            return $"Image added to slide {slideIndex}: {outputPath}";
+            return $"Image added to slide {slideIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Edits image properties
     /// </summary>
-    /// <param name="arguments">JSON arguments containing shapeIndex (image index), optional x, y, width, height, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing shapeIndex (image index), optional x, y, width, height, imagePath</param>
     /// <returns>Success message</returns>
-    private Task<string> EditImageAsync(JsonObject? arguments, string path, int slideIndex)
+    private Task<string> EditImageAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(async () =>
         {
@@ -258,9 +260,8 @@ Note: shapeIndex for edit operation refers to the image index (0-based) among al
             if (width.HasValue) pictureFrame.Width = width.Value;
             if (height.HasValue) pictureFrame.Height = height.Value;
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Image {imageIndex} updated on slide {slideIndex}: {outputPath}";
+            return $"Image {imageIndex} on slide {slideIndex} updated. Output: {outputPath}";
         });
     }
 }

@@ -129,7 +129,7 @@ Usage examples:
             // For create operation, path is the output path
             SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
             workbook.Save(path);
-            return $"Excel workbook created successfully at: {path}";
+            return $"Excel workbook created successfully. Output: {path}";
         });
     }
 
@@ -162,7 +162,7 @@ Usage examples:
             };
 
             workbook.Save(outputPath, saveFormat);
-            return $"Workbook converted from {inputPath} to {outputPath} (format: {format})";
+            return $"Workbook converted to {format} format. Output: {outputPath}";
         });
     }
 
@@ -254,7 +254,7 @@ Usage examples:
             }
 
             targetWorkbook.Save(outputPath);
-            return $"Merged {inputPaths.Count} workbooks into {outputPath}";
+            return $"Merged {inputPaths.Count} workbooks successfully. Output: {outputPath}";
         });
     }
 
@@ -313,7 +313,7 @@ Usage examples:
                 splitFiles.Add(outputPath);
             }
 
-            return $"Split workbook into {splitFiles.Count} files:\n{string.Join("\n", splitFiles)}";
+            return $"Split workbook into {splitFiles.Count} files. Output: {outputDirectory}";
         });
     }
 }

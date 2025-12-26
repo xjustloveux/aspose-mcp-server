@@ -1,4 +1,4 @@
-﻿using System.Text;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Slides;
 using Aspose.Slides.Export;
@@ -98,15 +98,16 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
 
         return operation.ToLower() switch
         {
-            "set" => await SetLayoutAsync(arguments, path),
-            "get_layouts" => await GetLayoutsAsync(arguments, path),
-            "get_masters" => await GetMastersAsync(arguments, path),
-            "apply_master" => await ApplyMasterAsync(arguments, path),
-            "apply_layout_range" => await ApplyLayoutRangeAsync(arguments, path),
-            "apply_theme" => await ApplyThemeAsync(arguments, path),
+            "set" => await SetLayoutAsync(path, outputPath, arguments),
+            "get_layouts" => await GetLayoutsAsync(path, arguments),
+            "get_masters" => await GetMastersAsync(path, arguments),
+            "apply_master" => await ApplyMasterAsync(path, outputPath, arguments),
+            "apply_layout_range" => await ApplyLayoutRangeAsync(path, outputPath, arguments),
+            "apply_theme" => await ApplyThemeAsync(path, outputPath, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -114,10 +115,11 @@ Usage examples:
     /// <summary>
     ///     Sets layout for a slide
     /// </summary>
-    /// <param name="arguments">JSON arguments containing slideIndex, layoutType, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing slideIndex, layoutType</param>
     /// <returns>Success message</returns>
-    private Task<string> SetLayoutAsync(JsonObject? arguments, string path)
+    private Task<string> SetLayoutAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -142,99 +144,157 @@ Usage examples:
                          presentation.LayoutSlides[0];
             presentation.Slides[slideIndex].LayoutSlide = layout;
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Layout set for slide {slideIndex}: {layoutStr}";
+            return $"Layout '{layoutStr}' set for slide {slideIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Gets available layouts
     /// </summary>
-    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
     /// <param name="path">PowerPoint file path</param>
-    /// <returns>Formatted string with available layouts</returns>
-    private Task<string> GetLayoutsAsync(JsonObject? arguments, string path)
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <returns>JSON string with available layouts</returns>
+    private Task<string> GetLayoutsAsync(string path, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
             var masterIndex = ArgumentHelper.GetIntNullable(arguments, "masterIndex");
 
             using var presentation = new Presentation(path);
-            var sb = new StringBuilder();
 
             if (masterIndex.HasValue)
             {
                 if (masterIndex.Value < 0 || masterIndex.Value >= presentation.Masters.Count)
                     throw new ArgumentException($"masterIndex must be between 0 and {presentation.Masters.Count - 1}");
+
                 var master = presentation.Masters[masterIndex.Value];
-                sb.AppendLine($"=== Master {masterIndex.Value} Layouts ===");
-                sb.AppendLine($"Total: {master.LayoutSlides.Count}");
+                var layoutsList = new List<object>();
+
                 for (var i = 0; i < master.LayoutSlides.Count; i++)
                 {
                     var layout = master.LayoutSlides[i];
-                    sb.AppendLine($"  [{i}] {layout.Name ?? "(unnamed)"}");
+                    layoutsList.Add(new
+                    {
+                        index = i,
+                        name = layout.Name
+                    });
                 }
+
+                var result = new
+                {
+                    masterIndex = masterIndex.Value,
+                    count = master.LayoutSlides.Count,
+                    layouts = layoutsList
+                };
+
+                return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
             }
             else
             {
-                sb.AppendLine("=== All Layouts ===");
+                var mastersList = new List<object>();
+
                 for (var i = 0; i < presentation.Masters.Count; i++)
                 {
                     var master = presentation.Masters[i];
-                    sb.AppendLine($"\nMaster {i}: {master.LayoutSlides.Count} layout(s)");
+                    var layoutsList = new List<object>();
+
                     for (var j = 0; j < master.LayoutSlides.Count; j++)
                     {
                         var layout = master.LayoutSlides[j];
-                        sb.AppendLine($"  [{j}] {layout.Name ?? "(unnamed)"}");
+                        layoutsList.Add(new
+                        {
+                            index = j,
+                            name = layout.Name
+                        });
                     }
-                }
-            }
 
-            return sb.ToString();
+                    mastersList.Add(new
+                    {
+                        masterIndex = i,
+                        layoutCount = master.LayoutSlides.Count,
+                        layouts = layoutsList
+                    });
+                }
+
+                var result = new
+                {
+                    mastersCount = presentation.Masters.Count,
+                    masters = mastersList
+                };
+
+                return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            }
         });
     }
 
     /// <summary>
     ///     Gets master slides information
     /// </summary>
-    /// <param name="_">Unused parameter</param>
     /// <param name="path">PowerPoint file path</param>
-    /// <returns>Formatted string with master slides</returns>
-    private Task<string> GetMastersAsync(JsonObject? _, string path)
+    /// <param name="_">Unused parameter</param>
+    /// <returns>JSON string with master slides</returns>
+    private Task<string> GetMastersAsync(string path, JsonObject? _)
     {
         return Task.Run(() =>
         {
             using var presentation = new Presentation(path);
-            var sb = new StringBuilder();
 
-            sb.AppendLine("=== Master Slides ===");
-            sb.AppendLine($"Total: {presentation.Masters.Count}");
+            if (presentation.Masters.Count == 0)
+            {
+                var emptyResult = new
+                {
+                    count = 0,
+                    masters = Array.Empty<object>(),
+                    message = "No master slides found"
+                };
+                return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
+            }
+
+            var mastersList = new List<object>();
 
             for (var i = 0; i < presentation.Masters.Count; i++)
             {
                 var master = presentation.Masters[i];
-                sb.AppendLine($"\nMaster {i}:");
-                sb.AppendLine($"  Name: {master.Name ?? "(unnamed)"}");
-                sb.AppendLine($"  Layouts: {master.LayoutSlides.Count}");
+                var layoutsList = new List<object>();
+
                 for (var j = 0; j < master.LayoutSlides.Count; j++)
                 {
                     var layout = master.LayoutSlides[j];
-                    sb.AppendLine($"    [{j}] {layout.Name ?? "(unnamed)"}");
+                    layoutsList.Add(new
+                    {
+                        index = j,
+                        name = layout.Name
+                    });
                 }
+
+                mastersList.Add(new
+                {
+                    index = i,
+                    name = master.Name,
+                    layoutCount = master.LayoutSlides.Count,
+                    layouts = layoutsList
+                });
             }
 
-            return sb.ToString();
+            var result = new
+            {
+                count = presentation.Masters.Count,
+                masters = mastersList
+            };
+
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 
     /// <summary>
     ///     Applies a master slide to slides
     /// </summary>
-    /// <param name="arguments">JSON arguments containing masterIndex, optional slideIndexes, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing masterIndex, optional slideIndexes</param>
     /// <returns>Success message</returns>
-    private Task<string> ApplyMasterAsync(JsonObject? arguments, string path)
+    private Task<string> ApplyMasterAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -260,19 +320,20 @@ Usage examples:
             var layout = master.LayoutSlides[layoutIndex];
             foreach (var idx in targets) presentation.Slides[idx].LayoutSlide = layout;
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Master {masterIndex} / Layout {layoutIndex} applied to {targets.Length} slides";
+            return
+                $"Master {masterIndex} / Layout {layoutIndex} applied to {targets.Length} slides. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Applies layout to a range of slides
     /// </summary>
-    /// <param name="arguments">JSON arguments containing layoutType, startIndex, endIndex, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing layout, slideIndices</param>
     /// <returns>Success message</returns>
-    private Task<string> ApplyLayoutRangeAsync(JsonObject? arguments, string path)
+    private Task<string> ApplyLayoutRangeAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -302,19 +363,19 @@ Usage examples:
 
             foreach (var idx in slideIndices) presentation.Slides[idx].LayoutSlide = layout;
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Layout {layoutStr} applied to {slideIndices.Length} slides";
+            return $"Layout '{layoutStr}' applied to {slideIndices.Length} slide(s). Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Applies a theme to the presentation
     /// </summary>
-    /// <param name="arguments">JSON arguments containing themePath, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing themePath</param>
     /// <returns>Success message</returns>
-    private Task<string> ApplyThemeAsync(JsonObject? arguments, string path)
+    private Task<string> ApplyThemeAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -326,10 +387,9 @@ Usage examples:
             // Copy theme from the first slide of theme presentation
             presentation.Slides[0].LayoutSlide = themePresentation.Slides[0].LayoutSlide;
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
 
-            return $"Theme applied to presentation: {outputPath}";
+            return $"Theme applied. Output: {outputPath}";
         });
     }
 }

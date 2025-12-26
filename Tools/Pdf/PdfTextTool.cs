@@ -1,4 +1,4 @@
-using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Aspose.Pdf;
@@ -106,12 +106,18 @@ Usage examples:
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+
+        // Only get outputPath for operations that modify the document
+        string? outputPath = null;
+        if (operation.ToLower() != "extract")
+            outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
 
         return operation.ToLower() switch
         {
-            "add" => await AddText(arguments),
-            "edit" => await EditText(arguments),
-            "extract" => await ExtractText(arguments),
+            "add" => await AddText(path, outputPath!, arguments),
+            "edit" => await EditText(path, outputPath!, arguments),
+            "extract" => await ExtractText(path, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -119,26 +125,20 @@ Usage examples:
     /// <summary>
     ///     Adds text to a PDF page
     /// </summary>
-    /// <param name="arguments">
-    ///     JSON arguments containing path, pageIndex, text, x, y, optional fontSize, fontName, fontColor,
-    ///     outputPath
-    /// </param>
+    /// <param name="path">Input file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing pageIndex, text, optional x, y, fontName, fontSize</param>
     /// <returns>Success message</returns>
-    private Task<string> AddText(JsonObject? arguments)
+    private Task<string> AddText(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
             var text = ArgumentHelper.GetString(arguments, "text");
             var x = ArgumentHelper.GetDouble(arguments, "x", "x", false, 100);
             var y = ArgumentHelper.GetDouble(arguments, "y", "y", false, 700);
             var fontName = ArgumentHelper.GetString(arguments, "fontName", "Arial");
             var fontSize = ArgumentHelper.GetDouble(arguments, "fontSize", "fontSize", false, 12);
-
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
             using var document = new Document(path);
             if (pageIndex < 1 || pageIndex > document.Pages.Count)
@@ -160,28 +160,25 @@ Usage examples:
             var textBuilder = new TextBuilder(page);
             textBuilder.AppendText(textFragment);
             document.Save(outputPath);
-            return $"Successfully added text to page {pageIndex}. Output: {outputPath}";
+            return $"Added text to page {pageIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Edits text on a PDF page
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, pageIndex, textIndex, text, optional outputPath</param>
+    /// <param name="path">Input file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing pageIndex, oldText, newText, optional replaceAll</param>
     /// <returns>Success message</returns>
-    private Task<string> EditText(JsonObject? arguments)
+    private Task<string> EditText(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
             var oldText = ArgumentHelper.GetString(arguments, "oldText");
             var newText = ArgumentHelper.GetString(arguments, "newText");
             var replaceAll = ArgumentHelper.GetBool(arguments, "replaceAll", false);
-
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
             using var document = new Document(path);
             if (pageIndex < 1 || pageIndex > document.Pages.Count)
@@ -276,7 +273,7 @@ Usage examples:
 
                         document.Save(outputPath);
                         return
-                            $"Replaced {replaceCount} occurrence(s) of '{oldText}' with '{newText}' on page {pageIndex}. Output: {outputPath}";
+                            $"Replaced {replaceCount} occurrence(s) of '{oldText}' on page {pageIndex}. Output: {outputPath}";
                     }
                 }
 
@@ -354,7 +351,7 @@ Usage examples:
 
                 document.Save(outputPath);
                 return
-                    $"Replaced {finalReplaceCount} occurrence(s) of '{oldText}' with '{newText}' on page {pageIndex}. Output: {outputPath}";
+                    $"Replaced {finalReplaceCount} occurrence(s) of '{oldText}' on page {pageIndex}. Output: {outputPath}";
             }
             catch (ArgumentException)
             {
@@ -371,17 +368,15 @@ Usage examples:
     /// <summary>
     ///     Extracts text from a PDF
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, optional pageIndex</param>
-    /// <returns>Extracted text as string</returns>
-    private Task<string> ExtractText(JsonObject? arguments)
+    /// <param name="path">Input file path</param>
+    /// <param name="arguments">JSON arguments containing pageIndex, optional includeFontInfo</param>
+    /// <returns>JSON formatted string with extracted text</returns>
+    private Task<string> ExtractText(string path, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
             var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
             var includeFontInfo = ArgumentHelper.GetBool(arguments, "includeFontInfo", false);
-
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
 
             using var document = new Document(path);
             if (pageIndex < 1 || pageIndex > document.Pages.Count)
@@ -391,27 +386,41 @@ Usage examples:
             var textAbsorber = new TextAbsorber();
             page.Accept(textAbsorber);
 
-            var sb = new StringBuilder();
-            sb.AppendLine($"=== Extracted Text from Page {pageIndex} ===");
-            sb.AppendLine();
-
             if (includeFontInfo)
             {
                 var textFragmentAbsorber = new TextFragmentAbsorber();
                 page.Accept(textFragmentAbsorber);
+                var fragments = new List<object>();
+
                 foreach (var fragment in textFragmentAbsorber.TextFragments)
+                    fragments.Add(new
+                    {
+                        text = fragment.Text,
+                        fontName = fragment.TextState.Font.FontName,
+                        fontSize = fragment.TextState.FontSize
+                    });
+
+                var result = new
                 {
-                    sb.AppendLine($"Text: {fragment.Text}");
-                    sb.AppendLine($"  Font: {fragment.TextState.Font.FontName}, Size: {fragment.TextState.FontSize}");
-                    sb.AppendLine();
-                }
+                    pageIndex,
+                    totalPages = document.Pages.Count,
+                    fragmentCount = fragments.Count,
+                    fragments
+                };
+
+                return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
             }
             else
             {
-                sb.AppendLine(textAbsorber.Text);
-            }
+                var result = new
+                {
+                    pageIndex,
+                    totalPages = document.Pages.Count,
+                    text = textAbsorber.Text
+                };
 
-            return sb.ToString();
+                return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            }
         });
     }
 }

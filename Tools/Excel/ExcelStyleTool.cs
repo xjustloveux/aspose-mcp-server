@@ -1,5 +1,5 @@
-﻿using System.Drawing;
-using System.Text;
+using System.Drawing;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
@@ -156,13 +156,14 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
 
         return operation.ToLower() switch
         {
-            "format" => await FormatCellsAsync(arguments, path, sheetIndex),
-            "get_format" => await GetCellFormatAsync(arguments, path, sheetIndex),
-            "copy_sheet_format" => await CopySheetFormatAsync(arguments, path),
+            "format" => await FormatCellsAsync(path, outputPath, sheetIndex, arguments),
+            "get_format" => await GetCellFormatAsync(path, sheetIndex, arguments),
+            "copy_sheet_format" => await CopySheetFormatAsync(path, outputPath, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -170,15 +171,15 @@ Usage examples:
     /// <summary>
     ///     Formats cells with specified style properties
     /// </summary>
-    /// <param name="arguments">JSON arguments containing ranges array and various format properties</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing ranges array and various format properties</param>
     /// <returns>Success message with formatted range count</returns>
-    private Task<string> FormatCellsAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> FormatCellsAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var range = ArgumentHelper.GetStringNullable(arguments, "range");
             var rangesArray = ArgumentHelper.GetArray(arguments, "ranges", false);
             var fontName = ArgumentHelper.GetStringNullable(arguments, "fontName");
@@ -306,18 +307,18 @@ Usage examples:
             }
 
             workbook.Save(outputPath);
-            return $"Cells formatted in sheet {sheetIndex}: {outputPath}";
+            return $"Cells formatted in sheet {sheetIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Gets format information for a cell
     /// </summary>
-    /// <param name="arguments">JSON arguments containing cell</param>
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <returns>Formatted string with cell format details</returns>
-    private Task<string> GetCellFormatAsync(JsonObject? arguments, string path, int sheetIndex)
+    /// <param name="arguments">JSON arguments containing cell</param>
+    /// <returns>JSON string with cell format details</returns>
+    private Task<string> GetCellFormatAsync(string path, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -332,9 +333,6 @@ Usage examples:
             using var workbook = new Workbook(path);
             var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
             var cells = worksheet.Cells;
-            var result = new StringBuilder();
-
-            result.AppendLine($"=== Cell format information for worksheet '{worksheet.Name}' ===\n");
 
             try
             {
@@ -344,63 +342,89 @@ Usage examples:
                 var startCol = cellRange.FirstColumn;
                 var endCol = cellRange.FirstColumn + cellRange.ColumnCount - 1;
 
+                var cellList = new List<object>();
                 for (var row = startRow; row <= endRow; row++)
                 for (var col = startCol; col <= endCol; col++)
                 {
                     var cellObj = cells[row, col];
                     var style = cellObj.GetStyle();
 
-                    result.AppendLine($"[Cell {CellsHelper.CellIndexToName(row, col)}]");
-                    result.AppendLine($"Value: {cellObj.Value ?? "(empty)"}");
-                    result.AppendLine($"Formula: {cellObj.Formula ?? "(none)"}");
-                    result.AppendLine($"Data type: {cellObj.Type}");
-                    result.AppendLine();
-
-                    result.AppendLine("Format information:");
-                    result.AppendLine($"  Font: {style.Font.Name}, Size: {style.Font.Size}");
-                    result.AppendLine($"  Bold: {style.Font.IsBold}, Italic: {style.Font.IsItalic}");
-                    result.AppendLine($"  Underline: {style.Font.Underline}, Strikethrough: {style.Font.IsStrikeout}");
-                    result.AppendLine($"  Font color: {style.Font.Color}");
-                    result.AppendLine($"  Background color: {style.BackgroundColor}");
-                    result.AppendLine($"  Number format: {style.Number}");
-                    result.AppendLine($"  Horizontal alignment: {style.HorizontalAlignment}");
-                    result.AppendLine($"  Vertical alignment: {style.VerticalAlignment}");
-
-                    // Add border information
-                    result.AppendLine("  Border information:");
                     var topBorder = style.Borders[BorderType.TopBorder];
                     var bottomBorder = style.Borders[BorderType.BottomBorder];
                     var leftBorder = style.Borders[BorderType.LeftBorder];
                     var rightBorder = style.Borders[BorderType.RightBorder];
 
-                    result.AppendLine($"    Top border: {topBorder.LineStyle} ({topBorder.Color})");
-                    result.AppendLine($"    Bottom border: {bottomBorder.LineStyle} ({bottomBorder.Color})");
-                    result.AppendLine($"    Left border: {leftBorder.LineStyle} ({leftBorder.Color})");
-                    result.AppendLine($"    Right border: {rightBorder.LineStyle} ({rightBorder.Color})");
-                    result.AppendLine();
+                    cellList.Add(new
+                    {
+                        cell = CellsHelper.CellIndexToName(row, col),
+                        value = cellObj.Value?.ToString() ?? "(empty)",
+                        formula = cellObj.Formula,
+                        dataType = cellObj.Type.ToString(),
+                        format = new
+                        {
+                            fontName = style.Font.Name,
+                            fontSize = style.Font.Size,
+                            bold = style.Font.IsBold,
+                            italic = style.Font.IsItalic,
+                            underline = style.Font.Underline.ToString(),
+                            strikethrough = style.Font.IsStrikeout,
+                            fontColor = style.Font.Color.ToString(),
+                            backgroundColor = style.BackgroundColor.ToString(),
+                            numberFormat = style.Number,
+                            horizontalAlignment = style.HorizontalAlignment.ToString(),
+                            verticalAlignment = style.VerticalAlignment.ToString(),
+                            borders = new
+                            {
+                                top = new
+                                {
+                                    lineStyle = topBorder.LineStyle.ToString(), color = topBorder.Color.ToString()
+                                },
+                                bottom = new
+                                {
+                                    lineStyle = bottomBorder.LineStyle.ToString(), color = bottomBorder.Color.ToString()
+                                },
+                                left = new
+                                {
+                                    lineStyle = leftBorder.LineStyle.ToString(), color = leftBorder.Color.ToString()
+                                },
+                                right = new
+                                {
+                                    lineStyle = rightBorder.LineStyle.ToString(), color = rightBorder.Color.ToString()
+                                }
+                            }
+                        }
+                    });
                 }
+
+                var result = new
+                {
+                    count = cellList.Count,
+                    worksheetName = worksheet.Name,
+                    range = cellOrRange,
+                    items = cellList
+                };
+
+                return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
             }
             catch (Exception ex)
             {
                 throw new ArgumentException(
                     $"Invalid cell range: '{cellOrRange}'. Expected format: single cell (e.g., 'A1') or range (e.g., 'A1:C5'). Error: {ex.Message}");
             }
-
-            return result.ToString();
         });
     }
 
     /// <summary>
     ///     Copies format from source sheet to destination sheet
     /// </summary>
-    /// <param name="arguments">JSON arguments containing sourceSheetIndex and destSheetIndex</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing sourceSheetIndex and destSheetIndex</param>
     /// <returns>Success message with sheet names</returns>
-    private Task<string> CopySheetFormatAsync(JsonObject? arguments, string path)
+    private Task<string> CopySheetFormatAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var sourceSheetIndex = ArgumentHelper.GetInt(arguments, "sourceSheetIndex");
             var targetSheetIndex = ArgumentHelper.GetInt(arguments, "targetSheetIndex");
             var copyColumnWidths = ArgumentHelper.GetBool(arguments, "copyColumnWidths", true);
@@ -419,7 +443,8 @@ Usage examples:
                     targetSheet.Cells.SetRowHeight(i, sourceSheet.Cells.GetRowHeight(i));
 
             workbook.Save(outputPath);
-            return $"Sheet format copied from sheet {sourceSheetIndex} to sheet {targetSheetIndex}: {outputPath}";
+            return
+                $"Sheet format copied from sheet {sourceSheetIndex} to sheet {targetSheetIndex}. Output: {outputPath}";
         });
     }
 }

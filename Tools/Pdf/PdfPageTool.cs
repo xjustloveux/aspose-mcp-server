@@ -1,4 +1,4 @@
-using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using AsposeMcpServer.Core;
@@ -94,14 +94,20 @@ Usage examples:
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+
+        // Only get outputPath for operations that modify the document
+        string? outputPath = null;
+        if (operation.ToLower() != "get_details" && operation.ToLower() != "get_info")
+            outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
 
         return operation.ToLower() switch
         {
-            "add" => await AddPage(arguments),
-            "delete" => await DeletePage(arguments),
-            "rotate" => await RotatePage(arguments),
-            "get_details" => await GetPageDetails(arguments),
-            "get_info" => await GetPageInfo(arguments),
+            "add" => await AddPage(path, outputPath!, arguments),
+            "delete" => await DeletePage(path, outputPath!, arguments),
+            "rotate" => await RotatePage(path, outputPath!, arguments),
+            "get_details" => await GetPageDetails(path, arguments),
+            "get_info" => await GetPageInfo(path),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -109,21 +115,18 @@ Usage examples:
     /// <summary>
     ///     Adds a page to the PDF
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, optional pageIndex, outputPath</param>
+    /// <param name="path">Input file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing optional count, insertAt, width, height</param>
     /// <returns>Success message</returns>
-    private Task<string> AddPage(JsonObject? arguments)
+    private Task<string> AddPage(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var count = ArgumentHelper.GetInt(arguments, "count", 1);
             var insertAt = ArgumentHelper.GetIntNullable(arguments, "insertAt");
             var width = ArgumentHelper.GetDoubleNullable(arguments, "width");
             var height = ArgumentHelper.GetDoubleNullable(arguments, "height");
-
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
             using var document = new Document(path);
 
@@ -150,25 +153,22 @@ Usage examples:
             }
 
             document.Save(outputPath);
-            return $"Successfully added {count} page(s). Output: {outputPath}";
+            return $"Added {count} page(s). Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Deletes a page from the PDF
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, pageIndex, optional outputPath</param>
+    /// <param name="path">Input file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing pageIndex</param>
     /// <returns>Success message</returns>
-    private Task<string> DeletePage(JsonObject? arguments)
+    private Task<string> DeletePage(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
-
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
             using var document = new Document(path);
             if (pageIndex < 1 || pageIndex > document.Pages.Count)
@@ -176,28 +176,24 @@ Usage examples:
 
             document.Pages.Delete(pageIndex);
             document.Save(outputPath);
-            return
-                $"Successfully deleted page {pageIndex}. Remaining pages: {document.Pages.Count}. Output: {outputPath}";
+            return $"Deleted page {pageIndex} (remaining: {document.Pages.Count}). Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Rotates a page
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, pageIndex, angle, optional outputPath</param>
+    /// <param name="path">Input file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing rotation, optional pageIndex, pageIndices</param>
     /// <returns>Success message</returns>
-    private Task<string> RotatePage(JsonObject? arguments)
+    private Task<string> RotatePage(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var rotation = ArgumentHelper.GetInt(arguments, "rotation");
             var pageIndex = ArgumentHelper.GetIntNullable(arguments, "pageIndex");
             var pageIndicesArray = ArgumentHelper.GetArray(arguments, "pageIndices", false);
-
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
             if (rotation != 0 && rotation != 90 && rotation != 180 && rotation != 270)
                 throw new ArgumentException("rotation must be 0, 90, 180, or 270");
@@ -225,73 +221,86 @@ Usage examples:
                     document.Pages[pageNum].Rotate = rotationEnum;
 
             document.Save(outputPath);
-            return
-                $"Rotated {pagesToRotate.Count} page(s) by {rotation} degrees. Output: {outputPath}";
+            return $"Rotated {pagesToRotate.Count} page(s) by {rotation} degrees. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Gets detailed information about a page
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, pageIndex</param>
-    /// <returns>Formatted string with page details</returns>
-    private Task<string> GetPageDetails(JsonObject? arguments)
+    /// <param name="path">Input file path</param>
+    /// <param name="arguments">JSON arguments containing pageIndex</param>
+    /// <returns>JSON string with page details</returns>
+    private Task<string> GetPageDetails(string path, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
             var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
-
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
 
             using var document = new Document(path);
             if (pageIndex < 1 || pageIndex > document.Pages.Count)
                 throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
 
             var page = document.Pages[pageIndex];
-            var sb = new StringBuilder();
-            sb.AppendLine($"=== Page {pageIndex} Details ===");
-            sb.AppendLine($"Size: {page.Rect.Width} x {page.Rect.Height}");
-            sb.AppendLine($"Rotation: {page.Rotate}�X");
-            sb.AppendLine(
-                $"MediaBox: ({page.MediaBox.LLX}, {page.MediaBox.LLY}) to ({page.MediaBox.URX}, {page.MediaBox.URY})");
-            sb.AppendLine(
-                $"CropBox: ({page.CropBox.LLX}, {page.CropBox.LLY}) to ({page.CropBox.URX}, {page.CropBox.URY})");
-            sb.AppendLine($"Annotations: {page.Annotations.Count}");
-            sb.AppendLine($"Paragraphs: {page.Paragraphs.Count}");
-            sb.AppendLine($"Images: {page.Resources?.Images?.Count ?? 0}");
+            var result = new
+            {
+                pageIndex,
+                width = page.Rect.Width,
+                height = page.Rect.Height,
+                rotation = page.Rotate.ToString(),
+                mediaBox = new
+                {
+                    llx = page.MediaBox.LLX,
+                    lly = page.MediaBox.LLY,
+                    urx = page.MediaBox.URX,
+                    ury = page.MediaBox.URY
+                },
+                cropBox = new
+                {
+                    llx = page.CropBox.LLX,
+                    lly = page.CropBox.LLY,
+                    urx = page.CropBox.URX,
+                    ury = page.CropBox.URY
+                },
+                annotations = page.Annotations.Count,
+                paragraphs = page.Paragraphs.Count,
+                images = page.Resources?.Images?.Count ?? 0
+            };
 
-            return sb.ToString();
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 
     /// <summary>
     ///     Gets information about all pages
     /// </summary>
-    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
-    /// <returns>Formatted string with page information</returns>
-    private Task<string> GetPageInfo(JsonObject? arguments)
+    /// <param name="path">Input file path</param>
+    /// <returns>JSON string with page information</returns>
+    private Task<string> GetPageInfo(string path)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-
             using var document = new Document(path);
-            var sb = new StringBuilder();
-            sb.AppendLine("=== PDF Page Info ===");
-            sb.AppendLine($"Total Pages: {document.Pages.Count}");
-            sb.AppendLine();
+            var pageList = new List<object>();
 
-            for (var i = 1; i <= Math.Min(document.Pages.Count, 10); i++)
+            for (var i = 1; i <= document.Pages.Count; i++)
             {
                 var page = document.Pages[i];
-                sb.AppendLine($"Page {i}: {page.Rect.Width} x {page.Rect.Height}, Rotation: {page.Rotate}�X");
+                pageList.Add(new
+                {
+                    pageIndex = i,
+                    width = page.Rect.Width,
+                    height = page.Rect.Height,
+                    rotation = page.Rotate.ToString()
+                });
             }
 
-            if (document.Pages.Count > 10)
-                sb.AppendLine($"... ({document.Pages.Count - 10} more pages)");
-
-            return sb.ToString();
+            var result = new
+            {
+                count = document.Pages.Count,
+                items = pageList
+            };
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 }

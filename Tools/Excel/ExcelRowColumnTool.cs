@@ -95,16 +95,17 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
 
         return operation.ToLower() switch
         {
-            "insert_row" => await InsertRowAsync(arguments, path, sheetIndex),
-            "delete_row" => await DeleteRowAsync(arguments, path, sheetIndex),
-            "insert_column" => await InsertColumnAsync(arguments, path, sheetIndex),
-            "delete_column" => await DeleteColumnAsync(arguments, path, sheetIndex),
-            "insert_cells" => await InsertCellsAsync(arguments, path, sheetIndex),
-            "delete_cells" => await DeleteCellsAsync(arguments, path, sheetIndex),
+            "insert_row" => await InsertRowAsync(path, outputPath, sheetIndex, arguments),
+            "delete_row" => await DeleteRowAsync(path, outputPath, sheetIndex, arguments),
+            "insert_column" => await InsertColumnAsync(path, outputPath, sheetIndex, arguments),
+            "delete_column" => await DeleteColumnAsync(path, outputPath, sheetIndex, arguments),
+            "insert_cells" => await InsertCellsAsync(path, outputPath, sheetIndex, arguments),
+            "delete_cells" => await DeleteCellsAsync(path, outputPath, sheetIndex, arguments),
             "set_column_width" => throw new ArgumentException(
                 $"Operation 'set_column_width' is not supported by excel_row_column. Please use excel_view_settings operation instead. Example: excel_view_settings(operation='set_column_width', path='{path}', columnIndex=0, width=15)"),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
@@ -114,15 +115,15 @@ Usage examples:
     /// <summary>
     ///     Inserts rows into the worksheet
     /// </summary>
-    /// <param name="arguments">JSON arguments containing rowIndex, optional count</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing rowIndex, optional count</param>
     /// <returns>Success message</returns>
-    private Task<string> InsertRowAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> InsertRowAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex");
             var count = ArgumentHelper.GetInt(arguments, "count", 1);
 
@@ -132,22 +133,22 @@ Usage examples:
             for (var i = 0; i < count; i++) worksheet.Cells.InsertRow(rowIndex);
             workbook.Save(outputPath);
 
-            return $"Inserted {count} rows at row {rowIndex}: {outputPath}";
+            return $"Inserted {count} row(s) at row {rowIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Deletes rows from the worksheet
     /// </summary>
-    /// <param name="arguments">JSON arguments containing rowIndex, optional count</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing rowIndex, optional count</param>
     /// <returns>Success message</returns>
-    private Task<string> DeleteRowAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> DeleteRowAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex");
             var count = ArgumentHelper.GetInt(arguments, "count", 1);
 
@@ -157,22 +158,22 @@ Usage examples:
             for (var i = 0; i < count; i++) worksheet.Cells.DeleteRow(rowIndex);
             workbook.Save(outputPath);
 
-            return $"Deleted {count} rows starting from row {rowIndex}: {outputPath}";
+            return $"Deleted {count} row(s) starting from row {rowIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Inserts columns into the worksheet
     /// </summary>
-    /// <param name="arguments">JSON arguments containing columnIndex, optional count</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing columnIndex, optional count</param>
     /// <returns>Success message</returns>
-    private Task<string> InsertColumnAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> InsertColumnAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var columnIndex = ArgumentHelper.GetInt(arguments, "columnIndex");
             var count = ArgumentHelper.GetInt(arguments, "count", 1);
 
@@ -182,22 +183,22 @@ Usage examples:
             for (var i = 0; i < count; i++) worksheet.Cells.InsertColumn(columnIndex);
             workbook.Save(outputPath);
 
-            return $"Inserted {count} columns at column {columnIndex}: {outputPath}";
+            return $"Inserted {count} column(s) at column {columnIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Deletes columns from the worksheet
     /// </summary>
-    /// <param name="arguments">JSON arguments containing columnIndex, optional count</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing columnIndex, optional count</param>
     /// <returns>Success message</returns>
-    private Task<string> DeleteColumnAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> DeleteColumnAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var columnIndex = ArgumentHelper.GetInt(arguments, "columnIndex");
             var count = ArgumentHelper.GetInt(arguments, "count", 1);
 
@@ -207,22 +208,22 @@ Usage examples:
             for (var i = 0; i < count; i++) worksheet.Cells.DeleteColumn(columnIndex);
             workbook.Save(outputPath);
 
-            return $"Deleted {count} columns starting from column {columnIndex}: {outputPath}";
+            return $"Deleted {count} column(s) starting from column {columnIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Inserts cells into the worksheet
     /// </summary>
-    /// <param name="arguments">JSON arguments containing range, shiftDirection</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing range, shiftDirection</param>
     /// <returns>Success message</returns>
-    private Task<string> InsertCellsAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> InsertCellsAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var range = ArgumentHelper.GetString(arguments, "range");
             var shiftDirection = ArgumentHelper.GetString(arguments, "shiftDirection");
 
@@ -241,22 +242,22 @@ Usage examples:
                     worksheet.Cells.InsertColumn(rangeObj.FirstColumn);
 
             workbook.Save(outputPath);
-            return $"Cells inserted in range {range}, shifted {shiftDirection}: {outputPath}";
+            return $"Cells inserted in range {range}, shifted {shiftDirection}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Deletes cells from the worksheet
     /// </summary>
-    /// <param name="arguments">JSON arguments containing range, shiftDirection</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing range, shiftDirection</param>
     /// <returns>Success message</returns>
-    private Task<string> DeleteCellsAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> DeleteCellsAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var range = ArgumentHelper.GetString(arguments, "range");
             var shiftDirection = ArgumentHelper.GetString(arguments, "shiftDirection");
 
@@ -286,7 +287,7 @@ Usage examples:
             worksheet.Cells.DeleteRange(rangeObj.FirstRow, rangeObj.FirstColumn, rowCount, columnCount, shiftType);
 
             workbook.Save(outputPath);
-            return $"Cells deleted in range {range}, shifted {shiftDirection}: {outputPath}";
+            return $"Cells deleted in range {range}, shifted {shiftDirection}. Output: {outputPath}";
         });
     }
 }

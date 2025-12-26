@@ -83,6 +83,6 @@ public class ExcelMergeCellsToolTests : ExcelTestBase
         // Assert
         Assert.NotNull(result);
         Assert.NotEmpty(result);
-        Assert.Contains("Merged", result, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("count", result);
     }
 }

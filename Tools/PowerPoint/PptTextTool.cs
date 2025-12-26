@@ -106,12 +106,13 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
 
         return operation.ToLower() switch
         {
-            "add" => await AddTextAsync(arguments, path),
-            "edit" => await EditTextAsync(arguments, path),
-            "replace" => await ReplaceTextAsync(arguments, path),
+            "add" => await AddTextAsync(path, outputPath, arguments),
+            "edit" => await EditTextAsync(path, outputPath, arguments),
+            "replace" => await ReplaceTextAsync(path, outputPath, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -119,13 +120,11 @@ Usage examples:
     /// <summary>
     ///     Adds text to a slide
     /// </summary>
-    /// <param name="arguments">
-    ///     JSON arguments containing slideIndex, text, optional x, y, width, height, fontSize, fontName,
-    ///     fontColor, outputPath
-    /// </param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing slideIndex, text, optional x, y, width, height</param>
     /// <returns>Success message</returns>
-    private Task<string> AddTextAsync(JsonObject? arguments, string path)
+    private Task<string> AddTextAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -147,20 +146,20 @@ Usage examples:
             textBox.FillFormat.FillType = FillType.NoFill;
             textBox.LineFormat.FillFormat.FillType = FillType.NoFill;
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
 
-            return $"Text added to slide {slideIndex}: {outputPath}";
+            return $"Text added to slide {slideIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Edits text on a slide
     /// </summary>
-    /// <param name="arguments">JSON arguments containing slideIndex, shapeIndex, text, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing slideIndex, shapeIndex, text</param>
     /// <returns>Success message</returns>
-    private Task<string> EditTextAsync(JsonObject? arguments, string path)
+    private Task<string> EditTextAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -192,19 +191,19 @@ Usage examples:
                     $"Shape at index {shapeIndex} (Type: {shape.GetType().Name}) is not an AutoShape and cannot contain text");
             }
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Text updated on slide {slideIndex}, shape index {shapeIndex} (Name: {shape.Name})";
+            return $"Text updated on slide {slideIndex}, shape {shapeIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Replaces text in the presentation
     /// </summary>
-    /// <param name="arguments">JSON arguments containing searchText, replaceText, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing findText, replaceText, optional matchCase</param>
     /// <returns>Success message with replacement count</returns>
-    private Task<string> ReplaceTextAsync(JsonObject? arguments, string path)
+    private Task<string> ReplaceTextAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -237,10 +236,8 @@ Usage examples:
                     }
                 }
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return
-                $"Text replacement completed: {replacements} occurrences\nFind: {findText}\nReplace with: {replaceText}\nOutput: {outputPath}";
+            return $"Replaced '{findText}' with '{replaceText}' ({replacements} occurrences). Output: {outputPath}";
         });
     }
 

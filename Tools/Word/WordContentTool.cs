@@ -362,10 +362,9 @@ Usage examples:
                 else
                 {
                     // Allow one blank line (2 newlines max)
-                    if (sb is { Length: >= 1 } && sb[^1] == '\n')
-                        // Already have one newline, add one more for blank line
-                        if (sb is not { Length: >= 2 } || sb[^2] != '\n')
-                            sb.Append('\n');
+                    // Already have one newline, add one more for blank line
+                    if (sb is { Length: >= 1 } && sb[^1] == '\n' && (sb is not { Length: >= 2 } || sb[^2] != '\n'))
+                        sb.Append('\n');
                 }
 
                 lastWasSpace = false;

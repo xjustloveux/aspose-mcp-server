@@ -49,17 +49,26 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments object containing operation parameters</param>
     /// <returns>Result message as a string</returns>
-    public Task<string> ExecuteAsync(JsonObject? arguments)
+    public async Task<string> ExecuteAsync(JsonObject? arguments)
+    {
+        var path = ArgumentHelper.GetAndValidatePath(arguments, "inputPath");
+        var outputPath = ArgumentHelper.GetAndValidatePath(arguments, "outputPath");
+
+        return await ConvertToPdf(path, outputPath, arguments);
+    }
+
+    /// <summary>
+    ///     Converts a document to PDF format
+    /// </summary>
+    /// <param name="path">Input file path</param>
+    /// <param name="outputPath">Output PDF file path</param>
+    /// <param name="arguments">JSON arguments for additional options</param>
+    /// <returns>Result message</returns>
+    private Task<string> ConvertToPdf(string path, string outputPath, JsonObject? _)
     {
         return Task.Run(() =>
         {
-            var inputPath = ArgumentHelper.GetString(arguments, "inputPath");
-            var outputPath = ArgumentHelper.GetString(arguments, "outputPath");
-
-            SecurityHelper.ValidateFilePath(inputPath, "inputPath", true);
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
-
-            var extension = Path.GetExtension(inputPath).ToLower();
+            var extension = Path.GetExtension(path).ToLower();
 
             switch (extension)
             {
@@ -67,7 +76,7 @@ Usage examples:
                 case ".docx":
                 case ".rtf":
                 case ".odt":
-                    var wordDoc = new Document(inputPath);
+                    var wordDoc = new Document(path);
                     wordDoc.Save(outputPath, SaveFormat.Pdf);
                     break;
 
@@ -75,7 +84,7 @@ Usage examples:
                 case ".xlsx":
                 case ".csv":
                 case ".ods":
-                    using (var workbook = new Workbook(inputPath))
+                    using (var workbook = new Workbook(path))
                     {
                         workbook.Save(outputPath, Aspose.Cells.SaveFormat.Pdf);
                     }
@@ -85,7 +94,7 @@ Usage examples:
                 case ".ppt":
                 case ".pptx":
                 case ".odp":
-                    using (var presentation = new Presentation(inputPath))
+                    using (var presentation = new Presentation(path))
                     {
                         presentation.Save(outputPath, Aspose.Slides.Export.SaveFormat.Pdf);
                     }
@@ -96,7 +105,7 @@ Usage examples:
                     throw new ArgumentException($"Unsupported file format: {extension}");
             }
 
-            return $"Document converted to PDF: {outputPath}";
+            return $"Document converted to PDF. Output: {outputPath}";
         });
     }
 }

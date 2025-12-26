@@ -1,4 +1,4 @@
-﻿using System.Text;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Slides;
 using Aspose.Slides.Export;
@@ -99,11 +99,12 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
 
         return operation.ToLower() switch
         {
-            "get" => await GetPropertiesAsync(arguments, path),
-            "set" => await SetPropertiesAsync(arguments, path),
+            "get" => await GetPropertiesAsync(path),
+            "set" => await SetPropertiesAsync(path, outputPath, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -111,41 +112,42 @@ Usage examples:
     /// <summary>
     ///     Gets presentation properties
     /// </summary>
-    /// <param name="_">Unused parameter</param>
     /// <param name="path">PowerPoint file path</param>
-    /// <returns>Formatted string with properties</returns>
-    private Task<string> GetPropertiesAsync(JsonObject? _, string path)
+    /// <returns>JSON string with properties</returns>
+    private Task<string> GetPropertiesAsync(string path)
     {
         return Task.Run(() =>
         {
             using var presentation = new Presentation(path);
             var props = presentation.DocumentProperties;
-            var sb = new StringBuilder();
 
-            sb.AppendLine("=== Document Properties ===");
-            sb.AppendLine($"Title: {props.Title ?? "(none)"}");
-            sb.AppendLine($"Subject: {props.Subject ?? "(none)"}");
-            sb.AppendLine($"Author: {props.Author ?? "(none)"}");
-            sb.AppendLine($"Keywords: {props.Keywords ?? "(none)"}");
-            sb.AppendLine($"Comments: {props.Comments ?? "(none)"}");
-            sb.AppendLine($"Category: {props.Category ?? "(none)"}");
-            sb.AppendLine($"Company: {props.Company ?? "(none)"}");
-            sb.AppendLine($"Manager: {props.Manager ?? "(none)"}");
-            sb.AppendLine($"Created: {props.CreatedTime}");
-            sb.AppendLine($"Modified: {props.LastSavedTime}");
-            sb.AppendLine($"Revision: {props.RevisionNumber}");
+            var result = new
+            {
+                title = props.Title,
+                subject = props.Subject,
+                author = props.Author,
+                keywords = props.Keywords,
+                comments = props.Comments,
+                category = props.Category,
+                company = props.Company,
+                manager = props.Manager,
+                createdTime = props.CreatedTime,
+                lastSavedTime = props.LastSavedTime,
+                revisionNumber = props.RevisionNumber
+            };
 
-            return sb.ToString();
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 
     /// <summary>
     ///     Sets presentation properties
     /// </summary>
-    /// <param name="arguments">JSON arguments containing various property values, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing various property values</param>
     /// <returns>Success message</returns>
-    private Task<string> SetPropertiesAsync(JsonObject? arguments, string path)
+    private Task<string> SetPropertiesAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -217,10 +219,9 @@ Usage examples:
                 changes.Add("CustomProperties");
             }
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
 
-            return $"Document properties updated: {string.Join(", ", changes)} - {outputPath}";
+            return $"Document properties updated: {string.Join(", ", changes)}. Output: {outputPath}";
         });
     }
 }

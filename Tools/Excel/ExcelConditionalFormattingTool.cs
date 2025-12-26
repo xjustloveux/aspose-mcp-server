@@ -1,5 +1,5 @@
-﻿using System.Drawing;
-using System.Text;
+using System.Drawing;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
@@ -104,14 +104,15 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
 
         return operation.ToLower() switch
         {
-            "add" => await AddConditionalFormattingAsync(arguments, path, sheetIndex),
-            "edit" => await EditConditionalFormattingAsync(arguments, path, sheetIndex),
-            "delete" => await DeleteConditionalFormattingAsync(arguments, path, sheetIndex),
-            "get" => await GetConditionalFormattingAsync(arguments, path, sheetIndex),
+            "add" => await AddConditionalFormattingAsync(path, outputPath, sheetIndex, arguments),
+            "edit" => await EditConditionalFormattingAsync(path, outputPath, sheetIndex, arguments),
+            "delete" => await DeleteConditionalFormattingAsync(path, outputPath, sheetIndex, arguments),
+            "get" => await GetConditionalFormattingAsync(path, sheetIndex),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -119,11 +120,13 @@ Usage examples:
     /// <summary>
     ///     Adds conditional formatting to a range
     /// </summary>
-    /// <param name="arguments">JSON arguments containing range, condition, value, optional style properties</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing range, condition, value, optional style properties</param>
     /// <returns>Success message</returns>
-    private Task<string> AddConditionalFormattingAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> AddConditionalFormattingAsync(string path, string outputPath, int sheetIndex,
+        JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -170,7 +173,7 @@ Usage examples:
             string? warningMessage = null;
             if (!isValidCondition)
                 warningMessage =
-                    $"\n⚠️ Warning: Condition type '{conditionStr}' may not be supported. Valid types are: GreaterThan, LessThan, Between, Equal. Please verify in Excel.";
+                    $" Warning: Condition type '{conditionStr}' may not be supported. Valid types are: GreaterThan, LessThan, Between, Equal.";
 
             // Handle Between condition - need Formula2
             if (operatorType == OperatorType.Between && value.Contains(","))
@@ -199,11 +202,10 @@ Usage examples:
             fc.Style.Pattern = BackgroundType.Solid;
 
             workbook.CalculateFormula();
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             workbook.Save(outputPath);
 
-            var result = $"Conditional formatting added to range {range} ({conditionStr}): {outputPath}";
-            if (!string.IsNullOrEmpty(warningMessage)) result += warningMessage;
+            var result =
+                $"Conditional formatting added to range {range} ({conditionStr}).{warningMessage ?? ""} Output: {outputPath}";
             return result;
         });
     }
@@ -211,15 +213,16 @@ Usage examples:
     /// <summary>
     ///     Edits existing conditional formatting
     /// </summary>
-    /// <param name="arguments">JSON arguments containing index, optional condition, value, style properties</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing index, optional condition, value, style properties</param>
     /// <returns>Success message</returns>
-    private Task<string> EditConditionalFormattingAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> EditConditionalFormattingAsync(string path, string outputPath, int sheetIndex,
+        JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var conditionalFormattingIndex = ArgumentHelper.GetInt(arguments, "conditionalFormattingIndex");
             var conditionIndex = ArgumentHelper.GetIntNullable(arguments, "conditionIndex");
             var conditionStr = ArgumentHelper.GetStringNullable(arguments, "condition");
@@ -256,7 +259,7 @@ Usage examples:
                         _ => condition.Operator
                     };
                     condition.Operator = operatorType;
-                    changes.Add($"Operator: {conditionStr}");
+                    changes.Add($"Operator={conditionStr}");
                 }
 
                 if (!string.IsNullOrEmpty(value))
@@ -275,7 +278,7 @@ Usage examples:
                         condition.Formula1 = value;
                     }
 
-                    changes.Add($"Value: {value}");
+                    changes.Add($"Value={value}");
                 }
 
                 if (!string.IsNullOrEmpty(backgroundColor))
@@ -284,7 +287,7 @@ Usage examples:
                     // Parse color with fallback to default color if parsing fails
                     style.BackgroundColor = ColorHelper.ParseColor(backgroundColor, Color.Yellow);
                     style.Pattern = BackgroundType.Solid;
-                    changes.Add($"Background color: {backgroundColor}");
+                    changes.Add($"BackgroundColor={backgroundColor}");
                 }
             }
 
@@ -293,31 +296,21 @@ Usage examples:
 
             workbook.Save(outputPath);
 
-            var result = $"Successfully edited conditional formatting #{conditionalFormattingIndex}\n";
-            if (changes.Count > 0)
-            {
-                result += "Changes:\n";
-                foreach (var change in changes) result += $"  - {change}\n";
-            }
-            else
-            {
-                result += "No changes.\n";
-            }
-
-            result += $"Output: {outputPath}";
-
-            return result;
+            var changesStr = changes.Count > 0 ? string.Join(", ", changes) : "No changes";
+            return $"Edited conditional formatting #{conditionalFormattingIndex} ({changesStr}). Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Deletes conditional formatting from a range
     /// </summary>
-    /// <param name="arguments">JSON arguments containing index</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing index</param>
     /// <returns>Success message</returns>
-    private Task<string> DeleteConditionalFormattingAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> DeleteConditionalFormattingAsync(string path, string outputPath, int sheetIndex,
+        JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -333,73 +326,77 @@ Usage examples:
                     $"Conditional formatting index {conditionalFormattingIndex} is out of range (worksheet has {conditionalFormattings.Count} conditional formattings)");
 
             conditionalFormattings.RemoveAt(conditionalFormattingIndex);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             workbook.Save(outputPath);
 
             var remainingCount = conditionalFormattings.Count;
 
             return
-                $"Successfully deleted conditional formatting #{conditionalFormattingIndex}\nRemaining conditional formattings in worksheet: {remainingCount}\nOutput: {outputPath}";
+                $"Deleted conditional formatting #{conditionalFormattingIndex} (remaining: {remainingCount}). Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Gets all conditional formatting rules from the worksheet
     /// </summary>
-    /// <param name="arguments">JSON arguments containing optional range</param>
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <returns>Formatted string with all conditional formatting rules</returns>
-    private Task<string> GetConditionalFormattingAsync(JsonObject? arguments, string path, int sheetIndex)
+    /// <returns>JSON string with all conditional formatting rules</returns>
+    private Task<string> GetConditionalFormattingAsync(string path, int sheetIndex)
     {
         return Task.Run(() =>
         {
-            var range = ArgumentHelper.GetStringNullable(arguments, "range");
-
             using var workbook = new Workbook(path);
 
             var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
             var conditionalFormattings = worksheet.ConditionalFormattings;
-            var result = new StringBuilder();
-
-            result.AppendLine($"=== Conditional formatting information for worksheet '{worksheet.Name}' ===\n");
-            result.AppendLine($"Total conditional formattings: {conditionalFormattings.Count}\n");
 
             if (conditionalFormattings.Count == 0)
             {
-                result.AppendLine("No conditional formattings found");
-                return result.ToString();
+                var emptyResult = new
+                {
+                    count = 0,
+                    worksheetName = worksheet.Name,
+                    items = Array.Empty<object>(),
+                    message = "No conditional formattings found"
+                };
+                return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
             }
 
-            if (!string.IsNullOrEmpty(range))
-                result.AppendLine(
-                    $"Note: Range '{range}' specified, but all conditional formatting rules are returned.\n");
-
-            result.AppendLine($"Found {conditionalFormattings.Count} conditional formatting rule(s):\n");
-
+            var formattingList = new List<object>();
             for (var i = 0; i < conditionalFormattings.Count; i++)
             {
                 var fcs = conditionalFormattings[i];
-                result.AppendLine($"[Conditional formatting {i}]");
 
-                // The range was specified when the conditional formatting was added
-                result.AppendLine($"Number of conditions: {fcs.Count}");
-
-                // Get condition details
+                var conditionsList = new List<object>();
                 for (var j = 0; j < fcs.Count; j++)
                 {
                     var fc = fcs[j];
-                    result.AppendLine($"  Condition {j}:");
-                    result.AppendLine($"    Operator: {fc.Operator}");
-                    result.AppendLine($"    Formula1: {fc.Formula1 ?? "(none)"}");
-                    result.AppendLine($"    Formula2: {fc.Formula2 ?? "(none)"}");
-                    if (fc.Style != null) result.AppendLine($"    Background color: {fc.Style.BackgroundColor}");
+                    conditionsList.Add(new
+                    {
+                        index = j,
+                        operatorType = fc.Operator.ToString(),
+                        formula1 = fc.Formula1,
+                        formula2 = fc.Formula2,
+                        backgroundColor = fc.Style?.BackgroundColor.ToString()
+                    });
                 }
 
-                result.AppendLine();
+                formattingList.Add(new
+                {
+                    index = i,
+                    conditionsCount = fcs.Count,
+                    conditions = conditionsList
+                });
             }
 
-            return result.ToString();
+            var result = new
+            {
+                count = conditionalFormattings.Count,
+                worksheetName = worksheet.Name,
+                items = formattingList
+            };
+
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 }

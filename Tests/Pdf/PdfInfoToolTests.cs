@@ -57,6 +57,6 @@ public class PdfInfoToolTests : PdfTestBase
         // Assert
         Assert.NotNull(result);
         Assert.NotEmpty(result);
-        Assert.Contains("Statistics", result, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("fileSizeBytes", result);
     }
 }

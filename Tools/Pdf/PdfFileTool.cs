@@ -100,13 +100,35 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
 
+        // Get path and outputPath based on operation type
+        string? path = null;
+        string? outputPath = null;
+
+        switch (operation.ToLower())
+        {
+            case "create":
+                outputPath = ArgumentHelper.GetString(arguments, "outputPath", "path", "outputPath");
+                break;
+            case "merge":
+                outputPath = ArgumentHelper.GetString(arguments, "outputPath");
+                break;
+            case "split":
+                path = ArgumentHelper.GetAndValidatePath(arguments);
+                break;
+            case "compress":
+            case "encrypt":
+                path = ArgumentHelper.GetAndValidatePath(arguments);
+                outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+                break;
+        }
+
         return operation.ToLower() switch
         {
-            "create" => await CreateDocument(arguments),
-            "merge" => await MergeDocuments(arguments),
-            "split" => await SplitDocument(arguments),
-            "compress" => await CompressDocument(arguments),
-            "encrypt" => await EncryptDocument(arguments),
+            "create" => await CreateDocument(outputPath!),
+            "merge" => await MergeDocuments(outputPath!, arguments),
+            "split" => await SplitDocument(path!, arguments),
+            "compress" => await CompressDocument(path!, outputPath!, arguments),
+            "encrypt" => await EncryptDocument(path!, outputPath!, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -114,34 +136,32 @@ Usage examples:
     /// <summary>
     ///     Creates a new PDF document
     /// </summary>
-    /// <param name="arguments">JSON arguments containing outputPath, optional content</param>
+    /// <param name="outputPath">Output file path</param>
     /// <returns>Success message with file path</returns>
-    private Task<string> CreateDocument(JsonObject? arguments)
+    private Task<string> CreateDocument(string outputPath)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetString(arguments, "outputPath", "path", "outputPath");
-
             SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
             using var document = new Document();
             document.Pages.Add();
             document.Save(outputPath);
-            return $"PDF document created successfully at: {outputPath}";
+            return $"PDF document created. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Merges multiple PDF documents into one
     /// </summary>
-    /// <param name="arguments">JSON arguments containing sourcePaths array, outputPath</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing inputPaths array</param>
     /// <returns>Success message with merged file path</returns>
-    private Task<string> MergeDocuments(JsonObject? arguments)
+    private Task<string> MergeDocuments(string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
             var inputPathsArray = ArgumentHelper.GetArray(arguments, "inputPaths");
-            var outputPath = ArgumentHelper.GetString(arguments, "outputPath");
 
             // Validate array size
             SecurityHelper.ValidateArraySize(inputPathsArray, "inputPaths");
@@ -164,24 +184,23 @@ Usage examples:
             }
 
             mergedDocument.Save(outputPath);
-            return $"Merged {inputPaths.Count} PDF documents into: {outputPath}";
+            return $"Merged {inputPaths.Count} PDF documents. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Splits PDF into multiple files
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, outputPath, splitBy (page or range)</param>
+    /// <param name="path">Input file path</param>
+    /// <param name="arguments">JSON arguments containing outputDir, pagesPerFile</param>
     /// <returns>Success message with split file count</returns>
-    private Task<string> SplitDocument(JsonObject? arguments)
+    private Task<string> SplitDocument(string path, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
             var outputDir = ArgumentHelper.GetString(arguments, "outputDir");
             var pagesPerFile = ArgumentHelper.GetInt(arguments, "pagesPerFile", 1);
 
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
             SecurityHelper.ValidateFilePath(outputDir, "outputDir", true);
 
             if (pagesPerFile < 1 || pagesPerFile > 1000)
@@ -203,27 +222,24 @@ Usage examples:
                 newDocument.Save(outputPath);
             }
 
-            return $"PDF split into {fileCount} files in: {outputDir}";
+            return $"PDF split into {fileCount} files. Output: {outputDir}";
         });
     }
 
     /// <summary>
     ///     Compresses a PDF document
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, optional compressionLevel, outputPath</param>
+    /// <param name="path">Input file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing compression options</param>
     /// <returns>Success message</returns>
-    private Task<string> CompressDocument(JsonObject? arguments)
+    private Task<string> CompressDocument(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var compressImages = ArgumentHelper.GetBool(arguments, "compressImages", true);
             var compressFonts = ArgumentHelper.GetBool(arguments, "compressFonts", true);
             var removeUnusedObjects = ArgumentHelper.GetBool(arguments, "removeUnusedObjects", true);
-
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
             using var document = new Document(path);
             var optimizationOptions = new OptimizationOptions();
@@ -250,26 +266,23 @@ Usage examples:
             var reduction = (double)(originalSize - compressedSize) / originalSize * 100;
 
             return
-                $"PDF compressed. Size reduction: {reduction:F2}% ({originalSize} -> {compressedSize} bytes). Output: {outputPath}";
+                $"PDF compressed ({reduction:F2}% reduction, {originalSize} -> {compressedSize} bytes). Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Encrypts a PDF document
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, password, optional userPassword, permissions, outputPath</param>
+    /// <param name="path">Input file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing userPassword, ownerPassword</param>
     /// <returns>Success message</returns>
-    private Task<string> EncryptDocument(JsonObject? arguments)
+    private Task<string> EncryptDocument(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var userPassword = ArgumentHelper.GetString(arguments, "userPassword");
             var ownerPassword = ArgumentHelper.GetString(arguments, "ownerPassword");
-
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
             using var document = new Document(path);
             document.Encrypt(userPassword, ownerPassword, Permissions.PrintDocument | Permissions.ModifyContent,

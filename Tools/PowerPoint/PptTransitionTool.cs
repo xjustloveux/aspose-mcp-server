@@ -1,4 +1,4 @@
-﻿using System.Text;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Slides;
 using Aspose.Slides.Export;
@@ -72,13 +72,14 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
 
         return operation.ToLower() switch
         {
-            "set" => await SetTransitionAsync(arguments, path, slideIndex),
-            "get" => await GetTransitionAsync(arguments, path, slideIndex),
-            "delete" => await DeleteTransitionAsync(arguments, path, slideIndex),
+            "set" => await SetTransitionAsync(path, outputPath, slideIndex, arguments),
+            "get" => await GetTransitionAsync(path, slideIndex),
+            "delete" => await DeleteTransitionAsync(path, outputPath, slideIndex),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -86,11 +87,12 @@ Usage examples:
     /// <summary>
     ///     Sets slide transition effect
     /// </summary>
-    /// <param name="arguments">JSON arguments containing transitionType, optional duration, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing transitionType, optional duration</param>
     /// <returns>Success message</returns>
-    private Task<string> SetTransitionAsync(JsonObject? arguments, string path, int slideIndex)
+    private Task<string> SetTransitionAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -113,55 +115,50 @@ Usage examples:
             };
             transition.AdvanceAfterTime = (uint)(duration * 1000);
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Transition set for slide {slideIndex}: {transition.Type}, duration {duration:0.##}s";
+            return
+                $"Transition '{transition.Type}' set for slide {slideIndex} (duration {duration:0.##}s). Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Gets transition information for a slide
     /// </summary>
-    /// <param name="_">Unused parameter</param>
     /// <param name="path">PowerPoint file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
-    /// <returns>Formatted string with transition details</returns>
-    private Task<string> GetTransitionAsync(JsonObject? _, string path, int slideIndex)
+    /// <returns>JSON string with transition details</returns>
+    private Task<string> GetTransitionAsync(string path, int slideIndex)
     {
         return Task.Run(() =>
         {
             using var presentation = new Presentation(path);
             var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
             var transition = slide.SlideShowTransition;
-            var sb = new StringBuilder();
 
-            sb.AppendLine($"=== Slide {slideIndex} Transition ===");
-            if (transition != null)
+            var result = new
             {
-                sb.AppendLine($"Type: {transition.Type}");
-                sb.AppendLine($"Speed: {transition.Speed}");
-                sb.AppendLine($"AdvanceOnClick: {transition.AdvanceOnClick}");
-                sb.AppendLine($"AdvanceAfterTime: {transition.AdvanceAfterTime}ms");
-                sb.AppendLine($"SoundMode: {transition.SoundMode}");
-                if (transition.Sound != null) sb.AppendLine($"Sound: {transition.Sound}");
-            }
-            else
-            {
-                sb.AppendLine("No transition set");
-            }
+                slideIndex,
+                hasTransition = transition != null,
+                type = transition?.Type.ToString(),
+                speed = transition?.Speed.ToString(),
+                advanceOnClick = transition?.AdvanceOnClick,
+                advanceAfterTimeMs = transition?.AdvanceAfterTime,
+                soundMode = transition?.SoundMode.ToString(),
+                hasSound = transition?.Sound != null
+            };
 
-            return sb.ToString();
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 
     /// <summary>
     ///     Removes transition from a slide
     /// </summary>
-    /// <param name="arguments">JSON arguments containing optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
     /// <returns>Success message</returns>
-    private Task<string> DeleteTransitionAsync(JsonObject? arguments, string path, int slideIndex)
+    private Task<string> DeleteTransitionAsync(string path, string outputPath, int slideIndex)
     {
         return Task.Run(() =>
         {
@@ -171,10 +168,9 @@ Usage examples:
             slide.SlideShowTransition.AdvanceOnClick = false;
             slide.SlideShowTransition.AdvanceAfterTime = 0;
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
 
-            return $"Transition removed from slide {slideIndex}: {outputPath}";
+            return $"Transition removed from slide {slideIndex}. Output: {outputPath}";
         });
     }
 }

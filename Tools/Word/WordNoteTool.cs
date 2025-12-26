@@ -416,34 +416,24 @@ Usage examples:
     /// <summary>
     ///     Callback for inserting notes at the exact position of matched text
     /// </summary>
-    private class NoteInsertingCallback : IReplacingCallback
+    private class NoteInsertingCallback(
+        DocumentBuilder builder,
+        FootnoteType noteType,
+        string noteText,
+        string? customMark) : IReplacingCallback
     {
-        private readonly DocumentBuilder _builder;
-        private readonly string? _customMark;
-        private readonly string _noteText;
-        private readonly FootnoteType _noteType;
-
-        public NoteInsertingCallback(DocumentBuilder builder, FootnoteType noteType, string noteText,
-            string? customMark)
-        {
-            _builder = builder;
-            _noteType = noteType;
-            _noteText = noteText;
-            _customMark = customMark;
-        }
-
         public Footnote? InsertedNote { get; private set; }
 
         public ReplaceAction Replacing(ReplacingArgs args)
         {
             // Move to the end of the matched node
             var matchNode = args.MatchNode;
-            _builder.MoveTo(matchNode);
+            builder.MoveTo(matchNode);
 
             // Insert the note at this position
-            InsertedNote = _builder.InsertFootnote(_noteType, _noteText);
-            if (!string.IsNullOrEmpty(_customMark))
-                InsertedNote.ReferenceMark = _customMark;
+            InsertedNote = builder.InsertFootnote(noteType, noteText);
+            if (!string.IsNullOrEmpty(customMark))
+                InsertedNote.ReferenceMark = customMark;
 
             // Return Skip to keep the original text and stop after first match
             return ReplaceAction.Skip;

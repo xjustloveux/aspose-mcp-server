@@ -1,5 +1,5 @@
-﻿using System.Globalization;
-using System.Text;
+using System.Globalization;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
@@ -109,14 +109,15 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
 
         return operation.ToLower() switch
         {
-            "write" => await WriteCellAsync(arguments, path, sheetIndex),
-            "edit" => await EditCellAsync(arguments, path, sheetIndex),
-            "get" => await GetCellAsync(arguments, path, sheetIndex),
-            "clear" => await ClearCellAsync(arguments, path, sheetIndex),
+            "write" => await WriteCellAsync(path, outputPath, sheetIndex, arguments),
+            "edit" => await EditCellAsync(path, outputPath, sheetIndex, arguments),
+            "get" => await GetCellAsync(path, sheetIndex, arguments),
+            "clear" => await ClearCellAsync(path, outputPath, sheetIndex, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -124,15 +125,15 @@ Usage examples:
     /// <summary>
     ///     Writes a value to a cell
     /// </summary>
-    /// <param name="arguments">JSON arguments containing cell address and value</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing cell address and value</param>
     /// <returns>Success message with cell location</returns>
-    private Task<string> WriteCellAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> WriteCellAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var cell = ArgumentHelper.GetString(arguments, "cell");
             var value = ArgumentHelper.GetString(arguments, "value");
 
@@ -151,22 +152,22 @@ Usage examples:
 
             workbook.Save(outputPath);
 
-            return $"Cell {cell} updated in sheet {sheetIndex}: {outputPath}";
+            return $"Cell {cell} written with value '{value}' in sheet {sheetIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Edits a cell value
     /// </summary>
-    /// <param name="arguments">JSON arguments containing cell address and new value</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing cell address and new value</param>
     /// <returns>Success message with cell location</returns>
-    private Task<string> EditCellAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> EditCellAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var cell = ArgumentHelper.GetString(arguments, "cell");
             var value = ArgumentHelper.GetStringNullable(arguments, "value");
             var formula = ArgumentHelper.GetStringNullable(arguments, "formula");
@@ -201,18 +202,18 @@ Usage examples:
             }
 
             workbook.Save(outputPath);
-            return $"Cell {cell} edited in sheet {sheetIndex}: {outputPath}";
+            return $"Cell {cell} edited in sheet {sheetIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Gets a cell value
     /// </summary>
-    /// <param name="arguments">JSON arguments containing cell and optional includeFormat</param>
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <returns>Formatted string with cell information</returns>
-    private Task<string> GetCellAsync(JsonObject? arguments, string path, int sheetIndex)
+    /// <param name="arguments">JSON arguments containing cell and optional includeFormat</param>
+    /// <returns>JSON string with cell information</returns>
+    private Task<string> GetCellAsync(string path, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -224,40 +225,55 @@ Usage examples:
             var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
             var cellObj = worksheet.Cells[cell];
 
-            var result = new StringBuilder();
-            result.AppendLine($"Cell: {cell}");
-            result.AppendLine($"Value: {cellObj.Value ?? "(empty)"}");
-            result.AppendLine($"Value Type: {cellObj.Type}");
-
-            if (includeFormula && !string.IsNullOrEmpty(cellObj.Formula))
-                result.AppendLine($"Formula: {cellObj.Formula}");
+            object? resultObj;
 
             if (includeFormat)
             {
                 var style = cellObj.GetStyle();
-                result.AppendLine("Format:");
-                result.AppendLine($"  Font: {style.Font.Name}, Size: {style.Font.Size}");
-                result.AppendLine($"  Bold: {style.Font.IsBold}, Italic: {style.Font.IsItalic}");
-                result.AppendLine($"  Background Color: {style.ForegroundColor}");
-                result.AppendLine($"  Number Format: {style.Number}");
+                resultObj = new
+                {
+                    cell,
+                    value = cellObj.Value?.ToString() ?? "(empty)",
+                    valueType = cellObj.Type.ToString(),
+                    formula = includeFormula && !string.IsNullOrEmpty(cellObj.Formula) ? cellObj.Formula : null,
+                    format = new
+                    {
+                        fontName = style.Font.Name,
+                        fontSize = style.Font.Size,
+                        bold = style.Font.IsBold,
+                        italic = style.Font.IsItalic,
+                        backgroundColor = style.ForegroundColor.ToString(),
+                        numberFormat = style.Number
+                    }
+                };
+            }
+            else
+            {
+                resultObj = new
+                {
+                    cell,
+                    value = cellObj.Value?.ToString() ?? "(empty)",
+                    valueType = cellObj.Type.ToString(),
+                    formula = includeFormula && !string.IsNullOrEmpty(cellObj.Formula) ? cellObj.Formula : null
+                };
             }
 
-            return result.ToString();
+            return JsonSerializer.Serialize(resultObj, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 
     /// <summary>
     ///     Clears a cell (content and/or format)
     /// </summary>
-    /// <param name="arguments">JSON arguments containing cell and optional clearContent, clearFormat</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing cell and optional clearContent, clearFormat</param>
     /// <returns>Success message</returns>
-    private Task<string> ClearCellAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> ClearCellAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var cell = ArgumentHelper.GetString(arguments, "cell");
             var clearContent = ArgumentHelper.GetBool(arguments, "clearContent", true);
             var clearFormat = ArgumentHelper.GetBool(arguments, "clearFormat", false);
@@ -283,7 +299,7 @@ Usage examples:
             }
 
             workbook.Save(outputPath);
-            return $"Cell {cell} cleared in sheet {sheetIndex}: {outputPath}";
+            return $"Cell {cell} cleared in sheet {sheetIndex}. Output: {outputPath}";
         });
     }
 }

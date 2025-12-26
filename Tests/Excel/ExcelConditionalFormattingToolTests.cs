@@ -67,7 +67,7 @@ public class ExcelConditionalFormattingToolTests : ExcelTestBase
         // Assert
         Assert.NotNull(result);
         Assert.NotEmpty(result);
-        Assert.Contains("Conditional", result, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("count", result);
     }
 
     [Fact]

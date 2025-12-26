@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
@@ -71,13 +71,14 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
 
         return operation.ToLower() switch
         {
-            "merge" => await MergeCellsAsync(arguments, path, sheetIndex),
-            "unmerge" => await UnmergeCellsAsync(arguments, path, sheetIndex),
-            "get" => await GetMergedCellsAsync(arguments, path, sheetIndex),
+            "merge" => await MergeCellsAsync(path, outputPath, sheetIndex, arguments),
+            "unmerge" => await UnmergeCellsAsync(path, outputPath, sheetIndex, arguments),
+            "get" => await GetMergedCellsAsync(path, sheetIndex),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -85,15 +86,15 @@ Usage examples:
     /// <summary>
     ///     Merges cells in a range
     /// </summary>
-    /// <param name="arguments">JSON arguments containing range</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing range</param>
     /// <returns>Success message with merged range</returns>
-    private Task<string> MergeCellsAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> MergeCellsAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var range = ArgumentHelper.GetString(arguments, "range");
 
             using var workbook = new Workbook(path);
@@ -104,22 +105,22 @@ Usage examples:
 
             cellRange.Merge();
             workbook.Save(outputPath);
-            return $"Range {range} merged: {outputPath}";
+            return $"Range {range} merged. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Unmerges cells in a range
     /// </summary>
-    /// <param name="arguments">JSON arguments containing range</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing range</param>
     /// <returns>Success message</returns>
-    private Task<string> UnmergeCellsAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> UnmergeCellsAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var range = ArgumentHelper.GetString(arguments, "range");
 
             using var workbook = new Workbook(path);
@@ -130,18 +131,17 @@ Usage examples:
 
             cellRange.UnMerge();
             workbook.Save(outputPath);
-            return $"Range {range} unmerged: {outputPath}";
+            return $"Range {range} unmerged. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Gets all merged cell ranges from the worksheet
     /// </summary>
-    /// <param name="_">Unused parameter</param>
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <returns>Formatted string with all merged ranges</returns>
-    private Task<string> GetMergedCellsAsync(JsonObject? _, string path, int sheetIndex)
+    /// <returns>JSON string with all merged ranges</returns>
+    private Task<string> GetMergedCellsAsync(string path, int sheetIndex)
     {
         return Task.Run(() =>
         {
@@ -150,57 +150,51 @@ Usage examples:
             var mergedCells = worksheet.Cells.MergedCells;
             if (mergedCells == null)
                 throw new InvalidOperationException($"Unable to get merged cells information: {worksheet.Name}");
-            var result = new StringBuilder();
-
-            result.AppendLine($"=== Merged cells information for worksheet '{worksheet.Name}' ===\n");
-            result.AppendLine($"Total merged regions: {mergedCells.Count}\n");
 
             if (mergedCells.Count == 0)
             {
-                result.AppendLine("No merged cells found");
-                return result.ToString();
+                var emptyResult = new
+                {
+                    count = 0,
+                    worksheetName = worksheet.Name,
+                    items = Array.Empty<object>(),
+                    message = "No merged cells found"
+                };
+                return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
             }
 
+            var mergedList = new List<object>();
             for (var i = 0; i < mergedCells.Count; i++)
                 try
                 {
-                    // MergedCells[i] returns a CellArea object or its string representation
-                    // Format might be "A1:B2" or "Aspose.Cells.CellArea(A5:C5)[4,0,4,2]"
-                    string? mergedCellName;
+                    string? mergedCellName = null;
                     int startRow = -1, startCol = -1, endRow = -1, endCol = -1;
+                    string? cellValue = null;
+                    string? error = null;
 
                     try
                     {
-                        // MergedCells[i] returns a CellArea struct or its string representation
-                        // Try to get as CellArea struct first
                         var mergedCellObj = mergedCells[i];
 
                         if (mergedCellObj is CellArea cellArea)
                         {
-                            // Use CellArea properties directly
                             startRow = cellArea.StartRow;
                             startCol = cellArea.StartColumn;
                             endRow = cellArea.EndRow;
                             endCol = cellArea.EndColumn;
 
-                            // Convert to cell names
                             var startCellName = CellsHelper.CellIndexToName(startRow, startCol);
                             var endCellName = CellsHelper.CellIndexToName(endRow, endCol);
                             mergedCellName = $"{startCellName}:{endCellName}";
                         }
                         else
                         {
-                            // Try as string representation
                             mergedCellName = mergedCells[i]?.ToString();
 
-                            // Parse string format
-                            // Format might be "A1:B2" or "Aspose.Cells.CellArea(A5:C5)[4,0,4,2]"
                             if (!string.IsNullOrWhiteSpace(mergedCellName))
                             {
-                                // Check if it's CellArea format: "Aspose.Cells.CellArea(A5:C5)[4,0,4,2]"
                                 if (mergedCellName.Contains("CellArea(") && mergedCellName.Contains("["))
                                 {
-                                    // Extract indices from [4,0,4,2] first (before modifying mergedCellName)
                                     var bracketStart = mergedCellName.IndexOf('[');
                                     if (bracketStart > 0)
                                     {
@@ -213,16 +207,12 @@ Usage examples:
                                                 int.TryParse(indices[2].Trim(), out endRow) &&
                                                 int.TryParse(indices[3].Trim(), out endCol))
                                             {
-                                                // Use parsed indices - success!
-                                                // Convert to cell names for display
                                                 var startCellName = CellsHelper.CellIndexToName(startRow, startCol);
                                                 var endCellName = CellsHelper.CellIndexToName(endRow, endCol);
                                                 mergedCellName = $"{startCellName}:{endCellName}";
                                             }
                                     }
 
-                                    // Also extract range from CellArea format: "CellArea(A5:C5)[4,0,4,2]"
-                                    // This is for display purposes if indices parsing failed
                                     if (startRow < 0)
                                     {
                                         var startIdx = mergedCellName.IndexOf('(') + 1;
@@ -230,12 +220,11 @@ Usage examples:
                                         if (startIdx > 0 && endIdx > startIdx)
                                         {
                                             var rangePart = mergedCellName.Substring(startIdx, endIdx - startIdx);
-                                            mergedCellName = rangePart; // Now it's "A5:C5"
+                                            mergedCellName = rangePart;
                                         }
                                     }
                                 }
 
-                                // If we still need to parse, try splitting by ':'
                                 if (startRow < 0 && mergedCellName.Contains(':'))
                                 {
                                     var parts = mergedCellName.Split(':');
@@ -251,7 +240,6 @@ Usage examples:
                                         }
                                         catch (Exception ex)
                                         {
-                                            // If parsing fails, keep mergedCellName as is
                                             Console.Error.WriteLine(
                                                 $"[WARN] Failed to parse cell names '{startCell}' or '{endCell}': {ex.Message}");
                                         }
@@ -259,58 +247,56 @@ Usage examples:
                                 }
                             }
                         }
+
+                        if (startRow >= 0 && startCol >= 0)
+                            try
+                            {
+                                var cell = worksheet.Cells[startRow, startCol];
+                                cellValue = cell.Value?.ToString() ?? "(empty)";
+                            }
+                            catch (Exception ex)
+                            {
+                                cellValue = "(unable to read)";
+                                Console.Error.WriteLine(
+                                    $"[WARN] Failed to read cell value at [{startRow}, {startCol}]: {ex.Message}");
+                            }
                     }
                     catch (Exception ex)
                     {
-                        // Skip this merged cell if we can't access it
-                        result.AppendLine($"[Merged region {i}]");
-                        result.AppendLine($"Error: Unable to read merged cell information - {ex.Message}");
-                        result.AppendLine();
-                        continue;
+                        error = $"Unable to read merged cell information - {ex.Message}";
                     }
 
-                    if (string.IsNullOrWhiteSpace(mergedCellName) || startRow < 0)
+                    mergedList.Add(new
                     {
-                        result.AppendLine($"[Merged region {i}]");
-                        result.AppendLine($"Range: {mergedCellName ?? "unknown"}");
-                        result.AppendLine("Note: Unable to parse range format");
-                        result.AppendLine();
-                        continue;
-                    }
-
-                    // Display merged cell information
-                    result.AppendLine($"[Merged region {i}]");
-                    result.AppendLine($"Range: {mergedCellName}");
-
-                    if (endRow >= 0 && startCol >= 0 && endCol >= 0)
-                    {
-                        result.AppendLine($"Row count: {endRow - startRow + 1}");
-                        result.AppendLine($"Column count: {endCol - startCol + 1}");
-
-                        try
-                        {
-                            var cell = worksheet.Cells[startRow, startCol];
-                            result.AppendLine($"Value: {cell.Value ?? "(empty)"}");
-                        }
-                        catch (Exception ex)
-                        {
-                            result.AppendLine("Value: (unable to read)");
-                            Console.Error.WriteLine(
-                                $"[WARN] Failed to read cell value at [{startRow}, {startCol}]: {ex.Message}");
-                        }
-                    }
-
-                    result.AppendLine();
+                        index = i,
+                        range = mergedCellName ?? "unknown",
+                        rowCount = endRow >= 0 && startRow >= 0 ? endRow - startRow + 1 : (int?)null,
+                        columnCount = endCol >= 0 && startCol >= 0 ? endCol - startCol + 1 : (int?)null,
+                        value = cellValue,
+                        error
+                    });
                 }
                 catch (Exception ex)
                 {
-                    // Skip this merged cell if there's an error
-                    result.AppendLine($"[Merged region {i}]");
-                    result.AppendLine($"Error: Unable to read merged cell information - {ex.Message}");
-                    result.AppendLine();
+                    mergedList.Add(new
+                    {
+                        index = i,
+                        range = (string?)null,
+                        rowCount = (int?)null,
+                        columnCount = (int?)null,
+                        value = (string?)null,
+                        error = $"Unable to read merged cell information - {ex.Message}"
+                    });
                 }
 
-            return result.ToString();
+            var result = new
+            {
+                count = mergedCells.Count,
+                worksheetName = worksheet.Name,
+                items = mergedList
+            };
+
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 }

@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
@@ -83,14 +83,15 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
 
         return operation.ToLower() switch
         {
-            "add" => await AddCommentAsync(arguments, path, sheetIndex),
-            "edit" => await EditCommentAsync(arguments, path, sheetIndex),
-            "delete" => await DeleteCommentAsync(arguments, path, sheetIndex),
-            "get" => await GetCommentsAsync(arguments, path, sheetIndex),
+            "add" => await AddCommentAsync(path, outputPath, sheetIndex, arguments),
+            "edit" => await EditCommentAsync(path, outputPath, sheetIndex, arguments),
+            "delete" => await DeleteCommentAsync(path, outputPath, sheetIndex, arguments),
+            "get" => await GetCommentsAsync(path, sheetIndex, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -98,15 +99,15 @@ Usage examples:
     /// <summary>
     ///     Adds a comment to a cell
     /// </summary>
-    /// <param name="arguments">JSON arguments containing cell address and comment text</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing cell address and comment text</param>
     /// <returns>Success message with comment details</returns>
-    private Task<string> AddCommentAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> AddCommentAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var cell = ArgumentHelper.GetString(arguments, "cell");
             var comment = ArgumentHelper.GetString(arguments, "comment");
             var author = ArgumentHelper.GetStringNullable(arguments, "author");
@@ -126,22 +127,22 @@ Usage examples:
             if (!string.IsNullOrEmpty(author)) commentObj.Author = author;
 
             workbook.Save(outputPath);
-            return $"Comment added to cell {cell} in sheet {sheetIndex}: {outputPath}";
+            return $"Comment added to cell {cell} in sheet {sheetIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Edits an existing cell comment
     /// </summary>
-    /// <param name="arguments">JSON arguments containing cell address and new comment text</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing cell address and new comment text</param>
     /// <returns>Success message</returns>
-    private Task<string> EditCommentAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> EditCommentAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var cell = ArgumentHelper.GetString(arguments, "cell");
             var comment = ArgumentHelper.GetString(arguments, "comment");
             var author = ArgumentHelper.GetStringNullable(arguments, "author");
@@ -157,22 +158,22 @@ Usage examples:
             if (!string.IsNullOrEmpty(author)) commentObj.Author = author;
 
             workbook.Save(outputPath);
-            return $"Comment edited on cell {cell} in sheet {sheetIndex}: {outputPath}";
+            return $"Comment edited on cell {cell} in sheet {sheetIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Deletes a comment from a cell
     /// </summary>
-    /// <param name="arguments">JSON arguments containing cell address</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing cell address</param>
     /// <returns>Success message</returns>
-    private Task<string> DeleteCommentAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> DeleteCommentAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var cell = ArgumentHelper.GetString(arguments, "cell");
 
             using var workbook = new Workbook(path);
@@ -182,18 +183,18 @@ Usage examples:
             if (comment != null) worksheet.Comments.RemoveAt(cell);
 
             workbook.Save(outputPath);
-            return $"Comment deleted from cell {cell} in sheet {sheetIndex}: {outputPath}";
+            return $"Comment deleted from cell {cell} in sheet {sheetIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Gets all comments or comments for a specific cell
     /// </summary>
-    /// <param name="arguments">JSON arguments optionally containing cell address</param>
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <returns>Formatted string with comment information</returns>
-    private Task<string> GetCommentsAsync(JsonObject? arguments, string path, int sheetIndex)
+    /// <param name="arguments">JSON arguments optionally containing cell address</param>
+    /// <returns>JSON string with comment information</returns>
+    private Task<string> GetCommentsAsync(string path, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -201,39 +202,76 @@ Usage examples:
 
             using var workbook = new Workbook(path);
             var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-            var sb = new StringBuilder();
 
             if (!string.IsNullOrEmpty(cell))
             {
                 var comment = worksheet.Comments[cell];
                 if (comment != null)
                 {
-                    sb.AppendLine($"Comment on cell {cell}:");
-                    sb.AppendLine($"  Author: {comment.Author}");
-                    sb.AppendLine($"  Note: {comment.Note}");
+                    var result = new
+                    {
+                        count = 1,
+                        sheetIndex,
+                        cell,
+                        items = new[]
+                        {
+                            new
+                            {
+                                cell,
+                                author = comment.Author,
+                                note = comment.Note
+                            }
+                        }
+                    };
+                    return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
                 }
                 else
                 {
-                    sb.AppendLine($"No comment found on cell {cell}");
+                    var result = new
+                    {
+                        count = 0,
+                        sheetIndex,
+                        cell,
+                        items = Array.Empty<object>(),
+                        message = $"No comment found on cell {cell}"
+                    };
+                    return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
                 }
             }
-            else
-            {
-                sb.AppendLine($"Comments in sheet {sheetIndex}:");
-                if (worksheet.Comments.Count > 0)
-                    foreach (var comment in worksheet.Comments)
-                    {
-                        var cellName = CellsHelper.CellIndexToName(comment.Row, comment.Column);
-                        sb.AppendLine($"  Cell {cellName}:");
-                        sb.AppendLine($"    Author: {comment.Author}");
-                        sb.AppendLine($"    Note: {comment.Note}");
-                        sb.AppendLine();
-                    }
-                else
-                    sb.AppendLine("  No comments found");
-            }
 
-            return sb.ToString();
+            {
+                if (worksheet.Comments.Count == 0)
+                {
+                    var emptyResult = new
+                    {
+                        count = 0,
+                        sheetIndex,
+                        items = Array.Empty<object>(),
+                        message = "No comments found"
+                    };
+                    return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
+                }
+
+                var commentList = new List<object>();
+                foreach (var comment in worksheet.Comments)
+                {
+                    var cellName = CellsHelper.CellIndexToName(comment.Row, comment.Column);
+                    commentList.Add(new
+                    {
+                        cell = cellName,
+                        author = comment.Author,
+                        note = comment.Note
+                    });
+                }
+
+                var result = new
+                {
+                    count = worksheet.Comments.Count,
+                    sheetIndex,
+                    items = commentList
+                };
+                return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            }
         });
     }
 }

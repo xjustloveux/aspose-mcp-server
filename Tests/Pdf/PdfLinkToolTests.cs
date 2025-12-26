@@ -75,7 +75,7 @@ public class PdfLinkToolTests : PdfTestBase
         // Assert
         Assert.NotNull(result);
         Assert.NotEmpty(result);
-        Assert.Contains("Link", result, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("count", result);
     }
 
     [Fact]

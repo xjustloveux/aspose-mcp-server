@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Cells;
 using Aspose.Cells.Pivot;
@@ -131,17 +131,18 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
 
         return operation.ToLower() switch
         {
-            "add" => await AddPivotTableAsync(arguments, path, sheetIndex),
-            "edit" => await EditPivotTableAsync(arguments, path, sheetIndex),
-            "delete" => await DeletePivotTableAsync(arguments, path, sheetIndex),
-            "get" => await GetPivotTablesAsync(arguments, path, sheetIndex),
-            "add_field" => await AddFieldAsync(arguments, path, sheetIndex),
-            "delete_field" => await DeleteFieldAsync(arguments, path, sheetIndex),
-            "refresh" => await RefreshPivotTableAsync(arguments, path, sheetIndex),
+            "add" => await AddPivotTableAsync(path, outputPath, sheetIndex, arguments),
+            "edit" => await EditPivotTableAsync(path, outputPath, sheetIndex, arguments),
+            "delete" => await DeletePivotTableAsync(path, outputPath, sheetIndex, arguments),
+            "get" => await GetPivotTablesAsync(path, sheetIndex),
+            "add_field" => await AddFieldAsync(path, outputPath, sheetIndex, arguments),
+            "delete_field" => await DeleteFieldAsync(path, outputPath, sheetIndex, arguments),
+            "refresh" => await RefreshPivotTableAsync(path, outputPath, sheetIndex, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -149,15 +150,15 @@ Usage examples:
     /// <summary>
     ///     Adds a new pivot table to the worksheet
     /// </summary>
-    /// <param name="arguments">JSON arguments containing sourceRange, destCell, and optional name</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing sourceRange, destCell, and optional name</param>
     /// <returns>Success message with file path</returns>
-    private Task<string> AddPivotTableAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> AddPivotTableAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var sourceRange = ArgumentHelper.GetString(arguments, "sourceRange");
             var destCell = ArgumentHelper.GetString(arguments, "destCell");
             var name = ArgumentHelper.GetString(arguments, "name", "PivotTable1");
@@ -177,22 +178,22 @@ Usage examples:
 
             workbook.Save(outputPath);
 
-            return $"Pivot table added to worksheet: {outputPath}";
+            return $"Pivot table '{name}' added to worksheet. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Edits an existing pivot table (name, refresh data)
     /// </summary>
-    /// <param name="arguments">JSON arguments containing pivotTableIndex and optional name, refreshData</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing pivotTableIndex and optional name, refreshData</param>
     /// <returns>Success message with changes made</returns>
-    private Task<string> EditPivotTableAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> EditPivotTableAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var pivotTableIndex = ArgumentHelper.GetInt(arguments, "pivotTableIndex");
             var name = ArgumentHelper.GetStringNullable(arguments, "name");
             var refreshData = ArgumentHelper.GetBool(arguments, "refreshData", false);
@@ -212,42 +213,31 @@ Usage examples:
             if (!string.IsNullOrEmpty(name))
             {
                 pivotTable.Name = name;
-                changes.Add($"Name: {name}");
+                changes.Add($"name={name}");
             }
 
             if (refreshData)
             {
                 pivotTable.CalculateData();
-                changes.Add("Data refreshed");
+                changes.Add("refreshed");
             }
 
             workbook.Save(outputPath);
 
-            var result = $"Successfully edited pivot table #{pivotTableIndex}\n";
-            if (changes.Count > 0)
-            {
-                result += "Changes:\n";
-                foreach (var change in changes) result += $"  - {change}\n";
-            }
-            else
-            {
-                result += "No changes.\n";
-            }
-
-            result += $"Output: {outputPath}";
-
-            return result;
+            var changesStr = changes.Count > 0 ? string.Join(", ", changes) : "no changes";
+            return $"Pivot table #{pivotTableIndex} edited ({changesStr}). Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Deletes a pivot table from the worksheet
     /// </summary>
-    /// <param name="arguments">JSON arguments containing pivotTableIndex</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing pivotTableIndex</param>
     /// <returns>Success message with remaining pivot table count</returns>
-    private Task<string> DeletePivotTableAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> DeletePivotTableAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -266,24 +256,19 @@ Usage examples:
             var pivotTableName = pivotTable.Name ?? $"PivotTable {pivotTableIndex}";
 
             pivotTables.RemoveAt(pivotTableIndex);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             workbook.Save(outputPath);
 
-            var remainingCount = pivotTables.Count;
-
-            return
-                $"Successfully deleted pivot table #{pivotTableIndex} ({pivotTableName})\nRemaining pivot tables in worksheet: {remainingCount}\nOutput: {outputPath}";
+            return $"Pivot table #{pivotTableIndex} ({pivotTableName}) deleted. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Gets information about all pivot tables in the worksheet
     /// </summary>
-    /// <param name="_">Unused parameter</param>
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <returns>Formatted string with pivot table information</returns>
-    private Task<string> GetPivotTablesAsync(JsonObject? _, string path, int sheetIndex)
+    /// <returns>JSON string with pivot table information</returns>
+    private Task<string> GetPivotTablesAsync(string path, int sheetIndex)
     {
         return Task.Run(() =>
         {
@@ -291,22 +276,23 @@ Usage examples:
 
             var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
             var pivotTables = worksheet.PivotTables;
-            var result = new StringBuilder();
-
-            result.AppendLine($"=== Pivot Table Information for Worksheet '{worksheet.Name}' ===\n");
-            result.AppendLine($"Total pivot tables: {pivotTables.Count}\n");
 
             if (pivotTables.Count == 0)
             {
-                result.AppendLine("No pivot tables found");
-                return result.ToString();
+                var emptyResult = new
+                {
+                    count = 0,
+                    worksheetName = worksheet.Name,
+                    items = Array.Empty<object>(),
+                    message = "No pivot tables found"
+                };
+                return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
             }
 
+            var pivotTableList = new List<object>();
             for (var i = 0; i < pivotTables.Count; i++)
             {
                 var pivotTable = pivotTables[i];
-                result.AppendLine($"【Pivot Table {i}】");
-                result.AppendLine($"Name: {pivotTable.Name ?? "(no name)"}");
 
                 // Format data source information
                 string dataSourceInfo;
@@ -327,77 +313,86 @@ Usage examples:
                     dataSourceInfo = "Unknown";
                 }
 
-                result.AppendLine($"Data source: {dataSourceInfo}");
-
                 // Format location information
+                object? locationInfo = null;
                 var dataBodyRange = pivotTable.DataBodyRange;
                 if (dataBodyRange.StartRow >= 0)
                 {
                     var startCell = CellsHelper.CellIndexToName(dataBodyRange.StartRow, dataBodyRange.StartColumn);
                     var endCell = CellsHelper.CellIndexToName(dataBodyRange.EndRow, dataBodyRange.EndColumn);
-                    result.AppendLine(
-                        $"Location: {startCell}:{endCell} (Rows {dataBodyRange.StartRow}-{dataBodyRange.EndRow}, Columns {dataBodyRange.StartColumn}-{dataBodyRange.EndColumn})");
-                }
-                else
-                {
-                    result.AppendLine("Location: Unknown");
+                    locationInfo = new
+                    {
+                        range = $"{startCell}:{endCell}",
+                        startRow = dataBodyRange.StartRow,
+                        endRow = dataBodyRange.EndRow,
+                        startColumn = dataBodyRange.StartColumn,
+                        endColumn = dataBodyRange.EndColumn
+                    };
                 }
 
                 // Format row fields information
+                var rowFieldsList = new List<object>();
                 if (pivotTable.RowFields is { Count: > 0 } rowFields)
-                {
-                    var rowFieldNames = new List<string>();
                     foreach (PivotField field in rowFields)
-                    {
-                        var fieldName = field.Name ?? $"Field {field.Position}";
-                        rowFieldNames.Add(fieldName);
-                    }
-
-                    result.AppendLine($"Row fields ({rowFields.Count}): {string.Join(", ", rowFieldNames)}");
-                }
+                        rowFieldsList.Add(new
+                        {
+                            name = field.Name ?? $"Field {field.Position}",
+                            position = field.Position
+                        });
 
                 // Format column fields information
+                var columnFieldsList = new List<object>();
                 if (pivotTable.ColumnFields is { Count: > 0 } columnFields)
-                {
-                    var columnFieldNames = new List<string>();
                     foreach (PivotField field in columnFields)
-                    {
-                        var fieldName = field.Name ?? $"Field {field.Position}";
-                        columnFieldNames.Add(fieldName);
-                    }
-
-                    result.AppendLine($"Column fields ({columnFields.Count}): {string.Join(", ", columnFieldNames)}");
-                }
+                        columnFieldsList.Add(new
+                        {
+                            name = field.Name ?? $"Field {field.Position}",
+                            position = field.Position
+                        });
 
                 // Format data fields information with aggregation functions
+                var dataFieldsList = new List<object>();
                 if (pivotTable.DataFields is { Count: > 0 } dataFields)
-                {
-                    var dataFieldInfo = new List<string>();
                     foreach (PivotField field in dataFields)
-                    {
-                        var fieldName = field.Name ?? $"Field {field.Position}";
-                        var function = field.Function.ToString();
-                        dataFieldInfo.Add($"{fieldName} ({function})");
-                    }
+                        dataFieldsList.Add(new
+                        {
+                            name = field.Name ?? $"Field {field.Position}",
+                            position = field.Position,
+                            function = field.Function.ToString()
+                        });
 
-                    result.AppendLine($"Data fields ({dataFields.Count}): {string.Join(", ", dataFieldInfo)}");
-                }
-
-                result.AppendLine();
+                pivotTableList.Add(new
+                {
+                    index = i,
+                    name = pivotTable.Name ?? "(no name)",
+                    dataSource = dataSourceInfo,
+                    location = locationInfo,
+                    rowFields = rowFieldsList,
+                    columnFields = columnFieldsList,
+                    dataFields = dataFieldsList
+                });
             }
 
-            return result.ToString();
+            var result = new
+            {
+                count = pivotTables.Count,
+                worksheetName = worksheet.Name,
+                items = pivotTableList
+            };
+
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 
     /// <summary>
     ///     Adds a field to the pivot table
     /// </summary>
-    /// <param name="arguments">JSON arguments containing pivotTableIndex, fieldName, fieldType, and optional function</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing pivotTableIndex, fieldName, fieldType, and optional function</param>
     /// <returns>Success message with field details</returns>
-    private Task<string> AddFieldAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> AddFieldAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -553,17 +548,15 @@ Usage examples:
                     }
 
                     // CalculateData updates the pivot table (RefreshData may cause issues)
-                    string? calcWarning = null;
                     try
                     {
                         pivotTable.CalculateData();
                     }
                     catch (Exception calcEx)
                     {
-                        calcWarning = calcEx.Message;
+                        Console.Error.WriteLine($"[WARN] CalculateData warning: {calcEx.Message}");
                     }
 
-                    var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
                     try
                     {
                         workbook.Save(outputPath);
@@ -574,29 +567,23 @@ Usage examples:
                             $"Failed to save workbook after adding field '{fieldName}': {saveEx.Message}");
                     }
 
-                    if (!string.IsNullOrEmpty(calcWarning))
-                        return
-                            $"Field '{fieldName}' added as {fieldType} field to pivot table #{pivotTableIndex} (note: CalculateData warning: {calcWarning}): {outputPath}";
                     return
-                        $"Field '{fieldName}' added as {fieldType} field to pivot table #{pivotTableIndex}: {outputPath}";
+                        $"Field '{fieldName}' added as {fieldType} field to pivot table #{pivotTableIndex}. Output: {outputPath}";
                 }
                 catch (Exception ex)
                 {
                     if (ex.Message.Contains("already exists") || ex.Message.Contains("duplicate"))
-                    {
-                        var outputPath2 = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
                         try
                         {
-                            workbook.Save(outputPath2);
+                            workbook.Save(outputPath);
                             return
-                                $"Field '{fieldName}' may already exist in {fieldType} area of pivot table #{pivotTableIndex}: {outputPath2}";
+                                $"Field '{fieldName}' may already exist in {fieldType} area of pivot table #{pivotTableIndex}. Output: {outputPath}";
                         }
                         catch (Exception saveEx)
                         {
                             throw new ArgumentException(
                                 $"Failed to add field '{fieldName}' to pivot table and save workbook: {ex.Message}. Save error: {saveEx.Message}");
                         }
-                    }
 
                     throw new ArgumentException(
                         $"Failed to add field '{fieldName}' to pivot table: {ex.Message}. Field index: {fieldIndex}, Field type: {fieldType}");
@@ -614,11 +601,12 @@ Usage examples:
     /// <summary>
     ///     Removes a field from the pivot table
     /// </summary>
-    /// <param name="arguments">JSON arguments containing pivotTableIndex, fieldName, and fieldType</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing pivotTableIndex, fieldName, and fieldType</param>
     /// <returns>Success message with field removal details</returns>
-    private Task<string> DeleteFieldAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> DeleteFieldAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -747,17 +735,15 @@ Usage examples:
                     pivotTable.RemoveField(fieldTypeEnum, fieldIndex);
 
                     // CalculateData updates the pivot table (RefreshData may cause issues)
-                    string? calcWarning = null;
                     try
                     {
                         pivotTable.CalculateData();
                     }
                     catch (Exception calcEx)
                     {
-                        calcWarning = calcEx.Message;
+                        Console.Error.WriteLine($"[WARN] CalculateData warning: {calcEx.Message}");
                     }
 
-                    var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
                     try
                     {
                         workbook.Save(outputPath);
@@ -768,29 +754,23 @@ Usage examples:
                             $"Failed to save workbook after removing field '{fieldName}': {saveEx.Message}");
                     }
 
-                    if (!string.IsNullOrEmpty(calcWarning))
-                        return
-                            $"Field '{fieldName}' removed from {fieldType} area of pivot table #{pivotTableIndex} (note: CalculateData warning: {calcWarning}): {outputPath}";
                     return
-                        $"Field '{fieldName}' removed from {fieldType} area of pivot table #{pivotTableIndex}: {outputPath}";
+                        $"Field '{fieldName}' removed from {fieldType} area of pivot table #{pivotTableIndex}. Output: {outputPath}";
                 }
                 catch (Exception ex)
                 {
                     if (ex.Message.Contains("not found") || ex.Message.Contains("does not exist"))
-                    {
-                        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
                         try
                         {
                             workbook.Save(outputPath);
                             return
-                                $"Field '{fieldName}' may already be removed from {fieldType} area of pivot table #{pivotTableIndex}: {outputPath}";
+                                $"Field '{fieldName}' may already be removed from {fieldType} area of pivot table #{pivotTableIndex}. Output: {outputPath}";
                         }
                         catch (Exception saveEx)
                         {
                             throw new ArgumentException(
                                 $"Failed to remove field '{fieldName}' from pivot table and save workbook: {ex.Message}. Save error: {saveEx.Message}");
                         }
-                    }
 
                     throw new ArgumentException(
                         $"Failed to remove field '{fieldName}' from pivot table: {ex.Message}. Field index: {fieldIndex}, Field type: {fieldType}");
@@ -808,15 +788,15 @@ Usage examples:
     /// <summary>
     ///     Refreshes pivot table data (one or all tables)
     /// </summary>
-    /// <param name="arguments">JSON arguments containing optional pivotTableIndex (if null, refreshes all)</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing optional pivotTableIndex (if null, refreshes all)</param>
     /// <returns>Success message with refresh count</returns>
-    private Task<string> RefreshPivotTableAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> RefreshPivotTableAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var pivotTableIndex = ArgumentHelper.GetIntNullable(arguments, "pivotTableIndex");
 
             using var workbook = new Workbook(path);
@@ -849,8 +829,7 @@ Usage examples:
 
             workbook.Save(outputPath);
 
-            return
-                $"Successfully refreshed {refreshedCount} pivot table(s)\nWorksheet: {worksheet.Name}\nOutput: {outputPath}";
+            return $"Refreshed {refreshedCount} pivot table(s) in worksheet '{worksheet.Name}'. Output: {outputPath}";
         });
     }
 }

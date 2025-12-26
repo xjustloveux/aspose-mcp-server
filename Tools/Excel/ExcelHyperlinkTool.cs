@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
@@ -99,14 +99,15 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
 
         return operation.ToLower() switch
         {
-            "add" => await AddHyperlinkAsync(arguments, path, sheetIndex),
-            "edit" => await EditHyperlinkAsync(arguments, path, sheetIndex),
-            "delete" => await DeleteHyperlinkAsync(arguments, path, sheetIndex),
-            "get" => await GetHyperlinksAsync(arguments, path, sheetIndex),
+            "add" => await AddHyperlinkAsync(path, outputPath, sheetIndex, arguments),
+            "edit" => await EditHyperlinkAsync(path, outputPath, sheetIndex, arguments),
+            "delete" => await DeleteHyperlinkAsync(path, outputPath, sheetIndex, arguments),
+            "get" => await GetHyperlinksAsync(path, sheetIndex),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -114,11 +115,12 @@ Usage examples:
     /// <summary>
     ///     Adds a hyperlink to a cell
     /// </summary>
-    /// <param name="arguments">JSON arguments containing cell, address, and optional screenTip, textToDisplay</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing cell, address, and optional screenTip, textToDisplay</param>
     /// <returns>Success message with hyperlink details</returns>
-    private Task<string> AddHyperlinkAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> AddHyperlinkAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -133,21 +135,21 @@ Usage examples:
             if (!string.IsNullOrEmpty(displayText)) cellObj.PutValue(displayText);
 
             worksheet.Hyperlinks.Add(cell, 1, 1, url);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             workbook.Save(outputPath);
 
-            return $"Hyperlink added to cell {cell}: {url}";
+            return $"Hyperlink added to {cell}: {url}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Edits an existing hyperlink
     /// </summary>
-    /// <param name="arguments">JSON arguments containing cell and optional address, screenTip, textToDisplay</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing cell and optional address, screenTip, textToDisplay</param>
     /// <returns>Success message with updated hyperlink details</returns>
-    private Task<string> EditHyperlinkAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> EditHyperlinkAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -165,20 +167,10 @@ Usage examples:
 
             var foundIndex = hyperlinkIndex;
 
-            // If cell is provided, find the hyperlink index by cell address
             if (!hyperlinkIndex.HasValue && !string.IsNullOrEmpty(cell))
             {
                 foundIndex = null;
-                int rowIndex, colIndex;
-                try
-                {
-                    CellsHelper.CellNameToIndex(cell, out rowIndex, out colIndex);
-                }
-                catch (Exception ex)
-                {
-                    Console.Error.WriteLine($"[ERROR] Invalid cell address format '{cell}': {ex.Message}");
-                    throw new ArgumentException($"Invalid cell address: {cell}");
-                }
+                CellsHelper.CellNameToIndex(cell, out var rowIndex, out var colIndex);
 
                 for (var i = 0; i < hyperlinks.Count; i++)
                 {
@@ -203,24 +195,25 @@ Usage examples:
                     $"Hyperlink index {index} is out of range (worksheet has {hyperlinks.Count} hyperlinks)");
 
             var hyperlink = hyperlinks[index];
-            var oldAddress = hyperlink.Address ?? "";
-            var oldText = hyperlink.TextToDisplay ?? "";
+            var changes = new List<string>();
 
-            if (!string.IsNullOrEmpty(address)) hyperlink.Address = address;
+            if (!string.IsNullOrEmpty(address))
+            {
+                hyperlink.Address = address;
+                changes.Add($"address={address}");
+            }
 
-            if (!string.IsNullOrEmpty(textToDisplay)) hyperlink.TextToDisplay = textToDisplay;
+            if (!string.IsNullOrEmpty(textToDisplay))
+            {
+                hyperlink.TextToDisplay = textToDisplay;
+                changes.Add($"text={textToDisplay}");
+            }
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             workbook.Save(outputPath);
 
-            var result = $"Successfully edited hyperlink #{index}";
-            if (!string.IsNullOrEmpty(cell)) result += $" (cell: {cell})";
-            result += "\n";
-            result += $"Old address: {oldAddress}\n";
-            result += $"New address: {hyperlink.Address ?? oldAddress}\n";
-            result += $"Old display text: {oldText}\n";
-            result += $"New display text: {hyperlink.TextToDisplay ?? oldText}\n";
-            result += $"Output: {outputPath}";
+            var result = changes.Count > 0
+                ? $"Hyperlink #{index} edited: {string.Join(", ", changes)}. Output: {outputPath}"
+                : $"Hyperlink #{index} no changes. Output: {outputPath}";
 
             return result;
         });
@@ -229,11 +222,12 @@ Usage examples:
     /// <summary>
     ///     Deletes a hyperlink from a cell
     /// </summary>
-    /// <param name="arguments">JSON arguments containing cell</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing cell</param>
     /// <returns>Success message</returns>
-    private Task<string> DeleteHyperlinkAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> DeleteHyperlinkAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -249,20 +243,10 @@ Usage examples:
 
             var foundIndex = hyperlinkIndex;
 
-            // If cell is provided, find the hyperlink index by cell address
             if (!hyperlinkIndex.HasValue && !string.IsNullOrEmpty(cell))
             {
                 foundIndex = null;
-                int rowIndex, colIndex;
-                try
-                {
-                    CellsHelper.CellNameToIndex(cell, out rowIndex, out colIndex);
-                }
-                catch (Exception ex)
-                {
-                    Console.Error.WriteLine($"[ERROR] Invalid cell address format '{cell}': {ex.Message}");
-                    throw new ArgumentException($"Invalid cell address: {cell}");
-                }
+                CellsHelper.CellNameToIndex(cell, out var rowIndex, out var colIndex);
 
                 for (var i = 0; i < hyperlinks.Count; i++)
                 {
@@ -286,62 +270,67 @@ Usage examples:
                 throw new ArgumentException(
                     $"Hyperlink index {index} is out of range (worksheet has {hyperlinks.Count} hyperlinks)");
 
-            var hyperlink = hyperlinks[index];
-            var address = hyperlink.Address ?? "";
-
             hyperlinks.RemoveAt(index);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             workbook.Save(outputPath);
 
-            var remainingCount = hyperlinks.Count;
-
-            var result = $"Successfully deleted hyperlink #{index}";
-            if (!string.IsNullOrEmpty(cell)) result += $" (cell: {cell})";
-            result +=
-                $"\nAddress: {address}\nRemaining hyperlinks in worksheet: {remainingCount}\nOutput: {outputPath}";
-
-            return result;
+            return $"Hyperlink #{index} deleted, {hyperlinks.Count} remaining. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Gets all hyperlinks from the worksheet
     /// </summary>
-    /// <param name="_">Unused parameter</param>
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <returns>Formatted string with all hyperlinks</returns>
-    private Task<string> GetHyperlinksAsync(JsonObject? _, string path, int sheetIndex)
+    /// <returns>JSON string with all hyperlinks</returns>
+    private Task<string> GetHyperlinksAsync(string path, int sheetIndex)
     {
         return Task.Run(() =>
         {
             using var workbook = new Workbook(path);
             var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
             var hyperlinks = worksheet.Hyperlinks;
-            var result = new StringBuilder();
-
-            result.AppendLine($"=== Hyperlink information for worksheet '{worksheet.Name}' ===\n");
-            result.AppendLine($"Total hyperlinks: {hyperlinks.Count}\n");
 
             if (hyperlinks.Count == 0)
             {
-                result.AppendLine("No hyperlinks found");
-                return result.ToString();
+                var emptyResult = new
+                {
+                    count = 0,
+                    worksheetName = worksheet.Name,
+                    items = Array.Empty<object>(),
+                    message = "No hyperlinks found"
+                };
+                return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
             }
 
+            var hyperlinkList = new List<object>();
             for (var i = 0; i < hyperlinks.Count; i++)
             {
                 var hyperlink = hyperlinks[i];
-                result.AppendLine($"[Hyperlink {i}]");
-                result.AppendLine($"Address: {hyperlink.Address ?? "(none)"}");
-                result.AppendLine($"Display text: {hyperlink.TextToDisplay ?? "(none)"}");
                 var area = hyperlink.Area;
-                result.AppendLine(
-                    $"Location: rows {area.StartRow}-{area.EndRow}, columns {area.StartColumn}-{area.EndColumn}");
-                result.AppendLine();
+                hyperlinkList.Add(new
+                {
+                    index = i,
+                    address = hyperlink.Address,
+                    displayText = hyperlink.TextToDisplay,
+                    location = new
+                    {
+                        startRow = area.StartRow,
+                        endRow = area.EndRow,
+                        startColumn = area.StartColumn,
+                        endColumn = area.EndColumn
+                    }
+                });
             }
 
-            return result.ToString();
+            var result = new
+            {
+                count = hyperlinks.Count,
+                worksheetName = worksheet.Name,
+                items = hyperlinkList
+            };
+
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 }

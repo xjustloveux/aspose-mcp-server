@@ -75,11 +75,12 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
 
         return operation.ToLower() switch
         {
-            "set_size" => await SetSlideSizeAsync(arguments, path),
-            "set_orientation" => await SetSlideOrientationAsync(arguments, path),
+            "set_size" => await SetSlideSizeAsync(path, outputPath, arguments),
+            "set_orientation" => await SetSlideOrientationAsync(path, outputPath, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -87,10 +88,11 @@ Usage examples:
     /// <summary>
     ///     Sets slide size
     /// </summary>
-    /// <param name="arguments">JSON arguments containing width, height, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing width, height</param>
     /// <returns>Success message</returns>
-    private Task<string> SetSlideSizeAsync(JsonObject? arguments, string path)
+    private Task<string> SetSlideSizeAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -120,20 +122,22 @@ Usage examples:
                 slideSize.SetSize(type, SlideSizeScaleType.DoNotScale);
             }
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return
-                $"Slide size set: {slideSize.Type} {(slideSize.Type == SlideSizeType.Custom ? $"{slideSize.Size.Width}x{slideSize.Size.Height}" : string.Empty)}";
+            var sizeInfo = slideSize.Type == SlideSizeType.Custom
+                ? $" ({slideSize.Size.Width}x{slideSize.Size.Height})"
+                : "";
+            return $"Slide size set to {slideSize.Type}{sizeInfo}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Sets slide orientation
     /// </summary>
-    /// <param name="arguments">JSON arguments containing orientation (portrait/landscape), optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing orientation (portrait/landscape)</param>
     /// <returns>Success message</returns>
-    private Task<string> SetSlideOrientationAsync(JsonObject? arguments, string path)
+    private Task<string> SetSlideOrientationAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -145,10 +149,9 @@ Usage examples:
                 orientation.ToLower() == "portrait" ? SlideSizeType.A4Paper : SlideSizeType.OnScreen16x10,
                 SlideSizeScaleType.EnsureFit);
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
 
-            return $"Slide orientation set to {orientation}: {outputPath}";
+            return $"Slide orientation set to {orientation}. Output: {outputPath}";
         });
     }
 }

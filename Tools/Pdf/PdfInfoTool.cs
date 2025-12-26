@@ -1,4 +1,4 @@
-using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using Aspose.Pdf.Text;
@@ -53,11 +53,12 @@ Usage examples:
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
 
         return operation.ToLower() switch
         {
-            "get_content" => await GetContent(arguments),
-            "get_statistics" => await GetStatistics(arguments),
+            "get_content" => await GetContent(arguments, path),
+            "get_statistics" => await GetStatistics(path),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -65,19 +66,16 @@ Usage examples:
     /// <summary>
     ///     Gets PDF content as text
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, optional pageIndex</param>
-    /// <returns>PDF content as string</returns>
-    private Task<string> GetContent(JsonObject? arguments)
+    /// <param name="arguments">JSON arguments containing optional pageIndex</param>
+    /// <param name="path">Input file path</param>
+    /// <returns>PDF content as JSON string</returns>
+    private Task<string> GetContent(JsonObject? arguments, string path)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
             var pageIndex = ArgumentHelper.GetIntNullable(arguments, "pageIndex");
 
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
-
             using var document = new Document(path);
-            var sb = new StringBuilder();
 
             if (pageIndex.HasValue)
             {
@@ -86,55 +84,62 @@ Usage examples:
 
                 var textAbsorber = new TextAbsorber();
                 document.Pages[pageIndex.Value].Accept(textAbsorber);
-                sb.AppendLine($"=== Content from Page {pageIndex.Value} ===");
-                sb.AppendLine(textAbsorber.Text);
+                var result = new
+                {
+                    pageIndex = pageIndex.Value,
+                    totalPages = document.Pages.Count,
+                    content = textAbsorber.Text
+                };
+                return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
             }
             else
             {
                 var textAbsorber = new TextAbsorber();
                 document.Pages.Accept(textAbsorber);
-                sb.AppendLine("=== Full Document Content ===");
-                sb.AppendLine(textAbsorber.Text);
+                var result = new
+                {
+                    totalPages = document.Pages.Count,
+                    content = textAbsorber.Text
+                };
+                return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
             }
-
-            return sb.ToString();
         });
     }
 
     /// <summary>
     ///     Gets PDF statistics
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path</param>
-    /// <returns>Formatted string with statistics</returns>
-    private Task<string> GetStatistics(JsonObject? arguments)
+    /// <param name="path">Input file path</param>
+    /// <returns>JSON string with statistics</returns>
+    private Task<string> GetStatistics(string path)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-
             using var document = new Document(path);
             var fileInfo = new FileInfo(path);
-            var sb = new StringBuilder();
-
-            sb.AppendLine("=== PDF Statistics ===");
-            sb.AppendLine($"File Size: {fileInfo.Length} bytes ({fileInfo.Length / 1024.0:F2} KB)");
-            sb.AppendLine($"Total Pages: {document.Pages.Count}");
-            sb.AppendLine($"Is Encrypted: {document.IsEncrypted}");
-            sb.AppendLine($"Is Linearized: {document.IsLinearized}");
-            sb.AppendLine($"Bookmarks: {document.Outlines.Count}");
-            sb.AppendLine($"Form Fields: {document.Form?.Count ?? 0}");
 
             var totalAnnotations = 0;
             for (var i = 1; i <= document.Pages.Count; i++)
                 totalAnnotations += document.Pages[i].Annotations.Count;
-            sb.AppendLine($"Total Annotations: {totalAnnotations}");
 
             var totalParagraphs = 0;
             for (var i = 1; i <= document.Pages.Count; i++)
                 totalParagraphs += document.Pages[i].Paragraphs.Count;
-            sb.AppendLine($"Total Paragraphs: {totalParagraphs}");
 
-            return sb.ToString();
+            var result = new
+            {
+                fileSizeBytes = fileInfo.Length,
+                fileSizeKb = Math.Round(fileInfo.Length / 1024.0, 2),
+                totalPages = document.Pages.Count,
+                isEncrypted = document.IsEncrypted,
+                isLinearized = document.IsLinearized,
+                bookmarks = document.Outlines.Count,
+                formFields = document.Form?.Count ?? 0,
+                totalAnnotations,
+                totalParagraphs
+            };
+
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 }

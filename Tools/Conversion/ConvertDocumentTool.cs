@@ -51,35 +51,44 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments object containing operation parameters</param>
     /// <returns>Result message as a string</returns>
-    public Task<string> ExecuteAsync(JsonObject? arguments)
+    public async Task<string> ExecuteAsync(JsonObject? arguments)
+    {
+        var path = ArgumentHelper.GetAndValidatePath(arguments, "inputPath");
+        var outputPath = ArgumentHelper.GetAndValidatePath(arguments, "outputPath");
+
+        return await ConvertDocument(path, outputPath, arguments);
+    }
+
+    /// <summary>
+    ///     Converts a document from one format to another
+    /// </summary>
+    /// <param name="path">Input file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments for additional options</param>
+    /// <returns>Result message</returns>
+    private Task<string> ConvertDocument(string path, string outputPath, JsonObject? _)
     {
         return Task.Run(() =>
         {
-            var inputPath = ArgumentHelper.GetString(arguments, "inputPath");
-            var outputPath = ArgumentHelper.GetString(arguments, "outputPath");
-
-            SecurityHelper.ValidateFilePath(inputPath, "inputPath", true);
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
-
-            var inputExtension = Path.GetExtension(inputPath).ToLower();
+            var inputExtension = Path.GetExtension(path).ToLower();
             var outputExtension = Path.GetExtension(outputPath).ToLower();
 
             // Detect document type and convert
             if (IsWordDocument(inputExtension))
             {
-                var doc = new Document(inputPath);
+                var doc = new Document(path);
                 var saveFormat = GetWordSaveFormat(outputExtension);
                 doc.Save(outputPath, saveFormat);
             }
             else if (IsExcelDocument(inputExtension))
             {
-                using var workbook = new Workbook(inputPath);
+                using var workbook = new Workbook(path);
                 var saveFormat = GetExcelSaveFormat(outputExtension);
                 workbook.Save(outputPath, saveFormat);
             }
             else if (IsPresentationDocument(inputExtension))
             {
-                using var presentation = new Presentation(inputPath);
+                using var presentation = new Presentation(path);
                 var saveFormat = GetPresentationSaveFormat(outputExtension);
                 presentation.Save(outputPath, saveFormat);
             }
@@ -88,7 +97,7 @@ Usage examples:
                 throw new ArgumentException($"Unsupported input format: {inputExtension}");
             }
 
-            return $"Document converted from {inputPath} to {outputPath}";
+            return $"Document converted from {inputExtension} to {outputExtension} format. Output: {outputPath}";
         });
     }
 

@@ -1,4 +1,4 @@
-using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using AsposeMcpServer.Core;
@@ -68,12 +68,18 @@ Usage examples:
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+
+        // Only get outputPath for operations that modify the document
+        string? outputPath = null;
+        if (operation.ToLower() != "get")
+            outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
 
         return operation.ToLower() switch
         {
-            "add" => await AddAttachment(arguments),
-            "delete" => await DeleteAttachment(arguments),
-            "get" => await GetAttachments(arguments),
+            "add" => await AddAttachment(path, outputPath!, arguments),
+            "delete" => await DeleteAttachment(path, outputPath!, arguments),
+            "get" => await GetAttachments(path),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -81,21 +87,19 @@ Usage examples:
     /// <summary>
     ///     Adds an attachment to the PDF
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, filePath, optional description, outputPath</param>
+    /// <param name="path">Input file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing attachmentPath, attachmentName, optional description</param>
     /// <returns>Success message</returns>
-    private Task<string> AddAttachment(JsonObject? arguments)
+    private Task<string> AddAttachment(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var attachmentPath = ArgumentHelper.GetString(arguments, "attachmentPath");
             var attachmentName = ArgumentHelper.GetString(arguments, "attachmentName");
             var description = ArgumentHelper.GetStringNullable(arguments, "description");
 
             // Validate paths
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
             SecurityHelper.ValidateFilePath(attachmentPath, "attachmentPath", true);
 
             // Validate attachment name length
@@ -113,21 +117,21 @@ Usage examples:
 
             document.EmbeddedFiles.Add(fileSpecification);
             document.Save(outputPath);
-            return $"Successfully added attachment '{attachmentName}'. Output: {outputPath}";
+            return $"Added attachment '{attachmentName}'. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Deletes an attachment from the PDF
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, attachmentName, optional outputPath</param>
+    /// <param name="path">Input file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing attachmentName</param>
     /// <returns>Success message</returns>
-    private Task<string> DeleteAttachment(JsonObject? arguments)
+    private Task<string> DeleteAttachment(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var attachmentName = ArgumentHelper.GetString(arguments, "attachmentName");
 
             using var document = new Document(path);
@@ -172,65 +176,70 @@ Usage examples:
             }
 
             document.Save(outputPath);
-            return $"Successfully deleted attachment '{attachmentName}'. Output: {outputPath}";
+            return $"Deleted attachment '{attachmentName}'. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Gets all attachments from the PDF
     /// </summary>
-    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
-    /// <returns>Formatted string with all attachments</returns>
-    private Task<string> GetAttachments(JsonObject? arguments)
+    /// <param name="path">Input file path</param>
+    /// <returns>JSON string with all attachments</returns>
+    private Task<string> GetAttachments(string path)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-
             try
             {
                 using var document = new Document(path);
-                var sb = new StringBuilder();
-                sb.AppendLine("=== PDF Attachments ===");
-                sb.AppendLine();
+                var attachmentList = new List<object>();
 
                 var embeddedFiles = document.EmbeddedFiles;
                 if (embeddedFiles == null || embeddedFiles.Count == 0)
                 {
-                    sb.AppendLine("No attachments found.");
-                    return sb.ToString();
+                    var emptyResult = new
+                    {
+                        count = 0,
+                        items = Array.Empty<object>(),
+                        message = "No attachments found"
+                    };
+                    return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
                 }
-
-                sb.AppendLine($"Total Attachments: {embeddedFiles.Count}");
-                sb.AppendLine();
 
                 for (var i = 1; i <= embeddedFiles.Count; i++)
                     try
                     {
                         var file = embeddedFiles[i];
-                        sb.AppendLine($"[{i}] Name: {file.Name ?? "(unnamed)"}");
-                        if (!string.IsNullOrEmpty(file.Description))
-                            sb.AppendLine($"    Description: {file.Description}");
+                        var attachmentInfo = new Dictionary<string, object?>
+                        {
+                            ["index"] = i,
+                            ["name"] = file.Name ?? "(unnamed)",
+                            ["description"] = !string.IsNullOrEmpty(file.Description) ? file.Description : null
+                        };
                         try
                         {
                             if (file.Contents != null)
-                                sb.AppendLine($"    Size: {file.Contents.Length} bytes");
+                                attachmentInfo["sizeBytes"] = file.Contents.Length;
                         }
                         catch (Exception ex)
                         {
-                            sb.AppendLine("    Size: (unavailable)");
+                            attachmentInfo["sizeBytes"] = null;
                             Console.Error.WriteLine($"[WARN] Failed to read attachment size: {ex.Message}");
                         }
 
-                        sb.AppendLine();
+                        attachmentList.Add(attachmentInfo);
                     }
                     catch (Exception ex)
                     {
-                        sb.AppendLine($"[{i}] Error reading attachment: {ex.Message}");
-                        sb.AppendLine();
+                        attachmentList.Add(new { index = i, error = ex.Message });
                     }
 
-                return sb.ToString();
+                var result = new
+                {
+                    count = attachmentList.Count,
+                    items = attachmentList
+                };
+                return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
             }
             catch (Exception ex)
             {

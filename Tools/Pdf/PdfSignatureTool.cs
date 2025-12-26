@@ -1,4 +1,4 @@
-using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using Aspose.Pdf.Facades;
@@ -81,12 +81,18 @@ Usage examples:
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+
+        // Only get outputPath for operations that modify the document
+        string? outputPath = null;
+        if (operation.ToLower() != "get")
+            outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
 
         return operation.ToLower() switch
         {
-            "sign" => await SignDocument(arguments),
-            "delete" => await DeleteSignature(arguments),
-            "get" => await GetSignatures(arguments),
+            "sign" => await SignDocument(path, outputPath!, arguments),
+            "delete" => await DeleteSignature(path, outputPath!, arguments),
+            "get" => await GetSignatures(path),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -94,24 +100,19 @@ Usage examples:
     /// <summary>
     ///     Signs the PDF document
     /// </summary>
-    /// <param name="arguments">
-    ///     JSON arguments containing path, certificatePath, password, optional reason, location,
-    ///     outputPath
-    /// </param>
+    /// <param name="path">Input file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing certificatePath, certificatePassword, optional reason, location</param>
     /// <returns>Success message</returns>
-    private Task<string> SignDocument(JsonObject? arguments)
+    private Task<string> SignDocument(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var certificatePath = ArgumentHelper.GetString(arguments, "certificatePath");
             var certificatePassword = ArgumentHelper.GetString(arguments, "certificatePassword");
             var reason = ArgumentHelper.GetString(arguments, "reason", "Document approval");
             var location = ArgumentHelper.GetString(arguments, "location", "");
 
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
             SecurityHelper.ValidateFilePath(certificatePath, "certificatePath", true);
 
             if (!File.Exists(certificatePath))
@@ -135,14 +136,14 @@ Usage examples:
     /// <summary>
     ///     Deletes a signature from the PDF
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, signatureIndex, optional outputPath</param>
+    /// <param name="path">Input file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing signatureIndex</param>
     /// <returns>Success message</returns>
-    private Task<string> DeleteSignature(JsonObject? arguments)
+    private Task<string> DeleteSignature(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var signatureIndex = ArgumentHelper.GetInt(arguments, "signatureIndex");
 
             using var document = new Document(path);
@@ -155,60 +156,65 @@ Usage examples:
             var signatureName = signatureNames[signatureIndex];
             pdfSign.RemoveSignature(signatureName);
             pdfSign.Save(outputPath);
-            return
-                $"Successfully deleted signature '{signatureName}' (index {signatureIndex}). Output: {outputPath}";
+            return $"Deleted signature '{signatureName}' (index {signatureIndex}). Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Gets all signatures from the PDF
     /// </summary>
-    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
-    /// <returns>Formatted string with all signatures</returns>
-    private Task<string> GetSignatures(JsonObject? arguments)
+    /// <param name="path">Input file path</param>
+    /// <returns>JSON string with all signatures</returns>
+    private Task<string> GetSignatures(string path)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-
             using var document = new Document(path);
             using var pdfSign = new PdfFileSignature(document);
             var signatureNames = pdfSign.GetSignNames();
-            var sb = new StringBuilder();
-
-            sb.AppendLine("=== PDF Signatures ===");
-            sb.AppendLine();
 
             if (signatureNames.Count == 0)
             {
-                sb.AppendLine("No signatures found.");
-                return sb.ToString();
+                var emptyResult = new
+                {
+                    count = 0,
+                    items = Array.Empty<object>(),
+                    message = "No signatures found"
+                };
+                return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
             }
 
-            sb.AppendLine($"Total Signatures: {signatureNames.Count}");
-            sb.AppendLine();
-
+            var signatureList = new List<object>();
             for (var i = 0; i < signatureNames.Count; i++)
             {
                 var signatureName = signatureNames[i];
-                sb.AppendLine($"[{i}] Name: {signatureName}");
+                var signatureInfo = new Dictionary<string, object?>
+                {
+                    ["index"] = i,
+                    ["name"] = signatureName
+                };
                 // Check signature validity - IsValid may not be available, use alternative method
                 try
                 {
                     _ = pdfSign.ExtractCertificate(signatureName);
-                    sb.AppendLine("    Valid: Yes (Certificate found)");
+                    signatureInfo["hasCertificate"] = true;
                 }
                 catch (Exception ex)
                 {
-                    sb.AppendLine("    Valid: Unknown");
+                    signatureInfo["hasCertificate"] = false;
                     Console.Error.WriteLine(
                         $"[WARN] Failed to extract certificate for signature '{signatureName}': {ex.Message}");
                 }
 
-                sb.AppendLine();
+                signatureList.Add(signatureInfo);
             }
 
-            return sb.ToString();
+            var result = new
+            {
+                count = signatureList.Count,
+                items = signatureList
+            };
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 }

@@ -114,16 +114,17 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
 
         return operation.ToLower() switch
         {
-            "group" => await GroupShapesAsync(arguments, path, slideIndex),
-            "ungroup" => await UngroupShapesAsync(arguments, path, slideIndex),
-            "copy" => await CopyShapeAsync(arguments, path),
-            "reorder" => await ReorderShapeAsync(arguments, path, slideIndex),
-            "align" => await AlignShapesAsync(arguments, path, slideIndex),
-            "flip" => await FlipShapeAsync(arguments, path, slideIndex),
+            "group" => await GroupShapesAsync(path, outputPath, slideIndex, arguments),
+            "ungroup" => await UngroupShapesAsync(path, outputPath, slideIndex, arguments),
+            "copy" => await CopyShapeAsync(path, outputPath, arguments),
+            "reorder" => await ReorderShapeAsync(path, outputPath, slideIndex, arguments),
+            "align" => await AlignShapesAsync(path, outputPath, slideIndex, arguments),
+            "flip" => await FlipShapeAsync(path, outputPath, slideIndex, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -131,11 +132,12 @@ Usage examples:
     /// <summary>
     ///     Groups shapes together
     /// </summary>
-    /// <param name="arguments">JSON arguments containing shapeIndexes array, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing shapeIndexes array</param>
     /// <returns>Success message</returns>
-    private Task<string> GroupShapesAsync(JsonObject? arguments, string path, int slideIndex)
+    private Task<string> GroupShapesAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -202,9 +204,8 @@ Usage examples:
                     throw new InvalidOperationException($"Failed to group shapes: {ex.Message}", ex);
                 }
 
-                var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
                 presentation.Save(outputPath, SaveFormat.Pptx);
-                return $"Grouped {shapeIndices.Count} shapes on slide {slideIndex}";
+                return $"Grouped {shapeIndices.Count} shapes on slide {slideIndex}. Output: {outputPath}";
             }
             catch (ArgumentException)
             {
@@ -220,11 +221,12 @@ Usage examples:
     /// <summary>
     ///     Ungroups shapes
     /// </summary>
-    /// <param name="arguments">JSON arguments containing shapeIndex, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing shapeIndex</param>
     /// <returns>Success message</returns>
-    private Task<string> UngroupShapesAsync(JsonObject? arguments, string path, int slideIndex)
+    private Task<string> UngroupShapesAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -244,22 +246,19 @@ Usage examples:
 
             slide.Shapes.Remove(groupShape);
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Ungrouped shape on slide {slideIndex}, shape {shapeIndex}";
+            return $"Ungrouped shape on slide {slideIndex}, shape {shapeIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Copies a shape to another slide
     /// </summary>
-    /// <param name="arguments">
-    ///     JSON arguments containing sourceSlideIndex, sourceShapeIndex, targetSlideIndex, optional
-    ///     outputPath
-    /// </param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing sourceSlideIndex, sourceShapeIndex, targetSlideIndex</param>
     /// <returns>Success message</returns>
-    private Task<string> CopyShapeAsync(JsonObject? arguments, string path)
+    private Task<string> CopyShapeAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -280,20 +279,20 @@ Usage examples:
             var targetSlide = presentation.Slides[toSlide];
             targetSlide.Shapes.AddClone(sourceSlide.Shapes[shapeIndex]);
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Shape {shapeIndex} copied from slide {fromSlide} to slide {toSlide}";
+            return $"Shape {shapeIndex} copied from slide {fromSlide} to slide {toSlide}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Changes the z-order of a shape
     /// </summary>
-    /// <param name="arguments">JSON arguments containing shapeIndex, newIndex, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing shapeIndex, newIndex</param>
     /// <returns>Success message</returns>
-    private Task<string> ReorderShapeAsync(JsonObject? arguments, string path, int slideIndex)
+    private Task<string> ReorderShapeAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -316,20 +315,20 @@ Usage examples:
             var removeIndex = shapeIndex + (shapeIndex < toIndex ? 1 : 0);
             slide.Shapes.RemoveAt(removeIndex);
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Shape moved: {shapeIndex} -> {toIndex}";
+            return $"Shape moved: {shapeIndex} -> {toIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Aligns shapes
     /// </summary>
-    /// <param name="arguments">JSON arguments containing shapeIndexes array, alignmentType, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing shapeIndexes array, alignmentType</param>
     /// <returns>Success message</returns>
-    private Task<string> AlignShapesAsync(JsonObject? arguments, string path, int slideIndex)
+    private Task<string> AlignShapesAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -386,20 +385,21 @@ Usage examples:
                         throw new ArgumentException("align must be one of: left, center, right, top, middle, bottom");
                 }
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Aligned {shapeIndices.Length} shapes: {alignStr}, alignToSlide={alignToSlide}";
+            return
+                $"Aligned {shapeIndices.Length} shapes: {alignStr}, alignToSlide={alignToSlide}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Flips a shape horizontally or vertically
     /// </summary>
-    /// <param name="arguments">JSON arguments containing shapeIndex, flipType (horizontal/vertical), optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing shapeIndex, flipType (horizontal/vertical)</param>
     /// <returns>Success message</returns>
-    private Task<string> FlipShapeAsync(JsonObject? arguments, string path, int slideIndex)
+    private Task<string> FlipShapeAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -437,9 +437,8 @@ Usage examples:
                 );
             }
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Shape flipped on slide {slideIndex}, shape {shapeIndex}";
+            return $"Shape flipped on slide {slideIndex}, shape {shapeIndex}. Output: {outputPath}";
         });
     }
 }

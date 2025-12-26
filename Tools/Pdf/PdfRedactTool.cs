@@ -73,9 +73,11 @@ Usage examples:
     /// <returns>Result message as a string</returns>
     public Task<string> ExecuteAsync(JsonObject? arguments)
     {
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
             var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
             var x = ArgumentHelper.GetDouble(arguments, "x");
             var y = ArgumentHelper.GetDouble(arguments, "y");
@@ -105,12 +107,9 @@ Usage examples:
             }
 
             page.Annotations.Add(redactionAnnotation);
-            // The annotation is added and will be visible
-
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             document.Save(outputPath);
 
-            return $"Redaction applied to page {pageIndex}: {outputPath}";
+            return $"Redaction applied to page {pageIndex}. Output: {outputPath}";
         });
     }
 }

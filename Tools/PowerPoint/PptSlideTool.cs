@@ -1,4 +1,4 @@
-﻿using System.Text;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Slides;
 using Aspose.Slides.Export;
@@ -110,17 +110,18 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
 
         return operation.ToLower() switch
         {
-            "add" => await AddSlideAsync(arguments, path),
-            "delete" => await DeleteSlideAsync(arguments, path),
-            "get_info" => await GetSlidesInfoAsync(arguments, path),
-            "move" => await MoveSlideAsync(arguments, path),
-            "duplicate" => await DuplicateSlideAsync(arguments, path),
-            "hide" => await HideSlidesAsync(arguments, path),
-            "clear" => await ClearSlideAsync(arguments, path),
-            "edit" => await EditSlideAsync(arguments, path),
+            "add" => await AddSlideAsync(path, outputPath, arguments),
+            "delete" => await DeleteSlideAsync(path, outputPath, arguments),
+            "get_info" => await GetSlidesInfoAsync(path),
+            "move" => await MoveSlideAsync(path, outputPath, arguments),
+            "duplicate" => await DuplicateSlideAsync(path, outputPath, arguments),
+            "hide" => await HideSlidesAsync(path, outputPath, arguments),
+            "clear" => await ClearSlideAsync(path, outputPath, arguments),
+            "edit" => await EditSlideAsync(path, outputPath, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -128,10 +129,11 @@ Usage examples:
     /// <summary>
     ///     Adds a new slide to the presentation
     /// </summary>
-    /// <param name="arguments">JSON arguments containing optional layoutType, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing optional layoutType</param>
     /// <returns>Success message with slide index</returns>
-    private Task<string> AddSlideAsync(JsonObject? arguments, string path)
+    private Task<string> AddSlideAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -156,20 +158,20 @@ Usage examples:
                               presentation.LayoutSlides[0];
             _ = presentation.Slides.AddEmptySlide(layoutSlide);
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
 
-            return $"Slide added to presentation: {outputPath} (Total: {presentation.Slides.Count})";
+            return $"Slide added (total: {presentation.Slides.Count}). Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Deletes a slide from the presentation
     /// </summary>
-    /// <param name="arguments">JSON arguments containing slideIndex, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing slideIndex</param>
     /// <returns>Success message</returns>
-    private Task<string> DeleteSlideAsync(JsonObject? arguments, string path)
+    private Task<string> DeleteSlideAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -180,28 +182,24 @@ Usage examples:
                 throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
 
             presentation.Slides.RemoveAt(slideIndex);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
 
-            return $"Slide {slideIndex} deleted, {presentation.Slides.Count} slides remaining: {outputPath}";
+            return $"Slide {slideIndex} deleted ({presentation.Slides.Count} remaining). Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Gets information about all slides
     /// </summary>
-    /// <param name="_">Unused parameter</param>
     /// <param name="path">PowerPoint file path</param>
-    /// <returns>Formatted string with slide information</returns>
-    private Task<string> GetSlidesInfoAsync(JsonObject? _, string path)
+    /// <returns>JSON string with slide information</returns>
+    private Task<string> GetSlidesInfoAsync(string path)
     {
         return Task.Run(() =>
         {
             using var presentation = new Presentation(path);
-            var sb = new StringBuilder();
 
-            sb.AppendLine($"Total slides: {presentation.Slides.Count}");
-
+            var slidesList = new List<object>();
             for (var i = 0; i < presentation.Slides.Count; i++)
             {
                 var slide = presentation.Slides[i];
@@ -210,24 +208,34 @@ Usage examples:
                 var titleText = title?.TextFrame?.Text ?? "(no title)";
                 var notes = slide.NotesSlideManager.NotesSlide?.NotesTextFrame?.Text;
 
-                sb.AppendLine($"\n--- Slide {i} ---");
-                sb.AppendLine($"Title: {titleText}");
-                sb.AppendLine($"Shapes count: {slide.Shapes.Count}");
-                sb.AppendLine($"Has speaker notes: {(string.IsNullOrWhiteSpace(notes) ? "No" : "Yes")}");
-                sb.AppendLine($"Hidden: {slide.Hidden}");
+                slidesList.Add(new
+                {
+                    index = i,
+                    title = titleText,
+                    shapesCount = slide.Shapes.Count,
+                    hasSpeakerNotes = !string.IsNullOrWhiteSpace(notes),
+                    hidden = slide.Hidden
+                });
             }
 
-            return sb.ToString();
+            var result = new
+            {
+                count = presentation.Slides.Count,
+                slides = slidesList
+            };
+
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 
     /// <summary>
     ///     Moves a slide to a different position
     /// </summary>
-    /// <param name="arguments">JSON arguments containing slideIndex, targetIndex, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing fromIndex, toIndex</param>
     /// <returns>Success message</returns>
-    private Task<string> MoveSlideAsync(JsonObject? arguments, string path)
+    private Task<string> MoveSlideAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -246,20 +254,20 @@ Usage examples:
             presentation.Slides.InsertClone(toIndex, source);
             var removeIndex = fromIndex + (fromIndex < toIndex ? 1 : 0);
             presentation.Slides.RemoveAt(removeIndex);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
 
-            return $"Slide moved: {fromIndex} -> {toIndex} (total {count})";
+            return $"Slide moved from {fromIndex} to {toIndex} (total: {count}). Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Duplicates a slide
     /// </summary>
-    /// <param name="arguments">JSON arguments containing slideIndex, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing slideIndex, optional insertAt</param>
     /// <returns>Success message with new slide index</returns>
-    private Task<string> DuplicateSlideAsync(JsonObject? arguments, string path)
+    private Task<string> DuplicateSlideAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -284,19 +292,19 @@ Usage examples:
                 presentation.Slides.AddClone(presentation.Slides[slideIndex]);
             }
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Slide {slideIndex} duplicated, total {presentation.Slides.Count} slides: {outputPath}";
+            return $"Slide {slideIndex} duplicated (total: {presentation.Slides.Count}). Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Hides or shows slides
     /// </summary>
-    /// <param name="arguments">JSON arguments containing slideIndexes array, isHidden, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing slideIndices array, hidden</param>
     /// <returns>Success message</returns>
-    private Task<string> HideSlidesAsync(JsonObject? arguments, string path)
+    private Task<string> HideSlidesAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -315,19 +323,19 @@ Usage examples:
 
             foreach (var idx in targets) presentation.Slides[idx].Hidden = hidden;
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Set {targets.Length} slides Hidden={hidden}";
+            return $"Set {targets.Length} slide(s) hidden={hidden}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Clears all content from a slide
     /// </summary>
-    /// <param name="arguments">JSON arguments containing slideIndex, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing slideIndex</param>
     /// <returns>Success message</returns>
-    private Task<string> ClearSlideAsync(JsonObject? arguments, string path)
+    private Task<string> ClearSlideAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -337,19 +345,19 @@ Usage examples:
             var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
             while (slide.Shapes.Count > 0) slide.Shapes.RemoveAt(0);
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Cleared all shapes from slide {slideIndex}";
+            return $"Cleared all shapes from slide {slideIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Edits slide properties
     /// </summary>
-    /// <param name="arguments">JSON arguments containing slideIndex, optional layoutType, background, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing slideIndex, optional layoutIndex</param>
     /// <returns>Success message</returns>
-    private Task<string> EditSlideAsync(JsonObject? arguments, string path)
+    private Task<string> EditSlideAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -367,9 +375,8 @@ Usage examples:
                 slide.LayoutSlide = presentation.LayoutSlides[layoutIndex.Value];
             }
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Slide {slideIndex} updated: {outputPath}";
+            return $"Slide {slideIndex} updated. Output: {outputPath}";
         });
     }
 }

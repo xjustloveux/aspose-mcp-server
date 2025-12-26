@@ -1,4 +1,4 @@
-using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
@@ -96,13 +96,19 @@ Usage examples:
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+
+        // Only get outputPath for operations that modify the document
+        string? outputPath = null;
+        if (operation.ToLower() != "get")
+            outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
 
         return operation.ToLower() switch
         {
-            "add" => await AddLink(arguments),
-            "delete" => await DeleteLink(arguments),
-            "edit" => await EditLink(arguments),
-            "get" => await GetLinks(arguments),
+            "add" => await AddLink(path, outputPath!, arguments),
+            "delete" => await DeleteLink(path, outputPath!, arguments),
+            "edit" => await EditLink(path, outputPath!, arguments),
+            "get" => await GetLinks(path, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -110,17 +116,14 @@ Usage examples:
     /// <summary>
     ///     Adds a link to a PDF page
     /// </summary>
-    /// <param name="arguments">
-    ///     JSON arguments containing path, pageIndex, x, y, width, height, url or pageNumber, optional
-    ///     outputPath
-    /// </param>
+    /// <param name="path">Input file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing pageIndex, x, y, width, height, url or targetPage</param>
     /// <returns>Success message</returns>
-    private Task<string> AddLink(JsonObject? arguments)
+    private Task<string> AddLink(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
             var x = ArgumentHelper.GetDouble(arguments, "x");
             var y = ArgumentHelper.GetDouble(arguments, "y");
@@ -128,9 +131,6 @@ Usage examples:
             var height = ArgumentHelper.GetDouble(arguments, "height");
             var url = ArgumentHelper.GetStringNullable(arguments, "url");
             var targetPage = ArgumentHelper.GetIntNullable(arguments, "targetPage");
-
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
             using var document = new Document(path);
             if (pageIndex < 1 || pageIndex > document.Pages.Count)
@@ -157,26 +157,23 @@ Usage examples:
 
             page.Annotations.Add(link);
             document.Save(outputPath);
-            return $"Successfully added link to page {pageIndex}. Output: {outputPath}";
+            return $"Added link to page {pageIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Deletes a link from a PDF page
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, pageIndex, linkIndex, optional outputPath</param>
+    /// <param name="path">Input file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing pageIndex, linkIndex</param>
     /// <returns>Success message</returns>
-    private Task<string> DeleteLink(JsonObject? arguments)
+    private Task<string> DeleteLink(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
             var linkIndex = ArgumentHelper.GetInt(arguments, "linkIndex");
-
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
             using var document = new Document(path);
             if (pageIndex < 1 || pageIndex > document.Pages.Count)
@@ -189,29 +186,25 @@ Usage examples:
 
             page.Annotations.Delete(links[linkIndex]);
             document.Save(outputPath);
-            return
-                $"Successfully deleted link {linkIndex} from page {pageIndex}. Output: {outputPath}";
+            return $"Deleted link {linkIndex} from page {pageIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Edits a link in a PDF
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, pageIndex, linkIndex, optional url, pageNumber, outputPath</param>
+    /// <param name="path">Input file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing pageIndex, linkIndex, optional url, targetPage</param>
     /// <returns>Success message</returns>
-    private Task<string> EditLink(JsonObject? arguments)
+    private Task<string> EditLink(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
             var linkIndex = ArgumentHelper.GetInt(arguments, "linkIndex");
             var url = ArgumentHelper.GetStringNullable(arguments, "url");
             var targetPage = ArgumentHelper.GetIntNullable(arguments, "targetPage");
-
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
             using var document = new Document(path);
             if (pageIndex < 1 || pageIndex > document.Pages.Count)
@@ -235,28 +228,24 @@ Usage examples:
             }
 
             document.Save(outputPath);
-            return $"Successfully edited link {linkIndex} on page {pageIndex}. Output: {outputPath}";
+            return $"Edited link {linkIndex} on page {pageIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Gets all links from a PDF page
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, pageIndex</param>
-    /// <returns>Formatted string with all links</returns>
-    private Task<string> GetLinks(JsonObject? arguments)
+    /// <param name="path">Input file path</param>
+    /// <param name="arguments">JSON arguments containing optional pageIndex</param>
+    /// <returns>JSON string with all links</returns>
+    private Task<string> GetLinks(string path, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
             var pageIndex = ArgumentHelper.GetIntNullable(arguments, "pageIndex");
 
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
-
             using var document = new Document(path);
-            var sb = new StringBuilder();
-            sb.AppendLine("=== PDF Links ===");
-            sb.AppendLine();
+            var linkList = new List<object>();
 
             if (pageIndex.HasValue)
             {
@@ -265,46 +254,98 @@ Usage examples:
 
                 var page = document.Pages[pageIndex.Value];
                 var links = page.Annotations.OfType<LinkAnnotation>().ToList();
-                sb.AppendLine($"Page {pageIndex.Value} Links ({links.Count}):");
+
+                if (links.Count == 0)
+                {
+                    var emptyResult = new
+                    {
+                        count = 0,
+                        pageIndex = pageIndex.Value,
+                        items = Array.Empty<object>(),
+                        message = $"No links found on page {pageIndex.Value}"
+                    };
+                    return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
+                }
+
                 for (var i = 0; i < links.Count; i++)
                 {
                     var link = links[i];
-                    sb.AppendLine($"  [{i}] Position: ({link.Rect.LLX}, {link.Rect.LLY})");
+                    var linkInfo = new Dictionary<string, object?>
+                    {
+                        ["index"] = i,
+                        ["pageIndex"] = pageIndex.Value,
+                        ["x"] = link.Rect.LLX,
+                        ["y"] = link.Rect.LLY
+                    };
                     if (link.Action is GoToURIAction uriAction)
-                        sb.AppendLine($"      URL: {uriAction.URI}");
+                    {
+                        linkInfo["type"] = "url";
+                        linkInfo["url"] = uriAction.URI;
+                    }
                     else if (link.Action is GoToAction)
-                        sb.AppendLine("      Target: Page");
-                    sb.AppendLine();
+                    {
+                        linkInfo["type"] = "page";
+                    }
+
+                    linkList.Add(linkInfo);
                 }
+
+                var result = new
+                {
+                    count = linkList.Count,
+                    pageIndex = pageIndex.Value,
+                    items = linkList
+                };
+                return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
             }
             else
             {
-                var totalCount = 0;
                 for (var p = 1; p <= document.Pages.Count; p++)
                 {
                     var page = document.Pages[p];
                     var links = page.Annotations.OfType<LinkAnnotation>().ToList();
-                    if (links.Count > 0)
+                    for (var i = 0; i < links.Count; i++)
                     {
-                        sb.AppendLine($"Page {p} ({links.Count} links):");
-                        for (var i = 0; i < links.Count; i++)
+                        var link = links[i];
+                        var linkInfo = new Dictionary<string, object?>
                         {
-                            var link = links[i];
-                            if (link.Action is GoToURIAction uriAction)
-                                sb.AppendLine($"  [{i}] URL: {uriAction.URI}");
-                            else if (link.Action is GoToAction)
-                                sb.AppendLine($"  [{i}] Target: Page");
+                            ["index"] = i,
+                            ["pageIndex"] = p,
+                            ["x"] = link.Rect.LLX,
+                            ["y"] = link.Rect.LLY
+                        };
+                        if (link.Action is GoToURIAction uriAction)
+                        {
+                            linkInfo["type"] = "url";
+                            linkInfo["url"] = uriAction.URI;
+                        }
+                        else if (link.Action is GoToAction)
+                        {
+                            linkInfo["type"] = "page";
                         }
 
-                        sb.AppendLine();
-                        totalCount += links.Count;
+                        linkList.Add(linkInfo);
                     }
                 }
 
-                sb.Insert(0, $"Total Links: {totalCount}\n\n");
-            }
+                if (linkList.Count == 0)
+                {
+                    var emptyResult = new
+                    {
+                        count = 0,
+                        items = Array.Empty<object>(),
+                        message = "No links found in document"
+                    };
+                    return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
+                }
 
-            return sb.ToString();
+                var result = new
+                {
+                    count = linkList.Count,
+                    items = linkList
+                };
+                return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            }
         });
     }
 }

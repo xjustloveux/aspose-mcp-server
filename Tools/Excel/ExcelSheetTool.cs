@@ -1,4 +1,4 @@
-using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
@@ -100,16 +100,17 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
 
         return operation.ToLower() switch
         {
-            "add" => await AddSheetAsync(arguments, path),
-            "delete" => await DeleteSheetAsync(arguments, path),
-            "get" => await GetSheetsAsync(arguments, path),
-            "rename" => await RenameSheetAsync(arguments, path),
-            "move" => await MoveSheetAsync(arguments, path),
-            "copy" => await CopySheetAsync(arguments, path),
-            "hide" => await HideSheetAsync(arguments, path),
+            "add" => await AddSheetAsync(path, outputPath, arguments),
+            "delete" => await DeleteSheetAsync(path, outputPath, arguments),
+            "get" => await GetSheetsAsync(path),
+            "rename" => await RenameSheetAsync(path, outputPath, arguments),
+            "move" => await MoveSheetAsync(path, outputPath, arguments),
+            "copy" => await CopySheetAsync(path, outputPath, arguments),
+            "hide" => await HideSheetAsync(path, outputPath, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -117,10 +118,11 @@ Usage examples:
     /// <summary>
     ///     Adds a new worksheet to the workbook
     /// </summary>
-    /// <param name="arguments">JSON arguments containing sheetName and optional insertAt</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing sheetName and optional insertAt</param>
     /// <returns>Success message with worksheet name</returns>
-    private Task<string> AddSheetAsync(JsonObject? arguments, string path)
+    private Task<string> AddSheetAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -159,20 +161,20 @@ Usage examples:
             }
 
             newSheet.Name = sheetName;
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             workbook.Save(outputPath);
 
-            return $"Worksheet '{sheetName}' added: {outputPath}";
+            return $"Worksheet '{sheetName}' added. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Deletes a worksheet from the workbook
     /// </summary>
-    /// <param name="arguments">JSON arguments containing sheetIndex</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing sheetIndex</param>
     /// <returns>Success message with deleted sheet name</returns>
-    private Task<string> DeleteSheetAsync(JsonObject? arguments, string path)
+    private Task<string> DeleteSheetAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -185,47 +187,66 @@ Usage examples:
 
             var sheetName = workbook.Worksheets[sheetIndex].Name;
             workbook.Worksheets.RemoveAt(sheetIndex);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             workbook.Save(outputPath);
 
-            return $"Worksheet '{sheetName}' (index {sheetIndex}) deleted: {outputPath}";
+            return $"Worksheet '{sheetName}' (index {sheetIndex}) deleted. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Gets information about all worksheets in the workbook
     /// </summary>
-    /// <param name="_">Unused parameter</param>
     /// <param name="path">Excel file path</param>
-    /// <returns>Formatted string with worksheet list</returns>
-    private Task<string> GetSheetsAsync(JsonObject? _, string path)
+    /// <returns>JSON string with worksheet list</returns>
+    private Task<string> GetSheetsAsync(string path)
     {
         return Task.Run(() =>
         {
             using var workbook = new Workbook(path);
-            var result = new StringBuilder();
 
-            result.AppendLine($"=== Worksheet list for workbook '{Path.GetFileName(path)}' ===\n");
-            result.AppendLine($"Total worksheets: {workbook.Worksheets.Count}\n");
+            if (workbook.Worksheets.Count == 0)
+            {
+                var emptyResult = new
+                {
+                    count = 0,
+                    workbookName = Path.GetFileName(path),
+                    items = Array.Empty<object>(),
+                    message = "No worksheets found"
+                };
+                return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
+            }
 
+            var sheetList = new List<object>();
             for (var i = 0; i < workbook.Worksheets.Count; i++)
             {
                 var worksheet = workbook.Worksheets[i];
-                result.AppendLine(
-                    $"{i}. {worksheet.Name} (visibility: {(worksheet.IsVisible ? "Visible" : "Hidden")})");
+                sheetList.Add(new
+                {
+                    index = i,
+                    name = worksheet.Name,
+                    visibility = worksheet.IsVisible ? "Visible" : "Hidden"
+                });
             }
 
-            return result.ToString();
+            var result = new
+            {
+                count = workbook.Worksheets.Count,
+                workbookName = Path.GetFileName(path),
+                items = sheetList
+            };
+
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 
     /// <summary>
     ///     Renames a worksheet
     /// </summary>
-    /// <param name="arguments">JSON arguments containing sheetIndex and newName</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing sheetIndex and newName</param>
     /// <returns>Success message with old and new names</returns>
-    private Task<string> RenameSheetAsync(JsonObject? arguments, string path)
+    private Task<string> RenameSheetAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -250,20 +271,20 @@ Usage examples:
                     $"Worksheet name '{newName}' (length: {newName.Length}) exceeds Excel's standard limit of 31 characters. Aspose.Cells does not allow worksheet names longer than 31 characters.");
 
             worksheet.Name = newName;
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             workbook.Save(outputPath);
 
-            return $"Worksheet '{oldName}' renamed to '{newName}': {outputPath}";
+            return $"Worksheet '{oldName}' renamed to '{newName}'. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Moves a worksheet to a different position
     /// </summary>
-    /// <param name="arguments">JSON arguments containing sheetIndex and targetIndex or insertAt</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing sheetIndex and targetIndex or insertAt</param>
     /// <returns>Success message with move details</returns>
-    private Task<string> MoveSheetAsync(JsonObject? arguments, string path)
+    private Task<string> MoveSheetAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -287,7 +308,7 @@ Usage examples:
                     $"Target index {finalTargetIndex} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
 
             if (sheetIndex == finalTargetIndex)
-                return $"Worksheet is already at position {sheetIndex}, no move needed: {path}";
+                return $"Worksheet is already at position {sheetIndex}, no move needed. Output: {path}";
 
             var sheetName = workbook.Worksheets[sheetIndex].Name;
 
@@ -348,20 +369,21 @@ Usage examples:
                     $"Failed to move sheet: {ex.Message}. Source index: {sheetIndex}, Target index: {finalTargetIndex}, Total sheets: {workbook.Worksheets.Count}");
             }
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             workbook.Save(outputPath);
 
-            return $"Worksheet '{sheetName}' moved from position {sheetIndex} to {finalTargetIndex}: {outputPath}";
+            return
+                $"Worksheet '{sheetName}' moved from position {sheetIndex} to {finalTargetIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Copies a worksheet with a new name
     /// </summary>
-    /// <param name="arguments">JSON arguments containing sheetIndex, newName, optional targetIndex or copyToPath</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing sheetIndex, newName, optional targetIndex or copyToPath</param>
     /// <returns>Success message with copy details</returns>
-    private Task<string> CopySheetAsync(JsonObject? arguments, string path)
+    private Task<string> CopySheetAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -386,7 +408,7 @@ Usage examples:
                 var newSheet = targetWorkbook.Worksheets.Add(sheetName);
                 sourceSheet.Copy(newSheet);
                 targetWorkbook.Save(copyToPath);
-                return $"Worksheet '{sheetName}' copied to '{copyToPath}': {path}";
+                return $"Worksheet '{sheetName}' copied to external file. Output: {copyToPath}";
             }
 
             // Copy within same workbook
@@ -398,19 +420,19 @@ Usage examples:
 
             _ = workbook.Worksheets.AddCopy(sheetIndex);
             // If specific position is needed, would need to copy and reorder manually
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             workbook.Save(outputPath);
-            return $"Worksheet '{sheetName}' copied to position {targetIndex.Value}: {outputPath}";
+            return $"Worksheet '{sheetName}' copied to position {targetIndex.Value}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Hides or shows a worksheet
     /// </summary>
-    /// <param name="arguments">JSON arguments containing sheetIndex and optional targetIndex, isVisible</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing sheetIndex and optional targetIndex, isVisible</param>
     /// <returns>Success message with visibility status</returns>
-    private Task<string> HideSheetAsync(JsonObject? arguments, string path)
+    private Task<string> HideSheetAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -421,17 +443,16 @@ Usage examples:
             var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
             var sheetName = worksheet.Name;
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             if (worksheet.IsVisible)
             {
                 worksheet.IsVisible = false;
                 workbook.Save(outputPath);
-                return $"Worksheet '{sheetName}' hidden: {outputPath}";
+                return $"Worksheet '{sheetName}' hidden. Output: {outputPath}";
             }
 
             worksheet.IsVisible = true;
             workbook.Save(outputPath);
-            return $"Worksheet '{sheetName}' shown: {outputPath}";
+            return $"Worksheet '{sheetName}' shown. Output: {outputPath}";
         });
     }
 }

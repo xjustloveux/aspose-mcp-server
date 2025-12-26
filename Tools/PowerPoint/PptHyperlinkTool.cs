@@ -1,4 +1,4 @@
-﻿using System.Text;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Slides;
 using Aspose.Slides.Export;
@@ -108,13 +108,14 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
 
         return operation.ToLower() switch
         {
-            "add" => await AddHyperlinkAsync(arguments, path),
-            "edit" => await EditHyperlinkAsync(arguments, path),
-            "delete" => await DeleteHyperlinkAsync(arguments, path),
-            "get" => await GetHyperlinksAsync(arguments, path),
+            "add" => await AddHyperlinkAsync(path, outputPath, arguments),
+            "edit" => await EditHyperlinkAsync(path, outputPath, arguments),
+            "delete" => await DeleteHyperlinkAsync(path, outputPath, arguments),
+            "get" => await GetHyperlinksAsync(path, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -122,10 +123,11 @@ Usage examples:
     /// <summary>
     ///     Adds a hyperlink to a shape
     /// </summary>
-    /// <param name="arguments">JSON arguments containing slideIndex, shapeIndex, address, optional text, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing slideIndex, shapeIndex, address, optional text</param>
     /// <returns>Success message</returns>
-    private Task<string> AddHyperlinkAsync(JsonObject? arguments, string path)
+    private Task<string> AddHyperlinkAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -167,19 +169,19 @@ Usage examples:
             if (!string.IsNullOrEmpty(displayText) && shape is IAutoShape { TextFrame: not null } autoShape)
                 autoShape.TextFrame.Text = displayText;
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Hyperlink added to slide {slideIndex}: {url}";
+            return $"Hyperlink added to slide {slideIndex}: {url}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Edits an existing hyperlink
     /// </summary>
-    /// <param name="arguments">JSON arguments containing slideIndex, shapeIndex, optional address, text, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing slideIndex, shapeIndex, optional address, text</param>
     /// <returns>Success message</returns>
-    private Task<string> EditHyperlinkAsync(JsonObject? arguments, string path)
+    private Task<string> EditHyperlinkAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -218,19 +220,19 @@ Usage examples:
                 throw new ArgumentException("Either url, slideTargetIndex, or removeHyperlink must be provided");
             }
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Hyperlink updated on slide {slideIndex}, shape {shapeIndex}";
+            return $"Hyperlink updated on slide {slideIndex}, shape {shapeIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Deletes a hyperlink from a shape
     /// </summary>
-    /// <param name="arguments">JSON arguments containing slideIndex, shapeIndex, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing slideIndex, shapeIndex</param>
     /// <returns>Success message</returns>
-    private Task<string> DeleteHyperlinkAsync(JsonObject? arguments, string path)
+    private Task<string> DeleteHyperlinkAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -247,86 +249,108 @@ Usage examples:
                 foreach (var portion in paragraph.Portions)
                     portion.PortionFormat.HyperlinkClick = null;
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Hyperlink deleted from slide {slideIndex}, shape {shapeIndex}";
+            return $"Hyperlink deleted from slide {slideIndex}, shape {shapeIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Gets all hyperlinks from the presentation
     /// </summary>
-    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
     /// <param name="path">PowerPoint file path</param>
-    /// <returns>Formatted string with all hyperlinks</returns>
-    private Task<string> GetHyperlinksAsync(JsonObject? arguments, string path)
+    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
+    /// <returns>JSON string with all hyperlinks</returns>
+    private Task<string> GetHyperlinksAsync(string path, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
             var slideIndex = ArgumentHelper.GetIntNullable(arguments, "slideIndex");
 
             using var presentation = new Presentation(path);
-            var sb = new StringBuilder();
 
             if (slideIndex.HasValue)
             {
                 if (slideIndex.Value < 0 || slideIndex.Value >= presentation.Slides.Count)
                     throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
                 var slide = presentation.Slides[slideIndex.Value];
-                sb.AppendLine($"=== Slide {slideIndex.Value} Hyperlinks ===");
-                GetHyperlinksFromSlide(presentation, slide, sb);
+                var hyperlinksList = GetHyperlinksFromSlideAsJson(presentation, slide);
+
+                var result = new
+                {
+                    slideIndex = slideIndex.Value,
+                    count = hyperlinksList.Count,
+                    hyperlinks = hyperlinksList
+                };
+
+                return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
             }
             else
             {
-                sb.AppendLine("=== All Hyperlinks ===");
+                var slidesList = new List<object>();
+                var totalCount = 0;
+
                 for (var i = 0; i < presentation.Slides.Count; i++)
                 {
                     var slide = presentation.Slides[i];
-                    var hyperlinks = GetHyperlinksFromSlide(presentation, slide, null);
-                    if (hyperlinks > 0)
-                    {
-                        sb.AppendLine($"\nSlide {i}: {hyperlinks} hyperlink(s)");
-                        GetHyperlinksFromSlide(presentation, slide, sb);
-                    }
-                }
-            }
+                    var hyperlinksList = GetHyperlinksFromSlideAsJson(presentation, slide);
+                    totalCount += hyperlinksList.Count;
 
-            return sb.ToString();
+                    slidesList.Add(new
+                    {
+                        slideIndex = i,
+                        count = hyperlinksList.Count,
+                        hyperlinks = hyperlinksList
+                    });
+                }
+
+                var result = new
+                {
+                    totalCount,
+                    slides = slidesList
+                };
+
+                return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            }
         });
     }
 
-    private int GetHyperlinksFromSlide(IPresentation presentation, ISlide slide, StringBuilder? sb)
+    private List<object> GetHyperlinksFromSlideAsJson(IPresentation presentation, ISlide slide)
     {
-        var count = 0;
+        var hyperlinksList = new List<object>();
+
         foreach (var shape in slide.Shapes)
             if (shape is IAutoShape autoShape)
             {
                 if (autoShape.HyperlinkClick != null)
                 {
-                    count++;
-                    if (sb != null)
+                    var url = autoShape.HyperlinkClick.ExternalUrl ?? (autoShape.HyperlinkClick.TargetSlide != null
+                        ? $"Slide {presentation.Slides.IndexOf(autoShape.HyperlinkClick.TargetSlide)}"
+                        : "Internal link");
+
+                    hyperlinksList.Add(new
                     {
-                        var url = autoShape.HyperlinkClick.ExternalUrl ?? (autoShape.HyperlinkClick.TargetSlide != null
-                            ? $"Slide {presentation.Slides.IndexOf(autoShape.HyperlinkClick.TargetSlide)}"
-                            : "Internal link");
-                        sb.AppendLine($"  Shape [{slide.Shapes.IndexOf(shape)}]: {url}");
-                    }
+                        shapeIndex = slide.Shapes.IndexOf(shape),
+                        triggerType = "click",
+                        url
+                    });
                 }
 
                 if (autoShape.HyperlinkMouseOver != null)
                 {
-                    count++;
-                    if (sb != null)
+                    var url = autoShape.HyperlinkMouseOver.ExternalUrl ??
+                              (autoShape.HyperlinkMouseOver.TargetSlide != null
+                                  ? $"Slide {presentation.Slides.IndexOf(autoShape.HyperlinkMouseOver.TargetSlide)}"
+                                  : "Internal link");
+
+                    hyperlinksList.Add(new
                     {
-                        var url = autoShape.HyperlinkMouseOver.ExternalUrl ??
-                                  (autoShape.HyperlinkMouseOver.TargetSlide != null
-                                      ? $"Slide {presentation.Slides.IndexOf(autoShape.HyperlinkMouseOver.TargetSlide)}"
-                                      : "Internal link");
-                        sb.AppendLine($"  Shape [{slide.Shapes.IndexOf(shape)}] (mouseover): {url}");
-                    }
+                        shapeIndex = slide.Shapes.IndexOf(shape),
+                        triggerType = "mouseover",
+                        url
+                    });
                 }
             }
 
-        return count;
+        return hyperlinksList;
     }
 }

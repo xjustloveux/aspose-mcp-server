@@ -1,5 +1,4 @@
-﻿using System.Text;
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Slides;
 using Aspose.Slides.Charts;
@@ -124,15 +123,16 @@ Note: shapeIndex refers to the chart index (0-based) among all charts on the sli
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
 
         return operation.ToLower() switch
         {
-            "add" => await AddChartAsync(arguments, path, slideIndex),
-            "edit" => await EditChartAsync(arguments, path, slideIndex),
-            "delete" => await DeleteChartAsync(arguments, path, slideIndex),
-            "get_data" => await GetChartDataAsync(arguments, path, slideIndex),
-            "update_data" => await UpdateChartDataAsync(arguments, path, slideIndex),
+            "add" => await AddChartAsync(path, outputPath, slideIndex, arguments),
+            "edit" => await EditChartAsync(path, outputPath, slideIndex, arguments),
+            "delete" => await DeleteChartAsync(path, outputPath, slideIndex, arguments),
+            "get_data" => await GetChartDataAsync(path, slideIndex, arguments),
+            "update_data" => await UpdateChartDataAsync(path, outputPath, slideIndex, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -140,11 +140,12 @@ Note: shapeIndex refers to the chart index (0-based) among all charts on the sli
     /// <summary>
     ///     Adds a chart to a slide
     /// </summary>
-    /// <param name="arguments">JSON arguments containing chartType, optional title, data, x, y, width, height, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing chartType, optional title, data, x, y, width, height</param>
     /// <returns>Success message with chart index</returns>
-    private Task<string> AddChartAsync(JsonObject? arguments, string path, int slideIndex)
+    private Task<string> AddChartAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -184,21 +185,21 @@ Note: shapeIndex refers to the chart index (0-based) among all charts on the sli
                 }
             }
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
 
-            return $"Chart added to slide {slideIndex}: {outputPath}";
+            return $"Chart '{chartTypeStr}' added to slide {slideIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Edits chart properties
     /// </summary>
-    /// <param name="arguments">JSON arguments containing chartIndex, optional title, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing chartIndex, optional title</param>
     /// <returns>Success message</returns>
-    private Task<string> EditChartAsync(JsonObject? arguments, string path, int slideIndex)
+    private Task<string> EditChartAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -265,9 +266,8 @@ Note: shapeIndex refers to the chart index (0-based) among all charts on the sli
                         throw new InvalidOperationException($"Failed to change chart type: {ex.Message}", ex);
                     }
 
-                var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
                 presentation.Save(outputPath, SaveFormat.Pptx);
-                return $"Chart {chartIndex} updated on slide {slideIndex}: {outputPath}";
+                return $"Chart {chartIndex} updated on slide {slideIndex}. Output: {outputPath}";
             }
             catch (ArgumentException)
             {
@@ -283,11 +283,12 @@ Note: shapeIndex refers to the chart index (0-based) among all charts on the sli
     /// <summary>
     ///     Deletes a chart from a slide
     /// </summary>
-    /// <param name="arguments">JSON arguments containing chartIndex, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing chartIndex</param>
     /// <returns>Success message</returns>
-    private Task<string> DeleteChartAsync(JsonObject? arguments, string path, int slideIndex)
+    private Task<string> DeleteChartAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -310,20 +311,19 @@ Note: shapeIndex refers to the chart index (0-based) among all charts on the sli
             var chart = charts[chartIndex];
             slide.Shapes.Remove(chart);
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Chart {chartIndex} deleted from slide {slideIndex}: {outputPath}";
+            return $"Chart {chartIndex} deleted from slide {slideIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Gets chart data
     /// </summary>
-    /// <param name="arguments">JSON arguments containing chartIndex</param>
     /// <param name="path">PowerPoint file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
-    /// <returns>Formatted string with chart data</returns>
-    private Task<string> GetChartDataAsync(JsonObject? arguments, string path, int slideIndex)
+    /// <param name="arguments">JSON arguments containing chartIndex</param>
+    /// <returns>JSON string with chart data</returns>
+    private Task<string> GetChartDataAsync(string path, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -344,51 +344,79 @@ Note: shapeIndex refers to the chart index (0-based) among all charts on the sli
             }
 
             var chart = charts[chartIndex];
-
-            var sb = new StringBuilder();
-            sb.AppendLine($"Chart Type: {chart.Type}");
-            sb.AppendLine($"Has Title: {chart.HasTitle}");
-            if (chart is { HasTitle: true, ChartTitle: not null })
-                sb.AppendLine($"Title: {chart.ChartTitle.TextFrameForOverriding?.Text ?? ""}");
-            sb.AppendLine();
-
             var chartData = chart.ChartData;
-            sb.AppendLine($"Categories ({chartData.Categories.Count}):");
+
+            // Build categories list
+            var categoriesList = new List<object>();
             for (var i = 0; i < chartData.Categories.Count; i++)
             {
                 var cat = chartData.Categories[i];
-                sb.AppendLine($"  [{i}] {cat.Value}");
+                categoriesList.Add(new
+                {
+                    index = i,
+                    value = cat.Value?.ToString()
+                });
             }
 
-            sb.AppendLine();
-
-            sb.AppendLine($"Series ({chartData.Series.Count}):");
+            // Build series list
+            var seriesList = new List<object>();
             for (var i = 0; i < chartData.Series.Count; i++)
             {
                 var series = chartData.Series[i];
-                sb.AppendLine($"  [{i}] {series.Name}");
-                sb.AppendLine($"      Data Points: {series.DataPoints.Count}");
-                for (var j = 0; j < Math.Min(series.DataPoints.Count, 10); j++)
+                var dataPointsList = new List<object>();
+                for (var j = 0; j < series.DataPoints.Count; j++)
                 {
                     var point = series.DataPoints[j];
-                    sb.AppendLine($"        [{j}] Value: {point.Value}");
+                    dataPointsList.Add(new
+                    {
+                        index = j,
+                        value = point.Value?.ToString()
+                    });
                 }
 
-                if (series.DataPoints.Count > 10) sb.AppendLine($"        ... ({series.DataPoints.Count - 10} more)");
+                seriesList.Add(new
+                {
+                    index = i,
+                    name = series.Name?.ToString(),
+                    dataPointsCount = series.DataPoints.Count,
+                    dataPoints = dataPointsList
+                });
             }
 
-            return sb.ToString();
+            var result = new
+            {
+                slideIndex,
+                chartIndex,
+                chartType = chart.Type.ToString(),
+                hasTitle = chart.HasTitle,
+                title = chart is { HasTitle: true, ChartTitle: not null }
+                    ? chart.ChartTitle.TextFrameForOverriding?.Text
+                    : null,
+                categories = new
+                {
+                    count = chartData.Categories.Count,
+                    items = categoriesList
+                },
+                series = new
+                {
+                    count = chartData.Series.Count,
+                    items = seriesList
+                }
+            };
+
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 
     /// <summary>
     ///     Updates chart data
     /// </summary>
-    /// <param name="arguments">JSON arguments containing chartIndex, data, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing chartIndex, data</param>
     /// <returns>Success message</returns>
-    private Task<string> UpdateChartDataAsync(JsonObject? arguments, string path, int slideIndex)
+    private Task<string> UpdateChartDataAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -455,9 +483,8 @@ Note: shapeIndex refers to the chart index (0-based) among all charts on the sli
             // If no data provided and clearExisting is false, return early
             if (categories == null && seriesList == null && !clearExisting)
             {
-                var earlyOutputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-                presentation.Save(earlyOutputPath, SaveFormat.Pptx);
-                return $"No changes made to chart {chartIndex} on slide {slideIndex}";
+                presentation.Save(outputPath, SaveFormat.Pptx);
+                return $"No changes made to chart {chartIndex} on slide {slideIndex}. Output: {outputPath}";
             }
 
             // Clear existing data if requested or if we have new data to write
@@ -588,9 +615,8 @@ Note: shapeIndex refers to the chart index (0-based) among all charts on the sli
                 chartData.SetRange(range);
             }
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Chart {chartIndex} data updated on slide {slideIndex}: {outputPath}";
+            return $"Chart {chartIndex} data updated on slide {slideIndex}. Output: {outputPath}";
         });
     }
 }

@@ -131,7 +131,7 @@ Usage examples:
             using var presentation = new Presentation();
             presentation.Save(path, SaveFormat.Pptx);
 
-            return $"PowerPoint presentation created successfully at: {path}";
+            return $"PowerPoint presentation created successfully. Output: {path}";
         });
     }
 
@@ -159,7 +159,7 @@ Usage examples:
                 using var bitmap = presentation.Slides[0].GetThumbnail(new Size(1920, 1080));
                 bitmap.Save(outputPath, ImageFormat.Jpeg);
 #pragma warning restore CA1416
-                return $"Presentation converted to JPEG: {outputPath}";
+                return $"Presentation converted to JPEG. Output: {outputPath}";
             }
 
             if (format == "png")
@@ -168,7 +168,7 @@ Usage examples:
                 using var bitmap = presentation.Slides[0].GetThumbnail(new Size(1920, 1080));
                 bitmap.Save(outputPath, ImageFormat.Png);
 #pragma warning restore CA1416
-                return $"Presentation converted to PNG: {outputPath}";
+                return $"Presentation converted to PNG. Output: {outputPath}";
             }
 
             var saveFormat = format switch
@@ -185,7 +185,7 @@ Usage examples:
 
             presentation.Save(outputPath, saveFormat);
 
-            return $"Presentation converted from {inputPath} to {outputPath} ({format})";
+            return $"Presentation converted from {inputPath} to {format} format. Output: {outputPath}";
         });
     }
 
@@ -227,7 +227,7 @@ Usage examples:
 
             masterPresentation.Save(outputPath, SaveFormat.Pptx);
             return
-                $"Merged {inputPaths.Count} presentations into: {outputPath} (Total slides: {masterPresentation.Slides.Count})";
+                $"Merged {inputPaths.Count} presentations (Total slides: {masterPresentation.Slides.Count}). Output: {outputPath}";
         });
     }
 
@@ -274,7 +274,7 @@ Usage examples:
                 fileCount++;
             }
 
-            return $"Split presentation into {fileCount} file(s) in: {outputDirectory}";
+            return $"Split presentation into {fileCount} file(s). Output: {outputDirectory}";
         });
     }
 }

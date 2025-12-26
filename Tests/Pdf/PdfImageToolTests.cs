@@ -83,7 +83,7 @@ public class PdfImageToolTests : PdfTestBase
         // Assert
         Assert.NotNull(result);
         Assert.NotEmpty(result);
-        Assert.Contains("Image", result, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("count", result);
     }
 
     [Fact]
@@ -342,6 +342,6 @@ public class PdfImageToolTests : PdfTestBase
 
         // Assert
         Assert.NotNull(result);
-        Assert.Contains("Image", result, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("count", result);
     }
 }

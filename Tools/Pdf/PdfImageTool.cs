@@ -1,5 +1,5 @@
 using System.Drawing.Imaging;
-using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using AsposeMcpServer.Core;
@@ -100,14 +100,20 @@ Usage examples:
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+
+        // Only get outputPath for operations that modify the document (add, delete, edit)
+        string? outputPath = null;
+        if (operation.ToLower() == "add" || operation.ToLower() == "delete" || operation.ToLower() == "edit")
+            outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
 
         return operation.ToLower() switch
         {
-            "add" => await AddImage(arguments),
-            "delete" => await DeleteImage(arguments),
-            "edit" => await EditImage(arguments),
-            "extract" => await ExtractImages(arguments),
-            "get" => await GetImages(arguments),
+            "add" => await AddImage(path, outputPath!, arguments),
+            "delete" => await DeleteImage(path, outputPath!, arguments),
+            "edit" => await EditImage(path, outputPath!, arguments),
+            "extract" => await ExtractImages(path, arguments),
+            "get" => await GetImages(path, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -115,14 +121,14 @@ Usage examples:
     /// <summary>
     ///     Adds an image to a PDF page
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, pageIndex, imagePath, x, y, optional width, height, outputPath</param>
+    /// <param name="path">Input file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing pageIndex, imagePath, x, y, optional width, height</param>
     /// <returns>Success message</returns>
-    private Task<string> AddImage(JsonObject? arguments)
+    private Task<string> AddImage(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
             var imagePath = ArgumentHelper.GetString(arguments, "imagePath");
             var x = ArgumentHelper.GetDouble(arguments, "x", "x", false, 100);
@@ -130,8 +136,6 @@ Usage examples:
             var width = ArgumentHelper.GetDoubleNullable(arguments, "width");
             var height = ArgumentHelper.GetDoubleNullable(arguments, "height");
 
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
             SecurityHelper.ValidateFilePath(imagePath, "imagePath", true);
 
             if (!File.Exists(imagePath))
@@ -147,26 +151,23 @@ Usage examples:
                 new Rectangle(x, y, width.HasValue ? x + width.Value : x + 200,
                     height.HasValue ? y + height.Value : y + 200));
             document.Save(outputPath);
-            return $"Successfully added image to page {actualPageIndex}. Output: {outputPath}";
+            return $"Added image to page {actualPageIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Deletes an image from a PDF page
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, pageIndex, imageIndex, optional outputPath</param>
+    /// <param name="path">Input file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing pageIndex, imageIndex</param>
     /// <returns>Success message</returns>
-    private Task<string> DeleteImage(JsonObject? arguments)
+    private Task<string> DeleteImage(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
             var imageIndex = ArgumentHelper.GetInt(arguments, "imageIndex");
-
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
             using var document = new Document(path);
             var actualPageIndex = pageIndex < 1 ? 1 : pageIndex;
@@ -184,22 +185,21 @@ Usage examples:
 
             images.Delete(actualImageIndex);
             document.Save(outputPath);
-            return
-                $"Successfully deleted image {actualImageIndex} from page {actualPageIndex}. Output: {outputPath}";
+            return $"Deleted image {actualImageIndex} from page {actualPageIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Edits image properties in a PDF
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, pageIndex, imageIndex, optional x, y, width, height, outputPath</param>
+    /// <param name="path">Input file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing pageIndex, imageIndex, imagePath, optional x, y, width, height</param>
     /// <returns>Success message</returns>
-    private Task<string> EditImage(JsonObject? arguments)
+    private Task<string> EditImage(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
             var imageIndex = ArgumentHelper.GetInt(arguments, "imageIndex");
             var imagePath = ArgumentHelper.GetString(arguments, "imagePath");
@@ -208,8 +208,6 @@ Usage examples:
             var width = ArgumentHelper.GetDoubleNullable(arguments, "width");
             var height = ArgumentHelper.GetDoubleNullable(arguments, "height");
 
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
             SecurityHelper.ValidateFilePath(imagePath, "imagePath", true);
 
             if (!File.Exists(imagePath))
@@ -234,27 +232,25 @@ Usage examples:
                 new Rectangle(newX, newY, width.HasValue ? newX + width.Value : newX + 200,
                     height.HasValue ? newY + height.Value : newY + 200));
             document.Save(outputPath);
-            return
-                $"Successfully edited image {imageIndex} on page {pageIndex}. Output: {outputPath}";
+            return $"Edited image {imageIndex} on page {pageIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Extracts images from a PDF
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, outputDirectory, optional pageIndex</param>
+    /// <param name="path">Input file path</param>
+    /// <param name="arguments">JSON arguments containing pageIndex, optional outputPath, outputDir, imageIndex</param>
     /// <returns>Success message with extracted image count</returns>
-    private Task<string> ExtractImages(JsonObject? arguments)
+    private Task<string> ExtractImages(string path, JsonObject? arguments)
     {
         return Task.Run(async () =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
             var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath");
             var outputDir = ArgumentHelper.GetStringNullable(arguments, "outputDir");
             var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
             var imageIndex = ArgumentHelper.GetIntNullable(arguments, "imageIndex");
 
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
             if (!string.IsNullOrEmpty(outputPath))
                 SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
             if (!string.IsNullOrEmpty(outputDir))
@@ -306,22 +302,17 @@ Usage examples:
     /// <summary>
     ///     Gets all images from a PDF page
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, pageIndex</param>
-    /// <returns>Formatted string with all images</returns>
-    private Task<string> GetImages(JsonObject? arguments)
+    /// <param name="path">Input file path</param>
+    /// <param name="arguments">JSON arguments containing optional pageIndex</param>
+    /// <returns>JSON string with all images</returns>
+    private Task<string> GetImages(string path, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
             var pageIndex = ArgumentHelper.GetIntNullable(arguments, "pageIndex");
 
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
-
             using var document = new Document(path);
-
-            var sb = new StringBuilder();
-            sb.AppendLine("=== PDF Images ===");
-            sb.AppendLine();
+            var imageList = new List<object>();
 
             if (pageIndex.HasValue)
             {
@@ -332,80 +323,112 @@ Usage examples:
 
                 if (images == null || images.Count == 0)
                 {
-                    sb.AppendLine($"No images found on page {pageIndex.Value}.");
-                    return sb.ToString();
+                    var emptyResult = new
+                    {
+                        count = 0,
+                        pageIndex = pageIndex.Value,
+                        items = Array.Empty<object>(),
+                        message = $"No images found on page {pageIndex.Value}"
+                    };
+                    return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
                 }
-
-                sb.AppendLine($"Page {pageIndex.Value} Images ({images.Count}):");
-                sb.AppendLine();
 
                 for (var i = 1; i <= images.Count; i++)
                     try
                     {
                         var image = images[i];
-                        sb.AppendLine($"[{i}] Image Index: {i}");
+                        var imageInfo = new Dictionary<string, object?>
+                        {
+                            ["index"] = i,
+                            ["pageIndex"] = pageIndex.Value
+                        };
                         try
                         {
                             if (image.Width > 0 && image.Height > 0)
-                                sb.AppendLine($"    Size: {image.Width} x {image.Height} pixels");
+                            {
+                                imageInfo["width"] = image.Width;
+                                imageInfo["height"] = image.Height;
+                            }
                         }
                         catch (Exception ex)
                         {
-                            sb.AppendLine("    Size: (unavailable)");
+                            imageInfo["width"] = null;
+                            imageInfo["height"] = null;
                             Console.Error.WriteLine($"[WARN] Failed to read image size: {ex.Message}");
                         }
 
-                        sb.AppendLine();
+                        imageList.Add(imageInfo);
                     }
                     catch (Exception ex)
                     {
-                        sb.AppendLine($"[{i}] Error reading image: {ex.Message}");
-                        sb.AppendLine();
+                        imageList.Add(new { index = i, pageIndex = pageIndex.Value, error = ex.Message });
                     }
+
+                var result = new
+                {
+                    count = imageList.Count,
+                    pageIndex = pageIndex.Value,
+                    items = imageList
+                };
+                return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
             }
             else
             {
                 // Get images from all pages
-                var totalImages = 0;
                 for (var pageNum = 1; pageNum <= document.Pages.Count; pageNum++)
                 {
                     var page = document.Pages[pageNum];
                     var images = page.Resources?.Images;
                     if (images is { Count: > 0 })
-                    {
-                        totalImages += images.Count;
-                        sb.AppendLine($"Page {pageNum} Images ({images.Count}):");
-                        sb.AppendLine();
                         for (var i = 1; i <= images.Count; i++)
                             try
                             {
                                 var image = images[i];
-                                sb.AppendLine($"[Page {pageNum}, Image {i}]");
+                                var imageInfo = new Dictionary<string, object?>
+                                {
+                                    ["index"] = i,
+                                    ["pageIndex"] = pageNum
+                                };
                                 try
                                 {
                                     if (image.Width > 0 && image.Height > 0)
-                                        sb.AppendLine($"    Size: {image.Width} x {image.Height} pixels");
+                                    {
+                                        imageInfo["width"] = image.Width;
+                                        imageInfo["height"] = image.Height;
+                                    }
                                 }
                                 catch
                                 {
-                                    sb.AppendLine("    Size: (unavailable)");
+                                    imageInfo["width"] = null;
+                                    imageInfo["height"] = null;
                                 }
 
-                                sb.AppendLine();
+                                imageList.Add(imageInfo);
                             }
                             catch (Exception ex)
                             {
-                                sb.AppendLine($"[Page {pageNum}, Image {i}] Error reading image: {ex.Message}");
-                                sb.AppendLine();
+                                imageList.Add(new { index = i, pageIndex = pageNum, error = ex.Message });
                             }
-                    }
                 }
 
-                if (totalImages == 0)
-                    sb.AppendLine("No images found in document.");
-            }
+                if (imageList.Count == 0)
+                {
+                    var emptyResult = new
+                    {
+                        count = 0,
+                        items = Array.Empty<object>(),
+                        message = "No images found in document"
+                    };
+                    return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
+                }
 
-            return sb.ToString();
+                var result = new
+                {
+                    count = imageList.Count,
+                    items = imageList
+                };
+                return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            }
         });
     }
 }

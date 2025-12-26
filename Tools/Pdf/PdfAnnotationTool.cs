@@ -1,4 +1,4 @@
-using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
@@ -81,13 +81,19 @@ Usage examples:
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+
+        // Only get outputPath for operations that modify the document
+        string? outputPath = null;
+        if (operation.ToLower() != "get")
+            outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
 
         return operation.ToLower() switch
         {
-            "add" => await AddAnnotation(arguments),
-            "delete" => await DeleteAnnotation(arguments),
-            "edit" => await EditAnnotation(arguments),
-            "get" => await GetAnnotations(arguments),
+            "add" => await AddAnnotation(path, outputPath!, arguments),
+            "delete" => await DeleteAnnotation(path, outputPath!, arguments),
+            "edit" => await EditAnnotation(path, outputPath!, arguments),
+            "get" => await GetAnnotations(path, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -95,17 +101,14 @@ Usage examples:
     /// <summary>
     ///     Adds an annotation to a PDF page
     /// </summary>
-    /// <param name="arguments">
-    ///     JSON arguments containing path, pageIndex, annotationType, x, y, width, height, optional text,
-    ///     outputPath
-    /// </param>
+    /// <param name="path">Input file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing pageIndex, text, x, y</param>
     /// <returns>Success message</returns>
-    private Task<string> AddAnnotation(JsonObject? arguments)
+    private Task<string> AddAnnotation(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
             var text = ArgumentHelper.GetString(arguments, "text");
             var x = ArgumentHelper.GetDouble(arguments, "x", "x", false, 100);
@@ -127,26 +130,23 @@ Usage examples:
 
             page.Annotations.Add(annotation);
             document.Save(outputPath);
-            return $"Successfully added annotation to page {pageIndex}. Output: {outputPath}";
+            return $"Added annotation to page {pageIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Deletes an annotation from a PDF page
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, pageIndex, annotationIndex, optional outputPath</param>
+    /// <param name="path">Input file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing pageIndex, annotationIndex</param>
     /// <returns>Success message</returns>
-    private Task<string> DeleteAnnotation(JsonObject? arguments)
+    private Task<string> DeleteAnnotation(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
             var annotationIndex = ArgumentHelper.GetInt(arguments, "annotationIndex");
-
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
             using var document = new Document(path);
             if (pageIndex < 1 || pageIndex > document.Pages.Count)
@@ -158,33 +158,26 @@ Usage examples:
 
             page.Annotations.Delete(annotationIndex);
             document.Save(outputPath);
-            return
-                $"Successfully deleted annotation {annotationIndex} from page {pageIndex}. Output: {outputPath}";
+            return $"Deleted annotation {annotationIndex} from page {pageIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Edits an annotation in a PDF
     /// </summary>
-    /// <param name="arguments">
-    ///     JSON arguments containing path, pageIndex, annotationIndex, optional text, x, y, width, height,
-    ///     outputPath
-    /// </param>
+    /// <param name="path">Input file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing pageIndex, annotationIndex, text, optional x, y</param>
     /// <returns>Success message</returns>
-    private Task<string> EditAnnotation(JsonObject? arguments)
+    private Task<string> EditAnnotation(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
             var annotationIndex = ArgumentHelper.GetInt(arguments, "annotationIndex");
             var text = ArgumentHelper.GetString(arguments, "text");
             var x = ArgumentHelper.GetDoubleNullable(arguments, "x");
             var y = ArgumentHelper.GetDoubleNullable(arguments, "y");
-
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
             using var document = new Document(path);
             if (pageIndex < 1 || pageIndex > document.Pages.Count)
@@ -215,31 +208,26 @@ Usage examples:
             }
 
             document.Save(outputPath);
-            return
-                $"Successfully edited annotation {annotationIndex} on page {pageIndex}. Output: {outputPath}";
+            return $"Edited annotation {annotationIndex} on page {pageIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Gets all annotations from a PDF page
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, pageIndex</param>
-    /// <returns>Formatted string with all annotations</returns>
-    private Task<string> GetAnnotations(JsonObject? arguments)
+    /// <param name="path">Input file path</param>
+    /// <param name="arguments">JSON arguments containing optional pageIndex</param>
+    /// <returns>JSON string with all annotations</returns>
+    private Task<string> GetAnnotations(string path, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
             var pageIndex = ArgumentHelper.GetIntNullable(arguments, "pageIndex");
-
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
 
             try
             {
                 using var document = new Document(path);
-                var sb = new StringBuilder();
-                sb.AppendLine("=== PDF Annotations ===");
-                sb.AppendLine();
+                var annotationList = new List<object>();
 
                 if (pageIndex.HasValue)
                 {
@@ -247,61 +235,94 @@ Usage examples:
                         throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
 
                     var page = document.Pages[pageIndex.Value];
-                    sb.AppendLine($"Page {pageIndex.Value} Annotations ({page.Annotations.Count}):");
                     for (var i = 1; i <= page.Annotations.Count; i++)
                         try
                         {
                             var annotation = page.Annotations[i];
-                            sb.AppendLine($"  [{i}] Type: {annotation.GetType().Name}");
+                            var annotationInfo = new Dictionary<string, object?>
+                            {
+                                ["index"] = i,
+                                ["pageIndex"] = pageIndex.Value,
+                                ["type"] = annotation.GetType().Name
+                            };
                             if (annotation is TextAnnotation textAnnotation)
-                                sb.AppendLine($"      Text: {textAnnotation.Contents ?? "(empty)"}");
+                                annotationInfo["text"] = textAnnotation.Contents ?? "";
                             if (annotation.Rect != null)
-                                sb.AppendLine($"      Position: ({annotation.Rect.LLX}, {annotation.Rect.LLY})");
-                            sb.AppendLine();
+                            {
+                                annotationInfo["x"] = annotation.Rect.LLX;
+                                annotationInfo["y"] = annotation.Rect.LLY;
+                            }
+
+                            annotationList.Add(annotationInfo);
                         }
                         catch (Exception ex)
                         {
-                            sb.AppendLine($"  [{i}] Error reading annotation: {ex.Message}");
-                            sb.AppendLine();
+                            annotationList.Add(new { index = i, pageIndex = pageIndex.Value, error = ex.Message });
                         }
+
+                    var result = new
+                    {
+                        count = annotationList.Count,
+                        pageIndex = pageIndex.Value,
+                        items = annotationList
+                    };
+                    return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
                 }
                 else
                 {
-                    var totalCount = 0;
                     for (var i = 1; i <= document.Pages.Count; i++)
                         try
                         {
                             var page = document.Pages[i];
-                            if (page.Annotations.Count > 0)
-                            {
-                                sb.AppendLine($"Page {i} ({page.Annotations.Count} annotations):");
-                                for (var j = 1; j <= page.Annotations.Count; j++)
-                                    try
+                            for (var j = 1; j <= page.Annotations.Count; j++)
+                                try
+                                {
+                                    var annotation = page.Annotations[j];
+                                    var annotationInfo = new Dictionary<string, object?>
                                     {
-                                        var annotation = page.Annotations[j];
-                                        sb.AppendLine($"  [{j}] Type: {annotation.GetType().Name}");
-                                        if (annotation is TextAnnotation textAnnotation)
-                                            sb.AppendLine($"      Text: {textAnnotation.Contents ?? "(empty)"}");
-                                    }
-                                    catch (Exception ex)
+                                        ["index"] = j,
+                                        ["pageIndex"] = i,
+                                        ["type"] = annotation.GetType().Name
+                                    };
+                                    if (annotation is TextAnnotation textAnnotation)
+                                        annotationInfo["text"] = textAnnotation.Contents ?? "";
+                                    if (annotation.Rect != null)
                                     {
-                                        sb.AppendLine($"  [{j}] Error reading annotation: {ex.Message}");
+                                        annotationInfo["x"] = annotation.Rect.LLX;
+                                        annotationInfo["y"] = annotation.Rect.LLY;
                                     }
 
-                                sb.AppendLine();
-                                totalCount += page.Annotations.Count;
-                            }
+                                    annotationList.Add(annotationInfo);
+                                }
+                                catch (Exception ex)
+                                {
+                                    annotationList.Add(new { index = j, pageIndex = i, error = ex.Message });
+                                }
                         }
                         catch (Exception ex)
                         {
-                            sb.AppendLine($"Page {i}: Error reading annotations: {ex.Message}");
-                            sb.AppendLine();
+                            annotationList.Add(new { pageIndex = i, error = ex.Message });
                         }
 
-                    sb.AppendLine($"Total Annotations: {totalCount}");
-                }
+                    if (annotationList.Count == 0)
+                    {
+                        var emptyResult = new
+                        {
+                            count = 0,
+                            items = Array.Empty<object>(),
+                            message = "No annotations found"
+                        };
+                        return JsonSerializer.Serialize(emptyResult,
+                            new JsonSerializerOptions { WriteIndented = true });
+                    }
 
-                return sb.ToString();
+                    var result = new
+                    {
+                        count = annotationList.Count,
+                        items = annotationList
+                    };
+                    return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+                }
             }
             catch (Exception ex)
             {

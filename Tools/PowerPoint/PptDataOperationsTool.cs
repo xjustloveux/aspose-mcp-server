@@ -1,4 +1,4 @@
-﻿using System.Text;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Slides;
 using Aspose.Slides.Charts;
@@ -73,22 +73,15 @@ Usage examples:
     /// </summary>
     /// <param name="_">Unused parameter</param>
     /// <param name="path">PowerPoint file path</param>
-    /// <returns>Formatted string with statistics</returns>
+    /// <returns>JSON formatted string with statistics</returns>
     private Task<string> GetStatisticsAsync(JsonObject? _, string path)
     {
         return Task.Run(() =>
         {
             using var presentation = new Presentation(path);
-            var sb = new StringBuilder();
-
-            sb.AppendLine("Presentation Statistics:");
-            sb.AppendLine($"  Total Slides: {presentation.Slides.Count}");
-            sb.AppendLine($"  Total Layouts: {presentation.LayoutSlides.Count}");
-            sb.AppendLine($"  Total Masters: {presentation.Masters.Count}");
-            sb.AppendLine($"  Slide Size: {presentation.SlideSize.Size.Width} x {presentation.SlideSize.Size.Height}");
 
             var totalShapes = 0;
-            var totalText = 0;
+            var totalTextCharacters = 0;
             var totalImages = 0;
             var totalTables = 0;
             var totalCharts = 0;
@@ -107,9 +100,8 @@ Usage examples:
                 {
                     if (shape is IAutoShape { TextFrame: not null } autoShape)
                     {
-                        totalText++;
                         if (!string.IsNullOrWhiteSpace(autoShape.TextFrame.Text))
-                            totalText += autoShape.TextFrame.Text.Length;
+                            totalTextCharacters += autoShape.TextFrame.Text.Length;
                     }
                     else if (shape is PictureFrame)
                     {
@@ -140,18 +132,29 @@ Usage examples:
                 }
             }
 
-            sb.AppendLine($"  Total Shapes: {totalShapes}");
-            sb.AppendLine($"  Total Text Characters: {totalText}");
-            sb.AppendLine($"  Total Images: {totalImages}");
-            sb.AppendLine($"  Total Tables: {totalTables}");
-            sb.AppendLine($"  Total Charts: {totalCharts}");
-            sb.AppendLine($"  Total SmartArt: {totalSmartArt}");
-            sb.AppendLine($"  Total Audio: {totalAudio}");
-            sb.AppendLine($"  Total Video: {totalVideo}");
-            sb.AppendLine($"  Total Animations: {totalAnimations}");
-            sb.AppendLine($"  Total Hyperlinks: {totalHyperlinks}");
+            var result = new
+            {
+                totalSlides = presentation.Slides.Count,
+                totalLayouts = presentation.LayoutSlides.Count,
+                totalMasters = presentation.Masters.Count,
+                slideSize = new
+                {
+                    width = presentation.SlideSize.Size.Width,
+                    height = presentation.SlideSize.Size.Height
+                },
+                totalShapes,
+                totalTextCharacters,
+                totalImages,
+                totalTables,
+                totalCharts,
+                totalSmartArt,
+                totalAudio,
+                totalVideo,
+                totalAnimations,
+                totalHyperlinks
+            };
 
-            return sb.ToString();
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 
@@ -160,28 +163,37 @@ Usage examples:
     /// </summary>
     /// <param name="_">Unused parameter</param>
     /// <param name="path">PowerPoint file path</param>
-    /// <returns>Formatted string with content</returns>
+    /// <returns>JSON formatted string with content</returns>
     private Task<string> GetContentAsync(JsonObject? _, string path)
     {
         return Task.Run(() =>
         {
             using var presentation = new Presentation(path);
-            var sb = new StringBuilder();
-
-            sb.AppendLine($"Total slides: {presentation.Slides.Count}");
+            var slides = new List<object>();
 
             var slideIndex = 0;
             foreach (var slide in presentation.Slides)
             {
-                slideIndex++;
-                sb.AppendLine($"\n--- Slide {slideIndex} ---");
-
+                var textContent = new List<string>();
                 foreach (var shape in slide.Shapes)
-                    if (shape is IAutoShape { TextFrame.Text: var text })
-                        sb.AppendLine(text);
+                    if (shape is IAutoShape { TextFrame.Text: var text } && !string.IsNullOrWhiteSpace(text))
+                        textContent.Add(text);
+
+                slides.Add(new
+                {
+                    index = slideIndex,
+                    textContent
+                });
+                slideIndex++;
             }
 
-            return sb.ToString();
+            var result = new
+            {
+                totalSlides = presentation.Slides.Count,
+                slides
+            };
+
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 
@@ -190,7 +202,7 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments containing slideIndex</param>
     /// <param name="path">PowerPoint file path</param>
-    /// <returns>Formatted string with slide details</returns>
+    /// <returns>JSON formatted string with slide details</returns>
     private Task<string> GetSlideDetailsAsync(JsonObject? arguments, string path)
     {
         return Task.Run(() =>
@@ -199,49 +211,57 @@ Usage examples:
 
             using var presentation = new Presentation(path);
             var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-            var sb = new StringBuilder();
-
-            sb.AppendLine($"=== Slide {slideIndex} Details ===");
-            sb.AppendLine($"Hidden: {slide.Hidden}");
-            sb.AppendLine($"Layout: {slide.LayoutSlide?.Name ?? "None"}");
-            sb.AppendLine($"Shapes Count: {slide.Shapes.Count}");
 
             // Transition
             var transition = slide.SlideShowTransition;
-            if (transition != null)
-            {
-                sb.AppendLine("\nTransition:");
-                sb.AppendLine($"  Type: {transition.Type}");
-                sb.AppendLine($"  Speed: {transition.Speed}");
-                sb.AppendLine($"  AdvanceOnClick: {transition.AdvanceOnClick}");
-                sb.AppendLine($"  AdvanceAfterTime: {transition.AdvanceAfterTime}ms");
-            }
+            object? transitionInfo = transition != null
+                ? new
+                {
+                    type = transition.Type.ToString(),
+                    speed = transition.Speed.ToString(),
+                    advanceOnClick = transition.AdvanceOnClick,
+                    advanceAfterTimeMs = transition.AdvanceAfterTime
+                }
+                : null;
 
             // Animations
             var animations = slide.Timeline.MainSequence;
-            sb.AppendLine($"\nAnimations: {animations.Count}");
+            var animationsList = new List<object>();
             for (var i = 0; i < animations.Count; i++)
             {
                 var anim = animations[i];
-                sb.AppendLine($"  [{i}] Type: {anim.Type}, Shape: {anim.TargetShape?.GetType().Name}");
+                animationsList.Add(new
+                {
+                    index = i,
+                    type = anim.Type.ToString(),
+                    targetShape = anim.TargetShape?.GetType().Name
+                });
             }
 
             // Background
             var background = slide.Background;
-            if (background != null)
-            {
-                sb.AppendLine("\nBackground:");
-                sb.AppendLine($"  FillType: {background.FillFormat.FillType}");
-            }
+            object? backgroundInfo = background != null
+                ? new { fillType = background.FillFormat.FillType.ToString() }
+                : null;
 
+            // Notes
             var notesSlide = slide.NotesSlideManager.NotesSlide;
-            if (notesSlide != null)
-            {
-                var notesText = notesSlide.NotesTextFrame?.Text;
-                sb.AppendLine($"\nNotes: {(string.IsNullOrWhiteSpace(notesText) ? "None" : notesText)}");
-            }
+            var notesText = notesSlide?.NotesTextFrame?.Text;
 
-            return sb.ToString();
+            var result = new
+            {
+                slideIndex,
+                hidden = slide.Hidden,
+                layout = slide.LayoutSlide?.Name,
+                shapesCount = slide.Shapes.Count,
+                transition = transitionInfo,
+                animationsCount = animations.Count,
+                animations = animationsList,
+                background = backgroundInfo,
+                notes = string.IsNullOrWhiteSpace(notesText) ? null : notesText
+            };
+
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 }

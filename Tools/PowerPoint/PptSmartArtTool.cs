@@ -109,12 +109,13 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
 
         return operation.ToLower() switch
         {
-            "add" => await AddSmartArtAsync(arguments, path, slideIndex),
-            "manage_nodes" => await ManageNodesAsync(arguments, path, slideIndex),
+            "add" => await AddSmartArtAsync(path, outputPath, slideIndex, arguments),
+            "manage_nodes" => await ManageNodesAsync(path, outputPath, slideIndex, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -122,11 +123,12 @@ Usage examples:
     /// <summary>
     ///     Adds a SmartArt shape to a slide
     /// </summary>
-    /// <param name="arguments">JSON arguments containing layout, x, y, width, height, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing layout, x, y, width, height</param>
     /// <returns>Success message</returns>
-    private Task<string> AddSmartArtAsync(JsonObject? arguments, string path, int slideIndex)
+    private Task<string> AddSmartArtAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -146,21 +148,21 @@ Usage examples:
 
             slide.Shapes.AddSmartArt(x, y, width, height, layoutType);
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
 
-            return $"SmartArt added successfully to slide {slideIndex} with layout '{layoutStr}' - {outputPath}";
+            return $"SmartArt '{layoutStr}' added to slide {slideIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Manages SmartArt nodes (add, edit, delete)
     /// </summary>
-    /// <param name="arguments">JSON arguments containing shapeIndex, action, targetPath, text, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="slideIndex">Slide index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing shapeIndex, action, targetPath, text</param>
     /// <returns>Success message</returns>
-    private Task<string> ManageNodesAsync(JsonObject? arguments, string path, int slideIndex)
+    private Task<string> ManageNodesAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -253,10 +255,9 @@ Usage examples:
                     throw new ArgumentException($"Unknown action: {action}. Valid actions: add, edit, delete");
             }
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
 
-            sb.AppendLine($"Output: {outputPath}");
+            sb.Append($" Output: {outputPath}");
             return sb.ToString();
         });
     }

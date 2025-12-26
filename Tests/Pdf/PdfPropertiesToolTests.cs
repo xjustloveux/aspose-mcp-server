@@ -35,7 +35,7 @@ public class PdfPropertiesToolTests : PdfTestBase
         // Assert
         Assert.NotNull(result);
         Assert.NotEmpty(result);
-        Assert.Contains("Properties", result, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("title", result);
     }
 
     [Fact]

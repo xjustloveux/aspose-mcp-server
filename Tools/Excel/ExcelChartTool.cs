@@ -1,4 +1,4 @@
-using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Cells;
 using Aspose.Cells.Charts;
@@ -150,18 +150,17 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath");
-        if (!string.IsNullOrEmpty(outputPath)) SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
 
         return operation.ToLower() switch
         {
-            "add" => await AddChartAsync(arguments, path, sheetIndex),
-            "edit" => await EditChartAsync(arguments, path, outputPath ?? path, sheetIndex),
-            "delete" => await DeleteChartAsync(arguments, path, sheetIndex),
-            "get" => await GetChartsAsync(arguments, path, sheetIndex),
-            "update_data" => await UpdateChartDataAsync(arguments, path, outputPath ?? path, sheetIndex),
-            "set_properties" => await SetChartPropertiesAsync(arguments, path, outputPath ?? path, sheetIndex),
+            "add" => await AddChartAsync(path, outputPath, sheetIndex, arguments),
+            "edit" => await EditChartAsync(path, outputPath, sheetIndex, arguments),
+            "delete" => await DeleteChartAsync(path, outputPath, sheetIndex, arguments),
+            "get" => await GetChartsAsync(path, sheetIndex),
+            "update_data" => await UpdateChartDataAsync(path, outputPath, sheetIndex, arguments),
+            "set_properties" => await SetChartPropertiesAsync(path, outputPath, sheetIndex, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -169,11 +168,12 @@ Usage examples:
     /// <summary>
     ///     Adds a chart to the worksheet
     /// </summary>
-    /// <param name="arguments">JSON arguments containing chartType, dataRange, optional categoryAxisDataRange, title, position</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing chartType, dataRange, optional categoryAxisDataRange, title, position</param>
     /// <returns>Success message with chart index</returns>
-    private Task<string> AddChartAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> AddChartAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -294,13 +294,12 @@ Usage examples:
             if (!string.IsNullOrEmpty(title)) chart.Title.Text = title;
 
             workbook.CalculateFormula();
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             workbook.Save(outputPath);
 
-            var result = $"Chart added to worksheet with data range: {dataRange}";
+            var result = $"Chart added with data range: {dataRange}";
             if (!string.IsNullOrEmpty(categoryAxisDataRange)) result += $", X-axis: {categoryAxisDataRange}";
-            result += $"\nOutput: {outputPath}";
             if (!string.IsNullOrEmpty(warningMessage)) result += warningMessage;
+            result += $". Output: {outputPath}";
             return result;
         });
     }
@@ -308,12 +307,12 @@ Usage examples:
     /// <summary>
     ///     Edits chart properties
     /// </summary>
-    /// <param name="arguments">JSON arguments containing chartIndex and various chart properties</param>
     /// <param name="path">Excel file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing chartIndex and various chart properties</param>
     /// <returns>Success message</returns>
-    private Task<string> EditChartAsync(JsonObject? arguments, string path, string outputPath, int sheetIndex)
+    private Task<string> EditChartAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -449,18 +448,9 @@ Usage examples:
 
             workbook.Save(outputPath);
 
-            var result = $"Successfully edited chart #{chartIndex}\n";
-            if (changes.Count > 0)
-            {
-                result += "Changes:\n";
-                foreach (var change in changes) result += $"  - {change}\n";
-            }
-            else
-            {
-                result += "No changes.\n";
-            }
-
-            result += $"Output: {outputPath}";
+            var result = changes.Count > 0
+                ? $"Chart #{chartIndex} edited: {string.Join(", ", changes)}. Output: {outputPath}"
+                : $"Chart #{chartIndex} no changes. Output: {outputPath}";
 
             return result;
         });
@@ -469,11 +459,12 @@ Usage examples:
     /// <summary>
     ///     Deletes a chart from the worksheet
     /// </summary>
-    /// <param name="arguments">JSON arguments containing chartIndex</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing chartIndex</param>
     /// <returns>Success message</returns>
-    private Task<string> DeleteChartAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> DeleteChartAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -492,24 +483,19 @@ Usage examples:
             var chartName = chart.Name ?? $"Chart {chartIndex}";
 
             charts.RemoveAt(chartIndex);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             workbook.Save(outputPath);
 
-            var remainingCount = charts.Count;
-
-            return
-                $"Successfully deleted chart #{chartIndex} ({chartName})\nRemaining charts in worksheet: {remainingCount}\nOutput: {outputPath}";
+            return $"Chart #{chartIndex} ({chartName}) deleted, {charts.Count} remaining. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Gets all charts from the worksheet
     /// </summary>
-    /// <param name="_">Unused parameter</param>
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <returns>Formatted string with all charts</returns>
-    private Task<string> GetChartsAsync(JsonObject? _, string path, int sheetIndex)
+    /// <returns>JSON string with all charts</returns>
+    private Task<string> GetChartsAsync(string path, int sheetIndex)
     {
         return Task.Run(() =>
         {
@@ -517,40 +503,31 @@ Usage examples:
 
             var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
             var charts = worksheet.Charts;
-            var result = new StringBuilder();
-
-            result.AppendLine($"=== Chart information for worksheet '{worksheet.Name}' ===\n");
-            result.AppendLine($"Total charts: {charts.Count}\n");
 
             if (charts.Count == 0)
             {
-                result.AppendLine("No charts found");
-                return result.ToString();
+                var emptyResult = new
+                {
+                    count = 0,
+                    worksheetName = worksheet.Name,
+                    items = Array.Empty<object>(),
+                    message = "No charts found"
+                };
+                return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
             }
 
+            var chartList = new List<object>();
             for (var i = 0; i < charts.Count; i++)
             {
                 var chart = charts[i];
-                result.AppendLine($"[Chart {i}]");
-                result.AppendLine($"Name: {chart.Name ?? "(no name)"}");
-                result.AppendLine($"Type: {chart.Type}");
-                result.AppendLine(
-                    $"Location: rows {chart.ChartObject.UpperLeftRow} - {chart.ChartObject.LowerRightRow}, columns {chart.ChartObject.UpperLeftColumn} - {chart.ChartObject.LowerRightColumn}");
-                result.AppendLine($"Width: {chart.ChartObject.Width}");
-                result.AppendLine($"Height: {chart.ChartObject.Height}");
+                var seriesList = new List<object>();
 
                 if (chart.NSeries is { Count: > 0 })
-                {
-                    result.AppendLine($"Data series count: {chart.NSeries.Count}");
                     for (var j = 0; j < chart.NSeries.Count && j < 5; j++)
                     {
                         var series = chart.NSeries[j];
                         var seriesName = series.Name ?? "(no name)";
                         var valuesRange = series.Values ?? "";
-
-                        result.AppendLine($"  Series {j}: {seriesName}");
-                        if (!string.IsNullOrEmpty(valuesRange))
-                            result.AppendLine($"    Data range (Y-axis): {valuesRange}");
 
                         string? categoryData = null;
 
@@ -600,30 +577,57 @@ Usage examples:
                                 // Ignore error setting category data
                             }
 
-                        if (!string.IsNullOrEmpty(categoryData)) result.AppendLine($"    X-axis data: {categoryData}");
+                        seriesList.Add(new
+                        {
+                            index = j,
+                            name = seriesName,
+                            valuesRange,
+                            categoryData
+                        });
                     }
-                }
 
-                if (chart.Title != null) result.AppendLine($"Title: {chart.Title.Text}");
-
-                if (chart.Legend != null) result.AppendLine("Legend: enabled");
-                result.AppendLine();
+                chartList.Add(new
+                {
+                    index = i,
+                    name = chart.Name ?? "(no name)",
+                    type = chart.Type.ToString(),
+                    location = new
+                    {
+                        upperLeftRow = chart.ChartObject.UpperLeftRow,
+                        lowerRightRow = chart.ChartObject.LowerRightRow,
+                        upperLeftColumn = chart.ChartObject.UpperLeftColumn,
+                        lowerRightColumn = chart.ChartObject.LowerRightColumn
+                    },
+                    width = chart.ChartObject.Width,
+                    height = chart.ChartObject.Height,
+                    title = chart.Title?.Text,
+                    legendEnabled = chart.Legend != null,
+                    seriesCount = chart.NSeries?.Count ?? 0,
+                    series = seriesList
+                });
             }
 
-            return result.ToString();
+            var result = new
+            {
+                count = charts.Count,
+                worksheetName = worksheet.Name,
+                items = chartList
+            };
+
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 
     /// <summary>
     ///     Updates chart data range
     /// </summary>
-    /// <param name="arguments">JSON arguments containing chartIndex, dataRange, optional categoryAxisDataRange</param>
     /// <param name="path">Excel file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing chartIndex, dataRange, optional categoryAxisDataRange</param>
     /// <returns>Success message</returns>
-    private Task<string> UpdateChartDataAsync(JsonObject? arguments, string path, string outputPath,
-        int sheetIndex)
+    private Task<string> UpdateChartDataAsync(string path, string outputPath, int sheetIndex,
+        JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -656,21 +660,20 @@ Usage examples:
 
             workbook.Save(outputPath);
 
-            return
-                $"Successfully updated data source for chart #{chartIndex}\nNew data range: {dataRange}\nOutput: {outputPath}";
+            return $"Chart #{chartIndex} data updated to: {dataRange}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Sets chart properties
     /// </summary>
-    /// <param name="arguments">JSON arguments containing chartIndex and various chart properties</param>
     /// <param name="path">Excel file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing chartIndex and various chart properties</param>
     /// <returns>Success message</returns>
-    private Task<string> SetChartPropertiesAsync(JsonObject? arguments, string path, string outputPath,
-        int sheetIndex)
+    private Task<string> SetChartPropertiesAsync(string path, string outputPath, int sheetIndex,
+        JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -724,11 +727,9 @@ Usage examples:
 
             workbook.Save(outputPath);
 
-            var result = changes.Count > 0
-                ? $"Chart properties updated: {string.Join(", ", changes)}\nOutput: {outputPath}"
-                : $"No changes\nOutput: {outputPath}";
-
-            return result;
+            return changes.Count > 0
+                ? $"Chart #{chartIndex} properties updated: {string.Join(", ", changes)}. Output: {outputPath}"
+                : $"Chart #{chartIndex} no changes. Output: {outputPath}";
         });
     }
 }

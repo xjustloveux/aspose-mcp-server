@@ -90,13 +90,14 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
 
         return operation.ToLower() switch
         {
-            "set_header" => await SetHeaderAsync(arguments, path),
-            "set_footer" => await SetFooterAsync(arguments, path),
-            "batch_set" => await BatchSetHeaderFooterAsync(arguments, path),
-            "set_slide_numbering" => await SetSlideNumberingAsync(arguments, path),
+            "set_header" => await SetHeaderAsync(path, outputPath, arguments),
+            "set_footer" => await SetFooterAsync(path, outputPath, arguments),
+            "batch_set" => await BatchSetHeaderFooterAsync(path, outputPath, arguments),
+            "set_slide_numbering" => await SetSlideNumberingAsync(path, outputPath, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -104,10 +105,11 @@ Usage examples:
     /// <summary>
     ///     Sets header text for slides
     /// </summary>
-    /// <param name="arguments">JSON arguments containing headerText, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing headerText</param>
     /// <returns>Success message</returns>
-    private Task<string> SetHeaderAsync(JsonObject? arguments, string path)
+    private Task<string> SetHeaderAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -128,20 +130,20 @@ Usage examples:
                 headerFooter.SetFooterVisibility(true);
             }
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
 
-            return $"Header set for {slides.Count} slide(s): {outputPath}";
+            return $"Header set for {slides.Count} slide(s). Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Sets footer text for slides
     /// </summary>
-    /// <param name="arguments">JSON arguments containing footerText, optional outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing footerText</param>
     /// <returns>Success message</returns>
-    private Task<string> SetFooterAsync(JsonObject? arguments, string path)
+    private Task<string> SetFooterAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -177,19 +179,19 @@ Usage examples:
                 }
             }
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return "Footer/page number settings updated";
+            return $"Footer/page number settings updated. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Sets header and footer for multiple slides
     /// </summary>
-    /// <param name="arguments">JSON arguments containing headerText, footerText, optional slideIndexes, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing headerText, footerText, optional slideIndexes</param>
     /// <returns>Success message</returns>
-    private Task<string> BatchSetHeaderFooterAsync(JsonObject? arguments, string path)
+    private Task<string> BatchSetHeaderFooterAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -235,19 +237,19 @@ Usage examples:
                 }
             }
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Batch updated footer/page number/date for {targets.Length} slides";
+            return $"Batch updated footer/page number/date for {targets.Length} slides. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Sets slide numbering
     /// </summary>
-    /// <param name="arguments">JSON arguments containing isVisible, optional startNumber, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing isVisible, optional startNumber</param>
     /// <returns>Success message</returns>
-    private Task<string> SetSlideNumberingAsync(JsonObject? arguments, string path)
+    private Task<string> SetSlideNumberingAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -255,10 +257,9 @@ Usage examples:
 
             using var presentation = new Presentation(path);
             presentation.FirstSlideNumber = firstNumber;
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
 
-            return $"Starting page number set to {firstNumber}";
+            return $"Starting page number set to {firstNumber}. Output: {outputPath}";
         });
     }
 }

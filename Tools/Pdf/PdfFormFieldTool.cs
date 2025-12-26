@@ -1,4 +1,4 @@
-using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using Aspose.Pdf.Forms;
@@ -107,13 +107,19 @@ Usage examples:
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+
+        // Only get outputPath for operations that modify the document
+        string? outputPath = null;
+        if (operation.ToLower() != "get")
+            outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
 
         return operation.ToLower() switch
         {
-            "add" => await AddFormField(arguments),
-            "delete" => await DeleteFormField(arguments),
-            "edit" => await EditFormField(arguments),
-            "get" => await GetFormFields(arguments),
+            "add" => await AddFormField(path, outputPath!, arguments),
+            "delete" => await DeleteFormField(path, outputPath!, arguments),
+            "edit" => await EditFormField(path, outputPath!, arguments),
+            "get" => await GetFormFields(path),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -121,17 +127,17 @@ Usage examples:
     /// <summary>
     ///     Adds a form field to a PDF page
     /// </summary>
+    /// <param name="path">Input file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="arguments">
-    ///     JSON arguments containing path, pageIndex, fieldType, name, x, y, width, height, optional
-    ///     defaultValue, outputPath
+    ///     JSON arguments containing pageIndex, fieldType, fieldName, x, y, width, height, optional
+    ///     defaultValue
     /// </param>
     /// <returns>Success message</returns>
-    private Task<string> AddFormField(JsonObject? arguments)
+    private Task<string> AddFormField(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
             var fieldType = ArgumentHelper.GetString(arguments, "fieldType");
             var fieldName = ArgumentHelper.GetString(arguments, "fieldName");
@@ -171,50 +177,44 @@ Usage examples:
 
             document.Form.Add(field);
             document.Save(outputPath);
-            return $"Successfully added {fieldType} field '{fieldName}'. Output: {outputPath}";
+            return $"Added {fieldType} field '{fieldName}'. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Deletes a form field from a PDF
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, fieldName, optional outputPath</param>
+    /// <param name="path">Input file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing fieldName</param>
     /// <returns>Success message</returns>
-    private Task<string> DeleteFormField(JsonObject? arguments)
+    private Task<string> DeleteFormField(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var fieldName = ArgumentHelper.GetString(arguments, "fieldName");
-
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
             using var document = new Document(path);
             document.Form.Delete(fieldName);
             document.Save(outputPath);
-            return $"Successfully deleted form field '{fieldName}'. Output: {outputPath}";
+            return $"Deleted form field '{fieldName}'. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Edits a form field in a PDF
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, fieldName, optional value, x, y, width, height, outputPath</param>
+    /// <param name="path">Input file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing fieldName, optional value, checkedValue</param>
     /// <returns>Success message</returns>
-    private Task<string> EditFormField(JsonObject? arguments)
+    private Task<string> EditFormField(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var fieldName = ArgumentHelper.GetString(arguments, "fieldName");
             var value = ArgumentHelper.GetStringNullable(arguments, "value");
             var checkedValue = ArgumentHelper.GetBoolNullable(arguments, "checkedValue");
-
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
             using var document = new Document(path);
             var field = document.Form[fieldName];
@@ -227,47 +227,53 @@ Usage examples:
                 checkBox.Checked = checkedValue.Value;
 
             document.Save(outputPath);
-            return $"Successfully edited form field '{fieldName}'. Output: {outputPath}";
+            return $"Edited form field '{fieldName}'. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Gets all form fields from the PDF
     /// </summary>
-    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
-    /// <returns>Formatted string with all form fields</returns>
-    private Task<string> GetFormFields(JsonObject? arguments)
+    /// <param name="path">Input file path</param>
+    /// <returns>JSON string with all form fields</returns>
+    private Task<string> GetFormFields(string path)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-
             using var document = new Document(path);
-            var sb = new StringBuilder();
-            sb.AppendLine("=== PDF Form Fields ===");
-            sb.AppendLine();
 
             if (document.Form.Count == 0)
             {
-                sb.AppendLine("No form fields found.");
-                return sb.ToString();
+                var emptyResult = new
+                {
+                    count = 0,
+                    items = Array.Empty<object>(),
+                    message = "No form fields found"
+                };
+                return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
             }
 
-            sb.AppendLine($"Total Form Fields: {document.Form.Count}");
-            sb.AppendLine();
-
+            var fieldList = new List<object>();
             foreach (var field in document.Form.Cast<Field>())
             {
-                sb.AppendLine($"Name: {field.PartialName}");
-                sb.AppendLine($"Type: {field.GetType().Name}");
+                var fieldInfo = new Dictionary<string, object?>
+                {
+                    ["name"] = field.PartialName,
+                    ["type"] = field.GetType().Name
+                };
                 if (field is TextBoxField textBox)
-                    sb.AppendLine($"Value: {textBox.Value}");
+                    fieldInfo["value"] = textBox.Value;
                 else if (field is CheckboxField checkBox)
-                    sb.AppendLine($"Checked: {checkBox.Checked}");
-                sb.AppendLine();
+                    fieldInfo["checked"] = checkBox.Checked;
+                fieldList.Add(fieldInfo);
             }
 
-            return sb.ToString();
+            var result = new
+            {
+                count = fieldList.Count,
+                items = fieldList
+            };
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 }

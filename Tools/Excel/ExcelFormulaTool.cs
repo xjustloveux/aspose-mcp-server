@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
@@ -89,16 +89,17 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
 
         return operation.ToLower() switch
         {
-            "add" => await AddFormulaAsync(arguments, path, sheetIndex),
-            "get" => await GetFormulasAsync(arguments, path, sheetIndex),
-            "get_result" => await GetFormulaResultAsync(arguments, path, sheetIndex),
-            "calculate" => await CalculateFormulasAsync(arguments, path, sheetIndex),
-            "set_array" => await SetArrayFormulaAsync(arguments, path, sheetIndex),
-            "get_array" => await GetArrayFormulaAsync(arguments, path, sheetIndex),
+            "add" => await AddFormulaAsync(path, outputPath, sheetIndex, arguments),
+            "get" => await GetFormulasAsync(path, sheetIndex, arguments),
+            "get_result" => await GetFormulaResultAsync(path, sheetIndex, arguments),
+            "calculate" => await CalculateFormulasAsync(path, outputPath, sheetIndex),
+            "set_array" => await SetArrayFormulaAsync(path, outputPath, sheetIndex, arguments),
+            "get_array" => await GetArrayFormulaAsync(path, sheetIndex, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -106,11 +107,12 @@ Usage examples:
     /// <summary>
     ///     Adds a formula to a cell
     /// </summary>
-    /// <param name="arguments">JSON arguments containing cell and formula</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing cell and formula</param>
     /// <returns>Success message with cell reference</returns>
-    private Task<string> AddFormulaAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> AddFormulaAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -138,21 +140,21 @@ Usage examples:
                 // Common Excel error values: #NAME?, #VALUE?, #REF!, #DIV/0!, #NUM!, #NULL!, #N/A
                 if (!string.IsNullOrEmpty(errorValue) && errorValue.StartsWith("#"))
                 {
-                    warningMessage = $"\n⚠️ Warning: Formula calculation resulted in error: {errorValue}";
+                    warningMessage = $" Warning: {errorValue}";
                     if (errorValue == "#NAME?")
-                        warningMessage += " This usually indicates an invalid function name or undefined name.";
+                        warningMessage += " (invalid function name)";
                     else if (errorValue == "#VALUE?")
-                        warningMessage += " This usually indicates an incorrect argument type.";
+                        warningMessage += " (incorrect argument type)";
                     else if (errorValue == "#REF!")
-                        warningMessage += " This usually indicates an invalid cell reference.";
+                        warningMessage += " (invalid cell reference)";
                 }
             }
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             workbook.Save(outputPath);
 
-            var result = $"Formula added to cell {cell}: {formula}\nOutput: {outputPath}";
-            if (!string.IsNullOrEmpty(warningMessage)) result += warningMessage;
+            var result = $"Formula added to {cell}: {formula}";
+            if (!string.IsNullOrEmpty(warningMessage)) result += $".{warningMessage}";
+            result += $". Output: {outputPath}";
             return result;
         });
     }
@@ -160,11 +162,11 @@ Usage examples:
     /// <summary>
     ///     Gets formula from a cell
     /// </summary>
-    /// <param name="arguments">JSON arguments containing cell</param>
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <returns>Formula string</returns>
-    private Task<string> GetFormulasAsync(JsonObject? arguments, string path, int sheetIndex)
+    /// <param name="arguments">JSON arguments containing cell</param>
+    /// <returns>JSON string with formula information</returns>
+    private Task<string> GetFormulasAsync(string path, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -173,9 +175,6 @@ Usage examples:
             using var workbook = new Workbook(path);
             var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
             var cells = worksheet.Cells;
-            var result = new StringBuilder();
-
-            result.AppendLine($"=== Formula Information for Worksheet '{worksheet.Name}' ===\n");
 
             int startRow, endRow, startCol, endCol;
 
@@ -202,38 +201,51 @@ Usage examples:
                 endCol = worksheet.Cells.MaxDataColumn;
             }
 
-            var formulaCount = 0;
+            var formulaList = new List<object>();
             for (var row = startRow; row <= endRow && row <= 10000; row++)
             for (var col = startCol; col <= endCol && col <= 1000; col++)
             {
                 var cell = cells[row, col];
                 if (!string.IsNullOrEmpty(cell.Formula))
-                {
-                    formulaCount++;
-                    result.AppendLine($"【{CellsHelper.CellIndexToName(row, col)}】");
-                    result.AppendLine($"Formula: {cell.Formula}");
-                    result.AppendLine($"Value: {cell.Value ?? "(calculating)"}");
-                    result.AppendLine();
-                }
+                    formulaList.Add(new
+                    {
+                        cell = CellsHelper.CellIndexToName(row, col),
+                        formula = cell.Formula,
+                        value = cell.Value?.ToString() ?? "(calculating)"
+                    });
             }
 
-            if (formulaCount == 0)
-                result.AppendLine("No formulas found");
-            else
-                result.Insert(0, $"Total formulas: {formulaCount}\n\n");
+            if (formulaList.Count == 0)
+            {
+                var emptyResult = new
+                {
+                    count = 0,
+                    worksheetName = worksheet.Name,
+                    items = Array.Empty<object>(),
+                    message = "No formulas found"
+                };
+                return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
+            }
 
-            return result.ToString();
+            var result = new
+            {
+                count = formulaList.Count,
+                worksheetName = worksheet.Name,
+                items = formulaList
+            };
+
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 
     /// <summary>
     ///     Gets the calculated result of a formula
     /// </summary>
-    /// <param name="arguments">JSON arguments containing cell</param>
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <returns>Formula result value</returns>
-    private Task<string> GetFormulaResultAsync(JsonObject? arguments, string path, int sheetIndex)
+    /// <param name="arguments">JSON arguments containing cell</param>
+    /// <returns>JSON string with formula result value</returns>
+    private Task<string> GetFormulaResultAsync(string path, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -246,9 +258,6 @@ Usage examples:
 
             if (calculateBeforeRead) workbook.CalculateFormula();
 
-            var result = $"Cell: {cell}\n";
-            result += $"Formula: {cellObj.Formula ?? "(none)"}\n";
-
             var calculatedValue = cellObj.Value;
 
             if (!string.IsNullOrEmpty(cellObj.Formula))
@@ -258,68 +267,46 @@ Usage examples:
                     if (string.IsNullOrEmpty(calculatedValue?.ToString())) calculatedValue = cellObj.Formula;
                 }
 
-            result += $"Calculated Value: {calculatedValue ?? "(empty)"}\n";
-            result += $"Value Type: {cellObj.Type}";
+            var result = new
+            {
+                cell,
+                formula = cellObj.Formula,
+                calculatedValue = calculatedValue?.ToString() ?? "(empty)",
+                valueType = cellObj.Type.ToString()
+            };
 
-            return result;
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 
     /// <summary>
     ///     Calculates all formulas in the workbook
     /// </summary>
-    /// <param name="arguments">JSON arguments containing optional outputPath</param>
     /// <param name="path">Excel file path</param>
-    /// <param name="sheetIndex">Worksheet index (0-based, not used but required for signature)</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <returns>Success message</returns>
-    private Task<string> CalculateFormulasAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> CalculateFormulasAsync(string path, string outputPath, int _)
     {
         return Task.Run(() =>
         {
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-            var cell = ArgumentHelper.GetStringNullable(arguments, "cell");
-
             using var workbook = new Workbook(path);
-
-            if (!string.IsNullOrEmpty(cell))
-            {
-                var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-                var cellObj = worksheet.Cells[cell];
-
-                if (!string.IsNullOrEmpty(cellObj.Formula))
-                {
-                    // Calculate formula first
-                    workbook.CalculateFormula();
-                    // Access value to trigger calculation and ensure result is saved
-                    _ = cellObj.Value;
-                    // Convert formula result to value (replace formula with calculated value)
-                    cellObj.PutValue(cellObj.Value);
-                }
-            }
-            else
-            {
-                workbook.CalculateFormula();
-            }
-
+            workbook.CalculateFormula();
             workbook.Save(outputPath);
 
-            var result = "Formula calculation completed\n";
-            result += $"Worksheet: {workbook.Worksheets[sheetIndex].Name}\n";
-            if (!string.IsNullOrEmpty(cell)) result += $"Cell: {cell}\n";
-            result += $"Output: {outputPath}";
-
-            return result;
+            return $"Formulas calculated. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Sets an array formula to a range
     /// </summary>
-    /// <param name="arguments">JSON arguments containing range and formula</param>
     /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing range and formula</param>
     /// <returns>Success message with range</returns>
-    private Task<string> SetArrayFormulaAsync(JsonObject? arguments, string path, int sheetIndex)
+    private Task<string> SetArrayFormulaAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -348,11 +335,6 @@ Usage examples:
             var firstCell = worksheet.Cells[rangeObj.FirstRow, rangeObj.FirstColumn];
 
 #pragma warning disable CS0618 // Type or member is obsolete
-            // Set array formula using SetArrayFormula method
-            // According to Aspose.Cells documentation, SetArrayFormula signature is:
-            // SetArrayFormula(string arrayFormula, int rowNumber, int columnNumber)
-            // where rowNumber and columnNumber are the number of rows and columns for the array
-
             // Formula should include '=' sign
             var formulaToSet = cleanFormula.StartsWith("=") ? cleanFormula : "=" + cleanFormula;
 
@@ -361,74 +343,58 @@ Usage examples:
             for (var j = 0; j < rangeObj.ColumnCount; j++)
                 worksheet.Cells[rangeObj.FirstRow + i, rangeObj.FirstColumn + j].PutValue("");
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-
             try
             {
-                // Use SetArrayFormula with rowCount and columnCount (not startRow/startCol)
-                // Signature: SetArrayFormula(formula, rowCount, columnCount)
                 firstCell.SetArrayFormula(formulaToSet, rangeObj.RowCount, rangeObj.ColumnCount);
-
-                // Calculate formulas to ensure array formula is processed
                 workbook.CalculateFormula();
 
-                // Check immediately if it's an array formula (optimization: avoid save/reload if already valid)
                 if (firstCell.IsArrayFormula)
                 {
                     workbook.Save(outputPath);
-                    return $"Array formula set in range {range}: {outputPath}";
+                    return $"Array formula set in range {range}. Output: {outputPath}";
                 }
 
-                // Save and reload to verify (in case immediate check didn't detect it)
                 workbook.Save(outputPath);
                 using var verifyWorkbook = new Workbook(outputPath);
                 var verifyWorksheet = verifyWorkbook.Worksheets[sheetIndex];
                 var verifyCell = verifyWorksheet.Cells[rangeObj.FirstRow, rangeObj.FirstColumn];
 
                 if (verifyCell.IsArrayFormula)
-                    return $"Array formula set in range {range}: {outputPath}";
+                    return $"Array formula set in range {range}. Output: {outputPath}";
 
-                // If SetArrayFormula with 2 parameters didn't work, try with 5 parameters
                 throw new InvalidOperationException("SetArrayFormula with 2 parameters did not work");
             }
             catch (Exception ex)
             {
-                // Try with 5 parameters: SetArrayFormula(formula, startRow, startCol, isR1C1, isLocal)
                 try
                 {
-                    // Reload for clean state
                     using var retryWorkbook = new Workbook(path);
                     var retryWorksheet = retryWorkbook.Worksheets[sheetIndex];
                     var retryRangeObj = ExcelHelper.CreateRange(retryWorksheet.Cells, range);
                     var retryFirstCell = retryWorksheet.Cells[retryRangeObj.FirstRow, retryRangeObj.FirstColumn];
 
-                    // Clear range
                     for (var i = 0; i < retryRangeObj.RowCount; i++)
                     for (var j = 0; j < retryRangeObj.ColumnCount; j++)
                         retryWorksheet.Cells[retryRangeObj.FirstRow + i, retryRangeObj.FirstColumn + j].PutValue("");
 
-                    // Try with 5 parameters
                     var formulaWithoutEquals = cleanFormula.StartsWith("=") ? cleanFormula.Substring(1) : cleanFormula;
                     retryFirstCell.SetArrayFormula(formulaWithoutEquals, retryRangeObj.FirstRow,
-                        retryRangeObj.FirstColumn,
-                        false, false);
+                        retryRangeObj.FirstColumn, false, false);
 
                     retryWorkbook.CalculateFormula();
                     retryWorkbook.Save(outputPath);
 
-                    // Verify
                     using var verifyWorkbook = new Workbook(outputPath);
                     var verifyWorksheet = verifyWorkbook.Worksheets[sheetIndex];
                     var verifyCell = verifyWorksheet.Cells[retryRangeObj.FirstRow, retryRangeObj.FirstColumn];
 
                     if (verifyCell.IsArrayFormula)
-                        return $"Array formula set in range {range}: {outputPath}";
+                        return $"Array formula set in range {range}. Output: {outputPath}";
 
                     throw new InvalidOperationException("SetArrayFormula with 5 parameters did not work");
                 }
                 catch (Exception ex2)
                 {
-                    // If both methods fail, set regular formulas as fallback
                     try
                     {
                         using var fallbackWorkbook = new Workbook(path);
@@ -445,12 +411,12 @@ Usage examples:
                         }
 
                         fallbackWorkbook.Save(outputPath);
-                        return $"Formula set to range {range} (Note: This is not a true array formula): {outputPath}";
+                        return $"Formula set to range {range} (not a true array formula). Output: {outputPath}";
                     }
                     catch (Exception ex3)
                     {
                         throw new ArgumentException(
-                            $"Failed to set array formula. Range: {range}, Formula: {cleanFormula}.\nMethod 1 error: {ex.Message}\nMethod 2 error: {ex2.Message}\nMethod 3 error: {ex3.Message}",
+                            $"Failed to set array formula. Range: {range}, Formula: {cleanFormula}. Errors: {ex.Message}, {ex2.Message}, {ex3.Message}",
                             ex);
                     }
                 }
@@ -462,11 +428,11 @@ Usage examples:
     /// <summary>
     ///     Gets array formula information from a cell
     /// </summary>
-    /// <param name="arguments">JSON arguments containing cell</param>
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <returns>Array formula information</returns>
-    private Task<string> GetArrayFormulaAsync(JsonObject? arguments, string path, int sheetIndex)
+    /// <param name="arguments">JSON arguments containing cell</param>
+    /// <returns>JSON string with array formula information</returns>
+    private Task<string> GetArrayFormulaAsync(string path, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -476,60 +442,66 @@ Usage examples:
             var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
             var cellObj = worksheet.Cells[cell];
 
-            var sb = new StringBuilder();
-            sb.AppendLine($"Cell: {cell}");
-
-            // Use IsArrayFormula property to detect if cell contains an array formula
-            if (cellObj.IsArrayFormula)
+            if (!cellObj.IsArrayFormula)
             {
-                var formula = cellObj.Formula;
-                sb.AppendLine($"Array Formula: {formula ?? "(empty)"}");
-
-                // Try to get the array range
-                try
+                var notFoundResult = new
                 {
-                    // Find the array range by checking surrounding cells
-                    var startRow = cellObj.Row;
-                    var startCol = cellObj.Column;
-                    var endRow = startRow;
-                    var endCol = startCol;
-
-                    // Check cells to the right
-                    for (var col = startCol + 1; col < worksheet.Cells.MaxColumn + 1; col++)
-                    {
-                        var testCell = worksheet.Cells[startRow, col];
-                        if (testCell.IsArrayFormula && testCell.Formula == formula)
-                            endCol = col;
-                        else
-                            break;
-                    }
-
-                    // Check cells below
-                    for (var row = startRow + 1; row < worksheet.Cells.MaxRow + 1; row++)
-                    {
-                        var testCell = worksheet.Cells[row, startCol];
-                        if (testCell.IsArrayFormula && testCell.Formula == formula)
-                            endRow = row;
-                        else
-                            break;
-                    }
-
-                    var startCellName = CellsHelper.CellIndexToName(startRow, startCol);
-                    var endCellName = CellsHelper.CellIndexToName(endRow, endCol);
-                    sb.AppendLine($"Array Range: {startCellName}:{endCellName}");
-                }
-                catch (Exception ex)
-                {
-                    sb.AppendLine("Array Range: Unable to determine");
-                    Console.Error.WriteLine($"[WARN] Failed to determine array range: {ex.Message}");
-                }
-            }
-            else
-            {
-                sb.AppendLine("No array formula found in this cell");
+                    cell,
+                    isArrayFormula = false,
+                    message = "No array formula found in this cell"
+                };
+                return JsonSerializer.Serialize(notFoundResult, new JsonSerializerOptions { WriteIndented = true });
             }
 
-            return sb.ToString();
+            var formula = cellObj.Formula;
+            string? arrayRange = null;
+
+            // Try to get the array range
+            try
+            {
+                var startRow = cellObj.Row;
+                var startCol = cellObj.Column;
+                var endRow = startRow;
+                var endCol = startCol;
+
+                // Check cells to the right
+                for (var col = startCol + 1; col < worksheet.Cells.MaxColumn + 1; col++)
+                {
+                    var testCell = worksheet.Cells[startRow, col];
+                    if (testCell.IsArrayFormula && testCell.Formula == formula)
+                        endCol = col;
+                    else
+                        break;
+                }
+
+                // Check cells below
+                for (var row = startRow + 1; row < worksheet.Cells.MaxRow + 1; row++)
+                {
+                    var testCell = worksheet.Cells[row, startCol];
+                    if (testCell.IsArrayFormula && testCell.Formula == formula)
+                        endRow = row;
+                    else
+                        break;
+                }
+
+                var startCellName = CellsHelper.CellIndexToName(startRow, startCol);
+                var endCellName = CellsHelper.CellIndexToName(endRow, endCol);
+                arrayRange = $"{startCellName}:{endCellName}";
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[WARN] Failed to determine array range: {ex.Message}");
+            }
+
+            var result = new
+            {
+                cell,
+                isArrayFormula = true,
+                formula = formula ?? "(empty)",
+                arrayRange = arrayRange ?? "Unable to determine"
+            };
+
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 }

@@ -1,4 +1,4 @@
-﻿using System.Text;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Slides;
 using Aspose.Slides.Export;
@@ -70,11 +70,12 @@ Usage examples:
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
 
         return operation.ToLower() switch
         {
-            "set" => await SetBackgroundAsync(arguments, path),
-            "get" => await GetBackgroundAsync(arguments, path),
+            "set" => await SetBackgroundAsync(path, outputPath, arguments),
+            "get" => await GetBackgroundAsync(path, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -82,10 +83,11 @@ Usage examples:
     /// <summary>
     ///     Sets slide background
     /// </summary>
-    /// <param name="arguments">JSON arguments containing optional slideIndex, imagePath, color, outputPath</param>
     /// <param name="path">PowerPoint file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing optional slideIndex, imagePath, color</param>
     /// <returns>Success message</returns>
-    private Task<string> SetBackgroundAsync(JsonObject? arguments, string path)
+    private Task<string> SetBackgroundAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(async () =>
         {
@@ -115,19 +117,18 @@ Usage examples:
                 throw new ArgumentException("Please provide at least one of color or imagePath");
             }
 
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Background updated for slide {slideIndex}: {outputPath}";
+            return $"Background updated for slide {slideIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Gets background information for a slide
     /// </summary>
-    /// <param name="arguments">JSON arguments containing slideIndex</param>
     /// <param name="path">PowerPoint file path</param>
-    /// <returns>Formatted string with background details</returns>
-    private Task<string> GetBackgroundAsync(JsonObject? arguments, string path)
+    /// <param name="arguments">JSON arguments containing slideIndex</param>
+    /// <returns>JSON string with background details</returns>
+    private Task<string> GetBackgroundAsync(string path, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -136,22 +137,24 @@ Usage examples:
             using var presentation = new Presentation(path);
             var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
             var background = slide.Background;
-            var sb = new StringBuilder();
 
-            sb.AppendLine($"=== Slide {slideIndex} Background ===");
-            if (background != null)
+            string? colorHex = null;
+            if (background?.FillFormat.FillType == FillType.Solid)
             {
-                sb.AppendLine($"FillType: {background.FillFormat.FillType}");
-                if (background.FillFormat.FillType == FillType.Solid)
-                    sb.AppendLine($"Color: {background.FillFormat.SolidFillColor}");
-                else if (background.FillFormat.FillType == FillType.Picture) sb.AppendLine("Picture fill");
-            }
-            else
-            {
-                sb.AppendLine("No background set");
+                var color = background.FillFormat.SolidFillColor.Color;
+                colorHex = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
             }
 
-            return sb.ToString();
+            var result = new
+            {
+                slideIndex,
+                hasBackground = background != null,
+                fillType = background?.FillFormat.FillType.ToString(),
+                color = colorHex,
+                isPictureFill = background?.FillFormat.FillType == FillType.Picture
+            };
+
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
     }
 }

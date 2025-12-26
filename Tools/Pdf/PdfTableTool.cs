@@ -107,11 +107,13 @@ Usage examples:
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
+        var path = ArgumentHelper.GetAndValidatePath(arguments);
+        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
 
         return operation.ToLower() switch
         {
-            "add" => await AddTable(arguments),
-            "edit" => await EditTable(arguments),
+            "add" => await AddTable(path, outputPath, arguments),
+            "edit" => await EditTable(path, outputPath, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -119,14 +121,14 @@ Usage examples:
     /// <summary>
     ///     Adds a table to a PDF page
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, pageIndex, rows, columns, data, x, y, optional outputPath</param>
+    /// <param name="path">Input file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing pageIndex, rows, columns, optional data, x, y</param>
     /// <returns>Success message</returns>
-    private Task<string> AddTable(JsonObject? arguments)
+    private Task<string> AddTable(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
             var rows = ArgumentHelper.GetInt(arguments, "rows");
             var columns = ArgumentHelper.GetInt(arguments, "columns");
@@ -174,29 +176,25 @@ Usage examples:
 
             page.Paragraphs.Add(table);
             document.Save(outputPath);
-            return
-                $"Successfully added table ({rows} rows x {columns} columns) to page {pageIndex}. Output: {outputPath}";
+            return $"Added table ({rows} rows x {columns} columns) to page {pageIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
     ///     Edits table data in a PDF
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, pageIndex, tableIndex, data, optional outputPath</param>
+    /// <param name="path">Input file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="arguments">JSON arguments containing tableIndex, optional cellRow, cellColumn, cellValue</param>
     /// <returns>Success message</returns>
-    private Task<string> EditTable(JsonObject? arguments)
+    private Task<string> EditTable(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var path = ArgumentHelper.GetAndValidatePath(arguments);
-            var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
             var tableIndex = ArgumentHelper.GetInt(arguments, "tableIndex");
             var cellRow = ArgumentHelper.GetIntNullable(arguments, "cellRow");
             var cellColumn = ArgumentHelper.GetIntNullable(arguments, "cellColumn");
             var cellValue = ArgumentHelper.GetStringNullable(arguments, "cellValue");
-
-            SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
             using var document = new Document(path);
 
@@ -361,7 +359,7 @@ Usage examples:
             }
 
             document.Save(outputPath);
-            return $"Successfully edited table {tableIndex}. Output: {outputPath}";
+            return $"Edited table {tableIndex}. Output: {outputPath}";
         });
     }
 }

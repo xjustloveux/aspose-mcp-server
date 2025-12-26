@@ -36,7 +36,7 @@ public class PptDataOperationsToolTests : TestBase
         // Assert
         Assert.NotNull(result);
         Assert.NotEmpty(result);
-        Assert.Contains("Statistics", result, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("totalSlides", result);
     }
 
     [Fact]
