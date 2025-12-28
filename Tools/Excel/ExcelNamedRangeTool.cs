@@ -7,18 +7,24 @@ using Range = Aspose.Cells.Range;
 namespace AsposeMcpServer.Tools.Excel;
 
 /// <summary>
-///     Unified tool for managing Excel named ranges (add, delete, get)
-///     Merges: ExcelAddNamedRangeTool, ExcelDeleteNamedRangeTool, ExcelGetNamedRangesTool
+///     Unified tool for managing Excel named ranges (add, delete, get).
 /// </summary>
 public class ExcelNamedRangeTool : IAsposeTool
 {
+    /// <summary>
+    ///     Gets the description of the tool and its usage examples.
+    /// </summary>
     public string Description => @"Manage Excel named ranges. Supports 3 operations: add, delete, get.
 
 Usage examples:
 - Add named range: excel_named_range(operation='add', path='book.xlsx', name='MyRange', range='A1:C10')
+- Add with sheet reference: excel_named_range(operation='add', path='book.xlsx', name='MyRange', range='Sheet1!A1:C10')
 - Delete named range: excel_named_range(operation='delete', path='book.xlsx', name='MyRange')
 - Get named ranges: excel_named_range(operation='get', path='book.xlsx')";
 
+    /// <summary>
+    ///     Gets the JSON schema defining the input parameters for the tool.
+    /// </summary>
     public object InputSchema => new
     {
         type = "object",
@@ -41,37 +47,39 @@ Usage examples:
             name = new
             {
                 type = "string",
-                description = "Name for the range (required for add/delete)"
+                description = "Name for the range. Must be a valid Excel name (required for add/delete)"
             },
             range = new
             {
                 type = "string",
-                description = "Cell range (e.g., 'A1:C10') or formula (required for add)"
+                description = "Cell range (e.g., 'A1:C10' or 'Sheet1!A1:C10', required for add)"
             },
             comment = new
             {
                 type = "string",
-                description = "Comment for the named range (optional, for add)"
+                description = "Comment for the named range (optional for add)"
             },
             sheetIndex = new
             {
                 type = "number",
-                description = "Sheet index (0-based, optional, default: 0, for add operation)"
+                description =
+                    "Sheet index (0-based, optional, default: 0). Used when range does not include sheet reference"
             },
             outputPath = new
             {
                 type = "string",
-                description = "Output file path (optional, for add/delete operations, defaults to input path)"
+                description = "Output file path (optional, defaults to input path)"
             }
         },
         required = new[] { "operation", "path" }
     };
 
     /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments
+    ///     Executes the tool operation with the provided JSON arguments.
     /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters</param>
-    /// <returns>Result message as a string</returns>
+    /// <param name="arguments">JSON arguments object containing operation parameters.</param>
+    /// <returns>Result message as a string.</returns>
+    /// <exception cref="ArgumentException">Thrown when operation is unknown.</exception>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
@@ -89,114 +97,52 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Adds a named range to the workbook
+    ///     Adds a named range to the workbook.
     /// </summary>
-    /// <param name="path">Excel file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing name and range</param>
-    /// <returns>Success message with named range details</returns>
+    /// <param name="path">Excel file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="sheetIndex">Worksheet index (0-based), used when range has no sheet reference.</param>
+    /// <param name="arguments">JSON arguments containing name, range, and optional comment.</param>
+    /// <returns>Success message with named range details.</returns>
+    /// <exception cref="ArgumentException">Thrown when named range already exists or range format is invalid.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when named range creation fails.</exception>
     private Task<string> AddNamedRangeAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
             var name = ArgumentHelper.GetString(arguments, "name");
-            var range = ArgumentHelper.GetString(arguments, "range");
+            var rangeAddress = ArgumentHelper.GetString(arguments, "range");
             var comment = ArgumentHelper.GetStringNullable(arguments, "comment");
 
             using var workbook = new Workbook(path);
             var names = workbook.Worksheets.Names;
 
-            // Get the correct worksheet using sheetIndex
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            if (names[name] != null)
+                throw new ArgumentException($"Named range '{name}' already exists.");
 
-            // Use Range object approach instead of manually constructing RefersTo string
-            // This is the recommended way according to Aspose.Cells documentation
-            // It automatically handles sheet name escaping, absolute references, and special characters
             try
             {
-                // Check if name already exists using get operation's method
-                using var checkWorkbook = new Workbook(path);
-                var checkNames = checkWorkbook.Worksheets.Names;
-                foreach (var checkName in checkNames)
-                    try
-                    {
-                        var checkText = checkName.Text;
-                        if (!string.IsNullOrEmpty(checkText) && checkText == name)
-                            throw new ArgumentException($"Named range '{name}' already exists");
-                    }
-                    catch (ArgumentException)
-                    {
-                        throw;
-                    }
-                    catch (Exception ex)
-                    {
-                        // Ignore if named range creation fails (will be handled by error handling)
-                        Console.Error.WriteLine(
-                            $"[WARN] Named range creation failed (will be handled by error handling): {ex.Message}");
-                    }
-
-                // Use Range object approach instead of manually constructing RefersTo string
-                // This is the recommended way according to Aspose.Cells documentation
-                // It automatically handles sheet name escaping, absolute references, and special characters
-
                 Range rangeObject;
-                if (range.Contains("!"))
+
+                if (rangeAddress.Contains('!'))
                 {
-                    // Range already contains sheet reference, parse it
-                    var parts = range.Split('!');
-                    if (parts.Length == 2)
-                    {
-                        var sheetRef = parts[0].Trim().Trim('\'');
-                        var cellRange = parts[1].Trim();
-
-                        // Find the worksheet by name
-                        Worksheet? targetSheet = null;
-                        foreach (var ws in workbook.Worksheets)
-                            if (ws.Name == sheetRef)
-                            {
-                                targetSheet = ws;
-                                break;
-                            }
-
-                        if (targetSheet == null)
-                            throw new ArgumentException($"Worksheet '{sheetRef}' not found");
-
-                        // Parse cell range (e.g., "A1:C1")
-                        var cellParts = cellRange.Split(':');
-                        rangeObject = targetSheet.Cells.CreateRange(cellParts[0].Trim(),
-                            cellParts.Length == 2 ? cellParts[1].Trim() : cellParts[0].Trim());
-                    }
-                    else
-                    {
-                        throw new ArgumentException(
-                            $"Invalid range format with sheet reference: '{range}'. Expected format: 'SheetName!A1:C1' or 'SheetName!A1'");
-                    }
+                    rangeObject = ParseRangeWithSheetReference(workbook, rangeAddress);
                 }
                 else
                 {
-                    // Range without sheet reference, use the specified worksheet
-                    // Parse cell range (e.g., "A1:C1")
-                    var cellParts = range.Split(':');
-                    rangeObject = worksheet.Cells.CreateRange(cellParts[0].Trim(),
-                        cellParts.Length == 2 ? cellParts[1].Trim() : range.Trim());
+                    var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+                    rangeObject = CreateRangeFromAddress(worksheet.Cells, rangeAddress);
                 }
 
-                // Set the name on the Range object - this automatically creates the named range
-                // with correct RefersTo format including sheet name, absolute references, etc.
                 rangeObject.Name = name;
 
-                // Get the actual named range to verify and get RefersTo
                 var namedRange = names[name];
-                var actualRefersTo = namedRange.RefersTo;
+                if (!string.IsNullOrEmpty(comment))
+                    namedRange.Comment = comment;
 
-                // Set comment if provided
-                if (!string.IsNullOrEmpty(comment)) namedRange.Comment = comment;
-
-                // Save the workbook to persist the changes
                 workbook.Save(outputPath);
 
-                return $"Named range '{name}' added with reference {actualRefersTo}. Output: {outputPath}";
+                return $"Named range '{name}' added (reference: {namedRange.RefersTo}). Output: {outputPath}";
             }
             catch (ArgumentException)
             {
@@ -205,18 +151,19 @@ Usage examples:
             catch (Exception ex)
             {
                 throw new InvalidOperationException(
-                    $"Unable to create named range '{name}', range: {range}. Error: {ex.Message}", ex);
+                    $"Failed to create named range '{name}' with range '{rangeAddress}': {ex.Message}", ex);
             }
         });
     }
 
     /// <summary>
-    ///     Deletes a named range from the workbook
+    ///     Deletes a named range from the workbook.
     /// </summary>
-    /// <param name="path">Excel file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing name</param>
-    /// <returns>Success message</returns>
+    /// <param name="path">Excel file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="arguments">JSON arguments containing name.</param>
+    /// <returns>Success message.</returns>
+    /// <exception cref="ArgumentException">Thrown when named range does not exist.</exception>
     private Task<string> DeleteNamedRangeAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -226,29 +173,10 @@ Usage examples:
             using var workbook = new Workbook(path);
             var names = workbook.Worksheets.Names;
 
-            Name? namedRange;
-            try
-            {
-                namedRange = names[name];
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"[ERROR] Error accessing named range '{name}': {ex.Message}");
-                throw new ArgumentException($"Named range '{name}' does not exist");
-            }
+            if (names[name] == null)
+                throw new ArgumentException($"Named range '{name}' does not exist.");
 
-            if (namedRange == null) throw new ArgumentException($"Named range '{name}' does not exist");
-
-            // Find the index of the named range
-            var indexToRemove = -1;
-            for (var i = 0; i < names.Count; i++)
-                if (names[i] == namedRange)
-                {
-                    indexToRemove = i;
-                    break;
-                }
-
-            if (indexToRemove >= 0) names.RemoveAt(indexToRemove);
+            names.Remove(name);
             workbook.Save(outputPath);
 
             return $"Named range '{name}' deleted. Output: {outputPath}";
@@ -256,10 +184,10 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Gets all named ranges from the workbook
+    ///     Gets all named ranges from the workbook.
     /// </summary>
-    /// <param name="path">Excel file path</param>
-    /// <returns>JSON string with all named ranges</returns>
+    /// <param name="path">Excel file path.</param>
+    /// <returns>JSON string containing all named ranges.</returns>
     private Task<string> GetNamedRangesAsync(string path)
     {
         return Task.Run(() =>
@@ -300,5 +228,54 @@ Usage examples:
 
             return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
         });
+    }
+
+    /// <summary>
+    ///     Parses a range address that includes a sheet reference (e.g., "Sheet1!A1:B2").
+    /// </summary>
+    /// <param name="workbook">The workbook containing the worksheet.</param>
+    /// <param name="rangeAddress">Range address with sheet reference.</param>
+    /// <returns>The created Range object.</returns>
+    /// <exception cref="ArgumentException">Thrown when format is invalid or worksheet not found.</exception>
+    private static Range ParseRangeWithSheetReference(Workbook workbook, string rangeAddress)
+    {
+        var exclamationIndex = rangeAddress.LastIndexOf('!');
+        if (exclamationIndex <= 0)
+            throw new ArgumentException($"Invalid range format: '{rangeAddress}'. Expected format: 'SheetName!A1:C1'");
+
+        var sheetRef = rangeAddress[..exclamationIndex].Trim().Trim('\'');
+        var cellRange = rangeAddress[(exclamationIndex + 1)..].Trim();
+
+        Worksheet? targetSheet = null;
+        foreach (var ws in workbook.Worksheets)
+            if (ws.Name == sheetRef)
+            {
+                targetSheet = ws;
+                break;
+            }
+
+        if (targetSheet == null)
+            throw new ArgumentException($"Worksheet '{sheetRef}' not found.");
+
+        return CreateRangeFromAddress(targetSheet.Cells, cellRange);
+    }
+
+    /// <summary>
+    ///     Creates a Range object from a cell address (e.g., "A1:B2" or "A1").
+    /// </summary>
+    /// <param name="cells">The Cells collection to create the range from.</param>
+    /// <param name="address">Cell address in A1:B2 or A1 format.</param>
+    /// <returns>The created Range object.</returns>
+    private static Range CreateRangeFromAddress(Cells cells, string address)
+    {
+        var colonIndex = address.IndexOf(':');
+        if (colonIndex > 0)
+        {
+            var startCell = address[..colonIndex].Trim();
+            var endCell = address[(colonIndex + 1)..].Trim();
+            return cells.CreateRange(startCell, endCell);
+        }
+
+        return cells.CreateRange(address.Trim(), address.Trim());
     }
 }

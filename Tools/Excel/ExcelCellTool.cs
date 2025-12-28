@@ -1,6 +1,6 @@
-using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 
@@ -8,13 +8,11 @@ namespace AsposeMcpServer.Tools.Excel;
 
 /// <summary>
 ///     Unified tool for managing Excel cells (write, edit, get, clear)
-///     Merges: ExcelWriteCellTool, ExcelEditCellTool, ExcelGetCellValueTool, ExcelClearCellTool
 /// </summary>
 public class ExcelCellTool : IAsposeTool
 {
-    /// <summary>
-    ///     Gets the description of the tool and its usage examples
-    /// </summary>
+    private static readonly Regex CellAddressRegex = new(@"^[A-Za-z]{1,3}\d+$", RegexOptions.Compiled);
+
     public string Description => @"Manage Excel cells. Supports 4 operations: write, edit, get, clear.
 
 Usage examples:
@@ -23,9 +21,6 @@ Usage examples:
 - Get cell: excel_cell(operation='get', path='book.xlsx', cell='A1')
 - Clear cell: excel_cell(operation='clear', path='book.xlsx', cell='A1')";
 
-    /// <summary>
-    ///     Gets the JSON schema defining the input parameters for the tool
-    /// </summary>
     public object InputSchema => new
     {
         type = "object",
@@ -54,12 +49,13 @@ Usage examples:
             cell = new
             {
                 type = "string",
-                description = "Cell reference (e.g., 'A1')"
+                description = "Cell reference (e.g., 'A1', 'B2', 'AA100')"
             },
             value = new
             {
                 type = "string",
-                description = "Value to write (required for write, optional for edit)"
+                description =
+                    "Value to write (required for write, optional for edit). Supports string, number, boolean, and date formats"
             },
             formula = new
             {
@@ -70,6 +66,11 @@ Usage examples:
             {
                 type = "boolean",
                 description = "Clear cell value (optional, for edit)"
+            },
+            calculateFormula = new
+            {
+                type = "boolean",
+                description = "Calculate formulas before reading value (optional, for get, default: false)"
             },
             includeFormula = new
             {
@@ -123,6 +124,18 @@ Usage examples:
     }
 
     /// <summary>
+    ///     Validates the cell address format
+    /// </summary>
+    /// <param name="cell">Cell address to validate</param>
+    /// <exception cref="ArgumentException">Thrown when cell address format is invalid</exception>
+    private static void ValidateCellAddress(string cell)
+    {
+        if (!CellAddressRegex.IsMatch(cell))
+            throw new ArgumentException(
+                $"Invalid cell address format: '{cell}'. Expected format like 'A1', 'B2', 'AA100'");
+    }
+
+    /// <summary>
     ///     Writes a value to a cell
     /// </summary>
     /// <param name="path">Excel file path</param>
@@ -137,22 +150,23 @@ Usage examples:
             var cell = ArgumentHelper.GetString(arguments, "cell");
             var value = ArgumentHelper.GetString(arguments, "value");
 
-            using var workbook = new Workbook(path);
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-            var cellObj = worksheet.Cells[cell];
+            ValidateCellAddress(cell);
 
-            // Parse value as number, boolean, or string
-            // Ensures formulas can correctly identify numeric values
-            if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var numValue))
-                cellObj.PutValue(numValue);
-            else if (bool.TryParse(value, out var boolValue))
-                cellObj.PutValue(boolValue);
-            else
-                cellObj.PutValue(value);
+            try
+            {
+                using var workbook = new Workbook(path);
+                var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+                var cellObj = worksheet.Cells[cell];
 
-            workbook.Save(outputPath);
+                ExcelHelper.SetCellValue(cellObj, value);
 
-            return $"Cell {cell} written with value '{value}' in sheet {sheetIndex}. Output: {outputPath}";
+                workbook.Save(outputPath);
+                return $"Cell {cell} written with value '{value}' in sheet {sheetIndex}. Output: {outputPath}";
+            }
+            catch (CellsException ex)
+            {
+                throw new ArgumentException($"Excel operation failed for cell '{cell}': {ex.Message}");
+            }
         });
     }
 
@@ -173,36 +187,30 @@ Usage examples:
             var formula = ArgumentHelper.GetStringNullable(arguments, "formula");
             var clearValue = ArgumentHelper.GetBool(arguments, "clearValue", false);
 
-            using var workbook = new Workbook(path);
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-            var cellObj = worksheet.Cells[cell];
+            ValidateCellAddress(cell);
 
-            if (clearValue)
+            try
             {
-                cellObj.PutValue("");
-            }
-            else if (!string.IsNullOrEmpty(formula))
-            {
-                cellObj.Formula = formula;
-            }
-            else if (!string.IsNullOrEmpty(value))
-            {
-                // Parse value as number, boolean, or string
-                // Ensures formulas can correctly identify numeric values
-                if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var numValue))
-                    cellObj.PutValue(numValue);
-                else if (bool.TryParse(value, out var boolValue))
-                    cellObj.PutValue(boolValue);
+                using var workbook = new Workbook(path);
+                var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+                var cellObj = worksheet.Cells[cell];
+
+                if (clearValue)
+                    cellObj.PutValue("");
+                else if (!string.IsNullOrEmpty(formula))
+                    cellObj.Formula = formula;
+                else if (!string.IsNullOrEmpty(value))
+                    ExcelHelper.SetCellValue(cellObj, value);
                 else
-                    cellObj.PutValue(value);
-            }
-            else
-            {
-                throw new ArgumentException("Either value, formula, or clearValue must be provided");
-            }
+                    throw new ArgumentException("Either value, formula, or clearValue must be provided");
 
-            workbook.Save(outputPath);
-            return $"Cell {cell} edited in sheet {sheetIndex}. Output: {outputPath}";
+                workbook.Save(outputPath);
+                return $"Cell {cell} edited in sheet {sheetIndex}. Output: {outputPath}";
+            }
+            catch (CellsException ex)
+            {
+                throw new ArgumentException($"Excel operation failed for cell '{cell}': {ex.Message}");
+            }
         });
     }
 
@@ -211,7 +219,7 @@ Usage examples:
     /// </summary>
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing cell and optional includeFormat</param>
+    /// <param name="arguments">JSON arguments containing cell and optional includeFormat, calculateFormula</param>
     /// <returns>JSON string with cell information</returns>
     private Task<string> GetCellAsync(string path, int sheetIndex, JsonObject? arguments)
     {
@@ -220,45 +228,59 @@ Usage examples:
             var cell = ArgumentHelper.GetString(arguments, "cell");
             var includeFormula = ArgumentHelper.GetBool(arguments, "includeFormula", true);
             var includeFormat = ArgumentHelper.GetBool(arguments, "includeFormat", false);
+            var calculateFormula = ArgumentHelper.GetBool(arguments, "calculateFormula", false);
 
-            using var workbook = new Workbook(path);
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-            var cellObj = worksheet.Cells[cell];
+            ValidateCellAddress(cell);
 
-            object? resultObj;
-
-            if (includeFormat)
+            try
             {
-                var style = cellObj.GetStyle();
-                resultObj = new
+                using var workbook = new Workbook(path);
+
+                if (calculateFormula)
+                    workbook.CalculateFormula();
+
+                var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+                var cellObj = worksheet.Cells[cell];
+
+                object? resultObj;
+
+                if (includeFormat)
                 {
-                    cell,
-                    value = cellObj.Value?.ToString() ?? "(empty)",
-                    valueType = cellObj.Type.ToString(),
-                    formula = includeFormula && !string.IsNullOrEmpty(cellObj.Formula) ? cellObj.Formula : null,
-                    format = new
+                    var style = cellObj.GetStyle();
+                    resultObj = new
                     {
-                        fontName = style.Font.Name,
-                        fontSize = style.Font.Size,
-                        bold = style.Font.IsBold,
-                        italic = style.Font.IsItalic,
-                        backgroundColor = style.ForegroundColor.ToString(),
-                        numberFormat = style.Number
-                    }
-                };
-            }
-            else
-            {
-                resultObj = new
+                        cell,
+                        value = cellObj.Value?.ToString() ?? "(empty)",
+                        valueType = cellObj.Type.ToString(),
+                        formula = includeFormula && !string.IsNullOrEmpty(cellObj.Formula) ? cellObj.Formula : null,
+                        format = new
+                        {
+                            fontName = style.Font.Name,
+                            fontSize = style.Font.Size,
+                            bold = style.Font.IsBold,
+                            italic = style.Font.IsItalic,
+                            backgroundColor = style.ForegroundColor.ToString(),
+                            numberFormat = style.Number
+                        }
+                    };
+                }
+                else
                 {
-                    cell,
-                    value = cellObj.Value?.ToString() ?? "(empty)",
-                    valueType = cellObj.Type.ToString(),
-                    formula = includeFormula && !string.IsNullOrEmpty(cellObj.Formula) ? cellObj.Formula : null
-                };
-            }
+                    resultObj = new
+                    {
+                        cell,
+                        value = cellObj.Value?.ToString() ?? "(empty)",
+                        valueType = cellObj.Type.ToString(),
+                        formula = includeFormula && !string.IsNullOrEmpty(cellObj.Formula) ? cellObj.Formula : null
+                    };
+                }
 
-            return JsonSerializer.Serialize(resultObj, new JsonSerializerOptions { WriteIndented = true });
+                return JsonSerializer.Serialize(resultObj, new JsonSerializerOptions { WriteIndented = true });
+            }
+            catch (CellsException ex)
+            {
+                throw new ArgumentException($"Excel operation failed for cell '{cell}': {ex.Message}");
+            }
         });
     }
 
@@ -278,28 +300,37 @@ Usage examples:
             var clearContent = ArgumentHelper.GetBool(arguments, "clearContent", true);
             var clearFormat = ArgumentHelper.GetBool(arguments, "clearFormat", false);
 
-            using var workbook = new Workbook(path);
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-            var cellObj = worksheet.Cells[cell];
+            ValidateCellAddress(cell);
 
-            if (clearContent && clearFormat)
+            try
             {
-                cellObj.PutValue("");
-                var defaultStyle = workbook.CreateStyle();
-                cellObj.SetStyle(defaultStyle);
-            }
-            else if (clearContent)
-            {
-                cellObj.PutValue("");
-            }
-            else if (clearFormat)
-            {
-                var defaultStyle = workbook.CreateStyle();
-                cellObj.SetStyle(defaultStyle);
-            }
+                using var workbook = new Workbook(path);
+                var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+                var cellObj = worksheet.Cells[cell];
 
-            workbook.Save(outputPath);
-            return $"Cell {cell} cleared in sheet {sheetIndex}. Output: {outputPath}";
+                if (clearContent && clearFormat)
+                {
+                    cellObj.PutValue("");
+                    var defaultStyle = workbook.CreateStyle();
+                    cellObj.SetStyle(defaultStyle);
+                }
+                else if (clearContent)
+                {
+                    cellObj.PutValue("");
+                }
+                else if (clearFormat)
+                {
+                    var defaultStyle = workbook.CreateStyle();
+                    cellObj.SetStyle(defaultStyle);
+                }
+
+                workbook.Save(outputPath);
+                return $"Cell {cell} cleared in sheet {sheetIndex}. Output: {outputPath}";
+            }
+            catch (CellsException ex)
+            {
+                throw new ArgumentException($"Excel operation failed for cell '{cell}': {ex.Message}");
+            }
         });
     }
 }

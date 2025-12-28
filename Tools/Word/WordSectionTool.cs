@@ -11,6 +11,9 @@ namespace AsposeMcpServer.Tools.Word;
 /// </summary>
 public class WordSectionTool : IAsposeTool
 {
+    /// <summary>
+    ///     Gets the description of the tool and its usage examples
+    /// </summary>
     public string Description => @"Manage Word document sections. Supports 3 operations: insert, delete, get.
 
 Usage examples:
@@ -23,6 +26,9 @@ Notes:
 - IMPORTANT: Deleting a section will also delete all content within that section (paragraphs, tables, images)
 - Use 'get' operation first to see section indices and their content statistics before deleting";
 
+    /// <summary>
+    ///     Gets the JSON schema defining the input parameters for the tool
+    /// </summary>
     public object InputSchema => new
     {
         type = "object",
@@ -81,6 +87,7 @@ Notes:
     /// </summary>
     /// <param name="arguments">JSON arguments object containing operation parameters</param>
     /// <returns>Result message as a string</returns>
+    /// <exception cref="ArgumentException">Thrown when operation is unknown or required parameters are missing.</exception>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");

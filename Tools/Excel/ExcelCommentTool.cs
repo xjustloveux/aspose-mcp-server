@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 
@@ -11,6 +12,9 @@ namespace AsposeMcpServer.Tools.Excel;
 /// </summary>
 public class ExcelCommentTool : IAsposeTool
 {
+    private const string DefaultAuthor = "AsposeMCP";
+    private static readonly Regex CellAddressRegex = new(@"^[A-Za-z]{1,3}\d+$", RegexOptions.Compiled);
+
     /// <summary>
     ///     Gets the description of the tool and its usage examples
     /// </summary>
@@ -97,6 +101,18 @@ Usage examples:
     }
 
     /// <summary>
+    ///     Validates the cell address format
+    /// </summary>
+    /// <param name="cell">Cell address to validate</param>
+    /// <exception cref="ArgumentException">Thrown when cell address format is invalid</exception>
+    private static void ValidateCellAddress(string cell)
+    {
+        if (!CellAddressRegex.IsMatch(cell))
+            throw new ArgumentException(
+                $"Invalid cell address format: '{cell}'. Expected format like 'A1', 'B2', 'AA100'");
+    }
+
+    /// <summary>
     ///     Adds a comment to a cell
     /// </summary>
     /// <param name="path">Excel file path</param>
@@ -110,24 +126,33 @@ Usage examples:
         {
             var cell = ArgumentHelper.GetString(arguments, "cell");
             var comment = ArgumentHelper.GetString(arguments, "comment");
-            var author = ArgumentHelper.GetStringNullable(arguments, "author");
+            var author = ArgumentHelper.GetStringNullable(arguments, "author") ?? DefaultAuthor;
 
-            using var workbook = new Workbook(path);
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-            var cellObj = worksheet.Cells[cell];
+            ValidateCellAddress(cell);
 
-            var commentObj = worksheet.Comments[cellObj.Name];
-            if (commentObj == null)
+            try
             {
-                var commentIndex = worksheet.Comments.Add(cellObj.Name);
-                commentObj = worksheet.Comments[commentIndex];
+                using var workbook = new Workbook(path);
+                var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+                var cellObj = worksheet.Cells[cell];
+
+                var commentObj = worksheet.Comments[cellObj.Name];
+                if (commentObj == null)
+                {
+                    var commentIndex = worksheet.Comments.Add(cellObj.Name);
+                    commentObj = worksheet.Comments[commentIndex];
+                }
+
+                commentObj.Note = comment;
+                commentObj.Author = author;
+
+                workbook.Save(outputPath);
+                return $"Comment added to cell {cell} in sheet {sheetIndex}. Output: {outputPath}";
             }
-
-            commentObj.Note = comment;
-            if (!string.IsNullOrEmpty(author)) commentObj.Author = author;
-
-            workbook.Save(outputPath);
-            return $"Comment added to cell {cell} in sheet {sheetIndex}. Output: {outputPath}";
+            catch (CellsException ex)
+            {
+                throw new ArgumentException($"Excel operation failed for cell '{cell}': {ex.Message}");
+            }
         });
     }
 
@@ -147,18 +172,27 @@ Usage examples:
             var comment = ArgumentHelper.GetString(arguments, "comment");
             var author = ArgumentHelper.GetStringNullable(arguments, "author");
 
-            using var workbook = new Workbook(path);
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-            var cellObj = worksheet.Cells[cell];
-            var commentObj = worksheet.Comments[cellObj.Name];
+            ValidateCellAddress(cell);
 
-            if (commentObj == null) throw new ArgumentException($"No comment found on cell {cell}");
+            try
+            {
+                using var workbook = new Workbook(path);
+                var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+                var cellObj = worksheet.Cells[cell];
+                var commentObj = worksheet.Comments[cellObj.Name];
 
-            commentObj.Note = comment;
-            if (!string.IsNullOrEmpty(author)) commentObj.Author = author;
+                if (commentObj == null) throw new ArgumentException($"No comment found on cell {cell}");
 
-            workbook.Save(outputPath);
-            return $"Comment edited on cell {cell} in sheet {sheetIndex}. Output: {outputPath}";
+                commentObj.Note = comment;
+                if (!string.IsNullOrEmpty(author)) commentObj.Author = author;
+
+                workbook.Save(outputPath);
+                return $"Comment edited on cell {cell} in sheet {sheetIndex}. Output: {outputPath}";
+            }
+            catch (CellsException ex)
+            {
+                throw new ArgumentException($"Excel operation failed for cell '{cell}': {ex.Message}");
+            }
         });
     }
 
@@ -176,14 +210,23 @@ Usage examples:
         {
             var cell = ArgumentHelper.GetString(arguments, "cell");
 
-            using var workbook = new Workbook(path);
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-            var comment = worksheet.Comments[cell];
+            ValidateCellAddress(cell);
 
-            if (comment != null) worksheet.Comments.RemoveAt(cell);
+            try
+            {
+                using var workbook = new Workbook(path);
+                var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+                var comment = worksheet.Comments[cell];
 
-            workbook.Save(outputPath);
-            return $"Comment deleted from cell {cell} in sheet {sheetIndex}. Output: {outputPath}";
+                if (comment != null) worksheet.Comments.RemoveAt(cell);
+
+                workbook.Save(outputPath);
+                return $"Comment deleted from cell {cell} in sheet {sheetIndex}. Output: {outputPath}";
+            }
+            catch (CellsException ex)
+            {
+                throw new ArgumentException($"Excel operation failed for cell '{cell}': {ex.Message}");
+            }
         });
     }
 
@@ -200,46 +243,50 @@ Usage examples:
         {
             var cell = ArgumentHelper.GetStringNullable(arguments, "cell");
 
-            using var workbook = new Workbook(path);
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-
             if (!string.IsNullOrEmpty(cell))
-            {
-                var comment = worksheet.Comments[cell];
-                if (comment != null)
-                {
-                    var result = new
-                    {
-                        count = 1,
-                        sheetIndex,
-                        cell,
-                        items = new[]
-                        {
-                            new
-                            {
-                                cell,
-                                author = comment.Author,
-                                note = comment.Note
-                            }
-                        }
-                    };
-                    return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
-                }
-                else
-                {
-                    var result = new
-                    {
-                        count = 0,
-                        sheetIndex,
-                        cell,
-                        items = Array.Empty<object>(),
-                        message = $"No comment found on cell {cell}"
-                    };
-                    return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
-                }
-            }
+                ValidateCellAddress(cell);
 
+            try
             {
+                using var workbook = new Workbook(path);
+                var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+
+                if (!string.IsNullOrEmpty(cell))
+                {
+                    var comment = worksheet.Comments[cell];
+                    if (comment != null)
+                    {
+                        var result = new
+                        {
+                            count = 1,
+                            sheetIndex,
+                            cell,
+                            items = new[]
+                            {
+                                new
+                                {
+                                    cell,
+                                    author = comment.Author,
+                                    note = comment.Note
+                                }
+                            }
+                        };
+                        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+                    }
+                    else
+                    {
+                        var result = new
+                        {
+                            count = 0,
+                            sheetIndex,
+                            cell,
+                            items = Array.Empty<object>(),
+                            message = $"No comment found on cell {cell}"
+                        };
+                        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+                    }
+                }
+
                 if (worksheet.Comments.Count == 0)
                 {
                     var emptyResult = new
@@ -264,13 +311,17 @@ Usage examples:
                     });
                 }
 
-                var result = new
+                var allResult = new
                 {
                     count = worksheet.Comments.Count,
                     sheetIndex,
                     items = commentList
                 };
-                return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+                return JsonSerializer.Serialize(allResult, new JsonSerializerOptions { WriteIndented = true });
+            }
+            catch (CellsException ex)
+            {
+                throw new ArgumentException($"Excel operation failed: {ex.Message}");
             }
         });
     }

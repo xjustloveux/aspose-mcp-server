@@ -213,25 +213,246 @@ public class ExcelSheetToolTests : ExcelTestBase
         var outputPath = CreateTestFilePath("test_hide_sheet_output.xlsx");
         var arguments = CreateArguments("hide", workbookPath, outputPath);
         arguments["sheetIndex"] = 1; // Index of "SheetToHide"
-        arguments["hidden"] = true;
 
         // Act
         await _tool.ExecuteAsync(arguments);
 
         // Assert
         var resultWorkbook = new Workbook(outputPath);
-        // In evaluation mode, hiding may not work perfectly
         Assert.True(File.Exists(outputPath), "Output workbook should be created");
-        // Check if sheet exists (it may still be visible due to evaluation mode limitations)
         var sheetExists = false;
         foreach (var worksheet in resultWorkbook.Worksheets)
             if (worksheet.Name == "SheetToHide")
             {
                 sheetExists = true;
-                // In evaluation mode, visibility may not change
                 break;
             }
 
-        Assert.True(sheetExists || true, "Hide operation completed (may be limited in evaluation mode)");
+        Assert.True(sheetExists, "SheetToHide should exist in the workbook");
+    }
+
+    [Fact]
+    public async Task AddSheet_WithInsertAt_ShouldInsertAtPosition()
+    {
+        // Arrange
+        var workbookPath = CreateExcelWorkbook("test_add_insert_at.xlsx");
+        var workbook = new Workbook(workbookPath);
+        workbook.Worksheets.Add("Sheet2");
+        workbook.Save(workbookPath);
+
+        var outputPath = CreateTestFilePath("test_add_insert_at_output.xlsx");
+        var arguments = CreateArguments("add", workbookPath, outputPath);
+        arguments["sheetName"] = "InsertedSheet";
+        arguments["insertAt"] = 0;
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        var resultWorkbook = new Workbook(outputPath);
+        var sheetFound = false;
+        foreach (var worksheet in resultWorkbook.Worksheets)
+            if (worksheet.Name == "InsertedSheet")
+            {
+                sheetFound = true;
+                break;
+            }
+
+        Assert.True(sheetFound, "InsertedSheet should be created");
+    }
+
+    [Fact]
+    public async Task AddSheet_WithInvalidName_ShouldThrowArgumentException()
+    {
+        // Arrange
+        var workbookPath = CreateExcelWorkbook("test_invalid_name.xlsx");
+        var arguments = CreateArguments("add", workbookPath);
+        arguments["sheetName"] = "Invalid/Name";
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+        Assert.Contains("invalid character", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task AddSheet_WithNameTooLong_ShouldThrowArgumentException()
+    {
+        // Arrange
+        var workbookPath = CreateExcelWorkbook("test_name_too_long.xlsx");
+        var arguments = CreateArguments("add", workbookPath);
+        arguments["sheetName"] = new string('A', 32); // 32 characters, exceeds 31 limit
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+        Assert.Contains("31 characters", ex.Message);
+    }
+
+    [Fact]
+    public async Task AddSheet_WithDuplicateName_ShouldThrowArgumentException()
+    {
+        // Arrange
+        var workbookPath = CreateExcelWorkbook("test_duplicate_name.xlsx");
+        var workbook = new Workbook(workbookPath);
+        workbook.Worksheets[0].Name = "ExistingSheet";
+        workbook.Save(workbookPath);
+
+        var arguments = CreateArguments("add", workbookPath);
+        arguments["sheetName"] = "ExistingSheet";
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+        Assert.Contains("already exists", ex.Message);
+    }
+
+    [Fact]
+    public async Task DeleteSheet_LastSheet_ShouldThrowInvalidOperationException()
+    {
+        // Arrange
+        var workbookPath = CreateExcelWorkbook("test_delete_last.xlsx");
+        var arguments = CreateArguments("delete", workbookPath);
+        arguments["sheetIndex"] = 0;
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _tool.ExecuteAsync(arguments));
+    }
+
+    [Fact]
+    public async Task RenameSheet_WithDuplicateName_ShouldThrowArgumentException()
+    {
+        // Arrange
+        var workbookPath = CreateExcelWorkbook("test_rename_duplicate.xlsx");
+        var workbook = new Workbook(workbookPath);
+        workbook.Worksheets.Add("Sheet2");
+        workbook.Save(workbookPath);
+
+        var arguments = CreateArguments("rename", workbookPath);
+        arguments["sheetIndex"] = 0;
+        arguments["newName"] = "Sheet2";
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+        Assert.Contains("already exists", ex.Message);
+    }
+
+    [Fact]
+    public async Task MoveSheet_ToSamePosition_ShouldNotModifyFile()
+    {
+        // Arrange
+        var workbookPath = CreateExcelWorkbook("test_move_same_position.xlsx");
+        var arguments = CreateArguments("move", workbookPath);
+        arguments["sheetIndex"] = 0;
+        arguments["insertAt"] = 0;
+
+        // Act
+        var result = await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.Contains("no move needed", result);
+    }
+
+    [Fact]
+    public async Task MoveSheet_WithoutTargetIndex_ShouldThrowArgumentException()
+    {
+        // Arrange
+        var workbookPath = CreateExcelWorkbook("test_move_no_target.xlsx");
+        var arguments = CreateArguments("move", workbookPath);
+        arguments["sheetIndex"] = 0;
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+        Assert.Contains("targetIndex", ex.Message);
+    }
+
+    [Fact]
+    public async Task CopySheet_ToExternalFile_ShouldCopySuccessfully()
+    {
+        // Arrange
+        var workbookPath = CreateExcelWorkbook("test_copy_external.xlsx");
+        var workbook = new Workbook(workbookPath);
+        workbook.Worksheets[0].Cells[0, 0].Value = "TestData";
+        workbook.Save(workbookPath);
+
+        var copyToPath = CreateTestFilePath("test_copy_external_target.xlsx");
+        var arguments = CreateArguments("copy", workbookPath);
+        arguments["sheetIndex"] = 0;
+        arguments["copyToPath"] = copyToPath;
+
+        // Act
+        var result = await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.True(File.Exists(copyToPath), "Target workbook should be created");
+        Assert.Contains("external file", result);
+
+        var targetWorkbook = new Workbook(copyToPath);
+        Assert.Equal("TestData", targetWorkbook.Worksheets[0].Cells[0, 0].Value?.ToString());
+    }
+
+    [Fact]
+    public async Task HideSheet_Toggle_ShouldShowHiddenSheet()
+    {
+        // Arrange
+        var workbookPath = CreateExcelWorkbook("test_toggle_visibility.xlsx");
+        var workbook = new Workbook(workbookPath);
+        workbook.Worksheets.Add("HiddenSheet");
+        workbook.Worksheets["HiddenSheet"].IsVisible = false;
+        workbook.Save(workbookPath);
+
+        var outputPath = CreateTestFilePath("test_toggle_visibility_output.xlsx");
+        var arguments = CreateArguments("hide", workbookPath, outputPath);
+        arguments["sheetIndex"] = 1;
+
+        // Act
+        var result = await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.Contains("shown", result);
+        var resultWorkbook = new Workbook(outputPath);
+        var isEvaluationMode = IsEvaluationMode();
+        if (!isEvaluationMode)
+        {
+            var hiddenSheet = resultWorkbook.Worksheets["HiddenSheet"];
+            Assert.True(hiddenSheet.IsVisible, "Hidden sheet should now be visible");
+        }
+    }
+
+    [Fact]
+    public async Task GetSheets_EmptyWorkbook_ShouldReturnValidJson()
+    {
+        // Arrange - Create workbook but don't add extra sheets
+        var workbookPath = CreateExcelWorkbook("test_get_sheets_minimal.xlsx");
+        var arguments = CreateArguments("get", workbookPath);
+
+        // Act
+        var result = await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Contains("count", result);
+        Assert.Contains("items", result);
+    }
+
+    [Fact]
+    public async Task InvalidOperation_ShouldThrowArgumentException()
+    {
+        // Arrange
+        var workbookPath = CreateExcelWorkbook("test_invalid_operation.xlsx");
+        var arguments = CreateArguments("invalid_operation", workbookPath);
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+        Assert.Contains("Unknown operation", ex.Message);
+    }
+
+    [Fact]
+    public async Task SheetIndex_OutOfRange_ShouldThrowArgumentException()
+    {
+        // Arrange
+        var workbookPath = CreateExcelWorkbook("test_index_out_of_range.xlsx");
+        var arguments = CreateArguments("delete", workbookPath);
+        arguments["sheetIndex"] = 999;
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
     }
 }

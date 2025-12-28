@@ -14,6 +14,9 @@ namespace AsposeMcpServer.Tools.Word;
 /// </summary>
 public class WordFieldTool : IAsposeTool
 {
+    /// <summary>
+    ///     Gets the description of the tool and its usage examples
+    /// </summary>
     public string Description =>
         @"Manage fields and form fields in Word documents. Supports 11 operations: insert_field, edit_field, delete_field, update_field, update_all, get_fields, get_field_detail, add_form_field, edit_form_field, delete_form_field, get_form_fields.
 
@@ -26,6 +29,9 @@ Usage examples:
 - Get fields: word_field(operation='get_fields', path='doc.docx')
 - Add form field: word_field(operation='add_form_field', path='doc.docx', formFieldType='TextInput', fieldName='name', paragraphIndex=0)";
 
+    /// <summary>
+    ///     Gets the JSON schema defining the input parameters for the tool
+    /// </summary>
     public object InputSchema => new
     {
         type = "object",
@@ -193,6 +199,7 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments object containing operation parameters</param>
     /// <returns>Result message as a string</returns>
+    /// <exception cref="ArgumentException">Thrown when operation is unknown or required parameters are missing.</exception>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");

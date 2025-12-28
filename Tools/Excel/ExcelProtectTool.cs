@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
@@ -6,20 +6,31 @@ using AsposeMcpServer.Core;
 namespace AsposeMcpServer.Tools.Excel;
 
 /// <summary>
-///     Unified tool for managing Excel protection (protect, unprotect, get)
-///     Merges: ExcelProtectTool, ExcelUnprotectTool, ExcelGetProtectionTool, ExcelProtectWorkbookTool
+///     Unified tool for managing Excel protection (protect, unprotect, get, set_cell_locked).
+///     Merges: ExcelProtectTool, ExcelUnprotectTool, ExcelGetProtectionTool, ExcelProtectWorkbookTool.
 /// </summary>
 public class ExcelProtectTool : IAsposeTool
 {
+    private const string OperationProtect = "protect";
+    private const string OperationUnprotect = "unprotect";
+    private const string OperationGet = "get";
+    private const string OperationSetCellLocked = "set_cell_locked";
+
+    /// <summary>
+    ///     Gets the description of the tool and its usage examples.
+    /// </summary>
     public string Description =>
-        @"Manage Excel protection. Supports 4 operations: protect, unprotect, get, set_cell_locked.
+        $@"Manage Excel protection. Supports 4 operations: {OperationProtect}, {OperationUnprotect}, {OperationGet}, {OperationSetCellLocked}.
 
 Usage examples:
-- Protect sheet: excel_protect(operation='protect', path='book.xlsx', sheetIndex=0, password='password')
-- Unprotect sheet: excel_protect(operation='unprotect', path='book.xlsx', sheetIndex=0, password='password')
-- Get protection: excel_protect(operation='get', path='book.xlsx', sheetIndex=0)
-- Set cell locked: excel_protect(operation='set_cell_locked', path='book.xlsx', range='A1:B10', locked=true)";
+- Protect sheet: excel_protect(operation='{OperationProtect}', path='book.xlsx', sheetIndex=0, password='password')
+- Unprotect sheet: excel_protect(operation='{OperationUnprotect}', path='book.xlsx', sheetIndex=0, password='password')
+- Get protection: excel_protect(operation='{OperationGet}', path='book.xlsx', sheetIndex=0)
+- Set cell locked: excel_protect(operation='{OperationSetCellLocked}', path='book.xlsx', range='A1:B10', locked=true)";
 
+    /// <summary>
+    ///     Gets the JSON schema defining the input parameters for the tool.
+    /// </summary>
     public object InputSchema => new
     {
         type = "object",
@@ -28,12 +39,12 @@ Usage examples:
             operation = new
             {
                 type = "string",
-                description = @"Operation to perform.
-- 'protect': Protect workbook or sheet (required params: path, password)
-- 'unprotect': Unprotect workbook or sheet (required params: path, password)
-- 'get': Get protection settings (required params: path)
-- 'set_cell_locked': Set cell locked status (required params: path, range, locked)",
-                @enum = new[] { "protect", "unprotect", "get", "set_cell_locked" }
+                description = $@"Operation to perform.
+- '{OperationProtect}': Protect workbook or sheet (required params: path, password)
+- '{OperationUnprotect}': Unprotect workbook or sheet (required params: path, password)
+- '{OperationGet}': Get protection settings (required params: path)
+- '{OperationSetCellLocked}': Set cell locked status (required params: path, range, locked)",
+                @enum = new[] { OperationProtect, OperationUnprotect, OperationGet, OperationSetCellLocked }
             },
             path = new
             {
@@ -43,7 +54,8 @@ Usage examples:
             sheetIndex = new
             {
                 type = "number",
-                description = "Sheet index (0-based, optional, protects/unprotects workbook if not specified)"
+                description =
+                    "Sheet index (0-based, optional). If not specified, the operation applies to the entire workbook structure instead of a specific worksheet."
             },
             password = new
             {
@@ -53,7 +65,8 @@ Usage examples:
             protectWorkbook = new
             {
                 type = "boolean",
-                description = "Protect workbook structure (optional, for protect operation, default: false)"
+                description =
+                    "Protect workbook structure (optional, for protect operation, default: false). When true with sheetIndex not specified, protects workbook structure. When false with sheetIndex not specified, also protects workbook structure."
             },
             protectStructure = new
             {
@@ -88,33 +101,35 @@ Usage examples:
     };
 
     /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments
+    ///     Executes the tool operation with the provided JSON arguments.
     /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters</param>
-    /// <returns>Result message as a string</returns>
+    /// <param name="arguments">JSON arguments object containing operation parameters.</param>
+    /// <returns>Result message as a string.</returns>
+    /// <exception cref="ArgumentException">Thrown when operation is unknown or required parameters are missing.</exception>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
 
-        return operation.ToLower() switch
+        return operation.ToLowerInvariant() switch
         {
-            "protect" => await ProtectAsync(path, outputPath, arguments),
-            "unprotect" => await UnprotectAsync(path, outputPath, arguments),
-            "get" => await GetProtectionAsync(path, arguments),
-            "set_cell_locked" => await SetCellLockedAsync(path, outputPath, arguments),
+            OperationProtect => await ProtectAsync(path, outputPath, arguments),
+            OperationUnprotect => await UnprotectAsync(path, outputPath, arguments),
+            OperationGet => await GetProtectionAsync(path, arguments),
+            OperationSetCellLocked => await SetCellLockedAsync(path, outputPath, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
 
     /// <summary>
-    ///     Protects workbook or worksheet with password
+    ///     Protects workbook or worksheet with password.
     /// </summary>
-    /// <param name="path">Excel file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing password, optional sheetIndex, protectWorkbook, protectionType</param>
-    /// <returns>Success message</returns>
+    /// <param name="path">Excel file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="arguments">JSON arguments containing password, optional sheetIndex, protectWorkbook, protectionType.</param>
+    /// <returns>Success message.</returns>
+    /// <exception cref="ArgumentException">Thrown when sheetIndex is out of range.</exception>
     private Task<string> ProtectAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -122,7 +137,6 @@ Usage examples:
             var password = ArgumentHelper.GetString(arguments, "password");
             var sheetIndex = ArgumentHelper.GetIntNullable(arguments, "sheetIndex");
             var protectWorkbook = ArgumentHelper.GetBool(arguments, "protectWorkbook", false);
-            // protectStructure defaults to true when protectWorkbook is true, otherwise defaults to false
             var protectStructure = ArgumentHelper.GetBool(arguments, "protectStructure", protectWorkbook);
             var protectWindows = ArgumentHelper.GetBool(arguments, "protectWindows", false);
 
@@ -130,21 +144,21 @@ Usage examples:
 
             if (protectWorkbook || (!sheetIndex.HasValue && !protectWorkbook))
             {
-                // Protect workbook with granular control
                 var protectionType = ProtectionType.None;
                 if (protectStructure && protectWindows)
                     protectionType = ProtectionType.All;
                 else if (protectStructure)
                     protectionType = ProtectionType.Structure;
-                else if (protectWindows) protectionType = ProtectionType.Windows;
+                else if (protectWindows)
+                    protectionType = ProtectionType.Windows;
 
-                if (protectionType != ProtectionType.None) workbook.Protect(protectionType, password);
+                if (protectionType != ProtectionType.None)
+                    workbook.Protect(protectionType, password);
             }
             else if (sheetIndex.HasValue)
             {
-                if (sheetIndex.Value < 0 || sheetIndex.Value >= workbook.Worksheets.Count)
-                    throw new ArgumentException($"sheetIndex must be between 0 and {workbook.Worksheets.Count - 1}");
-                workbook.Worksheets[sheetIndex.Value].Protect(ProtectionType.All, password, null);
+                var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex.Value);
+                worksheet.Protect(ProtectionType.All, password, null);
             }
 
             workbook.Save(outputPath);
@@ -156,12 +170,13 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Removes protection from workbook or worksheet
+    ///     Removes protection from workbook or worksheet.
     /// </summary>
-    /// <param name="path">Excel file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing password, optional sheetIndex</param>
-    /// <returns>Success message</returns>
+    /// <param name="path">Excel file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="arguments">JSON arguments containing password, optional sheetIndex.</param>
+    /// <returns>Success message.</returns>
+    /// <exception cref="ArgumentException">Thrown when sheetIndex is out of range or password is incorrect.</exception>
     private Task<string> UnprotectAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -173,13 +188,9 @@ Usage examples:
 
             if (sheetIndex.HasValue)
             {
-                if (sheetIndex.Value < 0 || sheetIndex.Value >= workbook.Worksheets.Count)
-                    throw new ArgumentException($"sheetIndex must be between 0 and {workbook.Worksheets.Count - 1}");
+                var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex.Value);
 
-                var worksheet = workbook.Worksheets[sheetIndex.Value];
-                var wasProtected = worksheet.IsProtected;
-
-                if (!wasProtected)
+                if (!worksheet.IsProtected)
                 {
                     workbook.Save(outputPath);
                     return $"Worksheet '{worksheet.Name}' is not protected. Output: {outputPath}";
@@ -191,7 +202,6 @@ Usage examples:
                 }
                 catch (Exception ex)
                 {
-                    workbook.Save(outputPath);
                     throw new ArgumentException(
                         $"Incorrect password. Cannot unprotect worksheet '{worksheet.Name}'. Error: {ex.Message}");
                 }
@@ -207,11 +217,12 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Gets protection status for workbook or worksheet
+    ///     Gets protection status for workbook or worksheet.
     /// </summary>
-    /// <param name="path">Excel file path</param>
-    /// <param name="arguments">JSON arguments containing optional sheetIndex</param>
-    /// <returns>JSON formatted string with protection status</returns>
+    /// <param name="path">Excel file path.</param>
+    /// <param name="arguments">JSON arguments containing optional sheetIndex.</param>
+    /// <returns>JSON formatted string with protection status.</returns>
+    /// <exception cref="ArgumentException">Thrown when sheetIndex is out of range.</exception>
     private Task<string> GetProtectionAsync(string path, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -223,20 +234,19 @@ Usage examples:
 
             if (sheetIndex.HasValue)
             {
-                if (sheetIndex.Value < 0 || sheetIndex.Value >= workbook.Worksheets.Count)
-                    throw new ArgumentException(
-                        $"Worksheet index {sheetIndex.Value} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
-                worksheets.Add(GetSheetProtectionInfo(workbook.Worksheets[sheetIndex.Value], sheetIndex.Value));
+                var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex.Value);
+                worksheets.Add(CreateSheetProtectionInfo(worksheet, sheetIndex.Value));
             }
             else
             {
                 for (var i = 0; i < workbook.Worksheets.Count; i++)
-                    worksheets.Add(GetSheetProtectionInfo(workbook.Worksheets[i], i));
+                    worksheets.Add(CreateSheetProtectionInfo(workbook.Worksheets[i], i));
             }
 
             var result = new
             {
                 count = worksheets.Count,
+                totalWorksheets = workbook.Worksheets.Count,
                 worksheets
             };
 
@@ -245,12 +255,12 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Gets protection information for a worksheet
+    ///     Creates protection information object for a worksheet.
     /// </summary>
-    /// <param name="worksheet">Worksheet to get protection info from</param>
-    /// <param name="index">Worksheet index</param>
-    /// <returns>Anonymous object with protection details</returns>
-    private object GetSheetProtectionInfo(Worksheet worksheet, int index)
+    /// <param name="worksheet">Worksheet to get protection info from.</param>
+    /// <param name="index">Worksheet index (0-based).</param>
+    /// <returns>Anonymous object with protection details.</returns>
+    private static object CreateSheetProtectionInfo(Worksheet worksheet, int index)
     {
         var protection = worksheet.Protection;
         return new
@@ -277,12 +287,13 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Sets cell locked status
+    ///     Sets cell locked status.
     /// </summary>
-    /// <param name="path">Excel file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing range, isLocked, optional sheetIndex</param>
-    /// <returns>Success message</returns>
+    /// <param name="path">Excel file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="arguments">JSON arguments containing range, locked, optional sheetIndex.</param>
+    /// <returns>Success message.</returns>
+    /// <exception cref="ArgumentException">Thrown when sheetIndex is out of range or range is invalid.</exception>
     private Task<string> SetCellLockedAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>

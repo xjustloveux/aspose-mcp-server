@@ -21,9 +21,8 @@ public class ExcelConditionalFormattingToolTests : ExcelTestBase
             ["path"] = workbookPath,
             ["outputPath"] = outputPath,
             ["range"] = "A1:A5",
-            ["formatType"] = "CellValue",
-            ["operator"] = "GreaterThan",
-            ["formula1"] = "10"
+            ["condition"] = "GreaterThan",
+            ["value"] = "10"
         };
 
         // Act
@@ -138,10 +137,9 @@ public class ExcelConditionalFormattingToolTests : ExcelTestBase
             ["path"] = workbookPath,
             ["outputPath"] = outputPath,
             ["conditionalFormattingIndex"] = 0,
-            ["range"] = "B1:B5",
-            ["formatType"] = "CellValue",
-            ["operator"] = "LessThan",
-            ["formula1"] = "20"
+            ["conditionIndex"] = 0,
+            ["condition"] = "LessThan",
+            ["value"] = "20"
         };
 
         // Act
@@ -152,5 +150,90 @@ public class ExcelConditionalFormattingToolTests : ExcelTestBase
         var resultWorksheet = resultWorkbook.Worksheets[0];
         Assert.True(resultWorksheet.ConditionalFormattings.Count > 0,
             "Conditional formatting should exist after editing");
+    }
+
+    [Fact]
+    public async Task Add_WithInvalidRange_ShouldThrowException()
+    {
+        // Arrange
+        var workbookPath = CreateExcelWorkbook("test_invalid_range.xlsx");
+        var outputPath = CreateTestFilePath("test_invalid_range_output.xlsx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "add",
+            ["path"] = workbookPath,
+            ["outputPath"] = outputPath,
+            ["range"] = "InvalidRange",
+            ["condition"] = "GreaterThan",
+            ["value"] = "10"
+        };
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+        Assert.Contains("Invalid range format", ex.Message);
+    }
+
+    [Fact]
+    public async Task Add_WithBetweenCondition_ShouldUseBothFormulas()
+    {
+        // Arrange
+        var workbookPath = CreateExcelWorkbookWithData("test_between_condition.xlsx", 5, 5);
+        var outputPath = CreateTestFilePath("test_between_condition_output.xlsx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "add",
+            ["path"] = workbookPath,
+            ["outputPath"] = outputPath,
+            ["range"] = "A1:A5",
+            ["condition"] = "Between",
+            ["value"] = "10",
+            ["formula2"] = "50"
+        };
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        var workbook = new Workbook(outputPath);
+        var worksheet = workbook.Worksheets[0];
+        Assert.True(worksheet.ConditionalFormattings.Count > 0, "Conditional formatting should be added");
+    }
+
+    [Fact]
+    public async Task Delete_WithInvalidIndex_ShouldThrowException()
+    {
+        // Arrange
+        var workbookPath = CreateExcelWorkbook("test_delete_invalid_index.xlsx");
+        var outputPath = CreateTestFilePath("test_delete_invalid_index_output.xlsx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "delete",
+            ["path"] = workbookPath,
+            ["outputPath"] = outputPath,
+            ["conditionalFormattingIndex"] = 999
+        };
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public async Task Get_WithNoFormattings_ShouldReturnEmptyResult()
+    {
+        // Arrange
+        var workbookPath = CreateExcelWorkbook("test_get_no_formatting.xlsx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "get",
+            ["path"] = workbookPath
+        };
+
+        // Act
+        var result = await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.Contains("\"count\": 0", result);
+        Assert.Contains("No conditional formattings found", result);
     }
 }

@@ -11,6 +11,9 @@ namespace AsposeMcpServer.Tools.Word;
 /// </summary>
 public class WordStyleTool : IAsposeTool
 {
+    /// <summary>
+    ///     Gets the description of the tool and its usage examples
+    /// </summary>
     public string Description =>
         @"Manage styles in Word documents. Supports 4 operations: get_styles, create_style, apply_style, copy_styles.
 
@@ -20,6 +23,9 @@ Usage examples:
 - Apply style: word_style(operation='apply_style', path='doc.docx', styleName='Heading 1', paragraphIndex=0)
 - Copy styles: word_style(operation='copy_styles', path='doc.docx', sourcePath='template.docx')";
 
+    /// <summary>
+    ///     Gets the JSON schema defining the input parameters for the tool
+    /// </summary>
     public object InputSchema => new
     {
         type = "object",
@@ -179,6 +185,7 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments object containing operation parameters</param>
     /// <returns>Result message as a string</returns>
+    /// <exception cref="ArgumentException">Thrown when operation is unknown or required parameters are missing.</exception>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");

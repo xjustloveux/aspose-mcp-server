@@ -8,8 +8,14 @@ using AsposeMcpServer.Core;
 
 namespace AsposeMcpServer.Tools.Word;
 
+/// <summary>
+///     Tool for managing tables in Word documents (add, edit, delete, structure operations)
+/// </summary>
 public class WordTableTool : IAsposeTool
 {
+    /// <summary>
+    ///     Gets the description of the tool and its usage examples
+    /// </summary>
     public string Description =>
         @"Manage tables in Word documents. Supports 17 operations: add_table, edit_table_format, delete_table, get_tables, insert_row, delete_row, insert_column, delete_column, merge_cells, split_cell, edit_cell_format, move_table, copy_table, get_table_structure, set_table_border, set_column_width, set_row_height.
 
@@ -20,6 +26,9 @@ Usage examples:
 - Merge cells: word_table(operation='merge_cells', path='doc.docx', tableIndex=0, startRow=0, startColumn=0, endRow=0, endColumn=1)
 - Set border: word_table(operation='set_table_border', path='doc.docx', tableIndex=0, borderType='all', style='single', width=1.0)";
 
+    /// <summary>
+    ///     Gets the JSON schema defining the input parameters for the tool
+    /// </summary>
     public object InputSchema => new
     {
         type = "object",
@@ -467,6 +476,7 @@ When true, format settings will be applied to all cells in the table. This is us
     /// </summary>
     /// <param name="arguments">JSON arguments object containing operation parameters</param>
     /// <returns>Result message as a string</returns>
+    /// <exception cref="ArgumentException">Thrown when operation is unknown or required parameters are missing.</exception>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");

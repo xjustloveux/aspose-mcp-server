@@ -12,6 +12,9 @@ namespace AsposeMcpServer.Tools.Word;
 /// </summary>
 public class WordHyperlinkTool : IAsposeTool
 {
+    /// <summary>
+    ///     Gets the description of the tool and its usage examples
+    /// </summary>
     public string Description => @"Manage Word hyperlinks. Supports 4 operations: add, edit, delete, get.
 
 Usage examples:
@@ -20,6 +23,9 @@ Usage examples:
 - Delete hyperlink: word_hyperlink(operation='delete', path='doc.docx', hyperlinkIndex=0)
 - Get hyperlinks: word_hyperlink(operation='get', path='doc.docx')";
 
+    /// <summary>
+    ///     Gets the JSON schema defining the input parameters for the tool
+    /// </summary>
     public object InputSchema => new
     {
         type = "object",
@@ -98,6 +104,7 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments object containing operation parameters</param>
     /// <returns>Result message as a string</returns>
+    /// <exception cref="ArgumentException">Thrown when operation is unknown or required parameters are missing.</exception>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");

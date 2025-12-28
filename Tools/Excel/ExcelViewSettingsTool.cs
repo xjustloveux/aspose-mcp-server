@@ -16,14 +16,18 @@ public class ExcelViewSettingsTool : IAsposeTool
     ///     Gets the description of the tool and its usage examples
     /// </summary>
     public string Description =>
-        @"Manage Excel view settings. Supports 10 operations: set_zoom, set_gridlines, set_headers, set_zero_values, set_column_width, set_row_height, set_background, set_tab_color, set_all, split_window.
+        @"Manage Excel view settings. Supports 14 operations: set_zoom, set_gridlines, set_headers, set_zero_values, set_column_width, set_row_height, set_background, set_tab_color, set_all, freeze_panes, split_window, auto_fit_column, auto_fit_row, show_formulas.
 
 Usage examples:
 - Set zoom: excel_view_settings(operation='set_zoom', path='book.xlsx', zoom=150)
 - Set gridlines: excel_view_settings(operation='set_gridlines', path='book.xlsx', visible=false)
 - Set column width: excel_view_settings(operation='set_column_width', path='book.xlsx', columnIndex=0, width=20)
 - Set row height: excel_view_settings(operation='set_row_height', path='book.xlsx', rowIndex=0, height=30)
-- Set all: excel_view_settings(operation='set_all', path='book.xlsx', zoom=150, gridlinesVisible=true)";
+- Freeze panes: excel_view_settings(operation='freeze_panes', path='book.xlsx', freezeRow=1, freezeColumn=1)
+- Split window: excel_view_settings(operation='split_window', path='book.xlsx', splitRow=5, splitColumn=2)
+- Auto fit column: excel_view_settings(operation='auto_fit_column', path='book.xlsx', columnIndex=0)
+- Show formulas: excel_view_settings(operation='show_formulas', path='book.xlsx', visible=true)
+- Set all: excel_view_settings(operation='set_all', path='book.xlsx', zoom=150, showGridlines=true)";
 
     /// <summary>
     ///     Gets the JSON schema defining the input parameters for the tool
@@ -44,13 +48,18 @@ Usage examples:
 - 'set_column_width': Set column width (required params: path, columnIndex, width)
 - 'set_row_height': Set row height (required params: path, rowIndex, height)
 - 'set_background': Set sheet background (required params: path, imagePath OR removeBackground)
-- 'set_tab_color': Set tab color (required params: path, color; optional: sheetIndex, default: 0)
+- 'set_tab_color': Set tab color (required params: path, color)
 - 'set_all': Set multiple settings (required params: path)
-- 'split_window': Split window (required params: path, splitRow OR splitColumn OR removeSplit)",
+- 'freeze_panes': Freeze panes - fixed rows/columns stay visible when scrolling (required: freezeRow OR freezeColumn OR unfreeze)
+- 'split_window': Split window - divide into independent scrollable panes (required: splitRow OR splitColumn OR removeSplit)
+- 'auto_fit_column': Auto fit column width (required params: path, columnIndex; optional: startRow, endRow)
+- 'auto_fit_row': Auto fit row height (required params: path, rowIndex; optional: startColumn, endColumn)
+- 'show_formulas': Show/hide formulas (required params: path, visible)",
                 @enum = new[]
                 {
                     "set_zoom", "set_gridlines", "set_headers", "set_zero_values", "set_column_width", "set_row_height",
-                    "set_background", "set_tab_color", "set_all", "split_window"
+                    "set_background", "set_tab_color", "set_all", "freeze_panes", "split_window", "auto_fit_column",
+                    "auto_fit_row", "show_formulas"
                 }
             },
             path = new
@@ -128,20 +137,56 @@ Usage examples:
                 type = "boolean",
                 description = "Display right to left (optional, for set_all)"
             },
+            freezeRow = new
+            {
+                type = "number",
+                description = "Row index to freeze at (0-based, for freeze_panes, rows above this will be frozen)"
+            },
+            freezeColumn = new
+            {
+                type = "number",
+                description =
+                    "Column index to freeze at (0-based, for freeze_panes, columns left of this will be frozen)"
+            },
+            unfreeze = new
+            {
+                type = "boolean",
+                description = "Remove frozen panes (optional, for freeze_panes, default: false)"
+            },
             splitRow = new
             {
                 type = "number",
-                description = "Row index to split at (0-based, optional, for split_window)"
+                description = "Row position to split at in pixels (for split_window)"
             },
             splitColumn = new
             {
                 type = "number",
-                description = "Column index to split at (0-based, optional, for split_window)"
+                description = "Column position to split at in pixels (for split_window)"
             },
             removeSplit = new
             {
                 type = "boolean",
-                description = "Remove split (optional, for split_window, default: false)"
+                description = "Remove window split (optional, for split_window, default: false)"
+            },
+            startRow = new
+            {
+                type = "number",
+                description = "Start row index for auto fit range (0-based, optional, for auto_fit_column)"
+            },
+            endRow = new
+            {
+                type = "number",
+                description = "End row index for auto fit range (0-based, optional, for auto_fit_column)"
+            },
+            startColumn = new
+            {
+                type = "number",
+                description = "Start column index for auto fit range (0-based, optional, for auto_fit_row)"
+            },
+            endColumn = new
+            {
+                type = "number",
+                description = "End column index for auto fit range (0-based, optional, for auto_fit_row)"
             },
             outputPath = new
             {
@@ -157,6 +202,7 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments object containing operation parameters</param>
     /// <returns>Result message as a string</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or invalid</exception>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
@@ -175,7 +221,11 @@ Usage examples:
             "set_background" => await SetBackgroundAsync(path, outputPath, sheetIndex, arguments),
             "set_tab_color" => await SetTabColorAsync(path, outputPath, sheetIndex, arguments),
             "set_all" => await SetAllAsync(path, outputPath, sheetIndex, arguments),
+            "freeze_panes" => await FreezePanesAsync(path, outputPath, sheetIndex, arguments),
             "split_window" => await SplitWindowAsync(path, outputPath, sheetIndex, arguments),
+            "auto_fit_column" => await AutoFitColumnAsync(path, outputPath, sheetIndex, arguments),
+            "auto_fit_row" => await AutoFitRowAsync(path, outputPath, sheetIndex, arguments),
+            "show_formulas" => await ShowFormulasAsync(path, outputPath, sheetIndex, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -188,6 +238,7 @@ Usage examples:
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <param name="arguments">JSON arguments containing zoom (10-400)</param>
     /// <returns>Success message</returns>
+    /// <exception cref="ArgumentException">Thrown when zoom is not between 10 and 400</exception>
     private Task<string> SetZoomAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -325,13 +376,15 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Sets worksheet background
+    ///     Sets worksheet background image
     /// </summary>
     /// <param name="path">Excel file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing imagePath or color</param>
+    /// <param name="arguments">JSON arguments containing imagePath or removeBackground</param>
     /// <returns>Success message</returns>
+    /// <exception cref="FileNotFoundException">Thrown when image file is not found</exception>
+    /// <exception cref="ArgumentException">Thrown when neither imagePath nor removeBackground is provided</exception>
     private Task<string> SetBackgroundAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -431,13 +484,56 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Splits worksheet window
+    ///     Freezes panes at specified row and/or column
     /// </summary>
     /// <param name="path">Excel file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing splitRow, splitColumn</param>
+    /// <param name="arguments">JSON arguments containing freezeRow, freezeColumn, or unfreeze</param>
     /// <returns>Success message</returns>
+    /// <exception cref="ArgumentException">Thrown when no freeze parameters are provided</exception>
+    private Task<string> FreezePanesAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
+    {
+        return Task.Run(() =>
+        {
+            var freezeRow = ArgumentHelper.GetIntNullable(arguments, "freezeRow");
+            var freezeColumn = ArgumentHelper.GetIntNullable(arguments, "freezeColumn");
+            var unfreeze = ArgumentHelper.GetBool(arguments, "unfreeze", false);
+
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+
+            if (unfreeze)
+            {
+                worksheet.UnFreezePanes();
+            }
+            else if (freezeRow.HasValue || freezeColumn.HasValue)
+            {
+                var row = freezeRow ?? 0;
+                var col = freezeColumn ?? 0;
+                worksheet.FreezePanes(row, col, row, col);
+            }
+            else
+            {
+                throw new ArgumentException("Either freezeRow, freezeColumn, or unfreeze must be provided");
+            }
+
+            workbook.Save(outputPath);
+            return unfreeze
+                ? $"Panes unfrozen for sheet {sheetIndex}. Output: {outputPath}"
+                : $"Panes frozen at row {freezeRow ?? 0}, column {freezeColumn ?? 0} for sheet {sheetIndex}. Output: {outputPath}";
+        });
+    }
+
+    /// <summary>
+    ///     Splits worksheet window into independent scrollable panes
+    /// </summary>
+    /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing splitRow, splitColumn, or removeSplit</param>
+    /// <returns>Success message</returns>
+    /// <exception cref="ArgumentException">Thrown when no split parameters are provided</exception>
     private Task<string> SplitWindowAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -455,14 +551,11 @@ Usage examples:
             }
             else if (splitRow.HasValue || splitColumn.HasValue)
             {
-                // Split window - Use FreezePanes as alternative (requires 4 parameters)
-                if (splitRow.HasValue && splitColumn.HasValue)
-                    worksheet.FreezePanes(splitRow.Value + 1, splitColumn.Value + 1, splitRow.Value + 1,
-                        splitColumn.Value + 1);
-                else if (splitRow.HasValue)
-                    worksheet.FreezePanes(splitRow.Value + 1, 0, splitRow.Value + 1, 0);
-                else if (splitColumn.HasValue)
-                    worksheet.FreezePanes(0, splitColumn.Value + 1, 0, splitColumn.Value + 1);
+                // Set active cell to determine split position
+                var row = splitRow ?? 0;
+                var col = splitColumn ?? 0;
+                worksheet.ActiveCell = CellsHelper.CellIndexToName(row, col);
+                worksheet.Split();
             }
             else
             {
@@ -470,7 +563,92 @@ Usage examples:
             }
 
             workbook.Save(outputPath);
-            return $"Window split {(removeSplit ? "removed" : "applied")} for sheet {sheetIndex}. Output: {outputPath}";
+            return removeSplit
+                ? $"Window split removed for sheet {sheetIndex}. Output: {outputPath}"
+                : $"Window split at row {splitRow ?? 0}, column {splitColumn ?? 0} for sheet {sheetIndex}. Output: {outputPath}";
+        });
+    }
+
+    /// <summary>
+    ///     Auto fits column width based on content
+    /// </summary>
+    /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing columnIndex and optional startRow, endRow</param>
+    /// <returns>Success message</returns>
+    /// <exception cref="ArgumentException">Thrown when columnIndex is out of range</exception>
+    private Task<string> AutoFitColumnAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
+    {
+        return Task.Run(() =>
+        {
+            var columnIndex = ArgumentHelper.GetInt(arguments, "columnIndex");
+            var startRow = ArgumentHelper.GetIntNullable(arguments, "startRow");
+            var endRow = ArgumentHelper.GetIntNullable(arguments, "endRow");
+
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+
+            if (startRow.HasValue && endRow.HasValue)
+                worksheet.AutoFitColumn(columnIndex, startRow.Value, endRow.Value);
+            else
+                worksheet.AutoFitColumn(columnIndex);
+
+            workbook.Save(outputPath);
+            return $"Column {columnIndex} auto-fitted. Output: {outputPath}";
+        });
+    }
+
+    /// <summary>
+    ///     Auto fits row height based on content
+    /// </summary>
+    /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing rowIndex and optional startColumn, endColumn</param>
+    /// <returns>Success message</returns>
+    /// <exception cref="ArgumentException">Thrown when rowIndex is out of range</exception>
+    private Task<string> AutoFitRowAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
+    {
+        return Task.Run(() =>
+        {
+            var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex");
+            var startColumn = ArgumentHelper.GetIntNullable(arguments, "startColumn");
+            var endColumn = ArgumentHelper.GetIntNullable(arguments, "endColumn");
+
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+
+            if (startColumn.HasValue && endColumn.HasValue)
+                worksheet.AutoFitRow(rowIndex, startColumn.Value, endColumn.Value);
+            else
+                worksheet.AutoFitRow(rowIndex);
+
+            workbook.Save(outputPath);
+            return $"Row {rowIndex} auto-fitted. Output: {outputPath}";
+        });
+    }
+
+    /// <summary>
+    ///     Shows or hides formulas in the worksheet
+    /// </summary>
+    /// <param name="path">Excel file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="arguments">JSON arguments containing visible</param>
+    /// <returns>Success message</returns>
+    private Task<string> ShowFormulasAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
+    {
+        return Task.Run(() =>
+        {
+            var visible = ArgumentHelper.GetBool(arguments, "visible", true);
+
+            using var workbook = new Workbook(path);
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            worksheet.ShowFormulas = visible;
+
+            workbook.Save(outputPath);
+            return $"Formulas {(visible ? "shown" : "hidden")} for sheet {sheetIndex}. Output: {outputPath}";
         });
     }
 }

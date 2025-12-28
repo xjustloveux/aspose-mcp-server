@@ -10,6 +10,9 @@ namespace AsposeMcpServer.Tools.Word;
 /// </summary>
 public class WordReferenceTool : IAsposeTool
 {
+    /// <summary>
+    ///     Gets the description of the tool and its usage examples
+    /// </summary>
     public string Description =>
         @"Manage references in Word documents. Supports 4 operations: add_table_of_contents, update_table_of_contents, add_index, add_cross_reference.
 
@@ -24,6 +27,9 @@ Notes:
 - For cross-references, targetName must be an existing bookmark name in the document
 - If headingStyle doesn't exist in the document, it falls back to 'Heading 1'";
 
+    /// <summary>
+    ///     Gets the JSON schema defining the input parameters for the tool
+    /// </summary>
     public object InputSchema => new
     {
         type = "object",
@@ -147,6 +153,7 @@ Notes:
     /// </summary>
     /// <param name="arguments">JSON arguments object containing operation parameters</param>
     /// <returns>Result message as a string</returns>
+    /// <exception cref="ArgumentException">Thrown when operation is unknown or required parameters are missing.</exception>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");

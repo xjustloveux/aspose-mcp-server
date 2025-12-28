@@ -14,6 +14,9 @@ namespace AsposeMcpServer.Tools.Word;
 /// </summary>
 public class WordImageTool : IAsposeTool
 {
+    /// <summary>
+    ///     Gets the description of the tool and its usage examples
+    /// </summary>
     public string Description =>
         @"Manage Word document images. Supports 6 operations: add, edit, delete, get, replace, extract.
 
@@ -25,6 +28,9 @@ Usage examples:
 - Replace image: word_image(operation='replace', path='doc.docx', imageIndex=0, imagePath='new_image.png')
 - Extract images: word_image(operation='extract', path='doc.docx', outputDir='images/')";
 
+    /// <summary>
+    ///     Gets the JSON schema defining the input parameters for the tool
+    /// </summary>
     public object InputSchema => new
     {
         type = "object",
@@ -184,6 +190,7 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments object containing operation parameters</param>
     /// <returns>Result message as a string</returns>
+    /// <exception cref="ArgumentException">Thrown when operation is unknown or required parameters are missing.</exception>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");

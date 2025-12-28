@@ -8,14 +8,9 @@ namespace AsposeMcpServer.Tools.Excel;
 
 /// <summary>
 ///     Unified tool for managing Excel charts (add, edit, delete, get, update data, set properties)
-///     Merges: ExcelAddChartTool, ExcelEditChartTool, ExcelDeleteChartTool, ExcelGetChartsTool,
-///     ExcelUpdateChartDataTool, ExcelSetChartTitleTool, ExcelSetChartLegendTool
 /// </summary>
 public class ExcelChartTool : IAsposeTool
 {
-    /// <summary>
-    ///     Gets the description of the tool and its usage examples
-    /// </summary>
     public string Description =>
         @"Manage Excel charts. Supports 6 operations: add, edit, delete, get, update_data, set_properties.
 
@@ -27,9 +22,6 @@ Usage examples:
 - Update data: excel_chart(operation='update_data', path='book.xlsx', chartIndex=0, dataRange='A1:C10')
 - Set properties: excel_chart(operation='set_properties', path='book.xlsx', chartIndex=0, title='Chart Title')";
 
-    /// <summary>
-    ///     Gets the JSON schema defining the input parameters for the tool
-    /// </summary>
     public object InputSchema => new
     {
         type = "object",
@@ -39,7 +31,7 @@ Usage examples:
             {
                 type = "string",
                 description = @"Operation to perform.
-- 'add': Add a chart (required params: path, chartType, dataRange, position)
+- 'add': Add a chart (required params: path, chartType, dataRange)
 - 'edit': Edit chart properties (required params: path, chartIndex)
 - 'delete': Delete a chart (required params: path, chartIndex)
 - 'get': Get all charts (required params: path)
@@ -55,8 +47,7 @@ Usage examples:
             outputPath = new
             {
                 type = "string",
-                description =
-                    "Output file path (optional, for add/edit/delete/update_data/set_properties operations, defaults to input path)"
+                description = "Output file path (optional, defaults to input path)"
             },
             sheetIndex = new
             {
@@ -68,12 +59,10 @@ Usage examples:
                 type = "number",
                 description = "Chart index (0-based, required for edit/delete/update_data/set_properties)"
             },
-            // Add operation parameters
             chartType = new
             {
                 type = "string",
-                description =
-                    "Chart type: Column, Bar, Line, Pie, Area, Scatter, Doughnut, Radar, Bubble, Cylinder, Cone, Pyramid (required for add)",
+                description = "Chart type (required for add, optional for edit)",
                 @enum = new[]
                 {
                     "Column", "Bar", "Line", "Pie", "Area", "Scatter", "Doughnut", "Radar", "Bubble", "Cylinder",
@@ -83,12 +72,12 @@ Usage examples:
             dataRange = new
             {
                 type = "string",
-                description = "Data range for chart Y-axis (values, e.g., 'E2:E40')"
+                description = "Data range for chart values (e.g., 'B1:B10' or 'B1:C10' for multiple series)"
             },
             categoryAxisDataRange = new
             {
                 type = "string",
-                description = "Category axis (X-axis) data range (optional, e.g., 'A2:A40')"
+                description = "Category axis (X-axis) data range (optional, e.g., 'A1:A10')"
             },
             title = new
             {
@@ -115,7 +104,6 @@ Usage examples:
                 type = "number",
                 description = "Chart height in rows (optional, default: 15)"
             },
-            // Edit operation parameters
             showLegend = new
             {
                 type = "boolean",
@@ -124,9 +112,8 @@ Usage examples:
             legendPosition = new
             {
                 type = "string",
-                description = "Legend position (Bottom, Top, Left, Right, optional)"
+                description = "Legend position: Bottom, Top, Left, Right (optional)"
             },
-            // Set properties operation parameters
             removeTitle = new
             {
                 type = "boolean",
@@ -166,13 +153,80 @@ Usage examples:
     }
 
     /// <summary>
+    ///     Parses chart type string to ChartType enum
+    /// </summary>
+    /// <param name="chartTypeStr">Chart type string</param>
+    /// <param name="defaultType">Default type if parsing fails</param>
+    /// <returns>Parsed ChartType</returns>
+    private static ChartType ParseChartType(string? chartTypeStr, ChartType defaultType = ChartType.Column)
+    {
+        if (string.IsNullOrEmpty(chartTypeStr))
+            return defaultType;
+
+        return Enum.TryParse<ChartType>(chartTypeStr, true, out var result) ? result : defaultType;
+    }
+
+    /// <summary>
+    ///     Parses legend position string to LegendPositionType enum
+    /// </summary>
+    /// <param name="positionStr">Position string</param>
+    /// <param name="defaultPosition">Default position if parsing fails</param>
+    /// <returns>Parsed LegendPositionType</returns>
+    private static LegendPositionType ParseLegendPosition(string? positionStr,
+        LegendPositionType defaultPosition = LegendPositionType.Bottom)
+    {
+        if (string.IsNullOrEmpty(positionStr))
+            return defaultPosition;
+
+        return positionStr.ToLower() switch
+        {
+            "bottom" => LegendPositionType.Bottom,
+            "top" => LegendPositionType.Top,
+            "left" => LegendPositionType.Left,
+            "right" => LegendPositionType.Right,
+            "topright" => LegendPositionType.Right,
+            _ => defaultPosition
+        };
+    }
+
+    /// <summary>
+    ///     Sets category data for chart series
+    /// </summary>
+    /// <param name="chart">Target chart</param>
+    /// <param name="categoryAxisDataRange">Category axis data range</param>
+    private static void SetCategoryData(Chart chart, string categoryAxisDataRange)
+    {
+        if (string.IsNullOrEmpty(categoryAxisDataRange) || chart.NSeries.Count == 0)
+            return;
+
+        chart.NSeries.CategoryData = categoryAxisDataRange;
+    }
+
+    /// <summary>
+    ///     Adds data series to chart
+    /// </summary>
+    /// <param name="chart">Target chart</param>
+    /// <param name="dataRange">Data range string (can be comma-separated for multiple series)</param>
+    private static void AddDataSeries(Chart chart, string dataRange)
+    {
+        chart.NSeries.Clear();
+        var ranges = dataRange.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        foreach (var range in ranges)
+        {
+            var seriesIndex = chart.NSeries.Add(range, true);
+            chart.NSeries[seriesIndex].Values = range;
+        }
+    }
+
+    /// <summary>
     ///     Adds a chart to the worksheet
     /// </summary>
     /// <param name="path">Excel file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <param name="arguments">JSON arguments containing chartType, dataRange, optional categoryAxisDataRange, title, position</param>
-    /// <returns>Success message with chart index</returns>
+    /// <returns>Success message with chart details</returns>
     private Task<string> AddChartAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -187,24 +241,8 @@ Usage examples:
             var height = ArgumentHelper.GetInt(arguments, "height", 15);
 
             using var workbook = new Workbook(path);
-            var worksheet = workbook.Worksheets[sheetIndex];
-
-            var chartType = chartTypeStr.ToLower() switch
-            {
-                "column" => ChartType.Column,
-                "bar" => ChartType.Bar,
-                "line" => ChartType.Line,
-                "pie" => ChartType.Pie,
-                "area" => ChartType.Area,
-                "scatter" => ChartType.Scatter,
-                "doughnut" => ChartType.Doughnut,
-                "radar" => ChartType.Radar,
-                "bubble" => ChartType.Bubble,
-                "cylinder" => ChartType.Cylinder,
-                "cone" => ChartType.Cone,
-                "pyramid" => ChartType.Pyramid,
-                _ => ChartType.Column
-            };
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            var chartType = ParseChartType(chartTypeStr);
 
             int chartTopRow;
             if (topRow.HasValue)
@@ -221,84 +259,18 @@ Usage examples:
                 worksheet.Charts.Add(chartType, chartTopRow, leftColumn, chartTopRow + height, leftColumn + width);
             var chart = worksheet.Charts[chartIndex];
 
-            // Clear existing series
-            chart.NSeries.Clear();
+            AddDataSeries(chart, dataRange);
+            SetCategoryData(chart, categoryAxisDataRange ?? "");
 
-            // Parse data range - support multiple ranges separated by comma (e.g., "E2:E40,G2:G40")
-            var ranges = dataRange.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-            // Validate data range and category axis data range length match
-            string? warningMessage = null;
-            if (!string.IsNullOrEmpty(categoryAxisDataRange))
-                try
-                {
-                    var dataRangeObj = ExcelHelper.CreateRange(worksheet.Cells, ranges[0]);
-                    var categoryRangeObj = ExcelHelper.CreateRange(worksheet.Cells, categoryAxisDataRange);
-
-                    if (dataRangeObj.RowCount != categoryRangeObj.RowCount)
-                        warningMessage =
-                            $"\n?? Warning: Data range length ({dataRangeObj.RowCount} cells) does not match category axis length ({categoryRangeObj.RowCount} cells). Chart may display incorrectly.";
-                }
-                catch (Exception ex)
-                {
-                    // Ignore validation errors, will be caught later
-                    Console.Error.WriteLine($"[WARN] Chart validation error (will be caught later): {ex.Message}");
-                }
-
-            // Add data series (Y-axis values) first
-            foreach (var range in ranges)
-            {
-                var seriesIndex = chart.NSeries.Add(range, true);
-                var series = chart.NSeries[seriesIndex];
-                series.Values = range;
-            }
-
-            // Set category axis data (X-axis) if provided
-            // Use NSeries.CategoryData property to set category data for all series
-            if (!string.IsNullOrEmpty(categoryAxisDataRange) && chart.NSeries.Count > 0)
-                try
-                {
-                    // Try to set category data using NSeries collection property
-                    var categoryDataProp = chart.NSeries.GetType().GetProperty("CategoryData");
-                    if (categoryDataProp != null && categoryDataProp.CanWrite)
-                        categoryDataProp.SetValue(chart.NSeries, categoryAxisDataRange);
-                    else
-                        // Fallback: Set category data for each series individually
-                        foreach (var series in chart.NSeries)
-                            try
-                            {
-                                var seriesCategoryDataProp = series.GetType().GetProperty("CategoryData");
-                                if (seriesCategoryDataProp != null && seriesCategoryDataProp.CanWrite)
-                                    seriesCategoryDataProp.SetValue(series, categoryAxisDataRange);
-                            }
-                            catch
-                            {
-                                // Ignore if CategoryData property is not accessible
-                            }
-                }
-                catch
-                {
-                    // Final fallback: Use SetChartDataRange but fix the series afterwards
-                    chart.NSeries.Clear();
-                    var combinedRange = $"{categoryAxisDataRange},{dataRange}";
-                    chart.SetChartDataRange(combinedRange, true);
-
-                    // Remove extra series if SetChartDataRange created too many
-                    while (chart.NSeries.Count > ranges.Length) chart.NSeries.RemoveAt(chart.NSeries.Count - 1);
-
-                    // Ensure all series have correct values
-                    for (var i = 0; i < ranges.Length && i < chart.NSeries.Count; i++)
-                        chart.NSeries[i].Values = ranges[i];
-                }
-
-            if (!string.IsNullOrEmpty(title)) chart.Title.Text = title;
+            if (!string.IsNullOrEmpty(title))
+                chart.Title.Text = title;
 
             workbook.CalculateFormula();
             workbook.Save(outputPath);
 
             var result = $"Chart added with data range: {dataRange}";
-            if (!string.IsNullOrEmpty(categoryAxisDataRange)) result += $", X-axis: {categoryAxisDataRange}";
-            if (!string.IsNullOrEmpty(warningMessage)) result += warningMessage;
+            if (!string.IsNullOrEmpty(categoryAxisDataRange))
+                result += $", X-axis: {categoryAxisDataRange}";
             result += $". Output: {outputPath}";
             return result;
         });
@@ -311,7 +283,7 @@ Usage examples:
     /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <param name="arguments">JSON arguments containing chartIndex and various chart properties</param>
-    /// <returns>Success message</returns>
+    /// <returns>Success message with applied changes</returns>
     private Task<string> EditChartAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -325,15 +297,13 @@ Usage examples:
             var legendPosition = ArgumentHelper.GetStringNullable(arguments, "legendPosition");
 
             using var workbook = new Workbook(path);
-
             var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-            var charts = worksheet.Charts;
 
-            if (chartIndex < 0 || chartIndex >= charts.Count)
+            if (chartIndex < 0 || chartIndex >= worksheet.Charts.Count)
                 throw new ArgumentException(
-                    $"Chart index {chartIndex} is out of range (worksheet has {charts.Count} charts)");
+                    $"Chart index {chartIndex} is out of range (worksheet has {worksheet.Charts.Count} charts)");
 
-            var chart = charts[chartIndex];
+            var chart = worksheet.Charts[chartIndex];
             var changes = new List<string>();
 
             if (!string.IsNullOrEmpty(title))
@@ -344,115 +314,38 @@ Usage examples:
 
             if (!string.IsNullOrEmpty(dataRange))
             {
-                chart.NSeries.Clear();
-
-                var ranges = dataRange.Split(',',
-                    StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-                // Add data series (Y-axis values)
-                foreach (var range in ranges)
-                {
-                    var seriesIndex = chart.NSeries.Add(range, true);
-                    var series = chart.NSeries[seriesIndex];
-                    series.Values = range;
-                }
-
-                // Set category axis data (X-axis) if provided
-                if (!string.IsNullOrEmpty(categoryAxisDataRange) && chart.NSeries.Count > 0)
-                    try
-                    {
-                        // Try to set category data using NSeries collection property
-                        var categoryDataProp = chart.NSeries.GetType().GetProperty("CategoryData");
-                        if (categoryDataProp != null && categoryDataProp.CanWrite)
-                        {
-                            categoryDataProp.SetValue(chart.NSeries, categoryAxisDataRange);
-                        }
-                        else
-                        {
-                            // Fallback: Use SetChartDataRange but fix the series afterwards
-                            chart.NSeries.Clear();
-                            var combinedRange = $"{categoryAxisDataRange},{dataRange}";
-                            chart.SetChartDataRange(combinedRange, true);
-
-                            // Remove extra series if SetChartDataRange created too many
-                            while (chart.NSeries.Count > ranges.Length) chart.NSeries.RemoveAt(chart.NSeries.Count - 1);
-
-                            // Ensure all series have correct values
-                            for (var i = 0; i < ranges.Length && i < chart.NSeries.Count; i++)
-                                chart.NSeries[i].Values = ranges[i];
-                        }
-                    }
-                    catch
-                    {
-                        // Final fallback: Use SetChartDataRange and clean up
-                        chart.NSeries.Clear();
-                        var combinedRange = $"{categoryAxisDataRange},{dataRange}";
-                        chart.SetChartDataRange(combinedRange, true);
-
-                        // Remove extra series
-                        while (chart.NSeries.Count > ranges.Length) chart.NSeries.RemoveAt(chart.NSeries.Count - 1);
-
-                        // Ensure all series have correct values
-                        for (var i = 0; i < ranges.Length && i < chart.NSeries.Count; i++)
-                            chart.NSeries[i].Values = ranges[i];
-                    }
+                AddDataSeries(chart, dataRange);
+                SetCategoryData(chart, categoryAxisDataRange ?? "");
 
                 var rangeInfo = dataRange;
-                if (!string.IsNullOrEmpty(categoryAxisDataRange)) rangeInfo += $", X-axis: {categoryAxisDataRange}";
+                if (!string.IsNullOrEmpty(categoryAxisDataRange))
+                    rangeInfo += $", X-axis: {categoryAxisDataRange}";
                 changes.Add($"Data range: {rangeInfo}");
             }
 
             if (!string.IsNullOrEmpty(chartTypeStr))
             {
-                var chartType = chartTypeStr.ToLower() switch
-                {
-                    "column" => ChartType.Column,
-                    "bar" => ChartType.Bar,
-                    "line" => ChartType.Line,
-                    "pie" => ChartType.Pie,
-                    "area" => ChartType.Area,
-                    "scatter" => ChartType.Scatter,
-                    "doughnut" => ChartType.Doughnut,
-                    "radar" => ChartType.Radar,
-                    "bubble" => ChartType.Bubble,
-                    "cylinder" => ChartType.Cylinder,
-                    "cone" => ChartType.Cone,
-                    "pyramid" => ChartType.Pyramid,
-                    _ => chart.Type
-                };
-                chart.Type = chartType;
+                chart.Type = ParseChartType(chartTypeStr, chart.Type);
                 changes.Add($"Chart type: {chartTypeStr}");
             }
 
             if (showLegend.HasValue)
             {
-                if (showLegend.Value && chart.Legend == null)
-                    chart.ShowLegend = true;
-                else if (!showLegend.Value && chart.Legend != null) chart.ShowLegend = false;
+                chart.ShowLegend = showLegend.Value;
                 changes.Add($"Legend: {(showLegend.Value ? "show" : "hide")}");
             }
 
             if (!string.IsNullOrEmpty(legendPosition) && chart.Legend != null)
             {
-                var position = legendPosition.ToLower() switch
-                {
-                    "bottom" => LegendPositionType.Bottom,
-                    "top" => LegendPositionType.Top,
-                    "left" => LegendPositionType.Left,
-                    "right" => LegendPositionType.Right,
-                    _ => chart.Legend.Position
-                };
-                chart.Legend.Position = position;
+                chart.Legend.Position = ParseLegendPosition(legendPosition, chart.Legend.Position);
                 changes.Add($"Legend position: {legendPosition}");
             }
 
             workbook.Save(outputPath);
 
-            var result = changes.Count > 0
+            return changes.Count > 0
                 ? $"Chart #{chartIndex} edited: {string.Join(", ", changes)}. Output: {outputPath}"
                 : $"Chart #{chartIndex} no changes. Output: {outputPath}";
-
-            return result;
         });
     }
 
@@ -463,7 +356,7 @@ Usage examples:
     /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <param name="arguments">JSON arguments containing chartIndex</param>
-    /// <returns>Success message</returns>
+    /// <returns>Success message with remaining chart count</returns>
     private Task<string> DeleteChartAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -471,21 +364,18 @@ Usage examples:
             var chartIndex = ArgumentHelper.GetInt(arguments, "chartIndex");
 
             using var workbook = new Workbook(path);
-
             var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-            var charts = worksheet.Charts;
 
-            if (chartIndex < 0 || chartIndex >= charts.Count)
+            if (chartIndex < 0 || chartIndex >= worksheet.Charts.Count)
                 throw new ArgumentException(
-                    $"Chart index {chartIndex} is out of range (worksheet has {charts.Count} charts)");
+                    $"Chart index {chartIndex} is out of range (worksheet has {worksheet.Charts.Count} charts)");
 
-            var chart = charts[chartIndex];
-            var chartName = chart.Name ?? $"Chart {chartIndex}";
-
-            charts.RemoveAt(chartIndex);
+            var chartName = worksheet.Charts[chartIndex].Name ?? $"Chart {chartIndex}";
+            worksheet.Charts.RemoveAt(chartIndex);
             workbook.Save(outputPath);
 
-            return $"Chart #{chartIndex} ({chartName}) deleted, {charts.Count} remaining. Output: {outputPath}";
+            return
+                $"Chart #{chartIndex} ({chartName}) deleted, {worksheet.Charts.Count} remaining. Output: {outputPath}";
         });
     }
 
@@ -494,13 +384,12 @@ Usage examples:
     /// </summary>
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <returns>JSON string with all charts</returns>
+    /// <returns>JSON string with chart details including position and data sources</returns>
     private Task<string> GetChartsAsync(string path, int sheetIndex)
     {
         return Task.Run(() =>
         {
             using var workbook = new Workbook(path);
-
             var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
             var charts = worksheet.Charts;
 
@@ -526,63 +415,12 @@ Usage examples:
                     for (var j = 0; j < chart.NSeries.Count && j < 5; j++)
                     {
                         var series = chart.NSeries[j];
-                        var seriesName = series.Name ?? "(no name)";
-                        var valuesRange = series.Values ?? "";
-
-                        string? categoryData = null;
-
-                        try
-                        {
-                            var chartDataRange = chart.GetChartDataRange();
-                            if (!string.IsNullOrEmpty(chartDataRange))
-                            {
-                                var parts = chartDataRange.Split(',');
-                                if (parts.Length >= 2)
-                                {
-                                    var potentialCategory = parts[0].Trim();
-                                    if (potentialCategory.Contains(":") || potentialCategory.Contains("$"))
-                                        categoryData = potentialCategory;
-                                }
-                            }
-                        }
-                        catch
-                        {
-                            // Ignore if category data extraction fails
-                        }
-
-                        if (string.IsNullOrEmpty(categoryData) ||
-                            (!categoryData.Contains(":") && categoryData.Contains("$")))
-                            try
-                            {
-                                var categoryDataProp = series.GetType().GetProperty("CategoryData");
-                                if (categoryDataProp != null)
-                                {
-                                    var catData = categoryDataProp.GetValue(series);
-                                    if (catData != null)
-                                    {
-                                        var catDataStr = catData.ToString();
-                                        if (!string.IsNullOrEmpty(catDataStr))
-                                        {
-                                            if (catDataStr.Contains(":"))
-                                                categoryData = catDataStr;
-                                            else if (string.IsNullOrEmpty(categoryData) &&
-                                                     (catDataStr.Contains("$") || catDataStr.StartsWith("=")))
-                                                categoryData = catDataStr;
-                                        }
-                                    }
-                                }
-                            }
-                            catch
-                            {
-                                // Ignore error setting category data
-                            }
-
                         seriesList.Add(new
                         {
                             index = j,
-                            name = seriesName,
-                            valuesRange,
-                            categoryData
+                            name = series.Name ?? "(no name)",
+                            valuesRange = series.Values ?? "",
+                            categoryData = chart.NSeries.CategoryData
                         });
                     }
 
@@ -625,55 +463,45 @@ Usage examples:
     /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <param name="arguments">JSON arguments containing chartIndex, dataRange, optional categoryAxisDataRange</param>
-    /// <returns>Success message</returns>
-    private Task<string> UpdateChartDataAsync(string path, string outputPath, int sheetIndex,
-        JsonObject? arguments)
+    /// <returns>Success message with new data range</returns>
+    private Task<string> UpdateChartDataAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
             var chartIndex = ArgumentHelper.GetInt(arguments, "chartIndex");
             var dataRange = ArgumentHelper.GetString(arguments, "dataRange");
+            var categoryAxisDataRange = ArgumentHelper.GetStringNullable(arguments, "categoryAxisDataRange");
 
             using var workbook = new Workbook(path);
-
             var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-            var charts = worksheet.Charts;
 
-            if (chartIndex < 0 || chartIndex >= charts.Count)
+            if (chartIndex < 0 || chartIndex >= worksheet.Charts.Count)
                 throw new ArgumentException(
-                    $"Chart index {chartIndex} is out of range (worksheet has {charts.Count} charts)");
+                    $"Chart index {chartIndex} is out of range (worksheet has {worksheet.Charts.Count} charts)");
 
-            var chart = charts[chartIndex];
-
-            chart.NSeries.Clear();
-
-            var ranges = dataRange.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-            foreach (var range in ranges)
-            {
-                var seriesIndex = chart.NSeries.Add(range, true);
-                var series = chart.NSeries[seriesIndex];
-                series.Values = range;
-            }
-
-            if (chart.NSeries.Count == 0) chart.SetChartDataRange(dataRange, true);
+            var chart = worksheet.Charts[chartIndex];
+            AddDataSeries(chart, dataRange);
+            SetCategoryData(chart, categoryAxisDataRange ?? "");
 
             workbook.Save(outputPath);
 
-            return $"Chart #{chartIndex} data updated to: {dataRange}. Output: {outputPath}";
+            var result = $"Chart #{chartIndex} data updated to: {dataRange}";
+            if (!string.IsNullOrEmpty(categoryAxisDataRange))
+                result += $", X-axis: {categoryAxisDataRange}";
+            result += $". Output: {outputPath}";
+            return result;
         });
     }
 
     /// <summary>
-    ///     Sets chart properties
+    ///     Sets chart properties (title, legend)
     /// </summary>
     /// <param name="path">Excel file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
     /// <param name="arguments">JSON arguments containing chartIndex and various chart properties</param>
-    /// <returns>Success message</returns>
-    private Task<string> SetChartPropertiesAsync(string path, string outputPath, int sheetIndex,
-        JsonObject? arguments)
+    /// <returns>Success message with applied changes</returns>
+    private Task<string> SetChartPropertiesAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
@@ -685,12 +513,14 @@ Usage examples:
 
             using var workbook = new Workbook(path);
             var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-            PowerPointHelper.ValidateCollectionIndex(chartIndex, worksheet.Charts, "chart");
+
+            if (chartIndex < 0 || chartIndex >= worksheet.Charts.Count)
+                throw new ArgumentException(
+                    $"Chart index {chartIndex} is out of range (worksheet has {worksheet.Charts.Count} charts)");
 
             var chart = worksheet.Charts[chartIndex];
             var changes = new List<string>();
 
-            // Handle title
             if (removeTitle)
             {
                 chart.Title.Text = "";
@@ -702,26 +532,15 @@ Usage examples:
                 changes.Add($"Title: {title}");
             }
 
-            // Handle legend visibility
             if (legendVisible.HasValue)
             {
                 chart.ShowLegend = legendVisible.Value;
                 changes.Add($"Legend: {(legendVisible.Value ? "show" : "hide")}");
             }
 
-            // Handle legend position
             if (!string.IsNullOrEmpty(legendPosition) && chart.Legend != null)
             {
-                var position = legendPosition switch
-                {
-                    "Bottom" => LegendPositionType.Bottom,
-                    "Top" => LegendPositionType.Top,
-                    "Left" => LegendPositionType.Left,
-                    "Right" => LegendPositionType.Right,
-                    "TopRight" => LegendPositionType.Right,
-                    _ => chart.Legend.Position
-                };
-                chart.Legend.Position = position;
+                chart.Legend.Position = ParseLegendPosition(legendPosition, chart.Legend.Position);
                 changes.Add($"Legend position: {legendPosition}");
             }
 

@@ -297,4 +297,53 @@ public class ExcelChartToolTests : ExcelTestBase
         var chart = resultWorkbook.Worksheets[0].Charts[0];
         Assert.True(chart.NSeries.Count >= 1, $"Chart should have series, got {chart.NSeries.Count}");
     }
+
+    [Fact]
+    public async Task Add_WithInvalidChartType_ShouldUseDefaultColumn()
+    {
+        // Arrange
+        var workbookPath = CreateWorkbookWithData("test_invalid_chart_type.xlsx", 5);
+        var outputPath = CreateTestFilePath("test_invalid_chart_type_output.xlsx");
+        var arguments = CreateArguments("add", workbookPath, outputPath);
+        arguments["chartType"] = "InvalidType";
+        arguments["dataRange"] = "B1:B5";
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        var workbook = new Workbook(outputPath);
+        var chart = workbook.Worksheets[0].Charts[0];
+        Assert.Equal(ChartType.Column, chart.Type);
+    }
+
+    [Fact]
+    public async Task Edit_WithInvalidChartIndex_ShouldThrowException()
+    {
+        // Arrange
+        var workbookPath = CreateWorkbookWithData("test_invalid_chart_index.xlsx");
+        var outputPath = CreateTestFilePath("test_invalid_chart_index_output.xlsx");
+        var arguments = CreateArguments("edit", workbookPath, outputPath);
+        arguments["chartIndex"] = 999;
+        arguments["title"] = "Test";
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public async Task Get_WithNoCharts_ShouldReturnEmptyResult()
+    {
+        // Arrange
+        var workbookPath = CreateWorkbookWithData("test_no_charts.xlsx");
+        var arguments = CreateArguments("get", workbookPath);
+
+        // Act
+        var result = await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.Contains("\"count\": 0", result);
+        Assert.Contains("No charts found", result);
+    }
 }

@@ -296,4 +296,64 @@ public class ExcelCellToolTests : ExcelTestBase
         Assert.Equal("Second", worksheet.Cells["B1"].Value);
         Assert.Equal("Third", worksheet.Cells["C1"].Value);
     }
+
+    [Fact]
+    public async Task Write_WithInvalidCellAddress_ShouldThrowException()
+    {
+        // Arrange
+        var workbookPath = CreateExcelWorkbook("test_invalid_cell.xlsx");
+        var outputPath = CreateTestFilePath("test_invalid_cell_output.xlsx");
+        var arguments = CreateArguments("write", workbookPath, outputPath);
+        arguments["cell"] = "InvalidCell";
+        arguments["value"] = "Test";
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+        Assert.Contains("Invalid cell address format", ex.Message);
+    }
+
+    [Fact]
+    public async Task Write_WithDateValue_ShouldWriteAsDate()
+    {
+        // Arrange
+        var workbookPath = CreateExcelWorkbook("test_date_value.xlsx");
+        var outputPath = CreateTestFilePath("test_date_value_output.xlsx");
+        var arguments = CreateArguments("write", workbookPath, outputPath);
+        arguments["cell"] = "A1";
+        arguments["value"] = "2024-01-15";
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        var workbook = new Workbook(outputPath);
+        var worksheet = workbook.Worksheets[0];
+        var cell = worksheet.Cells["A1"];
+        Assert.NotNull(cell.Value);
+        // Excel stores dates as numeric values, verify using DateTimeValue
+        var dateValue = cell.DateTimeValue;
+        Assert.Equal(new DateTime(2024, 1, 15), dateValue.Date);
+    }
+
+    [Fact]
+    public async Task Get_WithCalculateFormula_ShouldReturnCalculatedValue()
+    {
+        // Arrange
+        var workbookPath = CreateExcelWorkbook("test_calculate_formula.xlsx");
+        var workbook = new Workbook(workbookPath);
+        workbook.Worksheets[0].Cells["A1"].Value = 10;
+        workbook.Worksheets[0].Cells["B1"].Value = 20;
+        workbook.Worksheets[0].Cells["C1"].Formula = "=A1+B1";
+        workbook.Save(workbookPath);
+
+        var arguments = CreateArguments("get", workbookPath);
+        arguments["cell"] = "C1";
+        arguments["calculateFormula"] = true;
+
+        // Act
+        var result = await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.Contains("30", result);
+    }
 }

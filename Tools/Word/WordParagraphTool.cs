@@ -14,6 +14,9 @@ namespace AsposeMcpServer.Tools.Word;
 /// </summary>
 public class WordParagraphTool : IAsposeTool
 {
+    /// <summary>
+    ///     Gets the description of the tool and its usage examples
+    /// </summary>
     public string Description =>
         @"Manage paragraphs in Word documents. Supports 7 operations: insert, delete, edit, get, get_format, copy_format, merge.
 
@@ -35,6 +38,9 @@ Important notes for 'get' operation:
 - Paragraphs inside TextBoxes are marked with '[TextBox]' in the location field
 - To check paragraph styles in table cells, use includeCommentParagraphs=true";
 
+    /// <summary>
+    ///     Gets the JSON schema defining the input parameters for the tool
+    /// </summary>
     public object InputSchema => new
     {
         type = "object",
@@ -261,6 +267,7 @@ Note: To check paragraph styles in table cells (e.g., after using add_table with
     /// </summary>
     /// <param name="arguments">JSON arguments object containing operation parameters</param>
     /// <returns>Result message as a string</returns>
+    /// <exception cref="ArgumentException">Thrown when operation is unknown or required parameters are missing.</exception>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");

@@ -14,6 +14,9 @@ namespace AsposeMcpServer.Tools.Word;
 /// </summary>
 public class WordListTool : IAsposeTool
 {
+    /// <summary>
+    ///     Gets the description of the tool and its usage examples
+    /// </summary>
     public string Description =>
         @"Manage lists in Word documents. Supports 8 operations: add_list, add_item, delete_item, edit_item, set_format, get_format, restart_numbering, convert_to_list.
 
@@ -29,6 +32,9 @@ Usage examples:
 
 Note: The 'operation' parameter is optional and will be auto-inferred from other parameters. You can also explicitly specify it.";
 
+    /// <summary>
+    ///     Gets the JSON schema defining the input parameters for the tool
+    /// </summary>
     public object InputSchema => new
     {
         type = "object",
@@ -184,6 +190,7 @@ Level range: 0-8 (0 = top level)",
     /// </summary>
     /// <param name="arguments">JSON arguments object containing operation parameters</param>
     /// <returns>Result message as a string</returns>
+    /// <exception cref="ArgumentException">Thrown when operation is unknown or required parameters are missing.</exception>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         if (arguments == null)

@@ -13,6 +13,9 @@ namespace AsposeMcpServer.Tools.Word;
 /// </summary>
 public class WordContentTool : IAsposeTool
 {
+    /// <summary>
+    ///     Gets the description of the tool and its usage examples
+    /// </summary>
     public string Description =>
         @"Get Word document content, statistics, and document information. Supports 4 operations: get_content, get_content_detailed, get_statistics, get_document_info.
 
@@ -22,6 +25,9 @@ Usage examples:
 - Get statistics: word_content(operation='get_statistics', path='doc.docx', includeFootnotes=true)
 - Get document info: word_content(operation='get_document_info', path='doc.docx', includeTabStops=true)";
 
+    /// <summary>
+    ///     Gets the JSON schema defining the input parameters for the tool
+    /// </summary>
     public object InputSchema => new
     {
         type = "object",
@@ -83,6 +89,7 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments object containing operation parameters</param>
     /// <returns>Result message as a string</returns>
+    /// <exception cref="ArgumentException">Thrown when operation is unknown or required parameters are missing.</exception>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
@@ -363,7 +370,7 @@ Usage examples:
                 {
                     // Allow one blank line (2 newlines max)
                     // Already have one newline, add one more for blank line
-                    if (sb is { Length: >= 1 } && sb[^1] == '\n' && (sb is not { Length: >= 2 } || sb[^2] != '\n'))
+                    if (sb is [.., '\n'] and not [.., '\n', '\n'])
                         sb.Append('\n');
                 }
 

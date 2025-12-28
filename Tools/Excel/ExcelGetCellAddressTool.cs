@@ -1,25 +1,29 @@
-﻿using System.Text.Json.Nodes;
+using System.Text.Json.Nodes;
 using Aspose.Cells;
 using AsposeMcpServer.Core;
 
 namespace AsposeMcpServer.Tools.Excel;
 
 /// <summary>
-///     Tool for converting between Excel cell address formats (A1 notation and row/column index)
+///     Tool for converting between Excel cell address formats (A1 notation and row/column index).
 /// </summary>
 public class ExcelGetCellAddressTool : IAsposeTool
 {
+    private const int MaxExcelRows = 1048576;
+    private const int MaxExcelColumns = 16384;
+
     /// <summary>
-    ///     Gets the description of the tool and its usage examples
+    ///     Gets the description of the tool and its usage examples.
     /// </summary>
     public string Description => @"Convert between cell address formats (A1 notation and row/column index).
 
 Usage examples:
-- Convert A1 to index: excel_get_cell_address(cellAddress='A1', convertToIndex=true)
-- Convert index to A1: excel_get_cell_address(row=0, column=0, convertToIndex=false)";
+- Convert A1 to index: excel_get_cell_address(cellAddress='B2') returns row/column index
+- Convert index to A1: excel_get_cell_address(row=1, column=1) returns 'B2'
+- Validate address: excel_get_cell_address(cellAddress='AA100') validates and returns info";
 
     /// <summary>
-    ///     Gets the JSON schema defining the input parameters for the tool
+    ///     Gets the JSON schema defining the input parameters for the tool.
     /// </summary>
     public object InputSchema => new
     {
@@ -29,103 +33,84 @@ Usage examples:
             cellAddress = new
             {
                 type = "string",
-                description = "Cell address in A1 notation (e.g., 'A1') or row/column format (e.g., '0,0') (required)"
-            },
-            convertToIndex = new
-            {
-                type = "boolean",
-                description = "Convert to row/column index (optional, default: false, converts to A1 if true)"
+                description =
+                    "Cell address in A1 notation (e.g., 'A1', 'B2', 'AA100'). Use this OR row/column, not both."
             },
             row = new
             {
                 type = "number",
-                description = "Row index (0-based, optional, used with column)"
+                description = "Row index (0-based, 0 to 1048575). Use with column parameter."
             },
             column = new
             {
                 type = "number",
-                description = "Column index (0-based, optional, used with row)"
+                description = "Column index (0-based, 0 to 16383). Use with row parameter."
             }
         },
-        required = new[] { "cellAddress" }
+        required = new string[] { }
     };
 
     /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments
+    ///     Executes the tool operation with the provided JSON arguments.
     /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters</param>
-    /// <returns>Result message as a string</returns>
+    /// <param name="arguments">JSON arguments object containing operation parameters.</param>
+    /// <returns>Result message as a string.</returns>
     public Task<string> ExecuteAsync(JsonObject? arguments)
     {
         return Task.Run(() =>
         {
-            var cellAddress = ArgumentHelper.GetString(arguments, "cellAddress");
-            var convertToIndex = ArgumentHelper.GetBool(arguments, "convertToIndex", false);
+            var cellAddress = ArgumentHelper.GetStringNullable(arguments, "cellAddress");
             var row = ArgumentHelper.GetIntNullable(arguments, "row");
             var column = ArgumentHelper.GetIntNullable(arguments, "column");
 
-            if (row.HasValue && column.HasValue)
-            {
-                var a1Notation = CellsHelper.CellIndexToName(row.Value, column.Value);
-                return $"Row {row.Value}, Column {column.Value} = {a1Notation}";
-            }
+            var hasCellAddress = !string.IsNullOrWhiteSpace(cellAddress);
+            var hasRowColumn = row.HasValue && column.HasValue;
+            var hasPartialRowColumn = row.HasValue != column.HasValue;
 
-            if (convertToIndex)
-            {
-                // Check if input is in row,column format (e.g., "0,0")
-                if (TryParseRowColumnFormat(cellAddress, out var parsedRow, out var parsedCol))
-                {
-                    var a1Notation = CellsHelper.CellIndexToName(parsedRow, parsedCol);
-                    return $"Row {parsedRow}, Column {parsedCol} = {a1Notation}";
-                }
+            if (hasPartialRowColumn)
+                throw new ArgumentException("Both row and column must be specified together.");
 
-                // Try A1 notation
-                try
-                {
-                    CellsHelper.CellNameToIndex(cellAddress, out var rowIndex, out var colIndex);
-                    return $"{cellAddress} = Row {rowIndex}, Column {colIndex}";
-                }
-                catch (Exception ex)
-                {
-                    Console.Error.WriteLine($"[ERROR] Invalid cell address format '{cellAddress}': {ex.Message}");
-                    throw new ArgumentException($"Invalid cell address format: {cellAddress}");
-                }
+            if (hasCellAddress && hasRowColumn)
+                throw new ArgumentException(
+                    "Cannot specify both cellAddress and row/column. Use one or the other.");
+
+            if (!hasCellAddress && !hasRowColumn)
+                throw new ArgumentException(
+                    "Must specify either cellAddress or both row and column parameters.");
+
+            int finalRow, finalCol;
+
+            if (hasRowColumn)
+            {
+                finalRow = row!.Value;
+                finalCol = column!.Value;
             }
             else
             {
-                // Check if input is in row,column format (e.g., "0,0")
-                if (TryParseRowColumnFormat(cellAddress, out var parsedRow, out var parsedCol))
-                {
-                    var a1Notation = CellsHelper.CellIndexToName(parsedRow, parsedCol);
-                    return $"Valid cell address: {a1Notation} (Row {parsedRow}, Column {parsedCol})";
-                }
-
-                // Validate A1 notation
-                try
-                {
-                    CellsHelper.CellNameToIndex(cellAddress, out var rowIndex, out var colIndex);
-                    return $"Valid cell address: {cellAddress} (Row {rowIndex}, Column {colIndex})";
-                }
-                catch (Exception ex)
-                {
-                    Console.Error.WriteLine($"[ERROR] Invalid cell address format '{cellAddress}': {ex.Message}");
-                    throw new ArgumentException($"Invalid cell address format: {cellAddress}");
-                }
+                CellsHelper.CellNameToIndex(cellAddress!, out finalRow, out finalCol);
             }
+
+            ValidateIndexBounds(finalRow, finalCol);
+
+            var a1Notation = CellsHelper.CellIndexToName(finalRow, finalCol);
+            return $"{a1Notation} = Row {finalRow}, Column {finalCol}";
         });
     }
 
-    private bool TryParseRowColumnFormat(string input, out int row, out int column)
+    /// <summary>
+    ///     Validates that row and column indices are within Excel limits.
+    /// </summary>
+    /// <param name="row">Row index to validate.</param>
+    /// <param name="column">Column index to validate.</param>
+    /// <exception cref="ArgumentException">Thrown if indices are out of bounds.</exception>
+    private static void ValidateIndexBounds(int row, int column)
     {
-        row = 0;
-        column = 0;
+        if (row < 0 || row >= MaxExcelRows)
+            throw new ArgumentException(
+                $"Row index {row} is out of range. Valid range: 0 to {MaxExcelRows - 1}.");
 
-        // Try to parse "row,column" format (e.g., "0,0", "5,3")
-        var parts = input.Split(',');
-        if (parts.Length == 2)
-            if (int.TryParse(parts[0].Trim(), out row) && int.TryParse(parts[1].Trim(), out column))
-                return true;
-
-        return false;
+        if (column < 0 || column >= MaxExcelColumns)
+            throw new ArgumentException(
+                $"Column index {column} is out of range. Valid range: 0 to {MaxExcelColumns - 1}.");
     }
 }

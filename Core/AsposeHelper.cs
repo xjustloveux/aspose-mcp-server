@@ -1,5 +1,7 @@
+using System.Globalization;
 using Aspose.Cells;
 using Aspose.Slides;
+using Cell = Aspose.Cells.Cell;
 using Range = Aspose.Cells.Range;
 
 namespace AsposeMcpServer.Core;
@@ -130,6 +132,34 @@ public static class ExcelHelper
             throw new ArgumentException(
                 $"Invalid {rangeDescription} format: '{range}'. Range exceeds Excel limits (valid range: A1:XFD1048576). Error: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    ///     Parses a string value to appropriate type (number, boolean, date, or string).
+    ///     Useful for building arrays or collections with typed values.
+    /// </summary>
+    /// <param name="value">String value to parse.</param>
+    /// <returns>Parsed value as double, bool, DateTime, or original string.</returns>
+    public static object ParseValue(string value)
+    {
+        if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var numValue))
+            return numValue;
+        if (bool.TryParse(value, out var boolValue))
+            return boolValue;
+        if (DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateValue))
+            return dateValue;
+        return value;
+    }
+
+    /// <summary>
+    ///     Sets cell value with automatic type conversion (number, boolean, date, or string).
+    ///     This ensures formulas can correctly identify numeric values.
+    /// </summary>
+    /// <param name="cell">Cell to set value on.</param>
+    /// <param name="value">String value to parse and set.</param>
+    public static void SetCellValue(Cell cell, string value)
+    {
+        cell.PutValue(ParseValue(value));
     }
 }
 

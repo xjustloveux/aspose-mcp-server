@@ -12,6 +12,9 @@ namespace AsposeMcpServer.Tools.Word;
 /// </summary>
 public class WordBookmarkTool : IAsposeTool
 {
+    /// <summary>
+    ///     Gets the description of the tool and its usage examples
+    /// </summary>
     public string Description => @"Manage Word bookmarks. Supports 5 operations: add, edit, delete, get, goto.
 
 Usage examples:
@@ -21,6 +24,9 @@ Usage examples:
 - Get bookmarks: word_bookmark(operation='get', path='doc.docx')
 - Goto bookmark: word_bookmark(operation='goto', path='doc.docx', name='bookmark1')";
 
+    /// <summary>
+    ///     Gets the JSON schema defining the input parameters for the tool
+    /// </summary>
     public object InputSchema => new
     {
         type = "object",
@@ -87,6 +93,7 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments object containing operation parameters</param>
     /// <returns>Result message as a string</returns>
+    /// <exception cref="ArgumentException">Thrown when operation is unknown or required parameters are missing.</exception>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");

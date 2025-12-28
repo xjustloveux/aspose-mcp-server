@@ -11,12 +11,18 @@ namespace AsposeMcpServer.Tools.Word;
 /// </summary>
 public class WordMailMergeTool : IAsposeTool
 {
+    /// <summary>
+    ///     Gets the description of the tool and its usage examples
+    /// </summary>
     public string Description => @"Perform mail merge on a Word document template.
 
 Usage examples:
 - Single record: word_mail_merge(templatePath='template.docx', outputPath='output.docx', data={'name':'John','address':'123 Main St'})
 - Multiple records: word_mail_merge(templatePath='template.docx', outputPath='output.docx', dataArray=[{'name':'John'},{'name':'Jane'}])";
 
+    /// <summary>
+    ///     Gets the JSON schema defining the input parameters for the tool
+    /// </summary>
     public object InputSchema => new
     {
         type = "object",
@@ -66,6 +72,7 @@ Default: ['removeUnusedFields', 'removeEmptyParagraphs']",
     /// </summary>
     /// <param name="arguments">JSON arguments object containing operation parameters</param>
     /// <returns>Result message as a string</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or invalid.</exception>
     public Task<string> ExecuteAsync(JsonObject? arguments)
     {
         return Task.Run(() =>

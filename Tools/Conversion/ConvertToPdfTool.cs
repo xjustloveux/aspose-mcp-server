@@ -62,7 +62,7 @@ Usage examples:
     /// </summary>
     /// <param name="path">Input file path</param>
     /// <param name="outputPath">Output PDF file path</param>
-    /// <param name="arguments">JSON arguments for additional options</param>
+    /// <param name="_">JSON arguments (unused)</param>
     /// <returns>Result message</returns>
     private Task<string> ConvertToPdf(string path, string outputPath, JsonObject? _)
     {

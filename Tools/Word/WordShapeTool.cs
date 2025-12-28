@@ -9,8 +9,14 @@ using ImageType = Aspose.Cells.Drawing.ImageType;
 
 namespace AsposeMcpServer.Tools.Word;
 
+/// <summary>
+///     Tool for managing shapes (lines, textboxes, charts, etc.) in Word documents
+/// </summary>
 public class WordShapeTool : IAsposeTool
 {
+    /// <summary>
+    ///     Gets the description of the tool and its usage examples
+    /// </summary>
     public string Description =>
         @"Manage shapes in Word documents. Supports 9 operations: add_line, add_textbox, get_textboxes, edit_textbox_content, set_textbox_border, add_chart, add, get, delete.
 
@@ -29,6 +35,9 @@ Usage examples:
 - Get all shapes: word_shape(operation='get', path='doc.docx')
 - Delete shape: word_shape(operation='delete', path='doc.docx', shapeIndex=0)";
 
+    /// <summary>
+    ///     Gets the JSON schema defining the input parameters for the tool
+    /// </summary>
     public object InputSchema => new
     {
         type = "object",
@@ -287,6 +296,7 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments object containing operation parameters</param>
     /// <returns>Result message as a string</returns>
+    /// <exception cref="ArgumentException">Thrown when operation is unknown or required parameters are missing.</exception>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");

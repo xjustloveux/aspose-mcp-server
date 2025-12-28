@@ -15,18 +15,26 @@ namespace AsposeMcpServer.Tools.Excel;
 public class ExcelPivotTableTool : IAsposeTool
 {
     /// <summary>
-    ///     Gets the description of the tool and its usage examples
+    ///     Gets the description of the tool and its usage examples.
     /// </summary>
     public string Description =>
         @"Manage Excel pivot tables. Supports 7 operations: add, edit, delete, get, add_field, delete_field, refresh.
 
+NOTE: The 'add' operation creates a pivot table with default field settings:
+- First column (index 0) is added as Row field
+- Second column (index 1) is added as Data field
+Use 'add_field' operation to customize field arrangement after creation.
+
 Usage examples:
 - Add pivot table: excel_pivot_table(operation='add', path='book.xlsx', sourceRange='A1:D10', destCell='F1')
-- Edit pivot table: excel_pivot_table(operation='edit', path='book.xlsx', pivotTableIndex=0)
+- Edit pivot table: excel_pivot_table(operation='edit', path='book.xlsx', pivotTableIndex=0, name='NewName')
+- Edit with style: excel_pivot_table(operation='edit', path='book.xlsx', pivotTableIndex=0, style='Medium6')
+- Edit layout options: excel_pivot_table(operation='edit', path='book.xlsx', pivotTableIndex=0, showRowGrand=true, showColumnGrand=false)
+- Edit with auto-fit: excel_pivot_table(operation='edit', path='book.xlsx', pivotTableIndex=0, autoFitColumns=true)
 - Delete pivot table: excel_pivot_table(operation='delete', path='book.xlsx', pivotTableIndex=0)
 - Get pivot tables: excel_pivot_table(operation='get', path='book.xlsx')
 - Add field: excel_pivot_table(operation='add_field', path='book.xlsx', pivotTableIndex=0, fieldName='Column1', area='Row')
-- Delete field: excel_pivot_table(operation='delete_field', path='book.xlsx', pivotTableIndex=0, fieldName='Column1')
+- Delete field: excel_pivot_table(operation='delete_field', path='book.xlsx', pivotTableIndex=0, fieldName='Column1', fieldType='Row')
 - Refresh: excel_pivot_table(operation='refresh', path='book.xlsx', pivotTableIndex=0) or excel_pivot_table(operation='refresh', path='book.xlsx') to refresh all";
 
     /// <summary>
@@ -92,6 +100,30 @@ Usage examples:
                 type = "boolean",
                 description = "Refresh pivot table data (optional, for edit/refresh)"
             },
+            style = new
+            {
+                type = "string",
+                description = @"Pivot table style (optional, for edit). Common styles:
+- Light styles: 'Light1' to 'Light28'
+- Medium styles: 'Medium1' to 'Medium28'
+- Dark styles: 'Dark1' to 'Dark28'
+- 'None' to remove style"
+            },
+            showRowGrand = new
+            {
+                type = "boolean",
+                description = "Show row grand totals (optional, for edit)"
+            },
+            showColumnGrand = new
+            {
+                type = "boolean",
+                description = "Show column grand totals (optional, for edit)"
+            },
+            autoFitColumns = new
+            {
+                type = "boolean",
+                description = "Auto-fit column widths after editing (optional, for edit)"
+            },
             fieldName = new
             {
                 type = "string",
@@ -123,10 +155,11 @@ Usage examples:
     };
 
     /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments
+    ///     Executes the tool operation with the provided JSON arguments.
     /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters</param>
-    /// <returns>Result message as a string</returns>
+    /// <param name="arguments">JSON arguments object containing operation parameters.</param>
+    /// <returns>Result message as a string.</returns>
+    /// <exception cref="ArgumentException">Thrown when operation is unknown or parameters are invalid.</exception>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
@@ -148,13 +181,14 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Adds a new pivot table to the worksheet
+    ///     Adds a new pivot table to the worksheet.
     /// </summary>
-    /// <param name="path">Excel file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing sourceRange, destCell, and optional name</param>
-    /// <returns>Success message with file path</returns>
+    /// <param name="path">Excel file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="sheetIndex">Worksheet index (0-based).</param>
+    /// <param name="arguments">JSON arguments containing sourceRange, destCell, and optional name.</param>
+    /// <returns>Success message with file path.</returns>
+    /// <exception cref="ArgumentException">Thrown when sheet index is out of range.</exception>
     private Task<string> AddPivotTableAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -164,13 +198,12 @@ Usage examples:
             var name = ArgumentHelper.GetString(arguments, "name", "PivotTable1");
 
             using var workbook = new Workbook(path);
-            var worksheet = workbook.Worksheets[sheetIndex];
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
 
             var pivotTables = worksheet.PivotTables;
             var pivotIndex = pivotTables.Add($"={worksheet.Name}!{sourceRange}", destCell, name);
             var pivotTable = pivotTables[pivotIndex];
 
-            // Add default fields: first column as row field, second column as data field
             pivotTable.AddFieldToArea(PivotFieldType.Row, 0);
             pivotTable.AddFieldToArea(PivotFieldType.Data, 1);
 
@@ -183,19 +216,27 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Edits an existing pivot table (name, refresh data)
+    ///     Edits an existing pivot table (name, style, layout, refresh data).
     /// </summary>
-    /// <param name="path">Excel file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing pivotTableIndex and optional name, refreshData</param>
-    /// <returns>Success message with changes made</returns>
+    /// <param name="path">Excel file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="sheetIndex">Worksheet index (0-based).</param>
+    /// <param name="arguments">
+    ///     JSON arguments containing pivotTableIndex and optional name, style, showRowGrand,
+    ///     showColumnGrand, autoFitColumns, refreshData.
+    /// </param>
+    /// <returns>Success message with changes made.</returns>
+    /// <exception cref="ArgumentException">Thrown when pivot table index is out of range or style is invalid.</exception>
     private Task<string> EditPivotTableAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
             var pivotTableIndex = ArgumentHelper.GetInt(arguments, "pivotTableIndex");
             var name = ArgumentHelper.GetStringNullable(arguments, "name");
+            var style = ArgumentHelper.GetStringNullable(arguments, "style");
+            var showRowGrand = ArgumentHelper.GetBoolNullable(arguments, "showRowGrand");
+            var showColumnGrand = ArgumentHelper.GetBoolNullable(arguments, "showColumnGrand");
+            var autoFitColumns = ArgumentHelper.GetBool(arguments, "autoFitColumns", false);
             var refreshData = ArgumentHelper.GetBool(arguments, "refreshData", false);
 
             using var workbook = new Workbook(path);
@@ -216,10 +257,35 @@ Usage examples:
                 changes.Add($"name={name}");
             }
 
+            if (!string.IsNullOrEmpty(style))
+            {
+                var styleType = ParsePivotTableStyle(style);
+                pivotTable.PivotTableStyleType = styleType;
+                changes.Add($"style={style}");
+            }
+
+            if (showRowGrand.HasValue)
+            {
+                pivotTable.RowGrand = showRowGrand.Value;
+                changes.Add($"showRowGrand={showRowGrand.Value}");
+            }
+
+            if (showColumnGrand.HasValue)
+            {
+                pivotTable.ColumnGrand = showColumnGrand.Value;
+                changes.Add($"showColumnGrand={showColumnGrand.Value}");
+            }
+
             if (refreshData)
             {
                 pivotTable.CalculateData();
                 changes.Add("refreshed");
+            }
+
+            if (autoFitColumns)
+            {
+                worksheet.AutoFitColumns();
+                changes.Add("autoFitColumns");
             }
 
             workbook.Save(outputPath);
@@ -230,13 +296,35 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Deletes a pivot table from the worksheet
+    ///     Parses a style name string to PivotTableStyleType enum.
     /// </summary>
-    /// <param name="path">Excel file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing pivotTableIndex</param>
-    /// <returns>Success message with remaining pivot table count</returns>
+    /// <param name="style">Style name (e.g., "Light1", "Medium6", "Dark3", "None").</param>
+    /// <returns>The corresponding PivotTableStyleType value.</returns>
+    /// <exception cref="ArgumentException">Thrown when style name is invalid.</exception>
+    private static PivotTableStyleType ParsePivotTableStyle(string style)
+    {
+        if (string.Equals(style, "None", StringComparison.OrdinalIgnoreCase))
+            return PivotTableStyleType.None;
+
+        if (Enum.TryParse<PivotTableStyleType>($"PivotTableStyle{style}", true, out var result))
+            return result;
+
+        if (Enum.TryParse(style, true, out result))
+            return result;
+
+        throw new ArgumentException(
+            $"Invalid style: '{style}'. Valid formats: 'Light1'-'Light28', 'Medium1'-'Medium28', 'Dark1'-'Dark28', or 'None'");
+    }
+
+    /// <summary>
+    ///     Deletes a pivot table from the worksheet.
+    /// </summary>
+    /// <param name="path">Excel file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="sheetIndex">Worksheet index (0-based).</param>
+    /// <param name="arguments">JSON arguments containing pivotTableIndex.</param>
+    /// <returns>Success message with remaining pivot table count.</returns>
+    /// <exception cref="ArgumentException">Thrown when pivot table index is out of range.</exception>
     private Task<string> DeletePivotTableAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -263,11 +351,12 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Gets information about all pivot tables in the worksheet
+    ///     Gets information about all pivot tables in the worksheet.
     /// </summary>
-    /// <param name="path">Excel file path</param>
-    /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <returns>JSON string with pivot table information</returns>
+    /// <param name="path">Excel file path.</param>
+    /// <param name="sheetIndex">Worksheet index (0-based).</param>
+    /// <returns>JSON string with pivot table information.</returns>
+    /// <exception cref="ArgumentException">Thrown when sheet index is out of range.</exception>
     private Task<string> GetPivotTablesAsync(string path, int sheetIndex)
     {
         return Task.Run(() =>
@@ -313,8 +402,7 @@ Usage examples:
                     dataSourceInfo = "Unknown";
                 }
 
-                // Format location information
-                object? locationInfo = null;
+                object locationInfo;
                 var dataBodyRange = pivotTable.DataBodyRange;
                 if (dataBodyRange.StartRow >= 0)
                 {
@@ -327,6 +415,17 @@ Usage examples:
                         endRow = dataBodyRange.EndRow,
                         startColumn = dataBodyRange.StartColumn,
                         endColumn = dataBodyRange.EndColumn
+                    };
+                }
+                else
+                {
+                    locationInfo = new
+                    {
+                        range = "Not calculated",
+                        startRow = -1,
+                        endRow = -1,
+                        startColumn = -1,
+                        endColumn = -1
                     };
                 }
 
@@ -385,13 +484,14 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Adds a field to the pivot table
+    ///     Adds a field to the pivot table.
     /// </summary>
-    /// <param name="path">Excel file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing pivotTableIndex, fieldName, fieldType, and optional function</param>
-    /// <returns>Success message with field details</returns>
+    /// <param name="path">Excel file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="sheetIndex">Worksheet index (0-based).</param>
+    /// <param name="arguments">JSON arguments containing pivotTableIndex, fieldName, fieldType, and optional function.</param>
+    /// <returns>Success message with field details.</returns>
+    /// <exception cref="ArgumentException">Thrown when pivot table index is out of range or field not found.</exception>
     private Task<string> AddFieldAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -411,11 +511,12 @@ Usage examples:
                 var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
                 var pivotTables = worksheet.PivotTables;
 
-                PowerPointHelper.ValidateCollectionIndex(pivotTableIndex, pivotTables, "Pivot table");
+                if (pivotTableIndex < 0 || pivotTableIndex >= pivotTables.Count)
+                    throw new ArgumentException(
+                        $"Pivot table index {pivotTableIndex} is out of range (worksheet has {pivotTables.Count} pivot tables)");
 
                 var pivotTable = pivotTables[pivotTableIndex];
 
-                // Get data source (supports string or array formats: "=Sheet1!A1:C4", "Sheet1!A1:C4", or "A1:C4")
                 string? sourceRangeStr = null;
                 var dataSource = pivotTable.DataSource;
 
@@ -599,13 +700,14 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Removes a field from the pivot table
+    ///     Removes a field from the pivot table.
     /// </summary>
-    /// <param name="path">Excel file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing pivotTableIndex, fieldName, and fieldType</param>
-    /// <returns>Success message with field removal details</returns>
+    /// <param name="path">Excel file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="sheetIndex">Worksheet index (0-based).</param>
+    /// <param name="arguments">JSON arguments containing pivotTableIndex, fieldName, and fieldType.</param>
+    /// <returns>Success message with field removal details.</returns>
+    /// <exception cref="ArgumentException">Thrown when pivot table index is out of range or field not found.</exception>
     private Task<string> DeleteFieldAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -620,11 +722,12 @@ Usage examples:
                 var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
                 var pivotTables = worksheet.PivotTables;
 
-                PowerPointHelper.ValidateCollectionIndex(pivotTableIndex, pivotTables, "Pivot table");
+                if (pivotTableIndex < 0 || pivotTableIndex >= pivotTables.Count)
+                    throw new ArgumentException(
+                        $"Pivot table index {pivotTableIndex} is out of range (worksheet has {pivotTables.Count} pivot tables)");
 
                 var pivotTable = pivotTables[pivotTableIndex];
 
-                // Get data source (supports string or array formats: "=Sheet1!A1:C4", "Sheet1!A1:C4", or "A1:C4")
                 string? sourceRangeStr = null;
                 var dataSource = pivotTable.DataSource;
 
@@ -786,13 +889,15 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Refreshes pivot table data (one or all tables)
+    ///     Refreshes pivot table data (one or all tables).
     /// </summary>
-    /// <param name="path">Excel file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing optional pivotTableIndex (if null, refreshes all)</param>
-    /// <returns>Success message with refresh count</returns>
+    /// <param name="path">Excel file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="sheetIndex">Worksheet index (0-based).</param>
+    /// <param name="arguments">JSON arguments containing optional pivotTableIndex (if null, refreshes all).</param>
+    /// <returns>Success message with refresh count.</returns>
+    /// <exception cref="ArgumentException">Thrown when pivot table index is out of range.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when no pivot tables exist.</exception>
     private Task<string> RefreshPivotTableAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>

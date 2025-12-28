@@ -58,7 +58,8 @@ public class ExcelCommentToolTests : ExcelTestBase
         // Assert
         Assert.NotNull(result);
         Assert.NotEmpty(result);
-        Assert.Contains("Comment", result, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("note", result, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Test comment", result);
     }
 
     [Fact]
@@ -120,5 +121,90 @@ public class ExcelCommentToolTests : ExcelTestBase
         var resultWorksheet = resultWorkbook.Worksheets[0];
         var comment = resultWorksheet.Comments["A1"];
         Assert.Null(comment);
+    }
+
+    [Fact]
+    public async Task Add_WithInvalidCellAddress_ShouldThrowException()
+    {
+        // Arrange
+        var workbookPath = CreateExcelWorkbook("test_invalid_cell_comment.xlsx");
+        var outputPath = CreateTestFilePath("test_invalid_cell_comment_output.xlsx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "add",
+            ["path"] = workbookPath,
+            ["outputPath"] = outputPath,
+            ["cell"] = "InvalidCell",
+            ["comment"] = "Test comment"
+        };
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+        Assert.Contains("Invalid cell address format", ex.Message);
+    }
+
+    [Fact]
+    public async Task Edit_WithNonExistentComment_ShouldThrowException()
+    {
+        // Arrange
+        var workbookPath = CreateExcelWorkbook("test_edit_nonexistent.xlsx");
+        var outputPath = CreateTestFilePath("test_edit_nonexistent_output.xlsx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "edit",
+            ["path"] = workbookPath,
+            ["outputPath"] = outputPath,
+            ["cell"] = "A1",
+            ["comment"] = "New comment"
+        };
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+        Assert.Contains("No comment found", ex.Message);
+    }
+
+    [Fact]
+    public async Task Add_WithDefaultAuthor_ShouldUseDefaultAuthor()
+    {
+        // Arrange
+        var workbookPath = CreateExcelWorkbook("test_default_author.xlsx");
+        var outputPath = CreateTestFilePath("test_default_author_output.xlsx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "add",
+            ["path"] = workbookPath,
+            ["outputPath"] = outputPath,
+            ["cell"] = "A1",
+            ["comment"] = "Test comment without author"
+        };
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        var workbook = new Workbook(outputPath);
+        var worksheet = workbook.Worksheets[0];
+        var comment = worksheet.Comments["A1"];
+        Assert.NotNull(comment);
+        Assert.Equal("AsposeMCP", comment.Author);
+    }
+
+    [Fact]
+    public async Task Get_WithNoComments_ShouldReturnEmptyResult()
+    {
+        // Arrange
+        var workbookPath = CreateExcelWorkbook("test_no_comments.xlsx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "get",
+            ["path"] = workbookPath
+        };
+
+        // Act
+        var result = await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.Contains("\"count\": 0", result);
+        Assert.Contains("No comments found", result);
     }
 }

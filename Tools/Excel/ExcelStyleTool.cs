@@ -13,13 +13,21 @@ namespace AsposeMcpServer.Tools.Excel;
 /// </summary>
 public class ExcelStyleTool : IAsposeTool
 {
+    /// <summary>
+    ///     Gets the description of the tool and its usage examples.
+    /// </summary>
     public string Description => @"Manage Excel styles. Supports 3 operations: format, get_format, copy_sheet_format.
 
 Usage examples:
 - Format cells: excel_style(operation='format', path='book.xlsx', range='A1:B10', fontName='Arial', fontSize=12, bold=true)
-- Get format: excel_style(operation='get_format', path='book.xlsx', range='A1')
+- Pattern fill: excel_style(operation='format', path='book.xlsx', range='A1', patternType='DiagonalStripe', backgroundColor='#FF0000', patternColor='#FFFFFF')
+- Get format (full): excel_style(operation='get_format', path='book.xlsx', range='A1')
+- Get format (simple): excel_style(operation='get_format', path='book.xlsx', range='A1', fields='font,color')
 - Copy sheet format: excel_style(operation='copy_sheet_format', path='book.xlsx', sourceSheetIndex=0, targetSheetIndex=1)";
 
+    /// <summary>
+    ///     Gets the JSON schema defining the input parameters for the tool.
+    /// </summary>
     public object InputSchema => new
     {
         type = "object",
@@ -66,6 +74,12 @@ Usage examples:
                 description =
                     "Cell address or range (e.g., 'A1' or 'A1:C5', required for get_format, or use range as alternative)"
             },
+            fields = new
+            {
+                type = "string",
+                description =
+                    "Comma-separated list of fields to return for get_format (optional, reduces token usage). Valid values: font, color, alignment, border, number, value, all. Default: all"
+            },
             ranges = new
             {
                 type = "array",
@@ -100,7 +114,19 @@ Usage examples:
             backgroundColor = new
             {
                 type = "string",
-                description = "Background color (hex format like '#FFFF00', optional)"
+                description = "Background/foreground color for fill (hex format like '#FFFF00', optional)"
+            },
+            patternType = new
+            {
+                type = "string",
+                description =
+                    "Fill pattern type (Solid, Gray50, Gray75, Gray25, HorizontalStripe, VerticalStripe, DiagonalStripe, ReverseDiagonalStripe, DiagonalCrosshatch, ThickDiagonalCrosshatch, ThinHorizontalStripe, ThinVerticalStripe, ThinReverseDiagonalStripe, ThinDiagonalStripe, ThinHorizontalCrosshatch, ThinDiagonalCrosshatch, optional, default: Solid)"
+            },
+            patternColor = new
+            {
+                type = "string",
+                description =
+                    "Pattern/background color for pattern fill (hex format, optional, used with patternType for two-color patterns)"
             },
             numberFormat = new
             {
@@ -152,6 +178,7 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments object containing operation parameters</param>
     /// <returns>Result message as a string</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or invalid</exception>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
@@ -174,8 +201,11 @@ Usage examples:
     /// <param name="path">Excel file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing ranges array and various format properties</param>
-    /// <returns>Success message with formatted range count</returns>
+    /// <param name="arguments">JSON arguments containing range/ranges and various format properties</param>
+    /// <returns>Success message with formatted sheet index</returns>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when range/ranges is missing, or color format is invalid
+    /// </exception>
     private Task<string> FormatCellsAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -188,6 +218,8 @@ Usage examples:
             var italic = ArgumentHelper.GetBoolNullable(arguments, "italic");
             var fontColor = ArgumentHelper.GetStringNullable(arguments, "fontColor");
             var backgroundColor = ArgumentHelper.GetStringNullable(arguments, "backgroundColor");
+            var patternType = ArgumentHelper.GetStringNullable(arguments, "patternType");
+            var patternColor = ArgumentHelper.GetStringNullable(arguments, "patternColor");
             var numberFormat = ArgumentHelper.GetStringNullable(arguments, "numberFormat");
             var borderStyle = ArgumentHelper.GetStringNullable(arguments, "borderStyle");
             var borderColor = ArgumentHelper.GetStringNullable(arguments, "borderColor");
@@ -217,11 +249,41 @@ Usage examples:
                     $"Unable to parse font color '{fontColor}': {colorEx.Message}. Please use a valid color format (e.g., #FF0000, 255,0,0, or red)");
             }
 
-            if (!string.IsNullOrWhiteSpace(backgroundColor))
+            if (!string.IsNullOrWhiteSpace(backgroundColor) || !string.IsNullOrWhiteSpace(patternType))
             {
-                // Parse color with error handling - throws ArgumentException on failure
-                style.ForegroundColor = ColorHelper.ParseColor(backgroundColor, true);
-                style.Pattern = BackgroundType.Solid;
+                // Parse pattern type
+                var bgPattern = BackgroundType.Solid;
+                if (!string.IsNullOrWhiteSpace(patternType))
+                    bgPattern = patternType.ToLower() switch
+                    {
+                        "solid" => BackgroundType.Solid,
+                        "gray50" => BackgroundType.Gray50,
+                        "gray75" => BackgroundType.Gray75,
+                        "gray25" => BackgroundType.Gray25,
+                        "horizontalstripe" => BackgroundType.HorizontalStripe,
+                        "verticalstripe" => BackgroundType.VerticalStripe,
+                        "diagonalstripe" => BackgroundType.DiagonalStripe,
+                        "reversediagonalstripe" => BackgroundType.ReverseDiagonalStripe,
+                        "diagonalcrosshatch" => BackgroundType.DiagonalCrosshatch,
+                        "thickdiagonalcrosshatch" => BackgroundType.ThickDiagonalCrosshatch,
+                        "thinhorizontalstripe" => BackgroundType.ThinHorizontalStripe,
+                        "thinverticalstripe" => BackgroundType.ThinVerticalStripe,
+                        "thinreversediagonalstripe" => BackgroundType.ThinReverseDiagonalStripe,
+                        "thindiagonalstripe" => BackgroundType.ThinDiagonalStripe,
+                        "thinhorizontalcrosshatch" => BackgroundType.ThinHorizontalCrosshatch,
+                        "thindiagonalcrosshatch" => BackgroundType.ThinDiagonalCrosshatch,
+                        _ => BackgroundType.Solid
+                    };
+
+                style.Pattern = bgPattern;
+
+                // Set foreground color (primary fill color)
+                if (!string.IsNullOrWhiteSpace(backgroundColor))
+                    style.ForegroundColor = ColorHelper.ParseColor(backgroundColor, true);
+
+                // Set background color (pattern color for two-color patterns)
+                if (!string.IsNullOrWhiteSpace(patternColor))
+                    style.BackgroundColor = ColorHelper.ParseColor(patternColor, true);
             }
 
             if (!string.IsNullOrEmpty(numberFormat))
@@ -312,23 +374,30 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Gets format information for a cell
+    ///     Gets format information for a cell or range
     /// </summary>
     /// <param name="path">Excel file path</param>
     /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing cell</param>
+    /// <param name="arguments">JSON arguments containing cell or range</param>
     /// <returns>JSON string with cell format details</returns>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when neither cell nor range is provided, or the range format is invalid
+    /// </exception>
     private Task<string> GetCellFormatAsync(string path, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
             var cell = ArgumentHelper.GetStringNullable(arguments, "cell");
             var range = ArgumentHelper.GetStringNullable(arguments, "range");
+            var fieldsParam = ArgumentHelper.GetStringNullable(arguments, "fields");
 
             if (string.IsNullOrEmpty(cell) && string.IsNullOrEmpty(range))
                 throw new ArgumentException("Either cell or range is required for get_format operation");
 
             var cellOrRange = cell ?? range!;
+
+            // Parse fields parameter
+            var requestedFields = ParseFields(fieldsParam);
 
             using var workbook = new Workbook(path);
             var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
@@ -342,58 +411,95 @@ Usage examples:
                 var startCol = cellRange.FirstColumn;
                 var endCol = cellRange.FirstColumn + cellRange.ColumnCount - 1;
 
-                var cellList = new List<object>();
+                var cellList = new List<Dictionary<string, object?>>();
                 for (var row = startRow; row <= endRow; row++)
                 for (var col = startCol; col <= endCol; col++)
                 {
                     var cellObj = cells[row, col];
                     var style = cellObj.GetStyle();
 
-                    var topBorder = style.Borders[BorderType.TopBorder];
-                    var bottomBorder = style.Borders[BorderType.BottomBorder];
-                    var leftBorder = style.Borders[BorderType.LeftBorder];
-                    var rightBorder = style.Borders[BorderType.RightBorder];
-
-                    cellList.Add(new
+                    var cellData = new Dictionary<string, object?>
                     {
-                        cell = CellsHelper.CellIndexToName(row, col),
-                        value = cellObj.Value?.ToString() ?? "(empty)",
-                        formula = cellObj.Formula,
-                        dataType = cellObj.Type.ToString(),
-                        format = new
+                        ["cell"] = CellsHelper.CellIndexToName(row, col)
+                    };
+
+                    // Value fields (always include cell address)
+                    if (requestedFields.Contains("value") || requestedFields.Contains("all"))
+                    {
+                        cellData["value"] = cellObj.Value?.ToString() ?? "(empty)";
+                        cellData["formula"] = cellObj.Formula;
+                        cellData["dataType"] = cellObj.Type.ToString();
+                    }
+
+                    var formatData = new Dictionary<string, object?>();
+
+                    // Font fields
+                    if (requestedFields.Contains("font") || requestedFields.Contains("all"))
+                    {
+                        formatData["fontName"] = style.Font.Name;
+                        formatData["fontSize"] = style.Font.Size;
+                        formatData["bold"] = style.Font.IsBold;
+                        formatData["italic"] = style.Font.IsItalic;
+                        formatData["underline"] = style.Font.Underline.ToString();
+                        formatData["strikethrough"] = style.Font.IsStrikeout;
+                    }
+
+                    // Color fields
+                    if (requestedFields.Contains("color") || requestedFields.Contains("all"))
+                    {
+                        formatData["fontColor"] = style.Font.Color.ToString();
+                        formatData["foregroundColor"] = style.ForegroundColor.ToString();
+                        formatData["backgroundColor"] = style.BackgroundColor.ToString();
+                        formatData["patternType"] = style.Pattern.ToString();
+                    }
+
+                    // Alignment fields
+                    if (requestedFields.Contains("alignment") || requestedFields.Contains("all"))
+                    {
+                        formatData["horizontalAlignment"] = style.HorizontalAlignment.ToString();
+                        formatData["verticalAlignment"] = style.VerticalAlignment.ToString();
+                    }
+
+                    // Number format fields
+                    if (requestedFields.Contains("number") || requestedFields.Contains("all"))
+                    {
+                        formatData["numberFormat"] = style.Number;
+                        formatData["customFormat"] = style.Custom;
+                    }
+
+                    // Border fields
+                    if (requestedFields.Contains("border") || requestedFields.Contains("all"))
+                    {
+                        var topBorder = style.Borders[BorderType.TopBorder];
+                        var bottomBorder = style.Borders[BorderType.BottomBorder];
+                        var leftBorder = style.Borders[BorderType.LeftBorder];
+                        var rightBorder = style.Borders[BorderType.RightBorder];
+
+                        formatData["borders"] = new
                         {
-                            fontName = style.Font.Name,
-                            fontSize = style.Font.Size,
-                            bold = style.Font.IsBold,
-                            italic = style.Font.IsItalic,
-                            underline = style.Font.Underline.ToString(),
-                            strikethrough = style.Font.IsStrikeout,
-                            fontColor = style.Font.Color.ToString(),
-                            backgroundColor = style.BackgroundColor.ToString(),
-                            numberFormat = style.Number,
-                            horizontalAlignment = style.HorizontalAlignment.ToString(),
-                            verticalAlignment = style.VerticalAlignment.ToString(),
-                            borders = new
+                            top = new
                             {
-                                top = new
-                                {
-                                    lineStyle = topBorder.LineStyle.ToString(), color = topBorder.Color.ToString()
-                                },
-                                bottom = new
-                                {
-                                    lineStyle = bottomBorder.LineStyle.ToString(), color = bottomBorder.Color.ToString()
-                                },
-                                left = new
-                                {
-                                    lineStyle = leftBorder.LineStyle.ToString(), color = leftBorder.Color.ToString()
-                                },
-                                right = new
-                                {
-                                    lineStyle = rightBorder.LineStyle.ToString(), color = rightBorder.Color.ToString()
-                                }
+                                lineStyle = topBorder.LineStyle.ToString(), color = topBorder.Color.ToString()
+                            },
+                            bottom = new
+                            {
+                                lineStyle = bottomBorder.LineStyle.ToString(), color = bottomBorder.Color.ToString()
+                            },
+                            left = new
+                            {
+                                lineStyle = leftBorder.LineStyle.ToString(), color = leftBorder.Color.ToString()
+                            },
+                            right = new
+                            {
+                                lineStyle = rightBorder.LineStyle.ToString(), color = rightBorder.Color.ToString()
                             }
-                        }
-                    });
+                        };
+                    }
+
+                    if (formatData.Count > 0)
+                        cellData["format"] = formatData;
+
+                    cellList.Add(cellData);
                 }
 
                 var result = new
@@ -401,6 +507,7 @@ Usage examples:
                     count = cellList.Count,
                     worksheetName = worksheet.Name,
                     range = cellOrRange,
+                    fields = fieldsParam ?? "all",
                     items = cellList
                 };
 
@@ -415,12 +522,31 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Copies format from source sheet to destination sheet
+    ///     Parses the fields parameter into a set of field names
+    /// </summary>
+    /// <param name="fieldsParam">Comma-separated list of field names</param>
+    /// <returns>HashSet of normalized field names</returns>
+    private static HashSet<string> ParseFields(string? fieldsParam)
+    {
+        if (string.IsNullOrWhiteSpace(fieldsParam))
+            return ["all"];
+
+        var fields = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var field in fieldsParam.Split(',',
+                     StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            fields.Add(field.ToLower());
+
+        return fields.Count == 0 ? ["all"] : fields;
+    }
+
+    /// <summary>
+    ///     Copies column widths and row heights from source sheet to target sheet
     /// </summary>
     /// <param name="path">Excel file path</param>
     /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing sourceSheetIndex and destSheetIndex</param>
-    /// <returns>Success message with sheet names</returns>
+    /// <param name="arguments">JSON arguments containing sourceSheetIndex and targetSheetIndex</param>
+    /// <returns>Success message with sheet indices</returns>
+    /// <exception cref="ArgumentException">Thrown when sheet index is out of range</exception>
     private Task<string> CopySheetFormatAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>

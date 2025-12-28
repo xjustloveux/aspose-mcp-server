@@ -11,6 +11,9 @@ namespace AsposeMcpServer.Tools.Word;
 /// </summary>
 public class WordPropertiesTool : IAsposeTool
 {
+    /// <summary>
+    ///     Gets the description of the tool and its usage examples
+    /// </summary>
     public string Description => @"Get or set Word document properties (metadata). Supports 2 operations: get, set.
 
 Usage examples:
@@ -22,6 +25,9 @@ Notes:
 - Statistics like word count and page count are automatically calculated by Word and cannot be manually set
 - Custom properties support multiple types: string, number (integer/double), boolean, and datetime (ISO 8601 format)";
 
+    /// <summary>
+    ///     Gets the JSON schema defining the input parameters for the tool
+    /// </summary>
     public object InputSchema => new
     {
         type = "object",
@@ -100,6 +106,7 @@ Notes:
     /// </summary>
     /// <param name="arguments">JSON arguments object containing operation parameters</param>
     /// <returns>Result message as a string</returns>
+    /// <exception cref="ArgumentException">Thrown when operation is unknown or required parameters are missing.</exception>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");

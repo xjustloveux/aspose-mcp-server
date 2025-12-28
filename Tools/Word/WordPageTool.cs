@@ -12,6 +12,9 @@ namespace AsposeMcpServer.Tools.Word;
 /// </summary>
 public class WordPageTool : IAsposeTool
 {
+    /// <summary>
+    ///     Gets the description of the tool and its usage examples
+    /// </summary>
     public string Description =>
         @"Manage page settings in Word documents. Supports 8 operations: set_margins, set_orientation, set_size, set_page_number, set_page_setup, delete_page, insert_blank_page, add_page_break.
 
@@ -24,6 +27,9 @@ Usage examples:
 - Insert blank page: word_page(operation='insert_blank_page', path='doc.docx', insertAtPageIndex=2)
 - Add page break: word_page(operation='add_page_break', path='doc.docx', paragraphIndex=10)";
 
+    /// <summary>
+    ///     Gets the JSON schema defining the input parameters for the tool
+    /// </summary>
     public object InputSchema => new
     {
         type = "object",
@@ -155,6 +161,7 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments object containing operation parameters</param>
     /// <returns>Result message as a string</returns>
+    /// <exception cref="ArgumentException">Thrown when operation is unknown or required parameters are missing.</exception>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");

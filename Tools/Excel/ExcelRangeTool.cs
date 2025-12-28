@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Cells;
@@ -14,6 +13,22 @@ namespace AsposeMcpServer.Tools.Excel;
 /// </summary>
 public class ExcelRangeTool : IAsposeTool
 {
+    private const string OperationWrite = "write";
+    private const string OperationEdit = "edit";
+    private const string OperationGet = "get";
+    private const string OperationClear = "clear";
+    private const string OperationCopy = "copy";
+    private const string OperationMove = "move";
+    private const string OperationCopyFormat = "copy_format";
+
+    /// <summary>
+    ///     Text format number for Aspose.Cells style (formats cell as text).
+    /// </summary>
+    private const int TextFormatNumber = 49;
+
+    /// <summary>
+    ///     Gets the description of the tool and its usage examples.
+    /// </summary>
     public string Description =>
         @"Manage Excel ranges. Supports 7 operations: write, edit, get, clear, copy, move, copy_format.
 
@@ -26,6 +41,9 @@ Usage examples:
 - Move range: excel_range(operation='move', path='book.xlsx', sourceRange='A1:B2', destCell='C1')
 - Copy format: excel_range(operation='copy_format', path='book.xlsx', sourceRange='A1:B2', destCell='C1')";
 
+    /// <summary>
+    ///     Gets the JSON schema defining the input parameters for the tool.
+    /// </summary>
     public object InputSchema => new
     {
         type = "object",
@@ -34,15 +52,19 @@ Usage examples:
             operation = new
             {
                 type = "string",
-                description = @"Operation to perform.
-- 'write': Write data to range (required params: path, startCell, data)
-- 'edit': Edit range data (required params: path, range, data)
-- 'get': Get range data (required params: path, range)
-- 'clear': Clear range (required params: path, range)
-- 'copy': Copy range (required params: path, sourceRange, destCell)
-- 'move': Move range (required params: path, sourceRange, destCell)
-- 'copy_format': Copy format only (required params: path, range or sourceRange, destRange or destCell)",
-                @enum = new[] { "write", "edit", "get", "clear", "copy", "move", "copy_format" }
+                description = $@"Operation to perform.
+- '{OperationWrite}': Write data to range (required params: path, startCell, data)
+- '{OperationEdit}': Edit range data (required params: path, range, data)
+- '{OperationGet}': Get range data (required params: path, range)
+- '{OperationClear}': Clear range (required params: path, range)
+- '{OperationCopy}': Copy range (required params: path, sourceRange, destCell)
+- '{OperationMove}': Move range (required params: path, sourceRange, destCell)
+- '{OperationCopyFormat}': Copy format only (required params: path, range or sourceRange, destRange or destCell)",
+                @enum = new[]
+                {
+                    OperationWrite, OperationEdit, OperationGet, OperationClear, OperationCopy, OperationMove,
+                    OperationCopyFormat
+                }
             },
             path = new
             {
@@ -126,6 +148,12 @@ Usage examples:
                 type = "boolean",
                 description = "Include formulas instead of values (optional, for get, default: false)"
             },
+            calculateFormulas = new
+            {
+                type = "boolean",
+                description =
+                    "Recalculate all formulas before getting values (optional, for get, default: false). Set to true if you need up-to-date formula results."
+            },
             includeFormat = new
             {
                 type = "boolean",
@@ -165,10 +193,11 @@ Usage examples:
     };
 
     /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments
+    ///     Executes the tool operation with the provided JSON arguments.
     /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters</param>
-    /// <returns>Result message as a string</returns>
+    /// <param name="arguments">JSON arguments object containing operation parameters.</param>
+    /// <returns>Result message as a string.</returns>
+    /// <exception cref="ArgumentException">Thrown when operation is unknown or required parameters are missing.</exception>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
@@ -176,27 +205,28 @@ Usage examples:
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
         var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
 
-        return operation.ToLower() switch
+        return operation.ToLowerInvariant() switch
         {
-            "write" => await WriteRangeAsync(path, outputPath, sheetIndex, arguments),
-            "edit" => await EditRangeAsync(path, outputPath, sheetIndex, arguments),
-            "get" => await GetRangeAsync(path, sheetIndex, arguments),
-            "clear" => await ClearRangeAsync(path, outputPath, sheetIndex, arguments),
-            "copy" => await CopyRangeAsync(path, outputPath, sheetIndex, arguments),
-            "move" => await MoveRangeAsync(path, outputPath, sheetIndex, arguments),
-            "copy_format" => await CopyFormatAsync(path, outputPath, sheetIndex, arguments),
+            OperationWrite => await WriteRangeAsync(path, outputPath, sheetIndex, arguments),
+            OperationEdit => await EditRangeAsync(path, outputPath, sheetIndex, arguments),
+            OperationGet => await GetRangeAsync(path, sheetIndex, arguments),
+            OperationClear => await ClearRangeAsync(path, outputPath, sheetIndex, arguments),
+            OperationCopy => await CopyRangeAsync(path, outputPath, sheetIndex, arguments),
+            OperationMove => await MoveRangeAsync(path, outputPath, sheetIndex, arguments),
+            OperationCopyFormat => await CopyFormatAsync(path, outputPath, sheetIndex, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
 
     /// <summary>
-    ///     Writes data to a range starting at the specified cell
+    ///     Writes data to a range starting at the specified cell.
     /// </summary>
-    /// <param name="path">Excel file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing startCell and data array</param>
-    /// <returns>Success message with range location</returns>
+    /// <param name="path">Excel file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="sheetIndex">Worksheet index (0-based).</param>
+    /// <param name="arguments">JSON arguments containing startCell and data array.</param>
+    /// <returns>Success message with range location.</returns>
+    /// <exception cref="ArgumentException">Thrown when sheetIndex is out of range or data format is invalid.</exception>
     private Task<string> WriteRangeAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -215,52 +245,32 @@ Usage examples:
 
             if (is2DArrayFormat && dataArray.Count > 0)
             {
-                // 2D array format: [["value1", "value2"], ["value3", "value4"]]
-                // Use ImportTwoDimensionArray method - this is the official way to import 2D arrays
-                // According to Aspose.Cells documentation, this method avoids cell reference interpretation issues
-
-                // Determine dimensions
+                // 2D array format: use ImportTwoDimensionArray to avoid cell reference interpretation issues
                 var rowCount = dataArray.Count;
                 var colCount = dataArray.Max(item => item is JsonArray arr ? arr.Count : 0);
 
                 if (colCount > 0)
                 {
-                    // Create 2D object array
                     var data2D = new object[rowCount, colCount];
 
                     for (var i = 0; i < rowCount; i++)
                         if (dataArray[i] is JsonArray rowArray)
                             for (var j = 0; j < colCount; j++)
                                 if (j < rowArray.Count)
-                                {
-                                    var cellValue = rowArray[j]?.GetValue<string>() ?? "";
-
-                                    // Parse value as number, boolean, or string
-                                    if (double.TryParse(cellValue, NumberStyles.Any, CultureInfo.InvariantCulture,
-                                            out var numValue))
-                                        data2D[i, j] = numValue;
-                                    else if (bool.TryParse(cellValue, out var boolValue))
-                                        data2D[i, j] = boolValue;
-                                    else
-                                        data2D[i, j] = cellValue;
-                                }
+                                    data2D[i, j] = ExcelHelper.ParseValue(rowArray[j]?.GetValue<string>() ?? "");
                                 else
-                                {
                                     data2D[i, j] = "";
-                                }
 
-                    // Import the 2D array using official method
                     worksheet.Cells.ImportTwoDimensionArray(data2D, startRow, startCol);
 
-                    // After importing, set text format for values that look like cell references
-                    // This ensures they are stored as text, not interpreted as cell references
+                    // Set text format for values that look like cell references
                     for (var i = 0; i < rowCount; i++)
                         if (dataArray[i] is JsonArray rowArray)
                             for (var j = 0; j < rowArray.Count; j++)
                             {
                                 var cellValue = rowArray[j]?.GetValue<string>() ?? "";
 
-                                // Check if value looks like a cell reference
+                                // Check if value looks like a cell reference (e.g., "A2", "B10")
                                 var looksLikeCellRef = cellValue.Length >= 2 &&
                                                        char.IsLetter(cellValue[0]) &&
                                                        ((cellValue.Length is 2 && char.IsDigit(cellValue[1])) ||
@@ -271,15 +281,12 @@ Usage examples:
                                                          !cellValue.Contains(":") &&
                                                          !cellValue.Contains("$")));
 
-                                // If it's not a number or boolean and looks like a cell reference, force text format
-                                if (looksLikeCellRef &&
-                                    !double.TryParse(cellValue, NumberStyles.Any, CultureInfo.InvariantCulture,
-                                        out _) &&
-                                    !bool.TryParse(cellValue, out _))
+                                // If it looks like a cell ref and wasn't parsed as number/bool/date, force text format
+                                if (looksLikeCellRef && ExcelHelper.ParseValue(cellValue) is string)
                                 {
                                     var cellObj = worksheet.Cells[startRow + i, startCol + j];
                                     var style = workbook.CreateStyle();
-                                    style.Number = 49; // Text format
+                                    style.Number = TextFormatNumber;
                                     cellObj.SetStyle(style);
                                     cellObj.PutValue(cellValue, true);
                                 }
@@ -299,18 +306,7 @@ Usage examples:
                         var cellValue = itemObj["value"]?.GetValue<string>() ?? "";
 
                         if (!string.IsNullOrEmpty(cellRef))
-                        {
-                            var cellObj = worksheet.Cells[cellRef];
-
-                            // Parse value as number, boolean, or string
-                            if (double.TryParse(cellValue, NumberStyles.Any, CultureInfo.InvariantCulture,
-                                    out var numValue))
-                                cellObj.PutValue(numValue);
-                            else if (bool.TryParse(cellValue, out var boolValue))
-                                cellObj.PutValue(boolValue);
-                            else
-                                cellObj.PutValue(cellValue);
-                        }
+                            ExcelHelper.SetCellValue(worksheet.Cells[cellRef], cellValue);
                     }
                     else
                     {
@@ -326,13 +322,14 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Edits data in an existing range
+    ///     Edits data in an existing range.
     /// </summary>
-    /// <param name="path">Excel file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing range, data array, and optional clearRange</param>
-    /// <returns>Success message with range information</returns>
+    /// <param name="path">Excel file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="sheetIndex">Worksheet index (0-based).</param>
+    /// <param name="arguments">JSON arguments containing range, data array, and optional clearRange.</param>
+    /// <returns>Success message with range information.</returns>
+    /// <exception cref="ArgumentException">Thrown when sheetIndex is out of range or range format is invalid.</exception>
     private Task<string> EditRangeAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -362,17 +359,7 @@ Usage examples:
                     for (var j = 0; j < rowArray.Count; j++)
                     {
                         var value = rowArray[j]?.GetValue<string>() ?? "";
-                        var cellObj = cells[startRow + i, startCol + j];
-
-                        // Parse value as number, boolean, or string
-                        // Ensures formulas can correctly identify numeric values (same as excel_cell write)
-                        if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var numValue))
-                            // Use PutValue with number to ensure Excel recognizes it as numeric type
-                            cellObj.PutValue(numValue);
-                        else if (bool.TryParse(value, out var boolValue))
-                            cellObj.PutValue(boolValue);
-                        else
-                            cellObj.PutValue(value);
+                        ExcelHelper.SetCellValue(cells[startRow + i, startCol + j], value);
                     }
             }
 
@@ -382,12 +369,13 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Gets data from a range
+    ///     Gets data from a range.
     /// </summary>
-    /// <param name="path">Excel file path</param>
-    /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing range and optional includeFormulas, includeFormat</param>
-    /// <returns>JSON string with range data</returns>
+    /// <param name="path">Excel file path.</param>
+    /// <param name="sheetIndex">Worksheet index (0-based).</param>
+    /// <param name="arguments">JSON arguments containing range and optional includeFormulas, includeFormat, calculateFormulas.</param>
+    /// <returns>JSON string with range data.</returns>
+    /// <exception cref="ArgumentException">Thrown when sheetIndex is out of range or range format is invalid.</exception>
     private Task<string> GetRangeAsync(string path, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -395,14 +383,14 @@ Usage examples:
             var range = ArgumentHelper.GetString(arguments, "range");
             var includeFormulas = ArgumentHelper.GetBool(arguments, "includeFormulas", false);
             var includeFormat = ArgumentHelper.GetBool(arguments, "includeFormat", false);
+            var calculateFormulas = ArgumentHelper.GetBool(arguments, "calculateFormulas", false);
 
             using var workbook = new Workbook(path);
-            if (sheetIndex < 0 || sheetIndex >= workbook.Worksheets.Count)
-                throw new ArgumentException($"sheetIndex must be between 0 and {workbook.Worksheets.Count - 1}");
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
 
-            workbook.CalculateFormula();
+            if (calculateFormulas)
+                workbook.CalculateFormula();
 
-            var worksheet = workbook.Worksheets[sheetIndex];
             var cells = worksheet.Cells;
 
             var cellRange = ExcelHelper.CreateRange(cells, range);
@@ -475,13 +463,14 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Clears content and/or format from a range
+    ///     Clears content and/or format from a range.
     /// </summary>
-    /// <param name="path">Excel file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing range and optional clearContent, clearFormat</param>
-    /// <returns>Success message with cleared range</returns>
+    /// <param name="path">Excel file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="sheetIndex">Worksheet index (0-based).</param>
+    /// <param name="arguments">JSON arguments containing range and optional clearContent, clearFormat.</param>
+    /// <returns>Success message with cleared range.</returns>
+    /// <exception cref="ArgumentException">Thrown when sheetIndex is out of range or range format is invalid.</exception>
     private Task<string> ClearRangeAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -524,16 +513,17 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Copies a range to another location
+    ///     Copies a range to another location.
     /// </summary>
-    /// <param name="path">Excel file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="sheetIndex">Worksheet index (0-based)</param>
+    /// <param name="path">Excel file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="sheetIndex">Worksheet index (0-based).</param>
     /// <param name="arguments">
     ///     JSON arguments containing sourceRange, destCell, optional sourceSheetIndex, destSheetIndex,
-    ///     copyOptions
+    ///     copyOptions.
     /// </param>
-    /// <returns>Success message with copy details</returns>
+    /// <returns>Success message with copy details.</returns>
+    /// <exception cref="ArgumentException">Thrown when sheetIndex is out of range or range format is invalid.</exception>
     private Task<string> CopyRangeAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -578,13 +568,14 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Moves a range to another location
+    ///     Moves a range to another location.
     /// </summary>
-    /// <param name="path">Excel file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing sourceRange, destCell, optional sourceSheetIndex, destSheetIndex</param>
-    /// <returns>Success message with move details</returns>
+    /// <param name="path">Excel file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="sheetIndex">Worksheet index (0-based).</param>
+    /// <param name="arguments">JSON arguments containing sourceRange, destCell, optional sourceSheetIndex, destSheetIndex.</param>
+    /// <returns>Success message with move details.</returns>
+    /// <exception cref="ArgumentException">Thrown when sheetIndex is out of range or range format is invalid.</exception>
     private Task<string> MoveRangeAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -616,13 +607,17 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Copies format (and optionally values) from source range to destination
+    ///     Copies format (and optionally values) from source range to destination.
     /// </summary>
-    /// <param name="path">Excel file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing range or sourceRange, destRange or destCell, optional copyValue</param>
-    /// <returns>Success message with format copy details</returns>
+    /// <param name="path">Excel file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="sheetIndex">Worksheet index (0-based).</param>
+    /// <param name="arguments">JSON arguments containing range or sourceRange, destRange or destCell, optional copyValue.</param>
+    /// <returns>Success message with format copy details.</returns>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when sheetIndex is out of range, range format is invalid, or
+    ///     destRange/destCell is missing.
+    /// </exception>
     private Task<string> CopyFormatAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
     {
         return Task.Run(() =>

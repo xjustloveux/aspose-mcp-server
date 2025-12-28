@@ -7,11 +7,22 @@ namespace AsposeMcpServer.Tools.Excel;
 
 /// <summary>
 ///     Unified tool for managing Excel sheets (add, delete, get, rename, move, copy, hide)
-///     Merges: ExcelAddSheetTool, ExcelDeleteSheetTool, ExcelGetSheetsTool, ExcelRenameSheetTool,
-///     ExcelMoveSheetTool, ExcelCopySheetTool, ExcelHideSheetTool
 /// </summary>
 public class ExcelSheetTool : IAsposeTool
 {
+    private const string OperationAdd = "add";
+    private const string OperationDelete = "delete";
+    private const string OperationGet = "get";
+    private const string OperationRename = "rename";
+    private const string OperationMove = "move";
+    private const string OperationCopy = "copy";
+    private const string OperationHide = "hide";
+
+    private static readonly char[] InvalidSheetNameChars = ['\\', '/', '?', '*', '[', ']', ':'];
+
+    /// <summary>
+    ///     Gets the description of the tool and its usage examples.
+    /// </summary>
     public string Description =>
         @"Manage Excel sheets. Supports 7 operations: add, delete, get, rename, move, copy, hide.
 
@@ -24,6 +35,9 @@ Usage examples:
 - Copy sheet: excel_sheet(operation='copy', path='book.xlsx', sheetIndex=0, newName='Copy')
 - Hide sheet: excel_sheet(operation='hide', path='book.xlsx', sheetIndex=1)";
 
+    /// <summary>
+    ///     Gets the JSON schema defining the input parameters for the tool.
+    /// </summary>
     public object InputSchema => new
     {
         type = "object",
@@ -55,7 +69,7 @@ Usage examples:
             sheetName = new
             {
                 type = "string",
-                description = "Name of the sheet (required for add/rename)"
+                description = "Name of the sheet (required for add operation)"
             },
             newName = new
             {
@@ -96,23 +110,48 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments object containing operation parameters</param>
     /// <returns>Result message as a string</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or invalid</exception>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
         var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
 
-        return operation.ToLower() switch
+        return operation.ToLowerInvariant() switch
         {
-            "add" => await AddSheetAsync(path, outputPath, arguments),
-            "delete" => await DeleteSheetAsync(path, outputPath, arguments),
-            "get" => await GetSheetsAsync(path),
-            "rename" => await RenameSheetAsync(path, outputPath, arguments),
-            "move" => await MoveSheetAsync(path, outputPath, arguments),
-            "copy" => await CopySheetAsync(path, outputPath, arguments),
-            "hide" => await HideSheetAsync(path, outputPath, arguments),
+            OperationAdd => await AddSheetAsync(path, outputPath, arguments),
+            OperationDelete => await DeleteSheetAsync(path, outputPath, arguments),
+            OperationGet => await GetSheetsAsync(path),
+            OperationRename => await RenameSheetAsync(path, outputPath, arguments),
+            OperationMove => await MoveSheetAsync(path, outputPath, arguments),
+            OperationCopy => await CopySheetAsync(path, outputPath, arguments),
+            OperationHide => await HideSheetAsync(path, outputPath, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
+    }
+
+
+    /// <summary>
+    ///     Validates a sheet name according to Excel's naming rules
+    /// </summary>
+    /// <param name="name">The sheet name to validate</param>
+    /// <param name="paramName">The parameter name for error messages</param>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when the name is empty, exceeds 31 characters, or contains invalid characters (\ / ? * [ ] :)
+    /// </exception>
+    private static void ValidateSheetName(string name, string paramName)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException($"{paramName} cannot be empty");
+
+        if (name.Length > 31)
+            throw new ArgumentException(
+                $"{paramName} '{name}' (length: {name.Length}) exceeds Excel's limit of 31 characters");
+
+        var invalidCharIndex = name.IndexOfAny(InvalidSheetNameChars);
+        if (invalidCharIndex >= 0)
+            throw new ArgumentException(
+                $"{paramName} contains invalid character '{name[invalidCharIndex]}'. Sheet names cannot contain: \\ / ? * [ ] :");
     }
 
     /// <summary>
@@ -122,6 +161,9 @@ Usage examples:
     /// <param name="outputPath">Output file path</param>
     /// <param name="arguments">JSON arguments containing sheetName and optional insertAt</param>
     /// <returns>Success message with worksheet name</returns>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when sheetName is invalid, duplicated, or insertAt is out of range
+    /// </exception>
     private Task<string> AddSheetAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -129,7 +171,7 @@ Usage examples:
             var sheetName = ArgumentHelper.GetString(arguments, "sheetName").Trim();
             var insertAt = ArgumentHelper.GetIntNullable(arguments, "insertAt");
 
-            if (string.IsNullOrWhiteSpace(sheetName)) throw new ArgumentException("sheetName cannot be empty");
+            ValidateSheetName(sheetName, "sheetName");
 
             using var workbook = new Workbook(path);
 
@@ -174,6 +216,8 @@ Usage examples:
     /// <param name="outputPath">Output file path</param>
     /// <param name="arguments">JSON arguments containing sheetIndex</param>
     /// <returns>Success message with deleted sheet name</returns>
+    /// <exception cref="ArgumentException">Thrown when sheetIndex is out of range</exception>
+    /// <exception cref="InvalidOperationException">Thrown when trying to delete the last worksheet</exception>
     private Task<string> DeleteSheetAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -246,6 +290,9 @@ Usage examples:
     /// <param name="outputPath">Output file path</param>
     /// <param name="arguments">JSON arguments containing sheetIndex and newName</param>
     /// <returns>Success message with old and new names</returns>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when sheetIndex is out of range, newName is invalid, or duplicated
+    /// </exception>
     private Task<string> RenameSheetAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -253,22 +300,17 @@ Usage examples:
             var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex");
             var newName = ArgumentHelper.GetString(arguments, "newName").Trim();
 
-            if (string.IsNullOrWhiteSpace(newName)) throw new ArgumentException("newName cannot be empty");
+            ValidateSheetName(newName, "newName");
 
             using var workbook = new Workbook(path);
 
             var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
             var oldName = worksheet.Name;
 
-            // Check for duplicate names
             var duplicate = workbook.Worksheets.Any(ws =>
                 ws != worksheet && string.Equals(ws.Name, newName, StringComparison.OrdinalIgnoreCase));
             if (duplicate) throw new ArgumentException($"Worksheet name '{newName}' already exists in the workbook");
 
-            // Check length before setting name (Excel worksheet name limit is 31 characters)
-            if (newName.Length > 31)
-                throw new ArgumentException(
-                    $"Worksheet name '{newName}' (length: {newName.Length}) exceeds Excel's standard limit of 31 characters. Aspose.Cells does not allow worksheet names longer than 31 characters.");
 
             worksheet.Name = newName;
             workbook.Save(outputPath);
@@ -284,6 +326,9 @@ Usage examples:
     /// <param name="outputPath">Output file path</param>
     /// <param name="arguments">JSON arguments containing sheetIndex and targetIndex or insertAt</param>
     /// <returns>Success message with move details</returns>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when sheetIndex or targetIndex/insertAt is out of range, or neither is provided
+    /// </exception>
     private Task<string> MoveSheetAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -311,64 +356,9 @@ Usage examples:
                 return $"Worksheet is already at position {sheetIndex}, no move needed. Output: {path}";
 
             var sheetName = workbook.Worksheets[sheetIndex].Name;
+            var worksheet = workbook.Worksheets[sheetIndex];
 
-            // Use temporary unique name to avoid conflicts during move (Excel sheet name limit: 31 characters)
-            var tempName = $"Temp_{DateTime.Now.Ticks % 1000000}";
-            var tempCounter = 0;
-            while (workbook.Worksheets.Any(ws => ws.Name == tempName))
-            {
-                tempName = $"Temp_{DateTime.Now.Ticks % 1000000}_{tempCounter++}";
-                if (tempName.Length > 31) tempName = tempName.Substring(0, 31);
-            }
-
-            // Use Copy method to duplicate sheet at target position, then remove original
-            try
-            {
-                if (finalTargetIndex < sheetIndex)
-                {
-                    // Moving backward: insert copy at target position first
-                    workbook.Worksheets.Insert(finalTargetIndex, SheetType.Worksheet);
-                    var newSheet = workbook.Worksheets[finalTargetIndex];
-                    var sourceSheet = workbook.Worksheets[sheetIndex + 1];
-                    newSheet.Copy(sourceSheet);
-                    newSheet.Name = tempName;
-                    workbook.Worksheets.RemoveAt(sheetIndex + 1);
-                    newSheet.Name = sheetName;
-                }
-                else
-                {
-                    // Moving forward: copy to target position, then remove original
-                    workbook.Worksheets.Insert(finalTargetIndex, SheetType.Worksheet);
-                    var newSheet = workbook.Worksheets[finalTargetIndex];
-                    var sourceSheet = workbook.Worksheets[sheetIndex];
-                    newSheet.Copy(sourceSheet);
-                    newSheet.Name = tempName;
-                    workbook.Worksheets.RemoveAt(sheetIndex);
-                    newSheet.Name = sheetName;
-                }
-            }
-            catch (Exception ex)
-            {
-                // Clean up temporary sheet if operation fails
-                try
-                {
-                    for (var i = workbook.Worksheets.Count - 1; i >= 0; i--)
-                        if (workbook.Worksheets[i].Name == tempName)
-                        {
-                            workbook.Worksheets.RemoveAt(i);
-                            break;
-                        }
-                }
-                catch (Exception cleanupEx)
-                {
-                    // Ignore cleanup errors
-                    Console.Error.WriteLine($"[WARN] Error during sheet cleanup: {cleanupEx.Message}");
-                }
-
-                throw new ArgumentException(
-                    $"Failed to move sheet: {ex.Message}. Source index: {sheetIndex}, Target index: {finalTargetIndex}, Total sheets: {workbook.Worksheets.Count}");
-            }
-
+            worksheet.MoveTo(finalTargetIndex);
             workbook.Save(outputPath);
 
             return
@@ -377,12 +367,13 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Copies a worksheet with a new name
+    ///     Copies a worksheet within the same workbook or to an external file
     /// </summary>
     /// <param name="path">Excel file path</param>
     /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing sheetIndex, newName, optional targetIndex or copyToPath</param>
+    /// <param name="arguments">JSON arguments containing sheetIndex, optional targetIndex or copyToPath</param>
     /// <returns>Success message with copy details</returns>
+    /// <exception cref="ArgumentException">Thrown when sheetIndex or targetIndex is out of range</exception>
     private Task<string> CopySheetAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -403,15 +394,14 @@ Usage examples:
 
             if (!string.IsNullOrEmpty(copyToPath))
             {
-                // Copy to another workbook
                 using var targetWorkbook = new Workbook();
-                var newSheet = targetWorkbook.Worksheets.Add(sheetName);
-                sourceSheet.Copy(newSheet);
+
+                targetWorkbook.Worksheets[0].Copy(sourceSheet);
+                targetWorkbook.Worksheets[0].Name = sheetName;
                 targetWorkbook.Save(copyToPath);
                 return $"Worksheet '{sheetName}' copied to external file. Output: {copyToPath}";
             }
 
-            // Copy within same workbook
             targetIndex ??= workbook.Worksheets.Count;
 
             if (targetIndex.Value < 0 || targetIndex.Value > workbook.Worksheets.Count)
@@ -419,19 +409,19 @@ Usage examples:
                     $"Target index {targetIndex.Value} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
 
             _ = workbook.Worksheets.AddCopy(sheetIndex);
-            // If specific position is needed, would need to copy and reorder manually
             workbook.Save(outputPath);
             return $"Worksheet '{sheetName}' copied to position {targetIndex.Value}. Output: {outputPath}";
         });
     }
 
     /// <summary>
-    ///     Hides or shows a worksheet
+    ///     Toggles the visibility of a worksheet (hides if visible, shows if hidden)
     /// </summary>
     /// <param name="path">Excel file path</param>
     /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing sheetIndex and optional targetIndex, isVisible</param>
+    /// <param name="arguments">JSON arguments containing sheetIndex</param>
     /// <returns>Success message with visibility status</returns>
+    /// <exception cref="ArgumentException">Thrown when sheetIndex is out of range</exception>
     private Task<string> HideSheetAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>

@@ -12,6 +12,9 @@ namespace AsposeMcpServer.Tools.Word;
 /// </summary>
 public class WordFileTool : IAsposeTool
 {
+    /// <summary>
+    ///     Gets the description of the tool and its usage examples
+    /// </summary>
     public string Description =>
         @"Perform file operations on Word documents. Supports 5 operations: create, create_from_template, convert, merge, split.
 
@@ -30,6 +33,9 @@ Template syntax (LINQ Reporting Engine, use 'ds' as data source prefix):
 - Conditional: <<if [ds.Total > 1000]>>VIP<<else>>Normal<</if>>
 - Image: <<image [ds.ImageBytes]>>";
 
+    /// <summary>
+    ///     Gets the JSON schema defining the input parameters for the tool
+    /// </summary>
     public object InputSchema => new
     {
         type = "object",
@@ -179,6 +185,7 @@ For root arrays: <<foreach [item in ds]>><<[item.Name]>><</foreach>>"
     /// </summary>
     /// <param name="arguments">JSON arguments object containing operation parameters</param>
     /// <returns>Result message as a string</returns>
+    /// <exception cref="ArgumentException">Thrown when operation is unknown or required parameters are missing.</exception>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
