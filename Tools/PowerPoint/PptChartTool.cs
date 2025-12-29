@@ -67,17 +67,38 @@ Note: shapeIndex refers to the chart index (0-based) among all charts on the sli
                 type = "string",
                 description = "Chart title (optional)"
             },
+            x = new
+            {
+                type = "number",
+                description = "Chart X position in points (optional for add, default: 50)"
+            },
+            y = new
+            {
+                type = "number",
+                description = "Chart Y position in points (optional for add, default: 50)"
+            },
+            width = new
+            {
+                type = "number",
+                description = "Chart width in points (optional for add, default: 500)"
+            },
+            height = new
+            {
+                type = "number",
+                description = "Chart height in points (optional for add, default: 400)"
+            },
             data = new
             {
                 type = "object",
-                description = "Chart data object with series and categories (optional, for edit/update_data)",
+                description =
+                    "Chart data object with series and categories (optional, for edit/update_data). Note: categories length should match series.values length.",
                 properties = new
                 {
                     categories = new
                     {
                         type = "array",
                         items = new { type = "string" },
-                        description = "Category labels"
+                        description = "Category labels (e.g., ['Q1', 'Q2', 'Q3'])"
                     },
                     series = new
                     {
@@ -95,7 +116,7 @@ Note: shapeIndex refers to the chart index (0-based) among all charts on the sli
                                 }
                             }
                         },
-                        description = "Series data"
+                        description = "Series data (e.g., [{name: 'Sales', values: [100, 200, 300]}])"
                     }
                 }
             },
@@ -114,11 +135,7 @@ Note: shapeIndex refers to the chart index (0-based) among all charts on the sli
         required = new[] { "operation", "path", "slideIndex" }
     };
 
-    /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments
-    /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters</param>
-    /// <returns>Result message as a string</returns>
+    /// <inheritdoc />
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
@@ -138,38 +155,30 @@ Note: shapeIndex refers to the chart index (0-based) among all charts on the sli
     }
 
     /// <summary>
-    ///     Adds a chart to a slide
+    ///     Adds a chart to a slide.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="slideIndex">Slide index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing chartType, optional title, data, x, y, width, height</param>
-    /// <returns>Success message with chart index</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="slideIndex">Slide index (0-based).</param>
+    /// <param name="arguments">JSON arguments containing chartType, optional title, x, y, width, height.</param>
+    /// <returns>Success message with chart index.</returns>
+    /// <exception cref="ArgumentException">Thrown when slideIndex is out of range.</exception>
     private Task<string> AddChartAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
             var chartTypeStr = ArgumentHelper.GetString(arguments, "chartType");
             var title = ArgumentHelper.GetStringNullable(arguments, "title");
+            var x = ArgumentHelper.GetFloat(arguments, "x", 50);
+            var y = ArgumentHelper.GetFloat(arguments, "y", 50);
+            var width = ArgumentHelper.GetFloat(arguments, "width", 500);
+            var height = ArgumentHelper.GetFloat(arguments, "height", 400);
 
             using var presentation = new Presentation(path);
-            if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
-                throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
+            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
 
-            var slide = presentation.Slides[slideIndex];
-
-            var chartType = chartTypeStr.ToLower() switch
-            {
-                "column" => ChartType.ClusteredColumn,
-                "bar" => ChartType.ClusteredBar,
-                "line" => ChartType.Line,
-                "pie" => ChartType.Pie,
-                "area" => ChartType.Area,
-                "scatter" => ChartType.ScatterWithSmoothLines,
-                _ => ChartType.ClusteredColumn
-            };
-
-            var chart = slide.Shapes.AddChart(chartType, 50, 50, 500, 400);
+            var chartType = ParseChartType(chartTypeStr);
+            var chart = slide.Shapes.AddChart(chartType, x, y, width, height);
 
             if (!string.IsNullOrEmpty(title))
             {
@@ -192,13 +201,14 @@ Note: shapeIndex refers to the chart index (0-based) among all charts on the sli
     }
 
     /// <summary>
-    ///     Edits chart properties
+    ///     Edits chart properties.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="slideIndex">Slide index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing chartIndex, optional title</param>
-    /// <returns>Success message</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="slideIndex">Slide index (0-based).</param>
+    /// <param name="arguments">JSON arguments containing shapeIndex, optional title, chartType.</param>
+    /// <returns>Success message.</returns>
+    /// <exception cref="ArgumentException">Thrown when slideIndex or shapeIndex is out of range.</exception>
     private Task<string> EditChartAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -211,19 +221,7 @@ Note: shapeIndex refers to the chart index (0-based) among all charts on the sli
 
                 using var presentation = new Presentation(path);
                 var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-
-                var charts = slide.Shapes.OfType<IChart>().ToList();
-
-                if (chartIndex < 0 || chartIndex >= charts.Count)
-                {
-                    var totalShapes = slide.Shapes.Count;
-                    var totalCharts = charts.Count;
-                    throw new ArgumentException(
-                        $"Slide {slideIndex} does not contain a chart at index {chartIndex}. " +
-                        $"(Total charts found: {totalCharts}, Total shapes: {totalShapes})");
-                }
-
-                var chart = charts[chartIndex];
+                var chart = GetChartByIndex(slide, chartIndex, slideIndex);
 
                 if (!string.IsNullOrEmpty(title))
                     try
@@ -247,19 +245,7 @@ Note: shapeIndex refers to the chart index (0-based) among all charts on the sli
                 if (!string.IsNullOrEmpty(chartTypeStr))
                     try
                     {
-                        var chartType = chartTypeStr.ToLower() switch
-                        {
-                            "column" => ChartType.ClusteredColumn,
-                            "bar" => ChartType.ClusteredBar,
-                            "line" => ChartType.Line,
-                            "pie" => ChartType.Pie,
-                            "area" => ChartType.Area,
-                            "scatter" => ChartType.ScatterWithSmoothLines,
-                            "doughnut" => ChartType.Doughnut,
-                            "bubble" => ChartType.Bubble,
-                            _ => chart.Type
-                        };
-                        chart.Type = chartType;
+                        chart.Type = ParseChartType(chartTypeStr, chart.Type);
                     }
                     catch (Exception ex)
                     {
@@ -281,13 +267,14 @@ Note: shapeIndex refers to the chart index (0-based) among all charts on the sli
     }
 
     /// <summary>
-    ///     Deletes a chart from a slide
+    ///     Deletes a chart from a slide.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="slideIndex">Slide index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing chartIndex</param>
-    /// <returns>Success message</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="slideIndex">Slide index (0-based).</param>
+    /// <param name="arguments">JSON arguments containing shapeIndex.</param>
+    /// <returns>Success message.</returns>
+    /// <exception cref="ArgumentException">Thrown when slideIndex or shapeIndex is out of range.</exception>
     private Task<string> DeleteChartAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -296,19 +283,8 @@ Note: shapeIndex refers to the chart index (0-based) among all charts on the sli
 
             using var presentation = new Presentation(path);
             var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+            var chart = GetChartByIndex(slide, chartIndex, slideIndex);
 
-            var charts = slide.Shapes.OfType<IChart>().ToList();
-
-            if (chartIndex < 0 || chartIndex >= charts.Count)
-            {
-                var totalShapes = slide.Shapes.Count;
-                var totalCharts = charts.Count;
-                throw new ArgumentException(
-                    $"Chart index {chartIndex} out of range for slide {slideIndex}. " +
-                    $"(Total charts found: {totalCharts}, Total shapes: {totalShapes})");
-            }
-
-            var chart = charts[chartIndex];
             slide.Shapes.Remove(chart);
 
             presentation.Save(outputPath, SaveFormat.Pptx);
@@ -317,12 +293,13 @@ Note: shapeIndex refers to the chart index (0-based) among all charts on the sli
     }
 
     /// <summary>
-    ///     Gets chart data
+    ///     Gets chart data.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="slideIndex">Slide index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing chartIndex</param>
-    /// <returns>JSON string with chart data</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="slideIndex">Slide index (0-based).</param>
+    /// <param name="arguments">JSON arguments containing shapeIndex.</param>
+    /// <returns>JSON string with chart data.</returns>
+    /// <exception cref="ArgumentException">Thrown when slideIndex or shapeIndex is out of range.</exception>
     private Task<string> GetChartDataAsync(string path, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -331,19 +308,7 @@ Note: shapeIndex refers to the chart index (0-based) among all charts on the sli
 
             using var presentation = new Presentation(path);
             var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-
-            var charts = slide.Shapes.OfType<IChart>().ToList();
-
-            if (chartIndex < 0 || chartIndex >= charts.Count)
-            {
-                var totalShapes = slide.Shapes.Count;
-                var totalCharts = charts.Count;
-                throw new ArgumentException(
-                    $"Chart index {chartIndex} out of range for slide {slideIndex}. " +
-                    $"(Total charts found: {totalCharts}, Total shapes: {totalShapes})");
-            }
-
-            var chart = charts[chartIndex];
+            var chart = GetChartByIndex(slide, chartIndex, slideIndex);
             var chartData = chart.ChartData;
 
             // Build categories list
@@ -409,13 +374,14 @@ Note: shapeIndex refers to the chart index (0-based) among all charts on the sli
     }
 
     /// <summary>
-    ///     Updates chart data
+    ///     Updates chart data.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="slideIndex">Slide index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing chartIndex, data</param>
-    /// <returns>Success message</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="slideIndex">Slide index (0-based).</param>
+    /// <param name="arguments">JSON arguments containing shapeIndex, data, clearExisting.</param>
+    /// <returns>Success message.</returns>
+    /// <exception cref="ArgumentException">Thrown when slideIndex or shapeIndex is out of range.</exception>
     private Task<string> UpdateChartDataAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -426,19 +392,7 @@ Note: shapeIndex refers to the chart index (0-based) among all charts on the sli
 
             using var presentation = new Presentation(path);
             var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-
-            var charts = slide.Shapes.OfType<IChart>().ToList();
-
-            if (chartIndex < 0 || chartIndex >= charts.Count)
-            {
-                var totalShapes = slide.Shapes.Count;
-                var totalCharts = charts.Count;
-                throw new ArgumentException(
-                    $"Chart index {chartIndex} out of range for slide {slideIndex}. " +
-                    $"(Total charts found: {totalCharts}, Total shapes: {totalShapes})");
-            }
-
-            var chart = charts[chartIndex];
+            var chart = GetChartByIndex(slide, chartIndex, slideIndex);
 
             var chartData = chart.ChartData;
             var workbook = chartData.ChartDataWorkbook;
@@ -618,5 +572,55 @@ Note: shapeIndex refers to the chart index (0-based) among all charts on the sli
             presentation.Save(outputPath, SaveFormat.Pptx);
             return $"Chart {chartIndex} data updated on slide {slideIndex}. Output: {outputPath}";
         });
+    }
+
+    /// <summary>
+    ///     Gets a chart by index from a slide.
+    /// </summary>
+    /// <param name="slide">The slide to search.</param>
+    /// <param name="chartIndex">Chart index (0-based).</param>
+    /// <param name="slideIndex">Slide index for error messages.</param>
+    /// <returns>The chart at the specified index.</returns>
+    /// <exception cref="ArgumentException">Thrown when chartIndex is out of range or no charts exist.</exception>
+    private static IChart GetChartByIndex(ISlide slide, int chartIndex, int slideIndex)
+    {
+        var charts = slide.Shapes.OfType<IChart>().ToList();
+
+        if (charts.Count == 0)
+            throw new ArgumentException($"Slide {slideIndex} contains no charts.");
+
+        if (chartIndex < 0 || chartIndex >= charts.Count)
+            throw new ArgumentException(
+                $"Chart index {chartIndex} out of range for slide {slideIndex}. " +
+                $"Valid range: 0 to {charts.Count - 1} (Total charts: {charts.Count})");
+
+        return charts[chartIndex];
+    }
+
+    /// <summary>
+    ///     Parses a chart type string to ChartType enum.
+    /// </summary>
+    /// <param name="chartTypeStr">Chart type string.</param>
+    /// <param name="defaultType">Default chart type if parsing fails.</param>
+    /// <returns>Parsed ChartType.</returns>
+    private static ChartType ParseChartType(string? chartTypeStr, ChartType defaultType = ChartType.ClusteredColumn)
+    {
+        if (string.IsNullOrEmpty(chartTypeStr))
+            return defaultType;
+
+        return chartTypeStr.ToLower() switch
+        {
+            "column" => ChartType.ClusteredColumn,
+            "bar" => ChartType.ClusteredBar,
+            "line" => ChartType.Line,
+            "pie" => ChartType.Pie,
+            "area" => ChartType.Area,
+            "scatter" => ChartType.ScatterWithSmoothLines,
+            "doughnut" => ChartType.Doughnut,
+            "bubble" => ChartType.Bubble,
+            "radar" => ChartType.Radar,
+            "treemap" => ChartType.Treemap,
+            _ => defaultType
+        };
     }
 }

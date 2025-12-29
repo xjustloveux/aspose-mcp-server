@@ -221,17 +221,16 @@ public class PptTableToolTests : TestBase
         };
 
         // Act
-        await _tool.ExecuteAsync(arguments);
+        var result = await _tool.ExecuteAsync(arguments);
 
         // Assert
+        Assert.Contains("Row inserted", result);
+        Assert.Contains("3 rows", result);
         using var resultPresentation = new Presentation(outputPath);
         var resultSlide = resultPresentation.Slides[0];
         var tables = resultSlide.Shapes.OfType<ITable>().ToList();
         Assert.True(tables.Count > 0, "Table should exist");
-        // Note: Aspose.Slides has limitations with row insertion at specific index
-        // The InsertRowAsync method notes this limitation and doesn't actually insert rows
-        // We verify the operation completed without error (file was saved)
-        Assert.True(File.Exists(outputPath), "Output file should be created");
+        Assert.Equal(3, tables[0].Rows.Count);
     }
 
     [Fact]
@@ -271,15 +270,16 @@ public class PptTableToolTests : TestBase
         };
 
         // Act
-        await _tool.ExecuteAsync(arguments);
+        var result = await _tool.ExecuteAsync(arguments);
 
         // Assert
+        Assert.Contains("Column inserted", result);
+        Assert.Contains("3 columns", result);
         using var resultPresentation = new Presentation(outputPath);
         var resultSlide = resultPresentation.Slides[0];
         var tables = resultSlide.Shapes.OfType<ITable>().ToList();
         Assert.True(tables.Count > 0, "Table should exist");
-        // Column insertion has limitations in Aspose.Slides - may not insert at specific index
-        Assert.True(tables[0].Columns.Count >= 2, "Table should have at least 2 columns");
+        Assert.Equal(3, tables[0].Columns.Count);
     }
 
     [Fact]
@@ -409,7 +409,7 @@ public class PptTableToolTests : TestBase
             ["shapeIndex"] = shapeIndex,
             ["rowIndex"] = 0,
             ["columnIndex"] = 0,
-            ["cellValue"] = "New Value"
+            ["text"] = "New Value"
         };
 
         // Act
@@ -485,5 +485,158 @@ public class PptTableToolTests : TestBase
         var resultSlide = resultPresentation.Slides[0];
         var tables = resultSlide.Shapes.OfType<ITable>().ToList();
         Assert.Empty(tables);
+    }
+
+    [Fact]
+    public async Task AddTable_WithCustomPosition_ShouldPlaceTableAtPosition()
+    {
+        // Arrange
+        var pptPath = CreatePptPresentation("test_add_table_position.pptx");
+        var outputPath = CreateTestFilePath("test_add_table_position_output.pptx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "add",
+            ["path"] = pptPath,
+            ["outputPath"] = outputPath,
+            ["slideIndex"] = 0,
+            ["rows"] = 2,
+            ["columns"] = 2,
+            ["x"] = 150,
+            ["y"] = 200
+        };
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        using var presentation = new Presentation(outputPath);
+        var slide = presentation.Slides[0];
+        var tables = slide.Shapes.OfType<ITable>().ToList();
+        Assert.NotEmpty(tables);
+        Assert.Equal(150, tables[0].X, 1);
+        Assert.Equal(200, tables[0].Y, 1);
+    }
+
+    [Fact]
+    public async Task InsertRow_AtEnd_ShouldAppendRow()
+    {
+        // Arrange
+        var pptPath = CreatePptPresentation("test_insert_row_end.pptx");
+        var addOutputPath = CreateTestFilePath("test_insert_row_end_added.pptx");
+        var addArguments = new JsonObject
+        {
+            ["operation"] = "add",
+            ["path"] = pptPath,
+            ["outputPath"] = addOutputPath,
+            ["slideIndex"] = 0,
+            ["rows"] = 2,
+            ["columns"] = 2
+        };
+        await _tool.ExecuteAsync(addArguments);
+
+        var shapeIndex = FindTableShapeIndex(addOutputPath, 0);
+        Assert.True(shapeIndex >= 0, "Table should be found");
+
+        var outputPath = CreateTestFilePath("test_insert_row_end_output.pptx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "insert_row",
+            ["path"] = addOutputPath,
+            ["outputPath"] = outputPath,
+            ["slideIndex"] = 0,
+            ["shapeIndex"] = shapeIndex,
+            ["rowIndex"] = 2
+        };
+
+        // Act
+        var result = await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.Contains("Row inserted at index 2", result);
+        using var resultPresentation = new Presentation(outputPath);
+        var tables = resultPresentation.Slides[0].Shapes.OfType<ITable>().ToList();
+        Assert.Equal(3, tables[0].Rows.Count);
+    }
+
+    [Fact]
+    public async Task InsertRow_OutOfRange_ShouldThrow()
+    {
+        // Arrange
+        var pptPath = CreatePptPresentation("test_insert_row_oor.pptx");
+        var addOutputPath = CreateTestFilePath("test_insert_row_oor_added.pptx");
+        var addArguments = new JsonObject
+        {
+            ["operation"] = "add",
+            ["path"] = pptPath,
+            ["outputPath"] = addOutputPath,
+            ["slideIndex"] = 0,
+            ["rows"] = 2,
+            ["columns"] = 2
+        };
+        await _tool.ExecuteAsync(addArguments);
+
+        var shapeIndex = FindTableShapeIndex(addOutputPath, 0);
+        Assert.True(shapeIndex >= 0, "Table should be found");
+
+        var arguments = new JsonObject
+        {
+            ["operation"] = "insert_row",
+            ["path"] = addOutputPath,
+            ["slideIndex"] = 0,
+            ["shapeIndex"] = shapeIndex,
+            ["rowIndex"] = 99
+        };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+    }
+
+    [Fact]
+    public async Task InsertColumn_OutOfRange_ShouldThrow()
+    {
+        // Arrange
+        var pptPath = CreatePptPresentation("test_insert_column_oor.pptx");
+        var addOutputPath = CreateTestFilePath("test_insert_column_oor_added.pptx");
+        var addArguments = new JsonObject
+        {
+            ["operation"] = "add",
+            ["path"] = pptPath,
+            ["outputPath"] = addOutputPath,
+            ["slideIndex"] = 0,
+            ["rows"] = 2,
+            ["columns"] = 2
+        };
+        await _tool.ExecuteAsync(addArguments);
+
+        var shapeIndex = FindTableShapeIndex(addOutputPath, 0);
+        Assert.True(shapeIndex >= 0, "Table should be found");
+
+        var arguments = new JsonObject
+        {
+            ["operation"] = "insert_column",
+            ["path"] = addOutputPath,
+            ["slideIndex"] = 0,
+            ["shapeIndex"] = shapeIndex,
+            ["columnIndex"] = 99
+        };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_UnknownOperation_ShouldThrow()
+    {
+        // Arrange
+        var pptPath = CreatePptPresentation("test_unknown_op.pptx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "unknown",
+            ["path"] = pptPath,
+            ["slideIndex"] = 0
+        };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
     }
 }

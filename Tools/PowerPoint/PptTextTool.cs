@@ -13,6 +13,9 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 public class PptTextTool : IAsposeTool
 {
     public string Description => @"Manage PowerPoint text. Supports 3 operations: add, edit, replace.
+Searches text in AutoShapes, GroupShapes (recursive), and Table cells.
+
+Coordinate unit: 1 inch = 72 points.
 
 Usage examples:
 - Add text: ppt_text(operation='add', path='presentation.pptx', slideIndex=0, text='Hello World', x=100, y=100)
@@ -71,22 +74,22 @@ Usage examples:
             x = new
             {
                 type = "number",
-                description = "X position (optional, for add, default: 50)"
+                description = "X position in points (optional, for add, default: 50)"
             },
             y = new
             {
                 type = "number",
-                description = "Y position (optional, for add, default: 50)"
+                description = "Y position in points (optional, for add, default: 50)"
             },
             width = new
             {
                 type = "number",
-                description = "Text box width (optional, for add, default: 400)"
+                description = "Text box width in points (optional, for add, default: 400)"
             },
             height = new
             {
                 type = "number",
-                description = "Text box height (optional, for add, default: 100)"
+                description = "Text box height in points (optional, for add, default: 100)"
             },
             outputPath = new
             {
@@ -98,10 +101,11 @@ Usage examples:
     };
 
     /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments
+    ///     Executes the tool operation with the provided JSON arguments.
     /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters</param>
-    /// <returns>Result message as a string</returns>
+    /// <param name="arguments">JSON arguments object containing operation parameters.</param>
+    /// <returns>Result message as a string.</returns>
+    /// <exception cref="ArgumentException">Thrown when operation is unknown.</exception>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
@@ -118,12 +122,12 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Adds text to a slide
+    ///     Adds a text box to a slide.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing slideIndex, text, optional x, y, width, height</param>
-    /// <returns>Success message</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="arguments">JSON arguments containing slideIndex, text, optional x, y, width, height.</param>
+    /// <returns>Success message.</returns>
     private Task<string> AddTextAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -138,11 +142,8 @@ Usage examples:
             using var presentation = new Presentation(path);
             var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
 
-            // Create text box
             var textBox = slide.Shapes.AddAutoShape(ShapeType.Rectangle, x, y, width, height);
             textBox.TextFrame.Text = text;
-
-            // Set fill and line to transparent for a clean text box appearance
             textBox.FillFormat.FillType = FillType.NoFill;
             textBox.LineFormat.FillFormat.FillType = FillType.NoFill;
 
@@ -153,12 +154,13 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Edits text on a slide
+    ///     Edits text in a shape on a slide.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing slideIndex, shapeIndex, text</param>
-    /// <returns>Success message</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="arguments">JSON arguments containing slideIndex, shapeIndex, text.</param>
+    /// <returns>Success message.</returns>
+    /// <exception cref="ArgumentException">Thrown when shape is not an AutoShape.</exception>
     private Task<string> EditTextAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -169,26 +171,21 @@ Usage examples:
 
             using var presentation = new Presentation(path);
             var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-
             var shape = PowerPointHelper.GetShape(slide, shapeIndex);
 
-            if (shape is IAutoShape autoShape)
-            {
-                if (autoShape.TextFrame == null)
-                    autoShape.AddTextFrame("");
-
-                if (autoShape.TextFrame != null)
-                {
-                    autoShape.TextFrame.Paragraphs.Clear();
-                    var paragraph = new Paragraph();
-                    paragraph.Portions.Add(new Portion(text));
-                    autoShape.TextFrame.Paragraphs.Add(paragraph);
-                }
-            }
-            else
-            {
+            if (shape is not IAutoShape autoShape)
                 throw new ArgumentException(
                     $"Shape at index {shapeIndex} (Type: {shape.GetType().Name}) is not an AutoShape and cannot contain text");
+
+            if (autoShape.TextFrame == null)
+                autoShape.AddTextFrame("");
+
+            if (autoShape.TextFrame != null)
+            {
+                autoShape.TextFrame.Paragraphs.Clear();
+                var paragraph = new Paragraph();
+                paragraph.Portions.Add(new Portion(text));
+                autoShape.TextFrame.Paragraphs.Add(paragraph);
             }
 
             presentation.Save(outputPath, SaveFormat.Pptx);
@@ -197,12 +194,12 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Replaces text in the presentation
+    ///     Replaces text in the presentation across all shapes including GroupShapes and Tables.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing findText, replaceText, optional matchCase</param>
-    /// <returns>Success message with replacement count</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="arguments">JSON arguments containing findText, replaceText, optional matchCase.</param>
+    /// <returns>Success message with replacement count.</returns>
     private Task<string> ReplaceTextAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -215,26 +212,8 @@ Usage examples:
             var comparison = matchCase ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
             var replacements = 0;
 
-            // Iterate through all slides and shapes
             foreach (var slide in presentation.Slides)
-            foreach (var shape in slide.Shapes)
-                if (shape is IAutoShape { TextFrame: not null } autoShape)
-                {
-                    // Replace text at TextFrame level to better preserve formatting
-                    // This approach handles text that spans multiple Portions better
-                    var originalText = autoShape.TextFrame.Text;
-                    if (string.IsNullOrEmpty(originalText)) continue;
-
-                    var newText = ReplaceAll(originalText, findText, replaceText, comparison);
-                    if (newText != originalText)
-                    {
-                        // Replace the entire TextFrame text, which preserves paragraph structure
-                        // Note: This will reset formatting to default, but avoids breaking text across Portions
-                        // For better formatting preservation, we could use a more sophisticated approach
-                        autoShape.TextFrame.Text = newText;
-                        replacements++;
-                    }
-                }
+                replacements += ProcessShapesForReplace(slide.Shapes, findText, replaceText, comparison);
 
             presentation.Save(outputPath, SaveFormat.Pptx);
             return $"Replaced '{findText}' with '{replaceText}' ({replacements} occurrences). Output: {outputPath}";
@@ -242,8 +221,96 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Replaces all occurrences of a string in source with replacement string
+    ///     Recursively processes shapes for text replacement, including GroupShapes and Tables.
     /// </summary>
+    /// <param name="shapes">Shape collection to process.</param>
+    /// <param name="findText">Text to find.</param>
+    /// <param name="replaceText">Text to replace with.</param>
+    /// <param name="comparison">String comparison mode.</param>
+    /// <returns>Number of replacements made.</returns>
+    private static int ProcessShapesForReplace(IShapeCollection shapes, string findText, string replaceText,
+        StringComparison comparison)
+    {
+        var replacements = 0;
+
+        foreach (var shape in shapes)
+            switch (shape)
+            {
+                case IAutoShape { TextFrame: not null } autoShape:
+                    replacements += ReplaceInTextFrame(autoShape.TextFrame, findText, replaceText, comparison);
+                    break;
+                case IGroupShape groupShape:
+                    replacements += ProcessShapesForReplace(groupShape.Shapes, findText, replaceText, comparison);
+                    break;
+                case ITable table:
+                    replacements += ReplaceInTable(table, findText, replaceText, comparison);
+                    break;
+            }
+
+        return replacements;
+    }
+
+    /// <summary>
+    ///     Replaces text in a TextFrame while preserving formatting at the Portion level.
+    /// </summary>
+    /// <param name="textFrame">TextFrame to process.</param>
+    /// <param name="findText">Text to find.</param>
+    /// <param name="replaceText">Text to replace with.</param>
+    /// <param name="comparison">String comparison mode.</param>
+    /// <returns>1 if replacement was made, 0 otherwise.</returns>
+    private static int ReplaceInTextFrame(ITextFrame textFrame, string findText, string replaceText,
+        StringComparison comparison)
+    {
+        var originalText = textFrame.Text;
+        if (string.IsNullOrEmpty(originalText)) return 0;
+
+        if (originalText.IndexOf(findText, comparison) < 0) return 0;
+
+        foreach (var para in textFrame.Paragraphs)
+        foreach (var portion in para.Portions)
+        {
+            var portionText = portion.Text;
+            if (string.IsNullOrEmpty(portionText)) continue;
+
+            var newText = ReplaceAll(portionText, findText, replaceText, comparison);
+            if (newText != portionText)
+                portion.Text = newText;
+        }
+
+        return 1;
+    }
+
+    /// <summary>
+    ///     Replaces text in all cells of a table.
+    /// </summary>
+    /// <param name="table">Table to process.</param>
+    /// <param name="findText">Text to find.</param>
+    /// <param name="replaceText">Text to replace with.</param>
+    /// <param name="comparison">String comparison mode.</param>
+    /// <returns>Number of cells where replacement was made.</returns>
+    private static int ReplaceInTable(ITable table, string findText, string replaceText, StringComparison comparison)
+    {
+        var replacements = 0;
+
+        for (var row = 0; row < table.Rows.Count; row++)
+        for (var col = 0; col < table.Columns.Count; col++)
+        {
+            var cell = table[col, row];
+            if (cell.TextFrame != null)
+                replacements += ReplaceInTextFrame(cell.TextFrame, findText, replaceText, comparison);
+        }
+
+        return replacements;
+    }
+
+    /// <summary>
+    ///     Replaces all occurrences of a string in source with replacement string.
+    /// </summary>
+    /// <param name="source">Source string.</param>
+    /// <param name="find">Text to find.</param>
+    /// <param name="replace">Text to replace with.</param>
+    /// <param name="comparison">String comparison mode.</param>
+    /// <returns>String with replacements made.</returns>
     private static string ReplaceAll(string source, string find, string replace, StringComparison comparison)
     {
         if (string.IsNullOrEmpty(source) || string.IsNullOrEmpty(find)) return source;

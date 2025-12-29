@@ -1,6 +1,8 @@
-using System.Globalization;
+using System.Drawing.Imaging;
 using Aspose.Cells;
 using Aspose.Slides;
+using Aspose.Slides.Charts;
+using Aspose.Slides.SmartArt;
 using Cell = Aspose.Cells.Cell;
 using Range = Aspose.Cells.Range;
 
@@ -135,23 +137,6 @@ public static class ExcelHelper
     }
 
     /// <summary>
-    ///     Parses a string value to appropriate type (number, boolean, date, or string).
-    ///     Useful for building arrays or collections with typed values.
-    /// </summary>
-    /// <param name="value">String value to parse.</param>
-    /// <returns>Parsed value as double, bool, DateTime, or original string.</returns>
-    public static object ParseValue(string value)
-    {
-        if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var numValue))
-            return numValue;
-        if (bool.TryParse(value, out var boolValue))
-            return boolValue;
-        if (DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateValue))
-            return dateValue;
-        return value;
-    }
-
-    /// <summary>
     ///     Sets cell value with automatic type conversion (number, boolean, date, or string).
     ///     This ensures formulas can correctly identify numeric values.
     /// </summary>
@@ -159,7 +144,7 @@ public static class ExcelHelper
     /// <param name="value">String value to parse and set.</param>
     public static void SetCellValue(Cell cell, string value)
     {
-        cell.PutValue(ParseValue(value));
+        cell.PutValue(ArgumentHelper.ParseValue(value));
     }
 }
 
@@ -247,5 +232,125 @@ public static class PowerPointHelper
         if (index < 0 || index >= count)
             throw new ArgumentException(
                 $"{itemName} index {index} is out of range (collection has {count} {itemName.ToLower()}s)");
+    }
+
+    /// <summary>
+    ///     Extracts text from a shape recursively, including tables, SmartArt, and group shapes.
+    /// </summary>
+    /// <param name="shape">The shape to extract text from.</param>
+    /// <param name="textContent">List to add extracted text.</param>
+    public static void ExtractTextFromShape(IShape shape, List<string> textContent)
+    {
+        switch (shape)
+        {
+            case IAutoShape { TextFrame.Text: var text } when !string.IsNullOrWhiteSpace(text):
+                textContent.Add(text);
+                break;
+            case ITable table:
+                foreach (var row in table.Rows)
+                foreach (var cell in row)
+                    if (!string.IsNullOrWhiteSpace(cell.TextFrame?.Text))
+                        textContent.Add(cell.TextFrame.Text);
+                break;
+            case ISmartArt smartArt:
+                foreach (var node in smartArt.AllNodes)
+                    if (!string.IsNullOrWhiteSpace(node.TextFrame?.Text))
+                        textContent.Add(node.TextFrame.Text);
+                break;
+            case IGroupShape groupShape:
+                foreach (var childShape in groupShape.Shapes)
+                    ExtractTextFromShape(childShape, textContent);
+                break;
+        }
+    }
+
+    /// <summary>
+    ///     Counts text characters in a shape recursively.
+    /// </summary>
+    /// <param name="shape">The shape to count characters from.</param>
+    /// <returns>Total character count.</returns>
+    public static int CountTextCharacters(IShape shape)
+    {
+        var count = 0;
+        switch (shape)
+        {
+            case IAutoShape { TextFrame.Text: var text } when !string.IsNullOrWhiteSpace(text):
+                count += text.Length;
+                break;
+            case ITable table:
+                foreach (var row in table.Rows)
+                foreach (var cell in row)
+                    if (!string.IsNullOrWhiteSpace(cell.TextFrame?.Text))
+                        count += cell.TextFrame.Text.Length;
+                break;
+            case ISmartArt smartArt:
+                foreach (var node in smartArt.AllNodes)
+                    if (!string.IsNullOrWhiteSpace(node.TextFrame?.Text))
+                        count += node.TextFrame.Text.Length;
+                break;
+            case IGroupShape groupShape:
+                foreach (var childShape in groupShape.Shapes)
+                    count += CountTextCharacters(childShape);
+                break;
+        }
+
+        return count;
+    }
+
+    /// <summary>
+    ///     Counts shape types for statistics.
+    /// </summary>
+    /// <param name="shape">The shape to categorize.</param>
+    /// <param name="images">Reference to images count.</param>
+    /// <param name="tables">Reference to tables count.</param>
+    /// <param name="charts">Reference to charts count.</param>
+    /// <param name="smartArt">Reference to SmartArt count.</param>
+    /// <param name="audio">Reference to audio count.</param>
+    /// <param name="video">Reference to video count.</param>
+    public static void CountShapeTypes(IShape shape, ref int images, ref int tables, ref int charts,
+        ref int smartArt, ref int audio, ref int video)
+    {
+        switch (shape)
+        {
+            case PictureFrame:
+                images++;
+                break;
+            case ITable:
+                tables++;
+                break;
+            case IChart:
+                charts++;
+                break;
+            case ISmartArt:
+                smartArt++;
+                break;
+            case IAudioFrame:
+                audio++;
+                break;
+            case IVideoFrame:
+                video++;
+                break;
+            case IGroupShape groupShape:
+                foreach (var childShape in groupShape.Shapes)
+                    CountShapeTypes(childShape, ref images, ref tables, ref charts, ref smartArt, ref audio, ref video);
+                break;
+        }
+    }
+
+    /// <summary>
+    ///     Generates a thumbnail image of a slide as Base64 encoded PNG.
+    /// </summary>
+    /// <param name="slide">The slide to generate thumbnail from.</param>
+    /// <param name="scaleX">Horizontal scale factor (default 0.5 = 50%).</param>
+    /// <param name="scaleY">Vertical scale factor (default 0.5 = 50%).</param>
+    /// <returns>Base64 encoded PNG image string.</returns>
+    public static string GenerateThumbnail(ISlide slide, float scaleX = 0.5f, float scaleY = 0.5f)
+    {
+        using var bitmap = slide.GetThumbnail(scaleX, scaleY);
+        using var stream = new MemoryStream();
+#pragma warning disable CA1416 // Validate platform compatibility
+        bitmap.Save(stream, ImageFormat.Png);
+#pragma warning restore CA1416 // Validate platform compatibility
+        return Convert.ToBase64String(stream.ToArray());
     }
 }

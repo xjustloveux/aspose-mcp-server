@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Slides;
 using Aspose.Slides.Export;
@@ -7,16 +7,22 @@ using AsposeMcpServer.Core;
 namespace AsposeMcpServer.Tools.PowerPoint;
 
 /// <summary>
-///     Unified tool for managing PowerPoint document properties (get, set)
-///     Merges: PptGetDocumentPropertiesTool, PptSetDocumentPropertiesTool, PptSetPropertiesTool
+///     Unified tool for managing PowerPoint document properties (get, set).
+///     Uses IPresentationInfo for efficient property reading without loading entire presentation.
 /// </summary>
 public class PptPropertiesTool : IAsposeTool
 {
+    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
+
     public string Description => @"Manage PowerPoint document properties. Supports 2 operations: get, set.
+
+Warning: If outputPath is not provided for 'set' operation, the original file will be overwritten.
+Note: Custom properties support multiple types: string, int, double, bool, DateTime (ISO format).
 
 Usage examples:
 - Get properties: ppt_properties(operation='get', path='presentation.pptx')
-- Set properties: ppt_properties(operation='set', path='presentation.pptx', title='Title', author='Author', subject='Subject')";
+- Set properties: ppt_properties(operation='set', path='presentation.pptx', title='Title', author='Author')
+- Set custom properties: ppt_properties(operation='set', path='presentation.pptx', customProperties={'Count': 42, 'IsPublished': true})";
 
     public object InputSchema => new
     {
@@ -79,7 +85,8 @@ Usage examples:
             customProperties = new
             {
                 type = "object",
-                description = "Custom properties as key-value pairs (optional, for set)"
+                description =
+                    "Custom properties as key-value pairs. Supports: string, int, double, bool, DateTime (ISO format). Example: {'Count': 42, 'IsPublished': true}"
             },
             outputPath = new
             {
@@ -91,10 +98,11 @@ Usage examples:
     };
 
     /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments
+    ///     Executes the tool operation with the provided JSON arguments.
     /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters</param>
-    /// <returns>Result message as a string</returns>
+    /// <param name="arguments">JSON arguments object containing operation parameters.</param>
+    /// <returns>Result message as a string.</returns>
+    /// <exception cref="ArgumentException">Thrown when operation is unknown.</exception>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
@@ -110,16 +118,17 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Gets presentation properties
+    ///     Gets presentation properties using IPresentationInfo for efficiency.
+    ///     This method reads properties without loading the entire presentation.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <returns>JSON string with properties</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <returns>JSON string with properties.</returns>
     private Task<string> GetPropertiesAsync(string path)
     {
         return Task.Run(() =>
         {
-            using var presentation = new Presentation(path);
-            var props = presentation.DocumentProperties;
+            var info = PresentationFactory.Instance.GetPresentationInfo(path);
+            var props = info.ReadDocumentProperties();
 
             var result = new
             {
@@ -136,17 +145,17 @@ Usage examples:
                 revisionNumber = props.RevisionNumber
             };
 
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(result, JsonOptions);
         });
     }
 
     /// <summary>
-    ///     Sets presentation properties
+    ///     Sets presentation properties.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing various property values</param>
-    /// <returns>Success message</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="arguments">JSON arguments containing various property values.</param>
+    /// <returns>Success message with list of updated properties.</returns>
     private Task<string> SetPropertiesAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -215,7 +224,8 @@ Usage examples:
 
             if (customProps != null)
             {
-                foreach (var kvp in customProps) props[kvp.Key] = kvp.Value?.GetValue<string>() ?? "";
+                foreach (var kvp in customProps)
+                    props[kvp.Key] = ArgumentHelper.ConvertToObject(kvp.Value);
                 changes.Add("CustomProperties");
             }
 

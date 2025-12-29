@@ -257,7 +257,7 @@ Usage examples:
                         if (dataArray[i] is JsonArray rowArray)
                             for (var j = 0; j < colCount; j++)
                                 if (j < rowArray.Count)
-                                    data2D[i, j] = ExcelHelper.ParseValue(rowArray[j]?.GetValue<string>() ?? "");
+                                    data2D[i, j] = ArgumentHelper.ParseValue(rowArray[j]?.GetValue<string>() ?? "");
                                 else
                                     data2D[i, j] = "";
 
@@ -282,7 +282,7 @@ Usage examples:
                                                          !cellValue.Contains("$")));
 
                                 // If it looks like a cell ref and wasn't parsed as number/bool/date, force text format
-                                if (looksLikeCellRef && ExcelHelper.ParseValue(cellValue) is string)
+                                if (looksLikeCellRef && ArgumentHelper.ParseValue(cellValue) is string)
                                 {
                                     var cellObj = worksheet.Cells[startRow + i, startCol + j];
                                     var style = workbook.CreateStyle();

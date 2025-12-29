@@ -170,4 +170,85 @@ public class PptChartToolTests : TestBase
         Assert.True(chartsAfter < chartsBefore,
             $"Chart should be deleted. Before: {chartsBefore}, After: {chartsAfter}");
     }
+
+    [Fact]
+    public async Task AddChart_WithCustomPosition_ShouldUseProvidedValues()
+    {
+        var pptPath = CreateTestPresentation("test_add_chart_position.pptx");
+        var outputPath = CreateTestFilePath("test_add_chart_position_output.pptx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "add",
+            ["path"] = pptPath,
+            ["outputPath"] = outputPath,
+            ["slideIndex"] = 0,
+            ["chartType"] = "Bar",
+            ["x"] = 150,
+            ["y"] = 200,
+            ["width"] = 350,
+            ["height"] = 250
+        };
+
+        await _tool.ExecuteAsync(arguments);
+
+        using var presentation = new Presentation(outputPath);
+        var chart = presentation.Slides[0].Shapes.OfType<IChart>().First();
+        Assert.Equal(150, chart.X);
+        Assert.Equal(200, chart.Y);
+        Assert.Equal(350, chart.Width);
+        Assert.Equal(250, chart.Height);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_UnknownOperation_ShouldThrow()
+    {
+        var pptPath = CreateTestPresentation("test_unknown_op.pptx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "unknown",
+            ["path"] = pptPath,
+            ["slideIndex"] = 0
+        };
+
+        await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+    }
+
+    [Fact]
+    public async Task GetChartData_NoChartsOnSlide_ShouldThrow()
+    {
+        var pptPath = CreateTestPresentation("test_no_charts.pptx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "get_data",
+            ["path"] = pptPath,
+            ["slideIndex"] = 0,
+            ["shapeIndex"] = 0
+        };
+
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+        Assert.Contains("no charts", ex.Message);
+    }
+
+    [Fact]
+    public async Task EditChart_InvalidChartIndex_ShouldThrow()
+    {
+        var pptPath = CreateTestPresentation("test_invalid_index.pptx");
+        using (var ppt = new Presentation(pptPath))
+        {
+            ppt.Slides[0].Shapes.AddChart(ChartType.ClusteredColumn, 100, 100, 400, 300);
+            ppt.Save(pptPath, SaveFormat.Pptx);
+        }
+
+        var arguments = new JsonObject
+        {
+            ["operation"] = "edit",
+            ["path"] = pptPath,
+            ["slideIndex"] = 0,
+            ["shapeIndex"] = 99,
+            ["title"] = "Test"
+        };
+
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+        Assert.Contains("out of range", ex.Message);
+    }
 }

@@ -15,7 +15,9 @@ public class PptHyperlinkTool : IAsposeTool
     public string Description => @"Manage PowerPoint hyperlinks. Supports 4 operations: add, edit, delete, get.
 
 Usage examples:
-- Add hyperlink: ppt_hyperlink(operation='add', path='presentation.pptx', slideIndex=0, text='Link', url='https://example.com')
+- Add hyperlink (URL, shape-level): ppt_hyperlink(operation='add', path='presentation.pptx', slideIndex=0, text='Click here', url='https://example.com')
+- Add hyperlink (URL, text-level): ppt_hyperlink(operation='add', path='presentation.pptx', slideIndex=0, text='Please click here for more info', linkText='here', url='https://example.com')
+- Add hyperlink (internal): ppt_hyperlink(operation='add', path='presentation.pptx', slideIndex=0, text='Go to slide 5', slideTargetIndex=4)
 - Edit hyperlink: ppt_hyperlink(operation='edit', path='presentation.pptx', slideIndex=0, shapeIndex=0, url='https://newurl.com')
 - Delete hyperlink: ppt_hyperlink(operation='delete', path='presentation.pptx', slideIndex=0, shapeIndex=0)
 - Get hyperlinks: ppt_hyperlink(operation='get', path='presentation.pptx', slideIndex=0)";
@@ -29,10 +31,10 @@ Usage examples:
             {
                 type = "string",
                 description = @"Operation to perform.
-- 'add': Add hyperlink to shape (required params: path, slideIndex, text, url)
-- 'edit': Edit hyperlink (required params: path, slideIndex, shapeIndex, url)
+- 'add': Add hyperlink to shape (required params: path, slideIndex, text, url or slideTargetIndex)
+- 'edit': Edit hyperlink (required params: path, slideIndex, shapeIndex, url or slideTargetIndex)
 - 'delete': Delete hyperlink (required params: path, slideIndex, shapeIndex)
-- 'get': Get all hyperlinks (required params: path, slideIndex)",
+- 'get': Get all hyperlinks (required params: path)",
                 @enum = new[] { "add", "edit", "delete", "get" }
             },
             path = new
@@ -55,6 +57,12 @@ Usage examples:
                 type = "string",
                 description = "Display text (required for add)"
             },
+            linkText = new
+            {
+                type = "string",
+                description =
+                    "Specific text to apply hyperlink to (optional, for add). When provided, only this text portion will have the hyperlink. When omitted, the entire shape will be clickable."
+            },
             url = new
             {
                 type = "string",
@@ -63,7 +71,7 @@ Usage examples:
             slideTargetIndex = new
             {
                 type = "number",
-                description = "Target slide index for internal link (optional, for edit)"
+                description = "Target slide index for internal link (0-based, optional, for add/edit)"
             },
             removeHyperlink = new
             {
@@ -100,10 +108,11 @@ Usage examples:
     };
 
     /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments
+    ///     Executes the tool operation with the provided JSON arguments.
     /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters</param>
-    /// <returns>Result message as a string</returns>
+    /// <param name="arguments">JSON arguments object containing operation parameters.</param>
+    /// <returns>Result message as a string.</returns>
+    /// <exception cref="ArgumentException">Thrown when operation is unknown.</exception>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
@@ -121,19 +130,28 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Adds a hyperlink to a shape
+    ///     Adds a hyperlink to a shape or specific text portion.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing slideIndex, shapeIndex, address, optional text</param>
-    /// <returns>Success message</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="arguments">
+    ///     JSON arguments containing slideIndex, url or slideTargetIndex, optional text, linkText,
+    ///     shapeIndex, position.
+    /// </param>
+    /// <returns>Success message.</returns>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when slideIndex or slideTargetIndex is out of range, neither url nor
+    ///     slideTargetIndex is provided, or linkText is not found in text.
+    /// </exception>
     private Task<string> AddHyperlinkAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
             var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
-            var url = ArgumentHelper.GetString(arguments, "url");
-            var displayText = ArgumentHelper.GetStringNullable(arguments, "displayText");
+            var url = ArgumentHelper.GetStringNullable(arguments, "url");
+            var slideTargetIndex = ArgumentHelper.GetIntNullable(arguments, "slideTargetIndex");
+            var text = ArgumentHelper.GetStringNullable(arguments, "text");
+            var linkText = ArgumentHelper.GetStringNullable(arguments, "linkText");
             var shapeIndex = ArgumentHelper.GetIntNullable(arguments, "shapeIndex");
             var x = ArgumentHelper.GetFloatNullable(arguments, "x");
             var y = ArgumentHelper.GetFloatNullable(arguments, "y");
@@ -141,46 +159,107 @@ Usage examples:
             var height = ArgumentHelper.GetFloatNullable(arguments, "height");
 
             using var presentation = new Presentation(path);
-            if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
-                throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
-
-            var slide = presentation.Slides[slideIndex];
-            IShape shape;
+            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+            IAutoShape autoShape;
 
             if (shapeIndex is >= 0 && shapeIndex.Value < slide.Shapes.Count)
             {
-                // Use existing shape
-                shape = slide.Shapes[shapeIndex.Value];
+                if (slide.Shapes[shapeIndex.Value] is IAutoShape existingAutoShape)
+                    autoShape = existingAutoShape;
+                else
+                    throw new ArgumentException($"Shape at index {shapeIndex.Value} is not an AutoShape");
             }
             else
             {
-                // Create new shape
                 var defaultX = x ?? 50;
                 var defaultY = y ?? 50;
                 var defaultWidth = width ?? 300;
                 var defaultHeight = height ?? 50;
-                shape = slide.Shapes.AddAutoShape(ShapeType.Rectangle, defaultX, defaultY, defaultWidth, defaultHeight);
+                autoShape = slide.Shapes.AddAutoShape(ShapeType.Rectangle, defaultX, defaultY, defaultWidth,
+                    defaultHeight);
             }
 
-            // Set hyperlink on shape
-            shape.HyperlinkClick = new Hyperlink(url);
+            // Create hyperlink object
+            IHyperlink hyperlink;
+            string linkDescription;
+            if (!string.IsNullOrEmpty(url))
+            {
+                hyperlink = new Hyperlink(url);
+                linkDescription = url;
+            }
+            else if (slideTargetIndex.HasValue)
+            {
+                PowerPointHelper.ValidateSlideIndex(slideTargetIndex.Value, presentation);
+                hyperlink = new Hyperlink(presentation.Slides[slideTargetIndex.Value]);
+                linkDescription = $"Slide {slideTargetIndex.Value}";
+            }
+            else
+            {
+                throw new ArgumentException("Either url or slideTargetIndex must be provided");
+            }
 
-            // Also set display text if provided
-            if (!string.IsNullOrEmpty(displayText) && shape is IAutoShape { TextFrame: not null } autoShape)
-                autoShape.TextFrame.Text = displayText;
+            // Check if we need to apply hyperlink to specific text (Portion-level)
+            if (!string.IsNullOrEmpty(linkText) && !string.IsNullOrEmpty(text))
+            {
+                var linkIndex = text.IndexOf(linkText, StringComparison.Ordinal);
+                if (linkIndex < 0)
+                    throw new ArgumentException($"linkText '{linkText}' not found in text '{text}'");
+
+                // Clear existing text and create portions
+                autoShape.TextFrame.Paragraphs.Clear();
+                var paragraph = new Paragraph();
+
+                // Text before the link
+                if (linkIndex > 0)
+                {
+                    var beforePortion = new Portion(text[..linkIndex]);
+                    paragraph.Portions.Add(beforePortion);
+                }
+
+                // The link text portion
+                var linkPortion = new Portion(linkText);
+                linkPortion.PortionFormat.HyperlinkClick = hyperlink;
+                paragraph.Portions.Add(linkPortion);
+
+                // Text after the link
+                var afterIndex = linkIndex + linkText.Length;
+                if (afterIndex < text.Length)
+                {
+                    var afterPortion = new Portion(text[afterIndex..]);
+                    paragraph.Portions.Add(afterPortion);
+                }
+
+                autoShape.TextFrame.Paragraphs.Add(paragraph);
+                linkDescription += $" (on text: '{linkText}')";
+            }
+            else
+            {
+                // Shape-level hyperlink (original behavior)
+                autoShape.HyperlinkClick = hyperlink;
+
+                if (!string.IsNullOrEmpty(text) && autoShape.TextFrame != null)
+                    autoShape.TextFrame.Text = text;
+            }
 
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Hyperlink added to slide {slideIndex}: {url}. Output: {outputPath}";
+            return $"Hyperlink added to slide {slideIndex}: {linkDescription}. Output: {outputPath}";
         });
     }
 
     /// <summary>
-    ///     Edits an existing hyperlink
+    ///     Edits an existing hyperlink.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing slideIndex, shapeIndex, optional address, text</param>
-    /// <returns>Success message</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="arguments">
+    ///     JSON arguments containing slideIndex, shapeIndex, optional url, slideTargetIndex,
+    ///     removeHyperlink.
+    /// </param>
+    /// <returns>Success message.</returns>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when slideIndex, shapeIndex, or slideTargetIndex is out of range, or no
+    ///     valid action is specified.
+    /// </exception>
     private Task<string> EditHyperlinkAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -226,12 +305,13 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Deletes a hyperlink from a shape
+    ///     Deletes a hyperlink from a shape.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing slideIndex, shapeIndex</param>
-    /// <returns>Success message</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="arguments">JSON arguments containing slideIndex, shapeIndex.</param>
+    /// <returns>Success message.</returns>
+    /// <exception cref="ArgumentException">Thrown when slideIndex or shapeIndex is out of range.</exception>
     private Task<string> DeleteHyperlinkAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -255,11 +335,12 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Gets all hyperlinks from the presentation
+    ///     Gets all hyperlinks from the presentation.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="arguments">JSON arguments (no specific parameters required)</param>
-    /// <returns>JSON string with all hyperlinks</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="arguments">JSON arguments containing optional slideIndex.</param>
+    /// <returns>JSON string with all hyperlinks.</returns>
+    /// <exception cref="ArgumentException">Thrown when slideIndex is out of range.</exception>
     private Task<string> GetHyperlinksAsync(string path, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -314,42 +395,99 @@ Usage examples:
         });
     }
 
-    private List<object> GetHyperlinksFromSlideAsJson(IPresentation presentation, ISlide slide)
+    /// <summary>
+    ///     Gets hyperlinks from a slide as JSON objects.
+    ///     Detects both shape-level and portion-level (text) hyperlinks.
+    /// </summary>
+    /// <param name="presentation">Presentation to get slide indices from.</param>
+    /// <param name="slide">Slide to get hyperlinks from.</param>
+    /// <returns>List of hyperlink objects.</returns>
+    private static List<object> GetHyperlinksFromSlideAsJson(IPresentation presentation, ISlide slide)
     {
         var hyperlinksList = new List<object>();
 
-        foreach (var shape in slide.Shapes)
-            if (shape is IAutoShape autoShape)
+        for (var shapeIndex = 0; shapeIndex < slide.Shapes.Count; shapeIndex++)
+        {
+            if (slide.Shapes[shapeIndex] is not IAutoShape autoShape) continue;
+
+            // Shape-level hyperlinks
+            if (autoShape.HyperlinkClick != null)
             {
-                if (autoShape.HyperlinkClick != null)
-                {
-                    var url = autoShape.HyperlinkClick.ExternalUrl ?? (autoShape.HyperlinkClick.TargetSlide != null
-                        ? $"Slide {presentation.Slides.IndexOf(autoShape.HyperlinkClick.TargetSlide)}"
-                        : "Internal link");
+                var targetSlide = autoShape.HyperlinkClick.TargetSlide;
+                var url = autoShape.HyperlinkClick.ExternalUrl
+                          ?? (targetSlide != null
+                              ? $"Slide {presentation.Slides.IndexOf(targetSlide)}"
+                              : "Internal link");
 
-                    hyperlinksList.Add(new
-                    {
-                        shapeIndex = slide.Shapes.IndexOf(shape),
-                        triggerType = "click",
-                        url
-                    });
-                }
-
-                if (autoShape.HyperlinkMouseOver != null)
+                hyperlinksList.Add(new
                 {
-                    var url = autoShape.HyperlinkMouseOver.ExternalUrl ??
-                              (autoShape.HyperlinkMouseOver.TargetSlide != null
-                                  ? $"Slide {presentation.Slides.IndexOf(autoShape.HyperlinkMouseOver.TargetSlide)}"
+                    shapeIndex,
+                    level = "shape",
+                    triggerType = "click",
+                    url
+                });
+            }
+
+            if (autoShape.HyperlinkMouseOver != null)
+            {
+                var targetSlide = autoShape.HyperlinkMouseOver.TargetSlide;
+                var url = autoShape.HyperlinkMouseOver.ExternalUrl
+                          ?? (targetSlide != null
+                              ? $"Slide {presentation.Slides.IndexOf(targetSlide)}"
+                              : "Internal link");
+
+                hyperlinksList.Add(new
+                {
+                    shapeIndex,
+                    level = "shape",
+                    triggerType = "mouseover",
+                    url
+                });
+            }
+
+            // Portion-level (text) hyperlinks
+            if (autoShape.TextFrame == null) continue;
+
+            foreach (var paragraph in autoShape.TextFrame.Paragraphs)
+            foreach (var portion in paragraph.Portions)
+            {
+                if (portion.PortionFormat.HyperlinkClick != null)
+                {
+                    var targetSlide = portion.PortionFormat.HyperlinkClick.TargetSlide;
+                    var url = portion.PortionFormat.HyperlinkClick.ExternalUrl
+                              ?? (targetSlide != null
+                                  ? $"Slide {presentation.Slides.IndexOf(targetSlide)}"
                                   : "Internal link");
 
                     hyperlinksList.Add(new
                     {
-                        shapeIndex = slide.Shapes.IndexOf(shape),
+                        shapeIndex,
+                        level = "text",
+                        triggerType = "click",
+                        text = portion.Text,
+                        url
+                    });
+                }
+
+                if (portion.PortionFormat.HyperlinkMouseOver != null)
+                {
+                    var targetSlide = portion.PortionFormat.HyperlinkMouseOver.TargetSlide;
+                    var url = portion.PortionFormat.HyperlinkMouseOver.ExternalUrl
+                              ?? (targetSlide != null
+                                  ? $"Slide {presentation.Slides.IndexOf(targetSlide)}"
+                                  : "Internal link");
+
+                    hyperlinksList.Add(new
+                    {
+                        shapeIndex,
+                        level = "text",
                         triggerType = "mouseover",
+                        text = portion.Text,
                         url
                     });
                 }
             }
+        }
 
         return hyperlinksList;
     }

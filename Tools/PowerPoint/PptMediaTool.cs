@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Nodes;
+using System.Text.Json.Nodes;
 using Aspose.Slides;
 using Aspose.Slides.Export;
 using AsposeMcpServer.Core;
@@ -6,20 +6,33 @@ using AsposeMcpServer.Core;
 namespace AsposeMcpServer.Tools.PowerPoint;
 
 /// <summary>
-///     Unified tool for managing PowerPoint media (add audio/video, delete, set playback)
-///     Merges: PptAddAudioTool, PptDeleteAudioTool, PptAddVideoTool, PptDeleteVideoTool, PptSetMediaPlaybackTool
+///     Unified tool for managing PowerPoint media.
+///     Supports: add_audio, delete_audio, add_video, delete_video, set_playback
 /// </summary>
 public class PptMediaTool : IAsposeTool
 {
+    private static readonly Dictionary<string, AudioVolumeMode> VolumeMap = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["mute"] = AudioVolumeMode.Mute,
+        ["low"] = AudioVolumeMode.Low,
+        ["medium"] = AudioVolumeMode.Medium,
+        ["loud"] = AudioVolumeMode.Loud
+    };
+
+    private static readonly string SupportedVolumes = string.Join(", ", VolumeMap.Keys);
+
     public string Description =>
         @"Manage PowerPoint media. Supports 5 operations: add_audio, delete_audio, add_video, delete_video, set_playback.
+
+Coordinate system: Origin is top-left corner of slide. Units are in Points (1 inch = 72 points).
+Standard slide size: 720 x 540 points (10 x 7.5 inches).
 
 Usage examples:
 - Add audio: ppt_media(operation='add_audio', path='presentation.pptx', slideIndex=0, audioPath='audio.mp3', x=100, y=100)
 - Delete audio: ppt_media(operation='delete_audio', path='presentation.pptx', slideIndex=0, shapeIndex=0)
 - Add video: ppt_media(operation='add_video', path='presentation.pptx', slideIndex=0, videoPath='video.mp4', x=100, y=100)
 - Delete video: ppt_media(operation='delete_video', path='presentation.pptx', slideIndex=0, shapeIndex=0)
-- Set playback: ppt_media(operation='set_playback', path='presentation.pptx', slideIndex=0, shapeIndex=0, playOnClick=true)";
+- Set playback: ppt_media(operation='set_playback', path='presentation.pptx', slideIndex=0, shapeIndex=0, playMode='auto', loop=true)";
 
     public object InputSchema => new
     {
@@ -30,11 +43,11 @@ Usage examples:
             {
                 type = "string",
                 description = @"Operation to perform.
-- 'add_audio': Add audio to slide (required params: path, slideIndex, audioPath)
-- 'delete_audio': Delete audio (required params: path, slideIndex, shapeIndex)
-- 'add_video': Add video to slide (required params: path, slideIndex, videoPath)
-- 'delete_video': Delete video (required params: path, slideIndex, shapeIndex)
-- 'set_playback': Set playback options (required params: path, slideIndex, shapeIndex)",
+- 'add_audio': Embed audio into slide (required: path, slideIndex, audioPath)
+- 'delete_audio': Delete audio frame (required: path, slideIndex, shapeIndex)
+- 'add_video': Embed video into slide (required: path, slideIndex, videoPath)
+- 'delete_video': Delete video frame (required: path, slideIndex, shapeIndex)
+- 'set_playback': Set playback options for audio/video (required: path, slideIndex, shapeIndex)",
                 @enum = new[] { "add_audio", "delete_audio", "add_video", "delete_video", "set_playback" }
             },
             path = new
@@ -45,78 +58,78 @@ Usage examples:
             slideIndex = new
             {
                 type = "number",
-                description = "Slide index (0-based)"
+                description = "Slide index (0-based, required for all operations)"
             },
             shapeIndex = new
             {
                 type = "number",
-                description = "Shape index (0-based, required for delete_audio/delete_video/set_playback)"
+                description = "Shape index (0-based, required for delete/set_playback)"
             },
             audioPath = new
             {
                 type = "string",
-                description = "Audio file path (required for add_audio)"
+                description = "Audio file path to embed (required for add_audio)"
             },
             videoPath = new
             {
                 type = "string",
-                description = "Video file path (required for add_video)"
+                description = "Video file path to embed (required for add_video)"
             },
             x = new
             {
                 type = "number",
-                description = "X position (optional, for add_audio/add_video)"
+                description = "X position in points from top-left corner (optional, default: 50)"
             },
             y = new
             {
                 type = "number",
-                description = "Y position (optional, for add_audio/add_video)"
+                description = "Y position in points from top-left corner (optional, default: 50)"
             },
             width = new
             {
                 type = "number",
-                description = "Width (optional, for add_audio/add_video)"
+                description = "Width in points (optional, default: 80 for audio, 320 for video)"
             },
             height = new
             {
                 type = "number",
-                description = "Height (optional, for add_audio/add_video)"
+                description = "Height in points (optional, default: 80 for audio, 240 for video)"
             },
             playMode = new
             {
                 type = "string",
-                description = "auto|onclick (optional, for set_playback, default: auto)"
+                description = "Playback mode: auto|onclick (optional, default: auto)"
             },
             loop = new
             {
                 type = "boolean",
-                description = "Loop playback (optional, for set_playback, default: false)"
+                description = "Loop playback (optional, default: false)"
             },
             rewind = new
             {
                 type = "boolean",
-                description = "Rewind after play (video) (optional, for set_playback, default: false)"
+                description = "Rewind video after play (optional, default: false)"
             },
             volume = new
             {
                 type = "string",
-                description = "mute|low|medium|loud (optional, for set_playback, default: medium)"
+                description = "Volume level: mute|low|medium|loud (optional, default: medium)"
             },
             outputPath = new
             {
                 type = "string",
-                description =
-                    "Output file path (optional, for add/edit/delete/set_playback operations, defaults to input path)"
+                description = "Output file path (optional, defaults to input path)"
             }
         },
         required = new[] { "operation", "path", "slideIndex" }
     };
 
     /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments
+    ///     Executes the tool operation with the provided JSON arguments.
     /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters</param>
-    /// <returns>Result message as a string</returns>
+    /// <param name="arguments">JSON arguments object containing operation parameters.</param>
+    /// <returns>Result message as a string.</returns>
+    /// <exception cref="ArgumentException">Thrown when operation is unknown.</exception>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
@@ -136,13 +149,15 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Adds audio to a slide
+    ///     Embeds audio into a slide.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="slideIndex">Slide index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing audioPath, optional x, y, width, height</param>
-    /// <returns>Success message</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="slideIndex">Slide index (0-based).</param>
+    /// <param name="arguments">JSON arguments containing audioPath, optional x, y, width, height.</param>
+    /// <returns>Success message.</returns>
+    /// <exception cref="ArgumentException">Thrown when slideIndex is out of range.</exception>
+    /// <exception cref="FileNotFoundException">Thrown when audio file is not found.</exception>
     private Task<string> AddAudioAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -153,27 +168,33 @@ Usage examples:
             var width = ArgumentHelper.GetFloat(arguments, "width", 80);
             var height = ArgumentHelper.GetFloat(arguments, "height", 80);
 
+            if (!File.Exists(audioPath))
+                throw new FileNotFoundException($"Audio file not found: {audioPath}");
+
             using var presentation = new Presentation(path);
-            if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
-                throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
+            PowerPointHelper.ValidateCollectionIndex(slideIndex, presentation.Slides.Count, "slide");
 
             var slide = presentation.Slides[slideIndex];
             using var audioStream = File.OpenRead(audioPath);
             slide.Shapes.AddAudioFrameEmbedded(x, y, width, height, audioStream);
 
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Audio inserted into slide {slideIndex}. Output: {outputPath}";
+            return $"Audio embedded into slide {slideIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
-    ///     Deletes audio from a slide
+    ///     Deletes audio from a slide.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="slideIndex">Slide index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing audioIndex</param>
-    /// <returns>Success message</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="slideIndex">Slide index (0-based).</param>
+    /// <param name="arguments">JSON arguments containing shapeIndex.</param>
+    /// <returns>Success message.</returns>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when slideIndex or shapeIndex is out of range, or shape is not an audio
+    ///     frame.
+    /// </exception>
     private Task<string> DeleteAudioAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -183,6 +204,7 @@ Usage examples:
             using var presentation = new Presentation(path);
             var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
             var shape = PowerPointHelper.GetShape(slide, shapeIndex);
+
             if (shape is not IAudioFrame)
                 throw new ArgumentException($"Shape at index {shapeIndex} is not an audio frame");
 
@@ -194,13 +216,15 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Adds video to a slide
+    ///     Embeds video into a slide.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="slideIndex">Slide index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing videoPath, optional x, y, width, height</param>
-    /// <returns>Success message</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="slideIndex">Slide index (0-based).</param>
+    /// <param name="arguments">JSON arguments containing videoPath, optional x, y, width, height.</param>
+    /// <returns>Success message.</returns>
+    /// <exception cref="ArgumentException">Thrown when slideIndex is out of range.</exception>
+    /// <exception cref="FileNotFoundException">Thrown when video file is not found.</exception>
     private Task<string> AddVideoAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -211,26 +235,34 @@ Usage examples:
             var width = ArgumentHelper.GetFloat(arguments, "width", 320);
             var height = ArgumentHelper.GetFloat(arguments, "height", 240);
 
+            if (!File.Exists(videoPath))
+                throw new FileNotFoundException($"Video file not found: {videoPath}");
+
             using var presentation = new Presentation(path);
-            if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
-                throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
+            PowerPointHelper.ValidateCollectionIndex(slideIndex, presentation.Slides.Count, "slide");
 
             var slide = presentation.Slides[slideIndex];
-            _ = slide.Shapes.AddVideoFrame(x, y, width, height, videoPath);
+            using var videoStream = File.OpenRead(videoPath);
+            var video = presentation.Videos.AddVideo(videoStream, LoadingStreamBehavior.KeepLocked);
+            slide.Shapes.AddVideoFrame(x, y, width, height, video);
 
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Video inserted into slide {slideIndex}. Output: {outputPath}";
+            return $"Video embedded into slide {slideIndex}. Output: {outputPath}";
         });
     }
 
     /// <summary>
-    ///     Deletes video from a slide
+    ///     Deletes video from a slide.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="slideIndex">Slide index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing videoIndex</param>
-    /// <returns>Success message</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="slideIndex">Slide index (0-based).</param>
+    /// <param name="arguments">JSON arguments containing shapeIndex.</param>
+    /// <returns>Success message.</returns>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when slideIndex or shapeIndex is out of range, or shape is not a video
+    ///     frame.
+    /// </exception>
     private Task<string> DeleteVideoAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -240,6 +272,7 @@ Usage examples:
             using var presentation = new Presentation(path);
             var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
             var shape = PowerPointHelper.GetShape(slide, shapeIndex);
+
             if (shape is not IVideoFrame)
                 throw new ArgumentException($"Shape at index {shapeIndex} is not a video frame");
 
@@ -251,13 +284,17 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Sets media playback options
+    ///     Sets media playback options for audio or video.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="slideIndex">Slide index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing shapeIndex, optional playMode, loop, volume</param>
-    /// <returns>Success message</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="slideIndex">Slide index (0-based).</param>
+    /// <param name="arguments">JSON arguments containing shapeIndex, optional playMode, loop, rewind, volume.</param>
+    /// <returns>Success message.</returns>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when slideIndex or shapeIndex is out of range, shape is not a media frame,
+    ///     or volume is invalid.
+    /// </exception>
     private Task<string> SetPlaybackAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -269,48 +306,39 @@ Usage examples:
             var volumeStr = ArgumentHelper.GetString(arguments, "volume", "medium");
 
             using var presentation = new Presentation(path);
-            if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
-                throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
+            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+            var shape = PowerPointHelper.GetShape(slide, shapeIndex);
 
-            var slide = presentation.Slides[slideIndex];
-            if (shapeIndex < 0 || shapeIndex >= slide.Shapes.Count)
-                throw new ArgumentException($"shapeIndex must be between 0 and {slide.Shapes.Count - 1}");
+            if (!VolumeMap.TryGetValue(volumeStr, out var volume))
+                throw new ArgumentException($"Unknown volume: '{volumeStr}'. Supported values: {SupportedVolumes}");
 
-            var playModeAudio = playModeStr.ToLower() == "onclick"
-                ? AudioPlayModePreset.OnClick
-                : AudioPlayModePreset.Auto;
-            var playModeVideo = playModeStr.ToLower() == "onclick"
-                ? VideoPlayModePreset.OnClick
-                : VideoPlayModePreset.Auto;
-            var volume = volumeStr.ToLower() switch
-            {
-                "mute" => AudioVolumeMode.Mute,
-                "low" => AudioVolumeMode.Low,
-                "loud" => AudioVolumeMode.Loud,
-                _ => AudioVolumeMode.Medium
-            };
+            var isOnClick = playModeStr.Equals("onclick", StringComparison.OrdinalIgnoreCase);
 
-            var shape = slide.Shapes[shapeIndex];
             if (shape is IAudioFrame audio)
             {
-                audio.PlayMode = playModeAudio;
+                audio.PlayMode = isOnClick ? AudioPlayModePreset.OnClick : AudioPlayModePreset.Auto;
                 audio.Volume = volume;
                 audio.PlayLoopMode = loop;
             }
             else if (shape is IVideoFrame video)
             {
-                video.PlayMode = playModeVideo;
+                video.PlayMode = isOnClick ? VideoPlayModePreset.OnClick : VideoPlayModePreset.Auto;
                 video.Volume = volume;
                 video.PlayLoopMode = loop;
                 video.RewindVideo = rewind;
             }
             else
             {
-                throw new ArgumentException("The specified shape is not audio or video");
+                throw new ArgumentException($"Shape at index {shapeIndex} is not an audio or video frame");
             }
 
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Playback settings updated. Output: {outputPath}";
+
+            var settings = new List<string> { $"playMode={playModeStr}", $"volume={volumeStr}" };
+            if (loop) settings.Add("loop=true");
+            if (rewind && shape is IVideoFrame) settings.Add("rewind=true");
+
+            return $"Playback settings updated ({string.Join(", ", settings)}). Output: {outputPath}";
         });
     }
 }

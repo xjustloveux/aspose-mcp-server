@@ -58,7 +58,8 @@ Usage examples:
             layoutType = new
             {
                 type = "string",
-                description = "Slide layout type (Blank, Title, TitleOnly, etc., optional, for add operation)"
+                description = "Slide layout type (optional, for add operation)",
+                @enum = new[] { "Blank", "Title", "TitleOnly", "TwoColumn", "SectionHeader" }
             },
             fromIndex = new
             {
@@ -102,10 +103,11 @@ Usage examples:
     };
 
     /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments
+    ///     Executes the tool operation with the provided JSON arguments.
     /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters</param>
-    /// <returns>Result message as a string</returns>
+    /// <param name="arguments">JSON arguments object containing operation parameters.</param>
+    /// <returns>Result message as a string.</returns>
+    /// <exception cref="ArgumentException">Thrown when operation is unknown.</exception>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
@@ -127,12 +129,13 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Adds a new slide to the presentation
+    ///     Adds a new slide to the presentation.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing optional layoutType</param>
-    /// <returns>Success message with slide index</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="arguments">JSON arguments containing optional layoutType.</param>
+    /// <returns>Success message with slide count.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when presentation has no layout slides.</exception>
     private Task<string> AddSlideAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -165,12 +168,14 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Deletes a slide from the presentation
+    ///     Deletes a slide from the presentation.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing slideIndex</param>
-    /// <returns>Success message</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="arguments">JSON arguments containing slideIndex.</param>
+    /// <returns>Success message.</returns>
+    /// <exception cref="ArgumentException">Thrown when slideIndex is out of range.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when attempting to delete the last slide.</exception>
     private Task<string> DeleteSlideAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -181,6 +186,10 @@ Usage examples:
             if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
                 throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
 
+            if (presentation.Slides.Count == 1)
+                throw new InvalidOperationException(
+                    "Cannot delete the last slide. A presentation must have at least one slide.");
+
             presentation.Slides.RemoveAt(slideIndex);
             presentation.Save(outputPath, SaveFormat.Pptx);
 
@@ -189,10 +198,10 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Gets information about all slides
+    ///     Gets information about all slides.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <returns>JSON string with slide information</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <returns>JSON string with slide information including layout details.</returns>
     private Task<string> GetSlidesInfoAsync(string path)
     {
         return Task.Run(() =>
@@ -212,16 +221,23 @@ Usage examples:
                 {
                     index = i,
                     title = titleText,
+                    layoutType = slide.LayoutSlide.LayoutType.ToString(),
+                    layoutName = slide.LayoutSlide.Name,
                     shapesCount = slide.Shapes.Count,
                     hasSpeakerNotes = !string.IsNullOrWhiteSpace(notes),
                     hidden = slide.Hidden
                 });
             }
 
+            var layoutsList = presentation.LayoutSlides
+                .Select((ls, idx) => new { index = idx, name = ls.Name, type = ls.LayoutType.ToString() })
+                .ToList();
+
             var result = new
             {
                 count = presentation.Slides.Count,
-                slides = slidesList
+                slides = slidesList,
+                availableLayouts = layoutsList
             };
 
             return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
@@ -229,12 +245,13 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Moves a slide to a different position
+    ///     Moves a slide to a different position using Reorder method.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing fromIndex, toIndex</param>
-    /// <returns>Success message</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="arguments">JSON arguments containing fromIndex, toIndex.</param>
+    /// <returns>Success message.</returns>
+    /// <exception cref="ArgumentException">Thrown when fromIndex or toIndex is out of range.</exception>
     private Task<string> MoveSlideAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -250,10 +267,8 @@ Usage examples:
             if (toIndex < 0 || toIndex >= count)
                 throw new ArgumentException($"toIndex must be between 0 and {count - 1}");
 
-            var source = presentation.Slides[fromIndex];
-            presentation.Slides.InsertClone(toIndex, source);
-            var removeIndex = fromIndex + (fromIndex < toIndex ? 1 : 0);
-            presentation.Slides.RemoveAt(removeIndex);
+            var slide = presentation.Slides[fromIndex];
+            presentation.Slides.Reorder(toIndex, slide);
             presentation.Save(outputPath, SaveFormat.Pptx);
 
             return $"Slide moved from {fromIndex} to {toIndex} (total: {count}). Output: {outputPath}";
@@ -261,12 +276,13 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Duplicates a slide
+    ///     Duplicates a slide.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing slideIndex, optional insertAt</param>
-    /// <returns>Success message with new slide index</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="arguments">JSON arguments containing slideIndex, optional insertAt.</param>
+    /// <returns>Success message with new slide count.</returns>
+    /// <exception cref="ArgumentException">Thrown when slideIndex or insertAt is out of range.</exception>
     private Task<string> DuplicateSlideAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -298,12 +314,13 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Hides or shows slides
+    ///     Hides or shows slides.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing slideIndices array, hidden</param>
-    /// <returns>Success message</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="arguments">JSON arguments containing slideIndices array, hidden.</param>
+    /// <returns>Success message.</returns>
+    /// <exception cref="ArgumentException">Thrown when any slide index is out of range.</exception>
     private Task<string> HideSlidesAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -329,12 +346,13 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Clears all content from a slide
+    ///     Clears all content from a slide.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing slideIndex</param>
-    /// <returns>Success message</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="arguments">JSON arguments containing slideIndex.</param>
+    /// <returns>Success message.</returns>
+    /// <exception cref="ArgumentException">Thrown when slideIndex is out of range.</exception>
     private Task<string> ClearSlideAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -351,12 +369,13 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Edits slide properties
+    ///     Edits slide properties.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing slideIndex, optional layoutIndex</param>
-    /// <returns>Success message</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="arguments">JSON arguments containing slideIndex, optional layoutIndex.</param>
+    /// <returns>Success message.</returns>
+    /// <exception cref="ArgumentException">Thrown when slideIndex or layoutIndex is out of range.</exception>
     private Task<string> EditSlideAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>

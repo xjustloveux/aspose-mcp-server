@@ -13,10 +13,14 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 public class PptTextFormatTool : IAsposeTool
 {
     public string Description => @"Batch format PowerPoint text. Formats font, size, bold, italic, color across slides.
+Applies to text in AutoShapes and Table cells.
+
+Color format: Hex color code (e.g., #FF5500, #RGB, #RRGGBB) or named colors (e.g., Red, Blue, DarkGreen).
 
 Usage examples:
 - Format all slides: ppt_text_format(path='presentation.pptx', fontName='Arial', fontSize=14, bold=true)
-- Format specific slides: ppt_text_format(path='presentation.pptx', slideIndices=[0,1,2], fontName='Times New Roman', fontSize=12)";
+- Format specific slides: ppt_text_format(path='presentation.pptx', slideIndices=[0,1,2], fontName='Times New Roman', fontSize=12)
+- Format with color: ppt_text_format(path='presentation.pptx', color='#FF0000') or ppt_text_format(path='presentation.pptx', color='Red')";
 
     public object InputSchema => new
     {
@@ -57,7 +61,7 @@ Usage examples:
             color = new
             {
                 type = "string",
-                description = "Hex color, e.g. #FF5500 (optional)"
+                description = "Text color: Hex (#FF5500, #RGB) or named color (Red, Blue, DarkGreen) (optional)"
             },
             outputPath = new
             {
@@ -69,10 +73,11 @@ Usage examples:
     };
 
     /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments
+    ///     Executes the tool operation with the provided JSON arguments.
     /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters</param>
-    /// <returns>Result message as a string</returns>
+    /// <param name="arguments">JSON arguments object containing operation parameters.</param>
+    /// <returns>Result message as a string.</returns>
+    /// <exception cref="ArgumentException">Thrown when slide index is out of range.</exception>
     public Task<string> ExecuteAsync(JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -99,31 +104,60 @@ Usage examples:
             Color? color = null;
             if (!string.IsNullOrWhiteSpace(colorHex)) color = ColorHelper.ParseColor(colorHex);
 
+            var colorStr = color.HasValue
+                ? $"#{color.Value.R:X2}{color.Value.G:X2}{color.Value.B:X2}"
+                : null;
+
             foreach (var idx in targets)
             {
                 var slide = presentation.Slides[idx];
                 foreach (var shape in slide.Shapes)
                     if (shape is IAutoShape { TextFrame: not null } auto)
-                        foreach (var para in auto.TextFrame.Paragraphs)
-                        foreach (var portion in para.Portions)
-                        {
-                            // Apply font settings using FontHelper
-                            var colorStr = color.HasValue
-                                ? $"#{color.Value.R:X2}{color.Value.G:X2}{color.Value.B:X2}"
-                                : null;
-                            FontHelper.Ppt.ApplyFontSettings(
-                                portion.PortionFormat,
-                                fontName,
-                                fontSize,
-                                bold,
-                                italic,
-                                colorStr
-                            );
-                        }
+                        ApplyFontToTextFrame(auto.TextFrame, fontName, fontSize, bold, italic, colorStr);
+                    else if (shape is ITable table)
+                        ApplyFontToTable(table, fontName, fontSize, bold, italic, colorStr);
             }
 
             presentation.Save(outputPath, SaveFormat.Pptx);
             return $"Batch formatted text applied to {targets.Length} slides. Output: {outputPath}";
         });
+    }
+
+    /// <summary>
+    ///     Applies font settings to all portions in a text frame.
+    /// </summary>
+    /// <param name="textFrame">The text frame to format.</param>
+    /// <param name="fontName">Font name (null to skip).</param>
+    /// <param name="fontSize">Font size (null to skip).</param>
+    /// <param name="bold">Bold setting (null to skip).</param>
+    /// <param name="italic">Italic setting (null to skip).</param>
+    /// <param name="colorStr">Color string in hex format (null to skip).</param>
+    private static void ApplyFontToTextFrame(ITextFrame textFrame, string? fontName, double? fontSize, bool? bold,
+        bool? italic, string? colorStr)
+    {
+        foreach (var para in textFrame.Paragraphs)
+        foreach (var portion in para.Portions)
+            FontHelper.Ppt.ApplyFontSettings(portion.PortionFormat, fontName, fontSize, bold, italic, colorStr);
+    }
+
+    /// <summary>
+    ///     Applies font settings to all cells in a table.
+    /// </summary>
+    /// <param name="table">The table to format.</param>
+    /// <param name="fontName">Font name (null to skip).</param>
+    /// <param name="fontSize">Font size (null to skip).</param>
+    /// <param name="bold">Bold setting (null to skip).</param>
+    /// <param name="italic">Italic setting (null to skip).</param>
+    /// <param name="colorStr">Color string in hex format (null to skip).</param>
+    private static void ApplyFontToTable(ITable table, string? fontName, double? fontSize, bool? bold, bool? italic,
+        string? colorStr)
+    {
+        for (var row = 0; row < table.Rows.Count; row++)
+        for (var col = 0; col < table.Columns.Count; col++)
+        {
+            var cell = table[col, row];
+            if (cell.TextFrame != null)
+                ApplyFontToTextFrame(cell.TextFrame, fontName, fontSize, bold, italic, colorStr);
+        }
     }
 }

@@ -44,7 +44,7 @@ public class PptSectionToolTests : TestBase
     }
 
     [Fact]
-    public async Task GetSections_ShouldReturnAllSections()
+    public async Task GetSections_ShouldReturnAllSectionsWithSlideInfo()
     {
         // Arrange
         var pptPath = CreateTestPresentation("test_get_sections.pptx");
@@ -66,7 +66,28 @@ public class PptSectionToolTests : TestBase
         // Assert
         Assert.NotNull(result);
         Assert.NotEmpty(result);
-        Assert.Contains("Section", result, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Test Section", result);
+        Assert.Contains("startSlideIndex", result);
+        Assert.Contains("slideCount", result);
+    }
+
+    [Fact]
+    public async Task GetSections_WhenNoSections_ShouldReturnEmptyResult()
+    {
+        // Arrange
+        var pptPath = CreateTestPresentation("test_get_sections_empty.pptx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "get",
+            ["path"] = pptPath
+        };
+
+        // Act
+        var result = await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.Contains("\"count\": 0", result);
+        Assert.Contains("No sections found", result);
     }
 
     [Fact]
@@ -99,17 +120,24 @@ public class PptSectionToolTests : TestBase
     }
 
     [Fact]
-    public async Task DeleteSection_ShouldDeleteSection()
+    public async Task DeleteSection_ShouldDeleteSectionKeepSlides()
     {
         // Arrange
         var pptPath = CreateTestPresentation("test_delete_section.pptx");
+        int slidesBefore;
         using (var ppt = new Presentation(pptPath))
         {
             ppt.Sections.AddSection("Section to Delete", ppt.Slides[0]);
             ppt.Save(pptPath, SaveFormat.Pptx);
+            slidesBefore = ppt.Slides.Count;
         }
 
-        var sectionsBefore = new Presentation(pptPath).Sections.Count;
+        int sectionsBefore;
+        using (var pptCheck = new Presentation(pptPath))
+        {
+            sectionsBefore = pptCheck.Sections.Count;
+        }
+
         Assert.True(sectionsBefore > 0, "Section should exist before deletion");
 
         var outputPath = CreateTestFilePath("test_delete_section_output.pptx");
@@ -118,7 +146,8 @@ public class PptSectionToolTests : TestBase
             ["operation"] = "delete",
             ["path"] = pptPath,
             ["outputPath"] = outputPath,
-            ["sectionIndex"] = 0
+            ["sectionIndex"] = 0,
+            ["keepSlides"] = true
         };
 
         // Act
@@ -126,8 +155,90 @@ public class PptSectionToolTests : TestBase
 
         // Assert
         using var presentation = new Presentation(outputPath);
-        var sectionsAfter = presentation.Sections.Count;
-        Assert.True(sectionsAfter < sectionsBefore,
-            $"Section should be deleted. Before: {sectionsBefore}, After: {sectionsAfter}");
+        Assert.True(presentation.Sections.Count < sectionsBefore, "Section should be deleted");
+        Assert.Equal(slidesBefore, presentation.Slides.Count);
+    }
+
+    [Fact]
+    public async Task DeleteSection_WithKeepSlidesFalse_ShouldDeleteSectionAndSlides()
+    {
+        // Arrange
+        var pptPath = CreateTestPresentation("test_delete_section_with_slides.pptx");
+        using (var ppt = new Presentation(pptPath))
+        {
+            ppt.Sections.AddSection("Section to Delete", ppt.Slides[0]);
+            ppt.Save(pptPath, SaveFormat.Pptx);
+        }
+
+        var outputPath = CreateTestFilePath("test_delete_section_with_slides_output.pptx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "delete",
+            ["path"] = pptPath,
+            ["outputPath"] = outputPath,
+            ["sectionIndex"] = 0,
+            ["keepSlides"] = false
+        };
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        using var presentation = new Presentation(outputPath);
+        Assert.Empty(presentation.Sections);
+    }
+
+    [Fact]
+    public async Task RenameSection_WithInvalidIndex_ShouldThrowException()
+    {
+        // Arrange
+        var pptPath = CreateTestPresentation("test_rename_invalid.pptx");
+        using (var ppt = new Presentation(pptPath))
+        {
+            ppt.Sections.AddSection("Test", ppt.Slides[0]);
+            ppt.Save(pptPath, SaveFormat.Pptx);
+        }
+
+        var arguments = new JsonObject
+        {
+            ["operation"] = "rename",
+            ["path"] = pptPath,
+            ["sectionIndex"] = 99,
+            ["newName"] = "New Name"
+        };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+    }
+
+    [Fact]
+    public async Task DeleteSection_WithInvalidIndex_ShouldThrowException()
+    {
+        // Arrange
+        var pptPath = CreateTestPresentation("test_delete_invalid.pptx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "delete",
+            ["path"] = pptPath,
+            ["sectionIndex"] = 99
+        };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithUnknownOperation_ShouldThrowException()
+    {
+        // Arrange
+        var pptPath = CreateTestPresentation("test_unknown_op.pptx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "unknown",
+            ["path"] = pptPath
+        };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
     }
 }

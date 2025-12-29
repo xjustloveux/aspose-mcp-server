@@ -18,6 +18,7 @@ public class PptFileOperationsTool : IAsposeTool
 Usage examples:
 - Create presentation: ppt_file_operations(operation='create', path='new.pptx')
 - Convert format: ppt_file_operations(operation='convert', inputPath='presentation.pptx', outputPath='presentation.pdf', format='pdf')
+- Convert slide to image: ppt_file_operations(operation='convert', inputPath='presentation.pptx', outputPath='slide.png', format='png', slideIndex=0)
 - Merge presentations: ppt_file_operations(operation='merge', inputPath='presentation1.pptx', outputPath='merged.pptx', inputPaths=['presentation2.pptx'])
 - Split presentation: ppt_file_operations(operation='split', inputPath='presentation.pptx', outputDirectory='output/')";
 
@@ -32,7 +33,7 @@ Usage examples:
                 description = @"Operation to perform.
 - 'create': Create a new presentation (required params: path)
 - 'convert': Convert presentation format (required params: inputPath, outputPath, format)
-- 'merge': Merge presentations (required params: inputPath, outputPath, inputPaths)
+- 'merge': Merge presentations (required params: outputPath, inputPaths)
 - 'split': Split presentation (required params: inputPath, outputDirectory)",
                 @enum = new[] { "create", "convert", "merge", "split" }
             },
@@ -60,6 +61,11 @@ Usage examples:
             {
                 type = "string",
                 description = "Output format (pdf, html, pptx, jpg, png, etc., required for convert)"
+            },
+            slideIndex = new
+            {
+                type = "number",
+                description = "Slide index to convert (0-based, optional for convert to image format, default: 0)"
             },
             inputPaths = new
             {
@@ -98,10 +104,11 @@ Usage examples:
     };
 
     /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments
+    ///     Executes the tool operation with the provided JSON arguments.
     /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters</param>
-    /// <returns>Result message as a string</returns>
+    /// <param name="arguments">JSON arguments object containing operation parameters.</param>
+    /// <returns>Result message as a string.</returns>
+    /// <exception cref="ArgumentException">Thrown when operation is unknown.</exception>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
@@ -117,10 +124,10 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Creates a new presentation
+    ///     Creates a new presentation.
     /// </summary>
-    /// <param name="arguments">JSON arguments containing outputPath, optional templatePath</param>
-    /// <returns>Success message with file path</returns>
+    /// <param name="arguments">JSON arguments containing path or outputPath.</param>
+    /// <returns>Success message with file path.</returns>
     private Task<string> CreatePresentationAsync(JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -136,10 +143,11 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Converts presentation to another format
+    ///     Converts presentation to another format.
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, outputPath, format</param>
-    /// <returns>Success message with output path</returns>
+    /// <param name="arguments">JSON arguments containing inputPath, outputPath, format, and optional slideIndex.</param>
+    /// <returns>Success message with output path.</returns>
+    /// <exception cref="ArgumentException">Thrown when format is unsupported or slideIndex is out of range.</exception>
     private Task<string> ConvertPresentationAsync(JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -152,23 +160,22 @@ Usage examples:
 
             using var presentation = new Presentation(inputPath);
 
-            // Handle image formats separately
-            if (format == "jpg" || format == "jpeg")
+            if (format is "jpg" or "jpeg" or "png")
             {
-#pragma warning disable CA1416 // Validate platform compatibility
-                using var bitmap = presentation.Slides[0].GetThumbnail(new Size(1920, 1080));
-                bitmap.Save(outputPath, ImageFormat.Jpeg);
-#pragma warning restore CA1416
-                return $"Presentation converted to JPEG. Output: {outputPath}";
-            }
+                var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex", 0);
+                var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
 
-            if (format == "png")
-            {
+                var slideSize = presentation.SlideSize.Size;
+                var targetSize = new Size((int)slideSize.Width, (int)slideSize.Height);
+
 #pragma warning disable CA1416 // Validate platform compatibility
-                using var bitmap = presentation.Slides[0].GetThumbnail(new Size(1920, 1080));
-                bitmap.Save(outputPath, ImageFormat.Png);
+                using var bitmap = slide.GetThumbnail(targetSize);
+                var imageFormat = format == "png" ? ImageFormat.Png : ImageFormat.Jpeg;
+                bitmap.Save(outputPath, imageFormat);
 #pragma warning restore CA1416
-                return $"Presentation converted to PNG. Output: {outputPath}";
+
+                var formatName = format == "png" ? "PNG" : "JPEG";
+                return $"Slide {slideIndex} converted to {formatName}. Output: {outputPath}";
             }
 
             var saveFormat = format switch
@@ -185,15 +192,16 @@ Usage examples:
 
             presentation.Save(outputPath, saveFormat);
 
-            return $"Presentation converted from {inputPath} to {format} format. Output: {outputPath}";
+            return $"Presentation converted to {format.ToUpper()} format. Output: {outputPath}";
         });
     }
 
     /// <summary>
-    ///     Merges multiple presentations into one
+    ///     Merges multiple presentations into one.
     /// </summary>
-    /// <param name="arguments">JSON arguments containing sourcePaths array, outputPath</param>
-    /// <returns>Success message with merged file path</returns>
+    /// <param name="arguments">JSON arguments containing inputPaths array, outputPath, and optional keepSourceFormatting.</param>
+    /// <returns>Success message with merged file path.</returns>
+    /// <exception cref="ArgumentException">Thrown when no valid input paths are provided.</exception>
     private Task<string> MergePresentationsAsync(JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -232,10 +240,14 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Splits presentation into multiple files
+    ///     Splits presentation into multiple files.
     /// </summary>
-    /// <param name="arguments">JSON arguments containing path, outputPath, splitBy (slide or section)</param>
-    /// <returns>Success message with split file count</returns>
+    /// <param name="arguments">
+    ///     JSON arguments containing inputPath, outputDirectory, and optional slidesPerFile,
+    ///     startSlideIndex, endSlideIndex, outputFileNamePattern.
+    /// </param>
+    /// <returns>Success message with split file count.</returns>
+    /// <exception cref="ArgumentException">Thrown when slide range is invalid.</exception>
     private Task<string> SplitPresentationAsync(JsonObject? arguments)
     {
         return Task.Run(() =>

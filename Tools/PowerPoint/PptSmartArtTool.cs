@@ -51,8 +51,13 @@ Usage examples:
             layout = new
             {
                 type = "string",
-                description =
-                    "SmartArt layout type (required for add operation, e.g., 'BasicProcess', 'Cycle', 'Hierarchy')"
+                description = "SmartArt layout type (required for add operation)",
+                @enum = new[]
+                {
+                    "BasicProcess", "BasicCycle", "BasicPyramid", "BasicRadial",
+                    "Hierarchy", "OrganizationChart", "HorizontalHierarchy",
+                    "CircleArrowProcess", "ClosedChevronProcess", "StepDownProcess"
+                }
             },
             x = new
             {
@@ -91,6 +96,12 @@ Usage examples:
                 type = "string",
                 description = "Node text content (required for add/edit operations in manage_nodes)"
             },
+            position = new
+            {
+                type = "number",
+                description =
+                    "Insert position for new node (0-based, optional for add action, defaults to append at end)"
+            },
             outputPath = new
             {
                 type = "string",
@@ -101,10 +112,11 @@ Usage examples:
     };
 
     /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments
+    ///     Executes the tool operation with the provided JSON arguments.
     /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters</param>
-    /// <returns>Result message as a string</returns>
+    /// <param name="arguments">JSON arguments object containing operation parameters.</param>
+    /// <returns>Result message as a string.</returns>
+    /// <exception cref="ArgumentException">Thrown when operation is unknown.</exception>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
@@ -121,13 +133,14 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Adds a SmartArt shape to a slide
+    ///     Adds a SmartArt shape to a slide.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="slideIndex">Slide index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing layout, x, y, width, height</param>
-    /// <returns>Success message</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="slideIndex">Slide index (0-based).</param>
+    /// <param name="arguments">JSON arguments containing layout, x, y, width, height.</param>
+    /// <returns>Success message.</returns>
+    /// <exception cref="ArgumentException">Thrown when layout is invalid or slideIndex is out of range.</exception>
     private Task<string> AddSmartArtAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -138,7 +151,6 @@ Usage examples:
             var width = ArgumentHelper.GetFloat(arguments, "width", 400);
             var height = ArgumentHelper.GetFloat(arguments, "height", 300);
 
-            // Parse layout string to SmartArtLayoutType enum
             if (!Enum.TryParse<SmartArtLayoutType>(layoutStr, true, out var layoutType))
                 throw new ArgumentException(
                     $"Invalid SmartArt layout: '{layoutStr}'. Valid layouts include: BasicProcess, Cycle, Hierarchy, etc.");
@@ -155,13 +167,14 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Manages SmartArt nodes (add, edit, delete)
+    ///     Manages SmartArt nodes (add, edit, delete).
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="slideIndex">Slide index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing shapeIndex, action, targetPath, text</param>
-    /// <returns>Success message</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="slideIndex">Slide index (0-based).</param>
+    /// <param name="arguments">JSON arguments containing shapeIndex, action, targetPath, text.</param>
+    /// <returns>Success message.</returns>
+    /// <exception cref="ArgumentException">Thrown when shape is not SmartArt, targetPath is invalid, or action is unknown.</exception>
     private Task<string> ManageNodesAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -170,6 +183,7 @@ Usage examples:
             var action = ArgumentHelper.GetString(arguments, "action");
             var targetPathArray = ArgumentHelper.GetArray(arguments, "targetPath");
             var text = ArgumentHelper.GetStringNullable(arguments, "text");
+            var position = ArgumentHelper.GetIntNullable(arguments, "position");
 
             using var presentation = new Presentation(path);
             var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
@@ -181,7 +195,6 @@ Usage examples:
                 throw new ArgumentException(
                     $"Shape at index {shapeIndex} is not a SmartArt shape. It is a {shape.GetType().Name}.");
 
-            // Convert targetPath array to list of indices
             var targetPath = new List<int>();
             foreach (var item in targetPathArray)
                 if (item != null && int.TryParse(item.ToString(), out var index))
@@ -190,11 +203,16 @@ Usage examples:
                     throw new ArgumentException(
                         $"Invalid targetPath: all elements must be integers. Found: {item}");
 
-            if (targetPath.Count == 0) throw new ArgumentException("targetPath must contain at least one index");
+            if (targetPath.Count == 0)
+                throw new ArgumentException("targetPath must contain at least one index.");
 
-            // Navigate to target node
+            var rootIndex = targetPath[0];
+            if (rootIndex < 0 || rootIndex >= smartArt.AllNodes.Count)
+                throw new ArgumentException(
+                    $"Root index {rootIndex} is out of range (SmartArt has {smartArt.AllNodes.Count} root nodes).");
+
             ISmartArtNode targetNode;
-            var currentNode = smartArt.AllNodes[targetPath[0]];
+            var currentNode = smartArt.AllNodes[rootIndex];
 
             if (targetPath.Count == 1)
             {
@@ -207,7 +225,7 @@ Usage examples:
                     var childIndex = targetPath[i];
                     if (childIndex < 0 || childIndex >= currentNode.ChildNodes.Count)
                         throw new ArgumentException(
-                            $"Child index {childIndex} is out of range (node has {currentNode.ChildNodes.Count} children)");
+                            $"Child index {childIndex} is out of range (node has {currentNode.ChildNodes.Count} children).");
 
                     currentNode = currentNode.ChildNodes[childIndex];
                 }
@@ -221,11 +239,26 @@ Usage examples:
             {
                 case "add":
                     if (string.IsNullOrEmpty(text))
-                        throw new ArgumentException("text parameter is required for 'add' action");
+                        throw new ArgumentException("text parameter is required for 'add' action.");
 
-                    var newNode = targetNode.ChildNodes.AddNode();
+                    ISmartArtNode newNode;
+                    if (position.HasValue)
+                    {
+                        var childCount = targetNode.ChildNodes.Count;
+                        if (position.Value < 0 || position.Value > childCount)
+                            throw new ArgumentException(
+                                $"Position {position.Value} is out of range (valid: 0-{childCount}).");
+
+                        newNode = targetNode.ChildNodes.AddNodeByPosition(position.Value);
+                        sb.AppendLine($"Node added at position {position.Value}.");
+                    }
+                    else
+                    {
+                        newNode = targetNode.ChildNodes.AddNode();
+                        sb.AppendLine("Node added at end.");
+                    }
+
                     newNode.TextFrame.Text = text;
-                    sb.AppendLine("Node added successfully to SmartArt");
                     sb.AppendLine($"Target path: [{string.Join(",", targetPath)}]");
                     sb.AppendLine($"New node text: {text}");
                     break;
@@ -241,12 +274,14 @@ Usage examples:
                     break;
 
                 case "delete":
-                    // Check if it's a root node (root nodes are directly in AllNodes, not in ChildNodes)
-                    if (targetPath.Count == 1) throw new InvalidOperationException("Cannot delete root node");
-
                     var nodeText = targetNode.TextFrame?.Text ?? "(empty)";
-                    targetNode.Remove();
-                    sb.AppendLine("Node deleted successfully");
+
+                    if (targetPath.Count == 1)
+                        smartArt.AllNodes.RemoveNode(rootIndex);
+                    else
+                        targetNode.Remove();
+
+                    sb.AppendLine("Node deleted successfully.");
                     sb.AppendLine($"Deleted node path: [{string.Join(",", targetPath)}]");
                     sb.AppendLine($"Deleted node text: {nodeText}");
                     break;

@@ -17,12 +17,15 @@ public class PptTableTool : IAsposeTool
     public string Description =>
         @"Manage PowerPoint tables. Supports 9 operations: add, edit, delete, get_content, insert_row, insert_column, delete_row, delete_column, edit_cell.
 
+Coordinate unit: 1 inch = 72 points.
+
 Usage examples:
 - Add table: ppt_table(operation='add', path='presentation.pptx', slideIndex=0, rows=3, columns=3, x=100, y=100)
 - Edit table: ppt_table(operation='edit', path='presentation.pptx', slideIndex=0, shapeIndex=0, data=[['A','B'],['C','D']])
 - Delete table: ppt_table(operation='delete', path='presentation.pptx', slideIndex=0, shapeIndex=0)
-- Get content: ppt_table(operation='get_content', path='presentation.pptx', slideIndex=0, shapeIndex=0)
+- Get content: ppt_table(operation='get_content', path='presentation.pptx', slideIndex=0, shapeIndex=0) → Returns JSON with rows, columns, and cell data
 - Insert row: ppt_table(operation='insert_row', path='presentation.pptx', slideIndex=0, shapeIndex=0, rowIndex=1)
+- Insert column: ppt_table(operation='insert_column', path='presentation.pptx', slideIndex=0, shapeIndex=0, columnIndex=1)
 - Delete row: ppt_table(operation='delete_row', path='presentation.pptx', slideIndex=0, shapeIndex=0, rowIndex=1)
 - Edit cell: ppt_table(operation='edit_cell', path='presentation.pptx', slideIndex=0, shapeIndex=0, rowIndex=0, columnIndex=0, text='New Value')";
 
@@ -75,6 +78,16 @@ Usage examples:
                 type = "number",
                 description = "Number of columns (required for add)"
             },
+            x = new
+            {
+                type = "number",
+                description = "X position in points (optional for add, defaults to 50)"
+            },
+            y = new
+            {
+                type = "number",
+                description = "Y position in points (optional for add, defaults to 50)"
+            },
             data = new
             {
                 type = "array",
@@ -95,10 +108,10 @@ Usage examples:
                 type = "number",
                 description = "Column index (0-based, required for insert_column/delete_column/edit_cell)"
             },
-            cellValue = new
+            text = new
             {
                 type = "string",
-                description = "Cell value (required for edit_cell)"
+                description = "Cell text content (required for edit_cell)"
             },
             outputPath = new
             {
@@ -110,10 +123,11 @@ Usage examples:
     };
 
     /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments
+    ///     Executes the tool operation with the provided JSON arguments.
     /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters</param>
-    /// <returns>Result message as a string</returns>
+    /// <param name="arguments">JSON arguments object containing operation parameters.</param>
+    /// <returns>Result message as a string.</returns>
+    /// <exception cref="ArgumentException">Thrown when operation is unknown.</exception>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
@@ -137,19 +151,22 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Adds a table to a slide
+    ///     Adds a table to a slide.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="slideIndex">Slide index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing rows, columns, optional data</param>
-    /// <returns>Success message with table index</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="slideIndex">Slide index (0-based).</param>
+    /// <param name="arguments">JSON arguments containing rows, columns, x, y, optional data.</param>
+    /// <returns>Success message with table dimensions.</returns>
+    /// <exception cref="ArgumentException">Thrown when rows or columns are out of valid range (1-1000).</exception>
     private Task<string> AddTableAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
             var rows = ArgumentHelper.GetInt(arguments, "rows");
             var columns = ArgumentHelper.GetInt(arguments, "columns");
+            var x = ArgumentHelper.GetFloat(arguments, "x", 50);
+            var y = ArgumentHelper.GetFloat(arguments, "y", 50);
             var dataArray = ArgumentHelper.GetArray(arguments, "data", false);
 
             if (rows <= 0 || rows > 1000) throw new ArgumentException("rows must be between 1 and 1000");
@@ -169,7 +186,7 @@ Usage examples:
             for (var i = 0; i < rows; i++)
                 rowHeights[i] = 50;
 
-            var table = slide.Shapes.AddTable(50, 50, columnWidths, rowHeights);
+            var table = slide.Shapes.AddTable(x, y, columnWidths, rowHeights);
 
             if (dataArray != null)
                 for (var i = 0; i < Math.Min(rows, dataArray.Count); i++)
@@ -187,13 +204,14 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Edits table data
+    ///     Edits table data.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="slideIndex">Slide index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing shapeIndex, optional data</param>
-    /// <returns>Success message</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="slideIndex">Slide index (0-based).</param>
+    /// <param name="arguments">JSON arguments containing shapeIndex, optional data.</param>
+    /// <returns>Success message.</returns>
+    /// <exception cref="ArgumentException">Thrown when shape is not a table.</exception>
     private Task<string> EditTableAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -221,13 +239,14 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Deletes a table from a slide
+    ///     Deletes a table from a slide.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="slideIndex">Slide index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing shapeIndex</param>
-    /// <returns>Success message</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="slideIndex">Slide index (0-based).</param>
+    /// <param name="arguments">JSON arguments containing shapeIndex.</param>
+    /// <returns>Success message.</returns>
+    /// <exception cref="ArgumentException">Thrown when shape is not a table.</exception>
     private Task<string> DeleteTableAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -247,12 +266,13 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Gets table content
+    ///     Gets table content as JSON.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="slideIndex">Slide index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing shapeIndex</param>
-    /// <returns>JSON string with table content</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="slideIndex">Slide index (0-based).</param>
+    /// <param name="arguments">JSON arguments containing shapeIndex.</param>
+    /// <returns>JSON string with slideIndex, shapeIndex, columns, rows, and data array.</returns>
+    /// <exception cref="ArgumentException">Thrown when shape is not a table.</exception>
     private Task<string> GetTableContentAsync(string path, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -300,13 +320,14 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Inserts a row into a table
+    ///     Inserts a row into a table by cloning an existing row.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="slideIndex">Slide index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing shapeIndex, rowIndex</param>
-    /// <returns>Success message</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="slideIndex">Slide index (0-based).</param>
+    /// <param name="arguments">JSON arguments containing shapeIndex, rowIndex.</param>
+    /// <returns>Success message with new row count.</returns>
+    /// <exception cref="ArgumentException">Thrown when shape is not a table or rowIndex is out of range.</exception>
     private Task<string> InsertRowAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -319,28 +340,26 @@ Usage examples:
             var shape = PowerPointHelper.GetShape(slide, shapeIndex);
             if (shape is not ITable table) throw new ArgumentException("Shape is not a table");
 
-            // Insert row - Clone a row and insert it
             if (rowIndex < 0 || rowIndex > table.Rows.Count)
                 throw new ArgumentException($"rowIndex {rowIndex} is out of range (0-{table.Rows.Count})");
 
-            // Aspose.Slides has limitations with row insertion at specific index
-            // The table structure is fixed-size, so we need to work around this
-            // For now, we'll note the limitation and save the file
-            // In a full implementation, you would need to recreate the table with the new row structure
+            var templateRow = table.Rows[Math.Min(rowIndex, table.Rows.Count - 1)];
+            table.Rows.InsertClone(rowIndex, templateRow, false);
 
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Row inserted at index {rowIndex}. Output: {outputPath}";
+            return $"Row inserted at index {rowIndex}. Table now has {table.Rows.Count} rows. Output: {outputPath}";
         });
     }
 
     /// <summary>
-    ///     Inserts a column into a table
+    ///     Inserts a column into a table by cloning an existing column.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="slideIndex">Slide index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing shapeIndex, columnIndex</param>
-    /// <returns>Success message</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="slideIndex">Slide index (0-based).</param>
+    /// <param name="arguments">JSON arguments containing shapeIndex, columnIndex.</param>
+    /// <returns>Success message with new column count.</returns>
+    /// <exception cref="ArgumentException">Thrown when shape is not a table or columnIndex is out of range.</exception>
     private Task<string> InsertColumnAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -353,26 +372,27 @@ Usage examples:
             var shape = PowerPointHelper.GetShape(slide, shapeIndex);
             if (shape is not ITable table) throw new ArgumentException("Shape is not a table");
 
-            // Insert column - Add a new column to each row
             if (columnIndex < 0 || columnIndex > table.Columns.Count)
                 throw new ArgumentException($"columnIndex {columnIndex} is out of range (0-{table.Columns.Count})");
 
-            // Note: Aspose.Slides has limitations with column insertion at specific index
-            // The table structure needs to be recreated or cells need to be manually shifted
-            // For this implementation, we'll note the limitation
+            var templateColumn = table.Columns[Math.Min(columnIndex, table.Columns.Count - 1)];
+            table.Columns.InsertClone(columnIndex, templateColumn, false);
+
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Column inserted at index {columnIndex}. Output: {outputPath}";
+            return
+                $"Column inserted at index {columnIndex}. Table now has {table.Columns.Count} columns. Output: {outputPath}";
         });
     }
 
     /// <summary>
-    ///     Deletes a row from a table
+    ///     Deletes a row from a table.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="slideIndex">Slide index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing shapeIndex, rowIndex</param>
-    /// <returns>Success message</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="slideIndex">Slide index (0-based).</param>
+    /// <param name="arguments">JSON arguments containing shapeIndex, rowIndex.</param>
+    /// <returns>Success message.</returns>
+    /// <exception cref="ArgumentException">Thrown when shape is not a table.</exception>
     private Task<string> DeleteRowAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -392,13 +412,14 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Deletes a column from a table
+    ///     Deletes a column from a table.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="slideIndex">Slide index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing shapeIndex, columnIndex</param>
-    /// <returns>Success message</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="slideIndex">Slide index (0-based).</param>
+    /// <param name="arguments">JSON arguments containing shapeIndex, columnIndex.</param>
+    /// <returns>Success message.</returns>
+    /// <exception cref="ArgumentException">Thrown when shape is not a table.</exception>
     private Task<string> DeleteColumnAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -418,13 +439,14 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Edits a cell in a table
+    ///     Edits a cell in a table.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="slideIndex">Slide index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing shapeIndex, rowIndex, columnIndex, cellValue</param>
-    /// <returns>Success message</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="slideIndex">Slide index (0-based).</param>
+    /// <param name="arguments">JSON arguments containing shapeIndex, rowIndex, columnIndex, text.</param>
+    /// <returns>Success message.</returns>
+    /// <exception cref="ArgumentException">Thrown when shape is not a table or row/column index is out of range.</exception>
     private Task<string> EditCellAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -432,20 +454,19 @@ Usage examples:
             var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
             var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex");
             var columnIndex = ArgumentHelper.GetInt(arguments, "columnIndex");
-            var cellValue = ArgumentHelper.GetString(arguments, "cellValue");
+            var text = ArgumentHelper.GetString(arguments, "text");
 
             using var presentation = new Presentation(path);
             var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
             var shape = PowerPointHelper.GetShape(slide, shapeIndex);
             if (shape is not ITable table) throw new ArgumentException("Shape is not a table");
 
-            // Note: Aspose.Slides table indexing is [rowIndex, columnIndex], not [columnIndex, rowIndex]
             if (rowIndex < 0 || rowIndex >= table.Rows.Count)
                 throw new ArgumentException($"rowIndex {rowIndex} is out of range (0-{table.Rows.Count - 1})");
             if (columnIndex < 0 || columnIndex >= table.Columns.Count)
                 throw new ArgumentException($"columnIndex {columnIndex} is out of range (0-{table.Columns.Count - 1})");
 
-            table[rowIndex, columnIndex].TextFrame.Text = cellValue;
+            table[rowIndex, columnIndex].TextFrame.Text = text;
             presentation.Save(outputPath, SaveFormat.Pptx);
             return $"Cell [{rowIndex},{columnIndex}] updated. Output: {outputPath}";
         });

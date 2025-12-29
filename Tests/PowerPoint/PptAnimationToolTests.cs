@@ -15,44 +15,49 @@ public class PptAnimationToolTests : TestBase
     {
         var filePath = CreateTestFilePath(fileName);
         using var presentation = new Presentation();
-        // Use the default first slide instead of AddEmptySlide to ensure shapes are properly saved
         var slide = presentation.Slides[0];
         slide.Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         presentation.Save(filePath, SaveFormat.Pptx);
         return filePath;
     }
 
+    private int FindShapeIndex(string pptPath)
+    {
+        using var ppt = new Presentation(pptPath);
+        var slide = ppt.Slides[0];
+        var nonPlaceholderShapes = slide.Shapes.Where(s => s.Placeholder == null).ToList();
+        if (nonPlaceholderShapes.Count == 0) nonPlaceholderShapes = slide.Shapes.ToList();
+        foreach (var s in nonPlaceholderShapes)
+            if (Math.Abs(s.X - 100) < 1 && Math.Abs(s.Y - 100) < 1)
+                return slide.Shapes.IndexOf(s);
+        return nonPlaceholderShapes.Count > 0 ? slide.Shapes.IndexOf(nonPlaceholderShapes[0]) : 0;
+    }
+
+    #region Error Handling Tests
+
+    [Fact]
+    public async Task ExecuteAsync_UnknownOperation_ShouldThrow()
+    {
+        var pptPath = CreateTestPresentation("test_unknown_operation.pptx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "unknown",
+            ["path"] = pptPath,
+            ["slideIndex"] = 0
+        };
+
+        await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+    }
+
+    #endregion
+
+    #region Add Animation Tests
+
     [Fact]
     public async Task AddAnimation_ShouldAddAnimation()
     {
-        // Arrange
         var pptPath = CreateTestPresentation("test_add_animation.pptx");
-
-        // Find the correct shapeIndex for the added AutoShape (excluding placeholders)
-        var correctShapeIndex = -1;
-        using (var ppt = new Presentation(pptPath))
-        {
-            var pptSlide = ppt.Slides[0];
-            var nonPlaceholderShapes = pptSlide.Shapes.Where(s => s.Placeholder == null).ToList();
-            // If no non-placeholder shapes found, use all shapes
-            if (nonPlaceholderShapes.Count == 0) nonPlaceholderShapes = pptSlide.Shapes.ToList();
-            Assert.True(nonPlaceholderShapes.Count > 0,
-                $"Should find at least one shape. Total shapes: {pptSlide.Shapes.Count}, Non-placeholder: {pptSlide.Shapes.Count(s => s.Placeholder == null)}");
-            // The added shape should be the one with original coordinates (100, 100)
-            foreach (var s in nonPlaceholderShapes)
-                if (Math.Abs(s.X - 100) < 1 && Math.Abs(s.Y - 100) < 1)
-                {
-                    correctShapeIndex = pptSlide.Shapes.IndexOf(s);
-                    break;
-                }
-
-            if (correctShapeIndex < 0)
-                correctShapeIndex =
-                    pptSlide.Shapes.IndexOf(nonPlaceholderShapes[0]); // Fallback to first non-placeholder shape
-        }
-
-        Assert.True(correctShapeIndex >= 0, $"Should find at least one shape. Found shape index: {correctShapeIndex}");
-
+        var shapeIndex = FindShapeIndex(pptPath);
         var outputPath = CreateTestFilePath("test_add_animation_output.pptx");
         var arguments = new JsonObject
         {
@@ -60,55 +65,101 @@ public class PptAnimationToolTests : TestBase
             ["path"] = pptPath,
             ["outputPath"] = outputPath,
             ["slideIndex"] = 0,
-            ["shapeIndex"] = correctShapeIndex,
+            ["shapeIndex"] = shapeIndex,
             ["effectType"] = "Fade"
         };
 
-        // Act
         await _tool.ExecuteAsync(arguments);
 
-        // Assert
         using var presentation = new Presentation(outputPath);
-        var slide = presentation.Slides[0];
-        var sequence = slide.Timeline.MainSequence;
-        Assert.True(sequence.Count > 0, "Slide should contain at least one animation effect");
+        Assert.True(presentation.Slides[0].Timeline.MainSequence.Count > 0);
     }
+
+    [Fact]
+    public async Task AddAnimation_WithSubtype_ShouldApplySubtype()
+    {
+        var pptPath = CreateTestPresentation("test_add_animation_subtype.pptx");
+        var shapeIndex = FindShapeIndex(pptPath);
+        var outputPath = CreateTestFilePath("test_add_animation_subtype_output.pptx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "add",
+            ["path"] = pptPath,
+            ["outputPath"] = outputPath,
+            ["slideIndex"] = 0,
+            ["shapeIndex"] = shapeIndex,
+            ["effectType"] = "Fly",
+            ["effectSubtype"] = "FromBottom"
+        };
+
+        await _tool.ExecuteAsync(arguments);
+
+        using var presentation = new Presentation(outputPath);
+        var sequence = presentation.Slides[0].Timeline.MainSequence;
+        Assert.True(sequence.Count > 0);
+        Assert.Equal(EffectType.Fly, sequence[0].Type);
+    }
+
+    [Fact]
+    public async Task AddAnimation_WithTriggerType_ShouldApplyTrigger()
+    {
+        var pptPath = CreateTestPresentation("test_add_animation_trigger.pptx");
+        var shapeIndex = FindShapeIndex(pptPath);
+        var outputPath = CreateTestFilePath("test_add_animation_trigger_output.pptx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "add",
+            ["path"] = pptPath,
+            ["outputPath"] = outputPath,
+            ["slideIndex"] = 0,
+            ["shapeIndex"] = shapeIndex,
+            ["effectType"] = "Fade",
+            ["triggerType"] = "AfterPrevious"
+        };
+
+        await _tool.ExecuteAsync(arguments);
+
+        using var presentation = new Presentation(outputPath);
+        var sequence = presentation.Slides[0].Timeline.MainSequence;
+        Assert.True(sequence.Count > 0);
+        Assert.Equal(EffectTriggerType.AfterPrevious, sequence[0].Timing.TriggerType);
+    }
+
+    [Fact]
+    public async Task AddAnimation_InvalidShapeIndex_ShouldThrow()
+    {
+        var pptPath = CreateTestPresentation("test_add_animation_invalid.pptx");
+        var outputPath = CreateTestFilePath("test_add_animation_invalid_output.pptx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "add",
+            ["path"] = pptPath,
+            ["outputPath"] = outputPath,
+            ["slideIndex"] = 0,
+            ["shapeIndex"] = 999,
+            ["effectType"] = "Fade"
+        };
+
+        await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+    }
+
+    #endregion
+
+    #region Edit Animation Tests
 
     [Fact]
     public async Task EditAnimation_ShouldModifyAnimation()
     {
-        // Arrange
         var pptPath = CreateTestPresentation("test_edit_animation.pptx");
+        var shapeIndex = FindShapeIndex(pptPath);
 
-        // Find the correct shapeIndex for the added AutoShape (excluding placeholders)
-        var correctShapeIndex = -1;
-        using (var presentation = new Presentation(pptPath))
+        using (var ppt = new Presentation(pptPath))
         {
-            var slide = presentation.Slides[0];
-            var nonPlaceholderShapes = slide.Shapes.Where(s => s.Placeholder == null).ToList();
-            // If no non-placeholder shapes found, use all shapes
-            if (nonPlaceholderShapes.Count == 0) nonPlaceholderShapes = slide.Shapes.ToList();
-            Assert.True(nonPlaceholderShapes.Count > 0,
-                $"Should find at least one shape. Total shapes: {slide.Shapes.Count}, Non-placeholder: {slide.Shapes.Count(s => s.Placeholder == null)}");
-            // The added shape should be the one with original coordinates (100, 100)
-            foreach (var s in nonPlaceholderShapes)
-                if (Math.Abs(s.X - 100) < 1 && Math.Abs(s.Y - 100) < 1)
-                {
-                    correctShapeIndex = slide.Shapes.IndexOf(s);
-                    break;
-                }
-
-            if (correctShapeIndex < 0)
-                correctShapeIndex =
-                    slide.Shapes.IndexOf(nonPlaceholderShapes[0]); // Fallback to first non-placeholder shape
-
-            var shape = slide.Shapes[correctShapeIndex];
-            var sequence = slide.Timeline.MainSequence;
-            sequence.AddEffect(shape, EffectType.Fade, EffectSubtype.None, EffectTriggerType.OnClick);
-            presentation.Save(pptPath, SaveFormat.Pptx);
+            var shape = ppt.Slides[0].Shapes[shapeIndex];
+            ppt.Slides[0].Timeline.MainSequence.AddEffect(shape, EffectType.Fade, EffectSubtype.None,
+                EffectTriggerType.OnClick);
+            ppt.Save(pptPath, SaveFormat.Pptx);
         }
-
-        Assert.True(correctShapeIndex >= 0, $"Should find at least one shape. Found shape index: {correctShapeIndex}");
 
         var outputPath = CreateTestFilePath("test_edit_animation_output.pptx");
         var arguments = new JsonObject
@@ -117,61 +168,95 @@ public class PptAnimationToolTests : TestBase
             ["path"] = pptPath,
             ["outputPath"] = outputPath,
             ["slideIndex"] = 0,
-            ["shapeIndex"] = correctShapeIndex,
+            ["shapeIndex"] = shapeIndex,
             ["effectType"] = "Fly",
             ["duration"] = 2.0
         };
 
-        // Act
         await _tool.ExecuteAsync(arguments);
 
-        // Assert
-        Assert.True(File.Exists(outputPath), "Output presentation should be created");
+        Assert.True(File.Exists(outputPath));
     }
+
+    [Fact]
+    public async Task EditAnimation_WithAnimationIndex_ShouldModifySpecificAnimation()
+    {
+        var pptPath = CreateTestPresentation("test_edit_animation_index.pptx");
+        var shapeIndex = FindShapeIndex(pptPath);
+
+        using (var ppt = new Presentation(pptPath))
+        {
+            var shape = ppt.Slides[0].Shapes[shapeIndex];
+            var seq = ppt.Slides[0].Timeline.MainSequence;
+            seq.AddEffect(shape, EffectType.Fade, EffectSubtype.None, EffectTriggerType.OnClick);
+            seq.AddEffect(shape, EffectType.Appear, EffectSubtype.None, EffectTriggerType.AfterPrevious);
+            ppt.Save(pptPath, SaveFormat.Pptx);
+        }
+
+        var outputPath = CreateTestFilePath("test_edit_animation_index_output.pptx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "edit",
+            ["path"] = pptPath,
+            ["outputPath"] = outputPath,
+            ["slideIndex"] = 0,
+            ["shapeIndex"] = shapeIndex,
+            ["animationIndex"] = 0,
+            ["duration"] = 3.0
+        };
+
+        await _tool.ExecuteAsync(arguments);
+
+        using var presentation = new Presentation(outputPath);
+        Assert.Equal(2, presentation.Slides[0].Timeline.MainSequence.Count);
+    }
+
+    [Fact]
+    public async Task EditAnimation_InvalidAnimationIndex_ShouldThrow()
+    {
+        var pptPath = CreateTestPresentation("test_edit_animation_invalid_index.pptx");
+        var shapeIndex = FindShapeIndex(pptPath);
+
+        using (var ppt = new Presentation(pptPath))
+        {
+            var shape = ppt.Slides[0].Shapes[shapeIndex];
+            ppt.Slides[0].Timeline.MainSequence.AddEffect(shape, EffectType.Fade, EffectSubtype.None,
+                EffectTriggerType.OnClick);
+            ppt.Save(pptPath, SaveFormat.Pptx);
+        }
+
+        var outputPath = CreateTestFilePath("test_edit_animation_invalid_index_output.pptx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "edit",
+            ["path"] = pptPath,
+            ["outputPath"] = outputPath,
+            ["slideIndex"] = 0,
+            ["shapeIndex"] = shapeIndex,
+            ["animationIndex"] = 999,
+            ["effectType"] = "Fly"
+        };
+
+        await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+    }
+
+    #endregion
+
+    #region Delete Animation Tests
 
     [Fact]
     public async Task DeleteAnimation_ShouldDeleteAnimation()
     {
-        // Arrange
         var pptPath = CreateTestPresentation("test_delete_animation.pptx");
+        var shapeIndex = FindShapeIndex(pptPath);
 
-        // Find the correct shapeIndex for the added AutoShape (excluding placeholders)
-        var correctShapeIndex = -1;
         using (var ppt = new Presentation(pptPath))
         {
-            var pptSlide = ppt.Slides[0];
-            var nonPlaceholderShapes = pptSlide.Shapes.Where(s => s.Placeholder == null).ToList();
-            // If no non-placeholder shapes found, use all shapes
-            if (nonPlaceholderShapes.Count == 0) nonPlaceholderShapes = pptSlide.Shapes.ToList();
-            Assert.True(nonPlaceholderShapes.Count > 0,
-                $"Should find at least one shape. Total shapes: {pptSlide.Shapes.Count}, Non-placeholder: {pptSlide.Shapes.Count(s => s.Placeholder == null)}");
-            // The added shape should be the one with original coordinates (100, 100)
-            foreach (var s in nonPlaceholderShapes)
-                if (Math.Abs(s.X - 100) < 1 && Math.Abs(s.Y - 100) < 1)
-                {
-                    correctShapeIndex = pptSlide.Shapes.IndexOf(s);
-                    break;
-                }
-
-            if (correctShapeIndex < 0)
-                correctShapeIndex =
-                    pptSlide.Shapes.IndexOf(nonPlaceholderShapes[0]); // Fallback to first non-placeholder shape
-
-            var shape = pptSlide.Shapes[correctShapeIndex];
-            var sequence = pptSlide.Timeline.MainSequence;
-            sequence.AddEffect(shape, EffectType.Fade, EffectSubtype.None, EffectTriggerType.OnClick);
+            var shape = ppt.Slides[0].Shapes[shapeIndex];
+            ppt.Slides[0].Timeline.MainSequence.AddEffect(shape, EffectType.Fade, EffectSubtype.None,
+                EffectTriggerType.OnClick);
             ppt.Save(pptPath, SaveFormat.Pptx);
         }
-
-        Assert.True(correctShapeIndex >= 0, $"Should find at least one shape. Found shape index: {correctShapeIndex}");
-
-        int animationsBefore;
-        using (var tempPresentation = new Presentation(pptPath))
-        {
-            animationsBefore = tempPresentation.Slides[0].Timeline.MainSequence.Count;
-        }
-
-        Assert.True(animationsBefore > 0, "Animation should exist before deletion");
 
         var outputPath = CreateTestFilePath("test_delete_animation_output.pptx");
         var arguments = new JsonObject
@@ -180,16 +265,76 @@ public class PptAnimationToolTests : TestBase
             ["path"] = pptPath,
             ["outputPath"] = outputPath,
             ["slideIndex"] = 0,
-            ["shapeIndex"] = correctShapeIndex
+            ["shapeIndex"] = shapeIndex
         };
 
-        // Act
         await _tool.ExecuteAsync(arguments);
 
-        // Assert
         using var presentation = new Presentation(outputPath);
-        var animationsAfter = presentation.Slides[0].Timeline.MainSequence.Count;
-        Assert.True(animationsAfter < animationsBefore,
-            $"Animation should be deleted. Before: {animationsBefore}, After: {animationsAfter}");
+        Assert.Equal(0, presentation.Slides[0].Timeline.MainSequence.Count);
     }
+
+    [Fact]
+    public async Task DeleteAnimation_WithAnimationIndex_ShouldDeleteSpecificAnimation()
+    {
+        var pptPath = CreateTestPresentation("test_delete_animation_index.pptx");
+        var shapeIndex = FindShapeIndex(pptPath);
+
+        using (var ppt = new Presentation(pptPath))
+        {
+            var shape = ppt.Slides[0].Shapes[shapeIndex];
+            var sequence = ppt.Slides[0].Timeline.MainSequence;
+            sequence.AddEffect(shape, EffectType.Fade, EffectSubtype.None, EffectTriggerType.OnClick);
+            sequence.AddEffect(shape, EffectType.Appear, EffectSubtype.None, EffectTriggerType.AfterPrevious);
+            ppt.Save(pptPath, SaveFormat.Pptx);
+        }
+
+        var outputPath = CreateTestFilePath("test_delete_animation_index_output.pptx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "delete",
+            ["path"] = pptPath,
+            ["outputPath"] = outputPath,
+            ["slideIndex"] = 0,
+            ["shapeIndex"] = shapeIndex,
+            ["animationIndex"] = 0
+        };
+
+        await _tool.ExecuteAsync(arguments);
+
+        using var presentation = new Presentation(outputPath);
+        Assert.Equal(1, presentation.Slides[0].Timeline.MainSequence.Count);
+    }
+
+    [Fact]
+    public async Task DeleteAnimation_AllFromSlide_ShouldClearSequence()
+    {
+        var pptPath = CreateTestPresentation("test_delete_all_animation.pptx");
+        var shapeIndex = FindShapeIndex(pptPath);
+
+        using (var ppt = new Presentation(pptPath))
+        {
+            var shape = ppt.Slides[0].Shapes[shapeIndex];
+            var sequence = ppt.Slides[0].Timeline.MainSequence;
+            sequence.AddEffect(shape, EffectType.Fade, EffectSubtype.None, EffectTriggerType.OnClick);
+            sequence.AddEffect(shape, EffectType.Appear, EffectSubtype.None, EffectTriggerType.AfterPrevious);
+            ppt.Save(pptPath, SaveFormat.Pptx);
+        }
+
+        var outputPath = CreateTestFilePath("test_delete_all_animation_output.pptx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "delete",
+            ["path"] = pptPath,
+            ["outputPath"] = outputPath,
+            ["slideIndex"] = 0
+        };
+
+        await _tool.ExecuteAsync(arguments);
+
+        using var presentation = new Presentation(outputPath);
+        Assert.Equal(0, presentation.Slides[0].Timeline.MainSequence.Count);
+    }
+
+    #endregion
 }

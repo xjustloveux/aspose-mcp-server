@@ -40,7 +40,7 @@
 **開發與技術**
 - [🛠️ 開發者指南](#️-開發者指南) - 倉庫結構、本地開發、多平台構建、運行測試
 - [🔒 安全特性](#-安全特性) - 路徑驗證、輸入驗證、錯誤處理
-- [🌍 跨平台支援](#-跨平台支援) - Windows、Linux、macOS 技術規格
+- [🌍 跨平台支援](#-跨平台支援) - Windows、Linux、macOS 技術規格、Linux/macOS 額外需求
 
 **參考資料**
 - [📝 使用範例](#-使用範例) - 從A文檔複製格式到B文檔
@@ -580,11 +580,42 @@ word_style(path="B.docx", operation="copy_styles", sourceDocument="A.docx")
 - 單一可執行檔案（PublishSingleFile）
 - 支援 UTF-8 編碼（完整中文支援）
 
-**獲取方式：** 
+**獲取方式：**
 - 從 [GitHub Releases](https://github.com/xjustloveux/aspose-mcp-server/releases) 下載預編譯版本
 - 或使用 `publish.ps1` 腳本本地構建
 
 **注意：** GitHub Actions 會在推送到 main/master 分支時自動構建所有平台版本。
+
+### Linux/macOS 額外需求
+
+部分圖片處理功能依賴 `System.Drawing.Common`，在 Linux/macOS 上需要安裝 `libgdiplus`：
+
+**安裝方式：**
+```bash
+# Ubuntu/Debian
+sudo apt-get install libgdiplus
+
+# CentOS/RHEL
+sudo yum install libgdiplus
+
+# macOS
+brew install mono-libgdiplus
+```
+
+**受影響的功能：**
+
+| 功能 | 工具 | 說明 |
+|------|------|------|
+| 投影片匯出為圖片 | `ppt_image_operations` | `export_slides` 操作 |
+| 投影片縮圖生成 | `ppt_data_operations` | `get_slide_details` 的 `includeThumbnail` 參數 |
+| 簡報轉圖片 | `ppt_file_operations` | 轉換為圖片格式 |
+| PDF 圖片提取 | `pdf_image` | `extract` 操作的某些格式 |
+
+**未安裝 libgdiplus 時的錯誤訊息：**
+```
+System.TypeInitializationException: The type initializer for 'Gdip' threw an exception.
+---> System.PlatformNotSupportedException: System.Drawing.Common is not supported on non-Windows platforms.
+```
 
 ## 📄 授權
 

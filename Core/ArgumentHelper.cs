@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -1010,6 +1011,66 @@ public static class ArgumentHelper
         // Allow absolute paths for file operations (needed for test environments and legitimate use cases)
         _ = SecurityHelper.ValidateFilePath(outputPath, paramName, true);
         return outputPath;
+    }
+
+    #endregion
+
+    #region Type Conversion Methods
+
+    /// <summary>
+    ///     Converts a JSON node to the appropriate .NET type based on the JSON value kind.
+    ///     Supports: bool, int, double, DateTime (ISO format string), string.
+    /// </summary>
+    /// <param name="node">The JSON node to convert.</param>
+    /// <returns>The converted value as object, or empty string if node is null.</returns>
+    public static object ConvertToObject(JsonNode? node)
+    {
+        if (node == null)
+            return string.Empty;
+
+        var kind = node.GetValueKind();
+
+        return kind switch
+        {
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            JsonValueKind.Number => ConvertNumber(node.AsValue()),
+            JsonValueKind.String => ParseValue(node.GetValue<string>()),
+            _ => node.ToString()
+        };
+    }
+
+    /// <summary>
+    ///     Converts a JSON number to int or double based on whether it has a fractional part.
+    /// </summary>
+    private static object ConvertNumber(JsonValue value)
+    {
+        if (value.TryGetValue<int>(out var intVal))
+            return intVal;
+
+        if (value.TryGetValue<double>(out var doubleVal))
+            return doubleVal;
+
+        return value.GetValue<double>();
+    }
+
+    /// <summary>
+    ///     Parses a string value to appropriate type (number, boolean, date, or string).
+    ///     Useful for building arrays or collections with typed values.
+    /// </summary>
+    /// <param name="value">String value to parse.</param>
+    /// <returns>Parsed value as double, bool, DateTime, or original string.</returns>
+    public static object ParseValue(string value)
+    {
+        if (double.TryParse(value, NumberStyles.Any,
+                CultureInfo.InvariantCulture, out var numValue))
+            return numValue;
+        if (bool.TryParse(value, out var boolValue))
+            return boolValue;
+        if (DateTime.TryParse(value, CultureInfo.InvariantCulture,
+                DateTimeStyles.None, out var dateValue))
+            return dateValue;
+        return value;
     }
 
     #endregion

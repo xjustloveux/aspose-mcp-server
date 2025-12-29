@@ -7,12 +7,15 @@ using AsposeMcpServer.Core;
 namespace AsposeMcpServer.Tools.PowerPoint;
 
 /// <summary>
-///     Unified tool for managing PowerPoint sections (add, rename, delete, get)
-///     Merges: PptAddSectionTool, PptRenameSectionTool, PptDeleteSectionTool, PptGetSectionsTool
+///     Unified tool for managing PowerPoint sections (add, rename, delete, get).
 /// </summary>
 public class PptSectionTool : IAsposeTool
 {
+    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
+
     public string Description => @"Manage PowerPoint sections. Supports 4 operations: add, rename, delete, get.
+
+Warning: If outputPath is not provided for add/rename/delete operations, the original file will be overwritten.
 
 Usage examples:
 - Add section: ppt_section(operation='add', path='presentation.pptx', name='Section 1', slideIndex=0)
@@ -43,7 +46,7 @@ Usage examples:
             name = new
             {
                 type = "string",
-                description = "Section name (required for add/rename)"
+                description = "Section name (required for add)"
             },
             slideIndex = new
             {
@@ -79,6 +82,7 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments object containing operation parameters</param>
     /// <returns>Result message as a string</returns>
+    /// <exception cref="ArgumentException">Thrown when operation is unknown or required parameters are missing</exception>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
@@ -100,8 +104,9 @@ Usage examples:
     /// </summary>
     /// <param name="path">PowerPoint file path</param>
     /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing sectionName, slideIndex</param>
+    /// <param name="arguments">JSON arguments containing name, slideIndex</param>
     /// <returns>Success message</returns>
+    /// <exception cref="ArgumentException">Thrown when name is missing or slideIndex is out of range</exception>
     private Task<string> AddSectionAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -124,6 +129,7 @@ Usage examples:
     /// <param name="outputPath">Output file path</param>
     /// <param name="arguments">JSON arguments containing sectionIndex, newName</param>
     /// <returns>Success message</returns>
+    /// <exception cref="ArgumentException">Thrown when sectionIndex is out of range or newName is missing</exception>
     private Task<string> RenameSectionAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -132,8 +138,7 @@ Usage examples:
             var newName = ArgumentHelper.GetString(arguments, "newName");
 
             using var presentation = new Presentation(path);
-            if (sectionIndex < 0 || sectionIndex >= presentation.Sections.Count)
-                throw new ArgumentException($"sectionIndex must be between 0 and {presentation.Sections.Count - 1}");
+            PowerPointHelper.ValidateCollectionIndex(sectionIndex, presentation.Sections.Count, "section");
 
             presentation.Sections[sectionIndex].Name = newName;
             presentation.Save(outputPath, SaveFormat.Pptx);
@@ -146,8 +151,9 @@ Usage examples:
     /// </summary>
     /// <param name="path">PowerPoint file path</param>
     /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing sectionIndex</param>
+    /// <param name="arguments">JSON arguments containing sectionIndex, keepSlides</param>
     /// <returns>Success message</returns>
+    /// <exception cref="ArgumentException">Thrown when sectionIndex is out of range</exception>
     private Task<string> DeleteSectionAsync(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -171,7 +177,7 @@ Usage examples:
     ///     Gets all sections from the presentation
     /// </summary>
     /// <param name="path">PowerPoint file path</param>
-    /// <returns>JSON string with all sections</returns>
+    /// <returns>JSON string with all sections including slide range info</returns>
     private Task<string> GetSectionsAsync(string path)
     {
         return Task.Run(() =>
@@ -186,17 +192,22 @@ Usage examples:
                     sections = Array.Empty<object>(),
                     message = "No sections found"
                 };
-                return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
+                return JsonSerializer.Serialize(emptyResult, JsonOptions);
             }
 
             var sectionsList = new List<object>();
             for (var i = 0; i < presentation.Sections.Count; i++)
             {
                 var sec = presentation.Sections[i];
+                var startSlideIndex = sec.StartedFromSlide != null
+                    ? presentation.Slides.IndexOf(sec.StartedFromSlide)
+                    : -1;
                 sectionsList.Add(new
                 {
                     index = i,
-                    name = sec.Name
+                    name = sec.Name,
+                    startSlideIndex,
+                    slideCount = sec.GetSlidesListOfSection().Count
                 });
             }
 
@@ -206,7 +217,7 @@ Usage examples:
                 sections = sectionsList
             };
 
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(result, JsonOptions);
         });
     }
 }

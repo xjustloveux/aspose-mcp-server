@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Nodes;
+using System.Text.Json.Nodes;
 using Aspose.Slides;
 using Aspose.Slides.Animation;
 using Aspose.Slides.Export;
@@ -7,18 +7,19 @@ using AsposeMcpServer.Core;
 namespace AsposeMcpServer.Tools.PowerPoint;
 
 /// <summary>
-///     Unified tool for managing PowerPoint animations (add, edit, delete)
-///     Merges: PptAddAnimationTool, PptEditAnimationTool, PptDeleteAnimationTool
+///     Unified tool for managing PowerPoint animations (add, edit, delete).
 /// </summary>
 public class PptAnimationTool : IAsposeTool
 {
+    /// <inheritdoc />
     public string Description => @"Manage PowerPoint animations. Supports 3 operations: add, edit, delete.
 
 Usage examples:
 - Add animation: ppt_animation(operation='add', path='presentation.pptx', slideIndex=0, shapeIndex=0, effectType='Fade')
-- Edit animation: ppt_animation(operation='edit', path='presentation.pptx', slideIndex=0, shapeIndex=0, effectType='Fly')
+- Edit animation: ppt_animation(operation='edit', path='presentation.pptx', slideIndex=0, shapeIndex=0, animationIndex=0, effectType='Fly')
 - Delete animation: ppt_animation(operation='delete', path='presentation.pptx', slideIndex=0, shapeIndex=0)";
 
+    /// <inheritdoc />
     public object InputSchema => new
     {
         type = "object",
@@ -28,15 +29,15 @@ Usage examples:
             {
                 type = "string",
                 description = @"Operation to perform.
-- 'add': Add animation to shape (required params: path, slideIndex, shapeIndex, effectType)
-- 'edit': Edit animation (required params: path, slideIndex, shapeIndex)
-- 'delete': Delete animation (required params: path, slideIndex, shapeIndex)",
+- 'add': Add animation to shape
+- 'edit': Edit existing animation (use animationIndex to specify which one)
+- 'delete': Delete animation(s)",
                 @enum = new[] { "add", "edit", "delete" }
             },
             path = new
             {
                 type = "string",
-                description = "Presentation file path (required for all operations)"
+                description = "Presentation file path"
             },
             slideIndex = new
             {
@@ -48,47 +49,47 @@ Usage examples:
                 type = "number",
                 description = "Shape index (0-based, required for add/edit, optional for delete)"
             },
+            animationIndex = new
+            {
+                type = "number",
+                description = "Animation index (0-based, optional for edit/delete, targets specific animation)"
+            },
             effectType = new
             {
                 type = "string",
+                description = "Animation effect type (e.g., Fade, Fly, Appear, Bounce, Zoom, Wipe, Split, etc.)"
+            },
+            effectSubtype = new
+            {
+                type = "string",
                 description =
-                    "Animation effect type (Fade, Fly, Appear, Bounce, Zoom, etc., required for add, optional for edit)"
+                    "Animation effect subtype for direction/style (e.g., FromBottom, FromLeft, FromRight, FromTop, Horizontal, Vertical)"
             },
             triggerType = new
             {
                 type = "string",
-                description = "Trigger type (OnClick, AfterPrevious, WithPrevious, optional, for edit)"
+                description = "Trigger type (OnClick, AfterPrevious, WithPrevious)"
             },
             duration = new
             {
                 type = "number",
-                description = "Animation duration in seconds (optional, for edit)"
+                description = "Animation duration in seconds"
             },
             delay = new
             {
                 type = "number",
-                description = "Animation delay in seconds (optional, for edit)"
-            },
-            animationIndex = new
-            {
-                type = "number",
-                description =
-                    "Animation index (0-based, optional, for delete, if not provided deletes all animations for the shape)"
+                description = "Animation delay in seconds"
             },
             outputPath = new
             {
                 type = "string",
-                description = "Output file path (optional, for add/edit/delete operations, defaults to input path)"
+                description = "Output file path (optional, defaults to input path)"
             }
         },
         required = new[] { "operation", "path", "slideIndex" }
     };
 
-    /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments
-    /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters</param>
-    /// <returns>Result message as a string</returns>
+    /// <inheritdoc />
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
@@ -106,36 +107,33 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Adds animation to a shape
+    ///     Adds animation to a shape.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="slideIndex">Slide index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing shapeIndex, animationType, optional effectType</param>
-    /// <returns>Success message</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="slideIndex">Slide index (0-based).</param>
+    /// <param name="arguments">JSON arguments containing shapeIndex, effectType, effectSubtype, triggerType.</param>
+    /// <returns>Success message.</returns>
+    /// <exception cref="ArgumentException">Thrown when shapeIndex is out of range.</exception>
     private Task<string> AddAnimationAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
             var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
             var effectTypeStr = ArgumentHelper.GetString(arguments, "effectType", "Fade");
+            var effectSubtypeStr = ArgumentHelper.GetStringNullable(arguments, "effectSubtype");
+            var triggerTypeStr = ArgumentHelper.GetStringNullable(arguments, "triggerType");
 
             using var presentation = new Presentation(path);
-            var slide = presentation.Slides[slideIndex];
+            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+            PowerPointHelper.ValidateShapeIndex(shapeIndex, slide);
             var shape = slide.Shapes[shapeIndex];
 
-            var effectType = effectTypeStr.ToLower() switch
-            {
-                "fade" => EffectType.Fade,
-                "fly" => EffectType.Fly,
-                "appear" => EffectType.Appear,
-                "bounce" => EffectType.Bounce,
-                "zoom" => EffectType.Zoom,
-                _ => EffectType.Fade
-            };
+            var effectType = ParseEffectType(effectTypeStr);
+            var effectSubtype = ParseEffectSubtype(effectSubtypeStr);
+            var triggerType = ParseTriggerType(triggerTypeStr);
 
-            slide.Timeline.MainSequence.AddEffect(shape, effectType, EffectSubtype.None, EffectTriggerType.OnClick);
-
+            slide.Timeline.MainSequence.AddEffect(shape, effectType, effectSubtype, triggerType);
             presentation.Save(outputPath, SaveFormat.Pptx);
 
             return
@@ -144,65 +142,84 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Edits animation properties
+    ///     Edits animation properties. If animationIndex is provided, modifies that specific animation;
+    ///     otherwise replaces all animations for the shape.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="slideIndex">Slide index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing shapeIndex, optional animationType, effectType</param>
-    /// <returns>Success message</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="slideIndex">Slide index (0-based).</param>
+    /// <param name="arguments">
+    ///     JSON arguments containing shapeIndex, animationIndex, effectType, effectSubtype, triggerType,
+    ///     duration, delay.
+    /// </param>
+    /// <returns>Success message.</returns>
+    /// <exception cref="ArgumentException">Thrown when shapeIndex or animationIndex is out of range.</exception>
     private Task<string> EditAnimationAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
             var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
+            var animationIndex = ArgumentHelper.GetIntNullable(arguments, "animationIndex");
             var effectTypeStr = ArgumentHelper.GetStringNullable(arguments, "effectType");
+            var effectSubtypeStr = ArgumentHelper.GetStringNullable(arguments, "effectSubtype");
             var triggerTypeStr = ArgumentHelper.GetStringNullable(arguments, "triggerType");
             var duration = ArgumentHelper.GetFloatNullable(arguments, "duration");
             var delay = ArgumentHelper.GetFloatNullable(arguments, "delay");
 
             using var presentation = new Presentation(path);
             var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-            if (shapeIndex < 0 || shapeIndex >= slide.Shapes.Count)
-                throw new ArgumentException($"shapeIndex must be between 0 and {slide.Shapes.Count - 1}");
+            PowerPointHelper.ValidateShapeIndex(shapeIndex, slide);
 
             var shape = slide.Shapes[shapeIndex];
             var sequence = slide.Timeline.MainSequence;
+            var animations = sequence.Where(e => e.TargetShape == shape).ToList();
 
-            // Remove existing animations for this shape
-            for (var i = sequence.Count - 1; i >= 0; i--)
-                if (sequence[i].TargetShape == shape)
-                    sequence.Remove(sequence[i]);
-
-            // Add new animation if specified
-            if (!string.IsNullOrEmpty(effectTypeStr))
+            if (animationIndex.HasValue)
             {
-                var effectType = effectTypeStr.ToLower() switch
-                {
-                    "fade" => EffectType.Fade,
-                    "fly" => EffectType.Fly,
-                    "appear" => EffectType.Appear,
-                    "bounce" => EffectType.Bounce,
-                    "zoom" => EffectType.Zoom,
-                    "wipe" => EffectType.Wipe,
-                    "dissolve" => EffectType.Dissolve,
-                    "randombars" => EffectType.RandomBars,
-                    "randomeffects" => EffectType.RandomEffects,
-                    _ => EffectType.Fade
-                };
+                if (animationIndex.Value < 0 || animationIndex.Value >= animations.Count)
+                    throw new ArgumentException($"animationIndex must be between 0 and {animations.Count - 1}");
 
-                var triggerType = triggerTypeStr?.ToLower() switch
-                {
-                    "afterprevious" => EffectTriggerType.AfterPrevious,
-                    "withprevious" => EffectTriggerType.WithPrevious,
-                    _ => EffectTriggerType.OnClick
-                };
-
-                var effect = sequence.AddEffect(shape, effectType, EffectSubtype.None, triggerType);
-
+                var effect = animations[animationIndex.Value];
                 if (duration.HasValue) effect.Timing.Duration = duration.Value;
-
                 if (delay.HasValue) effect.Timing.TriggerDelayTime = delay.Value;
+
+                if (!string.IsNullOrEmpty(effectTypeStr) || !string.IsNullOrEmpty(effectSubtypeStr) ||
+                    !string.IsNullOrEmpty(triggerTypeStr))
+                {
+                    var newEffectType = !string.IsNullOrEmpty(effectTypeStr)
+                        ? ParseEffectType(effectTypeStr)
+                        : effect.Type;
+                    var newSubtype = !string.IsNullOrEmpty(effectSubtypeStr)
+                        ? ParseEffectSubtype(effectSubtypeStr)
+                        : effect.Subtype;
+                    var newTrigger = !string.IsNullOrEmpty(triggerTypeStr)
+                        ? ParseTriggerType(triggerTypeStr)
+                        : effect.Timing.TriggerType;
+
+                    var currentDuration = effect.Timing.Duration;
+                    var currentDelay = effect.Timing.TriggerDelayTime;
+
+                    sequence.Remove(effect);
+                    var newEffect = sequence.AddEffect(shape, newEffectType, newSubtype, newTrigger);
+                    newEffect.Timing.Duration = duration ?? currentDuration;
+                    newEffect.Timing.TriggerDelayTime = delay ?? currentDelay;
+                }
+            }
+            else
+            {
+                foreach (var anim in animations)
+                    sequence.Remove(anim);
+
+                if (!string.IsNullOrEmpty(effectTypeStr))
+                {
+                    var effectType = ParseEffectType(effectTypeStr);
+                    var effectSubtype = ParseEffectSubtype(effectSubtypeStr);
+                    var triggerType = ParseTriggerType(triggerTypeStr);
+                    var effect = sequence.AddEffect(shape, effectType, effectSubtype, triggerType);
+
+                    if (duration.HasValue) effect.Timing.Duration = duration.Value;
+                    if (delay.HasValue) effect.Timing.TriggerDelayTime = delay.Value;
+                }
             }
 
             presentation.Save(outputPath, SaveFormat.Pptx);
@@ -211,13 +228,14 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Deletes animation from a shape
+    ///     Deletes animation(s) from a shape or slide.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="slideIndex">Slide index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing shapeIndex</param>
-    /// <returns>Success message</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="slideIndex">Slide index (0-based).</param>
+    /// <param name="arguments">JSON arguments containing optional shapeIndex and animationIndex.</param>
+    /// <returns>Success message.</returns>
+    /// <exception cref="ArgumentException">Thrown when shapeIndex or animationIndex is out of range.</exception>
     private Task<string> DeleteAnimationAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -231,9 +249,7 @@ Usage examples:
 
             if (shapeIndex.HasValue)
             {
-                if (shapeIndex.Value < 0 || shapeIndex.Value >= slide.Shapes.Count)
-                    throw new ArgumentException($"shapeIndex must be between 0 and {slide.Shapes.Count - 1}");
-
+                PowerPointHelper.ValidateShapeIndex(shapeIndex.Value, slide);
                 var shape = slide.Shapes[shapeIndex.Value];
                 var animations = sequence.Where(e => e.TargetShape == shape).ToList();
 
@@ -245,17 +261,52 @@ Usage examples:
                 }
                 else
                 {
-                    foreach (var anim in animations) sequence.Remove(anim);
+                    foreach (var anim in animations)
+                        sequence.Remove(anim);
                 }
             }
             else
             {
-                // Delete all animations from the slide
                 sequence.Clear();
             }
 
             presentation.Save(outputPath, SaveFormat.Pptx);
             return $"Animation(s) deleted from slide {slideIndex}. Output: {outputPath}";
         });
+    }
+
+    /// <summary>
+    ///     Parses effect type string to EffectType enum.
+    /// </summary>
+    /// <param name="effectTypeStr">Effect type string.</param>
+    /// <returns>Parsed EffectType, defaults to Fade if invalid.</returns>
+    private static EffectType ParseEffectType(string? effectTypeStr)
+    {
+        if (string.IsNullOrEmpty(effectTypeStr)) return EffectType.Fade;
+        return Enum.TryParse<EffectType>(effectTypeStr, true, out var result) ? result : EffectType.Fade;
+    }
+
+    /// <summary>
+    ///     Parses effect subtype string to EffectSubtype enum.
+    /// </summary>
+    /// <param name="subtypeStr">Effect subtype string.</param>
+    /// <returns>Parsed EffectSubtype, defaults to None if invalid.</returns>
+    private static EffectSubtype ParseEffectSubtype(string? subtypeStr)
+    {
+        if (string.IsNullOrEmpty(subtypeStr)) return EffectSubtype.None;
+        return Enum.TryParse<EffectSubtype>(subtypeStr, true, out var result) ? result : EffectSubtype.None;
+    }
+
+    /// <summary>
+    ///     Parses trigger type string to EffectTriggerType enum.
+    /// </summary>
+    /// <param name="triggerTypeStr">Trigger type string.</param>
+    /// <returns>Parsed EffectTriggerType, defaults to OnClick if invalid.</returns>
+    private static EffectTriggerType ParseTriggerType(string? triggerTypeStr)
+    {
+        if (string.IsNullOrEmpty(triggerTypeStr)) return EffectTriggerType.OnClick;
+        return Enum.TryParse<EffectTriggerType>(triggerTypeStr, true, out var result)
+            ? result
+            : EffectTriggerType.OnClick;
     }
 }

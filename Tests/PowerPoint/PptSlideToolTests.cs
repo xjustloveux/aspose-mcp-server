@@ -293,4 +293,60 @@ public class PptSlideToolTests : TestBase
         // Verify edit operation completed
         Assert.NotNull(resultPresentation.Slides[0]);
     }
+
+    [Fact]
+    public async Task DeleteSlide_LastSlide_ShouldThrowInvalidOperationException()
+    {
+        // Arrange - Create a presentation with only one slide
+        var pptPath = CreateTestFilePath("test_delete_last_slide.pptx");
+        using (var ppt = new Presentation())
+        {
+            ppt.Save(pptPath, SaveFormat.Pptx);
+        }
+
+        var arguments = CreateArguments("delete", pptPath);
+        arguments["slideIndex"] = 0;
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _tool.ExecuteAsync(arguments));
+    }
+
+    [Fact]
+    public async Task GetSlidesInfo_ShouldReturnLayoutInfo()
+    {
+        // Arrange
+        var pptPath = CreatePptPresentation("test_get_layout_info.pptx");
+        var arguments = CreateArguments("get_info", pptPath);
+
+        // Act
+        var result = await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.Contains("layoutType", result);
+        Assert.Contains("layoutName", result);
+        Assert.Contains("availableLayouts", result);
+    }
+
+    [Fact]
+    public async Task UnknownOperation_ShouldThrowArgumentException()
+    {
+        // Arrange
+        var pptPath = CreatePptPresentation("test_unknown_op.pptx");
+        var arguments = CreateArguments("unknown_operation", pptPath);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+    }
+
+    [Fact]
+    public async Task DeleteSlide_InvalidIndex_ShouldThrowArgumentException()
+    {
+        // Arrange
+        var pptPath = CreatePptPresentation("test_delete_invalid_index.pptx");
+        var arguments = CreateArguments("delete", pptPath);
+        arguments["slideIndex"] = 99;
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+    }
 }

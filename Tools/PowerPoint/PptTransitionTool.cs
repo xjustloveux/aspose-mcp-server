@@ -15,8 +15,10 @@ public class PptTransitionTool : IAsposeTool
 {
     public string Description => @"Manage PowerPoint transitions. Supports 3 operations: set, get, delete.
 
+Transition types: Fade, Push, Wipe, Split, Random, Circle, Plus, Diamond, Comb, Cover, Cut, Dissolve, Zoom, and more (all TransitionType enum values supported).
+
 Usage examples:
-- Set transition: ppt_transition(operation='set', path='presentation.pptx', slideIndex=0, transitionType='Fade', durationSeconds=1.5)
+- Set transition: ppt_transition(operation='set', path='presentation.pptx', slideIndex=0, transitionType='Fade', advanceAfterSeconds=1.5)
 - Get transition: ppt_transition(operation='get', path='presentation.pptx', slideIndex=0)
 - Delete transition: ppt_transition(operation='delete', path='presentation.pptx', slideIndex=0)";
 
@@ -47,12 +49,14 @@ Usage examples:
             transitionType = new
             {
                 type = "string",
-                description = "Transition type (Fade, Push, Wipe, Split, RandomBars, etc., required for set)"
+                description =
+                    "Transition type: all TransitionType enum values supported (Fade, Push, Wipe, Split, Random, Circle, Plus, Diamond, etc., required for set)"
             },
-            durationSeconds = new
+            advanceAfterSeconds = new
             {
                 type = "number",
-                description = "Transition duration in seconds (optional, for set, default 1.0)"
+                description =
+                    "Seconds before auto-advancing to next slide (optional, for set, default: no auto-advance)"
             },
             outputPath = new
             {
@@ -85,48 +89,52 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Sets slide transition effect
+    ///     Sets slide transition effect.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="slideIndex">Slide index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing transitionType, optional duration</param>
-    /// <returns>Success message</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="slideIndex">Slide index (0-based).</param>
+    /// <param name="arguments">JSON arguments containing transitionType, optional advanceAfterSeconds.</param>
+    /// <returns>Success message.</returns>
+    /// <exception cref="ArgumentException">Thrown when transitionType is not a valid TransitionType enum value.</exception>
     private Task<string> SetTransitionAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
             var transitionTypeStr = ArgumentHelper.GetString(arguments, "transitionType");
-            var duration = ArgumentHelper.GetDouble(arguments, "durationSeconds", 1.0);
+            var advanceAfterSeconds = ArgumentHelper.GetDoubleNullable(arguments, "advanceAfterSeconds");
 
             using var presentation = new Presentation(path);
             var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
             var transition = slide.SlideShowTransition;
-            transition.Type = transitionTypeStr.ToLower() switch
+
+            if (!Enum.TryParse<TransitionType>(transitionTypeStr, true, out var transitionType))
+                throw new ArgumentException(
+                    $"Invalid transition type: '{transitionTypeStr}'. Valid values: {string.Join(", ", Enum.GetNames<TransitionType>())}");
+
+            transition.Type = transitionType;
+
+            if (advanceAfterSeconds.HasValue)
             {
-                "push" => TransitionType.Push,
-                "wipe" => TransitionType.Wipe,
-                "split" => TransitionType.Split,
-                "randombars" => TransitionType.Random,
-                "circle" => TransitionType.Circle,
-                "plus" => TransitionType.Plus,
-                "diamond" => TransitionType.Diamond,
-                _ => TransitionType.Fade
-            };
-            transition.AdvanceAfterTime = (uint)(duration * 1000);
+                transition.AdvanceAfterTime = (uint)(advanceAfterSeconds.Value * 1000);
+                transition.AdvanceOnClick = true;
+            }
 
             presentation.Save(outputPath, SaveFormat.Pptx);
-            return
-                $"Transition '{transition.Type}' set for slide {slideIndex} (duration {duration:0.##}s). Output: {outputPath}";
+
+            var message = $"Transition '{transition.Type}' set for slide {slideIndex}.";
+            if (advanceAfterSeconds.HasValue)
+                message += $" Auto-advance after {advanceAfterSeconds.Value:0.##}s.";
+            return message + $" Output: {outputPath}";
         });
     }
 
     /// <summary>
-    ///     Gets transition information for a slide
+    ///     Gets transition information for a slide.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="slideIndex">Slide index (0-based)</param>
-    /// <returns>JSON string with transition details</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="slideIndex">Slide index (0-based).</param>
+    /// <returns>JSON string with transition details.</returns>
     private Task<string> GetTransitionAsync(string path, int slideIndex)
     {
         return Task.Run(() =>
@@ -135,14 +143,15 @@ Usage examples:
             var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
             var transition = slide.SlideShowTransition;
 
+            var advanceAfterTimeMs = transition?.AdvanceAfterTime ?? 0;
             var result = new
             {
                 slideIndex,
-                hasTransition = transition != null,
+                hasTransition = transition?.Type != TransitionType.None,
                 type = transition?.Type.ToString(),
                 speed = transition?.Speed.ToString(),
                 advanceOnClick = transition?.AdvanceOnClick,
-                advanceAfterTimeMs = transition?.AdvanceAfterTime,
+                advanceAfterSeconds = advanceAfterTimeMs > 0 ? advanceAfterTimeMs / 1000.0 : (double?)null,
                 soundMode = transition?.SoundMode.ToString(),
                 hasSound = transition?.Sound != null
             };
@@ -152,20 +161,20 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Removes transition from a slide
+    ///     Removes transition from a slide.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="slideIndex">Slide index (0-based)</param>
-    /// <returns>Success message</returns>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <param name="outputPath">Output file path.</param>
+    /// <param name="slideIndex">Slide index (0-based).</param>
+    /// <returns>Success message.</returns>
     private Task<string> DeleteTransitionAsync(string path, string outputPath, int slideIndex)
     {
         return Task.Run(() =>
         {
             using var presentation = new Presentation(path);
             var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-            slide.SlideShowTransition.Type = TransitionType.Fade;
-            slide.SlideShowTransition.AdvanceOnClick = false;
+            slide.SlideShowTransition.Type = TransitionType.None;
+            slide.SlideShowTransition.AdvanceOnClick = true;
             slide.SlideShowTransition.AdvanceAfterTime = 0;
 
             presentation.Save(outputPath, SaveFormat.Pptx);

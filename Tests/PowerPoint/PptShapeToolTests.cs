@@ -6,6 +6,9 @@ using AsposeMcpServer.Tools.PowerPoint;
 
 namespace AsposeMcpServer.Tests.PowerPoint;
 
+/// <summary>
+///     Tests for the unified PptShapeTool (12 operations)
+/// </summary>
 public class PptShapeToolTests : TestBase
 {
     private readonly PptShapeTool _tool = new();
@@ -14,17 +17,78 @@ public class PptShapeToolTests : TestBase
     {
         var filePath = CreateTestFilePath(fileName);
         using var presentation = new Presentation();
-        // Use the default first slide instead of AddEmptySlide to ensure shapes are properly saved
         var slide = presentation.Slides[0];
         slide.Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         presentation.Save(filePath, SaveFormat.Pptx);
         return filePath;
     }
 
-    [Fact]
-    public async Task GetShapes_ShouldReturnAllShapes()
+    private string CreateTestPresentationWithTwoShapes(string fileName)
     {
-        // Arrange
+        var filePath = CreateTestFilePath(fileName);
+        using var presentation = new Presentation();
+        var slide = presentation.Slides[0];
+        slide.Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
+        slide.Shapes.AddAutoShape(ShapeType.Ellipse, 350, 100, 200, 100);
+        presentation.Save(filePath, SaveFormat.Pptx);
+        return filePath;
+    }
+
+    private static int FindNonPlaceholderShapeIndex(string pptPath)
+    {
+        using var ppt = new Presentation(pptPath);
+        var slide = ppt.Slides[0];
+        var nonPlaceholderShapes = slide.Shapes.Where(s => s.Placeholder == null).ToList();
+        if (nonPlaceholderShapes.Count == 0) return -1;
+
+        foreach (var s in nonPlaceholderShapes)
+            if (Math.Abs(s.X - 100) < 1 && Math.Abs(s.Y - 100) < 1)
+                return slide.Shapes.IndexOf(s);
+
+        return slide.Shapes.IndexOf(nonPlaceholderShapes[0]);
+    }
+
+    #region Basic Operations - Delete
+
+    [Fact]
+    public async Task Delete_ShouldRemoveShape()
+    {
+        var pptPath = CreateTestPresentation("test_delete.pptx");
+        var shapeIndex = FindNonPlaceholderShapeIndex(pptPath);
+        Assert.True(shapeIndex >= 0);
+
+        int shapesBefore;
+        using (var pres = new Presentation(pptPath))
+        {
+            shapesBefore = pres.Slides[0].Shapes.Count;
+        }
+
+        var outputPath = CreateTestFilePath("test_delete_output.pptx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "delete",
+            ["path"] = pptPath,
+            ["outputPath"] = outputPath,
+            ["slideIndex"] = 0,
+            ["shapeIndex"] = shapeIndex
+        };
+
+        await _tool.ExecuteAsync(arguments);
+
+        using var presentation = new Presentation(outputPath);
+        var shapesAfter = presentation.Slides[0].Shapes.Count;
+
+        if (!IsEvaluationMode())
+            Assert.True(shapesAfter < shapesBefore);
+    }
+
+    #endregion
+
+    #region Basic Operations - Get
+
+    [Fact]
+    public async Task Get_ShouldReturnAllShapes()
+    {
         var pptPath = CreateTestPresentation("test_get_shapes.pptx");
         var arguments = new JsonObject
         {
@@ -33,327 +97,491 @@ public class PptShapeToolTests : TestBase
             ["slideIndex"] = 0
         };
 
-        // Act
         var result = await _tool.ExecuteAsync(arguments);
 
-        // Assert
         Assert.NotNull(result);
-        Assert.NotEmpty(result);
-        Assert.Contains("Shape", result, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("userShapeIndex", result);
+        Assert.Contains("userShapeCount", result);
+        Assert.Contains("totalCount", result);
     }
 
     [Fact]
-    public async Task EditShape_ShouldModifyShape()
+    public async Task GetDetails_ShouldReturnShapeDetails()
     {
-        // Arrange
-        var pptPath = CreateTestPresentation("test_edit_shape.pptx");
-
-        // Find the correct shapeIndex for the added AutoShape (excluding placeholders)
-        var correctShapeIndex = -1;
-        using (var ppt = new Presentation(pptPath))
-        {
-            var pptSlide = ppt.Slides[0];
-            var nonPlaceholderShapes = pptSlide.Shapes.Where(s => s.Placeholder == null).ToList();
-            // If no non-placeholder shapes found, use all shapes
-            if (nonPlaceholderShapes.Count == 0) nonPlaceholderShapes = pptSlide.Shapes.ToList();
-            Assert.True(nonPlaceholderShapes.Count > 0,
-                $"Should find at least one shape. Total shapes: {pptSlide.Shapes.Count}, Non-placeholder: {pptSlide.Shapes.Count(s => s.Placeholder == null)}");
-            // The added shape should be the one with original coordinates (100, 100)
-            foreach (var s in nonPlaceholderShapes)
-                if (Math.Abs(s.X - 100) < 1 && Math.Abs(s.Y - 100) < 1)
-                {
-                    correctShapeIndex = pptSlide.Shapes.IndexOf(s);
-                    break;
-                }
-
-            if (correctShapeIndex < 0)
-                correctShapeIndex =
-                    pptSlide.Shapes.IndexOf(nonPlaceholderShapes[0]); // Fallback to first non-placeholder shape
-        }
-
-        var outputPath = CreateTestFilePath("test_edit_shape_output.pptx");
-        var arguments = new JsonObject
-        {
-            ["operation"] = "edit",
-            ["path"] = pptPath,
-            ["outputPath"] = outputPath,
-            ["slideIndex"] = 0,
-            ["shapeIndex"] = correctShapeIndex,
-            ["x"] = 200,
-            ["y"] = 200,
-            ["width"] = 300,
-            ["height"] = 150
-        };
-
-        // Act
-        await _tool.ExecuteAsync(arguments);
-
-        // Assert
-        using var presentation = new Presentation(outputPath);
-        var slide = presentation.Slides[0];
-        var shapesAfterEdit = slide.Shapes.Where(s => s.Placeholder == null).ToList();
-        Assert.True(shapesAfterEdit.Count > 0, "Shape should exist after editing");
-
-        // Find the shape that was edited (should have the new coordinates)
-        var editedShape = shapesAfterEdit.FirstOrDefault(s =>
-            Math.Abs(s.X - 200) < 10 && Math.Abs(s.Y - 200) < 10);
-
-        // If not found by coordinates, check the shape at the same index
-        editedShape ??= correctShapeIndex < shapesAfterEdit.Count
-            ? shapesAfterEdit[correctShapeIndex]
-            : shapesAfterEdit[0];
-
-        var isEvaluationMode = IsEvaluationMode();
-
-        if (isEvaluationMode)
-        {
-            Assert.True(shapesAfterEdit.Count > 0,
-                "Shape should exist after editing (evaluation mode may limit coordinate changes)");
-
-            var shapeWasModified = Math.Abs(editedShape.X - 200) < 10 ||
-                                   Math.Abs(editedShape.X - 100) < 10;
-
-            Assert.True(shapeWasModified || shapesAfterEdit.Count > 0,
-                $"In evaluation mode, shape coordinates may not be editable. " +
-                $"Expected X around 200 (or 100 if not editable), but got {editedShape.X}. " +
-                $"This is acceptable in evaluation mode.");
-        }
-        else
-        {
-            Assert.True(Math.Abs(editedShape.X - 200) < 10, $"Expected X around 200, but got {editedShape.X}");
-            Assert.True(Math.Abs(editedShape.Y - 200) < 10, $"Expected Y around 200, but got {editedShape.Y}");
-            Assert.True(Math.Abs(editedShape.Width - 300) < 10,
-                $"Expected Width around 300, but got {editedShape.Width}");
-            Assert.True(Math.Abs(editedShape.Height - 150) < 10,
-                $"Expected Height around 150, but got {editedShape.Height}");
-        }
-    }
-
-    [Fact]
-    public async Task DeleteShape_ShouldDeleteShape()
-    {
-        // Arrange
-        var pptPath = CreateTestPresentation("test_delete_shape.pptx");
-
-        // Count actual shapes (excluding placeholder shapes from layout slide)
-        var correctShapeIndex = -1;
-        int shapesBefore;
-        using (var presentationBefore = new Presentation(pptPath))
-        {
-            var slideBefore = presentationBefore.Slides[0];
-            var actualShapesBefore = slideBefore.Shapes.Where(s => s.Placeholder == null).ToList();
-            if (actualShapesBefore.Count == 0) actualShapesBefore = slideBefore.Shapes.ToList();
-            shapesBefore = actualShapesBefore.Count;
-            Assert.True(shapesBefore > 0, "Shape should exist before deletion");
-
-            // Find the correct shapeIndex for the added AutoShape
-            for (var i = 0; i < actualShapesBefore.Count; i++)
-            {
-                var s = actualShapesBefore[i];
-                if (Math.Abs(s.X - 100) < 1 && Math.Abs(s.Y - 100) < 1)
-                {
-                    correctShapeIndex = i;
-                    break;
-                }
-            }
-
-            if (correctShapeIndex < 0)
-                correctShapeIndex = 0; // Fallback to first non-placeholder shape
-        }
-
-        var outputPath = CreateTestFilePath("test_delete_shape_output.pptx");
-        var arguments = new JsonObject
-        {
-            ["operation"] = "delete",
-            ["path"] = pptPath,
-            ["outputPath"] = outputPath,
-            ["slideIndex"] = 0,
-            ["shapeIndex"] = correctShapeIndex
-        };
-
-        // Act
-        await _tool.ExecuteAsync(arguments);
-
-        // Assert
-        using var presentation = new Presentation(outputPath);
-        var slide = presentation.Slides[0];
-        var actualShapesAfter = slide.Shapes.Where(s => s.Placeholder == null).ToList();
-        if (actualShapesAfter.Count == 0)
-            actualShapesAfter = slide.Shapes.ToList();
-        var shapesAfter = actualShapesAfter.Count;
-        var isEvaluationMode = IsEvaluationMode();
-
-        if (isEvaluationMode)
-            Assert.True(shapesAfter <= shapesBefore,
-                $"In evaluation mode, shape deletion may be limited. " +
-                $"Before: {shapesBefore}, After: {shapesAfter}. " +
-                $"This is acceptable in evaluation mode.");
-        else
-            Assert.True(shapesAfter < shapesBefore,
-                $"Shape should be deleted. Before: {shapesBefore}, After: {shapesAfter}");
-    }
-
-    [Fact]
-    public async Task GetShapeDetails_ShouldReturnShapeDetails()
-    {
-        // Arrange
-        var pptPath = CreateTestPresentation("test_get_shape_details.pptx");
-
-        // Find the correct shapeIndex for the added AutoShape (excluding placeholders)
-        var correctShapeIndex = -1;
-        using (var ppt = new Presentation(pptPath))
-        {
-            var pptSlide = ppt.Slides[0];
-            var nonPlaceholderShapes = pptSlide.Shapes.Where(s => s.Placeholder == null).ToList();
-            // If no non-placeholder shapes found, use all shapes
-            if (nonPlaceholderShapes.Count == 0) nonPlaceholderShapes = pptSlide.Shapes.ToList();
-            Assert.True(nonPlaceholderShapes.Count > 0,
-                $"Should find at least one shape. Total shapes: {pptSlide.Shapes.Count}, Non-placeholder: {pptSlide.Shapes.Count(s => s.Placeholder == null)}");
-            // The added shape should be the one with original coordinates (100, 100)
-            foreach (var s in nonPlaceholderShapes)
-                if (Math.Abs(s.X - 100) < 1 && Math.Abs(s.Y - 100) < 1)
-                {
-                    correctShapeIndex = pptSlide.Shapes.IndexOf(s);
-                    break;
-                }
-
-            if (correctShapeIndex < 0)
-                correctShapeIndex =
-                    pptSlide.Shapes.IndexOf(nonPlaceholderShapes[0]); // Fallback to first non-placeholder shape
-        }
-
-        Assert.True(correctShapeIndex >= 0, $"Should find at least one shape. Found shape index: {correctShapeIndex}");
+        var pptPath = CreateTestPresentation("test_get_details.pptx");
+        var shapeIndex = FindNonPlaceholderShapeIndex(pptPath);
+        Assert.True(shapeIndex >= 0);
 
         var arguments = new JsonObject
         {
             ["operation"] = "get_details",
             ["path"] = pptPath,
             ["slideIndex"] = 0,
-            ["shapeIndex"] = correctShapeIndex
+            ["shapeIndex"] = shapeIndex
         };
 
-        // Act
         var result = await _tool.ExecuteAsync(arguments);
 
-        // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result);
-        Assert.Contains("Shape", result, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("position", result);
+        Assert.Contains("size", result);
+        Assert.Contains("fill", result);
+        Assert.Contains("line", result);
+        Assert.Contains("properties", result);
+    }
+
+    #endregion
+
+    #region Edit Operations
+
+    [Fact]
+    public async Task Edit_ShouldModifyPosition()
+    {
+        var pptPath = CreateTestPresentation("test_edit_pos.pptx");
+        var shapeIndex = FindNonPlaceholderShapeIndex(pptPath);
+        var outputPath = CreateTestFilePath("test_edit_pos_output.pptx");
+
+        var arguments = new JsonObject
+        {
+            ["operation"] = "edit",
+            ["path"] = pptPath,
+            ["outputPath"] = outputPath,
+            ["slideIndex"] = 0,
+            ["shapeIndex"] = shapeIndex,
+            ["x"] = 200,
+            ["y"] = 200
+        };
+
+        var result = await _tool.ExecuteAsync(arguments);
+
+        Assert.Contains("edited", result);
+        using var presentation = new Presentation(outputPath);
+        var shape = presentation.Slides[0].Shapes[shapeIndex];
+        if (!IsEvaluationMode())
+        {
+            Assert.Equal(200, shape.X, 1);
+            Assert.Equal(200, shape.Y, 1);
+        }
     }
 
     [Fact]
     public async Task Edit_WithRotation_ShouldRotateShape()
     {
-        // Arrange
-        var pptPath = CreateTestPresentation("test_rotate_shape.pptx");
+        var pptPath = CreateTestPresentation("test_edit_rotation.pptx");
+        var shapeIndex = FindNonPlaceholderShapeIndex(pptPath);
+        var outputPath = CreateTestFilePath("test_edit_rotation_output.pptx");
 
-        // Find the shape index
-        var correctShapeIndex = 0;
-        using (var ppt = new Presentation(pptPath))
-        {
-            var pptSlide = ppt.Slides[0];
-            var nonPlaceholderShapes = pptSlide.Shapes.Where(s => s.Placeholder == null).ToList();
-            if (nonPlaceholderShapes.Count > 0)
-                correctShapeIndex = pptSlide.Shapes.IndexOf(nonPlaceholderShapes[0]);
-        }
-
-        var outputPath = CreateTestFilePath("test_rotate_shape_output.pptx");
         var arguments = new JsonObject
         {
             ["operation"] = "edit",
             ["path"] = pptPath,
             ["outputPath"] = outputPath,
             ["slideIndex"] = 0,
-            ["shapeIndex"] = correctShapeIndex,
-            ["rotation"] = 45 // Rotate 45 degrees
+            ["shapeIndex"] = shapeIndex,
+            ["rotation"] = 45
         };
 
-        // Act
         await _tool.ExecuteAsync(arguments);
 
-        // Assert
         using var presentation = new Presentation(outputPath);
-        var slide = presentation.Slides[0];
-        var shapes = slide.Shapes.Where(s => s.Placeholder == null).ToList();
-        Assert.True(shapes.Count > 0, "Shape should exist after rotation");
-
-        var isEvaluationMode = IsEvaluationMode();
-        if (!isEvaluationMode)
-        {
-            var rotatedShape = shapes.FirstOrDefault(s => Math.Abs(s.Rotation - 45) < 1);
-            Assert.NotNull(rotatedShape);
-        }
+        var shape = presentation.Slides[0].Shapes[shapeIndex];
+        if (!IsEvaluationMode())
+            Assert.Equal(45, shape.Rotation, 1);
     }
 
     [Fact]
-    public async Task Edit_WithFlipHorizontal_ShouldFlipHorizontal()
+    public async Task Edit_WithText_ShouldUpdateText()
     {
-        // Arrange
-        var pptPath = CreateTestPresentation("test_flip_h_shape.pptx");
+        var pptPath = CreateTestPresentation("test_edit_text.pptx");
+        var shapeIndex = FindNonPlaceholderShapeIndex(pptPath);
+        var outputPath = CreateTestFilePath("test_edit_text_output.pptx");
 
-        var correctShapeIndex = 0;
-        using (var ppt = new Presentation(pptPath))
-        {
-            var pptSlide = ppt.Slides[0];
-            var nonPlaceholderShapes = pptSlide.Shapes.Where(s => s.Placeholder == null).ToList();
-            if (nonPlaceholderShapes.Count > 0)
-                correctShapeIndex = pptSlide.Shapes.IndexOf(nonPlaceholderShapes[0]);
-        }
-
-        var outputPath = CreateTestFilePath("test_flip_h_shape_output.pptx");
         var arguments = new JsonObject
         {
             ["operation"] = "edit",
             ["path"] = pptPath,
             ["outputPath"] = outputPath,
             ["slideIndex"] = 0,
-            ["shapeIndex"] = correctShapeIndex,
+            ["shapeIndex"] = shapeIndex,
+            ["text"] = "Updated Text"
+        };
+
+        var result = await _tool.ExecuteAsync(arguments);
+
+        Assert.Contains("Text updated", result);
+    }
+
+    [Fact]
+    public async Task SetFormat_ShouldSetFillColor()
+    {
+        var pptPath = CreateTestPresentation("test_set_format.pptx");
+        var shapeIndex = FindNonPlaceholderShapeIndex(pptPath);
+        var outputPath = CreateTestFilePath("test_set_format_output.pptx");
+
+        var arguments = new JsonObject
+        {
+            ["operation"] = "set_format",
+            ["path"] = pptPath,
+            ["outputPath"] = outputPath,
+            ["slideIndex"] = 0,
+            ["shapeIndex"] = shapeIndex,
+            ["fillColor"] = "#FF0000",
+            ["lineColor"] = "#0000FF"
+        };
+
+        var result = await _tool.ExecuteAsync(arguments);
+
+        Assert.Contains("format updated", result);
+        Assert.True(File.Exists(outputPath));
+    }
+
+    [Fact]
+    public async Task ClearFormat_ShouldClearFill()
+    {
+        var pptPath = CreateTestPresentation("test_clear_format.pptx");
+        var shapeIndex = FindNonPlaceholderShapeIndex(pptPath);
+        var outputPath = CreateTestFilePath("test_clear_format_output.pptx");
+
+        var arguments = new JsonObject
+        {
+            ["operation"] = "clear_format",
+            ["path"] = pptPath,
+            ["outputPath"] = outputPath,
+            ["slideIndex"] = 0,
+            ["shapeIndex"] = shapeIndex,
+            ["clearFill"] = true
+        };
+
+        var result = await _tool.ExecuteAsync(arguments);
+
+        Assert.Contains("format cleared", result);
+    }
+
+    #endregion
+
+    #region Advanced Operations - Group/Ungroup
+
+    [Fact]
+    public async Task Group_ShouldGroupShapes()
+    {
+        var pptPath = CreateTestPresentationWithTwoShapes("test_group.pptx");
+
+        int shapeIndex0, shapeIndex1;
+        using (var pres = new Presentation(pptPath))
+        {
+            var sld = pres.Slides[0];
+            var nonPlaceholder = sld.Shapes.Where(s => s.Placeholder == null).ToList();
+            Assert.True(nonPlaceholder.Count >= 2);
+            shapeIndex0 = sld.Shapes.IndexOf(nonPlaceholder[0]);
+            shapeIndex1 = sld.Shapes.IndexOf(nonPlaceholder[1]);
+        }
+
+        var outputPath = CreateTestFilePath("test_group_output.pptx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "group",
+            ["path"] = pptPath,
+            ["outputPath"] = outputPath,
+            ["slideIndex"] = 0,
+            ["shapeIndices"] = new JsonArray { shapeIndex0, shapeIndex1 }
+        };
+
+        var result = await _tool.ExecuteAsync(arguments);
+
+        Assert.Contains("Grouped", result);
+        using var presentation = new Presentation(outputPath);
+        Assert.True(presentation.Slides[0].Shapes.Count > 0);
+    }
+
+    [Fact]
+    public async Task Ungroup_ShouldUngroupShape()
+    {
+        var pptPath = CreateTestPresentationWithTwoShapes("test_ungroup.pptx");
+
+        int groupShapeIndex;
+        using (var pres = new Presentation(pptPath))
+        {
+            var sld = pres.Slides[0];
+            var nonPlaceholder = sld.Shapes.Where(s => s.Placeholder == null).ToList();
+            var idx0 = sld.Shapes.IndexOf(nonPlaceholder[0]);
+            var idx1 = sld.Shapes.IndexOf(nonPlaceholder[1]);
+
+            var groupShape = sld.Shapes.AddGroupShape();
+            groupShape.Shapes.AddClone(nonPlaceholder[0]);
+            groupShape.Shapes.AddClone(nonPlaceholder[1]);
+            sld.Shapes.RemoveAt(idx1);
+            sld.Shapes.RemoveAt(idx0);
+
+            groupShapeIndex = sld.Shapes.IndexOf(groupShape);
+            pres.Save(pptPath, SaveFormat.Pptx);
+        }
+
+        var outputPath = CreateTestFilePath("test_ungroup_output.pptx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "ungroup",
+            ["path"] = pptPath,
+            ["outputPath"] = outputPath,
+            ["slideIndex"] = 0,
+            ["shapeIndex"] = groupShapeIndex
+        };
+
+        var result = await _tool.ExecuteAsync(arguments);
+
+        Assert.Contains("Ungrouped", result);
+    }
+
+    #endregion
+
+    #region Advanced Operations - Copy/Reorder
+
+    [Fact]
+    public async Task Copy_ShouldCopyShapeToAnotherSlide()
+    {
+        var pptPath = CreateTestPresentation("test_copy.pptx");
+
+        using (var pres = new Presentation(pptPath))
+        {
+            pres.Slides.AddEmptySlide(pres.LayoutSlides[0]);
+            pres.Save(pptPath, SaveFormat.Pptx);
+        }
+
+        var shapeIndex = FindNonPlaceholderShapeIndex(pptPath);
+        var outputPath = CreateTestFilePath("test_copy_output.pptx");
+
+        var arguments = new JsonObject
+        {
+            ["operation"] = "copy",
+            ["path"] = pptPath,
+            ["outputPath"] = outputPath,
+            ["fromSlide"] = 0,
+            ["toSlide"] = 1,
+            ["shapeIndex"] = shapeIndex
+        };
+
+        var result = await _tool.ExecuteAsync(arguments);
+
+        Assert.Contains("copied", result);
+        using var presentation = new Presentation(outputPath);
+        Assert.True(presentation.Slides[1].Shapes.Count > 0);
+    }
+
+    [Fact]
+    public async Task Reorder_ShouldChangeZOrder()
+    {
+        var pptPath = CreateTestPresentationWithTwoShapes("test_reorder.pptx");
+
+        int shapeIndex;
+        using (var pres = new Presentation(pptPath))
+        {
+            var nonPlaceholder = pres.Slides[0].Shapes.Where(s => s.Placeholder == null).ToList();
+            shapeIndex = pres.Slides[0].Shapes.IndexOf(nonPlaceholder[0]);
+        }
+
+        var outputPath = CreateTestFilePath("test_reorder_output.pptx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "reorder",
+            ["path"] = pptPath,
+            ["outputPath"] = outputPath,
+            ["slideIndex"] = 0,
+            ["shapeIndex"] = shapeIndex,
+            ["toIndex"] = 0
+        };
+
+        var result = await _tool.ExecuteAsync(arguments);
+
+        Assert.Contains("Z-order", result);
+    }
+
+    #endregion
+
+    #region Advanced Operations - Align/Flip
+
+    [Fact]
+    public async Task Align_ShouldAlignShapes()
+    {
+        var pptPath = CreateTestPresentationWithTwoShapes("test_align.pptx");
+
+        int shapeIndex0, shapeIndex1;
+        using (var pres = new Presentation(pptPath))
+        {
+            var sld = pres.Slides[0];
+            var nonPlaceholder = sld.Shapes.Where(s => s.Placeholder == null).ToList();
+            shapeIndex0 = sld.Shapes.IndexOf(nonPlaceholder[0]);
+            shapeIndex1 = sld.Shapes.IndexOf(nonPlaceholder[1]);
+        }
+
+        var outputPath = CreateTestFilePath("test_align_output.pptx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "align",
+            ["path"] = pptPath,
+            ["outputPath"] = outputPath,
+            ["slideIndex"] = 0,
+            ["shapeIndices"] = new JsonArray { shapeIndex0, shapeIndex1 },
+            ["align"] = "left"
+        };
+
+        var result = await _tool.ExecuteAsync(arguments);
+
+        Assert.Contains("Aligned", result);
+    }
+
+    [Fact]
+    public async Task Flip_ShouldFlipShape()
+    {
+        var pptPath = CreateTestPresentation("test_flip.pptx");
+        var shapeIndex = FindNonPlaceholderShapeIndex(pptPath);
+        var outputPath = CreateTestFilePath("test_flip_output.pptx");
+
+        var arguments = new JsonObject
+        {
+            ["operation"] = "flip",
+            ["path"] = pptPath,
+            ["outputPath"] = outputPath,
+            ["slideIndex"] = 0,
+            ["shapeIndex"] = shapeIndex,
             ["flipHorizontal"] = true
         };
 
-        // Act
-        await _tool.ExecuteAsync(arguments);
+        var result = await _tool.ExecuteAsync(arguments);
 
-        // Assert
-        using var presentation = new Presentation(outputPath);
-        var slide = presentation.Slides[0];
-        var shapes = slide.Shapes.Where(s => s.Placeholder == null).ToList();
-        Assert.True(shapes.Count > 0, "Shape should exist after horizontal flip");
+        Assert.Contains("flipped", result);
     }
 
     [Fact]
-    public async Task Edit_WithFlipVertical_ShouldFlipVertical()
+    public async Task Flip_Vertical_ShouldFlipShape()
     {
-        // Arrange
-        var pptPath = CreateTestPresentation("test_flip_v_shape.pptx");
+        var pptPath = CreateTestPresentation("test_flip_v.pptx");
+        var shapeIndex = FindNonPlaceholderShapeIndex(pptPath);
+        var outputPath = CreateTestFilePath("test_flip_v_output.pptx");
 
-        var correctShapeIndex = 0;
-        using (var ppt = new Presentation(pptPath))
+        var arguments = new JsonObject
         {
-            var pptSlide = ppt.Slides[0];
-            var nonPlaceholderShapes = pptSlide.Shapes.Where(s => s.Placeholder == null).ToList();
-            if (nonPlaceholderShapes.Count > 0)
-                correctShapeIndex = pptSlide.Shapes.IndexOf(nonPlaceholderShapes[0]);
-        }
+            ["operation"] = "flip",
+            ["path"] = pptPath,
+            ["outputPath"] = outputPath,
+            ["slideIndex"] = 0,
+            ["shapeIndex"] = shapeIndex,
+            ["flipVertical"] = true
+        };
 
-        var outputPath = CreateTestFilePath("test_flip_v_shape_output.pptx");
+        var result = await _tool.ExecuteAsync(arguments);
+
+        Assert.Contains("flipped", result);
+    }
+
+    #endregion
+
+    #region Error Handling
+
+    [Fact]
+    public async Task ExecuteAsync_WithUnknownOperation_ShouldThrowException()
+    {
+        var pptPath = CreateTestPresentation("test_unknown_op.pptx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "unknown",
+            ["path"] = pptPath,
+            ["slideIndex"] = 0
+        };
+
+        await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithInvalidSlideIndex_ShouldThrowException()
+    {
+        var pptPath = CreateTestPresentation("test_invalid_slide.pptx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "get",
+            ["path"] = pptPath,
+            ["slideIndex"] = 99
+        };
+
+        await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+    }
+
+    [Fact]
+    public async Task Edit_WithInvalidShapeIndex_ShouldThrowException()
+    {
+        var pptPath = CreateTestPresentation("test_invalid_shape.pptx");
         var arguments = new JsonObject
         {
             ["operation"] = "edit",
             ["path"] = pptPath,
-            ["outputPath"] = outputPath,
             ["slideIndex"] = 0,
-            ["shapeIndex"] = correctShapeIndex,
-            ["flipVertical"] = true
+            ["shapeIndex"] = 99,
+            ["x"] = 100
         };
 
-        // Act
-        await _tool.ExecuteAsync(arguments);
-
-        // Assert
-        using var presentation = new Presentation(outputPath);
-        var slide = presentation.Slides[0];
-        var shapes = slide.Shapes.Where(s => s.Placeholder == null).ToList();
-        Assert.True(shapes.Count > 0, "Shape should exist after vertical flip");
+        await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
     }
+
+    [Fact]
+    public async Task ClearFormat_WithNoFlags_ShouldThrowException()
+    {
+        var pptPath = CreateTestPresentation("test_clear_no_flags.pptx");
+        var shapeIndex = FindNonPlaceholderShapeIndex(pptPath);
+        var arguments = new JsonObject
+        {
+            ["operation"] = "clear_format",
+            ["path"] = pptPath,
+            ["slideIndex"] = 0,
+            ["shapeIndex"] = shapeIndex
+        };
+
+        await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+    }
+
+    [Fact]
+    public async Task Flip_WithNoDirection_ShouldThrowException()
+    {
+        var pptPath = CreateTestPresentation("test_flip_no_dir.pptx");
+        var shapeIndex = FindNonPlaceholderShapeIndex(pptPath);
+        var arguments = new JsonObject
+        {
+            ["operation"] = "flip",
+            ["path"] = pptPath,
+            ["slideIndex"] = 0,
+            ["shapeIndex"] = shapeIndex
+        };
+
+        await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+    }
+
+    [Fact]
+    public async Task Group_WithLessThan2Shapes_ShouldThrowException()
+    {
+        var pptPath = CreateTestPresentation("test_group_one.pptx");
+        var shapeIndex = FindNonPlaceholderShapeIndex(pptPath);
+        var arguments = new JsonObject
+        {
+            ["operation"] = "group",
+            ["path"] = pptPath,
+            ["slideIndex"] = 0,
+            ["shapeIndices"] = new JsonArray { shapeIndex }
+        };
+
+        await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+    }
+
+    [Fact]
+    public async Task Ungroup_WithNonGroupShape_ShouldThrowException()
+    {
+        var pptPath = CreateTestPresentation("test_ungroup_non_group.pptx");
+        var shapeIndex = FindNonPlaceholderShapeIndex(pptPath);
+        var arguments = new JsonObject
+        {
+            ["operation"] = "ungroup",
+            ["path"] = pptPath,
+            ["slideIndex"] = 0,
+            ["shapeIndex"] = shapeIndex
+        };
+
+        await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+    }
+
+    #endregion
 }

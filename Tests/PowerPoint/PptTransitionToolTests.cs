@@ -33,7 +33,7 @@ public class PptTransitionToolTests : TestBase
             ["outputPath"] = outputPath,
             ["slideIndex"] = 0,
             ["transitionType"] = "Fade",
-            ["durationSeconds"] = 1.5
+            ["advanceAfterSeconds"] = 1.5
         };
 
         // Act
@@ -42,7 +42,8 @@ public class PptTransitionToolTests : TestBase
         // Assert
         using var presentation = new Presentation(outputPath);
         var slide = presentation.Slides[0];
-        Assert.NotNull(slide.SlideShowTransition);
+        Assert.Equal(TransitionType.Fade, slide.SlideShowTransition.Type);
+        Assert.Equal(1500u, slide.SlideShowTransition.AdvanceAfterTime);
     }
 
     [Fact]
@@ -54,6 +55,7 @@ public class PptTransitionToolTests : TestBase
         {
             var slide = presentation.Slides[0];
             slide.SlideShowTransition.Type = TransitionType.Fade;
+            slide.SlideShowTransition.AdvanceAfterTime = 2000;
             presentation.Save(pptPath, SaveFormat.Pptx);
         }
 
@@ -69,8 +71,9 @@ public class PptTransitionToolTests : TestBase
 
         // Assert
         Assert.NotNull(result);
-        Assert.NotEmpty(result);
-        Assert.Contains("Transition", result, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("\"type\": \"Fade\"", result);
+        Assert.Contains("\"hasTransition\": true", result);
+        Assert.Contains("\"advanceAfterSeconds\": 2", result);
     }
 
     [Fact]
@@ -98,6 +101,90 @@ public class PptTransitionToolTests : TestBase
         await _tool.ExecuteAsync(arguments);
 
         // Assert
-        Assert.True(File.Exists(outputPath), "Output presentation should be created");
+        using var resultPresentation = new Presentation(outputPath);
+        var resultSlide = resultPresentation.Slides[0];
+        Assert.Equal(TransitionType.None, resultSlide.SlideShowTransition.Type);
+        Assert.Equal(0u, resultSlide.SlideShowTransition.AdvanceAfterTime);
+    }
+
+    [Fact]
+    public async Task SetTransition_WithEnumTryParse_ShouldSupportAllTypes()
+    {
+        // Arrange
+        var pptPath = CreateTestPresentation("test_set_transition_push.pptx");
+        var outputPath = CreateTestFilePath("test_set_transition_push_output.pptx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "set",
+            ["path"] = pptPath,
+            ["outputPath"] = outputPath,
+            ["slideIndex"] = 0,
+            ["transitionType"] = "Push"
+        };
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        using var presentation = new Presentation(outputPath);
+        var slide = presentation.Slides[0];
+        Assert.Equal(TransitionType.Push, slide.SlideShowTransition.Type);
+    }
+
+    [Fact]
+    public async Task SetTransition_WithInvalidType_ShouldThrow()
+    {
+        // Arrange
+        var pptPath = CreateTestPresentation("test_set_transition_invalid.pptx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "set",
+            ["path"] = pptPath,
+            ["slideIndex"] = 0,
+            ["transitionType"] = "InvalidType"
+        };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+    }
+
+    [Fact]
+    public async Task SetTransition_WithoutAdvanceAfterSeconds_ShouldNotSetAutoAdvance()
+    {
+        // Arrange
+        var pptPath = CreateTestPresentation("test_set_transition_no_advance.pptx");
+        var outputPath = CreateTestFilePath("test_set_transition_no_advance_output.pptx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "set",
+            ["path"] = pptPath,
+            ["outputPath"] = outputPath,
+            ["slideIndex"] = 0,
+            ["transitionType"] = "Wipe"
+        };
+
+        // Act
+        await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        using var presentation = new Presentation(outputPath);
+        var slide = presentation.Slides[0];
+        Assert.Equal(TransitionType.Wipe, slide.SlideShowTransition.Type);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_UnknownOperation_ShouldThrow()
+    {
+        // Arrange
+        var pptPath = CreateTestPresentation("test_unknown_op.pptx");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "unknown",
+            ["path"] = pptPath,
+            ["slideIndex"] = 0
+        };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
     }
 }

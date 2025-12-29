@@ -1,8 +1,6 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Slides;
-using Aspose.Slides.Charts;
-using Aspose.Slides.SmartArt;
 using AsposeMcpServer.Core;
 
 namespace AsposeMcpServer.Tools.PowerPoint;
@@ -19,7 +17,8 @@ public class PptDataOperationsTool : IAsposeTool
 Usage examples:
 - Get statistics: ppt_data_operations(operation='get_statistics', path='presentation.pptx')
 - Get content: ppt_data_operations(operation='get_content', path='presentation.pptx')
-- Get slide details: ppt_data_operations(operation='get_slide_details', path='presentation.pptx', slideIndex=0)";
+- Get slide details: ppt_data_operations(operation='get_slide_details', path='presentation.pptx', slideIndex=0)
+- Get slide details with thumbnail: ppt_data_operations(operation='get_slide_details', path='presentation.pptx', slideIndex=0, includeThumbnail=true)";
 
     public object InputSchema => new
     {
@@ -44,16 +43,17 @@ Usage examples:
             {
                 type = "number",
                 description = "Slide index (0-based, required for get_slide_details)"
+            },
+            includeThumbnail = new
+            {
+                type = "boolean",
+                description = "Include Base64 encoded thumbnail image (optional for get_slide_details, default false)"
             }
         },
         required = new[] { "operation", "path" }
     };
 
-    /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments
-    /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters</param>
-    /// <returns>Result message as a string</returns>
+    /// <inheritdoc />
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
@@ -69,11 +69,11 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Gets presentation statistics
+    ///     Gets presentation statistics.
     /// </summary>
-    /// <param name="_">Unused parameter</param>
-    /// <param name="path">PowerPoint file path</param>
-    /// <returns>JSON formatted string with statistics</returns>
+    /// <param name="_">Unused parameter.</param>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <returns>JSON string with presentation statistics.</returns>
     private Task<string> GetStatisticsAsync(JsonObject? _, string path)
     {
         return Task.Run(() =>
@@ -90,43 +90,19 @@ Usage examples:
             var totalVideo = 0;
             var totalAnimations = 0;
             var totalHyperlinks = 0;
+            var totalHiddenSlides = 0;
 
             foreach (var slide in presentation.Slides)
             {
+                if (slide.Hidden) totalHiddenSlides++;
                 totalShapes += slide.Shapes.Count;
                 totalAnimations += slide.Timeline.MainSequence.Count;
 
                 foreach (var shape in slide.Shapes)
                 {
-                    if (shape is IAutoShape { TextFrame: not null } autoShape)
-                    {
-                        if (!string.IsNullOrWhiteSpace(autoShape.TextFrame.Text))
-                            totalTextCharacters += autoShape.TextFrame.Text.Length;
-                    }
-                    else if (shape is PictureFrame)
-                    {
-                        totalImages++;
-                    }
-                    else if (shape is ITable)
-                    {
-                        totalTables++;
-                    }
-                    else if (shape is IChart)
-                    {
-                        totalCharts++;
-                    }
-                    else if (shape is ISmartArt)
-                    {
-                        totalSmartArt++;
-                    }
-                    else if (shape is IAudioFrame)
-                    {
-                        totalAudio++;
-                    }
-                    else if (shape is IVideoFrame)
-                    {
-                        totalVideo++;
-                    }
+                    totalTextCharacters += PowerPointHelper.CountTextCharacters(shape);
+                    PowerPointHelper.CountShapeTypes(shape, ref totalImages, ref totalTables, ref totalCharts,
+                        ref totalSmartArt, ref totalAudio, ref totalVideo);
 
                     if (shape.HyperlinkClick != null) totalHyperlinks++;
                 }
@@ -135,6 +111,7 @@ Usage examples:
             var result = new
             {
                 totalSlides = presentation.Slides.Count,
+                totalHiddenSlides,
                 totalLayouts = presentation.LayoutSlides.Count,
                 totalMasters = presentation.Masters.Count,
                 slideSize = new
@@ -159,11 +136,11 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Gets presentation content
+    ///     Gets presentation content including text from all shape types.
     /// </summary>
-    /// <param name="_">Unused parameter</param>
-    /// <param name="path">PowerPoint file path</param>
-    /// <returns>JSON formatted string with content</returns>
+    /// <param name="_">Unused parameter.</param>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <returns>JSON string with presentation content.</returns>
     private Task<string> GetContentAsync(JsonObject? _, string path)
     {
         return Task.Run(() =>
@@ -176,12 +153,12 @@ Usage examples:
             {
                 var textContent = new List<string>();
                 foreach (var shape in slide.Shapes)
-                    if (shape is IAutoShape { TextFrame.Text: var text } && !string.IsNullOrWhiteSpace(text))
-                        textContent.Add(text);
+                    PowerPointHelper.ExtractTextFromShape(shape, textContent);
 
                 slides.Add(new
                 {
                     index = slideIndex,
+                    hidden = slide.Hidden,
                     textContent
                 });
                 slideIndex++;
@@ -198,21 +175,22 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Gets detailed information about a slide
+    ///     Gets detailed information about a slide.
     /// </summary>
-    /// <param name="arguments">JSON arguments containing slideIndex</param>
-    /// <param name="path">PowerPoint file path</param>
-    /// <returns>JSON formatted string with slide details</returns>
+    /// <param name="arguments">JSON arguments containing slideIndex and optional includeThumbnail.</param>
+    /// <param name="path">PowerPoint file path.</param>
+    /// <returns>JSON string with slide details.</returns>
+    /// <exception cref="ArgumentException">Thrown when slideIndex is out of range.</exception>
     private Task<string> GetSlideDetailsAsync(JsonObject? arguments, string path)
     {
         return Task.Run(() =>
         {
             var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
+            var includeThumbnail = ArgumentHelper.GetBool(arguments, "includeThumbnail", false);
 
             using var presentation = new Presentation(path);
             var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
 
-            // Transition
             var transition = slide.SlideShowTransition;
             object? transitionInfo = transition != null
                 ? new
@@ -224,7 +202,6 @@ Usage examples:
                 }
                 : null;
 
-            // Animations
             var animations = slide.Timeline.MainSequence;
             var animationsList = new List<object>();
             for (var i = 0; i < animations.Count; i++)
@@ -238,27 +215,35 @@ Usage examples:
                 });
             }
 
-            // Background
             var background = slide.Background;
             object? backgroundInfo = background != null
                 ? new { fillType = background.FillFormat.FillType.ToString() }
                 : null;
 
-            // Notes
             var notesSlide = slide.NotesSlideManager.NotesSlide;
             var notesText = notesSlide?.NotesTextFrame?.Text;
+
+            // Generate thumbnail if requested
+            string? thumbnailBase64 = null;
+            if (includeThumbnail) thumbnailBase64 = PowerPointHelper.GenerateThumbnail(slide);
 
             var result = new
             {
                 slideIndex,
                 hidden = slide.Hidden,
                 layout = slide.LayoutSlide?.Name,
+                slideSize = new
+                {
+                    width = presentation.SlideSize.Size.Width,
+                    height = presentation.SlideSize.Size.Height
+                },
                 shapesCount = slide.Shapes.Count,
                 transition = transitionInfo,
                 animationsCount = animations.Count,
                 animations = animationsList,
                 background = backgroundInfo,
-                notes = string.IsNullOrWhiteSpace(notesText) ? null : notesText
+                notes = string.IsNullOrWhiteSpace(notesText) ? null : notesText,
+                thumbnail = thumbnailBase64
             };
 
             return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
