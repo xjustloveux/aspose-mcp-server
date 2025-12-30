@@ -17,7 +17,8 @@ public class PdfImageTool : IAsposeTool
 Usage examples:
 - Add image: pdf_image(operation='add', path='doc.pdf', pageIndex=1, imagePath='image.png', x=100, y=100)
 - Delete image: pdf_image(operation='delete', path='doc.pdf', pageIndex=1, imageIndex=1)
-- Edit image: pdf_image(operation='edit', path='doc.pdf', pageIndex=1, imageIndex=1, x=200, y=200)
+- Move image: pdf_image(operation='edit', path='doc.pdf', pageIndex=1, imageIndex=1, x=200, y=200)
+- Replace image: pdf_image(operation='edit', path='doc.pdf', pageIndex=1, imageIndex=1, imagePath='new.png', x=200, y=200)
 - Extract image: pdf_image(operation='extract', path='doc.pdf', pageIndex=1, imageIndex=1, outputPath='image.png')
 - Get images: pdf_image(operation='get', path='doc.pdf', pageIndex=1)";
 
@@ -56,7 +57,7 @@ Usage examples:
             imagePath = new
             {
                 type = "string",
-                description = "Image file path (required for add, edit)"
+                description = "Image file path (required for add, optional for edit - omit to move existing image)"
             },
             imageIndex = new
             {
@@ -66,22 +67,24 @@ Usage examples:
             x = new
             {
                 type = "number",
-                description = "X position (for add, edit, default: 100)"
+                description =
+                    "X position in PDF coordinates, origin at bottom-left corner (for add, edit, default: 100)"
             },
             y = new
             {
                 type = "number",
-                description = "Y position (for add, edit, default: 600)"
+                description =
+                    "Y position in PDF coordinates, origin at bottom-left corner (for add, edit, default: 600)"
             },
             width = new
             {
                 type = "number",
-                description = "Image width (for add, edit, optional)"
+                description = "Image width (for add, edit, optional - if omitted defaults to 200)"
             },
             height = new
             {
                 type = "number",
-                description = "Image height (for add, edit, optional)"
+                description = "Image height (for add, edit, optional - if omitted defaults to 200)"
             },
             outputDir = new
             {
@@ -190,11 +193,11 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Edits image properties in a PDF
+    ///     Edits image properties in a PDF (replace or move position)
     /// </summary>
     /// <param name="path">Input file path</param>
     /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing pageIndex, imageIndex, imagePath, optional x, y, width, height</param>
+    /// <param name="arguments">JSON arguments containing pageIndex, imageIndex, optional imagePath, x, y, width, height</param>
     /// <returns>Success message</returns>
     private Task<string> EditImage(string path, string outputPath, JsonObject? arguments)
     {
@@ -202,16 +205,11 @@ Usage examples:
         {
             var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
             var imageIndex = ArgumentHelper.GetInt(arguments, "imageIndex");
-            var imagePath = ArgumentHelper.GetString(arguments, "imagePath");
+            var imagePath = ArgumentHelper.GetStringNullable(arguments, "imagePath");
             var x = ArgumentHelper.GetDoubleNullable(arguments, "x");
             var y = ArgumentHelper.GetDoubleNullable(arguments, "y");
             var width = ArgumentHelper.GetDoubleNullable(arguments, "width");
             var height = ArgumentHelper.GetDoubleNullable(arguments, "height");
-
-            SecurityHelper.ValidateFilePath(imagePath, "imagePath", true);
-
-            if (!File.Exists(imagePath))
-                throw new FileNotFoundException($"Image file not found: {imagePath}");
 
             using var document = new Document(path);
             var actualPageIndex = pageIndex < 1 ? 1 : pageIndex;
@@ -225,14 +223,41 @@ Usage examples:
             if (imageIndex < 1 || imageIndex > images.Count)
                 throw new ArgumentException($"imageIndex must be between 1 and {images.Count}");
 
-            images.Delete(imageIndex);
-            var newX = x ?? 100;
-            var newY = y ?? 600;
-            page.AddImage(imagePath,
-                new Rectangle(newX, newY, width.HasValue ? newX + width.Value : newX + 200,
-                    height.HasValue ? newY + height.Value : newY + 200));
-            document.Save(outputPath);
-            return $"Edited image {imageIndex} on page {pageIndex}. Output: {outputPath}";
+            string? tempImagePath = null;
+            try
+            {
+                if (string.IsNullOrEmpty(imagePath))
+                {
+                    tempImagePath = Path.Combine(Path.GetTempPath(), $"temp_image_{Guid.NewGuid()}.png");
+                    using var imageStream = new FileStream(tempImagePath, FileMode.Create);
+#pragma warning disable CA1416
+                    images[imageIndex].Save(imageStream, ImageFormat.Png);
+#pragma warning restore CA1416
+                    imagePath = tempImagePath;
+                }
+                else
+                {
+                    SecurityHelper.ValidateFilePath(imagePath, "imagePath", true);
+                    if (!File.Exists(imagePath))
+                        throw new FileNotFoundException($"Image file not found: {imagePath}");
+                }
+
+                images.Delete(imageIndex);
+                var newX = x ?? 100;
+                var newY = y ?? 600;
+                page.AddImage(imagePath,
+                    new Rectangle(newX, newY, width.HasValue ? newX + width.Value : newX + 200,
+                        height.HasValue ? newY + height.Value : newY + 200));
+                document.Save(outputPath);
+
+                var action = tempImagePath != null ? "Moved" : "Replaced";
+                return $"{action} image {imageIndex} on page {pageIndex}. Output: {outputPath}";
+            }
+            finally
+            {
+                if (tempImagePath != null && File.Exists(tempImagePath))
+                    File.Delete(tempImagePath);
+            }
         });
     }
 

@@ -12,7 +12,7 @@ public class PdfAttachmentToolTests : PdfTestBase
     private string CreateTestPdf(string fileName)
     {
         var filePath = CreateTestFilePath(fileName);
-        var document = new Document();
+        using var document = new Document();
         document.Pages.Add();
         document.Save(filePath);
         return filePath;
@@ -42,21 +42,92 @@ public class PdfAttachmentToolTests : PdfTestBase
         };
 
         // Act
-        await _tool.ExecuteAsync(arguments);
+        var result = await _tool.ExecuteAsync(arguments);
 
         // Assert
-        Assert.True(File.Exists(outputPath), "Output PDF should be created");
+        Assert.Contains("Added attachment", result);
+        using var document = new Document(outputPath);
+        Assert.True(document.EmbeddedFiles.Count > 0, "PDF should contain at least one attachment");
     }
 
     [Fact]
-    public async Task GetAttachments_ShouldReturnAllAttachments()
+    public async Task AddAttachment_WithDescription_ShouldAddAttachmentWithDescription()
+    {
+        // Arrange
+        var pdfPath = CreateTestPdf("test_add_attachment_desc.pdf");
+        var attachmentPath = CreateTestAttachment("test_attachment_desc.txt");
+        var outputPath = CreateTestFilePath("test_add_attachment_desc_output.pdf");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "add",
+            ["path"] = pdfPath,
+            ["outputPath"] = outputPath,
+            ["attachmentPath"] = attachmentPath,
+            ["attachmentName"] = "test_attachment_desc.txt",
+            ["description"] = "Test description"
+        };
+
+        // Act
+        var result = await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.Contains("Added attachment", result);
+    }
+
+    [Fact]
+    public async Task AddAttachment_DuplicateName_ShouldThrow()
+    {
+        // Arrange
+        var pdfPath = CreateTestPdf("test_add_duplicate.pdf");
+        var attachmentPath = CreateTestAttachment("test_dup.txt");
+
+        using (var document = new Document(pdfPath))
+        {
+            var fileSpec = new FileSpecification(attachmentPath, "") { Name = "existing.txt" };
+            document.EmbeddedFiles.Add(fileSpec);
+            document.Save(pdfPath);
+        }
+
+        var arguments = new JsonObject
+        {
+            ["operation"] = "add",
+            ["path"] = pdfPath,
+            ["attachmentPath"] = attachmentPath,
+            ["attachmentName"] = "existing.txt"
+        };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+    }
+
+    [Fact]
+    public async Task AddAttachment_FileNotFound_ShouldThrow()
+    {
+        // Arrange
+        var pdfPath = CreateTestPdf("test_add_notfound.pdf");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "add",
+            ["path"] = pdfPath,
+            ["attachmentPath"] = "nonexistent_file.txt",
+            ["attachmentName"] = "test.txt"
+        };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<FileNotFoundException>(() => _tool.ExecuteAsync(arguments));
+    }
+
+    [Fact]
+    public async Task GetAttachments_WithAttachments_ShouldReturnAttachmentInfo()
     {
         // Arrange
         var pdfPath = CreateTestPdf("test_get_attachments.pdf");
-        var document = new Document(pdfPath);
-        var attachmentPath = CreateTestAttachment("test_attachment2.txt");
-        document.EmbeddedFiles.Add(new FileSpecification(attachmentPath));
-        document.Save(pdfPath);
+        using (var document = new Document(pdfPath))
+        {
+            var attachmentPath = CreateTestAttachment("test_attachment2.txt");
+            document.EmbeddedFiles.Add(new FileSpecification(attachmentPath, "test_attachment2.txt"));
+            document.Save(pdfPath);
+        }
 
         var arguments = new JsonObject
         {
@@ -68,9 +139,27 @@ public class PdfAttachmentToolTests : PdfTestBase
         var result = await _tool.ExecuteAsync(arguments);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result);
-        Assert.Contains("Attachment", result, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("\"count\": 1", result);
+        Assert.Contains("test_attachment2.txt", result);
+    }
+
+    [Fact]
+    public async Task GetAttachments_Empty_ShouldReturnEmptyResult()
+    {
+        // Arrange
+        var pdfPath = CreateTestPdf("test_get_empty.pdf");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "get",
+            ["path"] = pdfPath
+        };
+
+        // Act
+        var result = await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.Contains("\"count\": 0", result);
+        Assert.Contains("No attachments found", result);
     }
 
     [Fact]
@@ -81,17 +170,8 @@ public class PdfAttachmentToolTests : PdfTestBase
         using (var document = new Document(pdfPath))
         {
             var attachmentPath = CreateTestAttachment("test_attachment3.txt");
-            var fileSpec = new FileSpecification(attachmentPath, "test_attachment3.txt");
-            document.EmbeddedFiles.Add(fileSpec);
+            document.EmbeddedFiles.Add(new FileSpecification(attachmentPath, "test_attachment3.txt"));
             document.Save(pdfPath);
-        }
-
-        // Reload to get accurate count
-        int attachmentsBefore;
-        using (var document = new Document(pdfPath))
-        {
-            attachmentsBefore = document.EmbeddedFiles.Count;
-            Assert.True(attachmentsBefore > 0, "Attachment should exist before deletion");
         }
 
         var outputPath = CreateTestFilePath("test_delete_attachment_output.pdf");
@@ -104,12 +184,43 @@ public class PdfAttachmentToolTests : PdfTestBase
         };
 
         // Act
-        await _tool.ExecuteAsync(arguments);
+        var result = await _tool.ExecuteAsync(arguments);
 
         // Assert
+        Assert.Contains("Deleted attachment", result);
         using var resultDocument = new Document(outputPath);
-        var attachmentsAfter = resultDocument.EmbeddedFiles.Count;
-        Assert.True(attachmentsAfter < attachmentsBefore,
-            $"Attachment should be deleted. Before: {attachmentsBefore}, After: {attachmentsAfter}");
+        Assert.Empty(resultDocument.EmbeddedFiles);
+    }
+
+    [Fact]
+    public async Task DeleteAttachment_NotFound_ShouldThrow()
+    {
+        // Arrange
+        var pdfPath = CreateTestPdf("test_delete_notfound.pdf");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "delete",
+            ["path"] = pdfPath,
+            ["attachmentName"] = "nonexistent.txt"
+        };
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+        Assert.Contains("not found", ex.Message);
+    }
+
+    [Fact]
+    public async Task UnknownOperation_ShouldThrow()
+    {
+        // Arrange
+        var pdfPath = CreateTestPdf("test_unknown_op.pdf");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "unknown",
+            ["path"] = pdfPath
+        };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
     }
 }

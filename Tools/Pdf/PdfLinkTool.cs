@@ -57,22 +57,24 @@ Usage examples:
             x = new
             {
                 type = "number",
-                description = "X position of link area (required for add)"
+                description =
+                    "X position of link area in PDF coordinates, origin at bottom-left corner (required for add)"
             },
             y = new
             {
                 type = "number",
-                description = "Y position of link area (required for add)"
+                description =
+                    "Y position of link area in PDF coordinates, origin at bottom-left corner (required for add)"
             },
             width = new
             {
                 type = "number",
-                description = "Width of link area (required for add)"
+                description = "Width of link area in PDF points (required for add)"
             },
             height = new
             {
                 type = "number",
-                description = "Height of link area (required for add)"
+                description = "Height of link area in PDF points (required for add)"
             },
             url = new
             {
@@ -282,9 +284,13 @@ Usage examples:
                         linkInfo["type"] = "url";
                         linkInfo["url"] = uriAction.URI;
                     }
-                    else if (link.Action is GoToAction)
+                    else if (link.Action is GoToAction gotoAction)
                     {
                         linkInfo["type"] = "page";
+                        if (gotoAction.Destination is XYZExplicitDestination xyzDest)
+                            linkInfo["destinationPage"] = xyzDest.PageNumber;
+                        else if (gotoAction.Destination is ExplicitDestination explicitDest)
+                            linkInfo["destinationPage"] = explicitDest.PageNumber;
                     }
 
                     linkList.Add(linkInfo);
@@ -319,9 +325,13 @@ Usage examples:
                             linkInfo["type"] = "url";
                             linkInfo["url"] = uriAction.URI;
                         }
-                        else if (link.Action is GoToAction)
+                        else if (link.Action is GoToAction gotoAction)
                         {
                             linkInfo["type"] = "page";
+                            if (gotoAction.Destination is XYZExplicitDestination xyzDest)
+                                linkInfo["destinationPage"] = xyzDest.PageNumber;
+                            else if (gotoAction.Destination is ExplicitDestination explicitDest)
+                                linkInfo["destinationPage"] = explicitDest.PageNumber;
                         }
 
                         linkList.Add(linkInfo);

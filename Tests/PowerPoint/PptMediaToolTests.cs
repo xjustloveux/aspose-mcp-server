@@ -22,7 +22,7 @@ public class PptMediaToolTests : TestBase
     private string CreateFakeAudioFile(string fileName)
     {
         var audioPath = CreateTestFilePath(fileName);
-        File.WriteAllBytes(audioPath, new byte[] { 0x49, 0x44, 0x33 }); // ID3 header
+        File.WriteAllBytes(audioPath, "ID3"u8.ToArray()); // ID3 header
         return audioPath;
     }
 
@@ -30,7 +30,7 @@ public class PptMediaToolTests : TestBase
     {
         var videoPath = CreateTestFilePath(fileName);
         // Minimal MP4 header bytes
-        File.WriteAllBytes(videoPath, new byte[] { 0x00, 0x00, 0x00, 0x1C, 0x66, 0x74, 0x79, 0x70 });
+        File.WriteAllBytes(videoPath, [0x00, 0x00, 0x00, 0x1C, 0x66, 0x74, 0x79, 0x70]);
         return videoPath;
     }
 
@@ -134,7 +134,7 @@ public class PptMediaToolTests : TestBase
         var audioPath = CreateFakeAudioFile("audio_to_delete.mp3");
         using (var presentation = new Presentation())
         {
-            using var audioStream = File.OpenRead(audioPath);
+            await using var audioStream = File.OpenRead(audioPath);
             presentation.Slides[0].Shapes.AddAudioFrameEmbedded(100, 100, 80, 80, audioStream);
             presentation.Save(pptPath, SaveFormat.Pptx);
         }
@@ -247,7 +247,7 @@ public class PptMediaToolTests : TestBase
         var videoPath = CreateFakeVideoFile("video_to_delete.mp4");
         using (var presentation = new Presentation())
         {
-            using var videoStream = File.OpenRead(videoPath);
+            await using var videoStream = File.OpenRead(videoPath);
             var videoObj = presentation.Videos.AddVideo(videoStream, LoadingStreamBehavior.KeepLocked);
             presentation.Slides[0].Shapes.AddVideoFrame(100, 100, 320, 240, videoObj);
             presentation.Save(pptPath, SaveFormat.Pptx);
@@ -309,7 +309,7 @@ public class PptMediaToolTests : TestBase
         var audioPath = CreateFakeAudioFile("playback_audio.mp3");
         using (var presentation = new Presentation())
         {
-            using var audioStream = File.OpenRead(audioPath);
+            await using var audioStream = File.OpenRead(audioPath);
             presentation.Slides[0].Shapes.AddAudioFrameEmbedded(100, 100, 80, 80, audioStream);
             presentation.Save(pptPath, SaveFormat.Pptx);
         }
@@ -346,7 +346,7 @@ public class PptMediaToolTests : TestBase
         var videoPath = CreateFakeVideoFile("playback_video.mp4");
         using (var presentation = new Presentation())
         {
-            using var videoStream = File.OpenRead(videoPath);
+            await using var videoStream = File.OpenRead(videoPath);
             var videoObj = presentation.Videos.AddVideo(videoStream, LoadingStreamBehavior.KeepLocked);
             presentation.Slides[0].Shapes.AddVideoFrame(100, 100, 320, 240, videoObj);
             presentation.Save(pptPath, SaveFormat.Pptx);
@@ -384,7 +384,7 @@ public class PptMediaToolTests : TestBase
         var audioPath = CreateFakeAudioFile("invalid_volume_audio.mp3");
         using (var presentation = new Presentation())
         {
-            using var audioStream = File.OpenRead(audioPath);
+            await using var audioStream = File.OpenRead(audioPath);
             presentation.Slides[0].Shapes.AddAudioFrameEmbedded(100, 100, 80, 80, audioStream);
             presentation.Save(pptPath, SaveFormat.Pptx);
         }

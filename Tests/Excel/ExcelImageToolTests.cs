@@ -151,7 +151,7 @@ public class ExcelImageToolTests : ExcelTestBase
         // Arrange
         var workbookPath = CreateExcelWorkbook("test_add_unsupported.xlsx");
         var invalidImagePath = CreateTestFilePath("test_image.txt");
-        File.WriteAllText(invalidImagePath, "not an image");
+        await File.WriteAllTextAsync(invalidImagePath, "not an image");
 
         var arguments = new JsonObject
         {

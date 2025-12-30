@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Pdf;
@@ -15,7 +16,9 @@ public class PdfInfoTool : IAsposeTool
         @"Get content and statistics from PDF documents. Supports 2 operations: get_content, get_statistics.
 
 Usage examples:
-- Get content: pdf_info(operation='get_content', path='doc.pdf', pageIndex=1)
+- Get content from page: pdf_info(operation='get_content', path='doc.pdf', pageIndex=1)
+- Get content from all pages: pdf_info(operation='get_content', path='doc.pdf')
+- Get content with limit: pdf_info(operation='get_content', path='doc.pdf', maxPages=50)
 - Get statistics: pdf_info(operation='get_statistics', path='doc.pdf')";
 
     public object InputSchema => new
@@ -40,6 +43,11 @@ Usage examples:
             {
                 type = "number",
                 description = "Page index (1-based, optional for get_content, extracts all if not specified)"
+            },
+            maxPages = new
+            {
+                type = "number",
+                description = "Maximum pages to extract (for get_content without pageIndex, default: 100)"
             }
         },
         required = new[] { "operation", "path" }
@@ -66,7 +74,7 @@ Usage examples:
     /// <summary>
     ///     Gets PDF content as text
     /// </summary>
-    /// <param name="arguments">JSON arguments containing optional pageIndex</param>
+    /// <param name="arguments">JSON arguments containing optional pageIndex and maxPages</param>
     /// <param name="path">Input file path</param>
     /// <returns>PDF content as JSON string</returns>
     private Task<string> GetContent(JsonObject? arguments, string path)
@@ -74,6 +82,7 @@ Usage examples:
         return Task.Run(() =>
         {
             var pageIndex = ArgumentHelper.GetIntNullable(arguments, "pageIndex");
+            var maxPages = ArgumentHelper.GetInt(arguments, "maxPages", 100);
 
             using var document = new Document(path);
 
@@ -94,12 +103,23 @@ Usage examples:
             }
             else
             {
-                var textAbsorber = new TextAbsorber();
-                document.Pages.Accept(textAbsorber);
+                var pagesToExtract = Math.Min(maxPages, document.Pages.Count);
+                var truncated = document.Pages.Count > maxPages;
+                var contentBuilder = new StringBuilder();
+
+                for (var i = 1; i <= pagesToExtract; i++)
+                {
+                    var textAbsorber = new TextAbsorber();
+                    document.Pages[i].Accept(textAbsorber);
+                    contentBuilder.AppendLine(textAbsorber.Text);
+                }
+
                 var result = new
                 {
                     totalPages = document.Pages.Count,
-                    content = textAbsorber.Text
+                    extractedPages = pagesToExtract,
+                    truncated,
+                    content = contentBuilder.ToString()
                 };
                 return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
             }
@@ -119,12 +139,13 @@ Usage examples:
             var fileInfo = new FileInfo(path);
 
             var totalAnnotations = 0;
-            for (var i = 1; i <= document.Pages.Count; i++)
-                totalAnnotations += document.Pages[i].Annotations.Count;
-
             var totalParagraphs = 0;
             for (var i = 1; i <= document.Pages.Count; i++)
-                totalParagraphs += document.Pages[i].Paragraphs.Count;
+            {
+                var page = document.Pages[i];
+                totalAnnotations += page.Annotations.Count;
+                totalParagraphs += page.Paragraphs.Count;
+            }
 
             var result = new
             {

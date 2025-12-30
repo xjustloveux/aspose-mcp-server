@@ -7,8 +7,8 @@ namespace AsposeMcpServer.Core.ShapeDetailProviders;
 /// </summary>
 public static class ShapeDetailProviderFactory
 {
-    private static readonly List<IShapeDetailProvider> Providers = new()
-    {
+    private static readonly List<IShapeDetailProvider> Providers =
+    [
         new AutoShapeDetailProvider(),
         new PictureFrameDetailProvider(),
         new TableDetailProvider(),
@@ -18,7 +18,7 @@ public static class ShapeDetailProviderFactory
         new AudioFrameDetailProvider(),
         new VideoFrameDetailProvider(),
         new ConnectorDetailProvider()
-    };
+    ];
 
     /// <summary>
     ///     Gets the appropriate provider for the given shape

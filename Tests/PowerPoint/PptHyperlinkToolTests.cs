@@ -421,8 +421,10 @@ public class PptHyperlinkToolTests : TestBase
             shape.TextFrame.Paragraphs.Clear();
             var paragraph = new Paragraph();
             paragraph.Portions.Add(new Portion("Click "));
-            var linkPortion = new Portion("here");
-            linkPortion.PortionFormat.HyperlinkClick = new Hyperlink("https://portion-link.com");
+            var linkPortion = new Portion("here")
+            {
+                PortionFormat = { HyperlinkClick = new Hyperlink("https://portion-link.com") }
+            };
             paragraph.Portions.Add(linkPortion);
             paragraph.Portions.Add(new Portion(" for more"));
             shape.TextFrame.Paragraphs.Add(paragraph);
@@ -456,8 +458,10 @@ public class PptHyperlinkToolTests : TestBase
             var shape = pptSlide.Shapes.AddAutoShape(ShapeType.Rectangle, 50, 50, 300, 50);
             shape.TextFrame.Paragraphs.Clear();
             var paragraph = new Paragraph();
-            var linkPortion = new Portion("Click here");
-            linkPortion.PortionFormat.HyperlinkClick = new Hyperlink("https://delete-me.com");
+            var linkPortion = new Portion("Click here")
+            {
+                PortionFormat = { HyperlinkClick = new Hyperlink("https://delete-me.com") }
+            };
             paragraph.Portions.Add(linkPortion);
             shape.TextFrame.Paragraphs.Add(paragraph);
             ppt.Save(pptPath, SaveFormat.Pptx);

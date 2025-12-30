@@ -130,27 +130,26 @@ Usage examples:
 
             using var document = new Document(path);
 
-            for (var i = 0; i < count; i++)
-            {
-                var page = document.Pages.Add();
-                if (width.HasValue && height.HasValue)
-                    page.SetPageSize(width.Value, height.Value);
-                else
-                    page.SetPageSize(PageSize.A4.Width, PageSize.A4.Height);
-            }
-
             if (insertAt is >= 1 && insertAt.Value <= document.Pages.Count)
-            {
-                // Move pages manually since GetRange may not be available
-                var pagesToMove = new List<Page>();
-                for (var i = document.Pages.Count - count; i < document.Pages.Count; i++)
-                    pagesToMove.Add(document.Pages[i]);
-                foreach (var page in pagesToMove)
+                // Insert pages at specific position
+                for (var i = 0; i < count; i++)
                 {
-                    document.Pages.Remove(page);
-                    document.Pages.Insert(insertAt.Value - 1, page);
+                    var page = document.Pages.Insert(insertAt.Value + i);
+                    if (width.HasValue && height.HasValue)
+                        page.SetPageSize(width.Value, height.Value);
+                    else
+                        page.SetPageSize(PageSize.A4.Width, PageSize.A4.Height);
                 }
-            }
+            else
+                // Append pages at the end
+                for (var i = 0; i < count; i++)
+                {
+                    var page = document.Pages.Add();
+                    if (width.HasValue && height.HasValue)
+                        page.SetPageSize(width.Value, height.Value);
+                    else
+                        page.SetPageSize(PageSize.A4.Width, PageSize.A4.Height);
+                }
 
             document.Save(outputPath);
             return $"Added {count} page(s). Output: {outputPath}";

@@ -14,8 +14,12 @@ public class PdfTableTool : IAsposeTool
     public string Description => @"Manage tables in PDF documents. Supports 2 operations: add, edit.
 
 Usage examples:
-- Add table: pdf_table(operation='add', path='doc.pdf', pageIndex=1, rows=3, columns=3, data=[['A','B','C'],['1','2','3']], x=100, y=100)
-- Edit table: pdf_table(operation='edit', path='doc.pdf', pageIndex=1, tableIndex=0, data=[['X','Y','Z']])";
+- Add table: pdf_table(operation='add', path='doc.pdf', pageIndex=1, rows=3, columns=3, data=[['A','B','C'],['1','2','3']])
+- Add table with position: pdf_table(operation='add', path='doc.pdf', pageIndex=1, rows=2, columns=2, x=100, y=500)
+- Add table with column widths: pdf_table(operation='add', path='doc.pdf', pageIndex=1, rows=2, columns=3, columnWidths='100 150 200')
+- Edit table cell: pdf_table(operation='edit', path='doc.pdf', tableIndex=0, cellRow=0, cellColumn=1, cellValue='NewValue')
+
+Note: PDF table editing has limitations. After saving, tables may be converted to graphics and cannot be edited as Table objects.";
 
     public object InputSchema => new
     {
@@ -68,12 +72,18 @@ Usage examples:
             x = new
             {
                 type = "number",
-                description = "X position (for add, default: 100)"
+                description = "X position (left margin) in PDF points (for add, default: 100)"
             },
             y = new
             {
                 type = "number",
-                description = "Y position (for add, default: 600)"
+                description = "Y position (top margin) in PDF points (for add, default: 600)"
+            },
+            columnWidths = new
+            {
+                type = "string",
+                description =
+                    "Space-separated column widths in PDF points (for add, default: all columns 100pt, e.g., '100 150 200')"
             },
             tableIndex = new
             {
@@ -104,6 +114,7 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments object containing operation parameters</param>
     /// <returns>Result message as a string</returns>
+    /// <exception cref="ArgumentException">Thrown when operation is unknown or required parameters are missing</exception>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
@@ -123,8 +134,9 @@ Usage examples:
     /// </summary>
     /// <param name="path">Input file path</param>
     /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing pageIndex, rows, columns, optional data, x, y</param>
+    /// <param name="arguments">JSON arguments containing pageIndex, rows, columns, optional data, x, y, columnWidths</param>
     /// <returns>Success message</returns>
+    /// <exception cref="ArgumentException">Thrown when pageIndex is out of range or data format is invalid</exception>
     private Task<string> AddTable(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -134,26 +146,32 @@ Usage examples:
             var columns = ArgumentHelper.GetInt(arguments, "columns");
             var x = ArgumentHelper.GetDouble(arguments, "x", "x", false, 100);
             var y = ArgumentHelper.GetDouble(arguments, "y", "y", false, 600);
+            var columnWidths = ArgumentHelper.GetStringNullable(arguments, "columnWidths");
 
             using var document = new Document(path);
             if (pageIndex < 1 || pageIndex > document.Pages.Count)
                 throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
 
             var page = document.Pages[pageIndex];
+
+            // Determine column widths: use provided value or default to 100 for each column
+            var effectiveColumnWidths = !string.IsNullOrEmpty(columnWidths)
+                ? columnWidths
+                : string.Join(" ", Enumerable.Repeat("100", columns));
+
             var table = new Table
             {
-                ColumnWidths = string.Join(" ", Enumerable.Repeat("100", columns)),
+                ColumnWidths = effectiveColumnWidths,
                 DefaultCellBorder = new BorderInfo(BorderSide.All, 0.5F),
                 Margin = new MarginInfo { Left = x, Top = y }
             };
 
+            // Parse data using direct deserialization for better performance
             string[][]? data = null;
-            if (arguments?.ContainsKey("data") == true)
+            if (arguments?.ContainsKey("data") == true && arguments["data"] != null)
                 try
                 {
-                    var dataJson = arguments["data"]?.ToJsonString();
-                    if (!string.IsNullOrEmpty(dataJson))
-                        data = JsonSerializer.Deserialize<string[][]>(dataJson);
+                    data = arguments["data"].Deserialize<string[][]>();
                 }
                 catch (Exception jsonEx)
                 {
@@ -187,6 +205,7 @@ Usage examples:
     /// <param name="outputPath">Output file path</param>
     /// <param name="arguments">JSON arguments containing tableIndex, optional cellRow, cellColumn, cellValue</param>
     /// <returns>Success message</returns>
+    /// <exception cref="ArgumentException">Thrown when no tables found, tableIndex out of range, or cell indices out of range</exception>
     private Task<string> EditTable(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -254,25 +273,6 @@ Usage examples:
                 {
                     // Method 3 failed
                     Console.Error.WriteLine($"[WARN] Error in alternative table search method: {ex.Message}");
-                }
-
-            if (tables.Count == 0)
-                // Try to find tables by searching page contents
-                try
-                {
-                    foreach (var page in document.Pages)
-                        // Check if page has any content that might contain tables
-                        if (page.Contents != null)
-                        {
-                            // Tables in PDF are typically stored as paragraph objects
-                            // If Paragraphs is empty, the table might not have been saved correctly
-                            // or the document structure is different
-                        }
-                }
-                catch (Exception ex)
-                {
-                    // Method 4 failed
-                    Console.Error.WriteLine($"[WARN] Error in page content search method: {ex.Message}");
                 }
 
             if (tables.Count == 0)

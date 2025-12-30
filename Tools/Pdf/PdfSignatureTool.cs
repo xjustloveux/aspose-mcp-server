@@ -17,6 +17,8 @@ public class PdfSignatureTool : IAsposeTool
 
 Usage examples:
 - Sign PDF: pdf_signature(operation='sign', path='doc.pdf', certificatePath='cert.pfx', certificatePassword='password')
+- Sign with position: pdf_signature(operation='sign', path='doc.pdf', certificatePath='cert.pfx', certificatePassword='password', pageIndex=1, x=100, y=100, width=200, height=100)
+- Sign with image: pdf_signature(operation='sign', path='doc.pdf', certificatePath='cert.pfx', certificatePassword='password', imagePath='stamp.png')
 - Delete signature: pdf_signature(operation='delete', path='doc.pdf', signatureIndex=0)
 - Get signatures: pdf_signature(operation='get', path='doc.pdf')";
 
@@ -68,6 +70,39 @@ Usage examples:
             {
                 type = "number",
                 description = "Signature index (0-based, required for delete)"
+            },
+            pageIndex = new
+            {
+                type = "number",
+                description = "Page index to place signature (1-based, for sign, default: 1)"
+            },
+            x = new
+            {
+                type = "number",
+                description =
+                    "X position of signature in PDF coordinates, origin at bottom-left corner (for sign, default: 100)"
+            },
+            y = new
+            {
+                type = "number",
+                description =
+                    "Y position of signature in PDF coordinates, origin at bottom-left corner (for sign, default: 100)"
+            },
+            width = new
+            {
+                type = "number",
+                description = "Width of signature rectangle in PDF points (for sign, default: 200)"
+            },
+            height = new
+            {
+                type = "number",
+                description = "Height of signature rectangle in PDF points (for sign, default: 100)"
+            },
+            imagePath = new
+            {
+                type = "string",
+                description =
+                    "Path to signature appearance image (for sign, optional, e.g., stamp or handwritten signature)"
             }
         },
         required = new[] { "operation", "path" }
@@ -78,6 +113,7 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments object containing operation parameters</param>
     /// <returns>Result message as a string</returns>
+    /// <exception cref="ArgumentException">Thrown when operation is unknown or required parameters are missing</exception>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
@@ -102,8 +138,13 @@ Usage examples:
     /// </summary>
     /// <param name="path">Input file path</param>
     /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing certificatePath, certificatePassword, optional reason, location</param>
+    /// <param name="arguments">
+    ///     JSON arguments containing certificatePath, certificatePassword, optional reason, location,
+    ///     position, imagePath
+    /// </param>
     /// <returns>Success message</returns>
+    /// <exception cref="ArgumentException">Thrown when pageIndex is out of range or required parameters are missing</exception>
+    /// <exception cref="FileNotFoundException">Thrown when certificate or image file is not found</exception>
     private Task<string> SignDocument(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -112,6 +153,12 @@ Usage examples:
             var certificatePassword = ArgumentHelper.GetString(arguments, "certificatePassword");
             var reason = ArgumentHelper.GetString(arguments, "reason", "Document approval");
             var location = ArgumentHelper.GetString(arguments, "location", "");
+            var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex", 1);
+            var x = ArgumentHelper.GetInt(arguments, "x", 100);
+            var y = ArgumentHelper.GetInt(arguments, "y", 100);
+            var width = ArgumentHelper.GetInt(arguments, "width", 200);
+            var height = ArgumentHelper.GetInt(arguments, "height", 100);
+            var imagePath = ArgumentHelper.GetStringNullable(arguments, "imagePath");
 
             SecurityHelper.ValidateFilePath(certificatePath, "certificatePath", true);
 
@@ -119,6 +166,10 @@ Usage examples:
                 throw new FileNotFoundException($"Certificate file not found: {certificatePath}");
 
             using var document = new Document(path);
+
+            if (pageIndex < 1 || pageIndex > document.Pages.Count)
+                throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
+
             using var pdfSign = new PdfFileSignature(document);
             var pkcs = new PKCS7(certificatePath, certificatePassword)
             {
@@ -126,10 +177,18 @@ Usage examples:
                 Location = location
             };
 
-            var rect = new Rectangle(100, 100, 200, 100);
-            pdfSign.Sign(1, true, rect, pkcs);
+            if (!string.IsNullOrEmpty(imagePath))
+            {
+                SecurityHelper.ValidateFilePath(imagePath, "imagePath", true);
+                if (!File.Exists(imagePath))
+                    throw new FileNotFoundException($"Signature image file not found: {imagePath}");
+                pdfSign.SignatureAppearance = imagePath;
+            }
+
+            var rect = new Rectangle(x, y, width, height);
+            pdfSign.Sign(pageIndex, true, rect, pkcs);
             pdfSign.Save(outputPath);
-            return $"PDF digitally signed. Output: {outputPath}";
+            return $"PDF digitally signed on page {pageIndex}. Output: {outputPath}";
         });
     }
 
@@ -140,6 +199,7 @@ Usage examples:
     /// <param name="outputPath">Output file path</param>
     /// <param name="arguments">JSON arguments containing signatureIndex</param>
     /// <returns>Success message</returns>
+    /// <exception cref="ArgumentException">Thrown when signatureIndex is out of range</exception>
     private Task<string> DeleteSignature(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -164,7 +224,7 @@ Usage examples:
     ///     Gets all signatures from the PDF
     /// </summary>
     /// <param name="path">Input file path</param>
-    /// <returns>JSON string with all signatures</returns>
+    /// <returns>JSON string with all signatures including validity status</returns>
     private Task<string> GetSignatures(string path)
     {
         return Task.Run(() =>
@@ -193,17 +253,26 @@ Usage examples:
                     ["index"] = i,
                     ["name"] = signatureName
                 };
-                // Check signature validity - IsValid may not be available, use alternative method
+
+                // Verify signature validity
+                try
+                {
+                    signatureInfo["isValid"] = pdfSign.VerifySignature(signatureName);
+                }
+                catch
+                {
+                    signatureInfo["isValid"] = false;
+                }
+
+                // Check if certificate can be extracted
                 try
                 {
                     _ = pdfSign.ExtractCertificate(signatureName);
                     signatureInfo["hasCertificate"] = true;
                 }
-                catch (Exception ex)
+                catch
                 {
                     signatureInfo["hasCertificate"] = false;
-                    Console.Error.WriteLine(
-                        $"[WARN] Failed to extract certificate for signature '{signatureName}': {ex.Message}");
                 }
 
                 signatureList.Add(signatureInfo);

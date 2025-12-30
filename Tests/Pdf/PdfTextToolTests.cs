@@ -1,4 +1,4 @@
-using System.Text;
+using System.Text.Json;
 using Aspose.Pdf;
 using Aspose.Pdf.Text;
 using AsposeMcpServer.Tests.Helpers;
@@ -21,110 +21,71 @@ public class PdfTextToolTests : PdfTestBase
     }
 
     [Fact]
-    public async Task ExtractText_ShouldExtractAllText()
+    public async Task ExtractText_ShouldReturnJsonResult()
     {
         // Arrange
         var pdfPath = CreatePdfDocument("test_extract_text.pdf");
-        var outputPath = CreateTestFilePath("test_extract_text_output.txt");
-        var arguments = CreateArguments("extract", pdfPath, outputPath);
-        arguments["pageIndex"] = 1; // PDF pageIndex is 1-based
-
-        // Act
-        var result = await _tool.ExecuteAsync(arguments);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result);
-        if (File.Exists(outputPath))
-        {
-            var content = await File.ReadAllTextAsync(outputPath);
-            Assert.Contains("Sample PDF Text", content, StringComparison.OrdinalIgnoreCase);
-        }
-    }
-
-    [Fact]
-    public async Task ExtractText_FromPage_ShouldExtractFromPage()
-    {
-        // Arrange
-        var pdfPath = CreatePdfDocument("test_extract_text_page.pdf");
-        var outputPath = CreateTestFilePath("test_extract_text_page_output.txt");
-        var arguments = CreateArguments("extract", pdfPath, outputPath);
-        arguments["pageIndex"] = 1; // PDF pageIndex is 1-based
-
-        // Act
-        var result = await _tool.ExecuteAsync(arguments);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result);
-    }
-
-    [Fact]
-    public async Task SearchText_ShouldFindText()
-    {
-        // Arrange
-        var pdfPath = CreatePdfDocument("test_search_text.pdf");
-        // Note: PdfTextTool doesn't have a "search" operation, only "add", "edit", "extract"
-        // This test is skipped as the operation doesn't exist
         var arguments = CreateArguments("extract", pdfPath);
         arguments["pageIndex"] = 1;
-        arguments["outputPath"] = CreateTestFilePath("test_search_text_output.txt");
 
         // Act
         var result = await _tool.ExecuteAsync(arguments);
 
         // Assert
         Assert.NotNull(result);
-        Assert.NotEmpty(result);
+        var json = JsonSerializer.Deserialize<JsonElement>(result);
+        Assert.True(json.TryGetProperty("pageIndex", out _));
+        Assert.True(json.TryGetProperty("totalPages", out _));
+        Assert.True(json.TryGetProperty("text", out _));
     }
 
     [Fact]
-    public async Task ReplaceText_ShouldReplaceText()
+    public async Task ExtractText_WithIncludeFontInfo_ShouldReturnFragments()
     {
         // Arrange
-        var pdfPath = CreatePdfDocument("test_replace_text.pdf");
-        var outputPath = CreateTestFilePath("test_replace_text_output.pdf");
-        var arguments = CreateArguments("edit", pdfPath, outputPath);
-        arguments["pageIndex"] = 1; // PDF pageIndex is 1-based
-        arguments["oldText"] = "Sample PDF Text";
-        arguments["newText"] = "Updated";
-        arguments["replaceAll"] = true; // Replace all occurrences
+        var pdfPath = CreatePdfDocument("test_extract_font_info.pdf");
+        var arguments = CreateArguments("extract", pdfPath);
+        arguments["pageIndex"] = 1;
+        arguments["includeFontInfo"] = true;
 
-        var isEvaluationMode = IsEvaluationMode();
+        // Act
+        var result = await _tool.ExecuteAsync(arguments);
 
-        try
-        {
-            await _tool.ExecuteAsync(arguments);
-            if (File.Exists(outputPath))
-            {
-                Assert.True(File.Exists(outputPath), "PDF text replacement output file should be created");
-                if (!isEvaluationMode)
-                {
-                    var document = new Document(outputPath);
-                    var textFragmentAbsorber = new TextFragmentAbsorber("Updated");
-                    document.Pages.Accept(textFragmentAbsorber);
-                    Assert.True(textFragmentAbsorber.TextFragments.Count > 0, "Text should be replaced");
-                }
-            }
-            else if (isEvaluationMode)
-            {
-                Assert.True(true, "In evaluation mode, file may not be created if operation fails");
-            }
-        }
-        catch (FileNotFoundException) when (isEvaluationMode)
-        {
-            Assert.True(true, "In evaluation mode, PDF operations may fail");
-        }
-        catch (ArgumentException ex) when (isEvaluationMode &&
-                                           (ex.Message.Contains("Object reference") || ex.Message.Contains("null") ||
-                                            ex.Message.Contains("Failed to replace")))
-        {
-            Assert.True(true, "In evaluation mode, PDF text replacement may fail due to null references");
-        }
-        catch (Exception ex) when (isEvaluationMode)
-        {
-            Assert.True(true, $"In evaluation mode, exception is acceptable: {ex.GetType().Name}");
-        }
+        // Assert
+        Assert.NotNull(result);
+        var json = JsonSerializer.Deserialize<JsonElement>(result);
+        Assert.True(json.TryGetProperty("fragments", out _));
+        Assert.True(json.TryGetProperty("fragmentCount", out _));
+    }
+
+    [Fact]
+    public async Task ExtractText_WithRawMode_ShouldExtractRawText()
+    {
+        // Arrange
+        var pdfPath = CreatePdfDocument("test_extract_raw.pdf");
+        var arguments = CreateArguments("extract", pdfPath);
+        arguments["pageIndex"] = 1;
+        arguments["extractionMode"] = "raw";
+
+        // Act
+        var result = await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Contains("text", result);
+    }
+
+    [Fact]
+    public async Task ExtractText_WithInvalidPageIndex_ShouldThrowArgumentException()
+    {
+        // Arrange
+        var pdfPath = CreatePdfDocument("test_extract_invalid_page.pdf");
+        var arguments = CreateArguments("extract", pdfPath);
+        arguments["pageIndex"] = 99;
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+        Assert.Contains("pageIndex must be between", exception.Message);
     }
 
     [Fact]
@@ -134,31 +95,17 @@ public class PdfTextToolTests : PdfTestBase
         var pdfPath = CreatePdfDocument("test_add_text.pdf");
         var outputPath = CreateTestFilePath("test_add_text_output.pdf");
         var arguments = CreateArguments("add", pdfPath, outputPath);
-        arguments["pageIndex"] = 1; // PDF pageIndex is 1-based
+        arguments["pageIndex"] = 1;
         arguments["text"] = "Added Text";
         arguments["x"] = 100;
         arguments["y"] = 700;
 
         // Act
-        await _tool.ExecuteAsync(arguments);
+        var result = await _tool.ExecuteAsync(arguments);
 
         // Assert
         Assert.True(File.Exists(outputPath), "PDF file should be created");
-        var document = new Document(outputPath);
-        // Use page index 1 (1-based) instead of 0
-        if (document.Pages.Count >= 1)
-        {
-            var textFragmentAbsorber = new TextFragmentAbsorber("Added Text");
-            document.Pages[1].Accept(textFragmentAbsorber);
-            // In evaluation mode, text addition may work
-            // Verify operation completed - file exists
-            Assert.True(File.Exists(outputPath), "PDF file should be created");
-        }
-        else
-        {
-            // Verify operation completed
-            Assert.True(File.Exists(outputPath), "PDF file should be created");
-        }
+        Assert.Contains("Added text to page", result);
     }
 
     [Fact]
@@ -168,7 +115,7 @@ public class PdfTextToolTests : PdfTestBase
         var pdfPath = CreatePdfDocument("test_add_text_font.pdf");
         var outputPath = CreateTestFilePath("test_add_text_font_output.pdf");
         var arguments = CreateArguments("add", pdfPath, outputPath);
-        arguments["pageIndex"] = 1; // PDF pageIndex is 1-based
+        arguments["pageIndex"] = 1;
         arguments["text"] = "Styled Text";
         arguments["fontName"] = "Arial";
         arguments["fontSize"] = 14;
@@ -180,37 +127,95 @@ public class PdfTextToolTests : PdfTestBase
 
         // Assert
         Assert.True(File.Exists(outputPath), "PDF file should be created");
-        // Verify font options were applied - operation completed without error
         var document = new Document(outputPath);
         Assert.True(document.Pages.Count >= 1, "PDF should have at least one page");
     }
 
     [Fact]
-    public async Task AddText_WithAllFontOptions_ShouldApplyAllOptions()
+    public async Task AddText_WithInvalidPageIndex_ShouldThrowArgumentException()
     {
         // Arrange
-        var pdfPath = CreatePdfDocument("test_add_text_all_options.pdf");
-        var outputPath = CreateTestFilePath("test_add_text_all_options_output.pdf");
-        var arguments = CreateArguments("add", pdfPath, outputPath);
-        arguments["pageIndex"] = 1;
-        arguments["text"] = "Fully Formatted Text";
-        arguments["fontName"] = "Times New Roman";
-        arguments["fontSize"] = 16;
-        arguments["x"] = 200;
-        arguments["y"] = 600;
+        var pdfPath = CreatePdfDocument("test_add_invalid_page.pdf");
+        var arguments = CreateArguments("add", pdfPath);
+        arguments["pageIndex"] = 99;
+        arguments["text"] = "Test";
 
-        // Act
-        await _tool.ExecuteAsync(arguments);
-
-        // Assert
-        Assert.True(File.Exists(outputPath), "PDF file should be created");
-        // Verify operation completed - file exists and has content
-        var document = new Document(outputPath);
-        Assert.True(document.Pages.Count >= 1, "PDF should have at least one page");
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+        Assert.Contains("pageIndex must be between", exception.Message);
     }
 
     [Fact]
-    public async Task Extract_WithMultiplePages_ShouldExtractFromAllPages()
+    public async Task EditText_ShouldReplaceText()
+    {
+        // Arrange
+        var pdfPath = CreatePdfDocument("test_edit_text.pdf");
+        var outputPath = CreateTestFilePath("test_edit_text_output.pdf");
+        var arguments = CreateArguments("edit", pdfPath, outputPath);
+        arguments["pageIndex"] = 1;
+        arguments["oldText"] = "Sample PDF Text";
+        arguments["newText"] = "Updated";
+        arguments["replaceAll"] = true;
+
+        var isEvaluationMode = IsEvaluationMode();
+
+        try
+        {
+            var result = await _tool.ExecuteAsync(arguments);
+            Assert.True(File.Exists(outputPath), "PDF file should be created");
+            Assert.Contains("Replaced", result);
+        }
+        catch (ArgumentException ex) when (isEvaluationMode &&
+                                           (ex.Message.Contains("not found") || ex.Message.Contains("Failed")))
+        {
+            Assert.True(true, "In evaluation mode, text replacement may fail");
+        }
+    }
+
+    [Fact]
+    public async Task EditText_WithInvalidPageIndex_ShouldThrowArgumentException()
+    {
+        // Arrange
+        var pdfPath = CreatePdfDocument("test_edit_invalid_page.pdf");
+        var arguments = CreateArguments("edit", pdfPath);
+        arguments["pageIndex"] = 99;
+        arguments["oldText"] = "old";
+        arguments["newText"] = "new";
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+        Assert.Contains("pageIndex must be between", exception.Message);
+    }
+
+    [Fact]
+    public async Task EditText_WithTextNotFound_ShouldThrowArgumentException()
+    {
+        // Arrange
+        var pdfPath = CreatePdfDocument("test_edit_not_found.pdf");
+        var arguments = CreateArguments("edit", pdfPath);
+        arguments["pageIndex"] = 1;
+        arguments["oldText"] = "nonexistent_text_12345";
+        arguments["newText"] = "new";
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+        Assert.Contains("not found", exception.Message);
+    }
+
+    [Fact]
+    public async Task Execute_WithUnknownOperation_ShouldThrowArgumentException()
+    {
+        // Arrange
+        var pdfPath = CreatePdfDocument("test_unknown_op.pdf");
+        var arguments = CreateArguments("unknown", pdfPath);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+        Assert.Contains("Unknown operation", exception.Message);
+    }
+
+    [Fact]
+    public async Task ExtractText_WithMultiplePages_ShouldExtractFromSpecifiedPage()
     {
         // Arrange
         var pdfPath = CreateTestFilePath("test_multi_page_extract.pdf");
@@ -219,30 +224,23 @@ public class PdfTextToolTests : PdfTestBase
         page1.Paragraphs.Add(new TextFragment("Page 1 Content"));
         var page2 = document.Pages.Add();
         page2.Paragraphs.Add(new TextFragment("Page 2 Content"));
-        var page3 = document.Pages.Add();
-        page3.Paragraphs.Add(new TextFragment("Page 3 Content"));
         document.Save(pdfPath);
 
-        var outputPath = CreateTestFilePath("test_multi_page_extract_output.txt");
+        var arguments = CreateArguments("extract", pdfPath);
+        arguments["pageIndex"] = 2;
 
-        // Extract from each page
-        var allText = new StringBuilder();
-        for (var i = 1; i <= 3; i++)
-        {
-            var arguments = CreateArguments("extract", pdfPath, outputPath);
-            arguments["pageIndex"] = i;
-            var result = await _tool.ExecuteAsync(arguments);
-            allText.AppendLine(result);
-        }
+        // Act
+        var result = await _tool.ExecuteAsync(arguments);
 
         // Assert
-        var combinedResult = allText.ToString();
-        Assert.NotNull(combinedResult);
-        Assert.True(combinedResult.Length > 0, "Should extract text from PDF pages");
+        Assert.NotNull(result);
+        var json = JsonSerializer.Deserialize<JsonElement>(result);
+        Assert.True(json.TryGetProperty("pageIndex", out var pageIndexProp));
+        Assert.Equal(2, pageIndexProp.GetInt32());
     }
 
     [Fact]
-    public async Task Extract_WithUnicode_ShouldHandleUnicode()
+    public async Task ExtractText_WithUnicode_ShouldHandleUnicode()
     {
         // Arrange
         var pdfPath = CreateTestFilePath("test_unicode_extract.pdf");
@@ -251,8 +249,7 @@ public class PdfTextToolTests : PdfTestBase
         page.Paragraphs.Add(new TextFragment("Unicode Test: 中文 日本語 한국어"));
         document.Save(pdfPath);
 
-        var outputPath = CreateTestFilePath("test_unicode_extract_output.txt");
-        var arguments = CreateArguments("extract", pdfPath, outputPath);
+        var arguments = CreateArguments("extract", pdfPath);
         arguments["pageIndex"] = 1;
 
         // Act
@@ -260,12 +257,11 @@ public class PdfTextToolTests : PdfTestBase
 
         // Assert
         Assert.NotNull(result);
-        // In evaluation mode, unicode may or may not be extracted correctly
-        Assert.True(result.Length > 0 || File.Exists(outputPath), "Should handle unicode text");
+        Assert.True(result.Length > 0, "Should extract unicode text");
     }
 
     [Fact]
-    public async Task Edit_ReplaceAll_ShouldReplaceAllOccurrences()
+    public async Task EditText_ReplaceAll_ShouldReplaceAllOccurrences()
     {
         // Arrange
         var pdfPath = CreateTestFilePath("test_replace_all.pdf");
@@ -285,11 +281,8 @@ public class PdfTextToolTests : PdfTestBase
 
         try
         {
-            // Act
             await _tool.ExecuteAsync(arguments);
-
-            // Assert
-            if (File.Exists(outputPath)) Assert.True(File.Exists(outputPath), "Output file should be created");
+            Assert.True(File.Exists(outputPath), "Output file should be created");
         }
         catch (Exception) when (isEvaluationMode)
         {
@@ -298,22 +291,20 @@ public class PdfTextToolTests : PdfTestBase
     }
 
     [Fact]
-    public async Task Add_WithColor_ShouldApplyColor()
+    public async Task AddText_WithDefaultPosition_ShouldUseDefaults()
     {
         // Arrange
-        var pdfPath = CreatePdfDocument("test_add_text_color.pdf");
-        var outputPath = CreateTestFilePath("test_add_text_color_output.pdf");
+        var pdfPath = CreatePdfDocument("test_add_default_position.pdf");
+        var outputPath = CreateTestFilePath("test_add_default_position_output.pdf");
         var arguments = CreateArguments("add", pdfPath, outputPath);
         arguments["pageIndex"] = 1;
-        arguments["text"] = "Red Colored Text";
-        arguments["fontColor"] = "FF0000"; // Red
-        arguments["x"] = 100;
-        arguments["y"] = 500;
+        arguments["text"] = "Text with default position";
 
         // Act
-        await _tool.ExecuteAsync(arguments);
+        var result = await _tool.ExecuteAsync(arguments);
 
         // Assert
-        Assert.True(File.Exists(outputPath), "PDF file should be created with colored text");
+        Assert.True(File.Exists(outputPath), "PDF file should be created");
+        Assert.Contains("Added text", result);
     }
 }

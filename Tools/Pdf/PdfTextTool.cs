@@ -15,9 +15,13 @@ public class PdfTextTool : IAsposeTool
     public string Description => @"Manage text in PDF documents. Supports 3 operations: add, edit, extract.
 
 Usage examples:
-- Add text: pdf_text(operation='add', path='doc.pdf', pageIndex=1, text='Hello World', x=100, y=100)
-- Edit text: pdf_text(operation='edit', path='doc.pdf', pageIndex=1, text='Updated Text')
-- Extract text: pdf_text(operation='extract', path='doc.pdf', pageIndex=1, outputPath='output.txt')";
+- Add text: pdf_text(operation='add', path='doc.pdf', pageIndex=1, text='Hello World', x=100, y=700)
+- Add text with font: pdf_text(operation='add', path='doc.pdf', pageIndex=1, text='Hello', x=100, y=700, fontName='Arial', fontSize=14)
+- Edit text: pdf_text(operation='edit', path='doc.pdf', pageIndex=1, oldText='old', newText='new')
+- Edit all occurrences: pdf_text(operation='edit', path='doc.pdf', pageIndex=1, oldText='old', newText='new', replaceAll=true)
+- Extract text: pdf_text(operation='extract', path='doc.pdf', pageIndex=1)
+- Extract with font info: pdf_text(operation='extract', path='doc.pdf', pageIndex=1, includeFontInfo=true)
+- Extract raw text: pdf_text(operation='extract', path='doc.pdf', pageIndex=1, extractionMode='raw')";
 
     public object InputSchema => new
     {
@@ -57,12 +61,12 @@ Usage examples:
             x = new
             {
                 type = "number",
-                description = "X position (for add, default: 100)"
+                description = "X position in PDF coordinates, origin at bottom-left corner (for add, default: 100)"
             },
             y = new
             {
                 type = "number",
-                description = "Y position (for add, default: 700)"
+                description = "Y position in PDF coordinates, origin at bottom-left corner (for add, default: 700)"
             },
             fontName = new
             {
@@ -93,6 +97,13 @@ Usage examples:
             {
                 type = "boolean",
                 description = "Include font information (for extract, default: false)"
+            },
+            extractionMode = new
+            {
+                type = "string",
+                description =
+                    "Text extraction mode (for extract, default: 'pure'). 'pure' preserves formatting, 'raw' extracts raw text without formatting",
+                @enum = new[] { "pure", "raw" }
             }
         },
         required = new[] { "operation", "path" }
@@ -103,6 +114,7 @@ Usage examples:
     /// </summary>
     /// <param name="arguments">JSON arguments object containing operation parameters</param>
     /// <returns>Result message as a string</returns>
+    /// <exception cref="ArgumentException">Thrown when operation is unknown or required parameters are missing</exception>
     public async Task<string> ExecuteAsync(JsonObject? arguments)
     {
         var operation = ArgumentHelper.GetString(arguments, "operation");
@@ -129,6 +141,7 @@ Usage examples:
     /// <param name="outputPath">Output file path</param>
     /// <param name="arguments">JSON arguments containing pageIndex, text, optional x, y, fontName, fontSize</param>
     /// <returns>Success message</returns>
+    /// <exception cref="ArgumentException">Thrown when pageIndex is out of range</exception>
     private Task<string> AddText(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -171,6 +184,7 @@ Usage examples:
     /// <param name="outputPath">Output file path</param>
     /// <param name="arguments">JSON arguments containing pageIndex, oldText, newText, optional replaceAll</param>
     /// <returns>Success message</returns>
+    /// <exception cref="ArgumentException">Thrown when pageIndex is out of range or text not found</exception>
     private Task<string> EditText(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -219,40 +233,13 @@ Usage examples:
                         try
                         {
                             var fragmentText = (fragment.Text?.Replace("\u0000", "") ?? "").Trim();
-                            var normalizedFragmentText = Regex.Replace(fragmentText, @"\s+", " ").Trim();
 
-                            // Try multiple matching strategies:
-                            // 1. Exact match (case-insensitive)
-                            // 2. Normalized match (case-insensitive)
-                            // 3. Partial match: oldText contains in fragmentText or vice versa
-                            // 4. Partial match with normalized text
-                            var isMatch =
-                                fragmentText.Equals(oldText, StringComparison.OrdinalIgnoreCase) ||
-                                normalizedFragmentText.Equals(oldText, StringComparison.OrdinalIgnoreCase) ||
-                                normalizedFragmentText.Equals(normalizedOldText, StringComparison.OrdinalIgnoreCase) ||
-                                fragmentText.Equals(cleanedOldText, StringComparison.OrdinalIgnoreCase) ||
-                                normalizedFragmentText.Equals(normalizedCleanedOldText,
-                                    StringComparison.OrdinalIgnoreCase) ||
-                                (fragmentText.Length > 0 &&
-                                 oldText.Contains(fragmentText, StringComparison.OrdinalIgnoreCase)) ||
-                                (fragmentText.Length > 0 &&
-                                 cleanedOldText.Contains(fragmentText, StringComparison.OrdinalIgnoreCase)) ||
-                                (fragmentText.Length > 0 &&
-                                 fragmentText.Contains(oldText, StringComparison.OrdinalIgnoreCase)) ||
-                                (fragmentText.Length > 0 &&
-                                 fragmentText.Contains(cleanedOldText, StringComparison.OrdinalIgnoreCase)) ||
-                                (normalizedFragmentText.Length > 0 &&
-                                 normalizedFragmentText.Contains(normalizedOldText,
-                                     StringComparison.OrdinalIgnoreCase)) ||
-                                (normalizedFragmentText.Length > 0 &&
-                                 normalizedFragmentText.Contains(normalizedCleanedOldText,
-                                     StringComparison.OrdinalIgnoreCase));
-
-                            if (isMatch) matchingFragments.Add(fragment);
+                            if (IsTextMatch(fragmentText, oldText, normalizedOldText, cleanedOldText,
+                                    normalizedCleanedOldText))
+                                matchingFragments.Add(fragment);
                         }
                         catch (Exception ex)
                         {
-                            // Skip fragments that cause errors
                             Console.Error.WriteLine(
                                 $"[WARN] Error processing text fragment during search: {ex.Message}");
                         }
@@ -369,21 +356,29 @@ Usage examples:
     ///     Extracts text from a PDF
     /// </summary>
     /// <param name="path">Input file path</param>
-    /// <param name="arguments">JSON arguments containing pageIndex, optional includeFontInfo</param>
+    /// <param name="arguments">JSON arguments containing pageIndex, optional includeFontInfo, extractionMode</param>
     /// <returns>JSON formatted string with extracted text</returns>
+    /// <exception cref="ArgumentException">Thrown when pageIndex is out of range</exception>
     private Task<string> ExtractText(string path, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
             var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
             var includeFontInfo = ArgumentHelper.GetBool(arguments, "includeFontInfo", false);
+            var extractionMode = ArgumentHelper.GetString(arguments, "extractionMode", "pure").ToLower();
 
             using var document = new Document(path);
             if (pageIndex < 1 || pageIndex > document.Pages.Count)
                 throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
 
             var page = document.Pages[pageIndex];
+
+            // Configure text extraction options based on mode
             var textAbsorber = new TextAbsorber();
+            if (extractionMode == "raw")
+                textAbsorber.ExtractionOptions =
+                    new TextExtractionOptions(TextExtractionOptions.TextFormattingMode.Raw);
+
             page.Accept(textAbsorber);
 
             if (includeFontInfo)
@@ -422,5 +417,55 @@ Usage examples:
                 return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
             }
         });
+    }
+
+    /// <summary>
+    ///     Checks if a text fragment matches the search text using multiple strategies
+    /// </summary>
+    /// <param name="fragmentText">The text from the PDF fragment</param>
+    /// <param name="searchText">The text to search for</param>
+    /// <param name="normalizedSearchText">Normalized version of the search text (whitespace collapsed)</param>
+    /// <param name="cleanedSearchText">Cleaned version of the search text (null chars removed)</param>
+    /// <param name="normalizedCleanedSearchText">Normalized and cleaned version of the search text</param>
+    /// <returns>True if the fragment matches the search text</returns>
+    private static bool IsTextMatch(
+        string fragmentText,
+        string searchText,
+        string normalizedSearchText,
+        string cleanedSearchText,
+        string normalizedCleanedSearchText)
+    {
+        if (string.IsNullOrEmpty(fragmentText)) return false;
+
+        var normalizedFragmentText = Regex.Replace(fragmentText, @"\s+", " ").Trim();
+
+        // Strategy 1: Exact match (case-insensitive)
+        if (fragmentText.Equals(searchText, StringComparison.OrdinalIgnoreCase) ||
+            fragmentText.Equals(cleanedSearchText, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        // Strategy 2: Normalized match (case-insensitive)
+        if (normalizedFragmentText.Equals(searchText, StringComparison.OrdinalIgnoreCase) ||
+            normalizedFragmentText.Equals(normalizedSearchText, StringComparison.OrdinalIgnoreCase) ||
+            normalizedFragmentText.Equals(normalizedCleanedSearchText, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        // Strategy 3: Partial match - search text contains fragment
+        if (searchText.Contains(fragmentText, StringComparison.OrdinalIgnoreCase) ||
+            cleanedSearchText.Contains(fragmentText, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        // Strategy 4: Partial match - fragment contains search text
+        if (fragmentText.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+            fragmentText.Contains(cleanedSearchText, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        // Strategy 5: Normalized partial match
+        if (normalizedFragmentText.Length > 0 &&
+            (normalizedFragmentText.Contains(normalizedSearchText, StringComparison.OrdinalIgnoreCase) ||
+             normalizedFragmentText.Contains(normalizedCleanedSearchText, StringComparison.OrdinalIgnoreCase)))
+            return true;
+
+        return false;
     }
 }

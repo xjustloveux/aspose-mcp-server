@@ -116,7 +116,7 @@ Usage examples:
 
             var slidesToUpdate = applyToAll
                 ? presentation.Slides.ToList()
-                : new List<ISlide> { PowerPointHelper.GetSlide(presentation, slideIndex) };
+                : [PowerPointHelper.GetSlide(presentation, slideIndex)];
 
             foreach (var slide in slidesToUpdate)
                 ApplyBackground(slide, color, img);

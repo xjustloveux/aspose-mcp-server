@@ -365,28 +365,26 @@ public class PptLayoutToolTests : TestBase
         var themePath = CreateThemePresentation("theme.pptx");
         var outputPath = CreateTestFilePath("test_apply_theme_output.pptx");
 
-        using (var origPres = new Presentation(pptPath))
+        using var origPres = new Presentation(pptPath);
+        var originalMasterCount = origPres.Masters.Count;
+
+        var arguments = new JsonObject
         {
-            var originalMasterCount = origPres.Masters.Count;
+            ["operation"] = "apply_theme",
+            ["path"] = pptPath,
+            ["outputPath"] = outputPath,
+            ["themePath"] = themePath
+        };
 
-            var arguments = new JsonObject
-            {
-                ["operation"] = "apply_theme",
-                ["path"] = pptPath,
-                ["outputPath"] = outputPath,
-                ["themePath"] = themePath
-            };
+        // Act
+        var result = await _tool.ExecuteAsync(arguments);
 
-            // Act
-            var result = await _tool.ExecuteAsync(arguments);
+        // Assert
+        Assert.Contains("master(s) copied", result);
+        Assert.Contains("layout applied to all slides", result);
 
-            // Assert
-            Assert.Contains("master(s) copied", result);
-            Assert.Contains("layout applied to all slides", result);
-
-            using var resultPres = new Presentation(outputPath);
-            Assert.True(resultPres.Masters.Count > originalMasterCount);
-        }
+        using var resultPres = new Presentation(outputPath);
+        Assert.True(resultPres.Masters.Count > originalMasterCount);
     }
 
     [Fact]

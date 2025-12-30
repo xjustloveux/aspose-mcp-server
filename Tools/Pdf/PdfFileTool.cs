@@ -6,19 +6,21 @@ using AsposeMcpServer.Core;
 namespace AsposeMcpServer.Tools.Pdf;
 
 /// <summary>
-///     Tool for performing file operations on PDF documents (create, merge, split, compress, encrypt)
+///     Tool for performing file operations on PDF documents (create, merge, split, compress, encrypt, linearize)
 /// </summary>
 public class PdfFileTool : IAsposeTool
 {
     public string Description =>
-        @"Perform file operations on PDF documents. Supports 5 operations: create, merge, split, compress, encrypt.
+        @"Perform file operations on PDF documents. Supports 6 operations: create, merge, split, compress, encrypt, linearize.
 
 Usage examples:
 - Create PDF: pdf_file(operation='create', outputPath='new.pdf')
 - Merge PDFs: pdf_file(operation='merge', inputPaths=['doc1.pdf','doc2.pdf'], outputPath='merged.pdf')
 - Split PDF: pdf_file(operation='split', path='doc.pdf', outputDir='output/', pagesPerFile=1)
+- Split PDF (page range): pdf_file(operation='split', path='doc.pdf', outputDir='output/', startPage=2, endPage=5)
 - Compress PDF: pdf_file(operation='compress', path='doc.pdf', outputPath='compressed.pdf', compressImages=true)
-- Encrypt PDF: pdf_file(operation='encrypt', path='doc.pdf', outputPath='encrypted.pdf', password='password')";
+- Encrypt PDF: pdf_file(operation='encrypt', path='doc.pdf', outputPath='encrypted.pdf', userPassword='user', ownerPassword='owner')
+- Linearize PDF: pdf_file(operation='linearize', path='doc.pdf', outputPath='linearized.pdf')";
 
     public object InputSchema => new
     {
@@ -31,20 +33,22 @@ Usage examples:
                 description = @"Operation to perform.
 - 'create': Create a new PDF (required params: outputPath)
 - 'merge': Merge multiple PDFs (required params: inputPaths, outputPath)
-- 'split': Split PDF into multiple files (required params: path, outputDir)
+- 'split': Split PDF into multiple files (required params: path, outputDir; optional: startPage, endPage, pagesPerFile)
 - 'compress': Compress PDF file (required params: path, outputPath)
-- 'encrypt': Encrypt PDF file (required params: path, outputPath, password)",
-                @enum = new[] { "create", "merge", "split", "compress", "encrypt" }
+- 'encrypt': Encrypt PDF file (required params: path, outputPath, userPassword, ownerPassword)
+- 'linearize': Optimize PDF for fast web view (required params: path, outputPath)",
+                @enum = new[] { "create", "merge", "split", "compress", "encrypt", "linearize" }
             },
             path = new
             {
                 type = "string",
-                description = "Input file path (required for split, compress, and encrypt operations)"
+                description = "Input file path (required for split, compress, encrypt, and linearize operations)"
             },
             outputPath = new
             {
                 type = "string",
-                description = "Output file path (required for create, merge, compress, and encrypt operations)"
+                description =
+                    "Output file path (required for create, merge, compress, encrypt, and linearize operations)"
             },
             inputPaths = new
             {
@@ -60,7 +64,17 @@ Usage examples:
             pagesPerFile = new
             {
                 type = "number",
-                description = "Number of pages per file (for split, default: 1)"
+                description = "Number of pages per file (for split, default: 1, ignored if startPage/endPage specified)"
+            },
+            startPage = new
+            {
+                type = "number",
+                description = "Start page number, 1-based (for split, optional)"
+            },
+            endPage = new
+            {
+                type = "number",
+                description = "End page number, 1-based inclusive (for split, optional)"
             },
             compressImages = new
             {
@@ -80,12 +94,12 @@ Usage examples:
             userPassword = new
             {
                 type = "string",
-                description = "User password (required for encrypt)"
+                description = "User password for opening PDF (required for encrypt)"
             },
             ownerPassword = new
             {
                 type = "string",
-                description = "Owner password (required for encrypt)"
+                description = "Owner password for permissions control (required for encrypt)"
             }
         },
         required = new[] { "operation" }
@@ -117,6 +131,7 @@ Usage examples:
                 break;
             case "compress":
             case "encrypt":
+            case "linearize":
                 path = ArgumentHelper.GetAndValidatePath(arguments);
                 outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
                 break;
@@ -129,6 +144,7 @@ Usage examples:
             "split" => await SplitDocument(path!, arguments),
             "compress" => await CompressDocument(path!, outputPath!, arguments),
             "encrypt" => await EncryptDocument(path!, outputPath!, arguments),
+            "linearize" => await LinearizeDocument(path!, outputPath!),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -170,10 +186,7 @@ Usage examples:
             if (inputPaths.Count == 0)
                 throw new ArgumentException("At least one input path is required");
 
-            // Validate all input paths
             foreach (var inputPath in inputPaths) SecurityHelper.ValidateFilePath(inputPath!, "inputPaths", true);
-
-            // Validate output path
             SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
             using var mergedDocument = new Document(inputPaths[0]);
@@ -192,7 +205,7 @@ Usage examples:
     ///     Splits PDF into multiple files
     /// </summary>
     /// <param name="path">Input file path</param>
-    /// <param name="arguments">JSON arguments containing outputDir, pagesPerFile</param>
+    /// <param name="arguments">JSON arguments containing outputDir, pagesPerFile, startPage, endPage</param>
     /// <returns>Success message with split file count</returns>
     private Task<string> SplitDocument(string path, JsonObject? arguments)
     {
@@ -200,6 +213,8 @@ Usage examples:
         {
             var outputDir = ArgumentHelper.GetString(arguments, "outputDir");
             var pagesPerFile = ArgumentHelper.GetInt(arguments, "pagesPerFile", 1);
+            var startPage = ArgumentHelper.GetIntNullable(arguments, "startPage");
+            var endPage = ArgumentHelper.GetIntNullable(arguments, "endPage");
 
             SecurityHelper.ValidateFilePath(outputDir, "outputDir", true);
 
@@ -208,13 +223,39 @@ Usage examples:
 
             Directory.CreateDirectory(outputDir);
             using var document = new Document(path);
+            var totalPages = document.Pages.Count;
             var fileBaseName = SecurityHelper.SanitizeFileName(Path.GetFileNameWithoutExtension(path));
             var fileCount = 0;
 
-            for (var i = 0; i < document.Pages.Count; i += pagesPerFile)
+            // Determine page range
+            var actualStartPage = startPage ?? 1;
+            var actualEndPage = endPage ?? totalPages;
+
+            if (actualStartPage < 1 || actualStartPage > totalPages)
+                throw new ArgumentException($"startPage must be between 1 and {totalPages}");
+            if (actualEndPage < actualStartPage || actualEndPage > totalPages)
+                throw new ArgumentException($"endPage must be between {actualStartPage} and {totalPages}");
+
+            // If startPage/endPage specified, extract as single file
+            if (startPage.HasValue || endPage.HasValue)
             {
                 using var newDocument = new Document();
-                for (var j = 0; j < pagesPerFile && i + j < document.Pages.Count; j++)
+                for (var pageNum = actualStartPage; pageNum <= actualEndPage; pageNum++)
+                    newDocument.Pages.Add(document.Pages[pageNum]);
+
+                var safeFileName =
+                    SecurityHelper.SanitizeFileName($"{fileBaseName}_pages_{actualStartPage}-{actualEndPage}.pdf");
+                var outputPath = Path.Combine(outputDir, safeFileName);
+                newDocument.Save(outputPath);
+                return
+                    $"PDF extracted pages {actualStartPage}-{actualEndPage} ({actualEndPage - actualStartPage + 1} pages). Output: {outputPath}";
+            }
+
+            // Original split by pagesPerFile
+            for (var i = 0; i < totalPages; i += pagesPerFile)
+            {
+                using var newDocument = new Document();
+                for (var j = 0; j < pagesPerFile && i + j < totalPages; j++)
                     newDocument.Pages.Add(document.Pages[i + j + 1]);
 
                 var safeFileName = SecurityHelper.SanitizeFileName($"{fileBaseName}_part_{++fileCount}.pdf");
@@ -256,6 +297,7 @@ Usage examples:
             {
                 optimizationOptions.LinkDuplcateStreams = true;
                 optimizationOptions.RemoveUnusedObjects = true;
+                optimizationOptions.AllowReusePageContent = true;
             }
 
             document.OptimizeResources(optimizationOptions);
@@ -289,6 +331,28 @@ Usage examples:
                 CryptoAlgorithm.AESx256);
             document.Save(outputPath);
             return $"PDF encrypted with password. Output: {outputPath}";
+        });
+    }
+
+    /// <summary>
+    ///     Linearizes a PDF document for fast web view
+    /// </summary>
+    /// <param name="path">Input file path</param>
+    /// <param name="outputPath">Output file path</param>
+    /// <returns>Success message</returns>
+    private Task<string> LinearizeDocument(string path, string outputPath)
+    {
+        return Task.Run(() =>
+        {
+            using var document = new Document(path);
+            document.Optimize();
+            document.Save(outputPath);
+
+            var originalSize = new FileInfo(path).Length;
+            var optimizedSize = new FileInfo(outputPath).Length;
+
+            return
+                $"PDF linearized for fast web view. Original: {originalSize} bytes, Optimized: {optimizedSize} bytes. Output: {outputPath}";
         });
     }
 }

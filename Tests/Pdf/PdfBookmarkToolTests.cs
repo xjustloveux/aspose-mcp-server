@@ -13,7 +13,7 @@ public class PdfBookmarkToolTests : PdfTestBase
     private string CreateTestPdf(string fileName)
     {
         var filePath = CreateTestFilePath(fileName);
-        var document = new Document();
+        using var document = new Document();
         document.Pages.Add();
         document.Pages.Add();
         document.Save(filePath);
@@ -36,27 +36,46 @@ public class PdfBookmarkToolTests : PdfTestBase
         };
 
         // Act
-        await _tool.ExecuteAsync(arguments);
+        var result = await _tool.ExecuteAsync(arguments);
 
         // Assert
-        var document = new Document(outputPath);
-        var bookmarks = document.Outlines;
-        Assert.True(bookmarks.Count > 0, "Document should contain at least one bookmark");
+        Assert.Contains("Added bookmark", result);
+        using var document = new Document(outputPath);
+        Assert.True(document.Outlines.Count > 0, "Document should contain at least one bookmark");
     }
 
     [Fact]
-    public async Task GetBookmarks_ShouldReturnAllBookmarks()
+    public async Task AddBookmark_InvalidPageIndex_ShouldThrow()
+    {
+        // Arrange
+        var pdfPath = CreateTestPdf("test_add_invalid_page.pdf");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "add",
+            ["path"] = pdfPath,
+            ["title"] = "Test",
+            ["pageIndex"] = 99
+        };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+    }
+
+    [Fact]
+    public async Task GetBookmarks_WithBookmarks_ShouldReturnBookmarkInfo()
     {
         // Arrange
         var pdfPath = CreateTestPdf("test_get_bookmarks.pdf");
-        var document = new Document(pdfPath);
-        var outlineItem = new OutlineItemCollection(document.Outlines)
+        using (var document = new Document(pdfPath))
         {
-            Title = "Test Bookmark",
-            Destination = new XYZExplicitDestination(document.Pages[1], 0, 0, 1)
-        };
-        document.Outlines.Add(outlineItem);
-        document.Save(pdfPath);
+            var outlineItem = new OutlineItemCollection(document.Outlines)
+            {
+                Title = "Test Bookmark",
+                Destination = new XYZExplicitDestination(document.Pages[1], 0, 0, 1)
+            };
+            document.Outlines.Add(outlineItem);
+            document.Save(pdfPath);
+        }
 
         var arguments = new JsonObject
         {
@@ -68,9 +87,27 @@ public class PdfBookmarkToolTests : PdfTestBase
         var result = await _tool.ExecuteAsync(arguments);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result);
-        Assert.Contains("Bookmark", result, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("\"count\": 1", result);
+        Assert.Contains("Test Bookmark", result);
+    }
+
+    [Fact]
+    public async Task GetBookmarks_Empty_ShouldReturnEmptyResult()
+    {
+        // Arrange
+        var pdfPath = CreateTestPdf("test_get_empty.pdf");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "get",
+            ["path"] = pdfPath
+        };
+
+        // Act
+        var result = await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.Contains("\"count\": 0", result);
+        Assert.Contains("No bookmarks found", result);
     }
 
     [Fact]
@@ -78,17 +115,16 @@ public class PdfBookmarkToolTests : PdfTestBase
     {
         // Arrange
         var pdfPath = CreateTestPdf("test_delete_bookmark.pdf");
-        var document = new Document(pdfPath);
-        var outlineItem = new OutlineItemCollection(document.Outlines)
+        using (var document = new Document(pdfPath))
         {
-            Title = "Bookmark to Delete",
-            Destination = new XYZExplicitDestination(document.Pages[1], 0, 0, 1)
-        };
-        document.Outlines.Add(outlineItem);
-        document.Save(pdfPath);
-
-        var bookmarksBefore = document.Outlines.Count;
-        Assert.True(bookmarksBefore > 0, "Bookmark should exist before deletion");
+            var outlineItem = new OutlineItemCollection(document.Outlines)
+            {
+                Title = "Bookmark to Delete",
+                Destination = new XYZExplicitDestination(document.Pages[1], 0, 0, 1)
+            };
+            document.Outlines.Add(outlineItem);
+            document.Save(pdfPath);
+        }
 
         var outputPath = CreateTestFilePath("test_delete_bookmark_output.pdf");
         var arguments = new JsonObject
@@ -100,28 +136,45 @@ public class PdfBookmarkToolTests : PdfTestBase
         };
 
         // Act
-        await _tool.ExecuteAsync(arguments);
+        var result = await _tool.ExecuteAsync(arguments);
 
         // Assert
-        var resultDocument = new Document(outputPath);
-        var bookmarksAfter = resultDocument.Outlines.Count;
-        Assert.True(bookmarksAfter < bookmarksBefore,
-            $"Bookmark should be deleted. Before: {bookmarksBefore}, After: {bookmarksAfter}");
+        Assert.Contains("Deleted bookmark", result);
+        using var resultDocument = new Document(outputPath);
+        Assert.Empty(resultDocument.Outlines);
     }
 
     [Fact]
-    public async Task EditBookmark_ShouldEditBookmark()
+    public async Task DeleteBookmark_InvalidIndex_ShouldThrow()
+    {
+        // Arrange
+        var pdfPath = CreateTestPdf("test_delete_invalid.pdf");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "delete",
+            ["path"] = pdfPath,
+            ["bookmarkIndex"] = 99
+        };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+    }
+
+    [Fact]
+    public async Task EditBookmark_ShouldEditTitle()
     {
         // Arrange
         var pdfPath = CreateTestPdf("test_edit_bookmark.pdf");
-        var document = new Document(pdfPath);
-        var outlineItem = new OutlineItemCollection(document.Outlines)
+        using (var document = new Document(pdfPath))
         {
-            Title = "Original Title",
-            Destination = new XYZExplicitDestination(document.Pages[1], 0, 0, 1)
-        };
-        document.Outlines.Add(outlineItem);
-        document.Save(pdfPath);
+            var outlineItem = new OutlineItemCollection(document.Outlines)
+            {
+                Title = "Original Title",
+                Destination = new XYZExplicitDestination(document.Pages[1], 0, 0, 1)
+            };
+            document.Outlines.Add(outlineItem);
+            document.Save(pdfPath);
+        }
 
         var outputPath = CreateTestFilePath("test_edit_bookmark_output.pdf");
         var arguments = new JsonObject
@@ -134,12 +187,104 @@ public class PdfBookmarkToolTests : PdfTestBase
         };
 
         // Act
-        await _tool.ExecuteAsync(arguments);
+        var result = await _tool.ExecuteAsync(arguments);
 
         // Assert
-        var resultDocument = new Document(outputPath);
-        Assert.True(resultDocument.Outlines.Count > 0, "Document should have bookmarks");
-        var firstBookmark = resultDocument.Outlines[1];
-        Assert.Equal("Updated Title", firstBookmark.Title);
+        Assert.Contains("Edited bookmark", result);
+        using var resultDocument = new Document(outputPath);
+        Assert.Equal("Updated Title", resultDocument.Outlines[1].Title);
+    }
+
+    [Fact]
+    public async Task EditBookmark_ShouldEditPageIndex()
+    {
+        // Arrange
+        var pdfPath = CreateTestPdf("test_edit_page.pdf");
+        using (var document = new Document(pdfPath))
+        {
+            var outlineItem = new OutlineItemCollection(document.Outlines)
+            {
+                Title = "Bookmark",
+                Action = new GoToAction(document.Pages[1])
+            };
+            document.Outlines.Add(outlineItem);
+            document.Save(pdfPath);
+        }
+
+        var outputPath = CreateTestFilePath("test_edit_page_output.pdf");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "edit",
+            ["path"] = pdfPath,
+            ["outputPath"] = outputPath,
+            ["bookmarkIndex"] = 1,
+            ["pageIndex"] = 2
+        };
+
+        // Act
+        var result = await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.Contains("Edited bookmark", result);
+    }
+
+    [Fact]
+    public async Task EditBookmark_InvalidBookmarkIndex_ShouldThrow()
+    {
+        // Arrange
+        var pdfPath = CreateTestPdf("test_edit_invalid.pdf");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "edit",
+            ["path"] = pdfPath,
+            ["bookmarkIndex"] = 99,
+            ["title"] = "Test"
+        };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+    }
+
+    [Fact]
+    public async Task EditBookmark_InvalidPageIndex_ShouldThrow()
+    {
+        // Arrange
+        var pdfPath = CreateTestPdf("test_edit_invalid_page.pdf");
+        using (var document = new Document(pdfPath))
+        {
+            var outlineItem = new OutlineItemCollection(document.Outlines)
+            {
+                Title = "Bookmark",
+                Destination = new XYZExplicitDestination(document.Pages[1], 0, 0, 1)
+            };
+            document.Outlines.Add(outlineItem);
+            document.Save(pdfPath);
+        }
+
+        var arguments = new JsonObject
+        {
+            ["operation"] = "edit",
+            ["path"] = pdfPath,
+            ["bookmarkIndex"] = 1,
+            ["pageIndex"] = 99
+        };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+    }
+
+    [Fact]
+    public async Task UnknownOperation_ShouldThrow()
+    {
+        // Arrange
+        var pdfPath = CreateTestPdf("test_unknown_op.pdf");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "unknown",
+            ["path"] = pdfPath
+        };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
     }
 }

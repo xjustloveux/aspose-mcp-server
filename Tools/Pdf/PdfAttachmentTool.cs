@@ -10,6 +10,8 @@ namespace AsposeMcpServer.Tools.Pdf;
 /// </summary>
 public class PdfAttachmentTool : IAsposeTool
 {
+    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
+
     public string Description => @"Manage attachments in PDF documents. Supports 3 operations: add, delete, get.
 
 Usage examples:
@@ -70,7 +72,6 @@ Usage examples:
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
 
-        // Only get outputPath for operations that modify the document
         string? outputPath = null;
         if (operation.ToLower() != "get")
             outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
@@ -91,6 +92,8 @@ Usage examples:
     /// <param name="outputPath">Output file path</param>
     /// <param name="arguments">JSON arguments containing attachmentPath, attachmentName, optional description</param>
     /// <returns>Success message</returns>
+    /// <exception cref="FileNotFoundException">Thrown when attachment file does not exist</exception>
+    /// <exception cref="ArgumentException">Thrown when attachment with same name already exists</exception>
     private Task<string> AddAttachment(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -99,10 +102,7 @@ Usage examples:
             var attachmentName = ArgumentHelper.GetString(arguments, "attachmentName");
             var description = ArgumentHelper.GetStringNullable(arguments, "description");
 
-            // Validate paths
             SecurityHelper.ValidateFilePath(attachmentPath, "attachmentPath", true);
-
-            // Validate attachment name length
             SecurityHelper.ValidateStringLength(attachmentName, "attachmentName", 255);
             if (description != null)
                 SecurityHelper.ValidateStringLength(description, "description", 1000);
@@ -111,9 +111,17 @@ Usage examples:
                 throw new FileNotFoundException($"Attachment file not found: {attachmentPath}");
 
             using var document = new Document(path);
-            var fileSpecification = new FileSpecification(attachmentPath, attachmentName);
-            if (!string.IsNullOrEmpty(description))
-                fileSpecification.Description = description;
+
+            var existingNames = CollectAttachmentNames(document.EmbeddedFiles);
+            if (existingNames.Any(n => string.Equals(n, attachmentName, StringComparison.OrdinalIgnoreCase) ||
+                                       string.Equals(Path.GetFileName(n), attachmentName,
+                                           StringComparison.OrdinalIgnoreCase)))
+                throw new ArgumentException($"Attachment with name '{attachmentName}' already exists");
+
+            var fileSpecification = new FileSpecification(attachmentPath, description ?? "")
+            {
+                Name = attachmentName
+            };
 
             document.EmbeddedFiles.Add(fileSpecification);
             document.Save(outputPath);
@@ -128,6 +136,7 @@ Usage examples:
     /// <param name="outputPath">Output file path</param>
     /// <param name="arguments">JSON arguments containing attachmentName</param>
     /// <returns>Success message</returns>
+    /// <exception cref="ArgumentException">Thrown when attachment is not found</exception>
     private Task<string> DeleteAttachment(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -137,36 +146,7 @@ Usage examples:
             using var document = new Document(path);
             var embeddedFiles = document.EmbeddedFiles;
 
-            // Find and delete attachment by name
-            // Note: EmbeddedFileCollection uses 1-based indexing for Item property
-            var found = false;
-            var attachmentNames = new List<string>();
-
-            // First, collect all attachment names for debugging
-            for (var i = 1; i <= embeddedFiles.Count; i++)
-                try
-                {
-                    var file = embeddedFiles[i];
-                    var name = file.Name ?? "";
-                    attachmentNames.Add(name);
-
-                    // Check Name property - use case-insensitive comparison
-                    // Also check if the name ends with the attachment name (for full path cases)
-                    var fileName = Path.GetFileName(name);
-                    if (string.Equals(name, attachmentName, StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(fileName, attachmentName, StringComparison.OrdinalIgnoreCase))
-                    {
-                        // Use the actual name from the file object for deletion
-                        embeddedFiles.Delete(name);
-                        found = true;
-                        break;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    // Skip invalid indices
-                    Console.Error.WriteLine($"[WARN] Error accessing attachment at index {i}: {ex.Message}");
-                }
+            var (found, actualName, attachmentNames) = FindAttachment(embeddedFiles, attachmentName);
 
             if (!found)
             {
@@ -175,6 +155,7 @@ Usage examples:
                     $"Attachment '{attachmentName}' not found. Available attachments: {(string.IsNullOrEmpty(availableNames) ? "(none)" : availableNames)}");
             }
 
+            embeddedFiles.Delete(actualName);
             document.Save(outputPath);
             return $"Deleted attachment '{attachmentName}'. Output: {outputPath}";
         });
@@ -189,62 +170,122 @@ Usage examples:
     {
         return Task.Run(() =>
         {
+            using var document = new Document(path);
+            var embeddedFiles = document.EmbeddedFiles;
+
+            if (embeddedFiles == null || embeddedFiles.Count == 0)
+            {
+                var emptyResult = new
+                {
+                    count = 0,
+                    items = Array.Empty<object>(),
+                    message = "No attachments found"
+                };
+                return JsonSerializer.Serialize(emptyResult, JsonOptions);
+            }
+
+            var attachmentList = CollectAttachmentInfo(embeddedFiles);
+
+            var result = new
+            {
+                count = attachmentList.Count,
+                items = attachmentList
+            };
+            return JsonSerializer.Serialize(result, JsonOptions);
+        });
+    }
+
+    /// <summary>
+    ///     Collects all attachment names from the embedded files collection
+    /// </summary>
+    /// <param name="embeddedFiles">The embedded files collection</param>
+    /// <returns>List of attachment names</returns>
+    private static List<string> CollectAttachmentNames(EmbeddedFileCollection embeddedFiles)
+    {
+        var names = new List<string>();
+        for (var i = 1; i <= embeddedFiles.Count; i++)
             try
             {
-                using var document = new Document(path);
-                var attachmentList = new List<object>();
+                var file = embeddedFiles[i];
+                names.Add(file.Name ?? "");
+            }
+            catch
+            {
+                // Skip invalid entries
+            }
 
-                var embeddedFiles = document.EmbeddedFiles;
-                if (embeddedFiles == null || embeddedFiles.Count == 0)
+        return names;
+    }
+
+    /// <summary>
+    ///     Finds an attachment by name in the embedded files collection
+    /// </summary>
+    /// <param name="embeddedFiles">The embedded files collection</param>
+    /// <param name="attachmentName">The name to search for</param>
+    /// <returns>Tuple of (found, actualName, allNames)</returns>
+    private static (bool found, string actualName, List<string> allNames) FindAttachment(
+        EmbeddedFileCollection embeddedFiles, string attachmentName)
+    {
+        var allNames = new List<string>();
+
+        for (var i = 1; i <= embeddedFiles.Count; i++)
+            try
+            {
+                var file = embeddedFiles[i];
+                var name = file.Name ?? "";
+                allNames.Add(name);
+
+                var fileName = Path.GetFileName(name);
+                if (string.Equals(name, attachmentName, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(fileName, attachmentName, StringComparison.OrdinalIgnoreCase))
+                    return (true, name, allNames);
+            }
+            catch
+            {
+                // Skip invalid entries
+            }
+
+        return (false, "", allNames);
+    }
+
+    /// <summary>
+    ///     Collects detailed attachment information from the embedded files collection
+    /// </summary>
+    /// <param name="embeddedFiles">The embedded files collection</param>
+    /// <returns>List of attachment info objects</returns>
+    private static List<object> CollectAttachmentInfo(EmbeddedFileCollection embeddedFiles)
+    {
+        var attachmentList = new List<object>();
+
+        for (var i = 1; i <= embeddedFiles.Count; i++)
+            try
+            {
+                var file = embeddedFiles[i];
+                var attachmentInfo = new Dictionary<string, object?>
                 {
-                    var emptyResult = new
-                    {
-                        count = 0,
-                        items = Array.Empty<object>(),
-                        message = "No attachments found"
-                    };
-                    return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
+                    ["index"] = i,
+                    ["name"] = file.Name ?? "(unnamed)",
+                    ["description"] = !string.IsNullOrEmpty(file.Description) ? file.Description : null,
+                    ["mimeType"] = !string.IsNullOrEmpty(file.MIMEType) ? file.MIMEType : null
+                };
+
+                try
+                {
+                    if (file.Contents != null)
+                        attachmentInfo["sizeBytes"] = file.Contents.Length;
+                }
+                catch
+                {
+                    attachmentInfo["sizeBytes"] = null;
                 }
 
-                for (var i = 1; i <= embeddedFiles.Count; i++)
-                    try
-                    {
-                        var file = embeddedFiles[i];
-                        var attachmentInfo = new Dictionary<string, object?>
-                        {
-                            ["index"] = i,
-                            ["name"] = file.Name ?? "(unnamed)",
-                            ["description"] = !string.IsNullOrEmpty(file.Description) ? file.Description : null
-                        };
-                        try
-                        {
-                            if (file.Contents != null)
-                                attachmentInfo["sizeBytes"] = file.Contents.Length;
-                        }
-                        catch (Exception ex)
-                        {
-                            attachmentInfo["sizeBytes"] = null;
-                            Console.Error.WriteLine($"[WARN] Failed to read attachment size: {ex.Message}");
-                        }
-
-                        attachmentList.Add(attachmentInfo);
-                    }
-                    catch (Exception ex)
-                    {
-                        attachmentList.Add(new { index = i, error = ex.Message });
-                    }
-
-                var result = new
-                {
-                    count = attachmentList.Count,
-                    items = attachmentList
-                };
-                return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+                attachmentList.Add(attachmentInfo);
             }
             catch (Exception ex)
             {
-                throw new ArgumentException($"Failed to get attachments: {ex.Message}");
+                attachmentList.Add(new { index = i, error = ex.Message });
             }
-        });
+
+        return attachmentList;
     }
 }

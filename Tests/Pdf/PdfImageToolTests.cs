@@ -344,4 +344,161 @@ public class PdfImageToolTests : PdfTestBase
         Assert.NotNull(result);
         Assert.Contains("count", result);
     }
+
+    [Fact]
+    public async Task EditImage_WithoutImagePath_ShouldMoveExistingImage()
+    {
+        // Arrange
+        var pdfPath = CreateTestFilePath("test_move_image.pdf");
+        var document = new Document();
+        var page = document.Pages.Add();
+        var imagePath = CreateTestImage("test_move_source.png");
+        await using (var imageStream = new FileStream(imagePath, FileMode.Open))
+        {
+            var rect = new Rectangle(100, 100, 200, 200);
+            page.AddImage(imageStream, rect);
+        }
+
+        document.Save(pdfPath);
+
+        var outputPath = CreateTestFilePath("test_move_image_output.pdf");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "edit",
+            ["path"] = pdfPath,
+            ["outputPath"] = outputPath,
+            ["imageIndex"] = 1,
+            ["pageIndex"] = 1,
+            ["x"] = 300,
+            ["y"] = 300
+        };
+
+        // Act
+        var result = await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.True(File.Exists(outputPath), "Output PDF should be created");
+        Assert.Contains("Moved", result);
+    }
+
+    [Fact]
+    public async Task AddImage_WithInvalidPageIndex_ShouldThrowArgumentException()
+    {
+        // Arrange
+        var pdfPath = CreateTestFilePath("test_add_invalid_page.pdf");
+        var document = new Document();
+        document.Pages.Add();
+        document.Save(pdfPath);
+
+        var imagePath = CreateTestImage("test_invalid_page_image.png");
+        var arguments = new JsonObject
+        {
+            ["operation"] = "add",
+            ["path"] = pdfPath,
+            ["imagePath"] = imagePath,
+            ["pageIndex"] = 99,
+            ["x"] = 100,
+            ["y"] = 100
+        };
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+        Assert.Contains("pageIndex must be between", exception.Message);
+    }
+
+    [Fact]
+    public async Task DeleteImage_WithInvalidImageIndex_ShouldThrowArgumentException()
+    {
+        // Arrange
+        var pdfPath = CreateTestFilePath("test_delete_invalid_index.pdf");
+        var document = new Document();
+        var page = document.Pages.Add();
+        var imagePath = CreateTestImage("test_delete_invalid_image.png");
+        await using (var imageStream = new FileStream(imagePath, FileMode.Open))
+        {
+            var rect = new Rectangle(100, 100, 200, 200);
+            page.AddImage(imageStream, rect);
+        }
+
+        document.Save(pdfPath);
+
+        var arguments = new JsonObject
+        {
+            ["operation"] = "delete",
+            ["path"] = pdfPath,
+            ["imageIndex"] = 99,
+            ["pageIndex"] = 1
+        };
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+        Assert.Contains("imageIndex must be between", exception.Message);
+    }
+
+    [Fact]
+    public async Task Execute_WithUnknownOperation_ShouldThrowArgumentException()
+    {
+        // Arrange
+        var pdfPath = CreateTestFilePath("test_unknown_op.pdf");
+        var document = new Document();
+        document.Pages.Add();
+        document.Save(pdfPath);
+
+        var arguments = new JsonObject
+        {
+            ["operation"] = "unknown",
+            ["path"] = pdfPath
+        };
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() => _tool.ExecuteAsync(arguments));
+        Assert.Contains("Unknown operation", exception.Message);
+    }
+
+    [Fact]
+    public async Task GetImages_WithNoImages_ShouldReturnEmptyResult()
+    {
+        // Arrange
+        var pdfPath = CreateTestFilePath("test_get_no_images.pdf");
+        var document = new Document();
+        document.Pages.Add();
+        document.Save(pdfPath);
+
+        var arguments = new JsonObject
+        {
+            ["operation"] = "get",
+            ["path"] = pdfPath,
+            ["pageIndex"] = 1
+        };
+
+        // Act
+        var result = await _tool.ExecuteAsync(arguments);
+
+        // Assert
+        Assert.Contains("\"count\": 0", result);
+        Assert.Contains("No images found", result);
+    }
+
+    [Fact]
+    public async Task AddImage_WithNonExistentFile_ShouldThrowFileNotFoundException()
+    {
+        // Arrange
+        var pdfPath = CreateTestFilePath("test_add_nonexistent.pdf");
+        var document = new Document();
+        document.Pages.Add();
+        document.Save(pdfPath);
+
+        var arguments = new JsonObject
+        {
+            ["operation"] = "add",
+            ["path"] = pdfPath,
+            ["imagePath"] = @"C:\nonexistent\image.png",
+            ["pageIndex"] = 1,
+            ["x"] = 100,
+            ["y"] = 100
+        };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<FileNotFoundException>(() => _tool.ExecuteAsync(arguments));
+    }
 }

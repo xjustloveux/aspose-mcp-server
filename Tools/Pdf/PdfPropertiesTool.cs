@@ -146,155 +146,19 @@ Usage examples:
             var producer = ArgumentHelper.GetStringNullable(arguments, "producer");
 
             using var document = new Document(path);
-            var metadata = document.Metadata;
+            var docInfo = document.Info;
 
             try
             {
-                // Set standard PDF metadata properties
-                // Aspose.Pdf Metadata dictionary may have restrictions on which keys can be set
-                // Try using the indexer directly, which should work for standard PDF metadata keys
-                if (!string.IsNullOrEmpty(title))
-                    try
-                    {
-                        // Try direct assignment
-                        metadata["Title"] = title;
-                    }
-                    catch (Exception ex) when (ex.Message.Contains("not valid") || ex.Message.Contains("Key"))
-                    {
-                        // If "Key is not valid" error, try using SetMetaInfo method instead
-                        try
-                        {
-                            document.Info.Title = title;
-                        }
-                        catch (Exception innerEx)
-                        {
-                            // If both methods fail, skip setting Title - this is a limitation of some PDF files
-                            Console.Error.WriteLine($"[WARN] Failed to set PDF Title property: {innerEx.Message}");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        // Try alternative method
-                        try
-                        {
-                            document.Info.Title = title;
-                        }
-                        catch (Exception ex2)
-                        {
-                            // If both methods fail, skip setting Title
-                            Console.Error.WriteLine(
-                                $"[WARN] Failed to set PDF Title property (both methods failed): {ex.Message}, {ex2.Message}");
-                        }
-                    }
-
-                if (!string.IsNullOrEmpty(author))
-                    try
-                    {
-                        metadata["Author"] = author;
-                    }
-                    catch (Exception ex) when (ex.Message.Contains("not valid") || ex.Message.Contains("Key"))
-                    {
-                        // If "Key is not valid" error, try using Info property instead
-                        try
-                        {
-                            document.Info.Author = author;
-                        }
-                        catch (Exception innerEx)
-                        {
-                            // If both methods fail, skip setting Author - this is a limitation of some PDF files
-                            Console.Error.WriteLine($"[WARN] Failed to set PDF Author property: {innerEx.Message}");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        // Try alternative method
-                        try
-                        {
-                            document.Info.Author = author;
-                        }
-                        catch (Exception ex2)
-                        {
-                            // If both methods fail, skip setting Author
-                            Console.Error.WriteLine(
-                                $"[WARN] Failed to set PDF Author property (both methods failed): {ex.Message}, {ex2.Message}");
-                        }
-                    }
-
-                if (!string.IsNullOrEmpty(subject))
-                    try
-                    {
-                        metadata["Subject"] = subject;
-                    }
-                    catch (Exception ex) when (ex.Message.Contains("not valid") || ex.Message.Contains("Key"))
-                    {
-                        // If "Key is not valid" error, try using Info property instead
-                        try
-                        {
-                            document.Info.Subject = subject;
-                        }
-                        catch (Exception innerEx)
-                        {
-                            // If both methods fail, skip setting Subject - this is a limitation of some PDF files
-                            Console.Error.WriteLine($"[WARN] Failed to set PDF Subject property: {innerEx.Message}");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        // Try alternative method
-                        try
-                        {
-                            document.Info.Subject = subject;
-                        }
-                        catch (Exception ex2)
-                        {
-                            // If both methods fail, skip setting Subject
-                            Console.Error.WriteLine(
-                                $"[WARN] Failed to set PDF Subject property (both methods failed): {ex.Message}, {ex2.Message}");
-                        }
-                    }
-
-                if (!string.IsNullOrEmpty(keywords))
-                    try
-                    {
-                        metadata["Keywords"] = keywords;
-                    }
-                    catch (Exception ex) when (ex.Message.Contains("not valid") || ex.Message.Contains("Key"))
-                    {
-                        throw new ArgumentException(
-                            $"Cannot set Keywords property: The PDF metadata dictionary does not support setting this key. Original error: {ex.Message}");
-                    }
-                    catch (Exception ex)
-                    {
-                        throw new ArgumentException($"Failed to set Keywords property: {ex.Message}");
-                    }
-
-                if (!string.IsNullOrEmpty(creator))
-                    try
-                    {
-                        metadata["Creator"] = creator;
-                    }
-                    catch (Exception ex)
-                    {
-                        // Creator may be read-only, skip if it fails
-                        Console.Error.WriteLine(
-                            $"[WARN] Failed to set PDF Creator property (may be read-only): {ex.Message}");
-                    }
-
-                if (!string.IsNullOrEmpty(producer))
-                    try
-                    {
-                        metadata["Producer"] = producer;
-                    }
-                    catch (Exception ex)
-                    {
-                        // Producer may be read-only, skip if it fails
-                        Console.Error.WriteLine(
-                            $"[WARN] Failed to set PDF Producer property (may be read-only): {ex.Message}");
-                    }
+                SetPropertyWithFallback(document, "Title", title, v => docInfo.Title = v);
+                SetPropertyWithFallback(document, "Author", author, v => docInfo.Author = v);
+                SetPropertyWithFallback(document, "Subject", subject, v => docInfo.Subject = v);
+                SetPropertyWithFallback(document, "Keywords", keywords, v => docInfo.Keywords = v);
+                SetPropertyWithFallback(document, "Creator", creator, null);
+                SetPropertyWithFallback(document, "Producer", producer, null);
             }
             catch (ArgumentException)
             {
-                // Re-throw ArgumentException as-is
                 throw;
             }
             catch (Exception ex)
@@ -306,5 +170,37 @@ Usage examples:
             document.Save(outputPath);
             return $"Document properties updated. Output: {outputPath}";
         });
+    }
+
+    /// <summary>
+    ///     Sets a PDF property with fallback to DocumentInfo
+    /// </summary>
+    /// <param name="document">PDF document</param>
+    /// <param name="key">Metadata key name</param>
+    /// <param name="value">Value to set</param>
+    /// <param name="infoSetter">Fallback setter for DocumentInfo, null if no fallback</param>
+    private static void SetPropertyWithFallback(Document document, string key, string? value,
+        Action<string>? infoSetter)
+    {
+        if (string.IsNullOrEmpty(value)) return;
+
+        try
+        {
+            document.Metadata[key] = value;
+        }
+        catch
+        {
+            if (infoSetter != null)
+                try
+                {
+                    infoSetter(value);
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"[WARN] Failed to set PDF {key} property: {ex.Message}");
+                }
+            else
+                Console.Error.WriteLine($"[WARN] Failed to set PDF {key} property (may be read-only)");
+        }
     }
 }

@@ -17,7 +17,8 @@ Usage examples:
 - Add form field: pdf_form_field(operation='add', path='doc.pdf', pageIndex=1, fieldType='TextBox', fieldName='name', x=100, y=100, width=200, height=20)
 - Delete form field: pdf_form_field(operation='delete', path='doc.pdf', fieldName='name')
 - Edit form field: pdf_form_field(operation='edit', path='doc.pdf', fieldName='name', value='New Value')
-- Get form field: pdf_form_field(operation='get', path='doc.pdf', fieldName='name')";
+- Get form fields: pdf_form_field(operation='get', path='doc.pdf')
+- Get form fields with limit: pdf_form_field(operation='get', path='doc.pdf', limit=50)";
 
     public object InputSchema => new
     {
@@ -63,12 +64,12 @@ Usage examples:
             x = new
             {
                 type = "number",
-                description = "X position (required for add)"
+                description = "X position in PDF coordinates, origin at bottom-left corner (required for add)"
             },
             y = new
             {
                 type = "number",
-                description = "Y position (required for add)"
+                description = "Y position in PDF coordinates, origin at bottom-left corner (required for add)"
             },
             width = new
             {
@@ -94,6 +95,11 @@ Usage examples:
             {
                 type = "boolean",
                 description = "Checked state (for CheckBox, RadioButton)"
+            },
+            limit = new
+            {
+                type = "number",
+                description = "Maximum number of fields to return (for get, default: 100)"
             }
         },
         required = new[] { "operation", "path" }
@@ -119,7 +125,7 @@ Usage examples:
             "add" => await AddFormField(path, outputPath!, arguments),
             "delete" => await DeleteFormField(path, outputPath!, arguments),
             "edit" => await EditFormField(path, outputPath!, arguments),
-            "get" => await GetFormFields(path),
+            "get" => await GetFormFields(path, arguments),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -150,6 +156,9 @@ Usage examples:
             using var document = new Document(path);
             if (pageIndex < 1 || pageIndex > document.Pages.Count)
                 throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
+
+            if (document.Form.Cast<Field>().Any(f => f.PartialName == fieldName))
+                throw new ArgumentException($"Form field '{fieldName}' already exists");
 
             var page = document.Pages[pageIndex];
             var rect = new Rectangle(x, y, x + width, y + height);
@@ -195,6 +204,9 @@ Usage examples:
             var fieldName = ArgumentHelper.GetString(arguments, "fieldName");
 
             using var document = new Document(path);
+            if (document.Form.Cast<Field>().All(f => f.PartialName != fieldName))
+                throw new ArgumentException($"Form field '{fieldName}' not found");
+
             document.Form.Delete(fieldName);
             document.Save(outputPath);
             return $"Deleted form field '{fieldName}'. Output: {outputPath}";
@@ -217,7 +229,7 @@ Usage examples:
             var checkedValue = ArgumentHelper.GetBoolNullable(arguments, "checkedValue");
 
             using var document = new Document(path);
-            var field = document.Form[fieldName];
+            var field = document.Form.Cast<Field>().FirstOrDefault(f => f.PartialName == fieldName);
             if (field == null)
                 throw new ArgumentException($"Form field '{fieldName}' not found");
 
@@ -225,6 +237,8 @@ Usage examples:
                 textBox.Value = value;
             else if (field is CheckboxField checkBox && checkedValue.HasValue)
                 checkBox.Checked = checkedValue.Value;
+            else if (field is RadioButtonField radioButton && !string.IsNullOrEmpty(value))
+                radioButton.Value = value;
 
             document.Save(outputPath);
             return $"Edited form field '{fieldName}'. Output: {outputPath}";
@@ -232,14 +246,16 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Gets all form fields from the PDF
+    ///     Gets form fields from the PDF
     /// </summary>
     /// <param name="path">Input file path</param>
-    /// <returns>JSON string with all form fields</returns>
-    private Task<string> GetFormFields(string path)
+    /// <param name="arguments">JSON arguments containing optional limit</param>
+    /// <returns>JSON string with form fields</returns>
+    private Task<string> GetFormFields(string path, JsonObject? arguments)
     {
         return Task.Run(() =>
         {
+            var limit = ArgumentHelper.GetInt(arguments, "limit", 100);
             using var document = new Document(path);
 
             if (document.Form.Count == 0)
@@ -254,7 +270,7 @@ Usage examples:
             }
 
             var fieldList = new List<object>();
-            foreach (var field in document.Form.Cast<Field>())
+            foreach (var field in document.Form.Cast<Field>().Take(limit))
             {
                 var fieldInfo = new Dictionary<string, object?>
                 {
@@ -265,12 +281,17 @@ Usage examples:
                     fieldInfo["value"] = textBox.Value;
                 else if (field is CheckboxField checkBox)
                     fieldInfo["checked"] = checkBox.Checked;
+                else if (field is RadioButtonField radioButton)
+                    fieldInfo["selected"] = radioButton.Selected;
                 fieldList.Add(fieldInfo);
             }
 
+            var totalCount = document.Form.Count;
             var result = new
             {
                 count = fieldList.Count,
+                totalCount,
+                truncated = totalCount > limit,
                 items = fieldList
             };
             return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });

@@ -26,7 +26,7 @@ public class PptTextFormatToolTests : TestBase
         var filePath = CreateTestFilePath(fileName);
         using var presentation = new Presentation();
         var slide = presentation.Slides[0];
-        var table = slide.Shapes.AddTable(100, 100, new double[] { 100, 100 }, new double[] { 50, 50 });
+        var table = slide.Shapes.AddTable(100, 100, [100, 100], [50, 50]);
         table[0, 0].TextFrame.Text = "Cell 1";
         table[0, 1].TextFrame.Text = "Cell 2";
         table[1, 0].TextFrame.Text = "Cell 3";
@@ -223,7 +223,7 @@ public class PptTextFormatToolTests : TestBase
             var slide = presentation.Slides[0];
             var textBox = slide.Shapes.AddAutoShape(ShapeType.Rectangle, 50, 50, 200, 50);
             textBox.TextFrame.Text = "AutoShape Text";
-            var table = slide.Shapes.AddTable(50, 150, new double[] { 100, 100 }, new double[] { 50 });
+            var table = slide.Shapes.AddTable(50, 150, [100, 100], [50]);
             table[0, 0].TextFrame.Text = "Table Text";
             presentation.Save(filePath, SaveFormat.Pptx);
         }

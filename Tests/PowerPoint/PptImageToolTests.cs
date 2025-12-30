@@ -606,7 +606,7 @@ public class PptImageToolTests : TestBase
 
         using (var presentation = new Presentation())
         {
-            using var imageStream = File.OpenRead(imagePath);
+            await using var imageStream = File.OpenRead(imagePath);
             var pictureImage = presentation.Images.AddImage(imageStream);
 
             // Add same image to multiple slides
@@ -650,7 +650,7 @@ public class PptImageToolTests : TestBase
 
         using (var presentation = new Presentation())
         {
-            using var imageStream = File.OpenRead(imagePath);
+            await using var imageStream = File.OpenRead(imagePath);
             var pictureImage = presentation.Images.AddImage(imageStream);
 
             // Add same image to multiple slides

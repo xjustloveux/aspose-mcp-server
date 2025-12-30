@@ -217,8 +217,10 @@ Usage examples:
                 }
 
                 // The link text portion
-                var linkPortion = new Portion(linkText);
-                linkPortion.PortionFormat.HyperlinkClick = hyperlink;
+                var linkPortion = new Portion(linkText)
+                {
+                    PortionFormat = { HyperlinkClick = hyperlink }
+                };
                 paragraph.Portions.Add(linkPortion);
 
                 // Text after the link

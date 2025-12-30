@@ -387,7 +387,7 @@ Usage examples:
                 if (flipVertical.HasValue) changes.Add($"FlipV={flipVertical.Value}");
             }
 
-            if (text != null && shape is IAutoShape autoShape && autoShape.TextFrame != null)
+            if (text != null && shape is IAutoShape { TextFrame: not null } autoShape)
             {
                 autoShape.TextFrame.Text = text;
                 changes.Add("Text updated");

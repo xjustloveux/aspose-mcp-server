@@ -209,7 +209,7 @@ public class PptTextToolTests : TestBase
         using (var ppt = new Presentation())
         {
             var slide = ppt.Slides[0];
-            var table = slide.Shapes.AddTable(100, 100, new double[] { 100, 100 }, new double[] { 50, 50 });
+            var table = slide.Shapes.AddTable(100, 100, [100, 100], [50, 50]);
             table[0, 0].TextFrame.Text = "Old Value";
             table[1, 0].TextFrame.Text = "Keep This";
             table[0, 1].TextFrame.Text = "Old Data";
@@ -315,7 +315,7 @@ public class PptTextToolTests : TestBase
         using (var ppt = new Presentation())
         {
             var slide = ppt.Slides[0];
-            slide.Shapes.AddTable(100, 100, new double[] { 100 }, new double[] { 50 });
+            slide.Shapes.AddTable(100, 100, [100], [50]);
             ppt.Save(pptPath, SaveFormat.Pptx);
         }
 

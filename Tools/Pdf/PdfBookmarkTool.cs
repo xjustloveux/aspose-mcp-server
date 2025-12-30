@@ -11,6 +11,8 @@ namespace AsposeMcpServer.Tools.Pdf;
 /// </summary>
 public class PdfBookmarkTool : IAsposeTool
 {
+    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
+
     public string Description => @"Manage bookmarks in PDF documents. Supports 4 operations: add, delete, edit, get.
 
 Usage examples:
@@ -73,7 +75,6 @@ Usage examples:
         var operation = ArgumentHelper.GetString(arguments, "operation");
         var path = ArgumentHelper.GetAndValidatePath(arguments);
 
-        // Only get outputPath for operations that modify the document
         string? outputPath = null;
         if (operation.ToLower() != "get")
             outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
@@ -95,6 +96,7 @@ Usage examples:
     /// <param name="outputPath">Output file path</param>
     /// <param name="arguments">JSON arguments containing title, pageIndex</param>
     /// <returns>Success message</returns>
+    /// <exception cref="ArgumentException">Thrown when pageIndex is out of range</exception>
     private Task<string> AddBookmark(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -119,12 +121,14 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Deletes a bookmark from the PDF
+    ///     Deletes a bookmark from the PDF by its index
     /// </summary>
     /// <param name="path">Input file path</param>
     /// <param name="outputPath">Output file path</param>
     /// <param name="arguments">JSON arguments containing bookmarkIndex</param>
     /// <returns>Success message</returns>
+    /// <exception cref="ArgumentException">Thrown when bookmarkIndex is out of range</exception>
+    /// <remarks>Note: Deletes by title, which may affect multiple bookmarks with the same title</remarks>
     private Task<string> DeleteBookmark(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -137,9 +141,17 @@ Usage examples:
 
             var bookmark = document.Outlines[bookmarkIndex];
             var title = bookmark.Title;
+
+            var countBefore = document.Outlines.Count;
             document.Outlines.Delete(title);
+            var countAfter = document.Outlines.Count;
+            var deletedCount = countBefore - countAfter;
+
             document.Save(outputPath);
-            return $"Deleted bookmark '{title}' (index {bookmarkIndex}). Output: {outputPath}";
+
+            return deletedCount > 1
+                ? $"Deleted {deletedCount} bookmark(s) with title '{title}' (requested index {bookmarkIndex}). Output: {outputPath}"
+                : $"Deleted bookmark '{title}' (index {bookmarkIndex}). Output: {outputPath}";
         });
     }
 
@@ -150,6 +162,7 @@ Usage examples:
     /// <param name="outputPath">Output file path</param>
     /// <param name="arguments">JSON arguments containing bookmarkIndex, optional title, pageIndex</param>
     /// <returns>Success message</returns>
+    /// <exception cref="ArgumentException">Thrown when bookmarkIndex or pageIndex is out of range</exception>
     private Task<string> EditBookmark(string path, string outputPath, JsonObject? arguments)
     {
         return Task.Run(() =>
@@ -198,23 +211,24 @@ Usage examples:
                     items = Array.Empty<object>(),
                     message = "No bookmarks found"
                 };
-                return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
+                return JsonSerializer.Serialize(emptyResult, JsonOptions);
             }
 
             var bookmarkList = new List<object>();
-            for (var i = 1; i <= document.Outlines.Count; i++)
+            var index = 0;
+
+            foreach (var bookmark in document.Outlines)
             {
-                var bookmark = document.Outlines[i];
+                index++;
                 var bookmarkInfo = new Dictionary<string, object?>
                 {
-                    ["index"] = i,
+                    ["index"] = index,
                     ["title"] = bookmark.Title
                 };
-                if (bookmark.Action is GoToAction { Destination: XYZExplicitDestination xyzDest })
-                {
-                    var pageNum = document.Pages.IndexOf(xyzDest.Page) + 1;
-                    bookmarkInfo["pageIndex"] = pageNum;
-                }
+
+                var pageIndex = ExtractPageIndex(bookmark, document);
+                if (pageIndex.HasValue)
+                    bookmarkInfo["pageIndex"] = pageIndex.Value;
 
                 bookmarkList.Add(bookmarkInfo);
             }
@@ -224,7 +238,31 @@ Usage examples:
                 count = bookmarkList.Count,
                 items = bookmarkList
             };
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(result, JsonOptions);
         });
+    }
+
+    /// <summary>
+    ///     Extracts the page index from a bookmark's destination or action
+    /// </summary>
+    /// <param name="bookmark">The bookmark to extract page index from</param>
+    /// <param name="document">The PDF document</param>
+    /// <returns>The 1-based page index, or null if not found</returns>
+    private static int? ExtractPageIndex(OutlineItemCollection bookmark, Document document)
+    {
+        Page? page = null;
+
+        // Try to get page from Destination property
+        if (bookmark.Destination is ExplicitDestination explicitDest)
+            page = explicitDest.Page;
+        // Try to get page from GoToAction
+        else if (bookmark.Action is GoToAction { Destination: ExplicitDestination actionDest })
+            page = actionDest.Page;
+
+        if (page == null)
+            return null;
+
+        var pageIndex = document.Pages.IndexOf(page);
+        return pageIndex > 0 ? pageIndex : null;
     }
 }
