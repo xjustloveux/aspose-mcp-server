@@ -1,0 +1,34 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.vs
+.vscode
+.idea
+*.user
+*.suo
+
+# Build outputs
+bin/
+obj/
+publish/
+.backup/
+
+# Tests
+Tests/
+
+# Deploy scripts (not needed in image)
+deploy/
+
+# Documentation
+*.md
+LICENSE
+
+# Logs and temp files
+*.log
+*.tmp
+
+# License files (security)
+*.lic
