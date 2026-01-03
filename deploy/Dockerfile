@@ -2,7 +2,7 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Version from build arg (passed from CI/CD)
+# Version from build arg (passed from CI/CD, may include 'v' prefix)
 ARG VERSION=1.0.0
 
 # Copy project file and restore dependencies
@@ -10,8 +10,10 @@ COPY AsposeMcpServer.csproj .
 RUN dotnet restore AsposeMcpServer.csproj
 
 # Copy source code and build
+# Remove 'v' prefix from version if present (e.g., v1.0.31 -> 1.0.31)
 COPY . .
-RUN dotnet publish AsposeMcpServer.csproj -c Release -o /app/publish --no-restore -p:Version=${VERSION}
+RUN VERSION_NUM=$(echo "${VERSION}" | sed 's/^v//') && \
+    dotnet publish AsposeMcpServer.csproj -c Release -o /app/publish --no-restore -p:Version=${VERSION_NUM}
 
 # Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
