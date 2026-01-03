@@ -160,7 +160,8 @@ jobs:
       cancel-in-progress: false
     permissions:
       contents: write
-      # Minimal permissions required for creating releases
+      packages: write
+      id-token: write
     
     steps:
     - name: Checkout code
@@ -173,7 +174,7 @@ jobs:
       shell: bash
       run: |
         # 確保獲取最新的 tag（包括遠程）
-        git fetch --tags --force
+        git fetch --prune --tags --force
         latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v1.0.0")
         echo "latest_tag=$latest_tag" >> $GITHUB_OUTPUT
         echo "Latest tag: $latest_tag"
