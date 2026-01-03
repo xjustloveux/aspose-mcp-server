@@ -1,22 +1,34 @@
+using System.ComponentModel;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using Aspose.Cells;
-using AsposeMcpServer.Core;
+using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Session;
+using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
 
 /// <summary>
-///     Unified tool for managing Excel data validation (add, edit, delete, get, set messages).
-///     Merges: ExcelAddDataValidationTool, ExcelEditDataValidationTool, ExcelDeleteDataValidationTool,
-///     ExcelGetDataValidationTool, ExcelSetDataValidationInputMessageTool, ExcelSetDataValidationErrorMessageTool.
+///     Unified tool for managing Excel data validation (add, edit, delete, get, set messages)
 /// </summary>
-public class ExcelDataValidationTool : IAsposeTool
+[McpServerToolType]
+public class ExcelDataValidationTool
 {
     /// <summary>
-    ///     Gets the description of the tool and its usage examples.
+    ///     Document session manager for in-memory editing support.
     /// </summary>
-    public string Description =>
-        @"Manage Excel data validation. Supports 5 operations: add, edit, delete, get, set_messages.
+    private readonly DocumentSessionManager? _sessionManager;
+
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="ExcelDataValidationTool" /> class.
+    /// </summary>
+    /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
+    public ExcelDataValidationTool(DocumentSessionManager? sessionManager = null)
+    {
+        _sessionManager = sessionManager;
+    }
+
+    [McpServerTool(Name = "excel_data_validation")]
+    [Description(@"Manage Excel data validation. Supports 5 operations: add, edit, delete, get, set_messages.
 
 Usage examples:
 - Add list validation: excel_data_validation(operation='add', path='book.xlsx', range='A1:A10', validationType='List', formula1='1,2,3')
@@ -25,119 +37,48 @@ Usage examples:
 - Edit validation: excel_data_validation(operation='edit', path='book.xlsx', validationIndex=0, validationType='WholeNumber', formula1='0', formula2='100')
 - Delete validation: excel_data_validation(operation='delete', path='book.xlsx', validationIndex=0)
 - Get validation: excel_data_validation(operation='get', path='book.xlsx')
-- Set messages: excel_data_validation(operation='set_messages', path='book.xlsx', validationIndex=0, inputMessage='Enter value', errorMessage='Invalid value')";
-
-    /// <summary>
-    ///     Gets the JSON schema for the tool's input parameters.
-    /// </summary>
-    public object InputSchema => new
+- Set messages: excel_data_validation(operation='set_messages', path='book.xlsx', validationIndex=0, inputMessage='Enter value', errorMessage='Invalid value')")]
+    public string Execute(
+        [Description("Operation: add, edit, delete, get, set_messages")]
+        string operation,
+        [Description("Excel file path (required if no sessionId)")]
+        string? path = null,
+        [Description("Session ID for in-memory editing")]
+        string? sessionId = null,
+        [Description("Output file path (file mode only)")]
+        string? outputPath = null,
+        [Description("Sheet index (0-based, default: 0)")]
+        int sheetIndex = 0,
+        [Description("Cell range to apply validation (e.g., 'A1:A10', required for add)")]
+        string? range = null,
+        [Description("Data validation index (0-based, required for edit/delete/set_messages)")]
+        int validationIndex = 0,
+        [Description("Validation type: WholeNumber, Decimal, List, Date, Time, TextLength, Custom")]
+        string? validationType = null,
+        [Description("Operator type: Between, Equal, NotEqual, GreaterThan, LessThan, GreaterOrEqual, LessOrEqual")]
+        string? operatorType = null,
+        [Description("First formula/value (e.g., '1,2,3' for List, '0' for minimum, required for add)")]
+        string? formula1 = null,
+        [Description("Second formula/value (required for 'Between' operator)")]
+        string? formula2 = null,
+        [Description("Show dropdown list in cell (only for List type, default: true)")]
+        bool inCellDropDown = true,
+        [Description("Error message to show when validation fails (optional)")]
+        string? errorMessage = null,
+        [Description("Input message to show when cell is selected (optional)")]
+        string? inputMessage = null)
     {
-        type = "object",
-        properties = new
-        {
-            operation = new
-            {
-                type = "string",
-                description = @"Operation to perform.
-- 'add': Add data validation (required params: path, range, validationType, formula1)
-- 'edit': Edit data validation (required params: path, validationIndex)
-- 'delete': Delete data validation (required params: path, validationIndex)
-- 'get': Get data validation info (required params: path)
-- 'set_messages': Set input/error messages (required params: path, validationIndex)",
-                @enum = new[] { "add", "edit", "delete", "get", "set_messages" }
-            },
-            path = new
-            {
-                type = "string",
-                description = "Excel file path (required for all operations)"
-            },
-            outputPath = new
-            {
-                type = "string",
-                description =
-                    "Output file path (optional, for add/edit/delete/set_messages operations, defaults to input path)"
-            },
-            sheetIndex = new
-            {
-                type = "number",
-                description = "Sheet index (0-based, optional, default: 0)"
-            },
-            range = new
-            {
-                type = "string",
-                description = "Cell range to apply validation (e.g., 'A1:A10', required for add operation)"
-            },
-            validationIndex = new
-            {
-                type = "number",
-                description =
-                    "Data validation index (0-based, required for edit, delete, and set_messages operations)"
-            },
-            validationType = new
-            {
-                type = "string",
-                description =
-                    "Validation type: 'WholeNumber', 'Decimal', 'List', 'Date', 'Time', 'TextLength', 'Custom'",
-                @enum = new[] { "WholeNumber", "Decimal", "List", "Date", "Time", "TextLength", "Custom" }
-            },
-            operatorType = new
-            {
-                type = "string",
-                description =
-                    "Operator type for validation comparison. Default: 'Between' if formula2 is provided, 'Equal' otherwise. For List type, this is ignored.",
-                @enum = new[]
-                    { "Between", "Equal", "NotEqual", "GreaterThan", "LessThan", "GreaterOrEqual", "LessOrEqual" }
-            },
-            formula1 = new
-            {
-                type = "string",
-                description = "First formula/value (e.g., '1,2,3' for List, '0' for minimum, required for add)"
-            },
-            formula2 = new
-            {
-                type = "string",
-                description =
-                    "Second formula/value (required for 'Between' operator, optional for other operators)"
-            },
-            inCellDropDown = new
-            {
-                type = "boolean",
-                description =
-                    "Show dropdown list in cell (only applicable for List type, optional, default: true)"
-            },
-            errorMessage = new
-            {
-                type = "string",
-                description = "Error message to show when validation fails (optional)"
-            },
-            inputMessage = new
-            {
-                type = "string",
-                description = "Input message to show when cell is selected (optional)"
-            }
-        },
-        required = new[] { "operation", "path" }
-    };
-
-    /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments.
-    /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters.</param>
-    /// <returns>Result message as a string.</returns>
-    public async Task<string> ExecuteAsync(JsonObject? arguments)
-    {
-        var operation = ArgumentHelper.GetString(arguments, "operation");
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path);
 
         return operation.ToLower() switch
         {
-            "add" => await AddDataValidationAsync(path, outputPath, sheetIndex, arguments),
-            "edit" => await EditDataValidationAsync(path, outputPath, sheetIndex, arguments),
-            "delete" => await DeleteDataValidationAsync(path, outputPath, sheetIndex, arguments),
-            "get" => await GetDataValidationAsync(path, sheetIndex),
-            "set_messages" => await SetMessagesAsync(path, outputPath, sheetIndex, arguments),
+            "add" => AddDataValidation(ctx, outputPath, sheetIndex, range, validationType, formula1, formula2,
+                operatorType, inCellDropDown, errorMessage, inputMessage),
+            "edit" => EditDataValidation(ctx, outputPath, sheetIndex, validationIndex, validationType, formula1,
+                formula2, operatorType, inCellDropDown, errorMessage, inputMessage),
+            "delete" => DeleteDataValidation(ctx, outputPath, sheetIndex, validationIndex),
+            "get" => GetDataValidation(ctx, sheetIndex),
+            "set_messages" => SetMessages(ctx, outputPath, sheetIndex, validationIndex, errorMessage, inputMessage),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -145,286 +86,272 @@ Usage examples:
     /// <summary>
     ///     Adds data validation to a range.
     /// </summary>
-    /// <param name="path">Excel file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="sheetIndex">Worksheet index (0-based).</param>
-    /// <param name="arguments">
-    ///     JSON arguments containing range, validationType, formula1, optional formula2, operatorType,
-    ///     inCellDropDown, errorMessage, inputMessage.
-    /// </param>
-    /// <returns>Success message with validation index.</returns>
-    private Task<string> AddDataValidationAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="sheetIndex">The sheet index (0-based).</param>
+    /// <param name="range">The cell range to apply validation (e.g., 'A1:A10').</param>
+    /// <param name="validationType">The type of validation (e.g., 'WholeNumber', 'List').</param>
+    /// <param name="formula1">The first formula/value for the validation.</param>
+    /// <param name="formula2">The second formula/value (for 'Between' operator).</param>
+    /// <param name="operatorType">The operator type (e.g., 'Between', 'Equal').</param>
+    /// <param name="inCellDropDown">Whether to show dropdown list in cell (for List type).</param>
+    /// <param name="errorMessage">The error message to show when validation fails.</param>
+    /// <param name="inputMessage">The input message to show when cell is selected.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or invalid.</exception>
+    private static string AddDataValidation(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex,
+        string? range, string? validationType, string? formula1, string? formula2, string? operatorType,
+        bool inCellDropDown, string? errorMessage, string? inputMessage)
     {
-        return Task.Run(() =>
+        if (string.IsNullOrEmpty(range))
+            throw new ArgumentException("range is required for add operation");
+        if (string.IsNullOrEmpty(validationType))
+            throw new ArgumentException("validationType is required for add operation");
+        if (string.IsNullOrEmpty(formula1))
+            throw new ArgumentException("formula1 is required for add operation");
+
+        var workbook = ctx.Document;
+        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var cells = worksheet.Cells;
+
+        var cellRange = ExcelHelper.CreateRange(cells, range);
+
+        var area = new CellArea
         {
-            var range = ArgumentHelper.GetString(arguments, "range");
-            var validationType = ArgumentHelper.GetString(arguments, "validationType");
-            var formula1 = ArgumentHelper.GetString(arguments, "formula1");
-            var formula2 = ArgumentHelper.GetStringNullable(arguments, "formula2");
-            var operatorTypeStr = ArgumentHelper.GetStringNullable(arguments, "operatorType");
-            var inCellDropDown = ArgumentHelper.GetBool(arguments, "inCellDropDown", true);
-            var errorMessage = ArgumentHelper.GetStringNullable(arguments, "errorMessage");
-            var inputMessage = ArgumentHelper.GetStringNullable(arguments, "inputMessage");
+            StartRow = cellRange.FirstRow,
+            StartColumn = cellRange.FirstColumn,
+            EndRow = cellRange.FirstRow + cellRange.RowCount - 1,
+            EndColumn = cellRange.FirstColumn + cellRange.ColumnCount - 1
+        };
+        var validationIndex = worksheet.Validations.Add(area);
+        var validation = worksheet.Validations[validationIndex];
 
-            using var workbook = new Workbook(path);
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-            var cells = worksheet.Cells;
+        var vType = ParseValidationType(validationType);
+        validation.Type = vType;
+        validation.Formula1 = formula1;
 
-            var cellRange = ExcelHelper.CreateRange(cells, range);
+        if (!string.IsNullOrEmpty(formula2))
+            validation.Formula2 = formula2;
 
-            var area = new CellArea
-            {
-                StartRow = cellRange.FirstRow,
-                StartColumn = cellRange.FirstColumn,
-                EndRow = cellRange.FirstRow + cellRange.RowCount - 1,
-                EndColumn = cellRange.FirstColumn + cellRange.ColumnCount - 1
-            };
-            var validationIndex = worksheet.Validations.Add(area);
-            var validation = worksheet.Validations[validationIndex];
+        validation.Operator = ParseOperatorType(operatorType, formula2);
 
-            var vType = ParseValidationType(validationType);
-            validation.Type = vType;
-            validation.Formula1 = formula1;
+        if (!string.IsNullOrEmpty(errorMessage))
+        {
+            validation.ErrorMessage = errorMessage;
+            validation.ShowError = true;
+        }
 
-            if (!string.IsNullOrEmpty(formula2))
-                validation.Formula2 = formula2;
+        if (!string.IsNullOrEmpty(inputMessage))
+        {
+            validation.InputMessage = inputMessage;
+            validation.ShowInput = true;
+        }
 
-            validation.Operator = ParseOperatorType(operatorTypeStr, formula2);
+        if (vType == ValidationType.List)
+            validation.InCellDropDown = inCellDropDown;
 
-            if (!string.IsNullOrEmpty(errorMessage))
-            {
-                validation.ErrorMessage = errorMessage;
-                validation.ShowError = true;
-            }
+        ctx.Save(outputPath);
 
-            if (!string.IsNullOrEmpty(inputMessage))
-            {
-                validation.InputMessage = inputMessage;
-                validation.ShowInput = true;
-            }
-
-            if (vType == ValidationType.List)
-                validation.InCellDropDown = inCellDropDown;
-
-            workbook.Save(outputPath);
-
-            return
-                $"Data validation added to range {range} (type: {validationType}, index: {validationIndex}). Output: {outputPath}";
-        });
+        return
+            $"Data validation added to range {range} (type: {validationType}, index: {validationIndex}). {ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
     ///     Edits existing data validation.
     /// </summary>
-    /// <param name="path">Excel file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="sheetIndex">Worksheet index (0-based).</param>
-    /// <param name="arguments">
-    ///     JSON arguments containing validationIndex, optional validationType, formula1, formula2,
-    ///     operatorType, inCellDropDown, errorMessage, inputMessage.
-    /// </param>
-    /// <returns>Success message with changes made.</returns>
-    private Task<string> EditDataValidationAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="sheetIndex">The sheet index (0-based).</param>
+    /// <param name="validationIndex">The data validation index (0-based).</param>
+    /// <param name="validationType">The type of validation to set.</param>
+    /// <param name="formula1">The first formula/value to set.</param>
+    /// <param name="formula2">The second formula/value to set.</param>
+    /// <param name="operatorType">The operator type to set.</param>
+    /// <param name="inCellDropDown">Whether to show dropdown list in cell.</param>
+    /// <param name="errorMessage">The error message to set.</param>
+    /// <param name="inputMessage">The input message to set.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when the validation index is out of range.</exception>
+    private static string EditDataValidation(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex,
+        int validationIndex, string? validationType, string? formula1, string? formula2, string? operatorType,
+        bool? inCellDropDown, string? errorMessage, string? inputMessage)
     {
-        return Task.Run(() =>
+        var workbook = ctx.Document;
+        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var validations = worksheet.Validations;
+
+        ValidateCollectionIndex(validationIndex, validations.Count, "data validation");
+
+        var validation = validations[validationIndex];
+        List<string> changes = [];
+
+        if (!string.IsNullOrEmpty(validationType))
         {
-            var validationIndex = ArgumentHelper.GetInt(arguments, "validationIndex");
-            var validationTypeStr = ArgumentHelper.GetStringNullable(arguments, "validationType");
-            var formula1 = ArgumentHelper.GetStringNullable(arguments, "formula1");
-            var formula2 = ArgumentHelper.GetStringNullable(arguments, "formula2");
-            var operatorTypeStr = ArgumentHelper.GetStringNullable(arguments, "operatorType");
-            var inCellDropDown = ArgumentHelper.GetBoolNullable(arguments, "inCellDropDown");
-            var errorMessage = ArgumentHelper.GetStringNullable(arguments, "errorMessage");
-            var inputMessage = ArgumentHelper.GetStringNullable(arguments, "inputMessage");
+            validation.Type = ParseValidationType(validationType);
+            changes.Add($"Type={validationType}");
+        }
 
-            using var workbook = new Workbook(path);
+        if (!string.IsNullOrEmpty(formula1))
+        {
+            validation.Formula1 = formula1;
+            changes.Add($"Formula1={formula1}");
+        }
 
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-            var validations = worksheet.Validations;
+        if (formula2 != null)
+        {
+            validation.Formula2 = formula2;
+            changes.Add($"Formula2={formula2}");
+        }
 
-            ValidateCollectionIndex(validationIndex, validations.Count, "data validation");
+        if (!string.IsNullOrEmpty(operatorType))
+        {
+            validation.Operator = ParseOperatorType(operatorType, formula2);
+            changes.Add($"Operator={operatorType}");
+        }
 
-            var validation = validations[validationIndex];
-            var changes = new List<string>();
+        if (inCellDropDown.HasValue)
+        {
+            validation.InCellDropDown = inCellDropDown.Value;
+            changes.Add($"InCellDropDown={inCellDropDown.Value}");
+        }
 
-            if (!string.IsNullOrEmpty(validationTypeStr))
-            {
-                validation.Type = ParseValidationType(validationTypeStr);
-                changes.Add($"Type={validationTypeStr}");
-            }
+        if (errorMessage != null)
+        {
+            validation.ErrorMessage = errorMessage;
+            validation.ShowError = !string.IsNullOrEmpty(errorMessage);
+            changes.Add($"ErrorMessage={errorMessage}");
+        }
 
-            if (!string.IsNullOrEmpty(formula1))
-            {
-                validation.Formula1 = formula1;
-                changes.Add($"Formula1={formula1}");
-            }
+        if (inputMessage != null)
+        {
+            validation.InputMessage = inputMessage;
+            validation.ShowInput = !string.IsNullOrEmpty(inputMessage);
+            changes.Add($"InputMessage={inputMessage}");
+        }
 
-            if (formula2 != null)
-            {
-                validation.Formula2 = formula2;
-                changes.Add($"Formula2={formula2}");
-            }
+        ctx.Save(outputPath);
 
-            if (!string.IsNullOrEmpty(operatorTypeStr))
-            {
-                validation.Operator = ParseOperatorType(operatorTypeStr, formula2);
-                changes.Add($"Operator={operatorTypeStr}");
-            }
-
-            if (inCellDropDown.HasValue)
-            {
-                validation.InCellDropDown = inCellDropDown.Value;
-                changes.Add($"InCellDropDown={inCellDropDown.Value}");
-            }
-
-            if (errorMessage != null)
-            {
-                validation.ErrorMessage = errorMessage;
-                validation.ShowError = !string.IsNullOrEmpty(errorMessage);
-                changes.Add($"ErrorMessage={errorMessage}");
-            }
-
-            if (inputMessage != null)
-            {
-                validation.InputMessage = inputMessage;
-                validation.ShowInput = !string.IsNullOrEmpty(inputMessage);
-                changes.Add($"InputMessage={inputMessage}");
-            }
-
-            workbook.Save(outputPath);
-
-            var changesStr = changes.Count > 0 ? string.Join(", ", changes) : "No changes";
-            return $"Edited data validation #{validationIndex} ({changesStr}). Output: {outputPath}";
-        });
+        var changesStr = changes.Count > 0 ? string.Join(", ", changes) : "No changes";
+        return $"Edited data validation #{validationIndex} ({changesStr}). {ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
     ///     Deletes data validation by index.
     /// </summary>
-    /// <param name="path">Excel file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="sheetIndex">Worksheet index (0-based).</param>
-    /// <param name="arguments">JSON arguments containing validationIndex.</param>
-    /// <returns>Success message with remaining count.</returns>
-    private Task<string> DeleteDataValidationAsync(string path, string outputPath, int sheetIndex,
-        JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="sheetIndex">The sheet index (0-based).</param>
+    /// <param name="validationIndex">The data validation index (0-based) to delete.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when the validation index is out of range.</exception>
+    private static string DeleteDataValidation(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex,
+        int validationIndex)
     {
-        return Task.Run(() =>
-        {
-            var validationIndex = ArgumentHelper.GetInt(arguments, "validationIndex");
+        var workbook = ctx.Document;
+        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var validations = worksheet.Validations;
 
-            using var workbook = new Workbook(path);
+        ValidateCollectionIndex(validationIndex, validations.Count, "data validation");
 
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-            var validations = worksheet.Validations;
+        validations.RemoveAt(validationIndex);
 
-            ValidateCollectionIndex(validationIndex, validations.Count, "data validation");
+        ctx.Save(outputPath);
 
-            validations.RemoveAt(validationIndex);
-            workbook.Save(outputPath);
-
-            return $"Deleted data validation #{validationIndex} (remaining: {validations.Count}). Output: {outputPath}";
-        });
+        return
+            $"Deleted data validation #{validationIndex} (remaining: {validations.Count}). {ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
     ///     Gets all data validation information for the worksheet.
     /// </summary>
-    /// <param name="path">Excel file path.</param>
-    /// <param name="sheetIndex">Worksheet index (0-based).</param>
-    /// <returns>JSON string with data validation details.</returns>
-    private Task<string> GetDataValidationAsync(string path, int sheetIndex)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="sheetIndex">The sheet index (0-based).</param>
+    /// <returns>A JSON string containing all data validation information.</returns>
+    private static string GetDataValidation(DocumentContext<Workbook> ctx, int sheetIndex)
     {
-        return Task.Run(() =>
+        var workbook = ctx.Document;
+        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var validations = worksheet.Validations;
+
+        List<object> validationList = [];
+        for (var i = 0; i < validations.Count; i++)
         {
-            using var workbook = new Workbook(path);
-
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-            var validations = worksheet.Validations;
-
-            var validationList = new List<object>();
-            for (var i = 0; i < validations.Count; i++)
+            var validation = validations[i];
+            validationList.Add(new
             {
-                var validation = validations[i];
-                validationList.Add(new
-                {
-                    index = i,
-                    type = validation.Type.ToString(),
-                    operatorType = validation.Operator.ToString(),
-                    formula1 = validation.Formula1,
-                    formula2 = validation.Formula2,
-                    errorMessage = validation.ErrorMessage,
-                    inputMessage = validation.InputMessage,
-                    showError = validation.ShowError,
-                    showInput = validation.ShowInput,
-                    inCellDropDown = validation.InCellDropDown
-                });
-            }
+                index = i,
+                type = validation.Type.ToString(),
+                operatorType = validation.Operator.ToString(),
+                formula1 = validation.Formula1,
+                formula2 = validation.Formula2,
+                errorMessage = validation.ErrorMessage,
+                inputMessage = validation.InputMessage,
+                showError = validation.ShowError,
+                showInput = validation.ShowInput,
+                inCellDropDown = validation.InCellDropDown
+            });
+        }
 
-            var result = new
-            {
-                count = validations.Count,
-                worksheetName = worksheet.Name,
-                items = validationList
-            };
+        var result = new
+        {
+            count = validations.Count,
+            worksheetName = worksheet.Name,
+            items = validationList
+        };
 
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
-        });
+        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
     }
 
     /// <summary>
     ///     Sets input/error messages for data validation.
     /// </summary>
-    /// <param name="path">Excel file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="sheetIndex">Worksheet index (0-based).</param>
-    /// <param name="arguments">JSON arguments containing validationIndex, optional inputMessage, errorMessage.</param>
-    /// <returns>Success message with changes made.</returns>
-    private Task<string> SetMessagesAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="sheetIndex">The sheet index (0-based).</param>
+    /// <param name="validationIndex">The data validation index (0-based).</param>
+    /// <param name="errorMessage">The error message to set.</param>
+    /// <param name="inputMessage">The input message to set.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when the validation index is out of range.</exception>
+    private static string SetMessages(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex,
+        int validationIndex, string? errorMessage, string? inputMessage)
     {
-        return Task.Run(() =>
+        var workbook = ctx.Document;
+        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var validations = worksheet.Validations;
+
+        ValidateCollectionIndex(validationIndex, validations.Count, "data validation");
+
+        var validation = validations[validationIndex];
+        List<string> changes = [];
+
+        if (errorMessage != null)
         {
-            var validationIndex = ArgumentHelper.GetInt(arguments, "validationIndex");
-            var errorMessage = ArgumentHelper.GetStringNullable(arguments, "errorMessage");
-            var inputMessage = ArgumentHelper.GetStringNullable(arguments, "inputMessage");
+            validation.ErrorMessage = errorMessage;
+            validation.ShowError = !string.IsNullOrEmpty(errorMessage);
+            changes.Add($"ErrorMessage={errorMessage}");
+        }
 
-            using var workbook = new Workbook(path);
+        if (inputMessage != null)
+        {
+            validation.InputMessage = inputMessage;
+            validation.ShowInput = !string.IsNullOrEmpty(inputMessage);
+            changes.Add($"InputMessage={inputMessage}");
+        }
 
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-            var validations = worksheet.Validations;
+        ctx.Save(outputPath);
 
-            ValidateCollectionIndex(validationIndex, validations.Count, "data validation");
-
-            var validation = validations[validationIndex];
-            var changes = new List<string>();
-
-            if (errorMessage != null)
-            {
-                validation.ErrorMessage = errorMessage;
-                validation.ShowError = !string.IsNullOrEmpty(errorMessage);
-                changes.Add($"ErrorMessage={errorMessage}");
-            }
-
-            if (inputMessage != null)
-            {
-                validation.InputMessage = inputMessage;
-                validation.ShowInput = !string.IsNullOrEmpty(inputMessage);
-                changes.Add($"InputMessage={inputMessage}");
-            }
-
-            workbook.Save(outputPath);
-
-            var changesStr = changes.Count > 0 ? string.Join(", ", changes) : "No changes";
-            return $"Updated data validation #{validationIndex} messages ({changesStr}). Output: {outputPath}";
-        });
+        var changesStr = changes.Count > 0 ? string.Join(", ", changes) : "No changes";
+        return
+            $"Updated data validation #{validationIndex} messages ({changesStr}). {ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
     ///     Parses validation type string to ValidationType enum.
     /// </summary>
-    /// <param name="validationType">Validation type string.</param>
-    /// <returns>ValidationType enum value.</returns>
-    /// <exception cref="ArgumentException">Thrown if validation type is not supported.</exception>
+    /// <param name="validationType">The validation type string to parse.</param>
+    /// <returns>The corresponding ValidationType enum value.</returns>
+    /// <exception cref="ArgumentException">Thrown when the validation type is not supported.</exception>
     private static ValidationType ParseValidationType(string validationType)
     {
         return validationType switch
@@ -443,9 +370,10 @@ Usage examples:
     /// <summary>
     ///     Parses operator type string to OperatorType enum.
     /// </summary>
-    /// <param name="operatorType">Operator type string (can be null).</param>
-    /// <param name="formula2">Second formula value (used for default determination).</param>
-    /// <returns>OperatorType enum value.</returns>
+    /// <param name="operatorType">The operator type string to parse.</param>
+    /// <param name="formula2">The second formula value used to infer operator type if not specified.</param>
+    /// <returns>The corresponding OperatorType enum value.</returns>
+    /// <exception cref="ArgumentException">Thrown when the operator type is not supported.</exception>
     private static OperatorType ParseOperatorType(string? operatorType, string? formula2)
     {
         if (!string.IsNullOrEmpty(operatorType))
@@ -467,10 +395,10 @@ Usage examples:
     /// <summary>
     ///     Validates collection index and throws exception if invalid.
     /// </summary>
-    /// <param name="index">Index to validate.</param>
-    /// <param name="count">Collection count.</param>
-    /// <param name="itemName">Name of the item type for error message.</param>
-    /// <exception cref="ArgumentException">Thrown if index is out of range.</exception>
+    /// <param name="index">The index to validate.</param>
+    /// <param name="count">The total count of items in the collection.</param>
+    /// <param name="itemName">The name of the item type for error messages.</param>
+    /// <exception cref="ArgumentException">Thrown when the index is out of range.</exception>
     private static void ValidateCollectionIndex(int index, int count, string itemName)
     {
         if (index < 0 || index >= count)

@@ -1,11 +1,12 @@
+using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Security.Cryptography;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using Aspose.Slides;
-using Aspose.Slides.Export;
-using AsposeMcpServer.Core;
+using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Session;
+using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.PowerPoint;
 
@@ -13,10 +14,25 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 ///     Unified tool for managing PowerPoint images.
 ///     Supports: add, edit, delete, get, export_slides, extract
 /// </summary>
-public class PptImageTool : IAsposeTool
+[McpServerToolType]
+public class PptImageTool
 {
-    public string Description =>
-        @"Manage PowerPoint images. Supports 6 operations: add, edit, delete, get, export_slides, extract.
+    /// <summary>
+    ///     Session manager for document lifecycle management.
+    /// </summary>
+    private readonly DocumentSessionManager? _sessionManager;
+
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="PptImageTool" /> class.
+    /// </summary>
+    /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
+    public PptImageTool(DocumentSessionManager? sessionManager = null)
+    {
+        _sessionManager = sessionManager;
+    }
+
+    [McpServerTool(Name = "ppt_image")]
+    [Description(@"Manage PowerPoint images. Supports 6 operations: add, edit, delete, get, export_slides, extract.
 
 Usage examples:
 - Add image: ppt_image(operation='add', path='presentation.pptx', slideIndex=0, imagePath='image.png', x=100, y=100)
@@ -25,136 +41,61 @@ Usage examples:
 - Delete image: ppt_image(operation='delete', path='presentation.pptx', slideIndex=0, imageIndex=0)
 - Get image info: ppt_image(operation='get', path='presentation.pptx', slideIndex=0)
 - Export slides as images: ppt_image(operation='export_slides', path='presentation.pptx', outputDir='images/', slideIndexes='0,2,4')
-- Extract embedded images: ppt_image(operation='extract', path='presentation.pptx', outputDir='images/', skipDuplicates=true)";
-
-    public object InputSchema => new
+- Extract embedded images: ppt_image(operation='extract', path='presentation.pptx', outputDir='images/', skipDuplicates=true)")]
+    public string Execute(
+        [Description("Operation: add, edit, delete, get, export_slides, extract")]
+        string operation,
+        [Description("Presentation file path (required if no sessionId)")]
+        string? path = null,
+        [Description("Session ID for in-memory editing")]
+        string? sessionId = null,
+        [Description("Output file path (file mode only)")]
+        string? outputPath = null,
+        [Description("Slide index (0-based, required for add/edit/delete/get)")]
+        int? slideIndex = null,
+        [Description("Image index on the slide (0-based, required for edit/delete)")]
+        int? imageIndex = null,
+        [Description("Image file path (required for add, optional for edit)")]
+        string? imagePath = null,
+        [Description("X position in points (optional for add/edit, default: 100)")]
+        float x = 100,
+        [Description("Y position in points (optional for add/edit, default: 100)")]
+        float y = 100,
+        [Description("Width in points (optional for add/edit)")]
+        float? width = null,
+        [Description("Height in points (optional for add/edit)")]
+        float? height = null,
+        [Description("JPEG quality 10-100 (optional for edit, re-encode image as JPEG)")]
+        int? jpegQuality = null,
+        [Description("Maximum width in pixels for resize (optional for edit)")]
+        int? maxWidth = null,
+        [Description("Maximum height in pixels for resize (optional for edit)")]
+        int? maxHeight = null,
+        [Description("Output directory (required for export_slides/extract)")]
+        string? outputDir = null,
+        [Description("Image format: png|jpeg (optional for export_slides/extract, default: png)")]
+        string format = "png",
+        [Description("Scaling factor (optional for export_slides, default: 1.0)")]
+        float scale = 1.0f,
+        [Description("Comma-separated slide indexes to export (optional for export_slides, e.g., '0,2,4')")]
+        string? slideIndexes = null,
+        [Description("Skip duplicate images based on content hash (optional for extract, default: false)")]
+        bool skipDuplicates = false)
     {
-        type = "object",
-        properties = new
-        {
-            operation = new
-            {
-                type = "string",
-                description = @"Operation to perform.
-- 'add': Add image to slide (required: path, slideIndex, imagePath)
-- 'edit': Edit image properties with optional compression/resize (required: path, slideIndex, imageIndex)
-- 'delete': Delete image from slide (required: path, slideIndex, imageIndex)
-- 'get': Get image information (required: path, slideIndex)
-- 'export_slides': Export slides as image files (required: path)
-- 'extract': Extract embedded images from presentation (required: path)",
-                @enum = new[] { "add", "edit", "delete", "get", "export_slides", "extract" }
-            },
-            path = new
-            {
-                type = "string",
-                description = "Presentation file path (required for all operations)"
-            },
-            slideIndex = new
-            {
-                type = "number",
-                description = "Slide index (0-based, required for add/edit/delete/get)"
-            },
-            imageIndex = new
-            {
-                type = "number",
-                description =
-                    "Image index on the slide (0-based, required for edit/delete). Refers to N-th image on slide, not absolute shape index."
-            },
-            imagePath = new
-            {
-                type = "string",
-                description = "Image file path (required for add, optional for edit)"
-            },
-            x = new
-            {
-                type = "number",
-                description = "X position in points (optional for add/edit, default: 100)"
-            },
-            y = new
-            {
-                type = "number",
-                description = "Y position in points (optional for add/edit, default: 100)"
-            },
-            width = new
-            {
-                type = "number",
-                description = "Width in points (optional for add/edit)"
-            },
-            height = new
-            {
-                type = "number",
-                description = "Height in points (optional for add/edit)"
-            },
-            jpegQuality = new
-            {
-                type = "number",
-                description = "JPEG quality 10-100 (optional for edit, re-encode image as JPEG)"
-            },
-            maxWidth = new
-            {
-                type = "number",
-                description = "Maximum width in pixels for resize (optional for edit)"
-            },
-            maxHeight = new
-            {
-                type = "number",
-                description = "Maximum height in pixels for resize (optional for edit)"
-            },
-            outputDir = new
-            {
-                type = "string",
-                description = "Output directory (required for export_slides/extract)"
-            },
-            format = new
-            {
-                type = "string",
-                description = "Image format: png|jpeg (optional for export_slides/extract, default: png)"
-            },
-            scale = new
-            {
-                type = "number",
-                description = "Scaling factor (optional for export_slides, default: 1.0)"
-            },
-            slideIndexes = new
-            {
-                type = "string",
-                description =
-                    "Comma-separated slide indexes to export (optional for export_slides, e.g., '0,2,4')"
-            },
-            skipDuplicates = new
-            {
-                type = "boolean",
-                description = "Skip duplicate images based on content hash (optional for extract, default: false)"
-            },
-            outputPath = new
-            {
-                type = "string",
-                description = "Output file path (optional for add/edit/delete, defaults to input path)"
-            }
-        },
-        required = new[] { "operation", "path" }
-    };
+        if (operation.ToLower() == "export_slides")
+            return ExportSlides(path!, outputDir, slideIndexes, format, scale);
+        if (operation.ToLower() == "extract")
+            return ExtractImages(path!, outputDir, format, skipDuplicates);
 
-    /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments.
-    /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters.</param>
-    /// <returns>Result message as a string.</returns>
-    /// <exception cref="ArgumentException">Thrown when operation is unknown.</exception>
-    public async Task<string> ExecuteAsync(JsonObject? arguments)
-    {
-        var operation = ArgumentHelper.GetString(arguments, "operation");
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path);
 
         return operation.ToLower() switch
         {
-            "add" => await AddImageAsync(path, outputPath, arguments),
-            "edit" => await EditImageAsync(path, outputPath, arguments),
-            "delete" => await DeleteImageAsync(path, outputPath, arguments),
-            "get" => await GetImageInfoAsync(path, arguments),
-            "export_slides" => await ExportSlidesAsync(path, arguments),
-            "extract" => await ExtractImagesAsync(path, arguments),
+            "add" => AddImage(ctx, outputPath, slideIndex, imagePath, x, y, width, height),
+            "edit" => EditImage(ctx, outputPath, slideIndex, imageIndex, imagePath, x, y, width, height, jpegQuality,
+                maxWidth, maxHeight),
+            "delete" => DeleteImage(ctx, outputPath, slideIndex, imageIndex),
+            "get" => GetImageInfo(ctx, slideIndex),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -164,48 +105,49 @@ Usage examples:
     /// <summary>
     ///     Adds an image to a slide.
     /// </summary>
-    /// <param name="path">PowerPoint file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="arguments">JSON arguments containing slideIndex, imagePath, optional x, y, width, height.</param>
-    /// <returns>Success message.</returns>
-    /// <exception cref="ArgumentException">Thrown when slideIndex is out of range.</exception>
-    /// <exception cref="FileNotFoundException">Thrown when image file is not found.</exception>
-    private Task<string> AddImageAsync(string path, string outputPath, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="slideIndex">The zero-based index of the slide.</param>
+    /// <param name="imagePath">The path to the image file.</param>
+    /// <param name="x">The X position in points.</param>
+    /// <param name="y">The Y position in points.</param>
+    /// <param name="width">The width in points (optional).</param>
+    /// <param name="height">The height in points (optional).</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when slideIndex or imagePath is not provided.</exception>
+    /// <exception cref="FileNotFoundException">Thrown when the image file does not exist.</exception>
+    private static string AddImage(DocumentContext<Presentation> ctx, string? outputPath,
+        int? slideIndex, string? imagePath, float x, float y, float? width, float? height)
     {
-        return Task.Run(() =>
+        if (!slideIndex.HasValue)
+            throw new ArgumentException("slideIndex is required for add operation");
+        if (string.IsNullOrEmpty(imagePath))
+            throw new ArgumentException("imagePath is required for add operation");
+        if (!File.Exists(imagePath))
+            throw new FileNotFoundException($"Image file not found: {imagePath}");
+
+        var presentation = ctx.Document;
+        var slide = PowerPointHelper.GetSlide(presentation, slideIndex.Value);
+
+        IPPImage pictureImage;
+        int pixelWidth, pixelHeight;
+
+        using (var fileStream = new FileStream(imagePath, FileMode.Open, FileAccess.Read))
         {
-            var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
-            var imagePath = ArgumentHelper.GetString(arguments, "imagePath");
-            var x = ArgumentHelper.GetFloat(arguments, "x", 100);
-            var y = ArgumentHelper.GetFloat(arguments, "y", 100);
-            var width = ArgumentHelper.GetFloatNullable(arguments, "width");
-            var height = ArgumentHelper.GetFloatNullable(arguments, "height");
+            pictureImage = presentation.Images.AddImage(fileStream);
+            pixelWidth = pictureImage.Width;
+            pixelHeight = pictureImage.Height;
+        }
 
-            if (!File.Exists(imagePath))
-                throw new FileNotFoundException($"Image file not found: {imagePath}");
+        var (finalWidth, finalHeight) = CalculateDimensions(width, height, pixelWidth, pixelHeight);
 
-            using var presentation = new Presentation(path);
-            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+        slide.Shapes.AddPictureFrame(ShapeType.Rectangle, x, y, finalWidth, finalHeight, pictureImage);
 
-            // Use FileStream for memory efficiency
-            IPPImage pictureImage;
-            int pixelWidth, pixelHeight;
+        ctx.Save(outputPath);
 
-            using (var fileStream = new FileStream(imagePath, FileMode.Open, FileAccess.Read))
-            {
-                pictureImage = presentation.Images.AddImage(fileStream);
-                pixelWidth = pictureImage.Width;
-                pixelHeight = pictureImage.Height;
-            }
-
-            // Calculate dimensions maintaining aspect ratio
-            var (finalWidth, finalHeight) = CalculateDimensions(width, height, pixelWidth, pixelHeight);
-
-            slide.Shapes.AddPictureFrame(ShapeType.Rectangle, x, y, finalWidth, finalHeight, pictureImage);
-            presentation.Save(outputPath, SaveFormat.Pptx);
-
-            return $"Image added to slide {slideIndex}. Output: {outputPath}";
-        });
+        var result = $"Image added to slide {slideIndex}. ";
+        result += ctx.GetOutputMessage(outputPath);
+        return result;
     }
 
     #endregion
@@ -215,32 +157,36 @@ Usage examples:
     /// <summary>
     ///     Deletes an image from a slide.
     /// </summary>
-    /// <param name="path">PowerPoint file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="arguments">JSON arguments containing slideIndex, imageIndex.</param>
-    /// <returns>Success message.</returns>
-    /// <exception cref="ArgumentException">Thrown when slideIndex or imageIndex is out of range.</exception>
-    private Task<string> DeleteImageAsync(string path, string outputPath, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="slideIndex">The zero-based index of the slide.</param>
+    /// <param name="imageIndex">The zero-based index of the image on the slide.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when slideIndex or imageIndex is not provided or out of range.</exception>
+    private static string DeleteImage(DocumentContext<Presentation> ctx, string? outputPath,
+        int? slideIndex, int? imageIndex)
     {
-        return Task.Run(() =>
-        {
-            var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
-            var imageIndex = ArgumentHelper.GetInt(arguments, "imageIndex");
+        if (!slideIndex.HasValue)
+            throw new ArgumentException("slideIndex is required for delete operation");
+        if (!imageIndex.HasValue)
+            throw new ArgumentException("imageIndex is required for delete operation");
 
-            using var presentation = new Presentation(path);
-            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-            var pictures = slide.Shapes.OfType<PictureFrame>().ToList();
+        var presentation = ctx.Document;
+        var slide = PowerPointHelper.GetSlide(presentation, slideIndex.Value);
+        var pictures = slide.Shapes.OfType<PictureFrame>().ToList();
 
-            if (imageIndex < 0 || imageIndex >= pictures.Count)
-                throw new ArgumentException(
-                    $"imageIndex {imageIndex} is out of range. Slide {slideIndex} has {pictures.Count} image(s).");
+        if (imageIndex.Value < 0 || imageIndex.Value >= pictures.Count)
+            throw new ArgumentException(
+                $"imageIndex {imageIndex.Value} is out of range. Slide {slideIndex.Value} has {pictures.Count} image(s).");
 
-            var pictureFrame = pictures[imageIndex];
-            slide.Shapes.Remove(pictureFrame);
+        var pictureFrame = pictures[imageIndex.Value];
+        slide.Shapes.Remove(pictureFrame);
 
-            presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Image {imageIndex} deleted from slide {slideIndex}. Output: {outputPath}";
-        });
+        ctx.Save(outputPath);
+
+        var result = $"Image {imageIndex} deleted from slide {slideIndex}. ";
+        result += ctx.GetOutputMessage(outputPath);
+        return result;
     }
 
     #endregion
@@ -250,39 +196,37 @@ Usage examples:
     /// <summary>
     ///     Gets image information from a slide.
     /// </summary>
-    /// <param name="path">PowerPoint file path.</param>
-    /// <param name="arguments">JSON arguments containing slideIndex.</param>
-    /// <returns>JSON string with image information.</returns>
-    /// <exception cref="ArgumentException">Thrown when slideIndex is out of range.</exception>
-    private Task<string> GetImageInfoAsync(string path, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="slideIndex">The zero-based index of the slide.</param>
+    /// <returns>A JSON string containing image information including count, positions, and sizes.</returns>
+    /// <exception cref="ArgumentException">Thrown when slideIndex is not provided.</exception>
+    private static string GetImageInfo(DocumentContext<Presentation> ctx, int? slideIndex)
     {
-        return Task.Run(() =>
+        if (!slideIndex.HasValue)
+            throw new ArgumentException("slideIndex is required for get operation");
+
+        var presentation = ctx.Document;
+        var slide = PowerPointHelper.GetSlide(presentation, slideIndex.Value);
+        var pictures = slide.Shapes.OfType<PictureFrame>().ToList();
+
+        var imageInfoList = pictures.Select((pic, index) => new
         {
-            var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
+            imageIndex = index,
+            x = pic.X,
+            y = pic.Y,
+            width = pic.Width,
+            height = pic.Height,
+            contentType = pic.PictureFormat.Picture.Image?.ContentType ?? "unknown"
+        }).ToList();
 
-            using var presentation = new Presentation(path);
-            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-            var pictures = slide.Shapes.OfType<PictureFrame>().ToList();
+        var result = new
+        {
+            slideIndex = slideIndex.Value,
+            imageCount = pictures.Count,
+            images = imageInfoList
+        };
 
-            var imageInfoList = pictures.Select((pic, index) => new
-            {
-                imageIndex = index,
-                x = pic.X,
-                y = pic.Y,
-                width = pic.Width,
-                height = pic.Height,
-                contentType = pic.PictureFormat.Picture.Image?.ContentType ?? "unknown"
-            }).ToList();
-
-            var result = new
-            {
-                slideIndex,
-                imageCount = pictures.Count,
-                images = imageInfoList
-            };
-
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
-        });
+        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
     }
 
     #endregion
@@ -292,47 +236,46 @@ Usage examples:
     /// <summary>
     ///     Exports slides as image files.
     /// </summary>
-    /// <param name="path">PowerPoint file path.</param>
-    /// <param name="arguments">JSON arguments containing outputDir, optional slideIndexes, format, scale.</param>
-    /// <returns>Success message with exported count.</returns>
-    /// <exception cref="ArgumentException">Thrown when slideIndexes contains invalid index.</exception>
-    private Task<string> ExportSlidesAsync(string path, JsonObject? arguments)
+    /// <param name="path">The presentation file path.</param>
+    /// <param name="outputDir">The output directory path.</param>
+    /// <param name="slideIndexesStr">Comma-separated slide indexes to export (optional).</param>
+    /// <param name="formatStr">The image format (png or jpeg).</param>
+    /// <param name="scale">The scaling factor.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when slide indexes are invalid.</exception>
+    private static string ExportSlides(string path, string? outputDir, string? slideIndexesStr, string formatStr,
+        float scale)
     {
-        return Task.Run(() =>
+        SecurityHelper.ValidateFilePath(path, "path", true);
+
+        var actualOutputDir = outputDir ?? Path.GetDirectoryName(path) ?? ".";
+
+#pragma warning disable CA1416 // Validate platform compatibility
+        var format = formatStr.ToLower() switch
         {
-            var outputDir = ArgumentHelper.GetStringNullable(arguments, "outputDir") ??
-                            Path.GetDirectoryName(path) ?? ".";
-            var formatStr = ArgumentHelper.GetString(arguments, "format", "png");
-            var scale = ArgumentHelper.GetFloat(arguments, "scale", 1.0f);
-            var slideIndexesStr = ArgumentHelper.GetStringNullable(arguments, "slideIndexes");
-
-#pragma warning disable CA1416 // Validate platform compatibility
-            var format = formatStr.ToLower() switch
-            {
-                "jpeg" or "jpg" => ImageFormat.Jpeg,
-                _ => ImageFormat.Png
-            };
-            var extension = format.Equals(ImageFormat.Png) ? "png" : "jpg";
+            "jpeg" or "jpg" => ImageFormat.Jpeg,
+            _ => ImageFormat.Png
+        };
+        var extension = format.Equals(ImageFormat.Png) ? "png" : "jpg";
 #pragma warning restore CA1416 // Validate platform compatibility
 
-            Directory.CreateDirectory(outputDir);
+        Directory.CreateDirectory(actualOutputDir);
 
-            using var presentation = new Presentation(path);
-            var slideIndexes = ParseSlideIndexes(slideIndexesStr, presentation.Slides.Count);
+        using var presentation = new Presentation(path);
+        var slideIndexList = ParseSlideIndexes(slideIndexesStr, presentation.Slides.Count);
 
-            var exportedCount = 0;
-            foreach (var i in slideIndexes)
-            {
-                using var bmp = presentation.Slides[i].GetThumbnail(scale, scale);
-                var fileName = Path.Combine(outputDir, $"slide_{i + 1}.{extension}");
+        var exportedCount = 0;
+        foreach (var i in slideIndexList)
+        {
+            using var bmp = presentation.Slides[i].GetThumbnail(scale, scale);
+            var fileName = Path.Combine(actualOutputDir, $"slide_{i + 1}.{extension}");
 #pragma warning disable CA1416 // Validate platform compatibility
-                bmp.Save(fileName, format);
+            bmp.Save(fileName, format);
 #pragma warning restore CA1416 // Validate platform compatibility
-                exportedCount++;
-            }
+            exportedCount++;
+        }
 
-            return $"Exported {exportedCount} slides. Output: {Path.GetFullPath(outputDir)}";
-        });
+        return $"Exported {exportedCount} slides. Output: {Path.GetFullPath(actualOutputDir)}";
     }
 
     #endregion
@@ -342,67 +285,65 @@ Usage examples:
     /// <summary>
     ///     Extracts embedded images from the presentation.
     /// </summary>
-    /// <param name="path">PowerPoint file path.</param>
-    /// <param name="arguments">JSON arguments containing outputDir, optional format, skipDuplicates.</param>
-    /// <returns>Success message with extracted count.</returns>
-    private Task<string> ExtractImagesAsync(string path, JsonObject? arguments)
+    /// <param name="path">The presentation file path.</param>
+    /// <param name="outputDir">The output directory path.</param>
+    /// <param name="formatStr">The image format (png or jpeg).</param>
+    /// <param name="skipDuplicates">True to skip duplicate images based on content hash.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    private static string ExtractImages(string path, string? outputDir, string formatStr, bool skipDuplicates)
     {
-        return Task.Run(() =>
+        SecurityHelper.ValidateFilePath(path, "path", true);
+
+        var actualOutputDir = outputDir ?? Path.GetDirectoryName(path) ?? ".";
+
+#pragma warning disable CA1416 // Validate platform compatibility
+        var format = formatStr.ToLower() switch
         {
-            var outputDir = ArgumentHelper.GetStringNullable(arguments, "outputDir") ??
-                            Path.GetDirectoryName(path) ?? ".";
-            var formatStr = ArgumentHelper.GetString(arguments, "format", "png");
-            var skipDuplicates = ArgumentHelper.GetBool(arguments, "skipDuplicates", false);
-
-#pragma warning disable CA1416 // Validate platform compatibility
-            var format = formatStr.ToLower() switch
-            {
-                "jpeg" or "jpg" => ImageFormat.Jpeg,
-                _ => ImageFormat.Png
-            };
-            var extension = format.Equals(ImageFormat.Png) ? "png" : "jpg";
+            "jpeg" or "jpg" => ImageFormat.Jpeg,
+            _ => ImageFormat.Png
+        };
+        var extension = format.Equals(ImageFormat.Png) ? "png" : "jpg";
 #pragma warning restore CA1416 // Validate platform compatibility
 
-            Directory.CreateDirectory(outputDir);
+        Directory.CreateDirectory(actualOutputDir);
 
-            using var presentation = new Presentation(path);
-            var count = 0;
-            var skippedCount = 0;
-            var exportedHashes = new HashSet<string>();
+        using var presentation = new Presentation(path);
+        var count = 0;
+        var skippedCount = 0;
+        var exportedHashes = new HashSet<string>();
 
-            var slideNum = 0;
-            foreach (var slide in presentation.Slides)
-            {
-                slideNum++;
-                foreach (var shape in slide.Shapes)
-                    if (shape is PictureFrame { PictureFormat.Picture.Image: not null } pic)
+        var slideNum = 0;
+        foreach (var slide in presentation.Slides)
+        {
+            slideNum++;
+            foreach (var shape in slide.Shapes)
+                if (shape is PictureFrame { PictureFormat.Picture.Image: not null } pic)
+                {
+                    var image = pic.PictureFormat.Picture.Image;
+
+                    if (skipDuplicates)
                     {
-                        var image = pic.PictureFormat.Picture.Image;
-
-                        if (skipDuplicates)
+                        var hash = ComputeImageHash(image.BinaryData);
+                        if (!exportedHashes.Add(hash))
                         {
-                            var hash = ComputeImageHash(image.BinaryData);
-                            if (!exportedHashes.Add(hash))
-                            {
-                                skippedCount++;
-                                continue;
-                            }
+                            skippedCount++;
+                            continue;
                         }
-
-                        var fileName = Path.Combine(outputDir, $"slide{slideNum}_img{++count}.{extension}");
-                        var systemImage = image.SystemImage;
-#pragma warning disable CA1416 // Validate platform compatibility
-                        systemImage.Save(fileName, format);
-#pragma warning restore CA1416 // Validate platform compatibility
                     }
-            }
 
-            var result = $"Extracted {count} images. Output: {Path.GetFullPath(outputDir)}";
-            if (skipDuplicates && skippedCount > 0)
-                result += $" (skipped {skippedCount} duplicates)";
+                    var fileName = Path.Combine(actualOutputDir, $"slide{slideNum}_img{++count}.{extension}");
+                    var systemImage = image.SystemImage;
+#pragma warning disable CA1416 // Validate platform compatibility
+                    systemImage.Save(fileName, format);
+#pragma warning restore CA1416 // Validate platform compatibility
+                }
+        }
 
-            return result;
-        });
+        var result = $"Extracted {count} images. Output: {Path.GetFullPath(actualOutputDir)}";
+        if (skipDuplicates && skippedCount > 0)
+            result += $" (skipped {skippedCount} duplicates)";
+
+        return result;
     }
 
     #endregion
@@ -412,89 +353,87 @@ Usage examples:
     /// <summary>
     ///     Edits image properties with optional compression and resize.
     /// </summary>
-    /// <param name="path">PowerPoint file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="arguments">
-    ///     JSON arguments containing slideIndex, imageIndex, optional x, y, width, height, imagePath,
-    ///     jpegQuality, maxWidth, maxHeight.
-    /// </param>
-    /// <returns>Success message.</returns>
-    /// <exception cref="ArgumentException">Thrown when slideIndex or imageIndex is out of range.</exception>
-    private Task<string> EditImageAsync(string path, string outputPath, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="slideIndex">The zero-based index of the slide.</param>
+    /// <param name="imageIndex">The zero-based index of the image on the slide.</param>
+    /// <param name="imagePath">The path to a new image file (optional).</param>
+    /// <param name="x">The X position in points.</param>
+    /// <param name="y">The Y position in points.</param>
+    /// <param name="width">The width in points (optional).</param>
+    /// <param name="height">The height in points (optional).</param>
+    /// <param name="jpegQuality">The JPEG quality 10-100 (optional).</param>
+    /// <param name="maxWidth">The maximum width in pixels for resize (optional).</param>
+    /// <param name="maxHeight">The maximum height in pixels for resize (optional).</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when slideIndex or imageIndex is not provided or out of range.</exception>
+    private static string EditImage(DocumentContext<Presentation> ctx, string? outputPath,
+        int? slideIndex, int? imageIndex, string? imagePath,
+        float x, float y, float? width, float? height,
+        int? jpegQuality, int? maxWidth, int? maxHeight)
     {
-        return Task.Run(() =>
+        if (!slideIndex.HasValue)
+            throw new ArgumentException("slideIndex is required for edit operation");
+        if (!imageIndex.HasValue)
+            throw new ArgumentException("imageIndex is required for edit operation");
+
+        var presentation = ctx.Document;
+        var slide = PowerPointHelper.GetSlide(presentation, slideIndex.Value);
+        var pictures = slide.Shapes.OfType<PictureFrame>().ToList();
+
+        if (imageIndex.Value < 0 || imageIndex.Value >= pictures.Count)
+            throw new ArgumentException(
+                $"imageIndex {imageIndex.Value} is out of range. Slide {slideIndex.Value} has {pictures.Count} image(s).");
+
+        var pictureFrame = pictures[imageIndex.Value];
+        List<string> changes = [];
+
+        if (!string.IsNullOrEmpty(imagePath) && File.Exists(imagePath))
         {
-            var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
-            var imageIndex = ArgumentHelper.GetInt(arguments, "imageIndex");
-            var imagePath = ArgumentHelper.GetStringNullable(arguments, "imagePath");
-            var x = ArgumentHelper.GetFloatNullable(arguments, "x");
-            var y = ArgumentHelper.GetFloatNullable(arguments, "y");
-            var width = ArgumentHelper.GetFloatNullable(arguments, "width");
-            var height = ArgumentHelper.GetFloatNullable(arguments, "height");
-            var jpegQuality = ArgumentHelper.GetIntNullable(arguments, "jpegQuality");
-            var maxWidth = ArgumentHelper.GetIntNullable(arguments, "maxWidth");
-            var maxHeight = ArgumentHelper.GetIntNullable(arguments, "maxHeight");
+            var newImage = ProcessAndAddImage(presentation, imagePath, jpegQuality, maxWidth, maxHeight,
+                out var processingDetails);
+            pictureFrame.PictureFormat.Picture.Image = newImage;
+            changes.AddRange(processingDetails);
+        }
 
-            using var presentation = new Presentation(path);
-            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-            var pictures = slide.Shapes.OfType<PictureFrame>().ToList();
+        pictureFrame.X = x;
+        pictureFrame.Y = y;
 
-            if (imageIndex < 0 || imageIndex >= pictures.Count)
-                throw new ArgumentException(
-                    $"imageIndex {imageIndex} is out of range. Slide {slideIndex} has {pictures.Count} image(s).");
+        if (width.HasValue)
+        {
+            pictureFrame.Width = width.Value;
+            changes.Add($"width={width.Value}");
+        }
 
-            var pictureFrame = pictures[imageIndex];
-            var changes = new List<string>();
+        if (height.HasValue)
+        {
+            pictureFrame.Height = height.Value;
+            changes.Add($"height={height.Value}");
+        }
 
-            // Replace image if provided
-            if (!string.IsNullOrEmpty(imagePath) && File.Exists(imagePath))
-            {
-                var newImage = ProcessAndAddImage(presentation, imagePath, jpegQuality, maxWidth, maxHeight,
-                    out var processingDetails);
-                pictureFrame.PictureFormat.Picture.Image = newImage;
-                changes.AddRange(processingDetails);
-            }
+        ctx.Save(outputPath);
 
-            // Update position
-            if (x.HasValue)
-            {
-                pictureFrame.X = x.Value;
-                changes.Add($"x={x.Value}");
-            }
-
-            if (y.HasValue)
-            {
-                pictureFrame.Y = y.Value;
-                changes.Add($"y={y.Value}");
-            }
-
-            // Update size
-            if (width.HasValue)
-            {
-                pictureFrame.Width = width.Value;
-                changes.Add($"width={width.Value}");
-            }
-
-            if (height.HasValue)
-            {
-                pictureFrame.Height = height.Value;
-                changes.Add($"height={height.Value}");
-            }
-
-            presentation.Save(outputPath, SaveFormat.Pptx);
-
-            var changesStr = changes.Count > 0 ? string.Join(", ", changes) : "no changes";
-            return $"Image {imageIndex} on slide {slideIndex} updated ({changesStr}). Output: {outputPath}";
-        });
+        var changesStr = changes.Count > 0 ? string.Join(", ", changes) : "position updated";
+        var result = $"Image {imageIndex} on slide {slideIndex} updated ({changesStr}). ";
+        result += ctx.GetOutputMessage(outputPath);
+        return result;
     }
 
     /// <summary>
     ///     Processes image with optional compression/resize and adds to presentation.
     /// </summary>
-    private IPPImage ProcessAndAddImage(IPresentation presentation, string imagePath, int? jpegQuality, int? maxWidth,
+    /// <param name="presentation">The presentation to add the image to.</param>
+    /// <param name="imagePath">The path to the image file.</param>
+    /// <param name="jpegQuality">The JPEG quality 10-100 (optional).</param>
+    /// <param name="maxWidth">The maximum width in pixels for resize (optional).</param>
+    /// <param name="maxHeight">The maximum height in pixels for resize (optional).</param>
+    /// <param name="processingDetails">Output list of processing details performed.</param>
+    /// <returns>The processed image added to the presentation.</returns>
+    private static IPPImage ProcessAndAddImage(IPresentation presentation, string imagePath, int? jpegQuality,
+        int? maxWidth,
         int? maxHeight, out List<string> processingDetails)
     {
-        processingDetails = new List<string>();
+        processingDetails = [];
 
         if (jpegQuality.HasValue || maxWidth.HasValue || maxHeight.HasValue)
         {
@@ -505,7 +444,6 @@ Usage examples:
             var processedImage = src;
             var needsDispose = false;
 
-            // Resize if needed
             if (maxWidth.HasValue || maxHeight.HasValue)
             {
                 var newSize = CalculateResizeSize(src.Width, src.Height, maxWidth, maxHeight);
@@ -517,7 +455,6 @@ Usage examples:
                 }
             }
 
-            // Encode to JPEG with quality or PNG
             using var ms = new MemoryStream();
             if (jpegQuality.HasValue)
             {
@@ -542,7 +479,6 @@ Usage examples:
             return presentation.Images.AddImage(ms);
         }
 
-        // No processing needed, use FileStream directly
         using var fs = new FileStream(imagePath, FileMode.Open, FileAccess.Read);
         processingDetails.Add("image replaced");
         return presentation.Images.AddImage(fs);
@@ -555,6 +491,11 @@ Usage examples:
     /// <summary>
     ///     Calculates final dimensions maintaining aspect ratio.
     /// </summary>
+    /// <param name="width">The requested width (optional).</param>
+    /// <param name="height">The requested height (optional).</param>
+    /// <param name="pixelWidth">The original image width in pixels.</param>
+    /// <param name="pixelHeight">The original image height in pixels.</param>
+    /// <returns>A tuple containing the calculated width and height.</returns>
     private static (float width, float height) CalculateDimensions(float? width, float? height, int pixelWidth,
         int pixelHeight)
     {
@@ -573,7 +514,6 @@ Usage examples:
             return (height.Value * ratio, height.Value);
         }
 
-        // Default: 300 points width, maintain aspect ratio
         var defaultWidth = 300f;
         var defaultRatio = pixelWidth > 0 ? (float)pixelHeight / pixelWidth : 1;
         return (defaultWidth, defaultWidth * defaultRatio);
@@ -582,6 +522,11 @@ Usage examples:
     /// <summary>
     ///     Calculates new image size maintaining aspect ratio within max bounds.
     /// </summary>
+    /// <param name="width">The original width.</param>
+    /// <param name="height">The original height.</param>
+    /// <param name="maxWidth">The maximum width constraint (optional).</param>
+    /// <param name="maxHeight">The maximum height constraint (optional).</param>
+    /// <returns>The calculated size within the constraints.</returns>
     private static Size CalculateResizeSize(int width, int height, int? maxWidth, int? maxHeight)
     {
         var newWidth = (double)width;
@@ -607,12 +552,16 @@ Usage examples:
     /// <summary>
     ///     Parses comma-separated slide indexes string.
     /// </summary>
+    /// <param name="slideIndexesStr">Comma-separated slide indexes string.</param>
+    /// <param name="totalSlides">The total number of slides in the presentation.</param>
+    /// <returns>A list of valid slide indexes.</returns>
+    /// <exception cref="ArgumentException">Thrown when a slide index is invalid or out of range.</exception>
     private static List<int> ParseSlideIndexes(string? slideIndexesStr, int totalSlides)
     {
         if (string.IsNullOrWhiteSpace(slideIndexesStr))
             return Enumerable.Range(0, totalSlides).ToList();
 
-        var indexes = new List<int>();
+        List<int> indexes = [];
         foreach (var part in slideIndexesStr.Split(',', StringSplitOptions.RemoveEmptyEntries))
         {
             if (!int.TryParse(part.Trim(), out var index))
@@ -631,6 +580,8 @@ Usage examples:
     /// <summary>
     ///     Computes MD5 hash of image binary data for duplicate detection.
     /// </summary>
+    /// <param name="data">The image binary data.</param>
+    /// <returns>The hexadecimal hash string.</returns>
     private static string ComputeImageHash(byte[] data)
     {
         var hashBytes = MD5.HashData(data);

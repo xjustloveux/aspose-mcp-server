@@ -1,7 +1,9 @@
+using System.ComponentModel;
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using Aspose.Words.Layout;
-using AsposeMcpServer.Core;
+using AsposeMcpServer.Core.Session;
+using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Word;
 
@@ -10,194 +12,104 @@ namespace AsposeMcpServer.Tools.Word;
 ///     Merges: WordSetPageMarginsTool, WordSetPageOrientationTool, WordSetPageSizeTool,
 ///     WordSetPageNumberTool, WordSetPageSetupTool, WordDeletePageTool, WordInsertBlankPageTool, WordAddPageBreakTool
 /// </summary>
-public class WordPageTool : IAsposeTool
+[McpServerToolType]
+public class WordPageTool
 {
     /// <summary>
-    ///     Gets the description of the tool and its usage examples
+    ///     Session manager for document session operations
     /// </summary>
-    public string Description =>
+    private readonly DocumentSessionManager? _sessionManager;
+
+    /// <summary>
+    ///     Initializes a new instance of the WordPageTool class
+    /// </summary>
+    /// <param name="sessionManager">Optional session manager for in-memory document operations</param>
+    public WordPageTool(DocumentSessionManager? sessionManager = null)
+    {
+        _sessionManager = sessionManager;
+    }
+
+    [McpServerTool(Name = "word_page")]
+    [Description(
         @"Manage page settings in Word documents. Supports 8 operations: set_margins, set_orientation, set_size, set_page_number, set_page_setup, delete_page, insert_blank_page, add_page_break.
 
 Usage examples:
 - Set margins: word_page(operation='set_margins', path='doc.docx', top=72, bottom=72, left=72, right=72)
 - Set orientation: word_page(operation='set_orientation', path='doc.docx', orientation='landscape')
 - Set page size: word_page(operation='set_size', path='doc.docx', width=792, height=612)
-- Set page number: word_page(operation='set_page_number', path='doc.docx', startNumber=1)
+- Set page number: word_page(operation='set_page_number', path='doc.docx', startingPageNumber=1)
 - Delete page: word_page(operation='delete_page', path='doc.docx', pageIndex=1)
 - Insert blank page: word_page(operation='insert_blank_page', path='doc.docx', insertAtPageIndex=2)
-- Add page break: word_page(operation='add_page_break', path='doc.docx', paragraphIndex=10)";
-
-    /// <summary>
-    ///     Gets the JSON schema defining the input parameters for the tool
-    /// </summary>
-    public object InputSchema => new
+- Add page break: word_page(operation='add_page_break', path='doc.docx', paragraphIndex=10)")]
+    public string Execute(
+        [Description(
+            "Operation: set_margins, set_orientation, set_size, set_page_number, set_page_setup, delete_page, insert_blank_page, add_page_break")]
+        string operation,
+        [Description("Document file path (required if no sessionId)")]
+        string? path = null,
+        [Description("Session ID for in-memory editing")]
+        string? sessionId = null,
+        [Description("Output file path (file mode only)")]
+        string? outputPath = null,
+        [Description("Top margin in points (72 pts = 1 inch)")]
+        double? top = null,
+        [Description("Bottom margin in points")]
+        double? bottom = null,
+        [Description("Left margin in points")] double? left = null,
+        [Description("Right margin in points")]
+        double? right = null,
+        [Description("Page orientation: Portrait or Landscape")]
+        string? orientation = null,
+        [Description("Page width in points (72 pts = 1 inch)")]
+        double? width = null,
+        [Description("Page height in points")] double? height = null,
+        [Description("Predefined paper size: A4, Letter, Legal, A3, A5")]
+        string? paperSize = null,
+        [Description("Page number format: arabic, roman, letter")]
+        string? pageNumberFormat = null,
+        [Description("Starting page number")] int? startingPageNumber = null,
+        [Description("Section index (0-based)")]
+        int? sectionIndex = null,
+        [Description("Array of section indices (overrides sectionIndex)")]
+        JsonArray? sectionIndices = null,
+        [Description("Page index to delete (0-based)")]
+        int? pageIndex = null,
+        [Description("Page index to insert blank page at (0-based)")]
+        int? insertAtPageIndex = null,
+        [Description("Paragraph index to insert page break after (0-based)")]
+        int? paragraphIndex = null)
     {
-        type = "object",
-        properties = new
-        {
-            operation = new
-            {
-                type = "string",
-                description = @"Operation to perform.
-- 'set_margins': Set page margins (required params: path)
-- 'set_orientation': Set page orientation (required params: path, orientation)
-- 'set_size': Set page size (required params: path, width, height)
-- 'set_page_number': Set page number format (required params: path, startNumber)
-- 'set_page_setup': Set page setup (required params: path)
-- 'delete_page': Delete a page (required params: path, pageIndex)
-- 'insert_blank_page': Insert blank page (required params: path, insertAtParagraphIndex)
-- 'add_page_break': Add page break (required params: path; optional: paragraphIndex)",
-                @enum = new[]
-                {
-                    "set_margins", "set_orientation", "set_size", "set_page_number", "set_page_setup", "delete_page",
-                    "insert_blank_page", "add_page_break"
-                }
-            },
-            path = new
-            {
-                type = "string",
-                description = "Document file path (required for all operations)"
-            },
-            outputPath = new
-            {
-                type = "string",
-                description = "Output file path (if not provided, overwrites input, for write operations)"
-            },
-            // Set margins parameters (72 points = 1 inch = 2.54 cm)
-            top = new
-            {
-                type = "number",
-                description = "Top margin in points (72 pts = 1 inch, e.g., 72 for 1 inch margin)"
-            },
-            bottom = new
-            {
-                type = "number",
-                description = "Bottom margin in points (72 pts = 1 inch)"
-            },
-            left = new
-            {
-                type = "number",
-                description = "Left margin in points (72 pts = 1 inch)"
-            },
-            right = new
-            {
-                type = "number",
-                description = "Right margin in points (72 pts = 1 inch)"
-            },
-            // Set orientation parameters
-            orientation = new
-            {
-                type = "string",
-                description = "Orientation: Portrait or Landscape (required for set_orientation operation)",
-                @enum = new[] { "Portrait", "Landscape" }
-            },
-            // Set size parameters (72 points = 1 inch = 2.54 cm)
-            width = new
-            {
-                type = "number",
-                description = "Page width in points (72 pts = 1 inch, e.g., A4 = 595 pts)"
-            },
-            height = new
-            {
-                type = "number",
-                description = "Page height in points (72 pts = 1 inch, e.g., A4 = 842 pts)"
-            },
-            paperSize = new
-            {
-                type = "string",
-                description =
-                    "Predefined paper size: A4, Letter, Legal, A3, A5 (optional, overrides width/height, for set_size operation)",
-                @enum = new[] { "A4", "Letter", "Legal", "A3", "A5" }
-            },
-            // Set page number parameters
-            pageNumberFormat = new
-            {
-                type = "string",
-                description = "Page number format: arabic, roman, letter (optional, for set_page_number operation)",
-                @enum = new[] { "arabic", "roman", "letter" }
-            },
-            startingPageNumber = new
-            {
-                type = "number",
-                description = "Starting page number (optional, for set_page_number operation)"
-            },
-            // Common parameters
-            sectionIndex = new
-            {
-                type = "number",
-                description = "Section index (0-based, optional, if not provided applies to all sections)"
-            },
-            sectionIndices = new
-            {
-                type = "array",
-                items = new { type = "number" },
-                description = "Array of section indices (0-based, optional, overrides sectionIndex)"
-            },
-            // Delete page parameters
-            pageIndex = new
-            {
-                type = "number",
-                description = "Page index to delete (0-based, required for delete_page operation)"
-            },
-            // Insert blank page parameters
-            insertAtPageIndex = new
-            {
-                type = "number",
-                description = "Page index to insert blank page at (0-based, optional, for insert_blank_page operation)"
-            },
-            // Add page break parameters
-            paragraphIndex = new
-            {
-                type = "number",
-                description =
-                    "Paragraph index to insert page break after (0-based, optional for add_page_break, defaults to document end)"
-            }
-        },
-        required = new[] { "operation", "path" }
-    };
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
 
-    /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments
-    /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters</param>
-    /// <returns>Result message as a string</returns>
-    /// <exception cref="ArgumentException">Thrown when operation is unknown or required parameters are missing.</exception>
-    public async Task<string> ExecuteAsync(JsonObject? arguments)
-    {
-        var operation = ArgumentHelper.GetString(arguments, "operation");
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
-
-        return operation switch
+        return operation.ToLower() switch
         {
-            "set_margins" => await SetMarginsAsync(path, outputPath, arguments),
-            "set_orientation" => await SetOrientationAsync(path, outputPath, arguments),
-            "set_size" => await SetSizeAsync(path, outputPath, arguments),
-            "set_page_number" => await SetPageNumberAsync(path, outputPath, arguments),
-            "set_page_setup" => await SetPageSetupAsync(path, outputPath, arguments),
-            "delete_page" => await DeletePageAsync(path, outputPath, arguments),
-            "insert_blank_page" => await InsertBlankPageAsync(path, outputPath, arguments),
-            "add_page_break" => await AddPageBreakAsync(path, outputPath, arguments),
+            "set_margins" => SetMargins(ctx, outputPath, top, bottom, left, right, sectionIndex, sectionIndices),
+            "set_orientation" => SetOrientation(ctx, outputPath, orientation, sectionIndex, sectionIndices),
+            "set_size" => SetSize(ctx, outputPath, width, height, paperSize, sectionIndex, sectionIndices),
+            "set_page_number" => SetPageNumber(ctx, outputPath, pageNumberFormat, startingPageNumber, sectionIndex),
+            "set_page_setup" => SetPageSetup(ctx, outputPath, top, bottom, left, right, orientation, sectionIndex),
+            "delete_page" => DeletePage(ctx, outputPath, pageIndex),
+            "insert_blank_page" => InsertBlankPage(ctx, outputPath, insertAtPageIndex),
+            "add_page_break" => AddPageBreak(ctx, outputPath, paragraphIndex),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
 
     /// <summary>
-    ///     Gets target section indices based on sectionIndex or sectionIndices parameters
+    ///     Gets the list of section indices to operate on based on provided parameters.
     /// </summary>
-    /// <param name="doc">Word document</param>
-    /// <param name="arguments">JSON arguments containing optional sectionIndex or sectionIndices</param>
-    /// <param name="validateRange">Whether to validate section indices are within range</param>
-    /// <returns>List of section indices to process</returns>
-    private static List<int> GetTargetSections(Document doc, JsonObject? arguments, bool validateRange = true)
+    /// <param name="doc">The Word document.</param>
+    /// <param name="sectionIndex">Optional single section index.</param>
+    /// <param name="sectionIndices">Optional array of section indices.</param>
+    /// <param name="validateRange">Whether to validate that indices are within range.</param>
+    /// <returns>A list of section indices to operate on.</returns>
+    /// <exception cref="ArgumentException">Thrown when section index is out of range.</exception>
+    private static List<int> GetTargetSections(Document doc, int? sectionIndex, JsonArray? sectionIndices,
+        bool validateRange = true)
     {
-        var sectionIndicesArray = ArgumentHelper.GetArray(arguments, "sectionIndices", false);
-        var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
-
-        if (sectionIndicesArray is { Count: > 0 })
+        if (sectionIndices is { Count: > 0 })
         {
-            var indices = sectionIndicesArray
+            var indices = sectionIndices
                 .Select(s => s?.GetValue<int>())
                 .Where(s => s.HasValue)
                 .Select(s => s!.Value)
@@ -223,362 +135,321 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Sets page margins
+    ///     Sets page margins for the specified sections.
     /// </summary>
-    /// <param name="path">Word document file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing optional top, bottom, left, right, sectionIndex</param>
-    /// <returns>Success message</returns>
-    private Task<string> SetMarginsAsync(string path, string outputPath, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="top">The top margin in points.</param>
+    /// <param name="bottom">The bottom margin in points.</param>
+    /// <param name="left">The left margin in points.</param>
+    /// <param name="right">The right margin in points.</param>
+    /// <param name="sectionIndex">Optional section index.</param>
+    /// <param name="sectionIndices">Optional array of section indices.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    private static string SetMargins(DocumentContext<Document> ctx, string? outputPath, double? top, double? bottom,
+        double? left, double? right, int? sectionIndex, JsonArray? sectionIndices)
     {
-        return Task.Run(() =>
+        var doc = ctx.Document;
+        var sectionsToUpdate = GetTargetSections(doc, sectionIndex, sectionIndices);
+
+        foreach (var idx in sectionsToUpdate)
         {
-            var top = ArgumentHelper.GetDoubleNullable(arguments, "top");
-            var bottom = ArgumentHelper.GetDoubleNullable(arguments, "bottom");
-            var left = ArgumentHelper.GetDoubleNullable(arguments, "left");
-            var right = ArgumentHelper.GetDoubleNullable(arguments, "right");
+            var pageSetup = doc.Sections[idx].PageSetup;
+            if (top.HasValue) pageSetup.TopMargin = top.Value;
+            if (bottom.HasValue) pageSetup.BottomMargin = bottom.Value;
+            if (left.HasValue) pageSetup.LeftMargin = left.Value;
+            if (right.HasValue) pageSetup.RightMargin = right.Value;
+        }
 
-            var doc = new Document(path);
-            var sectionsToUpdate = GetTargetSections(doc, arguments);
+        ctx.Save(outputPath);
+        return $"Page margins updated for {sectionsToUpdate.Count} section(s)\n{ctx.GetOutputMessage(outputPath)}";
+    }
 
-            foreach (var idx in sectionsToUpdate)
+    /// <summary>
+    ///     Sets page orientation (portrait or landscape) for the specified sections.
+    /// </summary>
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="orientation">The page orientation (Portrait or Landscape).</param>
+    /// <param name="sectionIndex">Optional section index.</param>
+    /// <param name="sectionIndices">Optional array of section indices.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when orientation is not specified.</exception>
+    private static string SetOrientation(DocumentContext<Document> ctx, string? outputPath, string? orientation,
+        int? sectionIndex, JsonArray? sectionIndices)
+    {
+        if (string.IsNullOrEmpty(orientation))
+            throw new ArgumentException("orientation parameter is required for set_orientation operation");
+
+        var doc = ctx.Document;
+        var orientationEnum = orientation.ToLower() == "landscape" ? Orientation.Landscape : Orientation.Portrait;
+        var sectionsToUpdate = GetTargetSections(doc, sectionIndex, sectionIndices);
+
+        foreach (var idx in sectionsToUpdate)
+            doc.Sections[idx].PageSetup.Orientation = orientationEnum;
+
+        ctx.Save(outputPath);
+        return
+            $"Page orientation set to {orientation} for {sectionsToUpdate.Count} section(s)\n{ctx.GetOutputMessage(outputPath)}";
+    }
+
+    /// <summary>
+    ///     Sets page size using custom dimensions or predefined paper sizes.
+    /// </summary>
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="width">The page width in points.</param>
+    /// <param name="height">The page height in points.</param>
+    /// <param name="paperSize">The predefined paper size (A4, Letter, Legal, A3, A5).</param>
+    /// <param name="sectionIndex">Optional section index.</param>
+    /// <param name="sectionIndices">Optional array of section indices.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when neither paperSize nor width/height are provided.</exception>
+    private static string SetSize(DocumentContext<Document> ctx, string? outputPath, double? width, double? height,
+        string? paperSize, int? sectionIndex, JsonArray? sectionIndices)
+    {
+        var doc = ctx.Document;
+        var sectionsToUpdate = GetTargetSections(doc, sectionIndex, sectionIndices);
+
+        foreach (var idx in sectionsToUpdate)
+        {
+            var pageSetup = doc.Sections[idx].PageSetup;
+
+            if (!string.IsNullOrEmpty(paperSize))
             {
-                var pageSetup = doc.Sections[idx].PageSetup;
-                if (top.HasValue) pageSetup.TopMargin = top.Value;
-                if (bottom.HasValue) pageSetup.BottomMargin = bottom.Value;
-                if (left.HasValue) pageSetup.LeftMargin = left.Value;
-                if (right.HasValue) pageSetup.RightMargin = right.Value;
+                pageSetup.PaperSize = paperSize.ToUpper() switch
+                {
+                    "A4" => PaperSize.A4,
+                    "LETTER" => PaperSize.Letter,
+                    "LEGAL" => PaperSize.Legal,
+                    "A3" => PaperSize.A3,
+                    "A5" => PaperSize.A5,
+                    _ => PaperSize.A4
+                };
             }
-
-            doc.Save(outputPath);
-            return $"Page margins updated for {sectionsToUpdate.Count} section(s): {outputPath}";
-        });
-    }
-
-    /// <summary>
-    ///     Sets page orientation
-    /// </summary>
-    /// <param name="path">Word document file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing orientation, optional sectionIndex</param>
-    /// <returns>Success message</returns>
-    private Task<string> SetOrientationAsync(string path, string outputPath, JsonObject? arguments)
-    {
-        return Task.Run(() =>
-        {
-            var orientation = ArgumentHelper.GetString(arguments, "orientation");
-
-            var doc = new Document(path);
-            var orientationEnum = orientation.ToLower() == "landscape" ? Orientation.Landscape : Orientation.Portrait;
-            var sectionsToUpdate = GetTargetSections(doc, arguments);
-
-            foreach (var idx in sectionsToUpdate)
-                doc.Sections[idx].PageSetup.Orientation = orientationEnum;
-
-            doc.Save(outputPath);
-            return $"Page orientation set to {orientation} for {sectionsToUpdate.Count} section(s): {outputPath}";
-        });
-    }
-
-    /// <summary>
-    ///     Sets page size
-    /// </summary>
-    /// <param name="path">Word document file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing optional width, height, paperSize, sectionIndex</param>
-    /// <returns>Success message</returns>
-    private Task<string> SetSizeAsync(string path, string outputPath, JsonObject? arguments)
-    {
-        return Task.Run(() =>
-        {
-            var width = ArgumentHelper.GetDoubleNullable(arguments, "width");
-            var height = ArgumentHelper.GetDoubleNullable(arguments, "height");
-            var paperSize = ArgumentHelper.GetStringNullable(arguments, "paperSize");
-
-            var doc = new Document(path);
-            var sectionsToUpdate = GetTargetSections(doc, arguments);
-
-            foreach (var idx in sectionsToUpdate)
+            else if (width.HasValue && height.HasValue)
             {
-                var pageSetup = doc.Sections[idx].PageSetup;
-
-                if (!string.IsNullOrEmpty(paperSize))
-                {
-                    pageSetup.PaperSize = paperSize.ToUpper() switch
-                    {
-                        "A4" => PaperSize.A4,
-                        "LETTER" => PaperSize.Letter,
-                        "LEGAL" => PaperSize.Legal,
-                        "A3" => PaperSize.A3,
-                        "A5" => PaperSize.A5,
-                        _ => PaperSize.A4
-                    };
-                }
-                else if (width.HasValue && height.HasValue)
-                {
-                    pageSetup.PageWidth = width.Value;
-                    pageSetup.PageHeight = height.Value;
-                }
-                else
-                {
-                    throw new ArgumentException("Either paperSize or both width and height must be provided");
-                }
-            }
-
-            doc.Save(outputPath);
-            return $"Page size updated for {sectionsToUpdate.Count} section(s): {outputPath}";
-        });
-    }
-
-    /// <summary>
-    ///     Sets page numbering
-    /// </summary>
-    /// <param name="path">Word document file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing optional startNumber, numberFormat, sectionIndex</param>
-    /// <returns>Success message</returns>
-    private Task<string> SetPageNumberAsync(string path, string outputPath, JsonObject? arguments)
-    {
-        return Task.Run(() =>
-        {
-            var pageNumberFormat = ArgumentHelper.GetStringNullable(arguments, "pageNumberFormat");
-            var startingPageNumber = ArgumentHelper.GetIntNullable(arguments, "startingPageNumber");
-            var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
-
-            var doc = new Document(path);
-            List<int> sectionsToUpdate;
-
-            if (sectionIndex.HasValue)
-            {
-                if (sectionIndex.Value < 0 || sectionIndex.Value >= doc.Sections.Count)
-                    throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
-                sectionsToUpdate = [sectionIndex.Value];
+                pageSetup.PageWidth = width.Value;
+                pageSetup.PageHeight = height.Value;
             }
             else
             {
-                sectionsToUpdate = [0];
+                throw new ArgumentException("Either paperSize or both width and height must be provided");
             }
+        }
 
-            foreach (var idx in sectionsToUpdate)
-            {
-                var pageSetup = doc.Sections[idx].PageSetup;
-
-                if (!string.IsNullOrEmpty(pageNumberFormat))
-                {
-                    var numStyle = pageNumberFormat.ToLower() switch
-                    {
-                        "roman" => NumberStyle.UppercaseRoman,
-                        "letter" => NumberStyle.UppercaseLetter,
-                        _ => NumberStyle.Arabic
-                    };
-                    pageSetup.PageNumberStyle = numStyle;
-                }
-
-                if (startingPageNumber.HasValue)
-                {
-                    pageSetup.RestartPageNumbering = true;
-                    pageSetup.PageStartingNumber = startingPageNumber.Value;
-                }
-            }
-
-            doc.Save(outputPath);
-            return $"Page number settings updated for {sectionsToUpdate.Count} section(s): {outputPath}";
-        });
+        ctx.Save(outputPath);
+        return $"Page size updated for {sectionsToUpdate.Count} section(s)\n{ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Sets page setup properties
+    ///     Sets page number format and starting number for a section.
     /// </summary>
-    /// <param name="path">Word document file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing various page setup options, optional sectionIndex</param>
-    /// <returns>Success message</returns>
-    private Task<string> SetPageSetupAsync(string path, string outputPath, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="pageNumberFormat">The page number format (arabic, roman, letter).</param>
+    /// <param name="startingPageNumber">The starting page number.</param>
+    /// <param name="sectionIndex">Optional section index.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when section index is out of range.</exception>
+    private static string SetPageNumber(DocumentContext<Document> ctx, string? outputPath, string? pageNumberFormat,
+        int? startingPageNumber, int? sectionIndex)
     {
-        return Task.Run(() =>
-        {
-            // This is a combined operation that can set multiple page setup properties
-            var doc = new Document(path);
-            var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex", 0);
+        var doc = ctx.Document;
+        List<int> sectionsToUpdate;
 
-            if (sectionIndex < 0 || sectionIndex >= doc.Sections.Count)
+        if (sectionIndex.HasValue)
+        {
+            if (sectionIndex.Value < 0 || sectionIndex.Value >= doc.Sections.Count)
                 throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
+            sectionsToUpdate = [sectionIndex.Value];
+        }
+        else
+        {
+            sectionsToUpdate = [0];
+        }
 
-            var pageSetup = doc.Sections[sectionIndex].PageSetup;
-            var changes = new List<string>();
+        foreach (var idx in sectionsToUpdate)
+        {
+            var pageSetup = doc.Sections[idx].PageSetup;
 
-            // Apply all page setup parameters
-            var top = ArgumentHelper.GetDoubleNullable(arguments, "top");
-            if (top.HasValue)
+            if (!string.IsNullOrEmpty(pageNumberFormat))
             {
-                pageSetup.TopMargin = top.Value;
-                changes.Add($"Top margin: {top.Value}");
+                var numStyle = pageNumberFormat.ToLower() switch
+                {
+                    "roman" => NumberStyle.UppercaseRoman,
+                    "letter" => NumberStyle.UppercaseLetter,
+                    _ => NumberStyle.Arabic
+                };
+                pageSetup.PageNumberStyle = numStyle;
             }
 
-            var bottom = ArgumentHelper.GetDoubleNullable(arguments, "bottom");
-            if (bottom.HasValue)
+            if (startingPageNumber.HasValue)
             {
-                pageSetup.BottomMargin = bottom.Value;
-                changes.Add($"Bottom margin: {bottom.Value}");
+                pageSetup.RestartPageNumbering = true;
+                pageSetup.PageStartingNumber = startingPageNumber.Value;
             }
+        }
 
-            var left = ArgumentHelper.GetDoubleNullable(arguments, "left");
-            if (left.HasValue)
-            {
-                pageSetup.LeftMargin = left.Value;
-                changes.Add($"Left margin: {left.Value}");
-            }
-
-            var right = ArgumentHelper.GetDoubleNullable(arguments, "right");
-            if (right.HasValue)
-            {
-                pageSetup.RightMargin = right.Value;
-                changes.Add($"Right margin: {right.Value}");
-            }
-
-            var orientation = ArgumentHelper.GetStringNullable(arguments, "orientation");
-            if (!string.IsNullOrEmpty(orientation))
-            {
-                pageSetup.Orientation =
-                    orientation.ToLower() == "landscape" ? Orientation.Landscape : Orientation.Portrait;
-                changes.Add($"Orientation: {orientation}");
-            }
-
-            doc.Save(outputPath);
-            return $"Page setup updated: {string.Join(", ", changes)}";
-        });
+        ctx.Save(outputPath);
+        return
+            $"Page number settings updated for {sectionsToUpdate.Count} section(s)\n{ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Deletes a page from the document using ExtractPages
+    ///     Sets multiple page setup options (margins and orientation) for a section.
     /// </summary>
-    /// <param name="path">Word document file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing pageIndex</param>
-    /// <returns>Success message</returns>
-    private Task<string> DeletePageAsync(string path, string outputPath, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="top">The top margin in points.</param>
+    /// <param name="bottom">The bottom margin in points.</param>
+    /// <param name="left">The left margin in points.</param>
+    /// <param name="right">The right margin in points.</param>
+    /// <param name="orientation">The page orientation.</param>
+    /// <param name="sectionIndex">Optional section index.</param>
+    /// <returns>A message indicating the changes made.</returns>
+    /// <exception cref="ArgumentException">Thrown when section index is out of range.</exception>
+    private static string SetPageSetup(DocumentContext<Document> ctx, string? outputPath, double? top, double? bottom,
+        double? left, double? right, string? orientation, int? sectionIndex)
     {
-        return Task.Run(() =>
+        var doc = ctx.Document;
+        var idx = sectionIndex ?? 0;
+
+        if (idx < 0 || idx >= doc.Sections.Count)
+            throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
+
+        var pageSetup = doc.Sections[idx].PageSetup;
+        List<string> changes = [];
+
+        if (top.HasValue)
         {
-            var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
+            pageSetup.TopMargin = top.Value;
+            changes.Add($"Top margin: {top.Value}");
+        }
 
-            var doc = new Document(path);
-            var pageCount = doc.PageCount;
+        if (bottom.HasValue)
+        {
+            pageSetup.BottomMargin = bottom.Value;
+            changes.Add($"Bottom margin: {bottom.Value}");
+        }
 
-            if (pageIndex < 0 || pageIndex >= pageCount)
-                throw new ArgumentException(
-                    $"pageIndex must be between 0 and {pageCount - 1} (document has {pageCount} pages)");
+        if (left.HasValue)
+        {
+            pageSetup.LeftMargin = left.Value;
+            changes.Add($"Left margin: {left.Value}");
+        }
 
-            // Use ExtractPages to rebuild document without the specified page
-            var resultDoc = new Document();
-            resultDoc.RemoveAllChildren();
+        if (right.HasValue)
+        {
+            pageSetup.RightMargin = right.Value;
+            changes.Add($"Right margin: {right.Value}");
+        }
 
-            // Extract pages before the deleted page
-            if (pageIndex > 0)
-            {
-                var beforePages = doc.ExtractPages(0, pageIndex);
-                foreach (var section in beforePages.Sections.Cast<Section>())
-                    resultDoc.AppendChild(resultDoc.ImportNode(section, true));
-            }
+        if (!string.IsNullOrEmpty(orientation))
+        {
+            pageSetup.Orientation = orientation.ToLower() == "landscape" ? Orientation.Landscape : Orientation.Portrait;
+            changes.Add($"Orientation: {orientation}");
+        }
 
-            // Extract pages after the deleted page
-            if (pageIndex < pageCount - 1)
-            {
-                var afterPages = doc.ExtractPages(pageIndex + 1, pageCount - pageIndex - 1);
-                foreach (var section in afterPages.Sections.Cast<Section>())
-                    resultDoc.AppendChild(resultDoc.ImportNode(section, true));
-            }
+        ctx.Save(outputPath);
+        return $"Page setup updated: {string.Join(", ", changes)}";
+    }
 
-            resultDoc.Save(outputPath);
+    /// <summary>
+    ///     Deletes a specific page from the document by extracting and recombining pages.
+    /// </summary>
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="pageIndex">The page index to delete (0-based).</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when page index is not provided or out of range.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when output path is required but not provided.</exception>
+    private static string DeletePage(DocumentContext<Document> ctx, string? outputPath, int? pageIndex)
+    {
+        if (!pageIndex.HasValue)
+            throw new ArgumentException("pageIndex parameter is required for delete_page operation");
+
+        var doc = ctx.Document;
+        var pageCount = doc.PageCount;
+
+        if (pageIndex.Value < 0 || pageIndex.Value >= pageCount)
+            throw new ArgumentException(
+                $"pageIndex must be between 0 and {pageCount - 1} (document has {pageCount} pages)");
+
+        var resultDoc = new Document();
+        resultDoc.RemoveAllChildren();
+
+        if (pageIndex.Value > 0)
+        {
+            var beforePages = doc.ExtractPages(0, pageIndex.Value);
+            foreach (var section in beforePages.Sections.Cast<Section>())
+                resultDoc.AppendChild(resultDoc.ImportNode(section, true));
+        }
+
+        if (pageIndex.Value < pageCount - 1)
+        {
+            var afterPages = doc.ExtractPages(pageIndex.Value + 1, pageCount - pageIndex.Value - 1);
+            foreach (var section in afterPages.Sections.Cast<Section>())
+                resultDoc.AppendChild(resultDoc.ImportNode(section, true));
+        }
+
+        // For file mode, save the result document directly
+        if (!ctx.IsSession)
+        {
+            var savePath = outputPath ?? throw new InvalidOperationException("Output path required for file mode");
+            resultDoc.Save(savePath);
             return
-                $"Page {pageIndex} deleted successfully (document now has {resultDoc.PageCount} pages)\nOutput: {outputPath}";
-        });
+                $"Page {pageIndex.Value} deleted successfully (document now has {resultDoc.PageCount} pages)\nOutput: {savePath}";
+        }
+
+        // For session mode, we need to update the session document
+        // Clear the current document and copy content from result
+        doc.RemoveAllChildren();
+        foreach (var section in resultDoc.Sections.Cast<Section>())
+            doc.AppendChild(doc.ImportNode(section, true));
+
+        ctx.Save(outputPath);
+        return
+            $"Page {pageIndex.Value} deleted successfully (document now has {doc.PageCount} pages)\n{ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Inserts a blank page into the document using LayoutCollector for precise positioning
+    ///     Inserts a blank page at the specified position in the document.
     /// </summary>
-    /// <param name="path">Word document file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing optional insertAtPageIndex</param>
-    /// <returns>Success message</returns>
-    private Task<string> InsertBlankPageAsync(string path, string outputPath, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="insertAtPageIndex">The page index to insert at (0-based).</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when insert page index is out of range.</exception>
+    private static string InsertBlankPage(DocumentContext<Document> ctx, string? outputPath, int? insertAtPageIndex)
     {
-        return Task.Run(() =>
+        var doc = ctx.Document;
+        var builder = new DocumentBuilder(doc);
+
+        if (insertAtPageIndex is > 0)
         {
-            var insertAtPageIndex = ArgumentHelper.GetIntNullable(arguments, "insertAtPageIndex");
+            var pageCount = doc.PageCount;
+            if (insertAtPageIndex.Value > pageCount)
+                throw new ArgumentException(
+                    $"insertAtPageIndex must be between 0 and {pageCount} (document has {pageCount} pages)");
 
-            var doc = new Document(path);
-            var builder = new DocumentBuilder(doc);
+            var layoutCollector = new LayoutCollector(doc);
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
 
-            if (insertAtPageIndex is > 0)
+            Paragraph? targetParagraph = null;
+            foreach (var para in paragraphs)
             {
-                var pageCount = doc.PageCount;
-                if (insertAtPageIndex.Value > pageCount)
-                    throw new ArgumentException(
-                        $"insertAtPageIndex must be between 0 and {pageCount} (document has {pageCount} pages)");
-
-                // Use LayoutCollector to find the first node on the target page
-                var layoutCollector = new LayoutCollector(doc);
-                var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
-
-                Paragraph? targetParagraph = null;
-                foreach (var para in paragraphs)
+                var paraPage = layoutCollector.GetStartPageIndex(para);
+                if (paraPage == insertAtPageIndex.Value + 1)
                 {
-                    var paraPage = layoutCollector.GetStartPageIndex(para);
-                    if (paraPage == insertAtPageIndex.Value + 1) // LayoutCollector uses 1-based page index
-                    {
-                        targetParagraph = para;
-                        break;
-                    }
-                }
-
-                if (targetParagraph != null)
-                {
-                    builder.MoveTo(targetParagraph);
-                    builder.InsertBreak(BreakType.PageBreak);
-                }
-                else
-                {
-                    // Fallback: insert at document end
-                    builder.MoveToDocumentEnd();
-                    builder.InsertBreak(BreakType.PageBreak);
+                    targetParagraph = para;
+                    break;
                 }
             }
-            else
+
+            if (targetParagraph != null)
             {
-                builder.MoveToDocumentEnd();
-                builder.InsertBreak(BreakType.PageBreak);
-            }
-
-            doc.Save(outputPath);
-            return $"Blank page inserted at page {insertAtPageIndex ?? doc.PageCount}\nOutput: {outputPath}";
-        });
-    }
-
-    /// <summary>
-    ///     Adds a page break to the document at specified paragraph or document end
-    /// </summary>
-    /// <param name="path">Word document file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing optional paragraphIndex</param>
-    /// <returns>Success message</returns>
-    private Task<string> AddPageBreakAsync(string path, string outputPath, JsonObject? arguments)
-    {
-        return Task.Run(() =>
-        {
-            var paragraphIndex = ArgumentHelper.GetIntNullable(arguments, "paragraphIndex");
-
-            var doc = new Document(path);
-            var builder = new DocumentBuilder(doc);
-
-            if (paragraphIndex.HasValue)
-            {
-                var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
-                if (paragraphIndex.Value < 0 || paragraphIndex.Value >= paragraphs.Count)
-                    throw new ArgumentException($"paragraphIndex must be between 0 and {paragraphs.Count - 1}");
-
-                builder.MoveTo(paragraphs[paragraphIndex.Value]);
+                builder.MoveTo(targetParagraph);
                 builder.InsertBreak(BreakType.PageBreak);
             }
             else
@@ -586,10 +457,47 @@ Usage examples:
                 builder.MoveToDocumentEnd();
                 builder.InsertBreak(BreakType.PageBreak);
             }
+        }
+        else
+        {
+            builder.MoveToDocumentEnd();
+            builder.InsertBreak(BreakType.PageBreak);
+        }
 
-            doc.Save(outputPath);
-            var location = paragraphIndex.HasValue ? $"after paragraph {paragraphIndex.Value}" : "at document end";
-            return $"Page break added {location}\nOutput: {outputPath}";
-        });
+        ctx.Save(outputPath);
+        return $"Blank page inserted at page {insertAtPageIndex ?? doc.PageCount}\n{ctx.GetOutputMessage(outputPath)}";
+    }
+
+    /// <summary>
+    ///     Adds a page break at the specified paragraph or at document end.
+    /// </summary>
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="paragraphIndex">The paragraph index to insert page break after (0-based).</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when paragraph index is out of range.</exception>
+    private static string AddPageBreak(DocumentContext<Document> ctx, string? outputPath, int? paragraphIndex)
+    {
+        var doc = ctx.Document;
+        var builder = new DocumentBuilder(doc);
+
+        if (paragraphIndex.HasValue)
+        {
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
+            if (paragraphIndex.Value < 0 || paragraphIndex.Value >= paragraphs.Count)
+                throw new ArgumentException($"paragraphIndex must be between 0 and {paragraphs.Count - 1}");
+
+            builder.MoveTo(paragraphs[paragraphIndex.Value]);
+            builder.InsertBreak(BreakType.PageBreak);
+        }
+        else
+        {
+            builder.MoveToDocumentEnd();
+            builder.InsertBreak(BreakType.PageBreak);
+        }
+
+        ctx.Save(outputPath);
+        var location = paragraphIndex.HasValue ? $"after paragraph {paragraphIndex.Value}" : "at document end";
+        return $"Page break added {location}\n{ctx.GetOutputMessage(outputPath)}";
     }
 }

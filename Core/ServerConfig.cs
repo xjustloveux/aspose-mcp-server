@@ -32,55 +32,135 @@ public class ServerConfig
     public string? LicensePath { get; private set; }
 
     /// <summary>
-    ///     Loads configuration from command line arguments
+    ///     Loads configuration from environment variables and command line arguments.
+    ///     Command line arguments take precedence over environment variables.
     /// </summary>
     /// <param name="args">Command line arguments</param>
     /// <returns>ServerConfig instance</returns>
     public static ServerConfig LoadFromArgs(string[] args)
     {
-        var config = new ServerConfig
+        var config = new ServerConfig();
+
+        // Load from environment variables first (as defaults)
+        config.LoadFromEnvironment();
+
+        // Command line arguments override environment variables
+        config.LoadFromCommandLine(args);
+
+        return config;
+    }
+
+    /// <summary>
+    ///     Loads configuration from environment variables
+    /// </summary>
+    private void LoadFromEnvironment()
+    {
+        // License path
+        var licensePath = Environment.GetEnvironmentVariable("ASPOSE_LICENSE_PATH");
+        if (!string.IsNullOrEmpty(licensePath))
+            LicensePath = licensePath;
+
+        // Tools (format: "all" or "word,excel,pdf,ppt")
+        var tools = Environment.GetEnvironmentVariable("ASPOSE_TOOLS");
+        if (!string.IsNullOrEmpty(tools)) ParseTools(tools);
+    }
+
+    /// <summary>
+    ///     Parses tool specification string and enables corresponding tools
+    /// </summary>
+    /// <param name="tools">Comma-separated tool names or "all"</param>
+    private void ParseTools(string tools)
+    {
+        // Reset all tools first
+        EnableWord = false;
+        EnableExcel = false;
+        EnablePowerPoint = false;
+        EnablePdf = false;
+
+        var toolList = tools.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        foreach (var tool in toolList)
+            switch (tool.ToLower())
+            {
+                case "all":
+                    EnableWord = true;
+                    EnableExcel = true;
+                    EnablePowerPoint = true;
+                    EnablePdf = true;
+                    return; // "all" includes everything, no need to continue
+                case "word":
+                    EnableWord = true;
+                    break;
+                case "excel":
+                    EnableExcel = true;
+                    break;
+                case "powerpoint":
+                case "ppt":
+                    EnablePowerPoint = true;
+                    break;
+                case "pdf":
+                    EnablePdf = true;
+                    break;
+            }
+    }
+
+    /// <summary>
+    ///     Loads configuration from command line arguments (overrides environment variables)
+    /// </summary>
+    /// <param name="args">Command line arguments</param>
+    private void LoadFromCommandLine(string[] args)
+    {
+        if (args.Length == 0) return;
+
+        // Check if any tool argument is specified
+        var hasToolArg = args.Any(a =>
+            a.Equals("--word", StringComparison.OrdinalIgnoreCase) ||
+            a.Equals("--excel", StringComparison.OrdinalIgnoreCase) ||
+            a.Equals("--powerpoint", StringComparison.OrdinalIgnoreCase) ||
+            a.Equals("--ppt", StringComparison.OrdinalIgnoreCase) ||
+            a.Equals("--pdf", StringComparison.OrdinalIgnoreCase) ||
+            a.Equals("--all", StringComparison.OrdinalIgnoreCase));
+
+        // Only reset tools if command line specifies tools (override env var)
+        if (hasToolArg)
         {
-            LicensePath = Environment.GetEnvironmentVariable("ASPOSE_LICENSE_PATH")
-        };
+            EnableWord = false;
+            EnableExcel = false;
+            EnablePowerPoint = false;
+            EnablePdf = false;
+        }
 
-        if (args.Length == 0) return config;
-
-        config.EnableWord = false;
-        config.EnableExcel = false;
-        config.EnablePowerPoint = false;
-        config.EnablePdf = false;
-
-        foreach (var arg in args)
-            switch (arg.ToLower())
+        foreach (var originalArg in args)
+        {
+            var arg = originalArg.ToLower();
+            switch (arg)
             {
                 case "--word":
-                    config.EnableWord = true;
+                    EnableWord = true;
                     break;
                 case "--excel":
-                    config.EnableExcel = true;
+                    EnableExcel = true;
                     break;
                 case "--powerpoint":
                 case "--ppt":
-                    config.EnablePowerPoint = true;
+                    EnablePowerPoint = true;
                     break;
                 case "--pdf":
-                    config.EnablePdf = true;
+                    EnablePdf = true;
                     break;
                 case "--all":
-                    config.EnableWord = true;
-                    config.EnableExcel = true;
-                    config.EnablePowerPoint = true;
-                    config.EnablePdf = true;
+                    EnableWord = true;
+                    EnableExcel = true;
+                    EnablePowerPoint = true;
+                    EnablePdf = true;
                     break;
                 default:
-                    if (arg.StartsWith("--license:", StringComparison.OrdinalIgnoreCase))
-                        config.LicensePath = arg.Substring("--license:".Length);
-                    else if (arg.StartsWith("--license=", StringComparison.OrdinalIgnoreCase))
-                        config.LicensePath = arg.Substring("--license=".Length);
+                    if (originalArg.StartsWith("--license:", StringComparison.OrdinalIgnoreCase))
+                        LicensePath = originalArg["--license:".Length..];
+                    else if (originalArg.StartsWith("--license=", StringComparison.OrdinalIgnoreCase))
+                        LicensePath = originalArg["--license=".Length..];
                     break;
             }
-
-        return config;
+        }
     }
 
     /// <summary>
@@ -89,7 +169,7 @@ public class ServerConfig
     /// <returns>String listing enabled tools, or "None" if none are enabled</returns>
     public string GetEnabledToolsInfo()
     {
-        var enabled = new List<string>();
+        List<string> enabled = [];
         if (EnableWord) enabled.Add("Word");
         if (EnableExcel) enabled.Add("Excel");
         if (EnablePowerPoint) enabled.Add("PowerPoint");

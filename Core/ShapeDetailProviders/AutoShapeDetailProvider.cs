@@ -7,13 +7,16 @@ namespace AsposeMcpServer.Core.ShapeDetailProviders;
 /// </summary>
 public class AutoShapeDetailProvider : IShapeDetailProvider
 {
+    /// <inheritdoc />
     public string TypeName => "AutoShape";
 
+    /// <inheritdoc />
     public bool CanHandle(IShape shape)
     {
         return shape is IAutoShape;
     }
 
+    /// <inheritdoc />
     public object? GetDetails(IShape shape, IPresentation presentation)
     {
         if (shape is not IAutoShape autoShape)
@@ -29,11 +32,10 @@ public class AutoShapeDetailProvider : IShapeDetailProvider
         var paragraphCount = autoShape.TextFrame?.Paragraphs.Count ?? 0;
         var hasTextFrame = autoShape.TextFrame != null;
 
-        // Extract adjustment values manually since IAdjustValueCollection doesn't support LINQ
         object[]? adjustments = null;
         if (autoShape.Adjustments.Count > 0)
         {
-            var adjustmentList = new List<object>();
+            List<object> adjustmentList = [];
             for (var i = 0; i < autoShape.Adjustments.Count; i++)
                 adjustmentList.Add(new { index = i, value = autoShape.Adjustments[i].RawValue });
             adjustments = adjustmentList.ToArray();

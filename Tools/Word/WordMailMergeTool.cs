@@ -1,143 +1,88 @@
+using System.ComponentModel;
 using System.Text;
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using Aspose.Words.MailMerging;
-using AsposeMcpServer.Core;
+using AsposeMcpServer.Core.Helpers;
+using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Word;
 
 /// <summary>
 ///     Tool for performing mail merge operations on Word document templates
 /// </summary>
-public class WordMailMergeTool : IAsposeTool
+[McpServerToolType]
+public class WordMailMergeTool
 {
-    /// <summary>
-    ///     Gets the description of the tool and its usage examples
-    /// </summary>
-    public string Description => @"Perform mail merge on a Word document template.
+    [McpServerTool(Name = "word_mail_merge")]
+    [Description(@"Perform mail merge on a Word document template.
 
 Usage examples:
 - Single record: word_mail_merge(templatePath='template.docx', outputPath='output.docx', data={'name':'John','address':'123 Main St'})
-- Multiple records: word_mail_merge(templatePath='template.docx', outputPath='output.docx', dataArray=[{'name':'John'},{'name':'Jane'}])";
-
-    /// <summary>
-    ///     Gets the JSON schema defining the input parameters for the tool
-    /// </summary>
-    public object InputSchema => new
-    {
-        type = "object",
-        properties = new
-        {
-            templatePath = new
-            {
-                type = "string",
-                description = "Template file path (required)"
-            },
-            outputPath = new
-            {
-                type = "string",
-                description =
-                    "Output file path (required). For multiple records, files will be named output_1.docx, output_2.docx, etc."
-            },
-            data = new
-            {
-                type = "object",
-                description = "Key-value pairs for mail merge fields (for single record)"
-            },
-            dataArray = new
-            {
-                type = "array",
-                description =
-                    "Array of objects for multiple records. Each object contains key-value pairs for mail merge fields. Example: [{'name':'John','city':'NYC'},{'name':'Jane','city':'LA'}]",
-                items = new { type = "object" }
-            },
-            cleanupOptions = new
-            {
-                type = "array",
-                description = @"Cleanup options to apply after mail merge. Available options:
+- Multiple records: word_mail_merge(templatePath='template.docx', outputPath='output.docx', dataArray=[{'name':'John'},{'name':'Jane'}])")]
+    public string Execute(
+        [Description("Template file path (required)")]
+        string templatePath,
+        [Description(
+            "Output file path (required). For multiple records, files will be named output_1.docx, output_2.docx, etc.")]
+        string outputPath,
+        [Description("Key-value pairs for mail merge fields (for single record), as JSON object")]
+        string? data = null,
+        [Description(
+            "Array of objects for multiple records, as JSON array. Each object contains key-value pairs for mail merge fields. Example: [{'name':'John','city':'NYC'},{'name':'Jane','city':'LA'}]")]
+        string? dataArray = null,
+        [Description(@"Cleanup options to apply after mail merge, as comma-separated string. Available options:
 - 'removeUnusedFields': Remove merge fields that were not populated
 - 'removeUnusedRegions': Remove mail merge regions that were not populated
 - 'removeEmptyParagraphs': Remove paragraphs that become empty after merge
 - 'removeContainingFields': Remove paragraphs containing empty merge fields
 - 'removeStaticFields': Remove static fields (like PAGE, DATE)
-Default: ['removeUnusedFields', 'removeEmptyParagraphs']",
-                items = new { type = "string" }
-            }
-        },
-        required = new[] { "templatePath", "outputPath" }
-    };
-
-    /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments
-    /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters</param>
-    /// <returns>Result message as a string</returns>
-    /// <exception cref="ArgumentException">Thrown when required parameters are missing or invalid.</exception>
-    public Task<string> ExecuteAsync(JsonObject? arguments)
+Default: 'removeUnusedFields,removeEmptyParagraphs'")]
+        string? cleanupOptions = null)
     {
-        return Task.Run(() =>
-        {
-            try
-            {
-                var templatePath = ArgumentHelper.GetString(arguments, "templatePath");
-                var outputPath = ArgumentHelper.GetString(arguments, "outputPath");
-                var data = ArgumentHelper.GetObject(arguments, "data", false);
-                var dataArray = ArgumentHelper.GetArray(arguments, "dataArray", false);
-                var cleanupOptionsArray = ArgumentHelper.GetArray(arguments, "cleanupOptions", false);
+        SecurityHelper.ValidateFilePath(templatePath, "templatePath", true);
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
-                SecurityHelper.ValidateFilePath(templatePath, "templatePath", true);
-                SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+        // Parse data and dataArray from JSON strings
+        JsonObject? dataObject = null;
+        JsonArray? dataArrayObject = null;
 
-                // Validate that either data or dataArray is provided
-                if (data == null && dataArray == null)
-                    throw new ArgumentException(
-                        "Either 'data' (for single record) or 'dataArray' (for multiple records) must be provided");
+        if (!string.IsNullOrEmpty(data)) dataObject = JsonNode.Parse(data) as JsonObject;
 
-                if (data != null && dataArray != null)
-                    throw new ArgumentException(
-                        "Cannot specify both 'data' and 'dataArray'. Use 'data' for single record or 'dataArray' for multiple records");
+        if (!string.IsNullOrEmpty(dataArray)) dataArrayObject = JsonNode.Parse(dataArray) as JsonArray;
 
-                // Parse cleanup options
-                var cleanupOptions = ParseCleanupOptions(cleanupOptionsArray);
+        // Validate that either data or dataArray is provided
+        if (dataObject == null && dataArrayObject == null)
+            throw new ArgumentException(
+                "Either 'data' (for single record) or 'dataArray' (for multiple records) must be provided");
 
-                if (dataArray is { Count: > 0 })
-                    // Multiple records mode
-                    return ExecuteMultipleRecords(templatePath, outputPath, dataArray, cleanupOptions);
+        if (dataObject != null && dataArrayObject != null)
+            throw new ArgumentException(
+                "Cannot specify both 'data' and 'dataArray'. Use 'data' for single record or 'dataArray' for multiple records");
 
-                if (data != null)
-                    // Single record mode
-                    return ExecuteSingleRecord(templatePath, outputPath, data, cleanupOptions);
+        // Parse cleanup options
+        var cleanupOptionsFlags = ParseCleanupOptions(cleanupOptions);
 
-                throw new ArgumentException("No data provided for mail merge");
-            }
-            catch (FileNotFoundException ex)
-            {
-                return $"Error: Template file not found - {ex.Message}";
-            }
-            catch (IOException ex)
-            {
-                return $"Error: File access error - {ex.Message}. The file may be in use by another application.";
-            }
-            catch (ArgumentException ex)
-            {
-                return $"Error: Invalid argument - {ex.Message}";
-            }
-            catch (Exception ex)
-            {
-                return $"Error: Mail merge failed - {ex.Message}";
-            }
-        });
+        if (dataArrayObject is { Count: > 0 })
+            // Multiple records mode
+            return ExecuteMultipleRecords(templatePath, outputPath, dataArrayObject, cleanupOptionsFlags);
+
+        if (dataObject != null)
+            // Single record mode
+            return ExecuteSingleRecord(templatePath, outputPath, dataObject, cleanupOptionsFlags);
+
+        throw new ArgumentException("No data provided for mail merge");
     }
 
     /// <summary>
-    ///     Executes mail merge for a single record
+    ///     Executes mail merge for a single record.
     /// </summary>
-    /// <param name="templatePath">Template file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="data">Key-value pairs for mail merge fields</param>
-    /// <param name="cleanupOptions">Cleanup options to apply after merge</param>
-    /// <returns>Success message</returns>
-    private string ExecuteSingleRecord(string templatePath, string outputPath, JsonObject data,
+    /// <param name="templatePath">The template file path.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="data">The JSON object containing field names and values.</param>
+    /// <param name="cleanupOptions">The mail merge cleanup options to apply.</param>
+    /// <returns>A message indicating the result of the mail merge operation.</returns>
+    private static string ExecuteSingleRecord(string templatePath, string outputPath, JsonObject data,
         MailMergeCleanupOptions cleanupOptions)
     {
         var doc = new Document(templatePath) { MailMerge = { CleanupOptions = cleanupOptions } };
@@ -160,17 +105,17 @@ Default: ['removeUnusedFields', 'removeEmptyParagraphs']",
     }
 
     /// <summary>
-    ///     Executes mail merge for multiple records
+    ///     Executes mail merge for multiple records.
     /// </summary>
-    /// <param name="templatePath">Template file path</param>
-    /// <param name="outputPath">Base output file path (will be suffixed with _1, _2, etc.)</param>
-    /// <param name="dataArray">Array of objects containing key-value pairs for each record</param>
-    /// <param name="cleanupOptions">Cleanup options to apply after merge</param>
-    /// <returns>Success message with list of output files</returns>
-    private string ExecuteMultipleRecords(string templatePath, string outputPath, JsonArray dataArray,
+    /// <param name="templatePath">The template file path.</param>
+    /// <param name="outputPath">The base output file path (files will be numbered).</param>
+    /// <param name="dataArray">The JSON array containing multiple record objects.</param>
+    /// <param name="cleanupOptions">The mail merge cleanup options to apply.</param>
+    /// <returns>A message indicating the result of the mail merge operation.</returns>
+    private static string ExecuteMultipleRecords(string templatePath, string outputPath, JsonArray dataArray,
         MailMergeCleanupOptions cleanupOptions)
     {
-        var outputFiles = new List<string>();
+        List<string> outputFiles = [];
         var outputDir = Path.GetDirectoryName(outputPath) ?? ".";
         var outputName = Path.GetFileNameWithoutExtension(outputPath);
         var outputExt = Path.GetExtension(outputPath);
@@ -209,22 +154,22 @@ Default: ['removeUnusedFields', 'removeEmptyParagraphs']",
     }
 
     /// <summary>
-    ///     Parses cleanup options from JSON array
+    ///     Parses cleanup options from comma-separated string.
     /// </summary>
-    /// <param name="optionsArray">Array of cleanup option strings</param>
-    /// <returns>Combined MailMergeCleanupOptions flags</returns>
-    private MailMergeCleanupOptions ParseCleanupOptions(JsonArray? optionsArray)
+    /// <param name="optionsString">The comma-separated cleanup options string.</param>
+    /// <returns>The parsed MailMergeCleanupOptions flags.</returns>
+    private static MailMergeCleanupOptions ParseCleanupOptions(string? optionsString)
     {
         // Default cleanup options
-        if (optionsArray == null || optionsArray.Count == 0)
+        if (string.IsNullOrEmpty(optionsString))
             return MailMergeCleanupOptions.RemoveUnusedFields | MailMergeCleanupOptions.RemoveEmptyParagraphs;
 
         var options = MailMergeCleanupOptions.None;
+        var optionsList =
+            optionsString.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-        foreach (var option in optionsArray)
-        {
-            var optionStr = option?.ToString().ToLower();
-            options |= optionStr switch
+        foreach (var option in optionsList)
+            options |= option.ToLower() switch
             {
                 "removeunusedfields" => MailMergeCleanupOptions.RemoveUnusedFields,
                 "removeunusedregions" => MailMergeCleanupOptions.RemoveUnusedRegions,
@@ -233,7 +178,6 @@ Default: ['removeUnusedFields', 'removeEmptyParagraphs']",
                 "removestaticfields" => MailMergeCleanupOptions.RemoveStaticFields,
                 _ => MailMergeCleanupOptions.None
             };
-        }
 
         return options;
     }

@@ -1,107 +1,69 @@
-using System.Text.Json.Nodes;
+using System.ComponentModel;
 using Aspose.Cells;
-using AsposeMcpServer.Core;
+using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Session;
+using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
 
 /// <summary>
 ///     Unified tool for managing Excel row and column groups (group/ungroup).
 /// </summary>
-public class ExcelGroupTool : IAsposeTool
+[McpServerToolType]
+public class ExcelGroupTool
 {
     /// <summary>
-    ///     Gets the description of the tool and its usage examples.
+    ///     Document session manager for in-memory editing support.
     /// </summary>
-    public string Description =>
-        @"Manage Excel groups. Supports 4 operations: group_rows, ungroup_rows, group_columns, ungroup_columns.
+    private readonly DocumentSessionManager? _sessionManager;
+
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="ExcelGroupTool" /> class.
+    /// </summary>
+    /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
+    public ExcelGroupTool(DocumentSessionManager? sessionManager = null)
+    {
+        _sessionManager = sessionManager;
+    }
+
+    [McpServerTool(Name = "excel_group")]
+    [Description(@"Manage Excel groups. Supports 4 operations: group_rows, ungroup_rows, group_columns, ungroup_columns.
 
 Usage examples:
 - Group rows: excel_group(operation='group_rows', path='book.xlsx', startRow=1, endRow=5)
 - Ungroup rows: excel_group(operation='ungroup_rows', path='book.xlsx', startRow=1, endRow=5)
 - Group columns: excel_group(operation='group_columns', path='book.xlsx', startColumn=1, endColumn=3)
-- Ungroup columns: excel_group(operation='ungroup_columns', path='book.xlsx', startColumn=1, endColumn=3)";
-
-    /// <summary>
-    ///     Gets the JSON schema defining the input parameters for the tool.
-    /// </summary>
-    public object InputSchema => new
+- Ungroup columns: excel_group(operation='ungroup_columns', path='book.xlsx', startColumn=1, endColumn=3)")]
+    public string Execute(
+        [Description("Operation: group_rows, ungroup_rows, group_columns, ungroup_columns")]
+        string operation,
+        [Description("Excel file path (required if no sessionId)")]
+        string? path = null,
+        [Description("Session ID for in-memory editing")]
+        string? sessionId = null,
+        [Description("Output file path (file mode only)")]
+        string? outputPath = null,
+        [Description("Sheet index (0-based, default: 0)")]
+        int sheetIndex = 0,
+        [Description("Start row index (0-based, required for group_rows/ungroup_rows)")]
+        int? startRow = null,
+        [Description("End row index (0-based, must be >= startRow, required for group_rows/ungroup_rows)")]
+        int? endRow = null,
+        [Description("Start column index (0-based, required for group_columns/ungroup_columns)")]
+        int? startColumn = null,
+        [Description("End column index (0-based, must be >= startColumn, required for group_columns/ungroup_columns)")]
+        int? endColumn = null,
+        [Description("Collapse group initially (optional, for group_rows/group_columns, default: false)")]
+        bool isCollapsed = false)
     {
-        type = "object",
-        properties = new
-        {
-            operation = new
-            {
-                type = "string",
-                description = @"Operation to perform.
-- 'group_rows': Group rows (required params: path, startRow, endRow)
-- 'ungroup_rows': Ungroup rows (required params: path, startRow, endRow)
-- 'group_columns': Group columns (required params: path, startColumn, endColumn)
-- 'ungroup_columns': Ungroup columns (required params: path, startColumn, endColumn)",
-                @enum = new[] { "group_rows", "ungroup_rows", "group_columns", "ungroup_columns" }
-            },
-            path = new
-            {
-                type = "string",
-                description = "Excel file path (required for all operations)"
-            },
-            sheetIndex = new
-            {
-                type = "number",
-                description = "Sheet index (0-based, optional, default: 0)"
-            },
-            startRow = new
-            {
-                type = "number",
-                description = "Start row index (0-based, required for group_rows/ungroup_rows)"
-            },
-            endRow = new
-            {
-                type = "number",
-                description = "End row index (0-based, must be >= startRow, required for group_rows/ungroup_rows)"
-            },
-            startColumn = new
-            {
-                type = "number",
-                description = "Start column index (0-based, required for group_columns/ungroup_columns)"
-            },
-            endColumn = new
-            {
-                type = "number",
-                description =
-                    "End column index (0-based, must be >= startColumn, required for group_columns/ungroup_columns)"
-            },
-            isCollapsed = new
-            {
-                type = "boolean",
-                description = "Collapse group initially (optional, for group_rows/group_columns, default: false)"
-            },
-            outputPath = new
-            {
-                type = "string",
-                description = "Output file path (optional, defaults to input path)"
-            }
-        },
-        required = new[] { "operation", "path" }
-    };
-
-    /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments.
-    /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters.</param>
-    /// <returns>Result message as a string.</returns>
-    public async Task<string> ExecuteAsync(JsonObject? arguments)
-    {
-        var operation = ArgumentHelper.GetString(arguments, "operation");
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path);
 
         return operation.ToLower() switch
         {
-            "group_rows" => await GroupRowsAsync(path, outputPath, sheetIndex, arguments),
-            "ungroup_rows" => await UngroupRowsAsync(path, outputPath, sheetIndex, arguments),
-            "group_columns" => await GroupColumnsAsync(path, outputPath, sheetIndex, arguments),
-            "ungroup_columns" => await UngroupColumnsAsync(path, outputPath, sheetIndex, arguments),
+            "group_rows" => GroupRows(ctx, outputPath, sheetIndex, startRow, endRow, isCollapsed),
+            "ungroup_rows" => UngroupRows(ctx, outputPath, sheetIndex, startRow, endRow),
+            "group_columns" => GroupColumns(ctx, outputPath, sheetIndex, startColumn, endColumn, isCollapsed),
+            "ungroup_columns" => UngroupColumns(ctx, outputPath, sheetIndex, startColumn, endColumn),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -109,131 +71,126 @@ Usage examples:
     /// <summary>
     ///     Groups rows together.
     /// </summary>
-    /// <param name="path">Excel file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="sheetIndex">Worksheet index (0-based).</param>
-    /// <param name="arguments">JSON arguments containing startRow, endRow, optional isCollapsed.</param>
-    /// <returns>Success message.</returns>
-    private Task<string> GroupRowsAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="sheetIndex">The worksheet index.</param>
+    /// <param name="startRow">The start row index (0-based).</param>
+    /// <param name="endRow">The end row index (0-based).</param>
+    /// <param name="isCollapsed">Whether to collapse the group initially.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when startRow or endRow is not provided, or when the range is invalid.</exception>
+    private static string GroupRows(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex, int? startRow,
+        int? endRow, bool isCollapsed)
     {
-        return Task.Run(() =>
-        {
-            var startRow = GetRequiredInt(arguments, "startRow", "group_rows");
-            var endRow = GetRequiredInt(arguments, "endRow", "group_rows");
-            var isCollapsed = ArgumentHelper.GetBool(arguments, "isCollapsed", false);
+        if (!startRow.HasValue)
+            throw new ArgumentException("Operation 'group_rows' requires parameter 'startRow'.");
+        if (!endRow.HasValue)
+            throw new ArgumentException("Operation 'group_rows' requires parameter 'endRow'.");
 
-            ValidateRowRange(startRow, endRow);
+        ValidateRowRange(startRow.Value, endRow.Value);
 
-            using var workbook = new Workbook(path);
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-            worksheet.Cells.GroupRows(startRow, endRow, isCollapsed);
+        var workbook = ctx.Document;
+        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        worksheet.Cells.GroupRows(startRow.Value, endRow.Value, isCollapsed);
 
-            workbook.Save(outputPath);
-            return $"Rows {startRow}-{endRow} grouped in sheet {sheetIndex}. Output: {outputPath}";
-        });
+        ctx.Save(outputPath);
+        return $"Rows {startRow}-{endRow} grouped in sheet {sheetIndex}. {ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
     ///     Ungroups rows.
     /// </summary>
-    /// <param name="path">Excel file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="sheetIndex">Worksheet index (0-based).</param>
-    /// <param name="arguments">JSON arguments containing startRow, endRow.</param>
-    /// <returns>Success message.</returns>
-    private Task<string> UngroupRowsAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="sheetIndex">The worksheet index.</param>
+    /// <param name="startRow">The start row index (0-based).</param>
+    /// <param name="endRow">The end row index (0-based).</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when startRow or endRow is not provided, or when the range is invalid.</exception>
+    private static string UngroupRows(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex, int? startRow,
+        int? endRow)
     {
-        return Task.Run(() =>
-        {
-            var startRow = GetRequiredInt(arguments, "startRow", "ungroup_rows");
-            var endRow = GetRequiredInt(arguments, "endRow", "ungroup_rows");
+        if (!startRow.HasValue)
+            throw new ArgumentException("Operation 'ungroup_rows' requires parameter 'startRow'.");
+        if (!endRow.HasValue)
+            throw new ArgumentException("Operation 'ungroup_rows' requires parameter 'endRow'.");
 
-            ValidateRowRange(startRow, endRow);
+        ValidateRowRange(startRow.Value, endRow.Value);
 
-            using var workbook = new Workbook(path);
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-            worksheet.Cells.UngroupRows(startRow, endRow);
+        var workbook = ctx.Document;
+        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        worksheet.Cells.UngroupRows(startRow.Value, endRow.Value);
 
-            workbook.Save(outputPath);
-            return $"Rows {startRow}-{endRow} ungrouped in sheet {sheetIndex}. Output: {outputPath}";
-        });
+        ctx.Save(outputPath);
+        return $"Rows {startRow}-{endRow} ungrouped in sheet {sheetIndex}. {ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
     ///     Groups columns together.
     /// </summary>
-    /// <param name="path">Excel file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="sheetIndex">Worksheet index (0-based).</param>
-    /// <param name="arguments">JSON arguments containing startColumn, endColumn, optional isCollapsed.</param>
-    /// <returns>Success message.</returns>
-    private Task<string> GroupColumnsAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="sheetIndex">The worksheet index.</param>
+    /// <param name="startColumn">The start column index (0-based).</param>
+    /// <param name="endColumn">The end column index (0-based).</param>
+    /// <param name="isCollapsed">Whether to collapse the group initially.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when startColumn or endColumn is not provided, or when the range is invalid.</exception>
+    private static string GroupColumns(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex,
+        int? startColumn, int? endColumn, bool isCollapsed)
     {
-        return Task.Run(() =>
-        {
-            var startColumn = GetRequiredInt(arguments, "startColumn", "group_columns");
-            var endColumn = GetRequiredInt(arguments, "endColumn", "group_columns");
-            var isCollapsed = ArgumentHelper.GetBool(arguments, "isCollapsed", false);
+        if (!startColumn.HasValue)
+            throw new ArgumentException("Operation 'group_columns' requires parameter 'startColumn'.");
+        if (!endColumn.HasValue)
+            throw new ArgumentException("Operation 'group_columns' requires parameter 'endColumn'.");
 
-            ValidateColumnRange(startColumn, endColumn);
+        ValidateColumnRange(startColumn.Value, endColumn.Value);
 
-            using var workbook = new Workbook(path);
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-            worksheet.Cells.GroupColumns(startColumn, endColumn, isCollapsed);
+        var workbook = ctx.Document;
+        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        worksheet.Cells.GroupColumns(startColumn.Value, endColumn.Value, isCollapsed);
 
-            workbook.Save(outputPath);
-            return $"Columns {startColumn}-{endColumn} grouped in sheet {sheetIndex}. Output: {outputPath}";
-        });
+        ctx.Save(outputPath);
+        return $"Columns {startColumn}-{endColumn} grouped in sheet {sheetIndex}. {ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
     ///     Ungroups columns.
     /// </summary>
-    /// <param name="path">Excel file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="sheetIndex">Worksheet index (0-based).</param>
-    /// <param name="arguments">JSON arguments containing startColumn, endColumn.</param>
-    /// <returns>Success message.</returns>
-    private Task<string> UngroupColumnsAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="sheetIndex">The worksheet index.</param>
+    /// <param name="startColumn">The start column index (0-based).</param>
+    /// <param name="endColumn">The end column index (0-based).</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when startColumn or endColumn is not provided, or when the range is invalid.</exception>
+    private static string UngroupColumns(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex,
+        int? startColumn, int? endColumn)
     {
-        return Task.Run(() =>
-        {
-            var startColumn = GetRequiredInt(arguments, "startColumn", "ungroup_columns");
-            var endColumn = GetRequiredInt(arguments, "endColumn", "ungroup_columns");
+        if (!startColumn.HasValue)
+            throw new ArgumentException("Operation 'ungroup_columns' requires parameter 'startColumn'.");
+        if (!endColumn.HasValue)
+            throw new ArgumentException("Operation 'ungroup_columns' requires parameter 'endColumn'.");
 
-            ValidateColumnRange(startColumn, endColumn);
+        ValidateColumnRange(startColumn.Value, endColumn.Value);
 
-            using var workbook = new Workbook(path);
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-            worksheet.Cells.UngroupColumns(startColumn, endColumn);
+        var workbook = ctx.Document;
+        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        worksheet.Cells.UngroupColumns(startColumn.Value, endColumn.Value);
 
-            workbook.Save(outputPath);
-            return $"Columns {startColumn}-{endColumn} ungrouped in sheet {sheetIndex}. Output: {outputPath}";
-        });
-    }
-
-    /// <summary>
-    ///     Gets a required integer parameter and throws if not provided.
-    /// </summary>
-    /// <param name="arguments">JSON arguments.</param>
-    /// <param name="paramName">Parameter name.</param>
-    /// <param name="operationName">Operation name for error message.</param>
-    /// <returns>Parameter value.</returns>
-    /// <exception cref="ArgumentException">Thrown if parameter is not provided.</exception>
-    private static int GetRequiredInt(JsonObject? arguments, string paramName, string operationName)
-    {
-        var value = ArgumentHelper.GetIntNullable(arguments, paramName);
-        if (!value.HasValue)
-            throw new ArgumentException($"Operation '{operationName}' requires parameter '{paramName}'.");
-        return value.Value;
+        ctx.Save(outputPath);
+        return $"Columns {startColumn}-{endColumn} ungrouped in sheet {sheetIndex}. {ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
     ///     Validates row range indices.
     /// </summary>
-    /// <param name="startRow">Start row index.</param>
-    /// <param name="endRow">End row index.</param>
-    /// <exception cref="ArgumentException">Thrown if indices are invalid.</exception>
+    /// <param name="startRow">The start row index (0-based).</param>
+    /// <param name="endRow">The end row index (0-based).</param>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when startRow or endRow is negative, or when startRow is greater than
+    ///     endRow.
+    /// </exception>
     private static void ValidateRowRange(int startRow, int endRow)
     {
         if (startRow < 0)
@@ -247,9 +204,12 @@ Usage examples:
     /// <summary>
     ///     Validates column range indices.
     /// </summary>
-    /// <param name="startColumn">Start column index.</param>
-    /// <param name="endColumn">End column index.</param>
-    /// <exception cref="ArgumentException">Thrown if indices are invalid.</exception>
+    /// <param name="startColumn">The start column index (0-based).</param>
+    /// <param name="endColumn">The end column index (0-based).</param>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when startColumn or endColumn is negative, or when startColumn is greater
+    ///     than endColumn.
+    /// </exception>
     private static void ValidateColumnRange(int startColumn, int endColumn)
     {
         if (startColumn < 0)

@@ -1,7 +1,9 @@
+using System.ComponentModel;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using Aspose.Cells;
-using AsposeMcpServer.Core;
+using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Session;
+using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
 
@@ -9,101 +11,63 @@ namespace AsposeMcpServer.Tools.Excel;
 ///     Unified tool for managing Excel filters (auto filter, custom filter, get filter status).
 ///     Merges: ExcelAutoFilterTool, ExcelGetFilterStatusTool.
 /// </summary>
-public class ExcelFilterTool : IAsposeTool
+[McpServerToolType]
+public class ExcelFilterTool
 {
     /// <summary>
-    ///     Gets the description of the tool and its usage examples.
+    ///     Document session manager for in-memory editing support.
     /// </summary>
-    public string Description => @"Manage Excel filters. Supports 4 operations: apply, remove, filter, get_status.
+    private readonly DocumentSessionManager? _sessionManager;
+
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="ExcelFilterTool" /> class.
+    /// </summary>
+    /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
+    public ExcelFilterTool(DocumentSessionManager? sessionManager = null)
+    {
+        _sessionManager = sessionManager;
+    }
+
+    [McpServerTool(Name = "excel_filter")]
+    [Description(@"Manage Excel filters. Supports 4 operations: apply, remove, filter, get_status.
 
 Usage examples:
 - Apply auto filter: excel_filter(operation='apply', path='book.xlsx', range='A1:C10')
 - Remove filter: excel_filter(operation='remove', path='book.xlsx')
 - Filter by value: excel_filter(operation='filter', path='book.xlsx', range='A1:C10', columnIndex=0, criteria='Completed')
 - Filter by custom: excel_filter(operation='filter', path='book.xlsx', range='A1:C10', columnIndex=1, filterOperator='GreaterThan', criteria='100')
-- Get filter status: excel_filter(operation='get_status', path='book.xlsx')";
-
-    /// <summary>
-    ///     Gets the JSON schema defining the input parameters for the tool.
-    /// </summary>
-    public object InputSchema => new
-    {
-        type = "object",
-        properties = new
-        {
-            operation = new
-            {
-                type = "string",
-                description = @"Operation to perform.
+- Get filter status: excel_filter(operation='get_status', path='book.xlsx')")]
+    public string Execute(
+        [Description(@"Operation to perform.
 - 'apply': Apply auto filter dropdown buttons (required params: path, range)
 - 'remove': Remove auto filter completely (required params: path)
 - 'filter': Apply filter criteria to a column (required params: path, range, columnIndex, criteria)
-- 'get_status': Get filter status with details (required params: path)",
-                @enum = new[] { "apply", "remove", "filter", "get_status" }
-            },
-            path = new
-            {
-                type = "string",
-                description = "Excel file path (required for all operations)"
-            },
-            sheetIndex = new
-            {
-                type = "number",
-                description = "Sheet index (0-based, optional, default: 0)"
-            },
-            range = new
-            {
-                type = "string",
-                description = "Cell range to apply filter (e.g., 'A1:C10', required for apply/filter)"
-            },
-            columnIndex = new
-            {
-                type = "number",
-                description = "Column index within filter range to apply criteria (0-based, required for filter)"
-            },
-            criteria = new
-            {
-                type = "string",
-                description = "Filter criteria value (required for filter operation)"
-            },
-            filterOperator = new
-            {
-                type = "string",
-                description =
-                    "Filter operator for custom filter (optional, default: 'Equal'). Use with numeric/date criteria.",
-                @enum = new[]
-                {
-                    "Equal", "NotEqual", "GreaterThan", "GreaterOrEqual", "LessThan", "LessOrEqual", "Contains",
-                    "NotContains", "BeginsWith", "EndsWith"
-                }
-            },
-            outputPath = new
-            {
-                type = "string",
-                description = "Output file path (optional, for apply/remove/filter operations, defaults to input path)"
-            }
-        },
-        required = new[] { "operation", "path" }
-    };
-
-    /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments.
-    /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters.</param>
-    /// <returns>Result message as a string.</returns>
-    public async Task<string> ExecuteAsync(JsonObject? arguments)
+- 'get_status': Get filter status with details (required params: path)")]
+        string operation,
+        [Description("Excel file path (required if no sessionId)")]
+        string? path = null,
+        [Description("Session ID for in-memory editing")]
+        string? sessionId = null,
+        [Description("Output file path (file mode only)")]
+        string? outputPath = null,
+        [Description("Sheet index (0-based, default: 0)")]
+        int sheetIndex = 0,
+        [Description("Cell range to apply filter (e.g., 'A1:C10', required for apply/filter)")]
+        string? range = null,
+        [Description("Column index within filter range to apply criteria (0-based, required for filter)")]
+        int columnIndex = 0,
+        [Description("Filter criteria value (required for filter operation)")]
+        string? criteria = null,
+        [Description("Filter operator for custom filter (optional, default: 'Equal')")]
+        string filterOperator = "Equal")
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation");
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
-
         return operation.ToLower() switch
         {
-            "apply" => await ApplyFilterAsync(path, outputPath, sheetIndex, arguments),
-            "remove" => await RemoveFilterAsync(path, outputPath, sheetIndex),
-            "filter" => await FilterByValueAsync(path, outputPath, sheetIndex, arguments),
-            "get_status" => await GetFilterStatusAsync(path, sheetIndex),
+            "apply" => ApplyFilter(path, sessionId, outputPath, sheetIndex, range),
+            "remove" => RemoveFilter(path, sessionId, outputPath, sheetIndex),
+            "filter" => FilterByValue(path, sessionId, outputPath, sheetIndex, range, columnIndex, criteria,
+                filterOperator),
+            "get_status" => GetFilterStatus(path, sessionId, sheetIndex),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -111,147 +75,140 @@ Usage examples:
     /// <summary>
     ///     Applies auto filter dropdown buttons to a range.
     /// </summary>
-    /// <param name="path">Excel file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="sheetIndex">Worksheet index (0-based).</param>
-    /// <param name="arguments">JSON arguments containing range.</param>
-    /// <returns>Success message.</returns>
-    private Task<string> ApplyFilterAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
+    /// <param name="path">The Excel file path.</param>
+    /// <param name="sessionId">The session ID for in-memory editing.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="sheetIndex">The worksheet index.</param>
+    /// <param name="range">The cell range to apply filter to.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    private string ApplyFilter(string? path, string? sessionId, string? outputPath, int sheetIndex, string? range)
     {
-        return Task.Run(() =>
-        {
-            var range = ArgumentHelper.GetString(arguments, "range");
+        if (string.IsNullOrEmpty(range))
+            throw new ArgumentException("range is required for apply operation");
 
-            using var workbook = new Workbook(path);
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path);
+        var worksheet = ExcelHelper.GetWorksheet(ctx.Document, sheetIndex);
 
-            ExcelHelper.CreateRange(worksheet.Cells, range);
+        ExcelHelper.CreateRange(worksheet.Cells, range);
+        worksheet.AutoFilter.Range = range;
 
-            worksheet.AutoFilter.Range = range;
-
-            workbook.Save(outputPath);
-
-            return $"Auto filter applied to range {range} in sheet {sheetIndex}. Output: {outputPath}";
-        });
+        ctx.Save(outputPath);
+        return $"Auto filter applied to range {range} in sheet {sheetIndex}. {ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Removes auto filter completely from the worksheet.
+    ///     Removes auto filter from the worksheet.
     /// </summary>
-    /// <param name="path">Excel file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="sheetIndex">Worksheet index (0-based).</param>
-    /// <returns>Success message.</returns>
-    private Task<string> RemoveFilterAsync(string path, string outputPath, int sheetIndex)
+    /// <param name="path">The Excel file path.</param>
+    /// <param name="sessionId">The session ID for in-memory editing.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="sheetIndex">The worksheet index.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    private string RemoveFilter(string? path, string? sessionId, string? outputPath, int sheetIndex)
     {
-        return Task.Run(() =>
-        {
-            using var workbook = new Workbook(path);
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path);
+        var worksheet = ExcelHelper.GetWorksheet(ctx.Document, sheetIndex);
 
-            worksheet.RemoveAutoFilter();
+        worksheet.RemoveAutoFilter();
 
-            workbook.Save(outputPath);
-            return $"Auto filter removed from sheet {sheetIndex}. Output: {outputPath}";
-        });
+        ctx.Save(outputPath);
+        return $"Auto filter removed from sheet {sheetIndex}. {ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
     ///     Applies filter criteria to a specific column.
     /// </summary>
-    /// <param name="path">Excel file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="sheetIndex">Worksheet index (0-based).</param>
-    /// <param name="arguments">JSON arguments containing range, columnIndex, criteria, optional filterOperator.</param>
-    /// <returns>Success message with filter details.</returns>
-    private Task<string> FilterByValueAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
+    /// <param name="path">The Excel file path.</param>
+    /// <param name="sessionId">The session ID for in-memory editing.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="sheetIndex">The worksheet index.</param>
+    /// <param name="range">The cell range for the filter.</param>
+    /// <param name="columnIndex">The column index to apply criteria to.</param>
+    /// <param name="criteria">The filter criteria value.</param>
+    /// <param name="filterOperatorStr">The filter operator type.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    private string FilterByValue(string? path, string? sessionId, string? outputPath, int sheetIndex, string? range,
+        int columnIndex, string? criteria, string filterOperatorStr)
     {
-        return Task.Run(() =>
-        {
-            var range = ArgumentHelper.GetString(arguments, "range");
-            var columnIndex = ArgumentHelper.GetInt(arguments, "columnIndex");
-            var criteria = ArgumentHelper.GetString(arguments, "criteria");
-            var filterOperatorStr = ArgumentHelper.GetStringNullable(arguments, "filterOperator") ?? "Equal";
+        if (string.IsNullOrEmpty(range))
+            throw new ArgumentException("range is required for filter operation");
+        if (string.IsNullOrEmpty(criteria))
+            throw new ArgumentException("criteria is required for filter operation");
 
-            using var workbook = new Workbook(path);
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path);
+        var worksheet = ExcelHelper.GetWorksheet(ctx.Document, sheetIndex);
 
-            ExcelHelper.CreateRange(worksheet.Cells, range);
+        ExcelHelper.CreateRange(worksheet.Cells, range);
+        worksheet.AutoFilter.Range = range;
 
-            worksheet.AutoFilter.Range = range;
+        var filterOperator = ParseFilterOperator(filterOperatorStr);
 
-            var filterOperator = ParseFilterOperator(filterOperatorStr);
+        if (filterOperator == FilterOperatorType.Equal)
+            worksheet.AutoFilter.Filter(columnIndex, criteria);
+        else
+            worksheet.AutoFilter.Custom(columnIndex, filterOperator, criteria);
 
-            if (filterOperator == FilterOperatorType.Equal)
-                worksheet.AutoFilter.Filter(columnIndex, criteria);
-            else
-                worksheet.AutoFilter.Custom(columnIndex, filterOperator, criteria);
-
-            workbook.Save(outputPath);
-
-            return
-                $"Filter applied to column {columnIndex} with criteria '{criteria}' (operator: {filterOperatorStr}). Output: {outputPath}";
-        });
+        ctx.Save(outputPath);
+        return
+            $"Filter applied to column {columnIndex} with criteria '{criteria}' (operator: {filterOperatorStr}). {ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Gets detailed filter status for the worksheet.
+    ///     Gets the current filter status and details.
     /// </summary>
-    /// <param name="path">Excel file path.</param>
-    /// <param name="sheetIndex">Worksheet index (0-based).</param>
-    /// <returns>JSON string with detailed filter status.</returns>
-    private Task<string> GetFilterStatusAsync(string path, int sheetIndex)
+    /// <param name="path">The Excel file path.</param>
+    /// <param name="sessionId">The session ID for in-memory editing.</param>
+    /// <param name="sheetIndex">The worksheet index.</param>
+    /// <returns>A JSON string containing the filter status information.</returns>
+    private string GetFilterStatus(string? path, string? sessionId, int sheetIndex)
     {
-        return Task.Run(() =>
-        {
-            using var workbook = new Workbook(path);
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-            var autoFilter = worksheet.AutoFilter;
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path);
+        var worksheet = ExcelHelper.GetWorksheet(ctx.Document, sheetIndex);
+        var autoFilter = worksheet.AutoFilter;
 
-            var rangeProperty = autoFilter.Range;
-            var isFilterEnabled = !string.IsNullOrEmpty(rangeProperty) && rangeProperty.Trim() != "";
+        var rangeProperty = autoFilter.Range;
+        var isFilterEnabled = !string.IsNullOrEmpty(rangeProperty) && rangeProperty.Trim() != "";
 
-            var filterColumns = autoFilter.FilterColumns;
-            var hasActiveFilters = filterColumns is { Count: > 0 };
+        var filterColumns = autoFilter.FilterColumns;
+        var hasActiveFilters = filterColumns is { Count: > 0 };
 
-            var filterColumnsList = new List<object>();
-            if (filterColumns != null)
-                for (var i = 0; i < filterColumns.Count; i++)
-                {
-                    var filterColumn = filterColumns[i];
-                    filterColumnsList.Add(new
-                    {
-                        columnIndex = i,
-                        filterType = filterColumn.FilterType.ToString(),
-                        isDropdownVisible = filterColumn.IsDropdownVisible
-                    });
-                }
-
-            var result = new
+        List<object> filterColumnsList = [];
+        if (filterColumns != null)
+            for (var i = 0; i < filterColumns.Count; i++)
             {
-                worksheetName = worksheet.Name,
-                isFilterEnabled,
-                hasActiveFilters,
-                status = isFilterEnabled
-                    ? hasActiveFilters
-                        ? "Auto filter enabled with active criteria"
-                        : "Auto filter enabled (no criteria)"
-                    : "Auto filter not enabled",
-                filterRange = isFilterEnabled ? rangeProperty : null,
-                filterColumnsCount = filterColumns?.Count ?? 0,
-                filterColumns = filterColumnsList
-            };
+                var filterColumn = filterColumns[i];
+                filterColumnsList.Add(new
+                {
+                    columnIndex = i,
+                    filterType = filterColumn.FilterType.ToString(),
+                    isDropdownVisible = filterColumn.IsDropdownVisible
+                });
+            }
 
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
-        });
+        var result = new
+        {
+            worksheetName = worksheet.Name,
+            isFilterEnabled,
+            hasActiveFilters,
+            status = isFilterEnabled
+                ? hasActiveFilters
+                    ? "Auto filter enabled with active criteria"
+                    : "Auto filter enabled (no criteria)"
+                : "Auto filter not enabled",
+            filterRange = isFilterEnabled ? rangeProperty : null,
+            filterColumnsCount = filterColumns?.Count ?? 0,
+            filterColumns = filterColumnsList
+        };
+
+        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
     }
 
     /// <summary>
     ///     Parses filter operator string to FilterOperatorType enum.
     /// </summary>
-    /// <param name="operatorStr">Operator string.</param>
-    /// <returns>FilterOperatorType enum value.</returns>
-    /// <exception cref="ArgumentException">Thrown if operator is not supported.</exception>
+    /// <param name="operatorStr">The filter operator string.</param>
+    /// <returns>The corresponding FilterOperatorType value.</returns>
+    /// <exception cref="ArgumentException">Thrown when the operator string is not supported.</exception>
     private static FilterOperatorType ParseFilterOperator(string operatorStr)
     {
         return operatorStr switch

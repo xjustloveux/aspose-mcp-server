@@ -1,7 +1,9 @@
+using System.ComponentModel;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using Aspose.Cells;
-using AsposeMcpServer.Core;
+using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Session;
+using ModelContextProtocol.Server;
 using Range = Aspose.Cells.Range;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -9,89 +11,56 @@ namespace AsposeMcpServer.Tools.Excel;
 /// <summary>
 ///     Unified tool for managing Excel named ranges (add, delete, get).
 /// </summary>
-public class ExcelNamedRangeTool : IAsposeTool
+[McpServerToolType]
+public class ExcelNamedRangeTool
 {
     /// <summary>
-    ///     Gets the description of the tool and its usage examples.
+    ///     Document session manager for in-memory editing support.
     /// </summary>
-    public string Description => @"Manage Excel named ranges. Supports 3 operations: add, delete, get.
+    private readonly DocumentSessionManager? _sessionManager;
+
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="ExcelNamedRangeTool" /> class.
+    /// </summary>
+    /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
+    public ExcelNamedRangeTool(DocumentSessionManager? sessionManager = null)
+    {
+        _sessionManager = sessionManager;
+    }
+
+    [McpServerTool(Name = "excel_named_range")]
+    [Description(@"Manage Excel named ranges. Supports 3 operations: add, delete, get.
 
 Usage examples:
 - Add named range: excel_named_range(operation='add', path='book.xlsx', name='MyRange', range='A1:C10')
 - Add with sheet reference: excel_named_range(operation='add', path='book.xlsx', name='MyRange', range='Sheet1!A1:C10')
 - Delete named range: excel_named_range(operation='delete', path='book.xlsx', name='MyRange')
-- Get named ranges: excel_named_range(operation='get', path='book.xlsx')";
-
-    /// <summary>
-    ///     Gets the JSON schema defining the input parameters for the tool.
-    /// </summary>
-    public object InputSchema => new
+- Get named ranges: excel_named_range(operation='get', path='book.xlsx')")]
+    public string Execute(
+        [Description("Operation: add, delete, get")]
+        string operation,
+        [Description("Excel file path (required if no sessionId)")]
+        string? path = null,
+        [Description("Session ID for in-memory editing")]
+        string? sessionId = null,
+        [Description("Output file path (file mode only)")]
+        string? outputPath = null,
+        [Description("Sheet index (0-based, default: 0). Used when range does not include sheet reference")]
+        int sheetIndex = 0,
+        [Description("Name for the range. Must be a valid Excel name (required for add/delete)")]
+        string? name = null,
+        [Description("Cell range (e.g., 'A1:C10' or 'Sheet1!A1:C10', required for add)")]
+        string? range = null,
+        [Description("Comment for the named range (optional for add)")]
+        string? comment = null)
     {
-        type = "object",
-        properties = new
-        {
-            operation = new
-            {
-                type = "string",
-                description = @"Operation to perform.
-- 'add': Add a named range (required params: path, name, range)
-- 'delete': Delete a named range (required params: path, name)
-- 'get': Get all named ranges (required params: path)",
-                @enum = new[] { "add", "delete", "get" }
-            },
-            path = new
-            {
-                type = "string",
-                description = "Excel file path (required for all operations)"
-            },
-            name = new
-            {
-                type = "string",
-                description = "Name for the range. Must be a valid Excel name (required for add/delete)"
-            },
-            range = new
-            {
-                type = "string",
-                description = "Cell range (e.g., 'A1:C10' or 'Sheet1!A1:C10', required for add)"
-            },
-            comment = new
-            {
-                type = "string",
-                description = "Comment for the named range (optional for add)"
-            },
-            sheetIndex = new
-            {
-                type = "number",
-                description =
-                    "Sheet index (0-based, optional, default: 0). Used when range does not include sheet reference"
-            },
-            outputPath = new
-            {
-                type = "string",
-                description = "Output file path (optional, defaults to input path)"
-            }
-        },
-        required = new[] { "operation", "path" }
-    };
-
-    /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments.
-    /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters.</param>
-    /// <returns>Result message as a string.</returns>
-    /// <exception cref="ArgumentException">Thrown when operation is unknown.</exception>
-    public async Task<string> ExecuteAsync(JsonObject? arguments)
-    {
-        var operation = ArgumentHelper.GetString(arguments, "operation");
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path);
 
         return operation.ToLower() switch
         {
-            "add" => await AddNamedRangeAsync(path, outputPath, sheetIndex, arguments),
-            "delete" => await DeleteNamedRangeAsync(path, outputPath, arguments),
-            "get" => await GetNamedRangesAsync(path),
+            "add" => AddNamedRange(ctx, outputPath, sheetIndex, name, range, comment),
+            "delete" => DeleteNamedRange(ctx, outputPath, name),
+            "get" => GetNamedRanges(ctx),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -99,144 +68,139 @@ Usage examples:
     /// <summary>
     ///     Adds a named range to the workbook.
     /// </summary>
-    /// <param name="path">Excel file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="sheetIndex">Worksheet index (0-based), used when range has no sheet reference.</param>
-    /// <param name="arguments">JSON arguments containing name, range, and optional comment.</param>
-    /// <returns>Success message with named range details.</returns>
-    /// <exception cref="ArgumentException">Thrown when named range already exists or range format is invalid.</exception>
-    /// <exception cref="InvalidOperationException">Thrown when named range creation fails.</exception>
-    private Task<string> AddNamedRangeAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="sheetIndex">The sheet index (0-based) when range does not include sheet reference.</param>
+    /// <param name="name">The name for the range.</param>
+    /// <param name="range">The cell range (e.g., 'A1:C10' or 'Sheet1!A1:C10').</param>
+    /// <param name="comment">Optional comment for the named range.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when name or range is missing, or named range already exists.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when failed to create the named range.</exception>
+    private static string AddNamedRange(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex, string? name,
+        string? range, string? comment)
     {
-        return Task.Run(() =>
+        if (string.IsNullOrEmpty(name))
+            throw new ArgumentException("name is required for add operation");
+        if (string.IsNullOrEmpty(range))
+            throw new ArgumentException("range is required for add operation");
+
+        var workbook = ctx.Document;
+        var names = workbook.Worksheets.Names;
+
+        if (names[name] != null)
+            throw new ArgumentException($"Named range '{name}' already exists.");
+
+        try
         {
-            var name = ArgumentHelper.GetString(arguments, "name");
-            var rangeAddress = ArgumentHelper.GetString(arguments, "range");
-            var comment = ArgumentHelper.GetStringNullable(arguments, "comment");
+            Range rangeObject;
 
-            using var workbook = new Workbook(path);
-            var names = workbook.Worksheets.Names;
-
-            if (names[name] != null)
-                throw new ArgumentException($"Named range '{name}' already exists.");
-
-            try
+            if (range.Contains('!'))
             {
-                Range rangeObject;
-
-                if (rangeAddress.Contains('!'))
-                {
-                    rangeObject = ParseRangeWithSheetReference(workbook, rangeAddress);
-                }
-                else
-                {
-                    var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-                    rangeObject = CreateRangeFromAddress(worksheet.Cells, rangeAddress);
-                }
-
-                rangeObject.Name = name;
-
-                var namedRange = names[name];
-                if (!string.IsNullOrEmpty(comment))
-                    namedRange.Comment = comment;
-
-                workbook.Save(outputPath);
-
-                return $"Named range '{name}' added (reference: {namedRange.RefersTo}). Output: {outputPath}";
+                rangeObject = ParseRangeWithSheetReference(workbook, range);
             }
-            catch (ArgumentException)
+            else
             {
-                throw;
+                var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+                rangeObject = CreateRangeFromAddress(worksheet.Cells, range);
             }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException(
-                    $"Failed to create named range '{name}' with range '{rangeAddress}': {ex.Message}", ex);
-            }
-        });
+
+            rangeObject.Name = name;
+
+            var namedRange = names[name];
+            if (!string.IsNullOrEmpty(comment))
+                namedRange.Comment = comment;
+
+            ctx.Save(outputPath);
+            return $"Named range '{name}' added (reference: {namedRange.RefersTo}). {ctx.GetOutputMessage(outputPath)}";
+        }
+        catch (ArgumentException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException(
+                $"Failed to create named range '{name}' with range '{range}': {ex.Message}", ex);
+        }
     }
 
     /// <summary>
     ///     Deletes a named range from the workbook.
     /// </summary>
-    /// <param name="path">Excel file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="arguments">JSON arguments containing name.</param>
-    /// <returns>Success message.</returns>
-    /// <exception cref="ArgumentException">Thrown when named range does not exist.</exception>
-    private Task<string> DeleteNamedRangeAsync(string path, string outputPath, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="name">The name of the range to delete.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when name is missing or named range does not exist.</exception>
+    private static string DeleteNamedRange(DocumentContext<Workbook> ctx, string? outputPath, string? name)
     {
-        return Task.Run(() =>
-        {
-            var name = ArgumentHelper.GetString(arguments, "name");
+        if (string.IsNullOrEmpty(name))
+            throw new ArgumentException("name is required for delete operation");
 
-            using var workbook = new Workbook(path);
-            var names = workbook.Worksheets.Names;
+        var workbook = ctx.Document;
+        var names = workbook.Worksheets.Names;
 
-            if (names[name] == null)
-                throw new ArgumentException($"Named range '{name}' does not exist.");
+        if (names[name] == null)
+            throw new ArgumentException($"Named range '{name}' does not exist.");
 
-            names.Remove(name);
-            workbook.Save(outputPath);
+        names.Remove(name);
 
-            return $"Named range '{name}' deleted. Output: {outputPath}";
-        });
+        ctx.Save(outputPath);
+        return $"Named range '{name}' deleted. {ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
     ///     Gets all named ranges from the workbook.
     /// </summary>
-    /// <param name="path">Excel file path.</param>
-    /// <returns>JSON string containing all named ranges.</returns>
-    private Task<string> GetNamedRangesAsync(string path)
+    /// <param name="ctx">The document context.</param>
+    /// <returns>A JSON string containing all named ranges information.</returns>
+    private static string GetNamedRanges(DocumentContext<Workbook> ctx)
     {
-        return Task.Run(() =>
+        var workbook = ctx.Document;
+        var names = workbook.Worksheets.Names;
+
+        if (names.Count == 0)
         {
-            using var workbook = new Workbook(path);
-            var names = workbook.Worksheets.Names;
-
-            if (names.Count == 0)
+            var emptyResult = new
             {
-                var emptyResult = new
-                {
-                    count = 0,
-                    items = Array.Empty<object>(),
-                    message = "No named ranges found"
-                };
-                return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
-            }
-
-            var nameList = new List<object>();
-            for (var i = 0; i < names.Count; i++)
-            {
-                var name = names[i];
-                nameList.Add(new
-                {
-                    index = i,
-                    name = name.Text,
-                    reference = name.RefersTo,
-                    comment = name.Comment,
-                    isVisible = name.IsVisible
-                });
-            }
-
-            var result = new
-            {
-                count = names.Count,
-                items = nameList
+                count = 0,
+                items = Array.Empty<object>(),
+                message = "No named ranges found"
             };
+            return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
+        }
 
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
-        });
+        List<object> nameList = [];
+        for (var i = 0; i < names.Count; i++)
+        {
+            var namedRange = names[i];
+            nameList.Add(new
+            {
+                index = i,
+                name = namedRange.Text,
+                reference = namedRange.RefersTo,
+                comment = namedRange.Comment,
+                isVisible = namedRange.IsVisible
+            });
+        }
+
+        var result = new
+        {
+            count = names.Count,
+            items = nameList
+        };
+
+        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
     }
 
     /// <summary>
     ///     Parses a range address that includes a sheet reference (e.g., "Sheet1!A1:B2").
     /// </summary>
-    /// <param name="workbook">The workbook containing the worksheet.</param>
-    /// <param name="rangeAddress">Range address with sheet reference.</param>
-    /// <returns>The created Range object.</returns>
-    /// <exception cref="ArgumentException">Thrown when format is invalid or worksheet not found.</exception>
+    /// <param name="workbook">The workbook containing the worksheets.</param>
+    /// <param name="rangeAddress">The range address with sheet reference (e.g., 'Sheet1!A1:B2').</param>
+    /// <returns>The Range object corresponding to the address.</returns>
+    /// <exception cref="ArgumentException">Thrown when the range format is invalid or the worksheet is not found.</exception>
     private static Range ParseRangeWithSheetReference(Workbook workbook, string rangeAddress)
     {
         var exclamationIndex = rangeAddress.LastIndexOf('!');
@@ -263,9 +227,9 @@ Usage examples:
     /// <summary>
     ///     Creates a Range object from a cell address (e.g., "A1:B2" or "A1").
     /// </summary>
-    /// <param name="cells">The Cells collection to create the range from.</param>
-    /// <param name="address">Cell address in A1:B2 or A1 format.</param>
-    /// <returns>The created Range object.</returns>
+    /// <param name="cells">The Cells collection of the worksheet.</param>
+    /// <param name="address">The cell address (e.g., 'A1:B2' or 'A1').</param>
+    /// <returns>The Range object corresponding to the address.</returns>
     private static Range CreateRangeFromAddress(Cells cells, string address)
     {
         var colonIndex = address.IndexOf(':');

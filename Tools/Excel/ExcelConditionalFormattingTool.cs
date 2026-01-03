@@ -1,25 +1,41 @@
+using System.ComponentModel;
 using System.Drawing;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Aspose.Cells;
-using AsposeMcpServer.Core;
+using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Session;
+using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
 
 /// <summary>
 ///     Unified tool for managing Excel conditional formatting (add, edit, delete, get)
-///     Merges: ExcelAddConditionalFormattingTool, ExcelEditConditionalFormattingTool,
-///     ExcelDeleteConditionalFormattingTool, ExcelGetConditionalFormattingTool
 /// </summary>
-public class ExcelConditionalFormattingTool : IAsposeTool
+[McpServerToolType]
+public class ExcelConditionalFormattingTool
 {
+    /// <summary>
+    ///     Regex pattern for validating Excel range format (e.g., A1:B10).
+    /// </summary>
     private static readonly Regex RangeRegex = new(@"^[A-Za-z]{1,3}\d+:[A-Za-z]{1,3}\d+$", RegexOptions.Compiled);
 
     /// <summary>
-    ///     Gets the description of the tool and its usage examples
+    ///     Document session manager for in-memory editing support.
     /// </summary>
-    public string Description => @"Manage Excel conditional formatting. Supports 4 operations: add, edit, delete, get.
+    private readonly DocumentSessionManager? _sessionManager;
+
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="ExcelConditionalFormattingTool" /> class.
+    /// </summary>
+    /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
+    public ExcelConditionalFormattingTool(DocumentSessionManager? sessionManager = null)
+    {
+        _sessionManager = sessionManager;
+    }
+
+    [McpServerTool(Name = "excel_conditional_formatting")]
+    [Description(@"Manage Excel conditional formatting. Supports 4 operations: add, edit, delete, get.
 
 You can add multiple conditional formatting rules to the same range by calling the 'add' operation multiple times. Each rule is independent and will be evaluated separately. To add multiple rules, simply call the 'add' operation multiple times with different conditions for the same range.
 
@@ -28,108 +44,52 @@ Usage examples:
 - Add multiple rules: Call 'add' multiple times with different conditions to create multiple rules for the same range
 - Edit conditional formatting: excel_conditional_formatting(operation='edit', path='book.xlsx', conditionalFormattingIndex=0, condition='GreaterThan', value='50')
 - Delete conditional formatting: excel_conditional_formatting(operation='delete', path='book.xlsx', conditionalFormattingIndex=0)
-- Get conditional formatting: excel_conditional_formatting(operation='get', path='book.xlsx', range='A1:A10')";
-
-    /// <summary>
-    ///     Gets the JSON schema defining the input parameters for the tool
-    /// </summary>
-    public object InputSchema => new
+- Get conditional formatting: excel_conditional_formatting(operation='get', path='book.xlsx', range='A1:A10')")]
+    public string Execute(
+        [Description("Operation: add, edit, delete, get")]
+        string operation,
+        [Description("Excel file path (required if no sessionId)")]
+        string? path = null,
+        [Description("Session ID for in-memory editing")]
+        string? sessionId = null,
+        [Description("Output file path (file mode only)")]
+        string? outputPath = null,
+        [Description("Sheet index (0-based, default: 0)")]
+        int sheetIndex = 0,
+        [Description("Cell range (e.g., 'A1:A10', required for add)")]
+        string? range = null,
+        [Description("Conditional formatting index (0-based, required for edit/delete)")]
+        int conditionalFormattingIndex = 0,
+        [Description("Condition index within the formatting rule (0-based, optional for edit)")]
+        int? conditionIndex = null,
+        [Description("Condition type: GreaterThan, LessThan, Between, Equal (required for add)")]
+        string? condition = null,
+        [Description("Condition value / Formula1 (required for add)")]
+        string? value = null,
+        [Description("Second value for 'Between' condition (optional)")]
+        string? formula2 = null,
+        [Description("Background color for matching cells (default: Yellow)")]
+        string backgroundColor = "Yellow")
     {
-        type = "object",
-        properties = new
-        {
-            operation = new
-            {
-                type = "string",
-                description = @"Operation to perform.
-- 'add': Add conditional formatting (required params: path, range, type)
-- 'edit': Edit conditional formatting (required params: path, conditionalFormattingIndex)
-- 'delete': Delete conditional formatting (required params: path, conditionalFormattingIndex)
-- 'get': Get conditional formatting (required params: path, range)",
-                @enum = new[] { "add", "edit", "delete", "get" }
-            },
-            path = new
-            {
-                type = "string",
-                description = "Excel file path (required for all operations)"
-            },
-            outputPath = new
-            {
-                type = "string",
-                description = "Output file path (optional, for add/edit/delete operations, defaults to input path)"
-            },
-            sheetIndex = new
-            {
-                type = "number",
-                description = "Sheet index (0-based, optional, default: 0)"
-            },
-            range = new
-            {
-                type = "string",
-                description =
-                    "Cell range (e.g., 'A1:A10', required for add, optional for get - if not provided, returns all conditional formatting rules)"
-            },
-            conditionalFormattingIndex = new
-            {
-                type = "number",
-                description = "Conditional formatting index (0-based, required for edit/delete)"
-            },
-            conditionIndex = new
-            {
-                type = "number",
-                description = "Condition index within the formatting rule (0-based, optional for edit)"
-            },
-            condition = new
-            {
-                type = "string",
-                description = "Condition type (GreaterThan, LessThan, Between, Equal, required for add)"
-            },
-            value = new
-            {
-                type = "string",
-                description = "Condition value / Formula1 (required for add)"
-            },
-            formula2 = new
-            {
-                type = "string",
-                description = "Second value for 'Between' condition (optional, use instead of comma-separated value)"
-            },
-            backgroundColor = new
-            {
-                type = "string",
-                description = "Background color for matching cells (optional)"
-            }
-        },
-        required = new[] { "operation", "path" }
-    };
-
-    /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments
-    /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters</param>
-    /// <returns>Result message as a string</returns>
-    public async Task<string> ExecuteAsync(JsonObject? arguments)
-    {
-        var operation = ArgumentHelper.GetString(arguments, "operation");
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path);
 
         return operation.ToLower() switch
         {
-            "add" => await AddConditionalFormattingAsync(path, outputPath, sheetIndex, arguments),
-            "edit" => await EditConditionalFormattingAsync(path, outputPath, sheetIndex, arguments),
-            "delete" => await DeleteConditionalFormattingAsync(path, outputPath, sheetIndex, arguments),
-            "get" => await GetConditionalFormattingAsync(path, sheetIndex),
+            "add" => AddConditionalFormatting(ctx, outputPath, sheetIndex, range, condition, value, formula2,
+                backgroundColor),
+            "edit" => EditConditionalFormatting(ctx, outputPath, sheetIndex, conditionalFormattingIndex, conditionIndex,
+                condition, value, formula2, backgroundColor),
+            "delete" => DeleteConditionalFormatting(ctx, outputPath, sheetIndex, conditionalFormattingIndex),
+            "get" => GetConditionalFormatting(ctx, sheetIndex),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
 
     /// <summary>
-    ///     Validates the range format (e.g., 'A1:B10')
+    ///     Validates the range format (e.g., 'A1:B10').
     /// </summary>
-    /// <param name="range">Range string to validate</param>
-    /// <exception cref="ArgumentException">Thrown when range format is invalid</exception>
+    /// <param name="range">The range string to validate.</param>
+    /// <exception cref="ArgumentException">Thrown when the range format is invalid.</exception>
     private static void ValidateRange(string range)
     {
         if (!RangeRegex.IsMatch(range))
@@ -137,11 +97,11 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Parses condition string to OperatorType
+    ///     Parses condition string to OperatorType.
     /// </summary>
-    /// <param name="conditionStr">Condition string (e.g., 'GreaterThan', 'LessThan')</param>
-    /// <param name="defaultOperator">Default operator if parsing fails</param>
-    /// <returns>Parsed OperatorType</returns>
+    /// <param name="conditionStr">The condition string to parse (e.g., 'GreaterThan', 'LessThan').</param>
+    /// <param name="defaultOperator">The default operator to return if conditionStr is null or empty.</param>
+    /// <returns>The corresponding OperatorType enum value.</returns>
     private static OperatorType ParseOperatorType(string? conditionStr,
         OperatorType defaultOperator = OperatorType.GreaterThan)
     {
@@ -159,10 +119,10 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Checks if the condition string is a valid operator type
+    ///     Checks if the condition string is a valid operator type.
     /// </summary>
-    /// <param name="conditionStr">Condition string to check</param>
-    /// <returns>True if valid, false otherwise</returns>
+    /// <param name="conditionStr">The condition string to check.</param>
+    /// <returns>True if the condition string is a valid operator type; otherwise, false.</returns>
     private static bool IsValidCondition(string conditionStr)
     {
         var validConditions = new[] { "greaterthan", "lessthan", "between", "equal" };
@@ -170,299 +130,296 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Adds conditional formatting to a range
+    ///     Adds conditional formatting to a range.
     /// </summary>
-    /// <param name="path">Excel file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing range, condition, value, optional style properties</param>
-    /// <returns>Success message</returns>
-    private Task<string> AddConditionalFormattingAsync(string path, string outputPath, int sheetIndex,
-        JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="sheetIndex">The sheet index (0-based).</param>
+    /// <param name="range">The cell range to apply formatting (e.g., 'A1:A10').</param>
+    /// <param name="conditionStr">The condition type (e.g., 'GreaterThan', 'Between').</param>
+    /// <param name="value">The condition value or formula1.</param>
+    /// <param name="formula2">The second value for 'Between' condition.</param>
+    /// <param name="backgroundColor">The background color for matching cells.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the range/operation is invalid.</exception>
+    private static string AddConditionalFormatting(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex,
+        string? range, string? conditionStr, string? value, string? formula2, string backgroundColor)
     {
-        return Task.Run(() =>
+        if (string.IsNullOrEmpty(range))
+            throw new ArgumentException("range is required for add operation");
+        if (string.IsNullOrEmpty(conditionStr))
+            throw new ArgumentException("condition is required for add operation");
+        if (string.IsNullOrEmpty(value))
+            throw new ArgumentException("value is required for add operation");
+
+        ValidateRange(range);
+
+        try
         {
-            var range = ArgumentHelper.GetString(arguments, "range");
-            var conditionStr = ArgumentHelper.GetString(arguments, "condition");
-            var value = ArgumentHelper.GetString(arguments, "value");
-            var formula2 = ArgumentHelper.GetStringNullable(arguments, "formula2");
-            var backgroundColor = ArgumentHelper.GetString(arguments, "backgroundColor", "Yellow");
+            var workbook = ctx.Document;
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
 
-            ValidateRange(range);
+            var formatIndex = worksheet.ConditionalFormattings.Add();
+            var fcs = worksheet.ConditionalFormattings[formatIndex];
 
-            try
+            var cellRange = ExcelHelper.CreateRange(worksheet.Cells, range);
+            fcs.AddArea(new CellArea
             {
-                using var workbook = new Workbook(path);
-                var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+                StartRow = cellRange.FirstRow,
+                EndRow = cellRange.FirstRow + cellRange.RowCount - 1,
+                StartColumn = cellRange.FirstColumn,
+                EndColumn = cellRange.FirstColumn + cellRange.ColumnCount - 1
+            });
 
-                var formatIndex = worksheet.ConditionalFormattings.Add();
-                var fcs = worksheet.ConditionalFormattings[formatIndex];
+            var conditionIndex = fcs.AddCondition(FormatConditionType.CellValue);
+            var fc = fcs[conditionIndex];
 
-                var cellRange = ExcelHelper.CreateRange(worksheet.Cells, range);
-                fcs.AddArea(new CellArea
+            var operatorType = ParseOperatorType(conditionStr);
+            fc.Operator = operatorType;
+
+            string? warningMessage = null;
+            if (!IsValidCondition(conditionStr))
+                warningMessage =
+                    $" Warning: Condition type '{conditionStr}' may not be supported. Valid types are: GreaterThan, LessThan, Between, Equal.";
+
+            fc.Formula1 = value;
+            if (operatorType == OperatorType.Between)
+            {
+                if (!string.IsNullOrEmpty(formula2))
                 {
-                    StartRow = cellRange.FirstRow,
-                    EndRow = cellRange.FirstRow + cellRange.RowCount - 1,
-                    StartColumn = cellRange.FirstColumn,
-                    EndColumn = cellRange.FirstColumn + cellRange.ColumnCount - 1
-                });
-
-                var conditionIndex = fcs.AddCondition(FormatConditionType.CellValue);
-                var fc = fcs[conditionIndex];
-
-                var operatorType = ParseOperatorType(conditionStr);
-                fc.Operator = operatorType;
-
-                string? warningMessage = null;
-                if (!IsValidCondition(conditionStr))
-                    warningMessage =
-                        $" Warning: Condition type '{conditionStr}' may not be supported. Valid types are: GreaterThan, LessThan, Between, Equal.";
-
-                fc.Formula1 = value;
-                if (operatorType == OperatorType.Between)
+                    fc.Formula2 = formula2;
+                }
+                else if (value.Contains(','))
                 {
-                    if (!string.IsNullOrEmpty(formula2))
+                    var parts = value.Split(',');
+                    if (parts.Length >= 2)
                     {
-                        fc.Formula2 = formula2;
+                        fc.Formula1 = parts[0].Trim();
+                        fc.Formula2 = parts[1].Trim();
                     }
-                    else if (value.Contains(','))
+                }
+            }
+
+            fc.Style.Pattern = BackgroundType.Solid;
+            fc.Style.ForegroundColor = ColorHelper.ParseColor(backgroundColor, Color.Yellow);
+
+            workbook.CalculateFormula();
+
+            ctx.Save(outputPath);
+
+            return
+                $"Conditional formatting added to range {range} ({conditionStr}).{warningMessage ?? ""} {ctx.GetOutputMessage(outputPath)}";
+        }
+        catch (CellsException ex)
+        {
+            throw new ArgumentException($"Excel operation failed for range '{range}': {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    ///     Edits existing conditional formatting.
+    /// </summary>
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="sheetIndex">The sheet index (0-based).</param>
+    /// <param name="conditionalFormattingIndex">The conditional formatting index (0-based).</param>
+    /// <param name="conditionIndex">The condition index within the formatting rule (0-based).</param>
+    /// <param name="conditionStr">The condition type to set.</param>
+    /// <param name="value">The condition value to set.</param>
+    /// <param name="formula2">The second value for 'Between' condition.</param>
+    /// <param name="backgroundColor">The background color to set.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when the index is out of range or the operation fails.</exception>
+    private static string EditConditionalFormatting(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex,
+        int conditionalFormattingIndex, int? conditionIndex, string? conditionStr, string? value,
+        string? formula2, string? backgroundColor)
+    {
+        try
+        {
+            var workbook = ctx.Document;
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            var conditionalFormattings = worksheet.ConditionalFormattings;
+
+            if (conditionalFormattingIndex < 0 || conditionalFormattingIndex >= conditionalFormattings.Count)
+                throw new ArgumentException(
+                    $"Conditional formatting index {conditionalFormattingIndex} is out of range (worksheet has {conditionalFormattings.Count} conditional formattings)");
+
+            var fcs = conditionalFormattings[conditionalFormattingIndex];
+            List<string> changes = [];
+
+            if (conditionIndex.HasValue)
+            {
+                if (conditionIndex.Value < 0 || conditionIndex.Value >= fcs.Count)
+                    throw new ArgumentException($"Condition index {conditionIndex.Value} is out of range");
+
+                var condition = fcs[conditionIndex.Value];
+
+                if (!string.IsNullOrEmpty(conditionStr))
+                {
+                    condition.Operator = ParseOperatorType(conditionStr, condition.Operator);
+                    changes.Add($"Operator={conditionStr}");
+                }
+
+                if (!string.IsNullOrEmpty(value))
+                {
+                    condition.Formula1 = value;
+                    if (condition.Operator == OperatorType.Between)
                     {
-                        var parts = value.Split(',');
-                        if (parts.Length >= 2)
+                        if (!string.IsNullOrEmpty(formula2))
                         {
-                            fc.Formula1 = parts[0].Trim();
-                            fc.Formula2 = parts[1].Trim();
+                            condition.Formula2 = formula2;
+                        }
+                        else if (value.Contains(','))
+                        {
+                            var parts = value.Split(',');
+                            if (parts.Length >= 2)
+                            {
+                                condition.Formula1 = parts[0].Trim();
+                                condition.Formula2 = parts[1].Trim();
+                            }
                         }
                     }
+
+                    changes.Add($"Value={value}");
                 }
 
-                fc.Style.Pattern = BackgroundType.Solid;
-                fc.Style.ForegroundColor = ColorHelper.ParseColor(backgroundColor, Color.Yellow);
-
-                workbook.CalculateFormula();
-                workbook.Save(outputPath);
-
-                return
-                    $"Conditional formatting added to range {range} ({conditionStr}).{warningMessage ?? ""} Output: {outputPath}";
+                if (!string.IsNullOrEmpty(backgroundColor))
+                {
+                    var style = condition.Style;
+                    style.Pattern = BackgroundType.Solid;
+                    style.ForegroundColor = ColorHelper.ParseColor(backgroundColor, Color.Yellow);
+                    changes.Add($"BackgroundColor={backgroundColor}");
+                }
             }
-            catch (CellsException ex)
-            {
-                throw new ArgumentException($"Excel operation failed for range '{range}': {ex.Message}");
-            }
-        });
+
+            workbook.CalculateFormula();
+
+            ctx.Save(outputPath);
+
+            var changesStr = changes.Count > 0 ? string.Join(", ", changes) : "No changes";
+            return
+                $"Edited conditional formatting #{conditionalFormattingIndex} ({changesStr}). {ctx.GetOutputMessage(outputPath)}";
+        }
+        catch (CellsException ex)
+        {
+            throw new ArgumentException($"Excel operation failed: {ex.Message}");
+        }
     }
 
     /// <summary>
-    ///     Edits existing conditional formatting
+    ///     Deletes conditional formatting from a range.
     /// </summary>
-    /// <param name="path">Excel file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing index, optional condition, value, style properties</param>
-    /// <returns>Success message</returns>
-    private Task<string> EditConditionalFormattingAsync(string path, string outputPath, int sheetIndex,
-        JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="sheetIndex">The sheet index (0-based).</param>
+    /// <param name="conditionalFormattingIndex">The conditional formatting index (0-based) to delete.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when the index is out of range or the operation fails.</exception>
+    private static string DeleteConditionalFormatting(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex,
+        int conditionalFormattingIndex)
     {
-        return Task.Run(() =>
+        try
         {
-            var conditionalFormattingIndex = ArgumentHelper.GetInt(arguments, "conditionalFormattingIndex");
-            var conditionIndex = ArgumentHelper.GetIntNullable(arguments, "conditionIndex");
-            var conditionStr = ArgumentHelper.GetStringNullable(arguments, "condition");
-            var value = ArgumentHelper.GetStringNullable(arguments, "value");
-            var formula2 = ArgumentHelper.GetStringNullable(arguments, "formula2");
-            var backgroundColor = ArgumentHelper.GetStringNullable(arguments, "backgroundColor");
+            var workbook = ctx.Document;
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            var conditionalFormattings = worksheet.ConditionalFormattings;
 
-            try
-            {
-                using var workbook = new Workbook(path);
-                var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-                var conditionalFormattings = worksheet.ConditionalFormattings;
+            if (conditionalFormattingIndex < 0 || conditionalFormattingIndex >= conditionalFormattings.Count)
+                throw new ArgumentException(
+                    $"Conditional formatting index {conditionalFormattingIndex} is out of range (worksheet has {conditionalFormattings.Count} conditional formattings)");
 
-                if (conditionalFormattingIndex < 0 || conditionalFormattingIndex >= conditionalFormattings.Count)
-                    throw new ArgumentException(
-                        $"Conditional formatting index {conditionalFormattingIndex} is out of range (worksheet has {conditionalFormattings.Count} conditional formattings)");
+            conditionalFormattings.RemoveAt(conditionalFormattingIndex);
 
-                var fcs = conditionalFormattings[conditionalFormattingIndex];
-                var changes = new List<string>();
+            ctx.Save(outputPath);
 
-                if (conditionIndex.HasValue)
-                {
-                    if (conditionIndex.Value < 0 || conditionIndex.Value >= fcs.Count)
-                        throw new ArgumentException($"Condition index {conditionIndex.Value} is out of range");
-
-                    var condition = fcs[conditionIndex.Value];
-
-                    if (!string.IsNullOrEmpty(conditionStr))
-                    {
-                        condition.Operator = ParseOperatorType(conditionStr, condition.Operator);
-                        changes.Add($"Operator={conditionStr}");
-                    }
-
-                    if (!string.IsNullOrEmpty(value))
-                    {
-                        condition.Formula1 = value;
-                        if (condition.Operator == OperatorType.Between)
-                        {
-                            if (!string.IsNullOrEmpty(formula2))
-                            {
-                                condition.Formula2 = formula2;
-                            }
-                            else if (value.Contains(','))
-                            {
-                                var parts = value.Split(',');
-                                if (parts.Length >= 2)
-                                {
-                                    condition.Formula1 = parts[0].Trim();
-                                    condition.Formula2 = parts[1].Trim();
-                                }
-                            }
-                        }
-
-                        changes.Add($"Value={value}");
-                    }
-
-                    if (!string.IsNullOrEmpty(backgroundColor))
-                    {
-                        var style = condition.Style;
-                        style.Pattern = BackgroundType.Solid;
-                        style.ForegroundColor = ColorHelper.ParseColor(backgroundColor, Color.Yellow);
-                        changes.Add($"BackgroundColor={backgroundColor}");
-                    }
-                }
-
-                workbook.CalculateFormula();
-                workbook.Save(outputPath);
-
-                var changesStr = changes.Count > 0 ? string.Join(", ", changes) : "No changes";
-                return
-                    $"Edited conditional formatting #{conditionalFormattingIndex} ({changesStr}). Output: {outputPath}";
-            }
-            catch (CellsException ex)
-            {
-                throw new ArgumentException($"Excel operation failed: {ex.Message}");
-            }
-        });
+            var remainingCount = conditionalFormattings.Count;
+            return
+                $"Deleted conditional formatting #{conditionalFormattingIndex} (remaining: {remainingCount}). {ctx.GetOutputMessage(outputPath)}";
+        }
+        catch (CellsException ex)
+        {
+            throw new ArgumentException($"Excel operation failed: {ex.Message}");
+        }
     }
 
     /// <summary>
-    ///     Deletes conditional formatting from a range
+    ///     Gets all conditional formatting rules from the worksheet.
     /// </summary>
-    /// <param name="path">Excel file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <param name="arguments">JSON arguments containing index</param>
-    /// <returns>Success message</returns>
-    private Task<string> DeleteConditionalFormattingAsync(string path, string outputPath, int sheetIndex,
-        JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="sheetIndex">The sheet index (0-based).</param>
+    /// <returns>A JSON string containing all conditional formatting information.</returns>
+    /// <exception cref="ArgumentException">Thrown when the operation fails.</exception>
+    private static string GetConditionalFormatting(DocumentContext<Workbook> ctx, int sheetIndex)
     {
-        return Task.Run(() =>
+        try
         {
-            var conditionalFormattingIndex = ArgumentHelper.GetInt(arguments, "conditionalFormattingIndex");
+            var workbook = ctx.Document;
+            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+            var conditionalFormattings = worksheet.ConditionalFormattings;
 
-            try
+            if (conditionalFormattings.Count == 0)
             {
-                using var workbook = new Workbook(path);
-                var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-                var conditionalFormattings = worksheet.ConditionalFormattings;
-
-                if (conditionalFormattingIndex < 0 || conditionalFormattingIndex >= conditionalFormattings.Count)
-                    throw new ArgumentException(
-                        $"Conditional formatting index {conditionalFormattingIndex} is out of range (worksheet has {conditionalFormattings.Count} conditional formattings)");
-
-                conditionalFormattings.RemoveAt(conditionalFormattingIndex);
-                workbook.Save(outputPath);
-
-                var remainingCount = conditionalFormattings.Count;
-                return
-                    $"Deleted conditional formatting #{conditionalFormattingIndex} (remaining: {remainingCount}). Output: {outputPath}";
-            }
-            catch (CellsException ex)
-            {
-                throw new ArgumentException($"Excel operation failed: {ex.Message}");
-            }
-        });
-    }
-
-    /// <summary>
-    ///     Gets all conditional formatting rules from the worksheet
-    /// </summary>
-    /// <param name="path">Excel file path</param>
-    /// <param name="sheetIndex">Worksheet index (0-based)</param>
-    /// <returns>JSON string with all conditional formatting rules</returns>
-    private Task<string> GetConditionalFormattingAsync(string path, int sheetIndex)
-    {
-        return Task.Run(() =>
-        {
-            try
-            {
-                using var workbook = new Workbook(path);
-                var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-                var conditionalFormattings = worksheet.ConditionalFormattings;
-
-                if (conditionalFormattings.Count == 0)
+                var emptyResult = new
                 {
-                    var emptyResult = new
-                    {
-                        count = 0,
-                        sheetIndex,
-                        worksheetName = worksheet.Name,
-                        items = Array.Empty<object>(),
-                        message = "No conditional formattings found"
-                    };
-                    return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
+                    count = 0,
+                    sheetIndex,
+                    worksheetName = worksheet.Name,
+                    items = Array.Empty<object>(),
+                    message = "No conditional formattings found"
+                };
+                return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
+            }
+
+            List<object> formattingList = [];
+            for (var i = 0; i < conditionalFormattings.Count; i++)
+            {
+                var fcs = conditionalFormattings[i];
+
+                List<string> areasList = [];
+                for (var k = 0; k < fcs.RangeCount; k++)
+                {
+                    var area = fcs.GetCellArea(k);
+                    areasList.Add(
+                        $"{CellsHelper.CellIndexToName(area.StartRow, area.StartColumn)}:{CellsHelper.CellIndexToName(area.EndRow, area.EndColumn)}");
                 }
 
-                var formattingList = new List<object>();
-                for (var i = 0; i < conditionalFormattings.Count; i++)
+                List<object> conditionsList = [];
+                for (var j = 0; j < fcs.Count; j++)
                 {
-                    var fcs = conditionalFormattings[i];
-
-                    var areasList = new List<string>();
-                    for (var k = 0; k < fcs.RangeCount; k++)
+                    var fc = fcs[j];
+                    conditionsList.Add(new
                     {
-                        var area = fcs.GetCellArea(k);
-                        areasList.Add(
-                            $"{CellsHelper.CellIndexToName(area.StartRow, area.StartColumn)}:{CellsHelper.CellIndexToName(area.EndRow, area.EndColumn)}");
-                    }
-
-                    var conditionsList = new List<object>();
-                    for (var j = 0; j < fcs.Count; j++)
-                    {
-                        var fc = fcs[j];
-                        conditionsList.Add(new
-                        {
-                            index = j,
-                            operatorType = fc.Operator.ToString(),
-                            formula1 = fc.Formula1,
-                            formula2 = fc.Formula2,
-                            foregroundColor = fc.Style?.ForegroundColor.ToString(),
-                            backgroundColor = fc.Style?.BackgroundColor.ToString()
-                        });
-                    }
-
-                    formattingList.Add(new
-                    {
-                        index = i,
-                        areas = areasList,
-                        conditionsCount = fcs.Count,
-                        conditions = conditionsList
+                        index = j,
+                        operatorType = fc.Operator.ToString(),
+                        formula1 = fc.Formula1,
+                        formula2 = fc.Formula2,
+                        foregroundColor = fc.Style?.ForegroundColor.ToString(),
+                        backgroundColor = fc.Style?.BackgroundColor.ToString()
                     });
                 }
 
-                var result = new
+                formattingList.Add(new
                 {
-                    count = conditionalFormattings.Count,
-                    sheetIndex,
-                    worksheetName = worksheet.Name,
-                    items = formattingList
-                };
+                    index = i,
+                    areas = areasList,
+                    conditionsCount = fcs.Count,
+                    conditions = conditionsList
+                });
+            }
 
-                return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
-            }
-            catch (CellsException ex)
+            var result = new
             {
-                throw new ArgumentException($"Excel operation failed: {ex.Message}");
-            }
-        });
+                count = conditionalFormattings.Count,
+                sheetIndex,
+                worksheetName = worksheet.Name,
+                items = formattingList
+            };
+
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (CellsException ex)
+        {
+            throw new ArgumentException($"Excel operation failed: {ex.Message}");
+        }
     }
 }

@@ -8,7 +8,7 @@
   "_comment7": "請將路徑替換為解壓後的實際路徑",
   "_comment8": "授權文件支援：Aspose.Total.lic 或單一組件授權（如 Aspose.Words.lic）",
   "_comment9": "授權文件配置：自動搜尋、環境變數 ASPOSE_LICENSE_PATH 或 --license:路徑 參數",
-  "_comment10": "下載地址：https://github.com/your-repo/aspose-mcp-server/releases",
+  "_comment10": "下載地址：https://github.com/xjustloveux/aspose-mcp-server/releases",
 
   "_範例1": "========================================",
   "_範例1說明": "✨推薦：從 GitHub Releases 下載後使用（Windows）",
@@ -98,7 +98,7 @@
 
   "_範例8": "========================================",
   "_範例8說明": "開發者模式：本地編譯版本",
-  "_範例8適用": "開發者（克隆倉庫後執行 pwsh build.ps1 編譯）",
+  "_範例8適用": "開發者（克隆倉庫後執行 pwsh deploy/build.ps1 編譯）",
   "_範例8注意": "僅用於開發測試，一般用戶請使用範例1",
   "mcpServers_example8_dev": {
     "aspose-word": {
@@ -130,16 +130,110 @@
     }
   },
 
+  "_範例11": "========================================",
+  "_範例11說明": "SSE 模式（HTTP Server-Sent Events）",
+  "_範例11適用": "網頁應用、遠端連線",
+  "_範例11端點": "http://localhost:3000/mcp",
+  "mcpServers_example11_sse": {
+    "aspose-all": {
+      "command": "C:/Tools/aspose-mcp-server/AsposeMcpServer.exe",
+      "args": ["--all", "--sse", "--port:3000"]
+    }
+  },
+
+  "_範例12": "========================================",
+  "_範例12說明": "WebSocket 模式（雙向通訊）",
+  "_範例12適用": "即時互動應用",
+  "_範例12端點": "ws://localhost:3000/ws",
+  "mcpServers_example12_websocket": {
+    "aspose-all": {
+      "command": "C:/Tools/aspose-mcp-server/AsposeMcpServer.exe",
+      "args": ["--all", "--ws", "--port:3000"]
+    }
+  },
+
+  "_範例13": "========================================",
+  "_範例13說明": "SSE 模式 + Session 管理",
+  "_範例13適用": "需要在記憶體中編輯文件時",
+  "mcpServers_example13_sse_session": {
+    "aspose-all": {
+      "command": "C:/Tools/aspose-mcp-server/AsposeMcpServer.exe",
+      "args": [
+        "--all",
+        "--sse",
+        "--port:3000",
+        "--session-enabled",
+        "--session-max:20",
+        "--session-timeout:60"
+      ]
+    }
+  },
+
+  "_範例14": "========================================",
+  "_範例14說明": "SSE 模式 + API Key 認證",
+  "_範例14適用": "需要保護 API 存取時",
+  "mcpServers_example14_sse_auth": {
+    "aspose-all": {
+      "command": "C:/Tools/aspose-mcp-server/AsposeMcpServer.exe",
+      "args": [
+        "--all",
+        "--sse",
+        "--port:3000",
+        "--auth-apikey-enabled",
+        "--auth-apikey-keys:mykey1:tenant1,mykey2:tenant2"
+      ]
+    }
+  },
+
   "_參數說明": "========================================",
-  "_參數列表": {
+  "_參數列表_工具": {
     "--word": "啟用 Word 工具（自動包含轉換功能）",
     "--excel": "啟用 Excel 工具（自動包含轉換功能）",
     "--powerpoint 或 --ppt": "啟用 PowerPoint 工具（自動包含轉換功能）",
     "--pdf": "啟用 PDF 工具",
     "--all": "啟用所有工具",
-    "--license:路徑 或 --license=路徑": "指定授權文件路徑（可選）",
-    "多個參數": "可組合使用，如 [\"--word\", \"--excel\"]",
-    "轉換功能": "轉換工具已自動集成，無需額外參數"
+    "--license:路徑": "指定授權文件路徑（可選）"
+  },
+  "_參數列表_傳輸": {
+    "--stdio": "標準輸入輸出模式（預設）",
+    "--sse": "SSE 模式（HTTP Server-Sent Events）",
+    "--ws 或 --websocket": "WebSocket 模式",
+    "--port:N": "監聽埠號（預設：3000）",
+    "--host:addr": "監聽位址（預設：localhost）"
+  },
+  "_參數列表_Session": {
+    "--session-enabled": "啟用 Session 管理",
+    "--session-max:N": "最大 Session 數（預設：10）",
+    "--session-timeout:N": "Session 逾時分鐘（預設：30）",
+    "--session-temp-retention-hours:N": "暫存檔保留時間（預設：24 小時）",
+    "--session-on-disconnect:behavior": "斷線行為（SaveToTemp/Discard/KeepInMemory）"
+  },
+  "_參數列表_認證_ApiKey": {
+    "--auth-apikey-enabled": "啟用 API Key 認證",
+    "--auth-apikey-mode:mode": "驗證模式（local, gateway, introspection, custom）",
+    "--auth-apikey-keys:key1:tenant1,key2:tenant2": "API Key 列表",
+    "--auth-apikey-header:name": "Header 名稱（預設：X-API-Key）",
+    "--auth-apikey-tenant-header:name": "Tenant ID Header（Gateway 模式，預設：X-Tenant-Id）",
+    "--auth-apikey-introspection-auth:value": "Introspection 認證 Header",
+    "--auth-apikey-custom-timeout:N": "Custom 驗證逾時秒數（預設：5）"
+  },
+  "_參數列表_認證_JWT": {
+    "--auth-jwt-enabled": "啟用 JWT 認證",
+    "--auth-jwt-mode:mode": "驗證模式（local, gateway, introspection, custom）",
+    "--auth-jwt-secret:value": "JWT HMAC 密鑰",
+    "--auth-jwt-issuer:value": "JWT 發行者",
+    "--auth-jwt-audience:value": "JWT 受眾",
+    "--auth-jwt-tenant-claim:name": "Tenant ID Claim 名稱（預設：tenant_id）",
+    "--auth-jwt-tenant-header:name": "Tenant ID Header（Gateway 模式，預設：X-Tenant-Id）",
+    "--auth-jwt-user-header:name": "User ID Header（Gateway 模式，預設：X-User-Id）",
+    "--auth-jwt-custom-timeout:N": "Custom 驗證逾時秒數（預設：5）",
+    "--rate-limit:N": "每分鐘請求限制"
+  },
+  "_參數列表_追蹤": {
+    "--log-enabled": "啟用日誌",
+    "--log-targets:Console,EventLog": "日誌目標（Console, EventLog）",
+    "--webhook-url:url": "Webhook URL",
+    "--metrics-enabled": "啟用 Prometheus Metrics"
   },
 
   "_路徑說明": "========================================",
@@ -153,7 +247,8 @@
   "_使用建議": "========================================",
   "_一般用戶": "從 GitHub Releases 下載預編譯版本（範例1-7、10）",
   "_開發者": "克隆倉庫並本地編譯（範例8-9）",
+  "_遠端連線": "使用 SSE 或 WebSocket 模式（範例11-14）",
   "_授權配置": "優先使用自動搜尋，或使用 --license:路徑 參數（範例2、10）",
   "_多服務": "可同時配置多個服務實例（範例1、5-7）",
-  "_下載地址": "https://github.com/your-repo/aspose-mcp-server/releases"
+  "_下載地址": "https://github.com/xjustloveux/aspose-mcp-server/releases"
 }

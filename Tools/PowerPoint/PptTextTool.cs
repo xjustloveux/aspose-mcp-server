@@ -1,8 +1,9 @@
-﻿using System.Text;
-using System.Text.Json.Nodes;
+using System.ComponentModel;
+using System.Text;
 using Aspose.Slides;
-using Aspose.Slides.Export;
-using AsposeMcpServer.Core;
+using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Session;
+using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.PowerPoint;
 
@@ -10,9 +11,25 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 ///     Unified tool for managing PowerPoint text (add, edit, replace)
 ///     Merges: PptAddTextTool, PptEditTextTool, PptReplaceTextTool
 /// </summary>
-public class PptTextTool : IAsposeTool
+[McpServerToolType]
+public class PptTextTool
 {
-    public string Description => @"Manage PowerPoint text. Supports 3 operations: add, edit, replace.
+    /// <summary>
+    ///     Session manager for document session handling.
+    /// </summary>
+    private readonly DocumentSessionManager? _sessionManager;
+
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="PptTextTool" /> class.
+    /// </summary>
+    /// <param name="sessionManager">Optional session manager for in-memory editing.</param>
+    public PptTextTool(DocumentSessionManager? sessionManager = null)
+    {
+        _sessionManager = sessionManager;
+    }
+
+    [McpServerTool(Name = "ppt_text")]
+    [Description(@"Manage PowerPoint text. Supports 3 operations: add, edit, replace.
 Searches text in AutoShapes, GroupShapes (recursive), and Table cells.
 
 Coordinate unit: 1 inch = 72 points.
@@ -20,103 +37,47 @@ Coordinate unit: 1 inch = 72 points.
 Usage examples:
 - Add text: ppt_text(operation='add', path='presentation.pptx', slideIndex=0, text='Hello World', x=100, y=100)
 - Edit text: ppt_text(operation='edit', path='presentation.pptx', slideIndex=0, shapeIndex=0, text='Updated Text')
-- Replace text: ppt_text(operation='replace', path='presentation.pptx', findText='old', replaceText='new')";
-
-    public object InputSchema => new
-    {
-        type = "object",
-        properties = new
-        {
-            operation = new
-            {
-                type = "string",
-                description = @"Operation to perform.
+- Replace text: ppt_text(operation='replace', path='presentation.pptx', findText='old', replaceText='new')")]
+    public string Execute(
+        [Description(@"Operation to perform.
 - 'add': Add text to slide (required params: path, slideIndex, text)
 - 'edit': Edit text in shape (required params: path, slideIndex, shapeIndex, text)
-- 'replace': Replace text in presentation (required params: path, findText, replaceText)",
-                @enum = new[] { "add", "edit", "replace" }
-            },
-            path = new
-            {
-                type = "string",
-                description = "Presentation file path (required for all operations)"
-            },
-            slideIndex = new
-            {
-                type = "number",
-                description = "Slide index (0-based, required for add/edit)"
-            },
-            shapeIndex = new
-            {
-                type = "number",
-                description = "Shape index (0-based, required for edit)"
-            },
-            text = new
-            {
-                type = "string",
-                description = "Text content (required for add/edit)"
-            },
-            findText = new
-            {
-                type = "string",
-                description = "Text to find (required for replace)"
-            },
-            replaceText = new
-            {
-                type = "string",
-                description = "Text to replace with (required for replace)"
-            },
-            matchCase = new
-            {
-                type = "boolean",
-                description = "Match case (optional, for replace, default: false)"
-            },
-            x = new
-            {
-                type = "number",
-                description = "X position in points (optional, for add, default: 50)"
-            },
-            y = new
-            {
-                type = "number",
-                description = "Y position in points (optional, for add, default: 50)"
-            },
-            width = new
-            {
-                type = "number",
-                description = "Text box width in points (optional, for add, default: 400)"
-            },
-            height = new
-            {
-                type = "number",
-                description = "Text box height in points (optional, for add, default: 100)"
-            },
-            outputPath = new
-            {
-                type = "string",
-                description = "Output file path (optional, for add/edit/delete operations, defaults to input path)"
-            }
-        },
-        required = new[] { "operation", "path" }
-    };
-
-    /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments.
-    /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters.</param>
-    /// <returns>Result message as a string.</returns>
-    /// <exception cref="ArgumentException">Thrown when operation is unknown.</exception>
-    public async Task<string> ExecuteAsync(JsonObject? arguments)
+- 'replace': Replace text in presentation (required params: path, findText, replaceText)")]
+        string operation,
+        [Description("Presentation file path (required if no sessionId)")]
+        string? path = null,
+        [Description("Session ID for in-memory editing")]
+        string? sessionId = null,
+        [Description("Output file path (optional, defaults to input path)")]
+        string? outputPath = null,
+        [Description("Slide index (0-based, required for add/edit)")]
+        int? slideIndex = null,
+        [Description("Shape index (0-based, required for edit)")]
+        int? shapeIndex = null,
+        [Description("Text content (required for add/edit)")]
+        string? text = null,
+        [Description("Text to find (required for replace)")]
+        string? findText = null,
+        [Description("Text to replace with (required for replace)")]
+        string? replaceText = null,
+        [Description("Match case (optional, for replace, default: false)")]
+        bool matchCase = false,
+        [Description("X position in points (optional, for add, default: 50)")]
+        float x = 50,
+        [Description("Y position in points (optional, for add, default: 50)")]
+        float y = 50,
+        [Description("Text box width in points (optional, for add, default: 400)")]
+        float width = 400,
+        [Description("Text box height in points (optional, for add, default: 100)")]
+        float height = 100)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation");
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path);
 
         return operation.ToLower() switch
         {
-            "add" => await AddTextAsync(path, outputPath, arguments),
-            "edit" => await EditTextAsync(path, outputPath, arguments),
-            "replace" => await ReplaceTextAsync(path, outputPath, arguments),
+            "add" => AddText(ctx, outputPath, slideIndex, text, x, y, width, height),
+            "edit" => EditText(ctx, outputPath, slideIndex, shapeIndex, text),
+            "replace" => ReplaceText(ctx, outputPath, findText, replaceText, matchCase),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -124,110 +85,122 @@ Usage examples:
     /// <summary>
     ///     Adds a text box to a slide.
     /// </summary>
-    /// <param name="path">PowerPoint file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="arguments">JSON arguments containing slideIndex, text, optional x, y, width, height.</param>
-    /// <returns>Success message.</returns>
-    private Task<string> AddTextAsync(string path, string outputPath, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="slideIndex">The zero-based index of the slide.</param>
+    /// <param name="text">The text content to add.</param>
+    /// <param name="x">The X position in points.</param>
+    /// <param name="y">The Y position in points.</param>
+    /// <param name="width">The text box width in points.</param>
+    /// <param name="height">The text box height in points.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when slideIndex or text is not provided.</exception>
+    private static string AddText(DocumentContext<Presentation> ctx, string? outputPath, int? slideIndex,
+        string? text, float x, float y, float width, float height)
     {
-        return Task.Run(() =>
-        {
-            var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
-            var text = ArgumentHelper.GetString(arguments, "text");
-            var x = ArgumentHelper.GetFloat(arguments, "x", "x", false, 50);
-            var y = ArgumentHelper.GetFloat(arguments, "y", "y", false, 50);
-            var width = ArgumentHelper.GetFloat(arguments, "width", "width", false, 400);
-            var height = ArgumentHelper.GetFloat(arguments, "height", "height", false, 100);
+        if (!slideIndex.HasValue)
+            throw new ArgumentException("slideIndex is required for add operation");
+        if (string.IsNullOrEmpty(text))
+            throw new ArgumentException("text is required for add operation");
 
-            using var presentation = new Presentation(path);
-            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+        var presentation = ctx.Document;
+        var slide = PowerPointHelper.GetSlide(presentation, slideIndex.Value);
 
-            var textBox = slide.Shapes.AddAutoShape(ShapeType.Rectangle, x, y, width, height);
-            textBox.TextFrame.Text = text;
-            textBox.FillFormat.FillType = FillType.NoFill;
-            textBox.LineFormat.FillFormat.FillType = FillType.NoFill;
+        var textBox = slide.Shapes.AddAutoShape(ShapeType.Rectangle, x, y, width, height);
+        textBox.TextFrame.Text = text;
+        textBox.FillFormat.FillType = FillType.NoFill;
+        textBox.LineFormat.FillFormat.FillType = FillType.NoFill;
 
-            presentation.Save(outputPath, SaveFormat.Pptx);
+        ctx.Save(outputPath);
 
-            return $"Text added to slide {slideIndex}. Output: {outputPath}";
-        });
+        return $"Text added to slide {slideIndex.Value}. {ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
     ///     Edits text in a shape on a slide.
     /// </summary>
-    /// <param name="path">PowerPoint file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="arguments">JSON arguments containing slideIndex, shapeIndex, text.</param>
-    /// <returns>Success message.</returns>
-    /// <exception cref="ArgumentException">Thrown when shape is not an AutoShape.</exception>
-    private Task<string> EditTextAsync(string path, string outputPath, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="slideIndex">The zero-based index of the slide.</param>
+    /// <param name="shapeIndex">The zero-based index of the shape.</param>
+    /// <param name="text">The new text content.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when slideIndex, shapeIndex, or text is not provided, or shape is not an
+    ///     AutoShape.
+    /// </exception>
+    private static string EditText(DocumentContext<Presentation> ctx, string? outputPath, int? slideIndex,
+        int? shapeIndex, string? text)
     {
-        return Task.Run(() =>
+        if (!slideIndex.HasValue)
+            throw new ArgumentException("slideIndex is required for edit operation");
+        if (!shapeIndex.HasValue)
+            throw new ArgumentException("shapeIndex is required for edit operation");
+        if (string.IsNullOrEmpty(text))
+            throw new ArgumentException("text is required for edit operation");
+
+        var presentation = ctx.Document;
+        var slide = PowerPointHelper.GetSlide(presentation, slideIndex.Value);
+        var shape = PowerPointHelper.GetShape(slide, shapeIndex.Value);
+
+        if (shape is not IAutoShape autoShape)
+            throw new ArgumentException(
+                $"Shape at index {shapeIndex.Value} (Type: {shape.GetType().Name}) is not an AutoShape and cannot contain text");
+
+        if (autoShape.TextFrame == null)
+            autoShape.AddTextFrame("");
+
+        if (autoShape.TextFrame != null)
         {
-            var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
-            var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
-            var text = ArgumentHelper.GetString(arguments, "text");
+            autoShape.TextFrame.Paragraphs.Clear();
+            var paragraph = new Paragraph();
+            paragraph.Portions.Add(new Portion(text));
+            autoShape.TextFrame.Paragraphs.Add(paragraph);
+        }
 
-            using var presentation = new Presentation(path);
-            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-            var shape = PowerPointHelper.GetShape(slide, shapeIndex);
-
-            if (shape is not IAutoShape autoShape)
-                throw new ArgumentException(
-                    $"Shape at index {shapeIndex} (Type: {shape.GetType().Name}) is not an AutoShape and cannot contain text");
-
-            if (autoShape.TextFrame == null)
-                autoShape.AddTextFrame("");
-
-            if (autoShape.TextFrame != null)
-            {
-                autoShape.TextFrame.Paragraphs.Clear();
-                var paragraph = new Paragraph();
-                paragraph.Portions.Add(new Portion(text));
-                autoShape.TextFrame.Paragraphs.Add(paragraph);
-            }
-
-            presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Text updated on slide {slideIndex}, shape {shapeIndex}. Output: {outputPath}";
-        });
+        ctx.Save(outputPath);
+        return
+            $"Text updated on slide {slideIndex.Value}, shape {shapeIndex.Value}. {ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
     ///     Replaces text in the presentation across all shapes including GroupShapes and Tables.
     /// </summary>
-    /// <param name="path">PowerPoint file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="arguments">JSON arguments containing findText, replaceText, optional matchCase.</param>
-    /// <returns>Success message with replacement count.</returns>
-    private Task<string> ReplaceTextAsync(string path, string outputPath, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="findText">The text to find.</param>
+    /// <param name="replaceText">The text to replace with.</param>
+    /// <param name="matchCase">True to match case, false for case-insensitive matching.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when findText or replaceText is not provided.</exception>
+    private static string ReplaceText(DocumentContext<Presentation> ctx, string? outputPath, string? findText,
+        string? replaceText, bool matchCase)
     {
-        return Task.Run(() =>
-        {
-            var findText = ArgumentHelper.GetString(arguments, "findText");
-            var replaceText = ArgumentHelper.GetString(arguments, "replaceText");
-            var matchCase = ArgumentHelper.GetBool(arguments, "matchCase", false);
+        if (string.IsNullOrEmpty(findText))
+            throw new ArgumentException("findText is required for replace operation");
+        if (replaceText == null)
+            throw new ArgumentException("replaceText is required for replace operation");
 
-            using var presentation = new Presentation(path);
-            var comparison = matchCase ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
-            var replacements = 0;
+        var presentation = ctx.Document;
+        var comparison = matchCase ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+        var replacements = 0;
 
-            foreach (var slide in presentation.Slides)
-                replacements += ProcessShapesForReplace(slide.Shapes, findText, replaceText, comparison);
+        foreach (var slide in presentation.Slides)
+            replacements += ProcessShapesForReplace(slide.Shapes, findText, replaceText, comparison);
 
-            presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Replaced '{findText}' with '{replaceText}' ({replacements} occurrences). Output: {outputPath}";
-        });
+        ctx.Save(outputPath);
+        return
+            $"Replaced '{findText}' with '{replaceText}' ({replacements} occurrences). {ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
     ///     Recursively processes shapes for text replacement, including GroupShapes and Tables.
     /// </summary>
-    /// <param name="shapes">Shape collection to process.</param>
-    /// <param name="findText">Text to find.</param>
-    /// <param name="replaceText">Text to replace with.</param>
-    /// <param name="comparison">String comparison mode.</param>
-    /// <returns>Number of replacements made.</returns>
+    /// <param name="shapes">The shape collection to process.</param>
+    /// <param name="findText">The text to find.</param>
+    /// <param name="replaceText">The text to replace with.</param>
+    /// <param name="comparison">The string comparison type.</param>
+    /// <returns>The number of replacements made.</returns>
     private static int ProcessShapesForReplace(IShapeCollection shapes, string findText, string replaceText,
         StringComparison comparison)
     {
@@ -253,11 +226,11 @@ Usage examples:
     /// <summary>
     ///     Replaces text in a TextFrame while preserving formatting at the Portion level.
     /// </summary>
-    /// <param name="textFrame">TextFrame to process.</param>
-    /// <param name="findText">Text to find.</param>
-    /// <param name="replaceText">Text to replace with.</param>
-    /// <param name="comparison">String comparison mode.</param>
-    /// <returns>1 if replacement was made, 0 otherwise.</returns>
+    /// <param name="textFrame">The text frame to process.</param>
+    /// <param name="findText">The text to find.</param>
+    /// <param name="replaceText">The text to replace with.</param>
+    /// <param name="comparison">The string comparison type.</param>
+    /// <returns>The number of replacements made (0 or 1).</returns>
     private static int ReplaceInTextFrame(ITextFrame textFrame, string findText, string replaceText,
         StringComparison comparison)
     {
@@ -283,11 +256,11 @@ Usage examples:
     /// <summary>
     ///     Replaces text in all cells of a table.
     /// </summary>
-    /// <param name="table">Table to process.</param>
-    /// <param name="findText">Text to find.</param>
-    /// <param name="replaceText">Text to replace with.</param>
-    /// <param name="comparison">String comparison mode.</param>
-    /// <returns>Number of cells where replacement was made.</returns>
+    /// <param name="table">The table to process.</param>
+    /// <param name="findText">The text to find.</param>
+    /// <param name="replaceText">The text to replace with.</param>
+    /// <param name="comparison">The string comparison type.</param>
+    /// <returns>The number of replacements made.</returns>
     private static int ReplaceInTable(ITable table, string findText, string replaceText, StringComparison comparison)
     {
         var replacements = 0;
@@ -306,11 +279,11 @@ Usage examples:
     /// <summary>
     ///     Replaces all occurrences of a string in source with replacement string.
     /// </summary>
-    /// <param name="source">Source string.</param>
-    /// <param name="find">Text to find.</param>
-    /// <param name="replace">Text to replace with.</param>
-    /// <param name="comparison">String comparison mode.</param>
-    /// <returns>String with replacements made.</returns>
+    /// <param name="source">The source string to search in.</param>
+    /// <param name="find">The text to find.</param>
+    /// <param name="replace">The text to replace with.</param>
+    /// <param name="comparison">The string comparison type.</param>
+    /// <returns>The string with all occurrences replaced.</returns>
     private static string ReplaceAll(string source, string find, string replace, StringComparison comparison)
     {
         if (string.IsNullOrEmpty(source) || string.IsNullOrEmpty(find)) return source;

@@ -1,8 +1,9 @@
-using System.Text.Json.Nodes;
+using System.ComponentModel;
 using Aspose.Cells;
 using Aspose.Slides;
 using Aspose.Words;
-using AsposeMcpServer.Core;
+using AsposeMcpServer.Core.Helpers;
+using ModelContextProtocol.Server;
 using SaveFormat = Aspose.Words.SaveFormat;
 
 namespace AsposeMcpServer.Tools.Conversion;
@@ -11,132 +12,92 @@ namespace AsposeMcpServer.Tools.Conversion;
 ///     Tool for converting documents between various formats with automatic source type detection
 ///     Supports Word, Excel, and PowerPoint documents
 /// </summary>
-public class ConvertDocumentTool : IAsposeTool
+[McpServerToolType]
+public class ConvertDocumentTool
 {
-    /// <summary>
-    ///     Gets the description of the tool and its usage examples
-    /// </summary>
-    public string Description => @"Convert documents between various formats (auto-detect source type).
+    [McpServerTool(Name = "convert_document")]
+    [Description(@"Convert documents between various formats (auto-detect source type).
 
 Usage examples:
 - Convert Word to HTML: convert_document(inputPath='doc.docx', outputPath='doc.html')
 - Convert Excel to CSV: convert_document(inputPath='book.xlsx', outputPath='book.csv')
 - Convert PowerPoint to PDF: convert_document(inputPath='presentation.pptx', outputPath='presentation.pdf')
-- Convert PDF to Word: convert_document(inputPath='doc.pdf', outputPath='doc.docx')";
-
-    /// <summary>
-    ///     Gets the JSON schema defining the input parameters for the tool
-    /// </summary>
-    public object InputSchema => new
+- Convert PDF to Word: convert_document(inputPath='doc.pdf', outputPath='doc.docx')")]
+    public string Execute(
+        [Description("Input file path (required, auto-detects format from extension)")]
+        string inputPath,
+        [Description("Output file path (required, format determined by extension)")]
+        string outputPath)
     {
-        type = "object",
-        properties = new
+        SecurityHelper.ValidateFilePath(inputPath, "inputPath", true);
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+
+        var inputExtension = Path.GetExtension(inputPath).ToLower();
+        var outputExtension = Path.GetExtension(outputPath).ToLower();
+
+        if (IsWordDocument(inputExtension))
         {
-            inputPath = new
-            {
-                type = "string",
-                description = "Input file path (required, auto-detects format from extension)"
-            },
-            outputPath = new
-            {
-                type = "string",
-                description = "Output file path (required, format determined by extension)"
-            }
-        },
-        required = new[] { "inputPath", "outputPath" }
-    };
+            var doc = new Document(inputPath);
+            var saveFormat = GetWordSaveFormat(outputExtension);
+            doc.Save(outputPath, saveFormat);
+        }
+        else if (IsExcelDocument(inputExtension))
+        {
+            using var workbook = new Workbook(inputPath);
+            var saveFormat = GetExcelSaveFormat(outputExtension);
+            workbook.Save(outputPath, saveFormat);
+        }
+        else if (IsPresentationDocument(inputExtension))
+        {
+            using var presentation = new Presentation(inputPath);
+            var saveFormat = GetPresentationSaveFormat(outputExtension);
+            presentation.Save(outputPath, saveFormat);
+        }
+        else
+        {
+            throw new ArgumentException($"Unsupported input format: {inputExtension}");
+        }
 
-    /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments
-    /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters</param>
-    /// <returns>Result message as a string</returns>
-    public async Task<string> ExecuteAsync(JsonObject? arguments)
-    {
-        var path = ArgumentHelper.GetAndValidatePath(arguments, "inputPath");
-        var outputPath = ArgumentHelper.GetAndValidatePath(arguments, "outputPath");
-
-        return await ConvertDocument(path, outputPath, arguments);
+        return $"Document converted from {inputExtension} to {outputExtension} format. Output: {outputPath}";
     }
 
     /// <summary>
-    ///     Converts a document from one format to another
+    ///     Determines whether the specified file extension corresponds to a Word document format.
     /// </summary>
-    /// <param name="path">Input file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="_">JSON arguments (unused)</param>
-    /// <returns>Result message</returns>
-    private Task<string> ConvertDocument(string path, string outputPath, JsonObject? _)
-    {
-        return Task.Run(() =>
-        {
-            var inputExtension = Path.GetExtension(path).ToLower();
-            var outputExtension = Path.GetExtension(outputPath).ToLower();
-
-            // Detect document type and convert
-            if (IsWordDocument(inputExtension))
-            {
-                var doc = new Document(path);
-                var saveFormat = GetWordSaveFormat(outputExtension);
-                doc.Save(outputPath, saveFormat);
-            }
-            else if (IsExcelDocument(inputExtension))
-            {
-                using var workbook = new Workbook(path);
-                var saveFormat = GetExcelSaveFormat(outputExtension);
-                workbook.Save(outputPath, saveFormat);
-            }
-            else if (IsPresentationDocument(inputExtension))
-            {
-                using var presentation = new Presentation(path);
-                var saveFormat = GetPresentationSaveFormat(outputExtension);
-                presentation.Save(outputPath, saveFormat);
-            }
-            else
-            {
-                throw new ArgumentException($"Unsupported input format: {inputExtension}");
-            }
-
-            return $"Document converted from {inputExtension} to {outputExtension} format. Output: {outputPath}";
-        });
-    }
-
-    /// <summary>
-    ///     Checks if the file extension indicates a Word document
-    /// </summary>
-    /// <param name="extension">File extension (including dot)</param>
-    /// <returns>True if Word document</returns>
-    private bool IsWordDocument(string extension)
+    /// <param name="extension">The file extension to check (including the leading dot).</param>
+    /// <returns><c>true</c> if the extension is a Word document format; otherwise, <c>false</c>.</returns>
+    private static bool IsWordDocument(string extension)
     {
         return extension is ".doc" or ".docx" or ".rtf" or ".odt" or ".txt";
     }
 
     /// <summary>
-    ///     Checks if the file extension indicates an Excel document
+    ///     Determines whether the specified file extension corresponds to an Excel document format.
     /// </summary>
-    /// <param name="extension">File extension (including dot)</param>
-    /// <returns>True if Excel document</returns>
-    private bool IsExcelDocument(string extension)
+    /// <param name="extension">The file extension to check (including the leading dot).</param>
+    /// <returns><c>true</c> if the extension is an Excel document format; otherwise, <c>false</c>.</returns>
+    private static bool IsExcelDocument(string extension)
     {
         return extension is ".xls" or ".xlsx" or ".csv" or ".ods";
     }
 
     /// <summary>
-    ///     Checks if the file extension indicates a PowerPoint presentation
+    ///     Determines whether the specified file extension corresponds to a PowerPoint presentation format.
     /// </summary>
-    /// <param name="extension">File extension (including dot)</param>
-    /// <returns>True if PowerPoint presentation</returns>
-    private bool IsPresentationDocument(string extension)
+    /// <param name="extension">The file extension to check (including the leading dot).</param>
+    /// <returns><c>true</c> if the extension is a PowerPoint presentation format; otherwise, <c>false</c>.</returns>
+    private static bool IsPresentationDocument(string extension)
     {
         return extension is ".ppt" or ".pptx" or ".odp";
     }
 
     /// <summary>
-    ///     Gets the Word save format from file extension
+    ///     Gets the Aspose.Words save format corresponding to the specified file extension.
     /// </summary>
-    /// <param name="extension">Output file extension (including dot)</param>
-    /// <returns>Word SaveFormat enum value</returns>
-    private SaveFormat GetWordSaveFormat(string extension)
+    /// <param name="extension">The target file extension (including the leading dot).</param>
+    /// <returns>The <see cref="SaveFormat" /> value for the specified extension.</returns>
+    /// <exception cref="ArgumentException">Thrown when the extension is not a supported output format.</exception>
+    private static SaveFormat GetWordSaveFormat(string extension)
     {
         return extension switch
         {
@@ -152,11 +113,12 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Gets the Excel save format from file extension
+    ///     Gets the Aspose.Cells save format corresponding to the specified file extension.
     /// </summary>
-    /// <param name="extension">Output file extension (including dot)</param>
-    /// <returns>Excel SaveFormat enum value</returns>
-    private Aspose.Cells.SaveFormat GetExcelSaveFormat(string extension)
+    /// <param name="extension">The target file extension (including the leading dot).</param>
+    /// <returns>The <see cref="Aspose.Cells.SaveFormat" /> value for the specified extension.</returns>
+    /// <exception cref="ArgumentException">Thrown when the extension is not a supported output format.</exception>
+    private static Aspose.Cells.SaveFormat GetExcelSaveFormat(string extension)
     {
         return extension switch
         {
@@ -171,11 +133,12 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Gets the PowerPoint save format from file extension
+    ///     Gets the Aspose.Slides save format corresponding to the specified file extension.
     /// </summary>
-    /// <param name="extension">Output file extension (including dot)</param>
-    /// <returns>PowerPoint SaveFormat enum value</returns>
-    private Aspose.Slides.Export.SaveFormat GetPresentationSaveFormat(string extension)
+    /// <param name="extension">The target file extension (including the leading dot).</param>
+    /// <returns>The <see cref="Aspose.Slides.Export.SaveFormat" /> value for the specified extension.</returns>
+    /// <exception cref="ArgumentException">Thrown when the extension is not a supported output format.</exception>
+    private static Aspose.Slides.Export.SaveFormat GetPresentationSaveFormat(string extension)
     {
         return extension switch
         {

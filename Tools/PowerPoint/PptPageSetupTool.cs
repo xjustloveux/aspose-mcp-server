@@ -1,7 +1,8 @@
-using System.Text.Json.Nodes;
+using System.ComponentModel;
 using Aspose.Slides;
-using Aspose.Slides.Export;
-using AsposeMcpServer.Core;
+using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Session;
+using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.PowerPoint;
 
@@ -9,12 +10,35 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 ///     Unified tool for PowerPoint page setup (slide size, orientation, footer, slide numbering).
 ///     Merges: PptSetSlideSizeTool, PptSetSlideOrientationTool, PptHeaderFooterTool
 /// </summary>
-public class PptPageSetupTool : IAsposeTool
+[McpServerToolType]
+public class PptPageSetupTool
 {
+    /// <summary>
+    ///     Minimum allowed slide size in points.
+    /// </summary>
     private const float MinSizePoints = 1f;
+
+    /// <summary>
+    ///     Maximum allowed slide size in points.
+    /// </summary>
     private const float MaxSizePoints = 5000f;
 
-    public string Description =>
+    /// <summary>
+    ///     Session manager for document session handling.
+    /// </summary>
+    private readonly DocumentSessionManager? _sessionManager;
+
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="PptPageSetupTool" /> class.
+    /// </summary>
+    /// <param name="sessionManager">Optional session manager for in-memory editing.</param>
+    public PptPageSetupTool(DocumentSessionManager? sessionManager = null)
+    {
+        _sessionManager = sessionManager;
+    }
+
+    [McpServerTool(Name = "ppt_page_setup")]
+    [Description(
         @"Manage PowerPoint page setup. Supports 4 operations: set_size, set_orientation, set_footer, set_slide_numbering.
 
 Note: PowerPoint slides do not have a separate header field. Only footer, date, and slide number are available.
@@ -25,102 +49,43 @@ Usage examples:
 - Set custom size: ppt_page_setup(operation='set_size', path='presentation.pptx', preset='Custom', width=960, height=720)
 - Set orientation: ppt_page_setup(operation='set_orientation', path='presentation.pptx', orientation='Portrait')
 - Set footer: ppt_page_setup(operation='set_footer', path='presentation.pptx', footerText='Footer', showSlideNumber=true)
-- Set slide numbering: ppt_page_setup(operation='set_slide_numbering', path='presentation.pptx', showSlideNumber=true, firstNumber=1)";
-
-    public object InputSchema => new
+- Set slide numbering: ppt_page_setup(operation='set_slide_numbering', path='presentation.pptx', showSlideNumber=true, firstNumber=1)")]
+    public string Execute(
+        [Description("Operation: set_size, set_orientation, set_footer, set_slide_numbering")]
+        string operation,
+        [Description("Presentation file path (required if no sessionId)")]
+        string? path = null,
+        [Description("Session ID for in-memory editing")]
+        string? sessionId = null,
+        [Description("Output file path (file mode only)")]
+        string? outputPath = null,
+        [Description("Preset: OnScreen16x9, OnScreen16x10, Letter, A4, Banner, Custom (optional, for set_size)")]
+        string? preset = null,
+        [Description("Custom width in points when preset=Custom (1-5000, 1 inch = 72 points)")]
+        double? width = null,
+        [Description("Custom height in points when preset=Custom (1-5000, 1 inch = 72 points)")]
+        double? height = null,
+        [Description("Orientation: 'Portrait' or 'Landscape' (required for set_orientation)")]
+        string? orientation = null,
+        [Description("Footer text (optional, for set_footer)")]
+        string? footerText = null,
+        [Description("Date/time text (optional, for set_footer)")]
+        string? dateText = null,
+        [Description("Show slide number (optional, for set_footer/set_slide_numbering, default: true)")]
+        bool showSlideNumber = true,
+        [Description("First slide number (optional, for set_slide_numbering, default: 1)")]
+        int firstNumber = 1,
+        [Description("Slide indices (0-based, optional, for set_footer, if not provided applies to all slides)")]
+        int[]? slideIndices = null)
     {
-        type = "object",
-        properties = new
-        {
-            operation = new
-            {
-                type = "string",
-                description = @"Operation to perform.
-- 'set_size': Set slide size (required params: path, preset)
-- 'set_orientation': Set slide orientation (required params: path, orientation)
-- 'set_footer': Set footer text, date, slide number for slides (required params: path)
-- 'set_slide_numbering': Set slide numbering visibility and start number (required params: path)",
-                @enum = new[] { "set_size", "set_orientation", "set_footer", "set_slide_numbering" }
-            },
-            path = new
-            {
-                type = "string",
-                description = "Presentation file path (required for all operations)"
-            },
-            preset = new
-            {
-                type = "string",
-                description = "Preset: OnScreen16x9, OnScreen16x10, Letter, A4, Banner, Custom (optional, for set_size)"
-            },
-            width = new
-            {
-                type = "number",
-                description = "Custom width in points when preset=Custom (1-5000, 1 inch = 72 points)"
-            },
-            height = new
-            {
-                type = "number",
-                description = "Custom height in points when preset=Custom (1-5000, 1 inch = 72 points)"
-            },
-            orientation = new
-            {
-                type = "string",
-                description = "Orientation: 'Portrait' or 'Landscape' (required for set_orientation)",
-                @enum = new[] { "Portrait", "Landscape" }
-            },
-            footerText = new
-            {
-                type = "string",
-                description = "Footer text (optional, for set_footer)"
-            },
-            dateText = new
-            {
-                type = "string",
-                description = "Date/time text (optional, for set_footer)"
-            },
-            showSlideNumber = new
-            {
-                type = "boolean",
-                description = "Show slide number (optional, for set_footer/set_slide_numbering, default: true)"
-            },
-            firstNumber = new
-            {
-                type = "number",
-                description = "First slide number (optional, for set_slide_numbering, default: 1)"
-            },
-            slideIndices = new
-            {
-                type = "array",
-                items = new { type = "number" },
-                description = "Slide indices (0-based, optional, for set_footer, if not provided applies to all slides)"
-            },
-            outputPath = new
-            {
-                type = "string",
-                description = "Output file path (optional, defaults to input path)"
-            }
-        },
-        required = new[] { "operation", "path" }
-    };
-
-    /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments.
-    /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters.</param>
-    /// <returns>Result message as a string.</returns>
-    /// <exception cref="ArgumentException">Thrown when operation is unknown.</exception>
-    public async Task<string> ExecuteAsync(JsonObject? arguments)
-    {
-        var operation = ArgumentHelper.GetString(arguments, "operation");
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path);
 
         return operation.ToLower() switch
         {
-            "set_size" => await SetSlideSizeAsync(path, outputPath, arguments),
-            "set_orientation" => await SetSlideOrientationAsync(path, outputPath, arguments),
-            "set_footer" => await SetFooterAsync(path, outputPath, arguments),
-            "set_slide_numbering" => await SetSlideNumberingAsync(path, outputPath, arguments),
+            "set_size" => SetSlideSize(ctx, outputPath, preset, width, height),
+            "set_orientation" => SetSlideOrientation(ctx, outputPath, orientation),
+            "set_footer" => SetFooter(ctx, outputPath, footerText, showSlideNumber, dateText, slideIndices),
+            "set_slide_numbering" => SetSlideNumbering(ctx, outputPath, showSlideNumber, firstNumber),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -128,57 +93,57 @@ Usage examples:
     /// <summary>
     ///     Sets slide size.
     /// </summary>
-    /// <param name="path">PowerPoint file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="arguments">JSON arguments containing preset, width, height.</param>
-    /// <returns>Success message.</returns>
-    /// <exception cref="ArgumentException">Thrown when custom size is missing width/height or values are out of range.</exception>
-    private Task<string> SetSlideSizeAsync(string path, string outputPath, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="preset">The slide size preset name.</param>
+    /// <param name="width">The custom width in points.</param>
+    /// <param name="height">The custom height in points.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when custom size is selected but width or height is not provided.</exception>
+    private static string SetSlideSize(DocumentContext<Presentation> ctx, string? outputPath, string? preset,
+        double? width, double? height)
     {
-        return Task.Run(() =>
+        var presetValue = preset ?? "OnScreen16x9";
+        var presentation = ctx.Document;
+        var slideSize = presentation.SlideSize;
+        var type = presetValue.ToLower() switch
         {
-            var preset = ArgumentHelper.GetString(arguments, "preset", "OnScreen16x9");
-            var width = ArgumentHelper.GetDoubleNullable(arguments, "width");
-            var height = ArgumentHelper.GetDoubleNullable(arguments, "height");
+            "onscreen16x10" => SlideSizeType.OnScreen16x10,
+            "a4" => SlideSizeType.A4Paper,
+            "banner" => SlideSizeType.Banner,
+            "custom" => SlideSizeType.Custom,
+            _ => SlideSizeType.OnScreen
+        };
 
-            using var presentation = new Presentation(path);
-            var slideSize = presentation.SlideSize;
-            var type = preset.ToLower() switch
-            {
-                "onscreen16x10" => SlideSizeType.OnScreen16x10,
-                "a4" => SlideSizeType.A4Paper,
-                "banner" => SlideSizeType.Banner,
-                "custom" => SlideSizeType.Custom,
-                _ => SlideSizeType.OnScreen
-            };
+        if (type == SlideSizeType.Custom)
+        {
+            if (!width.HasValue || !height.HasValue)
+                throw new ArgumentException("Custom size requires width and height.");
 
-            if (type == SlideSizeType.Custom)
-            {
-                if (!width.HasValue || !height.HasValue)
-                    throw new ArgumentException("Custom size requires width and height.");
+            ValidateSizeRange(width.Value, height.Value);
+            slideSize.SetSize((float)width.Value, (float)height.Value, SlideSizeScaleType.DoNotScale);
+        }
+        else
+        {
+            slideSize.SetSize(type, SlideSizeScaleType.DoNotScale);
+        }
 
-                ValidateSizeRange(width.Value, height.Value);
-                slideSize.SetSize((float)width.Value, (float)height.Value, SlideSizeScaleType.DoNotScale);
-            }
-            else
-            {
-                slideSize.SetSize(type, SlideSizeScaleType.DoNotScale);
-            }
+        ctx.Save(outputPath);
+        var sizeInfo = slideSize.Type == SlideSizeType.Custom
+            ? $" ({slideSize.Size.Width}x{slideSize.Size.Height})"
+            : "";
 
-            presentation.Save(outputPath, SaveFormat.Pptx);
-            var sizeInfo = slideSize.Type == SlideSizeType.Custom
-                ? $" ({slideSize.Size.Width}x{slideSize.Size.Height})"
-                : "";
-            return $"Slide size set to {slideSize.Type}{sizeInfo}. Output: {outputPath}";
-        });
+        var result = $"Slide size set to {slideSize.Type}{sizeInfo}.\n";
+        result += ctx.GetOutputMessage(outputPath);
+        return result;
     }
 
     /// <summary>
     ///     Validates that width and height are within acceptable range.
     /// </summary>
-    /// <param name="width">Width in points.</param>
-    /// <param name="height">Height in points.</param>
-    /// <exception cref="ArgumentException">Thrown when values are out of range (1-5000 points).</exception>
+    /// <param name="width">The width value to validate.</param>
+    /// <param name="height">The height value to validate.</param>
+    /// <exception cref="ArgumentException">Thrown when width or height is outside the valid range.</exception>
     private static void ValidateSizeRange(double width, double height)
     {
         if (width < MinSizePoints || width > MaxSizePoints)
@@ -191,128 +156,105 @@ Usage examples:
     /// <summary>
     ///     Sets slide orientation by swapping width and height while preserving the aspect ratio.
     /// </summary>
-    /// <param name="path">PowerPoint file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="arguments">JSON arguments containing orientation (Portrait/Landscape).</param>
-    /// <returns>Success message.</returns>
-    private Task<string> SetSlideOrientationAsync(string path, string outputPath, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="orientation">The orientation value (Portrait or Landscape).</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when orientation is not provided.</exception>
+    private static string SetSlideOrientation(DocumentContext<Presentation> ctx, string? outputPath,
+        string? orientation)
     {
-        return Task.Run(() =>
-        {
-            var orientation = ArgumentHelper.GetString(arguments, "orientation");
-            var isPortrait = orientation.Equals("Portrait", StringComparison.OrdinalIgnoreCase);
+        if (string.IsNullOrEmpty(orientation))
+            throw new ArgumentException("orientation is required for set_orientation operation");
 
-            using var presentation = new Presentation(path);
-            var currentSize = presentation.SlideSize.Size;
-            var currentWidth = currentSize.Width;
-            var currentHeight = currentSize.Height;
+        var isPortrait = orientation.Equals("Portrait", StringComparison.OrdinalIgnoreCase);
+        var presentation = ctx.Document;
+        var currentSize = presentation.SlideSize.Size;
+        var currentWidth = currentSize.Width;
+        var currentHeight = currentSize.Height;
 
-            var needsSwap = isPortrait ? currentWidth > currentHeight : currentHeight > currentWidth;
+        var needsSwap = isPortrait ? currentWidth > currentHeight : currentHeight > currentWidth;
 
-            if (needsSwap)
-                presentation.SlideSize.SetSize(currentHeight, currentWidth, SlideSizeScaleType.EnsureFit);
+        if (needsSwap)
+            presentation.SlideSize.SetSize(currentHeight, currentWidth, SlideSizeScaleType.EnsureFit);
 
-            presentation.Save(outputPath, SaveFormat.Pptx);
+        ctx.Save(outputPath);
 
-            var finalSize = presentation.SlideSize.Size;
-            return
-                $"Slide orientation set to {orientation} ({finalSize.Width}x{finalSize.Height}). Output: {outputPath}";
-        });
+        var finalSize = presentation.SlideSize.Size;
+        var result = $"Slide orientation set to {orientation} ({finalSize.Width}x{finalSize.Height}).\n";
+        result += ctx.GetOutputMessage(outputPath);
+        return result;
     }
 
     /// <summary>
     ///     Sets footer text, date, and slide number for slides.
     /// </summary>
-    /// <param name="path">PowerPoint file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="arguments">JSON arguments containing footerText, dateText, showSlideNumber, slideIndices.</param>
-    /// <returns>Success message.</returns>
-    /// <exception cref="ArgumentException">Thrown when slide index is out of range.</exception>
-    private Task<string> SetFooterAsync(string path, string outputPath, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="footerText">The footer text.</param>
+    /// <param name="showSlideNumber">Whether to show slide numbers.</param>
+    /// <param name="dateText">The date/time text.</param>
+    /// <param name="slideIndices">The slide indices to apply footer to.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    private static string SetFooter(DocumentContext<Presentation> ctx, string? outputPath,
+        string? footerText, bool showSlideNumber, string? dateText, int[]? slideIndices)
     {
-        return Task.Run(() =>
-        {
-            var footerText = ArgumentHelper.GetStringNullable(arguments, "footerText");
-            var showSlideNumber = ArgumentHelper.GetBool(arguments, "showSlideNumber", true);
-            var dateText = ArgumentHelper.GetStringNullable(arguments, "dateText");
-            var slideIndices = GetSlideIndices(arguments);
+        var presentation = ctx.Document;
+        var slides = GetTargetSlides(presentation, slideIndices);
+        var applyToAll = slideIndices == null || slideIndices.Length == 0;
 
-            using var presentation = new Presentation(path);
+        if (applyToAll)
+            EnableMasterVisibility(presentation, footerText, showSlideNumber, dateText);
 
-            var slides = GetTargetSlides(presentation, slideIndices);
-            var applyToAll = slideIndices == null || slideIndices.Length == 0;
+        foreach (var slide in slides)
+            ApplyFooterSettings(slide.HeaderFooterManager, footerText, showSlideNumber, dateText);
 
-            if (applyToAll)
-                EnableMasterVisibility(presentation, footerText, showSlideNumber, dateText);
+        ctx.Save(outputPath);
 
-            foreach (var slide in slides)
-                ApplyFooterSettings(slide.HeaderFooterManager, footerText, showSlideNumber, dateText);
-
-            presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Footer settings updated for {slides.Count} slide(s). Output: {outputPath}";
-        });
+        var result = $"Footer settings updated for {slides.Count} slide(s).\n";
+        result += ctx.GetOutputMessage(outputPath);
+        return result;
     }
 
     /// <summary>
     ///     Sets slide numbering visibility and start number.
     /// </summary>
-    /// <param name="path">PowerPoint file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="arguments">JSON arguments containing showSlideNumber and optional firstNumber.</param>
-    /// <returns>Success message.</returns>
-    private Task<string> SetSlideNumberingAsync(string path, string outputPath, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="showSlideNumber">Whether to show slide numbers.</param>
+    /// <param name="firstNumber">The first slide number.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    private static string SetSlideNumbering(DocumentContext<Presentation> ctx, string? outputPath, bool showSlideNumber,
+        int firstNumber)
     {
-        return Task.Run(() =>
-        {
-            var showSlideNumber = ArgumentHelper.GetBool(arguments, "showSlideNumber", true);
-            var firstNumber = ArgumentHelper.GetInt(arguments, "firstNumber", 1);
+        var presentation = ctx.Document;
 
-            using var presentation = new Presentation(path);
+        presentation.FirstSlideNumber = firstNumber;
+        presentation.HeaderFooterManager.SetAllSlideNumbersVisibility(showSlideNumber);
 
-            presentation.FirstSlideNumber = firstNumber;
-            presentation.HeaderFooterManager.SetAllSlideNumbersVisibility(showSlideNumber);
+        foreach (var slide in presentation.Slides)
+            slide.HeaderFooterManager.SetSlideNumberVisibility(showSlideNumber);
 
-            foreach (var slide in presentation.Slides)
-                slide.HeaderFooterManager.SetSlideNumberVisibility(showSlideNumber);
+        ctx.Save(outputPath);
 
-            presentation.Save(outputPath, SaveFormat.Pptx);
-
-            var visibilityText = showSlideNumber ? "shown" : "hidden";
-            return $"Slide numbers {visibilityText}, starting from {firstNumber}. Output: {outputPath}";
-        });
-    }
-
-    /// <summary>
-    ///     Gets slide indices from arguments.
-    /// </summary>
-    /// <param name="arguments">JSON arguments containing optional slideIndices.</param>
-    /// <returns>Array of slide indices, or null if not specified.</returns>
-    private static int[]? GetSlideIndices(JsonObject? arguments)
-    {
-        var slideIndicesArray = ArgumentHelper.GetArray(arguments, "slideIndices", false);
-        if (slideIndicesArray == null || slideIndicesArray.Count == 0)
-            return null;
-
-        return slideIndicesArray
-            .Select(x => x?.GetValue<int>())
-            .Where(x => x.HasValue)
-            .Select(x => x!.Value)
-            .ToArray();
+        var visibilityText = showSlideNumber ? "shown" : "hidden";
+        var result = $"Slide numbers {visibilityText}, starting from {firstNumber}.\n";
+        result += ctx.GetOutputMessage(outputPath);
+        return result;
     }
 
     /// <summary>
     ///     Gets target slides based on slide indices.
     /// </summary>
-    /// <param name="presentation">Presentation to get slides from.</param>
-    /// <param name="slideIndices">Slide indices, or null for all slides.</param>
-    /// <returns>List of target slides.</returns>
-    /// <exception cref="ArgumentException">Thrown when slide index is out of range.</exception>
+    /// <param name="presentation">The presentation object.</param>
+    /// <param name="slideIndices">The slide indices to retrieve.</param>
+    /// <returns>A list of slides matching the specified indices, or all slides if indices is null or empty.</returns>
     private static List<ISlide> GetTargetSlides(IPresentation presentation, int[]? slideIndices)
     {
         if (slideIndices == null || slideIndices.Length == 0)
             return presentation.Slides.ToList();
 
-        var slides = new List<ISlide>();
+        List<ISlide> slides = [];
         foreach (var index in slideIndices)
         {
             PowerPointHelper.ValidateSlideIndex(index, presentation);
@@ -325,10 +267,10 @@ Usage examples:
     /// <summary>
     ///     Enables visibility on master slides.
     /// </summary>
-    /// <param name="presentation">Presentation to configure.</param>
-    /// <param name="footerText">Footer text (if not null, enables footer visibility).</param>
+    /// <param name="presentation">The presentation object.</param>
+    /// <param name="footerText">The footer text.</param>
     /// <param name="showSlideNumber">Whether to show slide numbers.</param>
-    /// <param name="dateText">Date text (if not null, enables date visibility).</param>
+    /// <param name="dateText">The date/time text.</param>
     private static void EnableMasterVisibility(IPresentation presentation, string? footerText, bool showSlideNumber,
         string? dateText)
     {
@@ -346,10 +288,10 @@ Usage examples:
     /// <summary>
     ///     Applies footer settings to a slide.
     /// </summary>
-    /// <param name="manager">Slide header/footer manager.</param>
-    /// <param name="footerText">Footer text.</param>
+    /// <param name="manager">The slide header footer manager.</param>
+    /// <param name="footerText">The footer text.</param>
     /// <param name="showSlideNumber">Whether to show slide numbers.</param>
-    /// <param name="dateText">Date text.</param>
+    /// <param name="dateText">The date/time text.</param>
     private static void ApplyFooterSettings(ISlideHeaderFooterManager manager, string? footerText,
         bool showSlideNumber, string? dateText)
     {

@@ -1,10 +1,12 @@
+using System.ComponentModel;
 using System.Text;
-using System.Text.Json.Nodes;
 using Aspose.Cells;
 using Aspose.Cells.Charts;
 using Aspose.Words;
 using Aspose.Words.Drawing;
-using AsposeMcpServer.Core;
+using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Session;
+using ModelContextProtocol.Server;
 using ImageType = Aspose.Cells.Drawing.ImageType;
 
 namespace AsposeMcpServer.Tools.Word;
@@ -12,12 +14,25 @@ namespace AsposeMcpServer.Tools.Word;
 /// <summary>
 ///     Tool for managing shapes (lines, textboxes, charts, etc.) in Word documents
 /// </summary>
-public class WordShapeTool : IAsposeTool
+[McpServerToolType]
+public class WordShapeTool
 {
     /// <summary>
-    ///     Gets the description of the tool and its usage examples
+    ///     Session manager for document session operations
     /// </summary>
-    public string Description =>
+    private readonly DocumentSessionManager? _sessionManager;
+
+    /// <summary>
+    ///     Initializes a new instance of the WordShapeTool class
+    /// </summary>
+    /// <param name="sessionManager">Optional session manager for in-memory document operations</param>
+    public WordShapeTool(DocumentSessionManager? sessionManager = null)
+    {
+        _sessionManager = sessionManager;
+    }
+
+    [McpServerTool(Name = "word_shape")]
+    [Description(
         @"Manage shapes in Word documents. Supports 9 operations: add_line, add_textbox, get_textboxes, edit_textbox_content, set_textbox_border, add_chart, add, get, delete.
 
 Note: All position/size values are in points (1 point = 1/72 inch, 72 points = 1 inch).
@@ -33,885 +48,728 @@ Usage examples:
 - Add chart: word_shape(operation='add_chart', path='doc.docx', chartType='Column', data=[['A','B'],['1','2']])
 - Add generic shape: word_shape(operation='add', path='doc.docx', shapeType='Rectangle', width=100, height=50)
 - Get all shapes: word_shape(operation='get', path='doc.docx')
-- Delete shape: word_shape(operation='delete', path='doc.docx', shapeIndex=0)";
-
-    /// <summary>
-    ///     Gets the JSON schema defining the input parameters for the tool
-    /// </summary>
-    public object InputSchema => new
+- Delete shape: word_shape(operation='delete', path='doc.docx', shapeIndex=0)")]
+    public string Execute(
+        [Description(
+            "Operation: add_line, add_textbox, get_textboxes, edit_textbox_content, set_textbox_border, add_chart, add, get, delete")]
+        string operation,
+        [Description("Document file path (required if no sessionId)")]
+        string? path = null,
+        [Description("Session ID for in-memory editing")]
+        string? sessionId = null,
+        [Description("Output file path (file mode only)")]
+        string? outputPath = null,
+        [Description("Location: body, header, footer (for add_line, default: body)")]
+        string location = "body",
+        [Description("Position: start, end (for add_line, default: end)")]
+        string position = "end",
+        [Description("Line style: border, shape (for add_line, default: shape)")]
+        string lineStyle = "shape",
+        [Description("Line width in points (for add_line, default: 1.0)")]
+        double lineWidth = 1.0,
+        [Description("Line color hex (for add_line, default: 000000)")]
+        string lineColor = "000000",
+        [Description("Width/length in points (for add_line: line length; for add: shape width)")]
+        double? width = null,
+        [Description("Text content (for add_textbox, edit_textbox_content)")]
+        string? text = null,
+        [Description("Textbox width in points (for add_textbox, default: 200)")]
+        double textboxWidth = 200,
+        [Description("Textbox height in points (for add_textbox, default: 100)")]
+        double textboxHeight = 100,
+        [Description("Horizontal position in points (for add_textbox, default: 100)")]
+        double positionX = 100,
+        [Description("Vertical position in points (for add_textbox, default: 100)")]
+        double positionY = 100,
+        [Description("Background color hex (for add_textbox)")]
+        string? backgroundColor = null,
+        [Description("Border color hex (for add_textbox, set_textbox_border)")]
+        string? borderColor = null,
+        [Description("Border width in points (for add_textbox, set_textbox_border, default: 1)")]
+        double borderWidth = 1,
+        [Description("Font name (for add_textbox, edit_textbox_content)")]
+        string? fontName = null,
+        [Description("Font name for ASCII characters (for add_textbox, edit_textbox_content)")]
+        string? fontNameAscii = null,
+        [Description("Font name for Far East characters (for add_textbox, edit_textbox_content)")]
+        string? fontNameFarEast = null,
+        [Description("Font size in points (for add_textbox, edit_textbox_content)")]
+        double? fontSize = null,
+        [Description("Bold text (for add_textbox, edit_textbox_content)")]
+        bool? bold = null,
+        [Description("Italic text (for edit_textbox_content)")]
+        bool? italic = null,
+        [Description("Text color hex (for edit_textbox_content)")]
+        string? color = null,
+        [Description("Text alignment: left, center, right (for add_textbox, default: left)")]
+        string textAlignment = "left",
+        [Description("Textbox index (0-based, textbox-only index for edit_textbox_content, set_textbox_border)")]
+        int? textboxIndex = null,
+        [Description("Shape index (0-based, global index including all shapes, for delete operation)")]
+        int? shapeIndex = null,
+        [Description("Shape type: rectangle, ellipse, roundrectangle, line (for add operation)")]
+        string? shapeType = null,
+        [Description("Shape height in points (for add operation)")]
+        double? height = null,
+        [Description("Shape X position in points (for add operation, default: 100)")]
+        double x = 100,
+        [Description("Shape Y position in points (for add operation, default: 100)")]
+        double y = 100,
+        [Description("Append text to existing content (for edit_textbox_content, default: false)")]
+        bool appendText = false,
+        [Description("Clear existing formatting (for edit_textbox_content, default: false)")]
+        bool clearFormatting = false,
+        [Description("Show border (for set_textbox_border, default: true)")]
+        bool borderVisible = true,
+        [Description(
+            "Border style: solid, dash, dot, dashDot, dashDotDot, roundDot (for set_textbox_border, default: solid)")]
+        string borderStyle = "solid",
+        [Description("Include textbox content (for get_textboxes, default: true)")]
+        bool includeContent = true,
+        [Description("Chart type: column, bar, line, pie, area, scatter, doughnut (for add_chart, default: column)")]
+        string chartType = "column",
+        [Description("Chart data as 2D array (for add_chart)")]
+        string[][]? data = null,
+        [Description("Chart title (for add_chart, optional)")]
+        string? chartTitle = null,
+        [Description("Chart width in points (for add_chart, default: 432)")]
+        double chartWidth = 432,
+        [Description("Chart height in points (for add_chart, default: 252)")]
+        double chartHeight = 252,
+        [Description("Paragraph index to insert after (for add_chart, optional, use -1 for beginning)")]
+        int? paragraphIndex = null,
+        [Description("Chart alignment: left, center, right (for add_chart, default: left)")]
+        string alignment = "left")
     {
-        type = "object",
-        properties = new
-        {
-            operation = new
-            {
-                type = "string",
-                description = @"Operation to perform.
-- 'add_line': Add a line shape (required params: path)
-- 'add_textbox': Add a textbox (required params: path, text)
-- 'get_textboxes': Get all textboxes with textbox-only index (required params: path)
-- 'edit_textbox_content': Edit textbox content using textbox-only index (required params: path, textboxIndex)
-- 'set_textbox_border': Set textbox border using textbox-only index (required params: path, textboxIndex)
-- 'add_chart': Add a chart (required params: path, data)
-- 'add': Add a generic shape (required params: path, shapeType, width, height)
-- 'get': Get all shapes with global shape index (required params: path)
-- 'delete': Delete a shape using global shape index (required params: path, shapeIndex)",
-                @enum = new[]
-                {
-                    "add_line", "add_textbox", "get_textboxes", "edit_textbox_content", "set_textbox_border",
-                    "add_chart", "add", "get", "delete"
-                }
-            },
-            path = new
-            {
-                type = "string",
-                description = "Document file path (required for all operations)"
-            },
-            outputPath = new
-            {
-                type = "string",
-                description = "Output file path (optional, defaults to overwrite input)"
-            },
-            location = new
-            {
-                type = "string",
-                description = "Where to add line: body, header, footer (for add_line, default: body)",
-                @enum = new[] { "body", "header", "footer" }
-            },
-            position = new
-            {
-                type = "string",
-                description = "Position: start, end (for add_line, default: end)",
-                @enum = new[] { "start", "end" }
-            },
-            lineStyle = new
-            {
-                type = "string",
-                description = "Line style: border, shape (for add_line, default: shape)",
-                @enum = new[] { "border", "shape" }
-            },
-            lineWidth = new
-            {
-                type = "number",
-                description = "Line width in points (for add_line, default: 1.0)"
-            },
-            lineColor = new
-            {
-                type = "string",
-                description = "Line color hex (for add_line, default: 000000)"
-            },
-            width = new
-            {
-                type = "number",
-                description =
-                    "Width/length in points (for add_line: line length; for add: shape width. 1 point = 1/72 inch)"
-            },
-            text = new
-            {
-                type = "string",
-                description = "Text content (for add_textbox, edit_textbox_content)"
-            },
-            textboxWidth = new
-            {
-                type = "number",
-                description = "Textbox width in points (for add_textbox, default: 200)"
-            },
-            textboxHeight = new
-            {
-                type = "number",
-                description = "Textbox height in points (for add_textbox, default: 100)"
-            },
-            positionX = new
-            {
-                type = "number",
-                description = "Horizontal position in points (for add_textbox, default: 100)"
-            },
-            positionY = new
-            {
-                type = "number",
-                description = "Vertical position in points (for add_textbox, default: 100)"
-            },
-            backgroundColor = new
-            {
-                type = "string",
-                description = "Background color hex (for add_textbox)"
-            },
-            borderColor = new
-            {
-                type = "string",
-                description = "Border color hex (for add_textbox, set_textbox_border)"
-            },
-            borderWidth = new
-            {
-                type = "number",
-                description = "Border width in points (for add_textbox, set_textbox_border, default: 1)"
-            },
-            fontName = new
-            {
-                type = "string",
-                description = "Font name (for add_textbox, edit_textbox_content)"
-            },
-            fontNameAscii = new
-            {
-                type = "string",
-                description = "Font name for ASCII characters (for add_textbox, edit_textbox_content)"
-            },
-            fontNameFarEast = new
-            {
-                type = "string",
-                description = "Font name for Far East characters (for add_textbox, edit_textbox_content)"
-            },
-            fontSize = new
-            {
-                type = "number",
-                description = "Font size in points (for add_textbox, edit_textbox_content)"
-            },
-            bold = new
-            {
-                type = "boolean",
-                description = "Bold text (for add_textbox, edit_textbox_content)"
-            },
-            italic = new
-            {
-                type = "boolean",
-                description = "Italic text (for edit_textbox_content)"
-            },
-            color = new
-            {
-                type = "string",
-                description = "Text color hex (for edit_textbox_content)"
-            },
-            textAlignment = new
-            {
-                type = "string",
-                description = "Text alignment: left, center, right (for add_textbox, default: left)",
-                @enum = new[] { "left", "center", "right" }
-            },
-            textboxIndex = new
-            {
-                type = "number",
-                description = "Textbox index (0-based, textbox-only index for edit_textbox_content, set_textbox_border)"
-            },
-            shapeIndex = new
-            {
-                type = "number",
-                description = "Shape index (0-based, global index including all shapes, for delete operation)"
-            },
-            shapeType = new
-            {
-                type = "string",
-                description = "Shape type (for add operation)",
-                @enum = new[] { "rectangle", "ellipse", "roundrectangle", "line" }
-            },
-            height = new
-            {
-                type = "number",
-                description = "Shape height in points (for add operation, 1 point = 1/72 inch)"
-            },
-            x = new
-            {
-                type = "number",
-                description = "Shape X position in points (for add operation, default: 100)"
-            },
-            y = new
-            {
-                type = "number",
-                description = "Shape Y position in points (for add operation, default: 100)"
-            },
-            appendText = new
-            {
-                type = "boolean",
-                description = "Append text to existing content (for edit_textbox_content, default: false)"
-            },
-            clearFormatting = new
-            {
-                type = "boolean",
-                description = "Clear existing formatting (for edit_textbox_content, default: false)"
-            },
-            borderVisible = new
-            {
-                type = "boolean",
-                description = "Show border (for set_textbox_border, default: true)"
-            },
-            borderStyle = new
-            {
-                type = "string",
-                description = "Border style (for set_textbox_border, default: solid)",
-                @enum = new[] { "solid", "dash", "dot", "dashDot", "dashDotDot", "roundDot" }
-            },
-            includeContent = new
-            {
-                type = "boolean",
-                description = "Include textbox content (for get_textboxes, default: true)"
-            },
-            chartType = new
-            {
-                type = "string",
-                description =
-                    "Chart type: column, bar, line, pie, area, scatter, doughnut (for add_chart, default: column)",
-                @enum = new[] { "column", "bar", "line", "pie", "area", "scatter", "doughnut" }
-            },
-            data = new
-            {
-                type = "array",
-                description = "Chart data as 2D array (for add_chart)",
-                items = new
-                {
-                    type = "array",
-                    items = new { type = "string" }
-                }
-            },
-            chartTitle = new
-            {
-                type = "string",
-                description = "Chart title (for add_chart, optional)"
-            },
-            chartWidth = new
-            {
-                type = "number",
-                description = "Chart width in points (for add_chart, default: 432)"
-            },
-            chartHeight = new
-            {
-                type = "number",
-                description = "Chart height in points (for add_chart, default: 252)"
-            },
-            paragraphIndex = new
-            {
-                type = "number",
-                description = "Paragraph index to insert after (for add_chart, optional, use -1 for beginning)"
-            },
-            alignment = new
-            {
-                type = "string",
-                description = "Chart alignment: left, center, right (for add_chart, default: left)",
-                @enum = new[] { "left", "center", "right" }
-            }
-        },
-        required = new[] { "operation", "path" }
-    };
-
-    /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments
-    /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters</param>
-    /// <returns>Result message as a string</returns>
-    /// <exception cref="ArgumentException">Thrown when operation is unknown or required parameters are missing.</exception>
-    public async Task<string> ExecuteAsync(JsonObject? arguments)
-    {
-        var operation = ArgumentHelper.GetString(arguments, "operation");
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
 
         return operation.ToLower() switch
         {
-            "add_line" => await AddLine(path, outputPath, arguments),
-            "add_textbox" => await AddTextBox(path, outputPath, arguments),
-            "get_textboxes" => await GetTextboxes(path, arguments),
-            "edit_textbox_content" => await EditTextBoxContent(path, outputPath, arguments),
-            "set_textbox_border" => await SetTextBoxBorder(path, outputPath, arguments),
-            "add_chart" => await AddChart(path, outputPath, arguments),
-            "add" => await AddShape(path, outputPath, arguments),
-            "get" => await GetShapes(path),
-            "delete" => await DeleteShape(path, outputPath, arguments),
+            "add_line" => AddLine(ctx, outputPath, location, position, lineStyle, lineWidth, lineColor, width),
+            "add_textbox" => AddTextBox(ctx, outputPath, text, textboxWidth, textboxHeight, positionX, positionY,
+                backgroundColor, borderColor, borderWidth, fontName, fontNameAscii, fontNameFarEast, fontSize, bold,
+                textAlignment),
+            "get_textboxes" => GetTextboxes(ctx, includeContent),
+            "edit_textbox_content" => EditTextBoxContent(ctx, outputPath, textboxIndex, text, appendText, fontName,
+                fontNameAscii, fontNameFarEast, fontSize, bold, italic, color, clearFormatting),
+            "set_textbox_border" => SetTextBoxBorder(ctx, outputPath, textboxIndex, borderVisible, borderColor,
+                borderWidth, borderStyle),
+            "add_chart" => AddChart(ctx, outputPath, chartType, data, chartTitle, chartWidth, chartHeight,
+                paragraphIndex, alignment),
+            "add" => AddShape(ctx, outputPath, shapeType, width, height, x, y),
+            "get" => GetShapes(ctx),
+            "delete" => DeleteShape(ctx, outputPath, shapeIndex),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
 
     /// <summary>
-    ///     Adds a line shape to the document
+    ///     Adds a line shape to the document.
     /// </summary>
-    /// <param name="path">Document file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing optional location, position, lineStyle, lineWidth, lineColor, width</param>
-    /// <returns>Success message with line details</returns>
-    private Task<string> AddLine(string path, string outputPath, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="location">The location for the line: body, header, or footer.</param>
+    /// <param name="position">The position: start or end.</param>
+    /// <param name="lineStyle">The line style: border or shape.</param>
+    /// <param name="lineWidth">The line width in points.</param>
+    /// <param name="lineColor">The line color in hex format.</param>
+    /// <param name="width">The optional line width/length in points.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the target location cannot be accessed.</exception>
+    private static string AddLine(DocumentContext<Document> ctx, string? outputPath, string location, string position,
+        string lineStyle, double lineWidth, string lineColor, double? width)
     {
-        return Task.Run(() =>
+        var doc = ctx.Document;
+        var section = doc.FirstSection;
+        var calculatedWidth = width ?? section.PageSetup.PageWidth - section.PageSetup.LeftMargin -
+            section.PageSetup.RightMargin;
+
+        Node? targetNode;
+        string locationDesc;
+
+        switch (location.ToLower())
         {
-            var location = ArgumentHelper.GetString(arguments, "location", "body");
-            var position = ArgumentHelper.GetString(arguments, "position", "end");
-            var lineStyle = ArgumentHelper.GetString(arguments, "lineStyle", "shape");
-            var lineWidth = ArgumentHelper.GetDouble(arguments, "lineWidth", 1.0);
-            var lineColor = ArgumentHelper.GetString(arguments, "lineColor", "000000");
-            var width = ArgumentHelper.GetDoubleNullable(arguments, "width");
+            case "header":
+                var header = section.HeadersFooters[HeaderFooterType.HeaderPrimary];
+                if (header == null)
+                {
+                    header = new HeaderFooter(doc, HeaderFooterType.HeaderPrimary);
+                    section.HeadersFooters.Add(header);
+                }
 
-            var doc = new Document(path);
-            var section = doc.FirstSection;
-            var calculatedWidth = width ?? section.PageSetup.PageWidth - section.PageSetup.LeftMargin -
-                section.PageSetup.RightMargin;
+                targetNode = header;
+                locationDesc = "header";
+                break;
 
-            Node? targetNode;
-            string locationDesc;
+            case "footer":
+                var footer = section.HeadersFooters[HeaderFooterType.FooterPrimary];
+                if (footer == null)
+                {
+                    footer = new HeaderFooter(doc, HeaderFooterType.FooterPrimary);
+                    section.HeadersFooters.Add(footer);
+                }
 
-            switch (location.ToLower())
+                targetNode = footer;
+                locationDesc = "footer";
+                break;
+
+            default:
+                targetNode = section.Body;
+                locationDesc = "document body";
+                break;
+        }
+
+        if (targetNode == null)
+            throw new InvalidOperationException($"Could not access {location}");
+
+        if (lineStyle == "shape")
+        {
+            var linePara = new Paragraph(doc)
             {
-                case "header":
-                    var header = section.HeadersFooters[HeaderFooterType.HeaderPrimary];
-                    if (header == null)
-                    {
-                        header = new HeaderFooter(doc, HeaderFooterType.HeaderPrimary);
-                        section.HeadersFooters.Add(header);
-                    }
+                ParagraphFormat =
+                {
+                    SpaceBefore = 0,
+                    SpaceAfter = 0,
+                    LineSpacing = 1,
+                    LineSpacingRule = LineSpacingRule.Exactly
+                }
+            };
 
-                    targetNode = header;
-                    locationDesc = "header";
-                    break;
+            var shape = new Shape(doc, ShapeType.Line)
+            {
+                Width = calculatedWidth,
+                Height = 0,
+                StrokeWeight = lineWidth,
+                StrokeColor = ColorHelper.ParseColor(lineColor),
+                WrapType = WrapType.Inline
+            };
 
-                case "footer":
-                    var footer = section.HeadersFooters[HeaderFooterType.FooterPrimary];
-                    if (footer == null)
-                    {
-                        footer = new HeaderFooter(doc, HeaderFooterType.FooterPrimary);
-                        section.HeadersFooters.Add(footer);
-                    }
+            linePara.AppendChild(shape);
 
-                    targetNode = footer;
-                    locationDesc = "footer";
-                    break;
-
-                default:
-                    targetNode = section.Body;
-                    locationDesc = "document body";
-                    break;
+            if (position == "start")
+            {
+                if (targetNode is HeaderFooter headerFooter)
+                    headerFooter.PrependChild(linePara);
+                else if (targetNode is Body body)
+                    body.PrependChild(linePara);
             }
-
-            if (targetNode == null)
-                throw new InvalidOperationException($"Could not access {location}");
-
-            if (lineStyle == "shape")
+            else
             {
-                var linePara = new Paragraph(doc)
-                {
-                    ParagraphFormat =
-                    {
-                        SpaceBefore = 0,
-                        SpaceAfter = 0,
-                        LineSpacing = 1,
-                        LineSpacingRule = LineSpacingRule.Exactly
-                    }
-                };
+                if (targetNode is HeaderFooter headerFooter)
+                    headerFooter.AppendChild(linePara);
+                else if (targetNode is Body body)
+                    body.AppendChild(linePara);
+            }
+        }
+        else
+        {
+            var linePara = new Paragraph(doc);
+            linePara.ParagraphFormat.Borders.Bottom.LineStyle = LineStyle.Single;
+            linePara.ParagraphFormat.Borders.Bottom.LineWidth = lineWidth;
+            linePara.ParagraphFormat.Borders.Bottom.Color = ColorHelper.ParseColor(lineColor);
 
-                var shape = new Shape(doc, ShapeType.Line)
-                {
-                    Width = calculatedWidth,
-                    Height = 0,
-                    StrokeWeight = lineWidth,
-                    StrokeColor = ColorHelper.ParseColor(lineColor),
-                    WrapType = WrapType.Inline
-                };
+            if (position == "start")
+            {
+                if (targetNode is HeaderFooter headerFooter)
+                    headerFooter.PrependChild(linePara);
+                else if (targetNode is Body body)
+                    body.PrependChild(linePara);
+            }
+            else
+            {
+                if (targetNode is HeaderFooter headerFooter)
+                    headerFooter.AppendChild(linePara);
+                else if (targetNode is Body body)
+                    body.AppendChild(linePara);
+            }
+        }
 
-                linePara.AppendChild(shape);
+        ctx.Save(outputPath);
+        var result = $"Successfully inserted line in {locationDesc} at {position} position.\n";
+        result += ctx.GetOutputMessage(outputPath);
+        return result;
+    }
 
-                if (position == "start")
+    /// <summary>
+    ///     Adds a textbox to the document.
+    /// </summary>
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="text">The text content for the textbox.</param>
+    /// <param name="textboxWidth">The textbox width in points.</param>
+    /// <param name="textboxHeight">The textbox height in points.</param>
+    /// <param name="positionX">The horizontal position in points.</param>
+    /// <param name="positionY">The vertical position in points.</param>
+    /// <param name="backgroundColor">The background color in hex format.</param>
+    /// <param name="borderColor">The border color in hex format.</param>
+    /// <param name="borderWidth">The border width in points.</param>
+    /// <param name="fontName">The font name.</param>
+    /// <param name="fontNameAscii">The font name for ASCII characters.</param>
+    /// <param name="fontNameFarEast">The font name for Far East characters.</param>
+    /// <param name="fontSize">The font size in points.</param>
+    /// <param name="bold">Whether the text is bold.</param>
+    /// <param name="textAlignment">The text alignment: left, center, or right.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when text is null or empty.</exception>
+    private static string AddTextBox(DocumentContext<Document> ctx, string? outputPath, string? text,
+        double textboxWidth, double textboxHeight, double positionX, double positionY, string? backgroundColor,
+        string? borderColor, double borderWidth, string? fontName, string? fontNameAscii, string? fontNameFarEast,
+        double? fontSize, bool? bold, string textAlignment)
+    {
+        if (string.IsNullOrEmpty(text))
+            throw new ArgumentException("text is required for add_textbox operation");
+
+        var doc = ctx.Document;
+        var builder = new DocumentBuilder(doc);
+        builder.MoveToDocumentEnd();
+
+        var textBox = new Shape(doc, ShapeType.TextBox)
+        {
+            Width = textboxWidth,
+            Height = textboxHeight,
+            Left = positionX,
+            Top = positionY,
+            WrapType = WrapType.None,
+            RelativeHorizontalPosition = RelativeHorizontalPosition.Page,
+            RelativeVerticalPosition = RelativeVerticalPosition.Page
+        };
+
+        if (!string.IsNullOrEmpty(backgroundColor))
+        {
+            textBox.Fill.Color = ColorHelper.ParseColor(backgroundColor);
+            textBox.Fill.Visible = true;
+        }
+
+        if (!string.IsNullOrEmpty(borderColor))
+        {
+            textBox.Stroke.Color = ColorHelper.ParseColor(borderColor);
+            textBox.Stroke.Weight = borderWidth;
+            textBox.Stroke.Visible = true;
+        }
+
+        var para = new Paragraph(doc);
+        var run = new Run(doc, text);
+
+        if (!string.IsNullOrEmpty(fontNameAscii))
+            run.Font.NameAscii = fontNameAscii;
+
+        if (!string.IsNullOrEmpty(fontNameFarEast))
+            run.Font.NameFarEast = fontNameFarEast;
+
+        if (!string.IsNullOrEmpty(fontName))
+        {
+            if (string.IsNullOrEmpty(fontNameAscii) && string.IsNullOrEmpty(fontNameFarEast))
+            {
+                run.Font.Name = fontName;
+            }
+            else
+            {
+                if (string.IsNullOrEmpty(fontNameAscii))
+                    run.Font.NameAscii = fontName;
+                if (string.IsNullOrEmpty(fontNameFarEast))
+                    run.Font.NameFarEast = fontName;
+            }
+        }
+
+        if (fontSize.HasValue)
+            run.Font.Size = fontSize.Value;
+
+        if (bold.HasValue)
+            run.Font.Bold = bold.Value;
+
+        para.ParagraphFormat.Alignment = textAlignment.ToLower() switch
+        {
+            "center" => ParagraphAlignment.Center,
+            "right" => ParagraphAlignment.Right,
+            _ => ParagraphAlignment.Left
+        };
+
+        para.AppendChild(run);
+        textBox.AppendChild(para);
+        builder.InsertNode(textBox);
+
+        ctx.Save(outputPath);
+        var result = "Successfully added textbox.\n";
+        result += ctx.GetOutputMessage(outputPath);
+        return result;
+    }
+
+    /// <summary>
+    ///     Gets all textboxes from the document.
+    /// </summary>
+    /// <param name="ctx">The document context.</param>
+    /// <param name="includeContent">Whether to include textbox content in the output.</param>
+    /// <returns>A formatted string containing information about all textboxes.</returns>
+    private static string GetTextboxes(DocumentContext<Document> ctx, bool includeContent)
+    {
+        var doc = ctx.Document;
+        var shapes = FindAllTextboxes(doc);
+
+        var result = new StringBuilder();
+        result.AppendLine("=== Document Textboxes ===\n");
+        result.AppendLine($"Total Textboxes: {shapes.Count}\n");
+
+        if (shapes.Count == 0)
+        {
+            result.AppendLine("No textboxes found");
+            return result.ToString();
+        }
+
+        for (var i = 0; i < shapes.Count; i++)
+        {
+            var textbox = shapes[i];
+            result.AppendLine($"[Textbox {i}]");
+            result.AppendLine($"Name: {textbox.Name ?? "(No name)"}");
+            result.AppendLine($"Width: {textbox.Width} pt");
+            result.AppendLine($"Height: {textbox.Height} pt");
+            result.AppendLine($"Position: X={textbox.Left}, Y={textbox.Top}");
+
+            if (includeContent)
+            {
+                var textboxText = textbox.GetText().Trim();
+                if (!string.IsNullOrEmpty(textboxText))
                 {
-                    if (targetNode is HeaderFooter headerFooter)
-                        headerFooter.PrependChild(linePara);
-                    else if (targetNode is Body body)
-                        body.PrependChild(linePara);
+                    result.AppendLine("Content:");
+                    result.AppendLine($"  {textboxText.Replace("\n", "\n  ")}");
                 }
                 else
                 {
-                    if (targetNode is HeaderFooter headerFooter)
-                        headerFooter.AppendChild(linePara);
-                    else if (targetNode is Body body)
-                        body.AppendChild(linePara);
+                    result.AppendLine("Content: (empty)");
+                }
+            }
+
+            result.AppendLine();
+        }
+
+        return result.ToString();
+    }
+
+    /// <summary>
+    ///     Edits the content of a textbox.
+    /// </summary>
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="textboxIndex">The zero-based index of the textbox to edit.</param>
+    /// <param name="text">The new text content.</param>
+    /// <param name="appendText">Whether to append text to existing content.</param>
+    /// <param name="fontName">The font name.</param>
+    /// <param name="fontNameAscii">The font name for ASCII characters.</param>
+    /// <param name="fontNameFarEast">The font name for Far East characters.</param>
+    /// <param name="fontSize">The font size in points.</param>
+    /// <param name="bold">Whether the text is bold.</param>
+    /// <param name="italic">Whether the text is italic.</param>
+    /// <param name="color">The text color in hex format.</param>
+    /// <param name="clearFormatting">Whether to clear existing formatting.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when textboxIndex is not provided or is out of range.</exception>
+    private static string EditTextBoxContent(DocumentContext<Document> ctx, string? outputPath, int? textboxIndex,
+        string? text, bool appendText, string? fontName, string? fontNameAscii, string? fontNameFarEast,
+        double? fontSize, bool? bold, bool? italic, string? color, bool clearFormatting)
+    {
+        if (!textboxIndex.HasValue)
+            throw new ArgumentException("textboxIndex is required for edit_textbox_content operation");
+
+        var doc = ctx.Document;
+        var textboxes = FindAllTextboxes(doc);
+
+        if (textboxIndex.Value < 0 || textboxIndex.Value >= textboxes.Count)
+            throw new ArgumentException(
+                $"Textbox index {textboxIndex.Value} out of range (total textboxes: {textboxes.Count})");
+
+        var textbox = textboxes[textboxIndex.Value];
+
+        // Use false to get only direct child paragraphs of the textbox (not recursive)
+        var paragraphs = textbox.GetChildNodes(NodeType.Paragraph, false);
+        Paragraph para;
+
+        if (paragraphs.Count == 0)
+        {
+            // Create a new paragraph inside the textbox
+            para = new Paragraph(doc);
+            textbox.AppendChild(para);
+        }
+        else
+        {
+            // Use the first paragraph that is a direct child of the textbox
+            para = paragraphs[0] as Paragraph ?? throw new Exception("Cannot get textbox paragraph");
+        }
+
+        // Ensure we're working only with content inside the textbox
+        // Get runs that are direct children of the paragraph (which is inside the textbox)
+        var runsCollection = para.GetChildNodes(NodeType.Run, false);
+        var runs = runsCollection.Cast<Run>().ToList();
+
+        if (text != null)
+        {
+            if (appendText && runsCollection.Count > 0)
+            {
+                // Append new run to existing content
+                var newRun = new Run(doc, text);
+                para.AppendChild(newRun);
+            }
+            else
+            {
+                // Clear existing content and set new text
+                // Only remove direct children of the paragraph (runs inside textbox)
+                para.RemoveAllChildren();
+                var newRun = new Run(doc, text);
+                para.AppendChild(newRun);
+            }
+
+            // Refresh runs list after modification
+            runs = para.GetChildNodes(NodeType.Run, false).Cast<Run>().ToList();
+        }
+
+        if (clearFormatting)
+            foreach (var run in runs)
+                run.Font.ClearFormatting();
+
+        var hasFormatting = !string.IsNullOrEmpty(fontName) || !string.IsNullOrEmpty(fontNameAscii) ||
+                            !string.IsNullOrEmpty(fontNameFarEast) || fontSize.HasValue ||
+                            bold.HasValue || italic.HasValue || !string.IsNullOrEmpty(color);
+
+        if (hasFormatting)
+            foreach (var run in runs)
+            {
+                // Apply font settings using FontHelper
+                FontHelper.Word.ApplyFontSettings(
+                    run,
+                    fontName,
+                    fontNameAscii,
+                    fontNameFarEast,
+                    fontSize,
+                    bold,
+                    italic
+                );
+
+                // Handle color separately to throw exception on parse error
+                if (!string.IsNullOrEmpty(color))
+                    run.Font.Color = ColorHelper.ParseColor(color, true);
+            }
+
+        ctx.Save(outputPath);
+        var result = $"Successfully edited textbox #{textboxIndex.Value}.\n";
+        result += ctx.GetOutputMessage(outputPath);
+        return result;
+    }
+
+    /// <summary>
+    ///     Sets border properties for a textbox.
+    /// </summary>
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="textboxIndex">The zero-based index of the textbox.</param>
+    /// <param name="borderVisible">Whether the border is visible.</param>
+    /// <param name="borderColor">The border color in hex format.</param>
+    /// <param name="borderWidth">The border width in points.</param>
+    /// <param name="borderStyle">The border style (solid, dash, dot, etc.).</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when textboxIndex is not provided or is out of range.</exception>
+    private static string SetTextBoxBorder(DocumentContext<Document> ctx, string? outputPath, int? textboxIndex,
+        bool borderVisible, string? borderColor, double borderWidth, string borderStyle)
+    {
+        if (!textboxIndex.HasValue)
+            throw new ArgumentException("textboxIndex is required for set_textbox_border operation");
+
+        var doc = ctx.Document;
+        var allTextboxes = FindAllTextboxes(doc);
+
+        if (textboxIndex.Value < 0 || textboxIndex.Value >= allTextboxes.Count)
+            throw new ArgumentException(
+                $"Textbox index {textboxIndex.Value} out of range (total textboxes: {allTextboxes.Count})");
+
+        var textBox = allTextboxes[textboxIndex.Value];
+        var stroke = textBox.Stroke;
+
+        stroke.Visible = borderVisible;
+
+        if (borderVisible)
+        {
+            stroke.Color = ColorHelper.ParseColor(borderColor ?? "000000");
+            stroke.Weight = borderWidth;
+            stroke.DashStyle = borderStyle.ToLower() switch
+            {
+                "dash" => DashStyle.Dash,
+                "dot" => DashStyle.Dot,
+                "dashdot" => DashStyle.DashDot,
+                "dashdotdot" => DashStyle.LongDashDotDot,
+                "rounddot" => DashStyle.ShortDot,
+                _ => DashStyle.Solid
+            };
+        }
+
+        ctx.Save(outputPath);
+
+        var borderDesc = borderVisible
+            ? $"Border: {borderWidth}pt, Color: {borderColor ?? "000000"}, Style: {borderStyle}"
+            : "No border";
+
+        var result = $"Successfully set textbox {textboxIndex.Value} {borderDesc}.\n";
+        result += ctx.GetOutputMessage(outputPath);
+        return result;
+    }
+
+    /// <summary>
+    ///     Adds a chart to the document.
+    /// </summary>
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="chartType">The chart type: column, bar, line, pie, area, scatter, or doughnut.</param>
+    /// <param name="data">The chart data as a 2D array.</param>
+    /// <param name="chartTitle">The optional chart title.</param>
+    /// <param name="chartWidth">The chart width in points.</param>
+    /// <param name="chartHeight">The chart height in points.</param>
+    /// <param name="paragraphIndex">The optional paragraph index to insert after.</param>
+    /// <param name="alignment">The chart alignment: left, center, or right.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when chart data is null or empty.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when an error occurs creating the chart.</exception>
+    private static string AddChart(DocumentContext<Document> ctx, string? outputPath, string chartType,
+        string[][]? data, string? chartTitle, double chartWidth, double chartHeight, int? paragraphIndex,
+        string alignment)
+    {
+        if (data == null || data.Length == 0)
+            throw new ArgumentException("Chart data cannot be empty");
+
+        List<List<string>> tableData = [];
+        foreach (var row in data)
+        {
+            List<string> rowData = [];
+            foreach (var cell in row)
+                rowData.Add(cell);
+            tableData.Add(rowData);
+        }
+
+        if (tableData.Count == 0)
+            throw new ArgumentException("Cannot parse chart data");
+
+        var doc = ctx.Document;
+        var tempExcelPath = Path.Combine(Path.GetTempPath(), $"chart_{Guid.NewGuid()}.xlsx");
+        try
+        {
+            var workbook = new Workbook();
+            var worksheet = workbook.Worksheets[0];
+
+            for (var i = 0; i < tableData.Count; i++)
+            for (var j = 0; j < tableData[i].Count; j++)
+            {
+                var cellValue = tableData[i][j];
+                if (double.TryParse(cellValue, out var numValue) && i > 0)
+                    worksheet.Cells[i, j].PutValue(numValue);
+                else
+                    worksheet.Cells[i, j].PutValue(cellValue);
+            }
+
+            var maxCol = tableData.Max(r => r.Count);
+            var dataRange = $"A1:{Convert.ToChar(64 + maxCol)}{tableData.Count}";
+
+            var chartTypeEnum = chartType.ToLower() switch
+            {
+                "bar" => ChartType.Bar,
+                "line" => ChartType.Line,
+                "pie" => ChartType.Pie,
+                "area" => ChartType.Area,
+                "scatter" => ChartType.Scatter,
+                "doughnut" => ChartType.Doughnut,
+                _ => ChartType.Column
+            };
+
+            var chartIndex = worksheet.Charts.Add(chartTypeEnum, 0, tableData.Count + 2, 20, 10);
+            var chart = worksheet.Charts[chartIndex];
+            chart.SetChartDataRange(dataRange, true);
+
+            if (!string.IsNullOrEmpty(chartTitle))
+                chart.Title.Text = chartTitle;
+
+            workbook.Save(tempExcelPath);
+
+            var tempImagePath = Path.Combine(Path.GetTempPath(), $"chart_{Guid.NewGuid()}.png");
+            chart.ToImage(tempImagePath, ImageType.Png);
+
+            var builder = new DocumentBuilder(doc);
+
+            if (paragraphIndex.HasValue)
+            {
+                var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
+                if (paragraphIndex.Value == -1)
+                {
+                    if (paragraphs.Count > 0)
+                        if (paragraphs[0] is Paragraph firstPara)
+                            builder.MoveTo(firstPara);
+                }
+                else if (paragraphIndex.Value >= 0 && paragraphIndex.Value < paragraphs.Count)
+                {
+                    if (paragraphs[paragraphIndex.Value] is Paragraph targetPara)
+                        builder.MoveTo(targetPara);
+                    else
+                        throw new ArgumentException($"Cannot find paragraph at index {paragraphIndex.Value}");
+                }
+                else
+                {
+                    throw new ArgumentException(
+                        $"Paragraph index {paragraphIndex.Value} out of range (total paragraphs: {paragraphs.Count})");
                 }
             }
             else
             {
-                var linePara = new Paragraph(doc);
-                linePara.ParagraphFormat.Borders.Bottom.LineStyle = LineStyle.Single;
-                linePara.ParagraphFormat.Borders.Bottom.LineWidth = lineWidth;
-                linePara.ParagraphFormat.Borders.Bottom.Color = ColorHelper.ParseColor(lineColor);
-
-                if (position == "start")
-                {
-                    if (targetNode is HeaderFooter headerFooter)
-                        headerFooter.PrependChild(linePara);
-                    else if (targetNode is Body body)
-                        body.PrependChild(linePara);
-                }
-                else
-                {
-                    if (targetNode is HeaderFooter headerFooter)
-                        headerFooter.AppendChild(linePara);
-                    else if (targetNode is Body body)
-                        body.AppendChild(linePara);
-                }
+                builder.MoveToDocumentEnd();
             }
 
-            doc.Save(outputPath);
-            return $"Successfully inserted line in {locationDesc} at {position} position. Output: {outputPath}";
-        });
-    }
-
-    /// <summary>
-    ///     Adds a textbox to the document
-    /// </summary>
-    /// <param name="path">Document file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing text, optional textboxWidth, textboxHeight, positionX, positionY</param>
-    /// <returns>Success message with textbox details</returns>
-    private Task<string> AddTextBox(string path, string outputPath, JsonObject? arguments)
-    {
-        return Task.Run(() =>
-        {
-            var text = ArgumentHelper.GetString(arguments, "text");
-            var textboxWidth = ArgumentHelper.GetDouble(arguments, "textboxWidth", "textboxWidth", false, 200);
-            var textboxHeight = ArgumentHelper.GetDouble(arguments, "textboxHeight", "textboxHeight", false, 100);
-            var positionX = ArgumentHelper.GetDouble(arguments, "positionX", "positionX", false, 100);
-            var positionY = ArgumentHelper.GetDouble(arguments, "positionY", "positionY", false, 100);
-            var backgroundColor = ArgumentHelper.GetStringNullable(arguments, "backgroundColor");
-            var borderColor = ArgumentHelper.GetStringNullable(arguments, "borderColor");
-            var borderWidth = ArgumentHelper.GetDouble(arguments, "borderWidth", "borderWidth", false, 1);
-            var fontName = ArgumentHelper.GetStringNullable(arguments, "fontName");
-            var fontNameAscii = ArgumentHelper.GetStringNullable(arguments, "fontNameAscii");
-            var fontNameFarEast = ArgumentHelper.GetStringNullable(arguments, "fontNameFarEast");
-            var fontSize = ArgumentHelper.GetDoubleNullable(arguments, "fontSize");
-            var bold = ArgumentHelper.GetBoolNullable(arguments, "bold");
-            var textAlignment = ArgumentHelper.GetString(arguments, "textAlignment", "left");
-
-            var doc = new Document(path);
-            var builder = new DocumentBuilder(doc);
-            builder.MoveToDocumentEnd();
-
-            var textBox = new Shape(doc, ShapeType.TextBox)
-            {
-                Width = textboxWidth,
-                Height = textboxHeight,
-                Left = positionX,
-                Top = positionY,
-                WrapType = WrapType.None,
-                RelativeHorizontalPosition = RelativeHorizontalPosition.Page,
-                RelativeVerticalPosition = RelativeVerticalPosition.Page
-            };
-
-            if (!string.IsNullOrEmpty(backgroundColor))
-            {
-                textBox.Fill.Color = ColorHelper.ParseColor(backgroundColor);
-                textBox.Fill.Visible = true;
-            }
-
-            if (!string.IsNullOrEmpty(borderColor))
-            {
-                textBox.Stroke.Color = ColorHelper.ParseColor(borderColor);
-                textBox.Stroke.Weight = borderWidth;
-                textBox.Stroke.Visible = true;
-            }
-
-            var para = new Paragraph(doc);
-            var run = new Run(doc, text);
-
-            if (!string.IsNullOrEmpty(fontNameAscii))
-                run.Font.NameAscii = fontNameAscii;
-
-            if (!string.IsNullOrEmpty(fontNameFarEast))
-                run.Font.NameFarEast = fontNameFarEast;
-
-            if (!string.IsNullOrEmpty(fontName))
-            {
-                if (string.IsNullOrEmpty(fontNameAscii) && string.IsNullOrEmpty(fontNameFarEast))
-                {
-                    run.Font.Name = fontName;
-                }
-                else
-                {
-                    if (string.IsNullOrEmpty(fontNameAscii))
-                        run.Font.NameAscii = fontName;
-                    if (string.IsNullOrEmpty(fontNameFarEast))
-                        run.Font.NameFarEast = fontName;
-                }
-            }
-
-            if (fontSize.HasValue)
-                run.Font.Size = fontSize.Value;
-
-            if (bold.HasValue)
-                run.Font.Bold = bold.Value;
-
-            para.ParagraphFormat.Alignment = textAlignment.ToLower() switch
+            builder.ParagraphFormat.Alignment = alignment.ToLower() switch
             {
                 "center" => ParagraphAlignment.Center,
                 "right" => ParagraphAlignment.Right,
                 _ => ParagraphAlignment.Left
             };
 
-            para.AppendChild(run);
-            textBox.AppendChild(para);
-            builder.InsertNode(textBox);
+            var shape = builder.InsertImage(tempImagePath);
+            shape.Width = chartWidth;
+            shape.Height = chartHeight;
+            shape.WrapType = WrapType.Inline;
 
-            doc.Save(outputPath);
-            return $"Successfully added textbox. Output: {outputPath}";
-        });
-    }
+            if (File.Exists(tempImagePath))
+                try
+                {
+                    File.Delete(tempImagePath);
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"[WARN] Error deleting temp image file: {ex.Message}");
+                }
 
-    /// <summary>
-    ///     Gets all textboxes from the document
-    /// </summary>
-    /// <param name="path">Document file path</param>
-    /// <param name="arguments">JSON arguments containing optional includeContent</param>
-    /// <returns>Formatted string with all textboxes</returns>
-    private Task<string> GetTextboxes(string path, JsonObject? arguments)
-    {
-        return Task.Run(() =>
+            ctx.Save(outputPath);
+
+            var result = $"Successfully added chart. Type: {chartType}, Data rows: {tableData.Count}.\n";
+            result += ctx.GetOutputMessage(outputPath);
+            return result;
+        }
+        catch (Exception ex)
         {
-            var includeContent = ArgumentHelper.GetBool(arguments, "includeContent", true);
-
-            var doc = new Document(path);
-            var shapes = FindAllTextboxes(doc);
-
-            var result = new StringBuilder();
-            result.AppendLine("=== Document Textboxes ===\n");
-            result.AppendLine($"Total Textboxes: {shapes.Count}\n");
-
-            if (shapes.Count == 0)
-            {
-                result.AppendLine("No textboxes found");
-                return result.ToString();
-            }
-
-            for (var i = 0; i < shapes.Count; i++)
-            {
-                var textbox = shapes[i];
-                result.AppendLine($"�iTextbox {i}�j");
-                result.AppendLine($"Name: {textbox.Name ?? "(No name)"}");
-                result.AppendLine($"Width: {textbox.Width} pt");
-                result.AppendLine($"Height: {textbox.Height} pt");
-                result.AppendLine($"Position: X={textbox.Left}, Y={textbox.Top}");
-
-                if (includeContent)
-                {
-                    var textboxText = textbox.GetText().Trim();
-                    if (!string.IsNullOrEmpty(textboxText))
-                    {
-                        result.AppendLine("Content:");
-                        result.AppendLine($"  {textboxText.Replace("\n", "\n  ")}");
-                    }
-                    else
-                    {
-                        result.AppendLine("Content: (empty)");
-                    }
-                }
-
-                result.AppendLine();
-            }
-
-            return result.ToString();
-        });
-    }
-
-    /// <summary>
-    ///     Edits the content of a textbox
-    /// </summary>
-    /// <param name="path">Document file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing textboxIndex, text, optional formatting options</param>
-    /// <returns>Success message with updated textbox details</returns>
-    private Task<string> EditTextBoxContent(string path, string outputPath, JsonObject? arguments)
-    {
-        return Task.Run(() =>
+            throw new InvalidOperationException($"Error creating chart: {ex.Message}", ex);
+        }
+        finally
         {
-            var textboxIndex = ArgumentHelper.GetInt(arguments, "textboxIndex");
-            var text = ArgumentHelper.GetStringNullable(arguments, "text");
-            var appendText = ArgumentHelper.GetBool(arguments, "appendText", false);
-            var fontName = ArgumentHelper.GetStringNullable(arguments, "fontName");
-            var fontNameAscii = ArgumentHelper.GetStringNullable(arguments, "fontNameAscii");
-            var fontNameFarEast = ArgumentHelper.GetStringNullable(arguments, "fontNameFarEast");
-            var fontSize = ArgumentHelper.GetDoubleNullable(arguments, "fontSize");
-            var bold = ArgumentHelper.GetBoolNullable(arguments, "bold");
-            var italic = ArgumentHelper.GetBoolNullable(arguments, "italic");
-            var color = ArgumentHelper.GetStringNullable(arguments, "color");
-            var clearFormatting = ArgumentHelper.GetBool(arguments, "clearFormatting", false);
-
-            var doc = new Document(path);
-            var textboxes = FindAllTextboxes(doc);
-
-            if (textboxIndex < 0 || textboxIndex >= textboxes.Count)
-                throw new ArgumentException(
-                    $"Textbox index {textboxIndex} out of range (total textboxes: {textboxes.Count})");
-
-            var textbox = textboxes[textboxIndex];
-
-            // Use false to get only direct child paragraphs of the textbox (not recursive)
-            var paragraphs = textbox.GetChildNodes(NodeType.Paragraph, false);
-            Paragraph para;
-
-            if (paragraphs.Count == 0)
-            {
-                // Create a new paragraph inside the textbox
-                para = new Paragraph(doc);
-                textbox.AppendChild(para);
-            }
-            else
-            {
-                // Use the first paragraph that is a direct child of the textbox
-                para = paragraphs[0] as Paragraph ?? throw new Exception("Cannot get textbox paragraph");
-            }
-
-            // Ensure we're working only with content inside the textbox
-            // Get runs that are direct children of the paragraph (which is inside the textbox)
-            var runsCollection = para.GetChildNodes(NodeType.Run, false);
-            var runs = runsCollection.Cast<Run>().ToList();
-
-            if (text != null)
-            {
-                if (appendText && runsCollection.Count > 0)
+            if (File.Exists(tempExcelPath))
+                try
                 {
-                    // Append new run to existing content
-                    var newRun = new Run(doc, text);
-                    para.AppendChild(newRun);
+                    File.Delete(tempExcelPath);
                 }
-                else
+                catch (Exception ex)
                 {
-                    // Clear existing content and set new text
-                    // Only remove direct children of the paragraph (runs inside textbox)
-                    para.RemoveAllChildren();
-                    var newRun = new Run(doc, text);
-                    para.AppendChild(newRun);
+                    Console.Error.WriteLine($"[WARN] Error deleting temp Excel file: {ex.Message}");
                 }
-
-                // Refresh runs list after modification
-                runs = para.GetChildNodes(NodeType.Run, false).Cast<Run>().ToList();
-            }
-
-            if (clearFormatting)
-                foreach (var run in runs)
-                    run.Font.ClearFormatting();
-
-            var hasFormatting = !string.IsNullOrEmpty(fontName) || !string.IsNullOrEmpty(fontNameAscii) ||
-                                !string.IsNullOrEmpty(fontNameFarEast) || fontSize.HasValue ||
-                                bold.HasValue || italic.HasValue || !string.IsNullOrEmpty(color);
-
-            if (hasFormatting)
-                foreach (var run in runs)
-                {
-                    // Apply font settings using FontHelper
-                    FontHelper.Word.ApplyFontSettings(
-                        run,
-                        fontName,
-                        fontNameAscii,
-                        fontNameFarEast,
-                        fontSize,
-                        bold,
-                        italic
-                    );
-
-                    // Handle color separately to throw exception on parse error
-                    if (!string.IsNullOrEmpty(color))
-                        run.Font.Color = ColorHelper.ParseColor(color, true);
-                }
-
-            doc.Save(outputPath);
-            return $"Successfully edited textbox #{textboxIndex}. Output: {outputPath}";
-        });
+        }
     }
 
     /// <summary>
-    ///     Sets border properties for a textbox
-    /// </summary>
-    /// <param name="path">Document file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing textboxIndex, optional borderColor, borderWidth</param>
-    /// <returns>Success message</returns>
-    private Task<string> SetTextBoxBorder(string path, string outputPath, JsonObject? arguments)
-    {
-        return Task.Run(() =>
-        {
-            var textboxIndex = ArgumentHelper.GetInt(arguments, "textboxIndex");
-            var borderVisible = ArgumentHelper.GetBool(arguments, "borderVisible", true);
-            var borderColor = ArgumentHelper.GetString(arguments, "borderColor", "000000");
-            var borderWidth = ArgumentHelper.GetDouble(arguments, "borderWidth", "borderWidth", false, 1.0);
-
-            var doc = new Document(path);
-            var allTextboxes = FindAllTextboxes(doc);
-
-            if (textboxIndex < 0 || textboxIndex >= allTextboxes.Count)
-                throw new ArgumentException(
-                    $"Textbox index {textboxIndex} out of range (total textboxes: {allTextboxes.Count})");
-
-            var textBox = allTextboxes[textboxIndex];
-            var stroke = textBox.Stroke;
-
-            stroke.Visible = borderVisible;
-
-            if (borderVisible)
-            {
-                stroke.Color = ColorHelper.ParseColor(borderColor);
-                stroke.Weight = borderWidth;
-            }
-
-            doc.Save(outputPath);
-
-            var borderDesc = borderVisible
-                ? $"Border: {borderWidth}pt, Color: {borderColor}"
-                : "No border";
-
-            return $"Successfully set textbox {textboxIndex} {borderDesc}. Output: {outputPath}";
-        });
-    }
-
-    /// <summary>
-    ///     Adds a chart to the document
-    /// </summary>
-    /// <param name="path">Document file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing chartType, data, optional chartTitle, chartWidth, chartHeight</param>
-    /// <returns>Success message with chart details</returns>
-    private Task<string> AddChart(string path, string outputPath, JsonObject? arguments)
-    {
-        return Task.Run(async () =>
-        {
-            var chartType = ArgumentHelper.GetString(arguments, "chartType", "column");
-            var data = ArgumentHelper.GetArray(arguments, "data");
-            var chartTitle = ArgumentHelper.GetStringNullable(arguments, "chartTitle");
-            var chartWidth = ArgumentHelper.GetDouble(arguments, "chartWidth", "chartWidth", false, 432.0);
-            var chartHeight = ArgumentHelper.GetDouble(arguments, "chartHeight", "chartHeight", false, 252.0);
-            var paragraphIndex = ArgumentHelper.GetIntNullable(arguments, "paragraphIndex");
-            var alignment = ArgumentHelper.GetString(arguments, "alignment", "left");
-
-            if (data.Count == 0)
-                throw new ArgumentException("Chart data cannot be empty");
-
-            var tableData = new List<List<string>>();
-            foreach (var row in data)
-                if (row is JsonArray rowArray)
-                {
-                    var rowData = new List<string>();
-                    foreach (var cell in rowArray)
-                        rowData.Add(cell?.ToString() ?? "");
-                    tableData.Add(rowData);
-                }
-
-            if (tableData.Count == 0)
-                throw new ArgumentException("Cannot parse chart data");
-
-            var tempExcelPath = Path.Combine(Path.GetTempPath(), $"chart_{Guid.NewGuid()}.xlsx");
-            try
-            {
-                var workbook = new Workbook();
-                var worksheet = workbook.Worksheets[0];
-
-                for (var i = 0; i < tableData.Count; i++)
-                for (var j = 0; j < tableData[i].Count; j++)
-                {
-                    var cellValue = tableData[i][j];
-                    if (double.TryParse(cellValue, out var numValue) && i > 0)
-                        worksheet.Cells[i, j].PutValue(numValue);
-                    else
-                        worksheet.Cells[i, j].PutValue(cellValue);
-                }
-
-                var maxCol = tableData.Max(r => r.Count);
-                var dataRange = $"A1:{Convert.ToChar(64 + maxCol)}{tableData.Count}";
-
-                var chartTypeEnum = chartType.ToLower() switch
-                {
-                    "bar" => ChartType.Bar,
-                    "line" => ChartType.Line,
-                    "pie" => ChartType.Pie,
-                    "area" => ChartType.Area,
-                    "scatter" => ChartType.Scatter,
-                    "doughnut" => ChartType.Doughnut,
-                    _ => ChartType.Column
-                };
-
-                var chartIndex = worksheet.Charts.Add(chartTypeEnum, 0, tableData.Count + 2, 20, 10);
-                var chart = worksheet.Charts[chartIndex];
-                chart.SetChartDataRange(dataRange, true);
-
-                if (!string.IsNullOrEmpty(chartTitle))
-                    chart.Title.Text = chartTitle;
-
-                workbook.Save(tempExcelPath);
-
-                var tempImagePath = Path.Combine(Path.GetTempPath(), $"chart_{Guid.NewGuid()}.png");
-                chart.ToImage(tempImagePath, ImageType.Png);
-
-                var doc = new Document(path);
-                var builder = new DocumentBuilder(doc);
-
-                if (paragraphIndex.HasValue)
-                {
-                    var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
-                    if (paragraphIndex.Value == -1)
-                    {
-                        if (paragraphs.Count > 0)
-                            if (paragraphs[0] is Paragraph firstPara)
-                                builder.MoveTo(firstPara);
-                    }
-                    else if (paragraphIndex.Value >= 0 && paragraphIndex.Value < paragraphs.Count)
-                    {
-                        if (paragraphs[paragraphIndex.Value] is Paragraph targetPara)
-                            builder.MoveTo(targetPara);
-                        else
-                            throw new ArgumentException($"Cannot find paragraph at index {paragraphIndex.Value}");
-                    }
-                    else
-                    {
-                        throw new ArgumentException(
-                            $"Paragraph index {paragraphIndex.Value} out of range (total paragraphs: {paragraphs.Count})");
-                    }
-                }
-                else
-                {
-                    builder.MoveToDocumentEnd();
-                }
-
-                builder.ParagraphFormat.Alignment = alignment.ToLower() switch
-                {
-                    "center" => ParagraphAlignment.Center,
-                    "right" => ParagraphAlignment.Right,
-                    _ => ParagraphAlignment.Left
-                };
-
-                var shape = builder.InsertImage(tempImagePath);
-                shape.Width = chartWidth;
-                shape.Height = chartHeight;
-                shape.WrapType = WrapType.Inline;
-
-                if (File.Exists(tempImagePath))
-                    try
-                    {
-                        File.Delete(tempImagePath);
-                    }
-                    catch (Exception ex)
-                    {
-                        await Console.Error.WriteLineAsync($"[WARN] Error deleting temp image file: {ex.Message}");
-                    }
-
-                doc.Save(outputPath);
-
-                return
-                    $"Successfully added chart. Type: {chartType}, Data rows: {tableData.Count}. Output: {outputPath}";
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException($"Error creating chart: {ex.Message}", ex);
-            }
-            finally
-            {
-                if (File.Exists(tempExcelPath))
-                    try
-                    {
-                        File.Delete(tempExcelPath);
-                    }
-                    catch (Exception ex)
-                    {
-                        await Console.Error.WriteLineAsync($"[WARN] Error deleting temp Excel file: {ex.Message}");
-                    }
-            }
-        });
-    }
-
-    /// <summary>
-    ///     Find all textboxes in the document, searching in all sections' Body and HeaderFooter.
+    ///     Finds all textboxes in the document, searching in all sections' Body and HeaderFooter.
     ///     This ensures consistent textbox indexing across all operations.
     /// </summary>
-    private List<Shape> FindAllTextboxes(Document doc)
+    /// <param name="doc">The Word document to search.</param>
+    /// <returns>A list of all textbox shapes found in the document.</returns>
+    private static List<Shape> FindAllTextboxes(Document doc)
     {
-        var textboxes = new List<Shape>();
+        List<Shape> textboxes = [];
         foreach (var section in doc.Sections.Cast<Section>())
         {
             // Search in main body
@@ -932,103 +790,107 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Adds a generic shape to the document
+    ///     Adds a generic shape to the document.
     /// </summary>
-    /// <param name="path">Document file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing shapeType, width, height, optional x, y</param>
-    /// <returns>Success message with shape details</returns>
-    private Task<string> AddShape(string path, string outputPath, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="shapeType">The shape type: rectangle, ellipse, roundrectangle, or line.</param>
+    /// <param name="width">The shape width in points.</param>
+    /// <param name="height">The shape height in points.</param>
+    /// <param name="x">The X position in points.</param>
+    /// <param name="y">The Y position in points.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or shape type is unknown.</exception>
+    private static string AddShape(DocumentContext<Document> ctx, string? outputPath, string? shapeType, double? width,
+        double? height, double x, double y)
     {
-        return Task.Run(() =>
+        if (string.IsNullOrEmpty(shapeType))
+            throw new ArgumentException("shapeType is required for add operation");
+        if (!width.HasValue)
+            throw new ArgumentException("width is required for add operation");
+        if (!height.HasValue)
+            throw new ArgumentException("height is required for add operation");
+
+        var shapeTypeEnum = shapeType.ToLower() switch
         {
-            var shapeTypeStr = ArgumentHelper.GetString(arguments, "shapeType");
-            var width = ArgumentHelper.GetDouble(arguments, "width");
-            var height = ArgumentHelper.GetDouble(arguments, "height");
-            var x = ArgumentHelper.GetDoubleNullable(arguments, "x") ?? 100;
-            var y = ArgumentHelper.GetDoubleNullable(arguments, "y") ?? 100;
+            "rectangle" => ShapeType.Rectangle,
+            "ellipse" => ShapeType.Ellipse,
+            "roundrectangle" => ShapeType.RoundRectangle,
+            "line" => ShapeType.Line,
+            _ => throw new ArgumentException($"Unknown shape type: {shapeType}")
+        };
 
-            var shapeType = shapeTypeStr.ToLower() switch
-            {
-                "rectangle" => ShapeType.Rectangle,
-                "ellipse" => ShapeType.Ellipse,
-                "roundrectangle" => ShapeType.RoundRectangle,
-                "line" => ShapeType.Line,
-                _ => throw new ArgumentException($"Unknown shape type: {shapeTypeStr}")
-            };
+        var doc = ctx.Document;
+        var builder = new DocumentBuilder(doc);
+        var shape = builder.InsertShape(shapeTypeEnum, width.Value, height.Value);
+        shape.Left = x;
+        shape.Top = y;
 
-            var doc = new Document(path);
-            var builder = new DocumentBuilder(doc);
-            var shape = builder.InsertShape(shapeType, width, height);
-            shape.Left = x;
-            shape.Top = y;
-
-            doc.Save(outputPath);
-            return $"Successfully added {shapeTypeStr} shape. Output: {outputPath}";
-        });
+        ctx.Save(outputPath);
+        var result = $"Successfully added {shapeType} shape.\n";
+        result += ctx.GetOutputMessage(outputPath);
+        return result;
     }
 
     /// <summary>
-    ///     Gets all shapes from the document
+    ///     Gets all shapes from the document.
     /// </summary>
-    /// <param name="path">Document file path</param>
-    /// <returns>Formatted string with all shapes</returns>
-    private Task<string> GetShapes(string path)
+    /// <param name="ctx">The document context.</param>
+    /// <returns>A formatted string containing information about all shapes.</returns>
+    private static string GetShapes(DocumentContext<Document> ctx)
     {
-        return Task.Run(() =>
+        var doc = ctx.Document;
+        var shapes = doc.GetChildNodes(NodeType.Shape, true).Cast<Shape>().ToList();
+
+        var result = new StringBuilder();
+        result.AppendLine("=== Document Shapes ===\n");
+        result.AppendLine($"Total Shapes: {shapes.Count}\n");
+
+        if (shapes.Count == 0)
         {
-            var doc = new Document(path);
-            var shapes = doc.GetChildNodes(NodeType.Shape, true).Cast<Shape>().ToList();
-
-            var result = new StringBuilder();
-            result.AppendLine("=== Document Shapes ===\n");
-            result.AppendLine($"Total Shapes: {shapes.Count}\n");
-
-            if (shapes.Count == 0)
-            {
-                result.AppendLine("No shapes found");
-                return result.ToString();
-            }
-
-            for (var i = 0; i < shapes.Count; i++)
-            {
-                var shape = shapes[i];
-                result.AppendLine($"Shape {i}:");
-                result.AppendLine($"  Type: {shape.ShapeType}");
-                result.AppendLine($"  Name: {shape.Name ?? "(No name)"}");
-                result.AppendLine($"  Size: {shape.Width} x {shape.Height} pt");
-                result.AppendLine($"  Position: X={shape.Left}, Y={shape.Top}");
-                result.AppendLine();
-            }
-
+            result.AppendLine("No shapes found");
             return result.ToString();
-        });
+        }
+
+        for (var i = 0; i < shapes.Count; i++)
+        {
+            var shape = shapes[i];
+            result.AppendLine($"Shape {i}:");
+            result.AppendLine($"  Type: {shape.ShapeType}");
+            result.AppendLine($"  Name: {shape.Name ?? "(No name)"}");
+            result.AppendLine($"  Size: {shape.Width} x {shape.Height} pt");
+            result.AppendLine($"  Position: X={shape.Left}, Y={shape.Top}");
+            result.AppendLine();
+        }
+
+        return result.ToString();
     }
 
     /// <summary>
-    ///     Deletes a shape from the document
+    ///     Deletes a shape from the document.
     /// </summary>
-    /// <param name="path">Document file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing shapeIndex</param>
-    /// <returns>Success message</returns>
-    private Task<string> DeleteShape(string path, string outputPath, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="shapeIndex">The zero-based index of the shape to delete.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when shapeIndex is not provided or is out of range.</exception>
+    private static string DeleteShape(DocumentContext<Document> ctx, string? outputPath, int? shapeIndex)
     {
-        return Task.Run(() =>
-        {
-            var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
+        if (!shapeIndex.HasValue)
+            throw new ArgumentException("shapeIndex is required for delete operation");
 
-            var doc = new Document(path);
-            var shapes = doc.GetChildNodes(NodeType.Shape, true).Cast<Shape>().ToList();
+        var doc = ctx.Document;
+        var shapes = doc.GetChildNodes(NodeType.Shape, true).Cast<Shape>().ToList();
 
-            if (shapeIndex < 0 || shapeIndex >= shapes.Count)
-                throw new ArgumentException(
-                    $"Shape index {shapeIndex} is out of range. Document has {shapes.Count} shapes.");
+        if (shapeIndex.Value < 0 || shapeIndex.Value >= shapes.Count)
+            throw new ArgumentException(
+                $"Shape index {shapeIndex.Value} is out of range. Document has {shapes.Count} shapes.");
 
-            shapes[shapeIndex].Remove();
-            doc.Save(outputPath);
+        shapes[shapeIndex.Value].Remove();
+        ctx.Save(outputPath);
 
-            return $"Successfully deleted shape at index {shapeIndex}. Output: {outputPath}";
-        });
+        var result = $"Successfully deleted shape at index {shapeIndex.Value}.\n";
+        result += ctx.GetOutputMessage(outputPath);
+        return result;
     }
 }

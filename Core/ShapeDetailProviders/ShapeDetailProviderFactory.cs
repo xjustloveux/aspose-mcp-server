@@ -7,6 +7,9 @@ namespace AsposeMcpServer.Core.ShapeDetailProviders;
 /// </summary>
 public static class ShapeDetailProviderFactory
 {
+    /// <summary>
+    ///     Registered shape detail providers for handling different shape types.
+    /// </summary>
     private static readonly List<IShapeDetailProvider> Providers =
     [
         new AutoShapeDetailProvider(),
@@ -41,7 +44,6 @@ public static class ShapeDetailProviderFactory
         var provider = GetProvider(shape);
         if (provider != null) return (provider.TypeName, provider.GetDetails(shape, presentation));
 
-        // Fallback for unknown shape types
         return (shape.GetType().Name, null);
     }
 }

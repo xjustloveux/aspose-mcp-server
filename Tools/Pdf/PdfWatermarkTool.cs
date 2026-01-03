@@ -1,204 +1,156 @@
-using System.Text.Json.Nodes;
+using System.ComponentModel;
 using Aspose.Pdf;
 using Aspose.Pdf.Text;
-using AsposeMcpServer.Core;
+using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Session;
+using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Pdf;
 
 /// <summary>
 ///     Tool for managing watermarks in PDF documents
 /// </summary>
-public class PdfWatermarkTool : IAsposeTool
+[McpServerToolType]
+public class PdfWatermarkTool
 {
-    public string Description => @"Manage watermarks in PDF documents. Supports 1 operation: add.
+    /// <summary>
+    ///     The document session manager for managing in-memory document sessions.
+    /// </summary>
+    private readonly DocumentSessionManager? _sessionManager;
+
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="PdfWatermarkTool" /> class.
+    /// </summary>
+    /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
+    public PdfWatermarkTool(DocumentSessionManager? sessionManager = null)
+    {
+        _sessionManager = sessionManager;
+    }
+
+    [McpServerTool(Name = "pdf_watermark")]
+    [Description(@"Manage watermarks in PDF documents. Supports 1 operation: add.
 
 Usage examples:
 - Add watermark: pdf_watermark(operation='add', path='doc.pdf', text='CONFIDENTIAL', fontSize=72, opacity=0.3)
 - Add colored watermark: pdf_watermark(operation='add', path='doc.pdf', text='URGENT', color='Red')
 - Add watermark to specific pages: pdf_watermark(operation='add', path='doc.pdf', text='DRAFT', pageRange='1,3,5-10')
-- Add background watermark: pdf_watermark(operation='add', path='doc.pdf', text='SAMPLE', isBackground=true)";
-
-    public object InputSchema => new
+- Add background watermark: pdf_watermark(operation='add', path='doc.pdf', text='SAMPLE', isBackground=true)")]
+    public string Execute(
+        [Description("Operation: add")] string operation,
+        [Description("PDF file path (required if no sessionId)")]
+        string? path = null,
+        [Description("Session ID for in-memory editing")]
+        string? sessionId = null,
+        [Description("Output file path (file mode only)")]
+        string? outputPath = null,
+        [Description("Watermark text (required for add)")]
+        string? text = null,
+        [Description("Opacity (0.0 to 1.0, default: 0.3)")]
+        double opacity = 0.3,
+        [Description("Font size in points (default: 72)")]
+        double fontSize = 72,
+        [Description("Font name (default: 'Arial')")]
+        string fontName = "Arial",
+        [Description("Rotation angle in degrees (default: 45)")]
+        double rotation = 45,
+        [Description(
+            "Watermark color name (e.g., 'Red', 'Blue', 'Gray') or hex code (e.g., '#FF0000'). Default: 'Gray'")]
+        string color = "Gray",
+        [Description("Page range to apply watermark (e.g., '1,3,5-10'). If not specified, applies to all pages")]
+        string? pageRange = null,
+        [Description("If true, watermark is placed behind text content. Default: false")]
+        bool isBackground = false,
+        [Description("Horizontal alignment (default: Center)")]
+        string horizontalAlignment = "Center",
+        [Description("Vertical alignment (default: Center)")]
+        string verticalAlignment = "Center")
     {
-        type = "object",
-        properties = new
-        {
-            operation = new
-            {
-                type = "string",
-                description = @"Operation to perform.
-- 'add': Add text watermark (required params: path, text)",
-                @enum = new[] { "add" }
-            },
-            path = new
-            {
-                type = "string",
-                description = "PDF file path (required for all operations)"
-            },
-            outputPath = new
-            {
-                type = "string",
-                description = "Output file path (optional, defaults to overwrite input)"
-            },
-            text = new
-            {
-                type = "string",
-                description = "Watermark text (required for add)"
-            },
-            opacity = new
-            {
-                type = "number",
-                description = "Opacity (0.0 to 1.0, default: 0.3)",
-                minimum = 0.0,
-                maximum = 1.0
-            },
-            fontSize = new
-            {
-                type = "number",
-                description = "Font size in points (default: 72)",
-                minimum = 1
-            },
-            fontName = new
-            {
-                type = "string",
-                description = "Font name (default: 'Arial')"
-            },
-            rotation = new
-            {
-                type = "number",
-                description = "Rotation angle in degrees (default: 45)"
-            },
-            color = new
-            {
-                type = "string",
-                description =
-                    "Watermark color name (e.g., 'Red', 'Blue', 'Gray') or hex code (e.g., '#FF0000'). Default: 'Gray'"
-            },
-            pageRange = new
-            {
-                type = "string",
-                description = "Page range to apply watermark (e.g., '1,3,5-10'). If not specified, applies to all pages"
-            },
-            isBackground = new
-            {
-                type = "boolean",
-                description = "If true, watermark is placed behind text content. Default: false"
-            },
-            horizontalAlignment = new
-            {
-                type = "string",
-                description = "Horizontal alignment (default: Center)",
-                @enum = new[] { "Left", "Center", "Right" }
-            },
-            verticalAlignment = new
-            {
-                type = "string",
-                description = "Vertical alignment (default: Center)",
-                @enum = new[] { "Top", "Center", "Bottom" }
-            }
-        },
-        required = new[] { "operation", "path", "text" }
-    };
-
-    /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments
-    /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters</param>
-    /// <returns>Result message as a string</returns>
-    /// <exception cref="ArgumentException">Thrown when operation is unknown or required parameters are missing</exception>
-    /// <exception cref="FileNotFoundException">Thrown when input file does not exist</exception>
-    public async Task<string> ExecuteAsync(JsonObject? arguments)
-    {
-        var operation = ArgumentHelper.GetString(arguments, "operation");
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
 
         return operation.ToLower() switch
         {
-            "add" => await AddWatermark(path, outputPath, arguments),
+            "add" => AddWatermark(ctx, outputPath, text, opacity, fontSize, fontName, rotation, color, pageRange,
+                isBackground, horizontalAlignment, verticalAlignment),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
 
     /// <summary>
-    ///     Adds a watermark to the PDF
+    ///     Adds a watermark to the PDF document.
     /// </summary>
-    /// <param name="path">Input file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">
-    ///     JSON arguments containing text, optional opacity, fontSize, fontName, rotation, color,
-    ///     pageRange, isBackground, alignment
-    /// </param>
-    /// <returns>Success message indicating number of pages with watermark applied</returns>
-    /// <exception cref="ArgumentException">Thrown when pageRange format is invalid</exception>
-    private Task<string> AddWatermark(string path, string outputPath, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="text">The watermark text.</param>
+    /// <param name="opacity">The opacity of the watermark (0.0 to 1.0).</param>
+    /// <param name="fontSize">The font size in points.</param>
+    /// <param name="fontName">The font name.</param>
+    /// <param name="rotation">The rotation angle in degrees.</param>
+    /// <param name="colorName">The watermark color name or hex code.</param>
+    /// <param name="pageRange">Optional page range to apply watermark to.</param>
+    /// <param name="isBackground">Whether to place the watermark behind content.</param>
+    /// <param name="horizontalAlignment">The horizontal alignment of the watermark.</param>
+    /// <param name="verticalAlignment">The vertical alignment of the watermark.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when text is empty.</exception>
+    private static string AddWatermark(DocumentContext<Document> ctx, string? outputPath, string? text, double opacity,
+        double fontSize, string fontName, double rotation, string colorName, string? pageRange, bool isBackground,
+        string horizontalAlignment, string verticalAlignment)
     {
-        return Task.Run(() =>
+        if (string.IsNullOrEmpty(text))
+            throw new ArgumentException("text is required for add operation");
+
+        var document = ctx.Document;
+
+        var hAlign = horizontalAlignment.ToLower() switch
         {
-            var text = ArgumentHelper.GetString(arguments, "text");
-            var opacity = ArgumentHelper.GetDouble(arguments, "opacity", "opacity", false, 0.3);
-            var fontSize = ArgumentHelper.GetDouble(arguments, "fontSize", "fontSize", false, 72);
-            var fontName = ArgumentHelper.GetString(arguments, "fontName", "Arial");
-            var rotation = ArgumentHelper.GetDouble(arguments, "rotation", "rotation", false, 45);
-            var colorName = ArgumentHelper.GetString(arguments, "color", "Gray");
-            var pageRange = ArgumentHelper.GetStringNullable(arguments, "pageRange");
-            var isBackground = ArgumentHelper.GetBool(arguments, "isBackground", false);
-            var horizontalAlignment = ArgumentHelper.GetString(arguments, "horizontalAlignment", "Center");
-            var verticalAlignment = ArgumentHelper.GetString(arguments, "verticalAlignment", "Center");
+            "left" => HorizontalAlignment.Left,
+            "right" => HorizontalAlignment.Right,
+            _ => HorizontalAlignment.Center
+        };
 
-            using var document = new Document(path);
+        var vAlign = verticalAlignment.ToLower() switch
+        {
+            "top" => VerticalAlignment.Top,
+            "bottom" => VerticalAlignment.Bottom,
+            _ => VerticalAlignment.Center
+        };
 
-            var hAlign = horizontalAlignment.ToLower() switch
+        var watermarkColor = ParseColor(colorName);
+        var pageIndices = ParsePageRange(pageRange, document.Pages.Count);
+        var appliedCount = 0;
+
+        foreach (var pageIndex in pageIndices)
+        {
+            var page = document.Pages[pageIndex];
+            var watermark = new WatermarkArtifact();
+            var textState = new TextState
             {
-                "left" => HorizontalAlignment.Left,
-                "right" => HorizontalAlignment.Right,
-                _ => HorizontalAlignment.Center
+                ForegroundColor = watermarkColor
             };
 
-            var vAlign = verticalAlignment.ToLower() switch
-            {
-                "top" => VerticalAlignment.Top,
-                "bottom" => VerticalAlignment.Bottom,
-                _ => VerticalAlignment.Center
-            };
+            FontHelper.Pdf.ApplyFontSettings(textState, fontName, fontSize);
 
-            var watermarkColor = ParseColor(colorName);
-            var pageIndices = ParsePageRange(pageRange, document.Pages.Count);
-            var appliedCount = 0;
+            watermark.SetTextAndState(text, textState);
+            watermark.ArtifactHorizontalAlignment = hAlign;
+            watermark.ArtifactVerticalAlignment = vAlign;
+            watermark.Rotation = rotation;
+            watermark.Opacity = opacity;
+            watermark.IsBackground = isBackground;
 
-            foreach (var pageIndex in pageIndices)
-            {
-                var page = document.Pages[pageIndex];
-                var watermark = new WatermarkArtifact();
-                var textState = new TextState
-                {
-                    ForegroundColor = watermarkColor
-                };
+            page.Artifacts.Add(watermark);
+            appliedCount++;
+        }
 
-                FontHelper.Pdf.ApplyFontSettings(textState, fontName, fontSize);
+        ctx.Save(outputPath);
 
-                watermark.SetTextAndState(text, textState);
-                watermark.ArtifactHorizontalAlignment = hAlign;
-                watermark.ArtifactVerticalAlignment = vAlign;
-                watermark.Rotation = rotation;
-                watermark.Opacity = opacity;
-                watermark.IsBackground = isBackground;
-
-                page.Artifacts.Add(watermark);
-                appliedCount++;
-            }
-
-            document.Save(outputPath);
-
-            return $"Watermark added to {appliedCount} page(s). Output: {outputPath}";
-        });
+        return $"Watermark added to {appliedCount} page(s). {ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Parses a color string to Aspose Color
+    ///     Parses a color name or hex code into a PDF Color object.
     /// </summary>
-    /// <param name="colorName">Color name (e.g., 'Red', 'Blue') or hex code (e.g., '#FF0000')</param>
-    /// <returns>Parsed Color object</returns>
+    /// <param name="colorName">The color name or hex code (e.g., "Red" or "#FF0000").</param>
+    /// <returns>The parsed Color object, or Gray if parsing fails.</returns>
     private static Color ParseColor(string colorName)
     {
         if (string.IsNullOrEmpty(colorName))
@@ -208,7 +160,7 @@ Usage examples:
             try
             {
                 var hex = colorName.TrimStart('#');
-                var r = Convert.ToByte(hex.Substring(0, 2), 16);
+                var r = Convert.ToByte(hex[..2], 16);
                 var g = Convert.ToByte(hex.Substring(2, 2), 16);
                 var b = Convert.ToByte(hex.Substring(4, 2), 16);
                 return Color.FromRgb(r / 255.0, g / 255.0, b / 255.0);
@@ -238,12 +190,12 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Parses a page range string into a list of page indices
+    ///     Parses a page range string into a list of page indices.
     /// </summary>
-    /// <param name="pageRange">Page range string (e.g., '1,3,5-10')</param>
-    /// <param name="totalPages">Total number of pages in the document</param>
-    /// <returns>List of 1-based page indices</returns>
-    /// <exception cref="ArgumentException">Thrown when pageRange format is invalid</exception>
+    /// <param name="pageRange">The page range string (e.g., "1,3,5-10").</param>
+    /// <param name="totalPages">The total number of pages in the document.</param>
+    /// <returns>A list of 1-based page indices.</returns>
+    /// <exception cref="ArgumentException">Thrown when the page range format is invalid or out of bounds.</exception>
     private static List<int> ParsePageRange(string? pageRange, int totalPages)
     {
         if (string.IsNullOrEmpty(pageRange))

@@ -14,7 +14,6 @@ public static class LicenseManager
     /// <param name="config">Server configuration</param>
     public static void SetLicense(ServerConfig config)
     {
-        // Suppress stdout output from Aspose during license loading
         var originalOut = Console.Out;
         try
         {
@@ -23,7 +22,7 @@ public static class LicenseManager
             var baseDirectory = AppContext.BaseDirectory;
             var currentDirectory = Directory.GetCurrentDirectory();
 
-            var licenseFileNames = new List<string>();
+            List<string> licenseFileNames = [];
 
             if (!string.IsNullOrWhiteSpace(config.LicensePath))
             {
@@ -35,7 +34,6 @@ public static class LicenseManager
                 }
             }
 
-            // Add common license file names based on enabled components
             if (config.EnableWord)
             {
                 licenseFileNames.Add("Aspose.Words.lic");
@@ -64,12 +62,10 @@ public static class LicenseManager
                 licenseFileNames.Add(Path.Combine(currentDirectory, "Aspose.Pdf.lic"));
             }
 
-            // Add Total license as fallback
             licenseFileNames.Add("Aspose.Total.lic");
             licenseFileNames.Add(Path.Combine(baseDirectory, "Aspose.Total.lic"));
             licenseFileNames.Add(Path.Combine(currentDirectory, "Aspose.Total.lic"));
 
-            // Search for any .lic files in the directories
             var searchDirectories = new[] { baseDirectory, currentDirectory };
             foreach (var dir in searchDirectories)
                 try
@@ -95,7 +91,7 @@ public static class LicenseManager
                     break;
                 }
 
-            var loadedLicenses = new List<string>();
+            List<string> loadedLicenses = [];
 
             if (licensePath != null)
             {
@@ -108,7 +104,7 @@ public static class LicenseManager
                     }
                     catch
                     {
-                        // License file might not contain Words license
+                        // Ignore license loading errors for Words
                     }
 
                 if (config.EnableExcel)
@@ -120,7 +116,7 @@ public static class LicenseManager
                     }
                     catch
                     {
-                        // License file might not contain Cells license
+                        // Ignore license loading errors for Cells
                     }
 
                 if (config.EnablePowerPoint)
@@ -132,7 +128,7 @@ public static class LicenseManager
                     }
                     catch
                     {
-                        // License file might not contain Slides license
+                        // Ignore license loading errors for Slides
                     }
 
                 if (config.EnablePdf)
@@ -144,7 +140,7 @@ public static class LicenseManager
                     }
                     catch
                     {
-                        // License file might not contain Pdf license
+                        // Ignore license loading errors for Pdf
                     }
 
                 Console.SetOut(originalOut);

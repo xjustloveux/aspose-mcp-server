@@ -22,344 +22,55 @@
     <meta property="twitter:url" content="https://xjustloveux.github.io/aspose-mcp-server/faq.html">
     <meta property="twitter:title" content="常見問答 - Aspose MCP Server">
     <meta property="twitter:description" content="Aspose MCP Server 常見問答：索引行為、授權配置、參數使用等問題解答。">
+    <link rel="stylesheet" href="theme.css">
+    <script src="theme.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background: #f5f5f5;
-        }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        
-        nav {
-            background: white;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            margin-bottom: 40px;
-        }
-        
-        .nav-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
-        
-        .nav-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 0;
-            gap: 20px;
-        }
-        
-        .nav-menu {
-            display: flex;
-            justify-content: flex-end;
-            align-items: center;
-            flex-wrap: nowrap;
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            gap: 5px;
-            flex: 1;
-        }
-        
-        .nav-menu li {
-            margin: 0;
-            white-space: nowrap;
-        }
-        
-        .nav-menu a {
-            color: #333;
-            text-decoration: none;
-            padding: 8px 12px;
-            border-radius: 5px;
-            transition: background 0.3s ease;
-            font-weight: 500;
-            display: block;
-            white-space: nowrap;
-            font-size: 0.95em;
-        }
-        
-        .nav-menu a:hover {
-            background: #f0f0f0;
-        }
-        
-        .nav-menu a.active {
-            background: #667eea;
-            color: white;
-        }
-        
-        .nav-logo {
-            font-size: 1.2em;
-            font-weight: bold;
-            color: #667eea;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            white-space: nowrap;
-            flex-shrink: 0;
-            text-decoration: none;
-        }
-        
-        .nav-logo img {
-            width: 24px;
-            height: 24px;
-            vertical-align: middle;
-        }
-        
-        /* 中等屏幕优化 */
-        @media (max-width: 1024px) and (min-width: 769px) {
-            .nav-menu a {
-                padding: 8px 10px;
-                font-size: 0.9em;
-            }
-            
-            .nav-logo {
-                font-size: 1.1em;
-            }
-            
-            .nav-menu {
-                gap: 3px;
-            }
-            
-            .nav-header {
-                gap: 15px;
-            }
-        }
-        
-        .menu-toggle {
-            display: none;
-            background: none;
-            border: none;
-            font-size: 1.5em;
-            cursor: pointer;
-            color: #667eea;
-            padding: 5px 10px;
-        }
-        
-        .menu-toggle:hover {
-            color: #5568d3;
-        }
-        
-        .page-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 40px 20px;
-            text-align: center;
-            margin-bottom: 40px;
-        }
-        
-        .page-header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-        }
-        
-        .section {
-            background: white;
-            padding: 40px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            margin-bottom: 30px;
-        }
-        
-        .section h2 {
-            color: #667eea;
-            margin-bottom: 20px;
-            font-size: 1.8em;
-            border-bottom: 3px solid #667eea;
-            padding-bottom: 10px;
-        }
-        
+        /* Page-specific styles */
         .faq-item {
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid #f0f0f0;
+            margin-bottom: 20px;
+            padding: 25px;
+            background: var(--faq-item-bg);
+            border-radius: 8px;
+            border-left: 4px solid var(--accent-primary);
         }
-        
-        .faq-item:last-child {
-            border-bottom: none;
-        }
-        
+
         .faq-question {
-            color: #764ba2;
+            color: var(--accent-secondary);
             font-size: 1.2em;
             font-weight: bold;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
         }
-        
+
         .faq-answer {
-            color: #666;
+            color: var(--text-secondary);
             line-height: 1.8;
         }
-        
+
         .faq-answer ul,
         .faq-answer ol {
             margin-top: 10px;
             padding-left: 25px;
         }
-        
-        .code-block {
-            background: #2d2d2d;
-            color: #f8f8f2;
-            padding: 15px;
-            border-radius: 5px;
-            overflow-x: auto;
-            margin: 15px 0;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9em;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-            display: block;
-        }
-        
-        .info-box {
-            background: #e3f2fd;
-            border-left: 4px solid #2196f3;
-            padding: 15px;
-            margin: 15px 0;
-            border-radius: 5px;
-        }
-        
-        footer {
-            text-align: center;
-            padding: 40px 20px;
-            color: #666;
-            border-top: 1px solid #ddd;
-            margin-top: 40px;
-        }
-        
-        /* 响应式设计 - 移动端 */
+
+        /* Page-specific RWD */
         @media (max-width: 768px) {
-            .container {
-                padding: 15px;
-            }
-            
-            .nav-container {
-                padding: 0 15px;
-            }
-            
-            .nav-header {
-                padding: 10px 0;
-                flex-wrap: wrap;
-            }
-            
-            .menu-toggle {
-                display: block;
-            }
-            
-            .nav-menu {
-                display: none;
-                flex-direction: column;
-                align-items: flex-start;
-                padding: 10px 0;
-                width: 100%;
-                order: 3;
-                flex: 1 1 100%;
-            }
-            
-            .nav-menu.active {
-                display: flex;
-            }
-            
-            .nav-menu li {
-                width: 100%;
-                margin: 5px 0;
-            }
-            
-            .nav-menu a {
-                display: block;
-                width: 100%;
-                padding: 12px 16px;
-            }
-            
-            .nav-logo {
-                flex: 1;
-                font-size: 1.1em;
-            }
-            
-            .page-header {
-                padding: 30px 15px;
-                margin-bottom: 30px;
-            }
-            
-            .page-header h1 {
-                font-size: 1.8em;
-            }
-            
-            .section {
-                padding: 25px 15px;
-                margin-bottom: 20px;
-            }
-            
-            .section h2 {
-                font-size: 1.4em;
-            }
-            
             .faq-item {
                 margin-bottom: 20px;
                 padding-bottom: 15px;
             }
-            
+
             .faq-question {
                 font-size: 1.1em;
             }
-            
+
             .faq-answer {
                 font-size: 0.95em;
             }
-            
-            .code-block {
-                padding: 12px;
-                font-size: 0.85em;
-                margin: 10px 0;
-            }
-            
-            .info-box {
-                padding: 12px;
-                margin: 10px 0;
-            }
-            
-            footer {
-                padding: 30px 15px;
-                font-size: 0.9em;
-            }
         }
-        
+
         @media (max-width: 480px) {
-            .page-header h1 {
-                font-size: 1.5em;
-            }
-            
-            .nav-logo {
-                font-size: 1em;
-            }
-            
-            .nav-logo img {
-                width: 20px;
-                height: 20px;
-            }
-            
             .faq-question {
                 font-size: 1em;
-            }
-            
-            .code-block {
-                font-size: 0.75em;
             }
         }
     </style>
@@ -386,9 +97,13 @@
                     <a href="developers.html">開發者指南</a>
                 </li>
                 <li>
+                    <a href="deployment.html">部署指南</a>
+                </li>
+                <li>
                     <a href="faq.html" class="active">常見問答</a>
                 </li>
             </ul>
+            <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme" title="切換亮/暗色主題">🌙</button>
             <button class="menu-toggle" aria-label="Toggle menu">☰</button>
         </div>
     </div>
@@ -509,7 +224,12 @@
     <div class="faq-item">
         <div class="faq-question">Q: 本專案的源代碼使用什麼授權？</div>
         <div class="faq-answer">
-            <p>本專案的源代碼採用 <a href="https://github.com/xjustloveux/aspose-mcp-server/blob/master/LICENSE" target="_blank" style="color: #667eea; font-weight: bold;">MIT License</a> 授權。</p>
+            <p>
+                本專案的源代碼採用
+                <a href="https://github.com/xjustloveux/aspose-mcp-server/blob/master/LICENSE" target="_blank">
+                    <strong>MIT License</strong>
+                </a> 授權。
+            </p>
             <p style="margin-top: 10px;">您可以：</p>
             <ul>
                 <li>✅ 自由使用、修改和分發源代碼</li>
@@ -517,6 +237,55 @@
                 <li>✅ 私有使用</li>
             </ul>
             <p style="margin-top: 10px;"><strong>注意</strong>：雖然源代碼使用 MIT License，但使用本專案需要有效的 Aspose 授權檔案才能正常運行（Aspose 是商業軟體）。</p>
+        </div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-question">Q: 評估模式（無授權）有什麼限制？</div>
+        <div class="faq-answer">
+            <p>在無授權（評估模式）下運行時，Aspose 組件會有以下限制：</p>
+            <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                <thead>
+                <tr style="background: var(--bg-step);">
+                    <th style="padding: 10px; text-align: left; border: 1px solid var(--border-color);">組件</th>
+                    <th style="padding: 10px; text-align: left; border: 1px solid var(--border-color);">限制說明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid var(--border-color);">
+                        <strong>Aspose.Words</strong>
+                    </td>
+                    <td style="padding: 10px; border: 1px solid var(--border-color);">字型格式（名稱、大小、顏色）可能無法正確應用；文檔會包含評估版水印</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid var(--border-color);">
+                        <strong>Aspose.Cells</strong>
+                    </td>
+                    <td style="padding: 10px; border: 1px solid var(--border-color);">多工作表操作受限（如跨工作表存取）；工作簿會包含評估版工作表</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid var(--border-color);">
+                        <strong>Aspose.Slides</strong>
+                    </td>
+                    <td style="padding: 10px; border: 1px solid var(--border-color);">文字替換時可能包含水印文字；投影片可能包含評估版標記</td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px; border: 1px solid var(--border-color);">
+                        <strong>Aspose.PDF</strong>
+                    </td>
+                    <td style="padding: 10px; border: 1px solid var(--border-color);">集合限制為最多 4 個元素（如頁面數限制）；PDF 會包含評估版水印</td>
+                </tr>
+                </tbody>
+            </table>
+            <div class="info-box" style="margin-top: 15px;">
+                <strong>💡 注意事項</strong>
+                <ul style="margin-top: 10px; margin-bottom: 0;">
+                    <li>大部分基本操作（讀取、創建、簡單編輯）在評估模式下仍可正常運行</li>
+                    <li>評估模式適合測試和開發，但不建議用於生產環境</li>
+                    <li>使用 <code>test.ps1 -SkipLicense</code> 可在評估模式下運行單元測試</li>
+                </ul>
+            </div>
         </div>
     </div>
 </div>
@@ -584,12 +353,12 @@
     <div class="faq-item">
         <div class="faq-question">Q: 可以自訂工具嗎？</div>
         <div class="faq-answer">
-            <p>可以。工具基於命名約定自動發現，您可以：</p>
+            <p>可以。工具使用 MCP SDK 的 <code>[McpServerToolType]</code> 屬性自動發現：</p>
             <ol>
-                <li>創建新的工具類（實現 <code>IAsposeTool</code> 介面）</li>
+                <li>創建新的工具類並添加 <code>[McpServerToolType]</code> 屬性</li>
                 <li>遵循命名約定（<code>*Tool.cs</code>）</li>
                 <li>放在對應的 <code>Tools/</code> 子目錄中</li>
-                <li>工具會自動註冊</li>
+                <li>工具會透過 MCP SDK 自動註冊</li>
             </ol>
         </div>
     </div>
@@ -631,79 +400,18 @@
     </div>
 </div>
 
-<div class="section">
-    <h2>🔑 授權配置相關</h2>
-
-    <div class="faq-item">
-        <div class="faq-question">Q: 找不到授權檔案會怎樣？</div>
-        <div class="faq-answer">
-            <p>如果找不到授權檔案，系統會以<strong>試用模式</strong>運行，生成的文檔會有試用版標記。</p>
-        </div>
-    </div>
-
-    <div class="faq-item">
-        <div class="faq-question">Q: 支援哪些授權類型？</div>
-        <div class="faq-answer">
-            <ul>
-                <li><strong>總授權</strong>：<code>Aspose.Total.lic</code>（包含所有組件）</li>
-                <li><strong>單一組件授權</strong>：<code>Aspose.Words.lic</code>、<code>Aspose.Cells.lic</code>、<code>Aspose.Slides.lic</code>、<code>Aspose.Pdf.lic</code></li>
-                <li><strong>自訂檔案名稱</strong>：可透過環境變數或命令列參數指定</li>
-            </ul>
-        </div>
-    </div>
-
-    <div class="faq-item">
-        <div class="faq-question">Q: 如何配置授權檔案？</div>
-        <div class="faq-answer">
-            <p>有三種方式：</p>
-            <ol>
-                <li><strong>自動搜尋</strong>（推薦）：將授權檔案放在可執行檔案同一目錄</li>
-                <li><strong>環境變數</strong>：設定 <code>ASPOSE_LICENSE_PATH</code> 環境變數</li>
-                <li><strong>命令列參數</strong>：使用 <code>--license:路徑</code> 或 <code>--license=路徑</code></li>
-            </ol>
-        </div>
-    </div>
-</div>
-
-<div class="section">
-    <h2>⚙️ 功能使用相關</h2>
-
-    <div class="faq-item">
-        <div class="faq-question">Q: 轉換功能什麼時候自動可用？</div>
-        <div class="faq-answer">
-            <ul>
-                <li>啟用任何文檔工具（<code>--word</code>、<code>--excel</code>、<code>--ppt</code>）時，自動包含 <code>convert_to_pdf</code>（轉換為PDF）</li>
-                <li>啟用兩個或以上文檔工具時，自動包含 <code>convert_document</code>（跨格式轉換，如Word轉Excel）</li>
-            </ul>
-        </div>
-    </div>
-
-    <div class="faq-item">
-        <div class="faq-question">Q: 參數命名有哪些兼容方式？</div>
-        <div class="faq-answer">
-            <p>為了向後兼容，某些參數支援多種命名方式：</p>
-            <ul>
-                <li><code>startColumn</code> / <code>startCol</code></li>
-                <li><code>columnIndex</code> / <code>colIndex</code></li>
-                <li><code>tableIndex</code> / <code>sourceTableIndex</code></li>
-                <li><code>text</code> / <code>replyText</code> (用於評論回覆)</li>
-            </ul>
-        </div>
-    </div>
-</div>
-
 </div>
 
 <footer>
     <div class="container">
         <p>基於 .NET 8.0 和 Aspose.Total 23.10.0 構建</p>
-        <p style="margin-top: 10px;">
-            <a href="https://github.com/xjustloveux/aspose-mcp-server" style="color: #667eea; text-decoration: none;" target="_blank">GitHub</a> |
-            <a href="https://www.aspose.com/" style="color: #667eea; text-decoration: none;" target="_blank">Aspose</a> |
-            <a href="https://modelcontextprotocol.io/" style="color: #667eea; text-decoration: none;" target="_blank">MCP Protocol</a> |
-            <a href="https://github.com/xjustloveux/aspose-mcp-server/releases" style="color: #667eea; text-decoration: none;" target="_blank">Releases</a>
+        <p class="footer-links" style="margin-top: 10px;">
+            <a href="https://github.com/xjustloveux/aspose-mcp-server" target="_blank">GitHub</a> |
+            <a href="https://www.aspose.com/" target="_blank">Aspose</a> |
+            <a href="https://modelcontextprotocol.io/" target="_blank">MCP Protocol</a> |
+            <a href="https://github.com/modelcontextprotocol/csharp-sdk" target="_blank">.NET MCP SDK</a>
         </p>
-        <p style="margin-top: 20px; color: #999; font-size: 0.9em;">
+        <p class="copyright-text" style="margin-top: 20px; font-size: 0.9em;">
             © 2025 JaJa. All rights reserved. | MIT License
         </p>
     </div>
@@ -812,35 +520,5 @@
         });
     </script>
 
-<script>
-        // 移动端菜单切换
-        document.addEventListener('DOMContentLoaded', function() {
-            const menuToggle = document.querySelector('.menu-toggle');
-            const navMenu = document.getElementById('navMenu');
-            
-            if (menuToggle && navMenu) {
-                menuToggle.addEventListener('click', function() {
-                    navMenu.classList.toggle('active');
-                    // 切换按钮图标
-                    if (navMenu.classList.contains('active')) {
-                        menuToggle.textContent = '✕';
-                    } else {
-                        menuToggle.textContent = '☰';
-                    }
-                });
-                
-                // 点击菜单项后关闭菜单（移动端）
-                const menuLinks = navMenu.querySelectorAll('a');
-                menuLinks.forEach(link => {
-                    link.addEventListener('click', function() {
-                        if (window.innerWidth <= 768) {
-                            navMenu.classList.remove('active');
-                            menuToggle.textContent = '☰';
-                        }
-                    });
-                });
-            }
-        });
-    </script>
 </body>
 </html>

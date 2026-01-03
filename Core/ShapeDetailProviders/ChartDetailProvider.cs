@@ -8,13 +8,16 @@ namespace AsposeMcpServer.Core.ShapeDetailProviders;
 /// </summary>
 public class ChartDetailProvider : IShapeDetailProvider
 {
+    /// <inheritdoc />
     public string TypeName => "Chart";
 
+    /// <inheritdoc />
     public bool CanHandle(IShape shape)
     {
         return shape is IChart;
     }
 
+    /// <inheritdoc />
     public object? GetDetails(IShape shape, IPresentation presentation)
     {
         if (shape is not IChart chart)

@@ -7,13 +7,16 @@ namespace AsposeMcpServer.Core.ShapeDetailProviders;
 /// </summary>
 public class AudioFrameDetailProvider : IShapeDetailProvider
 {
+    /// <inheritdoc />
     public string TypeName => "Audio";
 
+    /// <inheritdoc />
     public bool CanHandle(IShape shape)
     {
         return shape is IAudioFrame;
     }
 
+    /// <inheritdoc />
     public object? GetDetails(IShape shape, IPresentation presentation)
     {
         if (shape is not IAudioFrame audio)

@@ -1,8 +1,9 @@
-using System.Text.Json.Nodes;
+using System.ComponentModel;
 using Aspose.Cells;
 using Aspose.Slides;
 using Aspose.Words;
-using AsposeMcpServer.Core;
+using AsposeMcpServer.Core.Helpers;
+using ModelContextProtocol.Server;
 using SaveFormat = Aspose.Words.SaveFormat;
 
 namespace AsposeMcpServer.Tools.Conversion;
@@ -10,102 +11,62 @@ namespace AsposeMcpServer.Tools.Conversion;
 /// <summary>
 ///     Tool for converting documents (Word, Excel, PowerPoint) to PDF format
 /// </summary>
-public class ConvertToPdfTool : IAsposeTool
+[McpServerToolType]
+public class ConvertToPdfTool
 {
-    /// <summary>
-    ///     Gets the description of the tool and its usage examples
-    /// </summary>
-    public string Description => @"Convert any document (Word, Excel, PowerPoint) to PDF.
+    [McpServerTool(Name = "convert_to_pdf")]
+    [Description(@"Convert any document (Word, Excel, PowerPoint) to PDF.
 
 Usage examples:
 - Convert Word to PDF: convert_to_pdf(inputPath='doc.docx', outputPath='doc.pdf')
 - Convert Excel to PDF: convert_to_pdf(inputPath='book.xlsx', outputPath='book.pdf')
-- Convert PowerPoint to PDF: convert_to_pdf(inputPath='presentation.pptx', outputPath='presentation.pdf')";
-
-    /// <summary>
-    ///     Gets the JSON schema defining the input parameters for the tool
-    /// </summary>
-    public object InputSchema => new
+- Convert PowerPoint to PDF: convert_to_pdf(inputPath='presentation.pptx', outputPath='presentation.pdf')")]
+    public string Execute(
+        [Description("Input file path (required, supports Word, Excel, PowerPoint formats)")]
+        string inputPath,
+        [Description("Output PDF file path (required)")]
+        string outputPath)
     {
-        type = "object",
-        properties = new
+        SecurityHelper.ValidateFilePath(inputPath, "inputPath", true);
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+
+        var extension = Path.GetExtension(inputPath).ToLower();
+
+        switch (extension)
         {
-            inputPath = new
-            {
-                type = "string",
-                description = "Input file path (required, supports Word, Excel, PowerPoint formats)"
-            },
-            outputPath = new
-            {
-                type = "string",
-                description = "Output PDF file path (required)"
-            }
-        },
-        required = new[] { "inputPath", "outputPath" }
-    };
+            case ".doc":
+            case ".docx":
+            case ".rtf":
+            case ".odt":
+                var wordDoc = new Document(inputPath);
+                wordDoc.Save(outputPath, SaveFormat.Pdf);
+                break;
 
-    /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments
-    /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters</param>
-    /// <returns>Result message as a string</returns>
-    public async Task<string> ExecuteAsync(JsonObject? arguments)
-    {
-        var path = ArgumentHelper.GetAndValidatePath(arguments, "inputPath");
-        var outputPath = ArgumentHelper.GetAndValidatePath(arguments, "outputPath");
+            case ".xls":
+            case ".xlsx":
+            case ".csv":
+            case ".ods":
+                using (var workbook = new Workbook(inputPath))
+                {
+                    workbook.Save(outputPath, Aspose.Cells.SaveFormat.Pdf);
+                }
 
-        return await ConvertToPdf(path, outputPath, arguments);
-    }
+                break;
 
-    /// <summary>
-    ///     Converts a document to PDF format
-    /// </summary>
-    /// <param name="path">Input file path</param>
-    /// <param name="outputPath">Output PDF file path</param>
-    /// <param name="_">JSON arguments (unused)</param>
-    /// <returns>Result message</returns>
-    private Task<string> ConvertToPdf(string path, string outputPath, JsonObject? _)
-    {
-        return Task.Run(() =>
-        {
-            var extension = Path.GetExtension(path).ToLower();
+            case ".ppt":
+            case ".pptx":
+            case ".odp":
+                using (var presentation = new Presentation(inputPath))
+                {
+                    presentation.Save(outputPath, Aspose.Slides.Export.SaveFormat.Pdf);
+                }
 
-            switch (extension)
-            {
-                case ".doc":
-                case ".docx":
-                case ".rtf":
-                case ".odt":
-                    var wordDoc = new Document(path);
-                    wordDoc.Save(outputPath, SaveFormat.Pdf);
-                    break;
+                break;
 
-                case ".xls":
-                case ".xlsx":
-                case ".csv":
-                case ".ods":
-                    using (var workbook = new Workbook(path))
-                    {
-                        workbook.Save(outputPath, Aspose.Cells.SaveFormat.Pdf);
-                    }
+            default:
+                throw new ArgumentException($"Unsupported file format: {extension}");
+        }
 
-                    break;
-
-                case ".ppt":
-                case ".pptx":
-                case ".odp":
-                    using (var presentation = new Presentation(path))
-                    {
-                        presentation.Save(outputPath, Aspose.Slides.Export.SaveFormat.Pdf);
-                    }
-
-                    break;
-
-                default:
-                    throw new ArgumentException($"Unsupported file format: {extension}");
-            }
-
-            return $"Document converted to PDF. Output: {outputPath}";
-        });
+        return $"Document converted to PDF. Output: {outputPath}";
     }
 }

@@ -1,5 +1,10 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
-using Aspose.Words;
+using Aspose.Cells;
+using Aspose.Pdf;
+using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Tools.Session;
+using License = Aspose.Words.License;
 
 namespace AsposeMcpServer.Tests.Helpers;
 
@@ -19,8 +24,29 @@ public abstract class TestBase : IDisposable
         Pdf
     }
 
+    /// <summary>
+    ///     Tracks which Aspose licenses were successfully loaded during initialization.
+    ///     Used by IsEvaluationMode() to determine if a specific library is licensed.
+    /// </summary>
+    private static readonly HashSet<AsposeLibraryType> LoadedLicenses = new();
+
     protected readonly string TestDir;
     protected readonly List<string> TestFiles = new();
+
+    /// <summary>
+    ///     Shared session manager for session-based tests (lazy initialized)
+    /// </summary>
+    private DocumentSessionManager? _sessionManager;
+
+    /// <summary>
+    ///     Session tool for opening/closing sessions (lazy initialized)
+    /// </summary>
+    private DocumentSessionTool? _sessionTool;
+
+    /// <summary>
+    ///     Shared temp file manager for session-based tests (lazy initialized)
+    /// </summary>
+    private TempFileManager? _tempFileManager;
 
     // Static constructor, executed before first use of the class
     static TestBase()
@@ -34,13 +60,50 @@ public abstract class TestBase : IDisposable
         Directory.CreateDirectory(TestDir);
     }
 
+    /// <summary>
+    ///     Gets the shared session config
+    /// </summary>
+    private static SessionConfig SessionConfig => new() { Enabled = true };
+
+    /// <summary>
+    ///     Gets the shared session manager (creates if not exists)
+    /// </summary>
+    protected DocumentSessionManager SessionManager =>
+        _sessionManager ??= new DocumentSessionManager(SessionConfig);
+
+    /// <summary>
+    ///     Gets the shared temp file manager (creates if not exists)
+    /// </summary>
+    protected TempFileManager TempFileManager =>
+        _tempFileManager ??= new TempFileManager(SessionConfig);
+
+    /// <summary>
+    ///     Gets the shared session tool (creates if not exists)
+    /// </summary>
+    protected DocumentSessionTool SessionTool =>
+        _sessionTool ??= new DocumentSessionTool(SessionManager, TempFileManager);
+
     public virtual void Dispose()
     {
+        // Clean up session manager and temp file manager
+        _sessionManager?.Dispose();
+        _tempFileManager?.Dispose();
+
         // Clean up test files with retry mechanism
         foreach (var file in TestFiles) DeleteFileWithRetry(file);
 
         // Delete directory with retry mechanism
         DeleteDirectoryWithRetry(TestDir);
+    }
+
+    /// <summary>
+    ///     Opens a document session and returns the session ID
+    /// </summary>
+    protected string OpenSession(string documentPath)
+    {
+        var result = SessionTool.Execute("open", documentPath);
+        var json = JsonDocument.Parse(result);
+        return json.RootElement.GetProperty("sessionId").GetString()!;
     }
 
     /// <summary>
@@ -64,7 +127,7 @@ public abstract class TestBase : IDisposable
         // Check environment variable (set by CI)
         var envLicensePath = Environment.GetEnvironmentVariable("ASPOSE_LICENSE_PATH");
 
-        var licenseFileNames = new List<string>();
+        List<string> licenseFileNames = [];
 
         // Prioritize environment variable specified path
         if (!string.IsNullOrWhiteSpace(envLicensePath))
@@ -124,14 +187,12 @@ public abstract class TestBase : IDisposable
             return;
         }
 
-        var loadedLicenses = new List<string>();
-
         // Load all Aspose component licenses
         try
         {
             var wordsLicense = new License();
             wordsLicense.SetLicense(licensePath);
-            loadedLicenses.Add("Words");
+            LoadedLicenses.Add(AsposeLibraryType.Words);
         }
         catch
         {
@@ -142,7 +203,7 @@ public abstract class TestBase : IDisposable
         {
             var cellsLicense = new Aspose.Cells.License();
             cellsLicense.SetLicense(licensePath);
-            loadedLicenses.Add("Cells");
+            LoadedLicenses.Add(AsposeLibraryType.Cells);
         }
         catch
         {
@@ -153,7 +214,7 @@ public abstract class TestBase : IDisposable
         {
             var slidesLicense = new Aspose.Slides.License();
             slidesLicense.SetLicense(licensePath);
-            loadedLicenses.Add("Slides");
+            LoadedLicenses.Add(AsposeLibraryType.Slides);
         }
         catch
         {
@@ -164,17 +225,17 @@ public abstract class TestBase : IDisposable
         {
             var pdfLicense = new Aspose.Pdf.License();
             pdfLicense.SetLicense(licensePath);
-            loadedLicenses.Add("Pdf");
+            LoadedLicenses.Add(AsposeLibraryType.Pdf);
         }
         catch
         {
             // License file might not contain Pdf license
         }
 
-        if (loadedLicenses.Count > 0)
+        if (LoadedLicenses.Count > 0)
         {
             Console.Error.WriteLine($"[INFO] Aspose licenses loaded successfully from: {licensePath}");
-            Console.Error.WriteLine($"[INFO] Loaded licenses: {string.Join(", ", loadedLicenses)}");
+            Console.Error.WriteLine($"[INFO] Loaded licenses: {string.Join(", ", LoadedLicenses)}");
         }
         else
         {
@@ -368,41 +429,53 @@ public abstract class TestBase : IDisposable
     ///     Evaluation mode may add watermarks and limit certain operations.
     ///     This allows tests to adapt behavior when running without a license.
     /// </summary>
-    /// <param name="libraryType">The Aspose library type to check. Defaults to Slides.</param>
+    /// <param name="libraryType">The Aspose library type to check.</param>
     /// <returns>True if running in evaluation mode, false if licensed.</returns>
     protected static bool IsEvaluationMode(AsposeLibraryType libraryType = AsposeLibraryType.Slides)
     {
-        return libraryType switch
-        {
-            AsposeLibraryType.Slides => CheckLicenseStatus<Aspose.Slides.License>(),
-            AsposeLibraryType.Words => CheckLicenseStatus<License>(),
-            AsposeLibraryType.Cells => CheckLicenseStatus<Aspose.Cells.License>(),
-            AsposeLibraryType.Pdf => CheckLicenseStatus<Aspose.Pdf.License>(),
-            _ => CheckLicenseStatus<Aspose.Slides.License>()
-        };
-    }
+        // First check environment variable (set by test.ps1 -SkipLicense)
+        var skipLicense = Environment.GetEnvironmentVariable("SKIP_ASPOSE_LICENSE")
+                          ?? Environment.GetEnvironmentVariable("SKIP_LICENSE");
+        if (string.Equals(skipLicense, "true", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(skipLicense, "1", StringComparison.OrdinalIgnoreCase))
+            return true;
 
-    /// <summary>
-    ///     Generic method to check license status for any Aspose library.
-    /// </summary>
-    private static bool CheckLicenseStatus<T>() where T : new()
-    {
+        // Use direct API checks for libraries that support it
+        // This correctly handles expired licenses (SetLicense succeeded but license expired)
         try
         {
-            var license = new T();
-            var isLicensedProperty = license.GetType().GetProperty("IsLicensed");
-            if (isLicensedProperty != null && isLicensedProperty.PropertyType == typeof(bool))
+            return libraryType switch
             {
-                var isLicensed = (bool)(isLicensedProperty.GetValue(license) ?? false);
-                return !isLicensed;
-            }
-
-            return true;
+                // Aspose.Words: No direct IsLicensed API, use HashSet tracking
+                AsposeLibraryType.Words => !LoadedLicenses.Contains(AsposeLibraryType.Words),
+                // Aspose.Cells: Workbook.IsLicensed is an instance property
+                AsposeLibraryType.Cells => !new Workbook().IsLicensed,
+                // Aspose.Pdf: Document.IsLicensed is a STATIC property
+                AsposeLibraryType.Pdf => !Document.IsLicensed,
+                // Aspose.Slides: License.IsLicensed() is a method on License class
+                AsposeLibraryType.Slides => !new Aspose.Slides.License().IsLicensed(),
+                _ => !new Aspose.Slides.License().IsLicensed()
+            };
         }
         catch
         {
-            return true;
+            // If API check fails, fall back to HashSet tracking
+            return !LoadedLicenses.Contains(libraryType);
         }
+    }
+
+    /// <summary>
+    ///     Skips the current test if running in evaluation mode.
+    ///     Use this with [SkippableFact] or [SkippableTheory] attribute.
+    ///     This properly marks the test as "Skipped" instead of silently passing.
+    /// </summary>
+    /// <param name="libraryType">The Aspose library type to check.</param>
+    /// <param name="reason">The reason for skipping (shown in test output).</param>
+    protected static void SkipInEvaluationMode(
+        AsposeLibraryType libraryType = AsposeLibraryType.Slides,
+        string reason = "Exceeds evaluation mode limits")
+    {
+        Skip.If(IsEvaluationMode(libraryType), reason);
     }
 
     /// <summary>

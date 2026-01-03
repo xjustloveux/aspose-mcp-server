@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>部署指南 - Aspose MCP Server</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="alternate icon" href="favicon.ico">
+    <meta name="description" content="Aspose MCP Server 部署指南：Docker、Kubernetes、IIS 部署範例。">
+    <meta name="keywords" content="Aspose, MCP, 部署, Docker, Kubernetes, IIS, 範例">
+    <link rel="canonical" href="https://xjustloveux.github.io/aspose-mcp-server/deployment.html">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://xjustloveux.github.io/aspose-mcp-server/deployment.html">
+    <meta property="og:title" content="部署指南 - Aspose MCP Server">
+    <meta property="og:description" content="Aspose MCP Server 部署指南：Docker、Kubernetes、IIS 部署範例。">
+    <meta property="og:site_name" content="Aspose MCP Server">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary">
+    <meta property="twitter:url" content="https://xjustloveux.github.io/aspose-mcp-server/deployment.html">
+    <meta property="twitter:title" content="部署指南 - Aspose MCP Server">
+    <meta property="twitter:description" content="Aspose MCP Server 部署指南：Docker、Kubernetes、IIS 部署範例。">
+    <link rel="stylesheet" href="theme.css">
+    <script src="theme.js"></script>
+    <style>
+        /* Page-specific styles */
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        /* Page-specific RWD */
+        @media (max-width: 768px) {
+            .table-wrapper {
+                margin: 0 -15px;
+                padding: 0 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+<nav>
+    <div class="nav-container">
+        <div class="nav-header">
+            <a href="index.html" class="nav-logo"><img src="favicon.svg" alt="Aspose MCP Server"> Aspose MCP Server</a>
+            <ul class="nav-menu" id="navMenu">
+                <li>
+                    <a href="index.html">首頁</a>
+                </li>
+                <li>
+                    <a href="features.html">功能特性</a>
+                </li>
+                <li>
+                    <a href="tools.html">工具列表</a>
+                </li>
+                <li>
+                    <a href="getting-started.html">快速開始</a>
+                </li>
+                <li>
+                    <a href="developers.html">開發者指南</a>
+                </li>
+                <li>
+                    <a href="deployment.html" class="active">部署指南</a>
+                </li>
+                <li>
+                    <a href="faq.html">常見問答</a>
+                </li>
+            </ul>
+            <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme" title="切換亮/暗色主題">🌙</button>
+            <button class="menu-toggle" aria-label="Toggle menu">☰</button>
+        </div>
+    </div>
+</nav>
+
+<div class="page-header">
+    <div class="container">
+        <h1>🚀 部署指南</h1>
+        <p>Docker、Kubernetes、IIS 部署範例</p>
+    </div>
+</div>
+
+<div class="container">
+
+<div class="section">
+    <h2>🐳 Docker 部署</h2>
+    <p>使用 Docker 快速部署 Aspose MCP Server。</p>
+
+    <h3>docker-compose.yml</h3>
+    <div class="code-wrapper">
+        <button class="copy-button" onclick="copyCode(this)">📋 複製</button>
+        <pre class="code-block">version: '3.8'
+
+services:
+  aspose-mcp:
+    image: ghcr.io/xjustloveux/aspose-mcp-server:latest
+    container_name: aspose-mcp-server
+    ports:
+      - "3000:3000"
+    environment:
+      # === Transport Settings ===
+      - ASPOSE_TRANSPORT=sse              # stdio, sse, ws
+      - ASPOSE_PORT=3000
+      - ASPOSE_HOST=0.0.0.0
+
+      # === Tools ===
+      - ASPOSE_TOOLS=all                  # all, or comma-separated: word,excel,pdf,ppt
+
+      # === License ===
+      - ASPOSE_LICENSE_PATH=/app/license/Aspose.Total.lic
+
+      # === Session Settings (Optional) ===
+      # - ASPOSE_SESSION_ENABLED=true       # Enable session management (required for document_session tool)
+      - ASPOSE_SESSION_MAX=10               # Max concurrent sessions
+      - ASPOSE_SESSION_TIMEOUT=30           # Session timeout (minutes)
+      - ASPOSE_SESSION_TEMP_RETENTION_HOURS=24  # Temp file retention (hours)
+
+      # === API Key Authentication ===
+      # - ASPOSE_AUTH_APIKEY_ENABLED=true
+      # - ASPOSE_AUTH_APIKEY_MODE=local    # local, gateway, introspection, custom
+      # - ASPOSE_AUTH_APIKEY_KEYS=key1:tenant1,key2:tenant2
+      # - ASPOSE_AUTH_APIKEY_HEADER=X-API-Key
+      # - ASPOSE_AUTH_APIKEY_TENANT_HEADER=X-Tenant-Id
+      # - ASPOSE_AUTH_APIKEY_INTROSPECTION_AUTH=Bearer token
+      # - ASPOSE_AUTH_APIKEY_CUSTOM_TIMEOUT=5
+
+      # === JWT Authentication ===
+      # - ASPOSE_AUTH_JWT_ENABLED=true
+      # - ASPOSE_AUTH_JWT_MODE=local       # local, gateway, introspection, custom
+      # - ASPOSE_AUTH_JWT_SECRET=your-secret-key
+      # - ASPOSE_AUTH_JWT_ISSUER=your-issuer
+      # - ASPOSE_AUTH_JWT_AUDIENCE=your-audience
+      # - ASPOSE_AUTH_JWT_TENANT_CLAIM=tenant_id
+      # - ASPOSE_AUTH_JWT_TENANT_HEADER=X-Tenant-Id
+      # - ASPOSE_AUTH_JWT_USER_HEADER=X-User-Id
+      # - ASPOSE_AUTH_JWT_CUSTOM_TIMEOUT=5
+
+      # === Logging ===
+      # - ASPOSE_LOG_ENABLED=true
+      # - ASPOSE_LOG_TARGETS=Console       # Console, EventLog (Windows only)
+
+      # === Webhook ===
+      # - ASPOSE_WEBHOOK_URL=https://your-webhook.example.com/events
+      # - ASPOSE_WEBHOOK_SECRET=your-webhook-secret
+
+      # === Prometheus Metrics ===
+      # - ASPOSE_METRICS_ENABLED=true
+      # - ASPOSE_METRICS_PATH=/metrics
+
+    volumes:
+      - ./license:/app/license:ro
+      - ./documents:/app/documents
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3</pre>
+    </div>
+
+    <h3>啟動服務</h3>
+    <div class="code-wrapper">
+        <button class="copy-button" onclick="copyCode(this)">📋 複製</button>
+        <pre class="code-block"># 啟動
+docker-compose up -d
+
+# 查看日誌
+docker-compose logs -f
+
+# 停止
+docker-compose down</pre>
+    </div>
+</div>
+
+<div class="section">
+    <h2>☸️ Kubernetes 部署</h2>
+    <p>使用 Kubernetes 部署 Aspose MCP Server。複製以下 YAML 並根據需求修改。</p>
+
+    <h3>deployment.yaml</h3>
+    <div class="code-wrapper">
+        <button class="copy-button" onclick="copyCode(this)">📋 複製</button>
+        <pre class="code-block">apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aspose-mcp-server
+  labels:
+    app: aspose-mcp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aspose-mcp
+  template:
+    metadata:
+      labels:
+        app: aspose-mcp
+    spec:
+      containers:
+        - name: aspose-mcp
+          image: ghcr.io/xjustloveux/aspose-mcp-server:latest
+          ports:
+            - containerPort: 3000
+          env:
+            # === Transport Settings ===
+            - name: ASPOSE_TRANSPORT
+              value: "sse"                # stdio, sse, ws
+            - name: ASPOSE_PORT
+              value: "3000"
+            - name: ASPOSE_HOST
+              value: "0.0.0.0"
+
+            # === Tools ===
+            - name: ASPOSE_TOOLS
+              value: "all"                # all, or comma-separated: word,excel,pdf,ppt
+
+            # === License ===
+            - name: ASPOSE_LICENSE_PATH
+              value: "/app/license/Aspose.Total.lic"
+
+            # === Session Settings (Optional) ===
+            # - name: ASPOSE_SESSION_ENABLED
+            #   value: "true"               # Enable session management (required for document_session tool)
+            - name: ASPOSE_SESSION_MAX
+              value: "10"                   # Max concurrent sessions
+            - name: ASPOSE_SESSION_TIMEOUT
+              value: "30"                   # Session timeout (minutes)
+            - name: ASPOSE_SESSION_TEMP_RETENTION_HOURS
+              value: "24"                   # Temp file retention (hours)
+
+            # === API Key Authentication ===
+            # - name: ASPOSE_AUTH_APIKEY_ENABLED
+            #   value: "true"
+            # - name: ASPOSE_AUTH_APIKEY_MODE
+            #   value: "local"            # local, gateway, introspection, custom
+            # - name: ASPOSE_AUTH_APIKEY_KEYS
+            #   value: "key1:tenant1,key2:tenant2"
+            # - name: ASPOSE_AUTH_APIKEY_HEADER
+            #   value: "X-API-Key"
+            # - name: ASPOSE_AUTH_APIKEY_TENANT_HEADER
+            #   value: "X-Tenant-Id"
+            # - name: ASPOSE_AUTH_APIKEY_INTROSPECTION_AUTH
+            #   value: "Bearer token"
+            # - name: ASPOSE_AUTH_APIKEY_CUSTOM_TIMEOUT
+            #   value: "5"
+
+            # === JWT Authentication ===
+            # - name: ASPOSE_AUTH_JWT_ENABLED
+            #   value: "true"
+            # - name: ASPOSE_AUTH_JWT_MODE
+            #   value: "local"            # local, gateway, introspection, custom
+            # - name: ASPOSE_AUTH_JWT_SECRET
+            #   value: "your-secret-key"
+            # - name: ASPOSE_AUTH_JWT_ISSUER
+            #   value: "your-issuer"
+            # - name: ASPOSE_AUTH_JWT_AUDIENCE
+            #   value: "your-audience"
+            # - name: ASPOSE_AUTH_JWT_TENANT_CLAIM
+            #   value: "tenant_id"
+            # - name: ASPOSE_AUTH_JWT_TENANT_HEADER
+            #   value: "X-Tenant-Id"
+            # - name: ASPOSE_AUTH_JWT_USER_HEADER
+            #   value: "X-User-Id"
+            # - name: ASPOSE_AUTH_JWT_CUSTOM_TIMEOUT
+            #   value: "5"
+
+            # === Logging ===
+            # - name: ASPOSE_LOG_ENABLED
+            #   value: "true"
+            # - name: ASPOSE_LOG_TARGETS
+            #   value: "Console"          # Console, EventLog (Windows only)
+
+            # === Webhook ===
+            # - name: ASPOSE_WEBHOOK_URL
+            #   value: "https://your-webhook.example.com/events"
+            # - name: ASPOSE_WEBHOOK_SECRET
+            #   value: "your-webhook-secret"
+
+            # === Prometheus Metrics ===
+            # - name: ASPOSE_METRICS_ENABLED
+            #   value: "true"
+            # - name: ASPOSE_METRICS_PATH
+            #   value: "/metrics"
+
+          volumeMounts:
+            - name: license
+              mountPath: /app/license
+              readOnly: true
+
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 30
+
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+      volumes:
+        - name: license
+          secret:
+            secretName: aspose-license
+            optional: true</pre>
+    </div>
+
+    <h3>常用命令</h3>
+    <div class="code-wrapper">
+        <button class="copy-button" onclick="copyCode(this)">📋 複製</button>
+        <pre class="code-block"># 建立 License Secret
+kubectl create secret generic aspose-license \
+  --from-file=Aspose.Total.lic=/path/to/license
+
+# 部署
+kubectl apply -f deployment.yaml
+
+# 暴露服務
+kubectl expose deployment aspose-mcp-server --port=80 --target-port=3000
+
+# 查看狀態
+kubectl get pods -l app=aspose-mcp</pre>
+    </div>
+</div>
+
+<div class="section">
+    <h2>🖥️ IIS 部署</h2>
+    <p>在 Windows Server 的 IIS 上部署 Aspose MCP Server。</p>
+
+    <h3>前置需求</h3>
+    <ul style="margin-left: 20px; margin-bottom: 15px;">
+        <li>.NET 8.0 Hosting Bundle</li>
+        <li>IIS 已啟用 WebSocket 功能</li>
+        <li>ASP.NET Core Module V2</li>
+    </ul>
+
+    <h3>部署步驟</h3>
+    <ol style="margin-left: 20px; margin-bottom: 15px;">
+        <li>從 Release 下載 <code>aspose-mcp-server-iis.zip</code></li>
+        <li>解壓縮到 IIS 站台目錄（例如：<code>C:\inetpub\AsposeMcpServer</code>）</li>
+        <li>在 IIS 建立新站台，指向該目錄</li>
+        <li>設定 Application Pool 為「No Managed Code」</li>
+        <li>放置 License 檔案並修改 web.config 中的路徑</li>
+    </ol>
+
+    <h3>web.config 範例</h3>
+    <div class="code-wrapper">
+        <button class="copy-button" onclick="copyCode(this)">📋 複製</button>
+        <pre class="code-block">&lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;configuration&gt;
+  &lt;location path="." inheritInChildApplications="false"&gt;
+    &lt;system.webServer&gt;
+      &lt;handlers&gt;
+        &lt;add name="aspNetCore" path="*" verb="*"
+             modules="AspNetCoreModuleV2" resourceType="Unspecified" /&gt;
+      &lt;/handlers&gt;
+
+      &lt;aspNetCore processPath="dotnet"
+                  arguments=".\AsposeMcpServer.dll"
+                  stdoutLogEnabled="true"
+                  stdoutLogFile=".\logs\stdout"
+                  hostingModel="InProcess"&gt;
+        &lt;environmentVariables&gt;
+          &lt;environmentVariable name="ASPOSE_TRANSPORT" value="sse" /&gt;
+          &lt;environmentVariable name="ASPOSE_PORT" value="3000" /&gt;
+          &lt;environmentVariable name="ASPOSE_TOOLS" value="all" /&gt;
+          &lt;environmentVariable name="ASPOSE_LICENSE_PATH" value=".\Aspose.Total.lic" /&gt;
+          &lt;environmentVariable name="ASPOSE_SESSION_MAX" value="10" /&gt;
+          &lt;environmentVariable name="ASPOSE_SESSION_TIMEOUT" value="30" /&gt;
+          &lt;environmentVariable name="ASPOSE_SESSION_TEMP_RETENTION_HOURS" value="24" /&gt;
+        &lt;/environmentVariables&gt;
+      &lt;/aspNetCore&gt;
+
+      &lt;webSocket enabled="true" /&gt;
+    &lt;/system.webServer&gt;
+  &lt;/location&gt;
+&lt;/configuration&gt;</pre>
+    </div>
+
+    <div class="note">
+        <strong>注意：</strong> IIS 部署時，建議啟用 HTTPS 並設定適當的安全標頭。
+    </div>
+</div>
+
+<div class="section">
+<h2>⚙️ 環境變數</h2>
+<p>所有部署方式都支援以下環境變數（也可使用對應的命令行參數）：</p>
+
+<h3>基本設定</h3>
+<div class="table-wrapper">
+    <table style="width: 100%; border-collapse: collapse; margin-top: 15px; min-width: 500px;">
+        <thead>
+        <tr style="background: var(--bg-hover);">
+            <th class="accent-border" style="padding: 12px; text-align: left;">環境變數</th>
+            <th class="accent-border" style="padding: 12px; text-align: left;">命令行參數</th>
+            <th class="accent-border" style="padding: 12px; text-align: left;">說明</th>
+            <th class="accent-border" style="padding: 12px; text-align: left;">預設值</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>ASPOSE_TRANSPORT</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>--stdio/--sse/--ws</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">傳輸模式</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">stdio</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>ASPOSE_PORT</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>--port:N</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">監聽埠號</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">3000</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>ASPOSE_HOST</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>--host:addr</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">監聽位址</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">localhost</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>ASPOSE_TOOLS</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>--word/--excel/--pdf/--ppt/--all</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">啟用的工具</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">all</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px;">
+                <code>ASPOSE_LICENSE_PATH</code>
+            </td>
+            <td style="padding: 10px;">
+                <code>--license:path</code>
+            </td>
+            <td style="padding: 10px;">License 檔案路徑</td>
+            <td style="padding: 10px;">-</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="info-box" style="margin-top: 15px;">
+    <strong>🔧 工具過濾機制</strong>
+    <p style="margin-top: 8px; margin-bottom: 0;">MCP 工具列表會根據 <code>ASPOSE_TOOLS</code> 設定動態調整。例如設定 <code>word</code> 時，只會顯示 Word 相關工具，不會出現 Excel、PDF 等其他工具。</p>
+</div>
+
+<h3>Session 設定</h3>
+<div class="table-wrapper">
+    <table style="width: 100%; border-collapse: collapse; margin-top: 15px; min-width: 500px;">
+        <thead>
+        <tr style="background: var(--bg-hover);">
+            <th class="accent-border" style="padding: 12px; text-align: left;">環境變數</th>
+            <th class="accent-border" style="padding: 12px; text-align: left;">命令行參數</th>
+            <th class="accent-border" style="padding: 12px; text-align: left;">說明</th>
+            <th class="accent-border" style="padding: 12px; text-align: left;">預設值</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>ASPOSE_SESSION_ENABLED</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>--session-enabled</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">啟用 Session 管理</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">false</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>ASPOSE_SESSION_MAX</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>--session-max:N</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">最大 Session 數</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">10</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>ASPOSE_SESSION_TIMEOUT</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>--session-timeout:N</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">Session 逾時（分鐘）</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">30</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>ASPOSE_SESSION_TEMP_RETENTION_HOURS</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>--session-temp-retention-hours:N</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">暫存檔保留時間（小時）</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">24</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px;">
+                <code>ASPOSE_SESSION_ON_DISCONNECT</code>
+            </td>
+            <td style="padding: 10px;">
+                <code>--session-on-disconnect:behavior</code>
+            </td>
+            <td style="padding: 10px;">斷線行為</td>
+            <td style="padding: 10px;">SaveToTemp</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+<h3>認證設定</h3>
+<div class="table-wrapper">
+    <table style="width: 100%; border-collapse: collapse; margin-top: 15px; min-width: 500px;">
+        <thead>
+        <tr style="background: var(--bg-hover);">
+            <th class="accent-border" style="padding: 12px; text-align: left;">環境變數</th>
+            <th class="accent-border" style="padding: 12px; text-align: left;">命令行參數</th>
+            <th class="accent-border" style="padding: 12px; text-align: left;">說明</th>
+            <th class="accent-border" style="padding: 12px; text-align: left;">預設值</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>ASPOSE_AUTH_APIKEY_ENABLED</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>--auth-apikey-enabled</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">啟用 API Key 認證</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">false</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>ASPOSE_AUTH_APIKEY_MODE</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>--auth-apikey-mode:mode</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">API Key 驗證模式</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">local</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>ASPOSE_AUTH_APIKEY_KEYS</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>--auth-apikey-keys:keys</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">API Key 列表（key:tenant 格式）</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">-</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>ASPOSE_AUTH_APIKEY_HEADER</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>--auth-apikey-header:name</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">API Key Header 名稱</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">X-API-Key</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>ASPOSE_AUTH_APIKEY_TENANT_HEADER</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>--auth-apikey-tenant-header:name</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">Tenant ID Header（Gateway 模式）</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">X-Tenant-Id</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>ASPOSE_AUTH_APIKEY_INTROSPECTION_AUTH</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>--auth-apikey-introspection-auth:value</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">Introspection 認證 Header</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">-</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>ASPOSE_AUTH_APIKEY_CUSTOM_TIMEOUT</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>--auth-apikey-custom-timeout:N</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">Custom 驗證逾時（秒）</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">5</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>ASPOSE_AUTH_JWT_ENABLED</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>--auth-jwt-enabled</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">啟用 JWT 認證</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">false</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>ASPOSE_AUTH_JWT_MODE</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>--auth-jwt-mode:mode</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">JWT 驗證模式</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">local</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>ASPOSE_AUTH_JWT_SECRET</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>--auth-jwt-secret:value</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">JWT HMAC 密鑰</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">-</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>ASPOSE_AUTH_JWT_ISSUER</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>--auth-jwt-issuer:value</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">JWT 發行者</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">-</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>ASPOSE_AUTH_JWT_AUDIENCE</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>--auth-jwt-audience:value</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">JWT 受眾</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">-</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>ASPOSE_AUTH_JWT_TENANT_CLAIM</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>--auth-jwt-tenant-claim:name</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">Tenant ID Claim 名稱</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">tenant_id</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>ASPOSE_AUTH_JWT_TENANT_HEADER</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>--auth-jwt-tenant-header:name</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">Tenant ID Header（Gateway 模式）</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">X-Tenant-Id</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>ASPOSE_AUTH_JWT_USER_HEADER</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>--auth-jwt-user-header:name</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">User ID Header（Gateway 模式）</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">X-User-Id</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>ASPOSE_AUTH_JWT_CUSTOM_TIMEOUT</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>--auth-jwt-custom-timeout:N</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">Custom 驗證逾時（秒）</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">5</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px;">
+                <code>ASPOSE_RATE_LIMIT</code>
+            </td>
+            <td style="padding: 10px;">
+                <code>--rate-limit:N</code>
+            </td>
+            <td style="padding: 10px;">每分鐘請求限制</td>
+            <td style="padding: 10px;">0 (無限制)</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+<h3>追蹤設定</h3>
+<div class="table-wrapper">
+    <table style="width: 100%; border-collapse: collapse; margin-top: 15px; min-width: 500px;">
+        <thead>
+        <tr style="background: var(--bg-hover);">
+            <th class="accent-border" style="padding: 12px; text-align: left;">環境變數</th>
+            <th class="accent-border" style="padding: 12px; text-align: left;">命令行參數</th>
+            <th class="accent-border" style="padding: 12px; text-align: left;">說明</th>
+            <th class="accent-border" style="padding: 12px; text-align: left;">預設值</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>ASPOSE_LOG_ENABLED</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>--log-enabled</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">啟用日誌</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">true</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>ASPOSE_LOG_TARGETS</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>--log-targets:Console,EventLog</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">日誌目標</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">Console</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>ASPOSE_WEBHOOK_URL</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <code>--webhook-url:url</code>
+            </td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">Webhook URL</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">-</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px;">
+                <code>ASPOSE_METRICS_ENABLED</code>
+            </td>
+            <td style="padding: 10px;">
+                <code>--metrics-enabled</code>
+            </td>
+            <td style="padding: 10px;">啟用 Metrics</td>
+            <td style="padding: 10px;">false</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="info-box" style="margin-top: 20px;">
+    <strong>💡 優先順序</strong>
+    <p style="margin-top: 8px; margin-bottom: 0;">命令行參數優先於環境變數。完整參數列表請參考 <a href="https://github.com/xjustloveux/aspose-mcp-server#readme" target="_blank">README</a>。</p>
+</div>
+</div>
+
+</div>
+
+<footer>
+    <div class="container">
+        <p>基於 .NET 8.0 和 Aspose.Total 23.10.0 構建</p>
+        <p class="footer-links" style="margin-top: 10px;">
+            <a href="https://github.com/xjustloveux/aspose-mcp-server" target="_blank">GitHub</a> |
+            <a href="https://www.aspose.com/" target="_blank">Aspose</a> |
+            <a href="https://modelcontextprotocol.io/" target="_blank">MCP Protocol</a> |
+            <a href="https://github.com/modelcontextprotocol/csharp-sdk" target="_blank">.NET MCP SDK</a>
+        </p>
+        <p class="copyright-text" style="margin-top: 20px; font-size: 0.9em;">
+            © 2025 JaJa. All rights reserved. | MIT License
+        </p>
+    </div>
+</footer>
+
+<script>
+    function copyCode(button) {
+        const wrapper = button.parentElement;
+        const codeBlock = wrapper.querySelector('.code-block');
+        const text = codeBlock.textContent;
+
+        navigator.clipboard.writeText(text).then(function() {
+            button.textContent = '✓ 已複製';
+            button.classList.add('copied');
+            setTimeout(function() {
+                button.textContent = '📋 複製';
+                button.classList.remove('copied');
+            }, 2000);
+        });
+    }
+</script>
+</body>
+</html>

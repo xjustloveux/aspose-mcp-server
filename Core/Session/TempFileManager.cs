@@ -1,0 +1,585 @@
+using System.Text.Json;
+
+namespace AsposeMcpServer.Core.Session;
+
+/// <summary>
+///     Manages temporary files created by session disconnect behavior.
+///     Handles cleanup of expired files and recovery of saved sessions.
+/// </summary>
+public class TempFileManager : IHostedService, IDisposable
+{
+    private const string TempFilePrefix = "aspose_session_";
+    private const string MetadataExtension = ".meta.json";
+    private readonly SessionConfig _config;
+
+    private readonly ILogger<TempFileManager>? _logger;
+    private Timer? _cleanupTimer;
+    private bool _disposed;
+
+    /// <summary>
+    ///     Creates a new temp file manager
+    /// </summary>
+    /// <param name="config">Session configuration</param>
+    /// <param name="loggerFactory">Logger factory for logging</param>
+    public TempFileManager(SessionConfig config, ILoggerFactory? loggerFactory = null)
+    {
+        _config = config;
+        _logger = loggerFactory?.CreateLogger<TempFileManager>();
+    }
+
+    /// <summary>
+    ///     Disposes the temp file manager
+    /// </summary>
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        _cleanupTimer?.Dispose();
+    }
+
+    /// <summary>
+    ///     Starts the temp file manager service.
+    ///     Performs initial cleanup and starts periodic cleanup timer.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>A completed task</returns>
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
+        if (!_config.Enabled)
+        {
+            _logger?.LogDebug("Session management disabled, skipping temp file manager");
+            return Task.CompletedTask;
+        }
+
+        _logger?.LogInformation("Starting temp file manager (retention: {Hours} hours)", _config.TempRetentionHours);
+
+        // Cleanup on startup
+        var cleanupResult = CleanupExpiredFiles();
+        _logger?.LogInformation("Startup cleanup completed: {Deleted} files deleted, {Errors} errors",
+            cleanupResult.DeletedCount, cleanupResult.ErrorCount);
+
+        // Start periodic cleanup timer (every hour)
+        _cleanupTimer = new Timer(
+            PeriodicCleanup,
+            null,
+            TimeSpan.FromHours(1),
+            TimeSpan.FromHours(1));
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    ///     Stops the temp file manager service.
+    ///     Stops the periodic cleanup timer.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>A completed task</returns>
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        _logger?.LogInformation("Stopping temp file manager");
+        _cleanupTimer?.Change(Timeout.Infinite, 0);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    ///     Cleans up expired temporary files based on TempRetentionHours
+    /// </summary>
+    /// <returns>Cleanup result with statistics</returns>
+    public CleanupResult CleanupExpiredFiles()
+    {
+        var result = new CleanupResult();
+        var cutoffTime = DateTime.UtcNow.AddHours(-_config.TempRetentionHours);
+
+        try
+        {
+            if (!Directory.Exists(_config.TempDirectory))
+            {
+                _logger?.LogDebug("Temp directory does not exist: {TempDir}", _config.TempDirectory);
+                return result;
+            }
+
+            // Find all metadata files
+            var metadataFiles = Directory.GetFiles(_config.TempDirectory, $"{TempFilePrefix}*{MetadataExtension}");
+
+            foreach (var metadataPath in metadataFiles)
+                try
+                {
+                    result.ScannedCount++;
+                    var metadata = ReadMetadata(metadataPath);
+
+                    if (metadata == null)
+                    {
+                        // Invalid metadata, delete both files
+                        DeleteTempFileSet(metadataPath);
+                        result.DeletedCount++;
+                        continue;
+                    }
+
+                    if (metadata.SavedAt < cutoffTime)
+                    {
+                        DeleteTempFileSet(metadataPath);
+                        result.DeletedCount++;
+                        _logger?.LogDebug("Deleted expired temp file: {Path} (saved at {SavedAt})",
+                            metadata.TempPath, metadata.SavedAt);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    result.ErrorCount++;
+                    _logger?.LogWarning(ex, "Error processing temp file: {Path}", metadataPath);
+                }
+
+            // Also cleanup orphaned document files (no metadata)
+            var orphanedFiles = Directory.GetFiles(_config.TempDirectory, $"{TempFilePrefix}*")
+                .Where(f => !f.EndsWith(MetadataExtension))
+                .Where(f => !File.Exists(f + MetadataExtension));
+
+            foreach (var orphanedFile in orphanedFiles)
+                try
+                {
+                    var fileInfo = new FileInfo(orphanedFile);
+                    if (fileInfo.LastWriteTimeUtc < cutoffTime)
+                    {
+                        File.Delete(orphanedFile);
+                        result.DeletedCount++;
+                        _logger?.LogDebug("Deleted orphaned temp file: {Path}", orphanedFile);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    result.ErrorCount++;
+                    _logger?.LogWarning(ex, "Error deleting orphaned file: {Path}", orphanedFile);
+                }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error during temp file cleanup");
+            result.ErrorCount++;
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    ///     Lists all recoverable temporary files
+    /// </summary>
+    /// <returns>List of recoverable file information</returns>
+    public IEnumerable<RecoverableFileInfo> ListRecoverableFiles()
+    {
+        var results = new List<RecoverableFileInfo>();
+
+        try
+        {
+            if (!Directory.Exists(_config.TempDirectory))
+                return results;
+
+            var metadataFiles = Directory.GetFiles(_config.TempDirectory, $"{TempFilePrefix}*{MetadataExtension}");
+
+            foreach (var metadataPath in metadataFiles)
+                try
+                {
+                    var metadata = ReadMetadata(metadataPath);
+                    if (metadata == null) continue;
+
+                    // Check if document file exists
+                    if (!File.Exists(metadata.TempPath)) continue;
+
+                    var fileInfo = new FileInfo(metadata.TempPath);
+                    var expiresAt = metadata.SavedAt.AddHours(_config.TempRetentionHours);
+
+                    results.Add(new RecoverableFileInfo
+                    {
+                        SessionId = metadata.SessionId,
+                        OriginalPath = metadata.OriginalPath,
+                        TempPath = metadata.TempPath,
+                        DocumentType = metadata.DocumentType,
+                        SavedAt = metadata.SavedAt,
+                        ExpiresAt = expiresAt,
+                        FileSizeBytes = fileInfo.Length,
+                        PromptOnReconnect = metadata.PromptOnReconnect
+                    });
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogWarning(ex, "Error reading metadata: {Path}", metadataPath);
+                }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error listing recoverable files");
+        }
+
+        return results.OrderByDescending(r => r.SavedAt);
+    }
+
+    /// <summary>
+    ///     Recovers a temporary file to the specified path
+    /// </summary>
+    /// <param name="sessionId">Session ID to recover</param>
+    /// <param name="targetPath">Target path (null = original path)</param>
+    /// <param name="deleteAfterRecover">Whether to delete temp file after recovery</param>
+    /// <returns>Recovery result</returns>
+    public RecoverResult RecoverSession(string sessionId, string? targetPath = null, bool deleteAfterRecover = true)
+    {
+        var result = new RecoverResult { SessionId = sessionId };
+
+        try
+        {
+            // Find metadata file for this session
+            var metadataFiles =
+                Directory.GetFiles(_config.TempDirectory, $"{TempFilePrefix}{sessionId}*{MetadataExtension}");
+
+            if (metadataFiles.Length == 0)
+            {
+                result.Success = false;
+                result.ErrorMessage = $"No recoverable session found: {sessionId}";
+                return result;
+            }
+
+            // Use the most recent one if multiple exist
+            var metadataPath = metadataFiles
+                .Select(f => new { Path = f, Info = new FileInfo(f) })
+                .OrderByDescending(x => x.Info.LastWriteTimeUtc)
+                .First().Path;
+
+            var metadata = ReadMetadata(metadataPath);
+            if (metadata == null)
+            {
+                result.Success = false;
+                result.ErrorMessage = "Failed to read session metadata";
+                return result;
+            }
+
+            if (!File.Exists(metadata.TempPath))
+            {
+                result.Success = false;
+                result.ErrorMessage = $"Temp file not found: {metadata.TempPath}";
+                return result;
+            }
+
+            var destination = targetPath ?? metadata.OriginalPath;
+
+            // Ensure target directory exists
+            var targetDir = Path.GetDirectoryName(destination);
+            if (!string.IsNullOrEmpty(targetDir) && !Directory.Exists(targetDir))
+                Directory.CreateDirectory(targetDir);
+
+            // Copy temp file to destination
+            File.Copy(metadata.TempPath, destination, true);
+
+            result.Success = true;
+            result.RecoveredPath = destination;
+            result.OriginalPath = metadata.OriginalPath;
+
+            _logger?.LogInformation("Recovered session {SessionId} to {Path}", sessionId, destination);
+
+            // Delete temp files if requested
+            if (deleteAfterRecover)
+            {
+                DeleteTempFileSet(metadataPath);
+                _logger?.LogDebug("Deleted temp files after recovery: {SessionId}", sessionId);
+            }
+        }
+        catch (Exception ex)
+        {
+            result.Success = false;
+            result.ErrorMessage = ex.Message;
+            _logger?.LogError(ex, "Error recovering session {SessionId}", sessionId);
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    ///     Deletes a specific temporary session file
+    /// </summary>
+    /// <param name="sessionId">Session ID to delete</param>
+    /// <returns>True if deleted successfully</returns>
+    public bool DeleteTempSession(string sessionId)
+    {
+        try
+        {
+            var metadataFiles =
+                Directory.GetFiles(_config.TempDirectory, $"{TempFilePrefix}{sessionId}*{MetadataExtension}");
+
+            if (metadataFiles.Length == 0)
+                return false;
+
+            foreach (var metadataPath in metadataFiles) DeleteTempFileSet(metadataPath);
+
+            _logger?.LogInformation("Deleted temp session: {SessionId}", sessionId);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error deleting temp session {SessionId}", sessionId);
+            return false;
+        }
+    }
+
+    /// <summary>
+    ///     Gets cleanup statistics
+    /// </summary>
+    /// <returns>Current temp file statistics</returns>
+    public TempFileStats GetStats()
+    {
+        var stats = new TempFileStats();
+
+        try
+        {
+            if (!Directory.Exists(_config.TempDirectory))
+                return stats;
+
+            var metadataFiles = Directory.GetFiles(_config.TempDirectory, $"{TempFilePrefix}*{MetadataExtension}");
+            var cutoffTime = DateTime.UtcNow.AddHours(-_config.TempRetentionHours);
+
+            foreach (var metadataPath in metadataFiles)
+                try
+                {
+                    var metadata = ReadMetadata(metadataPath);
+                    if (metadata == null) continue;
+
+                    if (File.Exists(metadata.TempPath))
+                    {
+                        var fileInfo = new FileInfo(metadata.TempPath);
+                        stats.TotalCount++;
+                        stats.TotalSizeBytes += fileInfo.Length;
+
+                        if (metadata.SavedAt < cutoffTime)
+                            stats.ExpiredCount++;
+                    }
+                }
+                catch
+                {
+                    // Ignore errors in stats collection
+                }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Error collecting temp file stats");
+        }
+
+        return stats;
+    }
+
+    /// <summary>
+    ///     Periodic cleanup callback invoked by the timer
+    /// </summary>
+    /// <param name="state">Timer state (unused)</param>
+    private void PeriodicCleanup(object? state)
+    {
+        try
+        {
+            var result = CleanupExpiredFiles();
+            if (result.DeletedCount > 0 || result.ErrorCount > 0)
+                _logger?.LogInformation("Periodic cleanup: {Deleted} deleted, {Errors} errors",
+                    result.DeletedCount, result.ErrorCount);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error in periodic cleanup");
+        }
+    }
+
+    /// <summary>
+    ///     Reads metadata from a metadata file
+    /// </summary>
+    /// <param name="metadataPath">Path to the metadata file</param>
+    /// <returns>Deserialized metadata, or null if reading fails</returns>
+    private static TempFileMetadata? ReadMetadata(string metadataPath)
+    {
+        try
+        {
+            var json = File.ReadAllText(metadataPath);
+            return JsonSerializer.Deserialize<TempFileMetadata>(json);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    ///     Deletes a temp file and its metadata
+    /// </summary>
+    /// <param name="metadataPath">Path to the metadata file</param>
+    private void DeleteTempFileSet(string metadataPath)
+    {
+        try
+        {
+            var metadata = ReadMetadata(metadataPath);
+
+            // Delete document file
+            if (metadata?.TempPath != null && File.Exists(metadata.TempPath))
+                File.Delete(metadata.TempPath);
+
+            // Delete metadata file
+            if (File.Exists(metadataPath))
+                File.Delete(metadataPath);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Error deleting temp file set: {Path}", metadataPath);
+        }
+    }
+}
+
+/// <summary>
+///     Metadata stored with temp files for session recovery
+/// </summary>
+public class TempFileMetadata
+{
+    /// <summary>
+    ///     Session ID that created this temp file
+    /// </summary>
+    public string SessionId { get; set; } = "";
+
+    /// <summary>
+    ///     Original file path before disconnection
+    /// </summary>
+    public string OriginalPath { get; set; } = "";
+
+    /// <summary>
+    ///     Path to the temporary file
+    /// </summary>
+    public string TempPath { get; set; } = "";
+
+    /// <summary>
+    ///     Document type (Word, Excel, PowerPoint, Pdf)
+    /// </summary>
+    public string DocumentType { get; set; } = "";
+
+    /// <summary>
+    ///     When the temp file was saved
+    /// </summary>
+    public DateTime SavedAt { get; set; }
+
+    /// <summary>
+    ///     Whether to prompt user on reconnect
+    /// </summary>
+    public bool PromptOnReconnect { get; set; }
+}
+
+/// <summary>
+///     Information about a recoverable file returned by ListRecoverableFiles
+/// </summary>
+public class RecoverableFileInfo
+{
+    /// <summary>
+    ///     Session ID that created this temp file
+    /// </summary>
+    public string SessionId { get; set; } = "";
+
+    /// <summary>
+    ///     Original file path before disconnection
+    /// </summary>
+    public string OriginalPath { get; set; } = "";
+
+    /// <summary>
+    ///     Path to the temporary file
+    /// </summary>
+    public string TempPath { get; set; } = "";
+
+    /// <summary>
+    ///     Document type (Word, Excel, PowerPoint, Pdf)
+    /// </summary>
+    public string DocumentType { get; set; } = "";
+
+    /// <summary>
+    ///     When the temp file was saved
+    /// </summary>
+    public DateTime SavedAt { get; set; }
+
+    /// <summary>
+    ///     When the temp file will expire and be cleaned up
+    /// </summary>
+    public DateTime ExpiresAt { get; set; }
+
+    /// <summary>
+    ///     Size of the temp file in bytes
+    /// </summary>
+    public long FileSizeBytes { get; set; }
+
+    /// <summary>
+    ///     Whether to prompt user on reconnect
+    /// </summary>
+    public bool PromptOnReconnect { get; set; }
+}
+
+/// <summary>
+///     Result of a cleanup operation returned by CleanupExpiredFiles
+/// </summary>
+public class CleanupResult
+{
+    /// <summary>
+    ///     Number of temp files scanned
+    /// </summary>
+    public int ScannedCount { get; set; }
+
+    /// <summary>
+    ///     Number of temp files deleted
+    /// </summary>
+    public int DeletedCount { get; set; }
+
+    /// <summary>
+    ///     Number of errors during cleanup
+    /// </summary>
+    public int ErrorCount { get; set; }
+}
+
+/// <summary>
+///     Result of a recovery operation returned by RecoverSession
+/// </summary>
+public class RecoverResult
+{
+    /// <summary>
+    ///     Session ID that was recovered
+    /// </summary>
+    public string SessionId { get; set; } = "";
+
+    /// <summary>
+    ///     Whether recovery was successful
+    /// </summary>
+    public bool Success { get; set; }
+
+    /// <summary>
+    ///     Path where file was recovered to
+    /// </summary>
+    public string? RecoveredPath { get; set; }
+
+    /// <summary>
+    ///     Original file path before disconnection
+    /// </summary>
+    public string? OriginalPath { get; set; }
+
+    /// <summary>
+    ///     Error message if recovery failed
+    /// </summary>
+    public string? ErrorMessage { get; set; }
+}
+
+/// <summary>
+///     Statistics about temp files returned by GetStats
+/// </summary>
+public class TempFileStats
+{
+    /// <summary>
+    ///     Total number of temp files
+    /// </summary>
+    public int TotalCount { get; set; }
+
+    /// <summary>
+    ///     Total size of all temp files in bytes
+    /// </summary>
+    public long TotalSizeBytes { get; set; }
+
+    /// <summary>
+    ///     Number of expired temp files (past retention period)
+    /// </summary>
+    public int ExpiredCount { get; set; }
+
+    /// <summary>
+    ///     Total size of all temp files in megabytes
+    /// </summary>
+    public double TotalSizeMb => TotalSizeBytes / (1024.0 * 1024.0);
+}

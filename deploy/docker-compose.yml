@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  aspose-mcp:
+    image: ghcr.io/xjustloveux/aspose-mcp-server:latest
+    container_name: aspose-mcp-server
+    ports:
+      - "3000:3000"
+    environment:
+      # === Transport Settings (Required) ===
+      - ASPOSE_TRANSPORT=sse              # stdio, sse, ws
+      - ASPOSE_PORT=3000
+      - ASPOSE_HOST=0.0.0.0
+
+      # === Tools (Required) ===
+      - ASPOSE_TOOLS=all                  # all, or comma-separated: word,excel,pdf,ppt
+
+      # === License (Optional) ===
+      # - ASPOSE_LICENSE_PATH=/app/license/Aspose.Total.lic
+
+      # === Session Settings (Optional) ===
+      # - ASPOSE_SESSION_ENABLED=true       # Enable session management (required for document_session tool)
+      # - ASPOSE_SESSION_MAX=10             # Max concurrent sessions (default: 10)
+      # - ASPOSE_SESSION_TIMEOUT=30         # Session timeout in minutes (default: 30)
+      # - ASPOSE_SESSION_TEMP_RETENTION_HOURS=24  # Temp file retention in hours (default: 24)
+
+      # === API Key Authentication (Optional) ===
+      # - ASPOSE_AUTH_APIKEY_ENABLED=true
+      # - ASPOSE_AUTH_APIKEY_MODE=local    # local, gateway, introspection, custom
+      # - ASPOSE_AUTH_APIKEY_KEYS=key1:tenant1,key2:tenant2
+      # - ASPOSE_AUTH_APIKEY_HEADER=X-API-Key
+      # - ASPOSE_AUTH_APIKEY_TENANT_HEADER=X-Tenant-Id
+      # - ASPOSE_AUTH_APIKEY_INTROSPECTION_AUTH=Bearer token
+      # - ASPOSE_AUTH_APIKEY_CUSTOM_TIMEOUT=5
+
+      # === JWT Authentication (Optional) ===
+      # - ASPOSE_AUTH_JWT_ENABLED=true
+      # - ASPOSE_AUTH_JWT_MODE=local       # local, gateway, introspection, custom
+      # - ASPOSE_AUTH_JWT_SECRET=your-secret-key
+      # - ASPOSE_AUTH_JWT_ISSUER=your-issuer
+      # - ASPOSE_AUTH_JWT_AUDIENCE=your-audience
+      # - ASPOSE_AUTH_JWT_TENANT_CLAIM=tenant_id
+      # - ASPOSE_AUTH_JWT_TENANT_HEADER=X-Tenant-Id
+      # - ASPOSE_AUTH_JWT_USER_HEADER=X-User-Id
+      # - ASPOSE_AUTH_JWT_CUSTOM_TIMEOUT=5
+
+      # === Logging (Optional) ===
+      # - ASPOSE_LOG_ENABLED=true
+      # - ASPOSE_LOG_TARGETS=Console       # Console, EventLog (Windows only)
+
+      # === Webhook (Optional) ===
+      # - ASPOSE_WEBHOOK_URL=https://your-webhook.example.com/events
+      # - ASPOSE_WEBHOOK_SECRET=your-webhook-secret
+
+      # === Prometheus Metrics (Optional) ===
+      # - ASPOSE_METRICS_ENABLED=true
+      # - ASPOSE_METRICS_PATH=/metrics
+
+    # === Volumes (Optional) ===
+    # volumes:
+    #   - ./license:/app/license:ro
+    #   - ./documents:/app/documents
+
+    # === Restart Policy (Optional) ===
+    # restart: unless-stopped
+
+    # === Health Check (Optional) ===
+    # healthcheck:
+    #   test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+    #   interval: 30s
+    #   timeout: 3s
+    #   retries: 3

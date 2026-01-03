@@ -3,28 +3,38 @@ name: Run Tests
 on:
   push:
     branches: [ main, master ]
-    paths-ignore:
-      - '*.md'
-      - 'docs/**'
-      - '.gitignore'
-      - 'LICENSE'
+    paths:
+      - 'Core/**'
+      - 'Tools/**'
+      - 'Tests/**'
+      - 'Program.cs'
+      - '*.csproj'
+      - '*.sln'
+      - 'test.ps1'
+      - '.github/workflows/test.yml'
   pull_request:
     branches: [ main, master ]
-    paths-ignore:
-      - '*.md'
-      - 'docs/**'
-      - '.gitignore'
-      - 'LICENSE'
+    paths:
+      - 'Core/**'
+      - 'Tools/**'
+      - 'Tests/**'
+      - 'Program.cs'
+      - '*.csproj'
+      - '*.sln'
+      - 'test.ps1'
+      - '.github/workflows/test.yml'
   workflow_dispatch:
+    inputs:
+      run_evaluation_mode:
+        description: 'Run evaluation mode test (without license)'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   test:
     runs-on: windows-latest
-    # 额外保护：即使 paths-ignore 失效，也可以通过 commit message 跳过
-    if: |
-      (github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[ci skip]')) ||
-      (github.event_name == 'pull_request' && !contains(github.event.pull_request.title, '[skip ci]') && !contains(github.event.pull_request.title, '[ci skip]')) ||
-      github.event_name == 'workflow_dispatch'
+
     env:
       ASPOSE_LIC: ${{ secrets.ASPOSE_LIC }}
     
@@ -36,7 +46,8 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '8.0.x'
-    
+        cache: true
+
     - name: Restore dependencies
       run: dotnet restore AsposeMcpServer.sln
     
@@ -186,17 +197,10 @@ jobs:
         if-no-files-found: ignore
         retention-days: 1
 
-  # Evaluation mode test - optional execution
+  # Evaluation mode test - manual trigger only
   test-evaluation-mode:
     runs-on: windows-latest
-    # Only execute in the following cases:
-    # 1. Manual trigger (workflow_dispatch)
-    # 2. PR title contains [test-eval]
-    # 3. Commit message contains [test-eval]
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'pull_request' && contains(github.event.pull_request.title, '[test-eval]')) ||
-      (github.event_name == 'push' && contains(github.event.head_commit.message, '[test-eval]'))
+    if: github.event_name == 'workflow_dispatch' && inputs.run_evaluation_mode == true
     
     steps:
     - name: Checkout code
@@ -206,7 +210,8 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '8.0.x'
-    
+        cache: true
+
     - name: Restore dependencies
       run: dotnet restore AsposeMcpServer.sln
     

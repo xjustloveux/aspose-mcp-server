@@ -1,19 +1,39 @@
-﻿using System.Text.Json;
-using System.Text.Json.Nodes;
+using System.ComponentModel;
+using System.Text.Json;
 using Aspose.Slides;
-using Aspose.Slides.Export;
-using AsposeMcpServer.Core;
+using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Session;
+using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.PowerPoint;
 
 /// <summary>
 ///     Unified tool for managing PowerPoint sections (add, rename, delete, get).
 /// </summary>
-public class PptSectionTool : IAsposeTool
+[McpServerToolType]
+public class PptSectionTool
 {
+    /// <summary>
+    ///     JSON serializer options for consistent output formatting.
+    /// </summary>
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
-    public string Description => @"Manage PowerPoint sections. Supports 4 operations: add, rename, delete, get.
+    /// <summary>
+    ///     Session manager for document session handling.
+    /// </summary>
+    private readonly DocumentSessionManager? _sessionManager;
+
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="PptSectionTool" /> class.
+    /// </summary>
+    /// <param name="sessionManager">Optional session manager for in-memory editing.</param>
+    public PptSectionTool(DocumentSessionManager? sessionManager = null)
+    {
+        _sessionManager = sessionManager;
+    }
+
+    [McpServerTool(Name = "ppt_section")]
+    [Description(@"Manage PowerPoint sections. Supports 4 operations: add, rename, delete, get.
 
 Warning: If outputPath is not provided for add/rename/delete operations, the original file will be overwritten.
 
@@ -21,203 +41,168 @@ Usage examples:
 - Add section: ppt_section(operation='add', path='presentation.pptx', name='Section 1', slideIndex=0)
 - Rename section: ppt_section(operation='rename', path='presentation.pptx', sectionIndex=0, newName='New Section')
 - Delete section: ppt_section(operation='delete', path='presentation.pptx', sectionIndex=0)
-- Get sections: ppt_section(operation='get', path='presentation.pptx')";
-
-    public object InputSchema => new
+- Get sections: ppt_section(operation='get', path='presentation.pptx')")]
+    public string Execute(
+        [Description("Operation: add, rename, delete, get")]
+        string operation,
+        [Description("Presentation file path (required if no sessionId)")]
+        string? path = null,
+        [Description("Session ID for in-memory editing")]
+        string? sessionId = null,
+        [Description("Output file path (file mode only)")]
+        string? outputPath = null,
+        [Description("Section name (required for add)")]
+        string? name = null,
+        [Description("Start slide index for section (0-based, required for add)")]
+        int? slideIndex = null,
+        [Description("Section index (0-based, required for rename/delete)")]
+        int? sectionIndex = null,
+        [Description("New section name (required for rename)")]
+        string? newName = null,
+        [Description("Keep slides in presentation (optional, for delete, default: true)")]
+        bool keepSlides = true)
     {
-        type = "object",
-        properties = new
-        {
-            operation = new
-            {
-                type = "string",
-                description = @"Operation to perform.
-- 'add': Add a new section (required params: path, name, slideIndex)
-- 'rename': Rename a section (required params: path, sectionIndex, newName)
-- 'delete': Delete a section (required params: path, sectionIndex)
-- 'get': Get all sections (required params: path)",
-                @enum = new[] { "add", "rename", "delete", "get" }
-            },
-            path = new
-            {
-                type = "string",
-                description = "Presentation file path (required for all operations)"
-            },
-            name = new
-            {
-                type = "string",
-                description = "Section name (required for add)"
-            },
-            slideIndex = new
-            {
-                type = "number",
-                description = "Start slide index for section (0-based, required for add)"
-            },
-            sectionIndex = new
-            {
-                type = "number",
-                description = "Section index (0-based, required for rename/delete)"
-            },
-            newName = new
-            {
-                type = "string",
-                description = "New section name (required for rename)"
-            },
-            keepSlides = new
-            {
-                type = "boolean",
-                description = "Keep slides in presentation (optional, for delete, default: true)"
-            },
-            outputPath = new
-            {
-                type = "string",
-                description = "Output file path (optional, for add/delete/rename operations, defaults to input path)"
-            }
-        },
-        required = new[] { "operation", "path" }
-    };
-
-    /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments
-    /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters</param>
-    /// <returns>Result message as a string</returns>
-    /// <exception cref="ArgumentException">Thrown when operation is unknown or required parameters are missing</exception>
-    public async Task<string> ExecuteAsync(JsonObject? arguments)
-    {
-        var operation = ArgumentHelper.GetString(arguments, "operation");
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path);
 
         return operation.ToLower() switch
         {
-            "add" => await AddSectionAsync(path, outputPath, arguments),
-            "rename" => await RenameSectionAsync(path, outputPath, arguments),
-            "delete" => await DeleteSectionAsync(path, outputPath, arguments),
-            "get" => await GetSectionsAsync(path),
+            "add" => AddSection(ctx, outputPath, name, slideIndex),
+            "rename" => RenameSection(ctx, outputPath, sectionIndex, newName),
+            "delete" => DeleteSection(ctx, outputPath, sectionIndex, keepSlides),
+            "get" => GetSections(ctx),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
 
     /// <summary>
-    ///     Adds a section to the presentation
+    ///     Adds a section to the presentation.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing name, slideIndex</param>
-    /// <returns>Success message</returns>
-    /// <exception cref="ArgumentException">Thrown when name is missing or slideIndex is out of range</exception>
-    private Task<string> AddSectionAsync(string path, string outputPath, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="name">The section name.</param>
+    /// <param name="slideIndex">The start slide index for the section.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when name or slideIndex is not provided.</exception>
+    private static string AddSection(DocumentContext<Presentation> ctx, string? outputPath, string? name,
+        int? slideIndex)
     {
-        return Task.Run(() =>
-        {
-            var name = ArgumentHelper.GetString(arguments, "name");
-            var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
+        if (string.IsNullOrEmpty(name))
+            throw new ArgumentException("name is required for add operation");
+        if (!slideIndex.HasValue)
+            throw new ArgumentException("slideIndex is required for add operation");
 
-            using var presentation = new Presentation(path);
-            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-            presentation.Sections.AddSection(name, slide);
-            presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Section '{name}' added starting at slide {slideIndex}. Output: {outputPath}";
-        });
+        var presentation = ctx.Document;
+        var slide = PowerPointHelper.GetSlide(presentation, slideIndex.Value);
+        presentation.Sections.AddSection(name, slide);
+
+        ctx.Save(outputPath);
+
+        var result = $"Section '{name}' added starting at slide {slideIndex}.\n";
+        result += ctx.GetOutputMessage(outputPath);
+        return result;
     }
 
     /// <summary>
-    ///     Renames a section
+    ///     Renames a section.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing sectionIndex, newName</param>
-    /// <returns>Success message</returns>
-    /// <exception cref="ArgumentException">Thrown when sectionIndex is out of range or newName is missing</exception>
-    private Task<string> RenameSectionAsync(string path, string outputPath, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="sectionIndex">The section index (0-based).</param>
+    /// <param name="newName">The new section name.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when sectionIndex or newName is not provided.</exception>
+    private static string RenameSection(DocumentContext<Presentation> ctx, string? outputPath, int? sectionIndex,
+        string? newName)
     {
-        return Task.Run(() =>
-        {
-            var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex");
-            var newName = ArgumentHelper.GetString(arguments, "newName");
+        if (!sectionIndex.HasValue)
+            throw new ArgumentException("sectionIndex is required for rename operation");
+        if (string.IsNullOrEmpty(newName))
+            throw new ArgumentException("newName is required for rename operation");
 
-            using var presentation = new Presentation(path);
-            PowerPointHelper.ValidateCollectionIndex(sectionIndex, presentation.Sections.Count, "section");
+        var presentation = ctx.Document;
+        PowerPointHelper.ValidateCollectionIndex(sectionIndex.Value, presentation.Sections.Count, "section");
 
-            presentation.Sections[sectionIndex].Name = newName;
-            presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Section {sectionIndex} renamed to '{newName}'. Output: {outputPath}";
-        });
+        presentation.Sections[sectionIndex.Value].Name = newName;
+
+        ctx.Save(outputPath);
+
+        var result = $"Section {sectionIndex} renamed to '{newName}'.\n";
+        result += ctx.GetOutputMessage(outputPath);
+        return result;
     }
 
     /// <summary>
-    ///     Deletes a section from the presentation
+    ///     Deletes a section from the presentation.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing sectionIndex, keepSlides</param>
-    /// <returns>Success message</returns>
-    /// <exception cref="ArgumentException">Thrown when sectionIndex is out of range</exception>
-    private Task<string> DeleteSectionAsync(string path, string outputPath, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="sectionIndex">The section index (0-based).</param>
+    /// <param name="keepSlides">Whether to keep slides in the presentation.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when sectionIndex is not provided.</exception>
+    private static string DeleteSection(DocumentContext<Presentation> ctx, string? outputPath, int? sectionIndex,
+        bool keepSlides)
     {
-        return Task.Run(() =>
-        {
-            var sectionIndex = ArgumentHelper.GetInt(arguments, "sectionIndex");
-            var keepSlides = ArgumentHelper.GetBool(arguments, "keepSlides", true);
+        if (!sectionIndex.HasValue)
+            throw new ArgumentException("sectionIndex is required for delete operation");
 
-            using var presentation = new Presentation(path);
-            PowerPointHelper.ValidateCollectionIndex(sectionIndex, presentation.Sections.Count, "section");
-            var section = presentation.Sections[sectionIndex];
-            if (keepSlides)
-                presentation.Sections.RemoveSection(section);
-            else
-                presentation.Sections.RemoveSectionWithSlides(section);
-            presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Section {sectionIndex} removed (keep slides: {keepSlides}). Output: {outputPath}";
-        });
+        var presentation = ctx.Document;
+        PowerPointHelper.ValidateCollectionIndex(sectionIndex.Value, presentation.Sections.Count, "section");
+        var section = presentation.Sections[sectionIndex.Value];
+        if (keepSlides)
+            presentation.Sections.RemoveSection(section);
+        else
+            presentation.Sections.RemoveSectionWithSlides(section);
+
+        ctx.Save(outputPath);
+
+        var result = $"Section {sectionIndex} removed (keep slides: {keepSlides}).\n";
+        result += ctx.GetOutputMessage(outputPath);
+        return result;
     }
 
     /// <summary>
-    ///     Gets all sections from the presentation
+    ///     Gets all sections from the presentation.
     /// </summary>
-    /// <param name="path">PowerPoint file path</param>
-    /// <returns>JSON string with all sections including slide range info</returns>
-    private Task<string> GetSectionsAsync(string path)
+    /// <param name="ctx">The document context.</param>
+    /// <returns>A JSON string containing section information.</returns>
+    private static string GetSections(DocumentContext<Presentation> ctx)
     {
-        return Task.Run(() =>
+        var presentation = ctx.Document;
+
+        if (presentation.Sections.Count == 0)
         {
-            using var presentation = new Presentation(path);
-
-            if (presentation.Sections.Count == 0)
+            var emptyResult = new
             {
-                var emptyResult = new
-                {
-                    count = 0,
-                    sections = Array.Empty<object>(),
-                    message = "No sections found"
-                };
-                return JsonSerializer.Serialize(emptyResult, JsonOptions);
-            }
-
-            var sectionsList = new List<object>();
-            for (var i = 0; i < presentation.Sections.Count; i++)
-            {
-                var sec = presentation.Sections[i];
-                var startSlideIndex = sec.StartedFromSlide != null
-                    ? presentation.Slides.IndexOf(sec.StartedFromSlide)
-                    : -1;
-                sectionsList.Add(new
-                {
-                    index = i,
-                    name = sec.Name,
-                    startSlideIndex,
-                    slideCount = sec.GetSlidesListOfSection().Count
-                });
-            }
-
-            var result = new
-            {
-                count = presentation.Sections.Count,
-                sections = sectionsList
+                count = 0,
+                sections = Array.Empty<object>(),
+                message = "No sections found"
             };
+            return JsonSerializer.Serialize(emptyResult, JsonOptions);
+        }
 
-            return JsonSerializer.Serialize(result, JsonOptions);
-        });
+        List<object> sectionsList = [];
+        for (var i = 0; i < presentation.Sections.Count; i++)
+        {
+            var sec = presentation.Sections[i];
+            var startSlideIndex = sec.StartedFromSlide != null
+                ? presentation.Slides.IndexOf(sec.StartedFromSlide)
+                : -1;
+            sectionsList.Add(new
+            {
+                index = i,
+                name = sec.Name,
+                startSlideIndex,
+                slideCount = sec.GetSlidesListOfSection().Count
+            });
+        }
+
+        var result = new
+        {
+            count = presentation.Sections.Count,
+            sections = sectionsList
+        };
+
+        return JsonSerializer.Serialize(result, JsonOptions);
     }
 }

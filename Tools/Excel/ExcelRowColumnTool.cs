@@ -1,6 +1,8 @@
-﻿using System.Text.Json.Nodes;
+using System.ComponentModel;
 using Aspose.Cells;
-using AsposeMcpServer.Core;
+using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Session;
+using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
 
@@ -9,19 +11,25 @@ namespace AsposeMcpServer.Tools.Excel;
 ///     Merges: ExcelInsertRowTool, ExcelDeleteRowTool, ExcelInsertColumnTool, ExcelDeleteColumnTool,
 ///     ExcelInsertCellsTool, ExcelDeleteCellsTool
 /// </summary>
-public class ExcelRowColumnTool : IAsposeTool
+[McpServerToolType]
+public class ExcelRowColumnTool
 {
-    private const string OperationInsertRow = "insert_row";
-    private const string OperationDeleteRow = "delete_row";
-    private const string OperationInsertColumn = "insert_column";
-    private const string OperationDeleteColumn = "delete_column";
-    private const string OperationInsertCells = "insert_cells";
-    private const string OperationDeleteCells = "delete_cells";
+    /// <summary>
+    ///     Document session manager for in-memory editing support.
+    /// </summary>
+    private readonly DocumentSessionManager? _sessionManager;
 
     /// <summary>
-    ///     Gets the description of the tool and its usage examples.
+    ///     Initializes a new instance of the <see cref="ExcelRowColumnTool" /> class.
     /// </summary>
-    public string Description =>
+    /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
+    public ExcelRowColumnTool(DocumentSessionManager? sessionManager = null)
+    {
+        _sessionManager = sessionManager;
+    }
+
+    [McpServerTool(Name = "excel_row_column")]
+    [Description(
         @"Manage Excel rows and columns. Supports 6 operations: insert_row, delete_row, insert_column, delete_column, insert_cells, delete_cells.
 
 Usage examples:
@@ -30,95 +38,40 @@ Usage examples:
 - Insert column: excel_row_column(operation='insert_column', path='book.xlsx', columnIndex=2, count=1)
 - Delete column: excel_row_column(operation='delete_column', path='book.xlsx', columnIndex=2)
 - Insert cells: excel_row_column(operation='insert_cells', path='book.xlsx', range='A1:C5', shiftDirection='Down')
-- Delete cells: excel_row_column(operation='delete_cells', path='book.xlsx', range='A1:C5', shiftDirection='Up')";
-
-    /// <summary>
-    ///     Gets the JSON schema defining the input parameters for the tool.
-    /// </summary>
-    public object InputSchema => new
+- Delete cells: excel_row_column(operation='delete_cells', path='book.xlsx', range='A1:C5', shiftDirection='Up')")]
+    public string Execute(
+        [Description(
+            "Operation to perform: insert_row, delete_row, insert_column, delete_column, insert_cells, delete_cells")]
+        string operation,
+        [Description("Excel file path (required if no sessionId)")]
+        string? path = null,
+        [Description("Session ID for in-memory editing")]
+        string? sessionId = null,
+        [Description("Output file path (file mode only)")]
+        string? outputPath = null,
+        [Description("Sheet index (0-based, default: 0)")]
+        int sheetIndex = 0,
+        [Description("Row index (0-based, required for insert_row/delete_row)")]
+        int rowIndex = 0,
+        [Description("Column index (0-based, required for insert_column/delete_column)")]
+        int columnIndex = 0,
+        [Description("Cell range (e.g., 'A1:C5', required for insert_cells/delete_cells)")]
+        string? range = null,
+        [Description("Number of rows/columns to insert/delete (default: 1)")]
+        int count = 1,
+        [Description("Shift direction: 'Right'/'Down' for insert_cells, 'Left'/'Up' for delete_cells")]
+        string? shiftDirection = null)
     {
-        type = "object",
-        properties = new
-        {
-            operation = new
-            {
-                type = "string",
-                description = @"Operation to perform.
-- 'insert_row': Insert row(s) (required params: path, rowIndex)
-- 'delete_row': Delete row(s) (required params: path, rowIndex)
-- 'insert_column': Insert column(s) (required params: path, columnIndex)
-- 'delete_column': Delete column(s) (required params: path, columnIndex)
-- 'insert_cells': Insert cells (required params: path, range, shiftDirection)
-- 'delete_cells': Delete cells (required params: path, range, shiftDirection)",
-                @enum = new[]
-                    { "insert_row", "delete_row", "insert_column", "delete_column", "insert_cells", "delete_cells" }
-            },
-            path = new
-            {
-                type = "string",
-                description = "Excel file path (required for all operations)"
-            },
-            sheetIndex = new
-            {
-                type = "number",
-                description = "Sheet index (0-based, optional, default: 0)"
-            },
-            rowIndex = new
-            {
-                type = "number",
-                description = "Row index (0-based, required for insert_row/delete_row)"
-            },
-            columnIndex = new
-            {
-                type = "number",
-                description = "Column index (0-based, required for insert_column/delete_column)"
-            },
-            range = new
-            {
-                type = "string",
-                description = "Cell range (e.g., 'A1:C5', required for insert_cells/delete_cells)"
-            },
-            count = new
-            {
-                type = "number",
-                description = "Number of rows/columns to insert/delete (optional, default: 1)"
-            },
-            shiftDirection = new
-            {
-                type = "string",
-                description = "Shift direction: 'Right'/'Down' for insert_cells, 'Left'/'Up' for delete_cells",
-                @enum = new[] { "Right", "Down", "Left", "Up" }
-            },
-            outputPath = new
-            {
-                type = "string",
-                description = "Output file path (optional, for all operations, defaults to input path)"
-            }
-        },
-        required = new[] { "operation", "path" }
-    };
-
-    /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments.
-    /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters.</param>
-    /// <returns>Result message as a string.</returns>
-    /// <exception cref="ArgumentException">Thrown when operation is unknown or required parameters are missing.</exception>
-    public async Task<string> ExecuteAsync(JsonObject? arguments)
-    {
-        var operation = ArgumentHelper.GetString(arguments, "operation");
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var sheetIndex = ArgumentHelper.GetInt(arguments, "sheetIndex", 0);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path);
 
         return operation.ToLowerInvariant() switch
         {
-            OperationInsertRow => await InsertRowAsync(path, outputPath, sheetIndex, arguments),
-            OperationDeleteRow => await DeleteRowAsync(path, outputPath, sheetIndex, arguments),
-            OperationInsertColumn => await InsertColumnAsync(path, outputPath, sheetIndex, arguments),
-            OperationDeleteColumn => await DeleteColumnAsync(path, outputPath, sheetIndex, arguments),
-            OperationInsertCells => await InsertCellsAsync(path, outputPath, sheetIndex, arguments),
-            OperationDeleteCells => await DeleteCellsAsync(path, outputPath, sheetIndex, arguments),
+            "insert_row" => InsertRow(ctx, outputPath, sheetIndex, rowIndex, count),
+            "delete_row" => DeleteRow(ctx, outputPath, sheetIndex, rowIndex, count),
+            "insert_column" => InsertColumn(ctx, outputPath, sheetIndex, columnIndex, count),
+            "delete_column" => DeleteColumn(ctx, outputPath, sheetIndex, columnIndex, count),
+            "insert_cells" => InsertCells(ctx, outputPath, sheetIndex, range, shiftDirection),
+            "delete_cells" => DeleteCells(ctx, outputPath, sheetIndex, range, shiftDirection),
             "set_column_width" => throw new ArgumentException(
                 $"Operation 'set_column_width' is not supported by excel_row_column. Please use excel_view_settings operation instead. Example: excel_view_settings(operation='set_column_width', path='{path}', columnIndex=0, width=15)"),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
@@ -126,179 +79,161 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Inserts rows into the worksheet.
+    ///     Inserts rows at the specified position.
     /// </summary>
-    /// <param name="path">Excel file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="sheetIndex">Worksheet index (0-based).</param>
-    /// <param name="arguments">JSON arguments containing rowIndex, optional count.</param>
-    /// <returns>Success message.</returns>
-    /// <exception cref="ArgumentException">Thrown when sheetIndex is out of range.</exception>
-    private Task<string> InsertRowAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
+    /// <param name="ctx">The document context containing the workbook.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="sheetIndex">The zero-based index of the worksheet.</param>
+    /// <param name="rowIndex">The zero-based index where rows will be inserted.</param>
+    /// <param name="count">The number of rows to insert.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    private static string InsertRow(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex, int rowIndex,
+        int count)
     {
-        return Task.Run(() =>
-        {
-            var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex");
-            var count = ArgumentHelper.GetInt(arguments, "count", 1);
+        var workbook = ctx.Document;
+        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
 
-            using var workbook = new Workbook(path);
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        worksheet.Cells.InsertRows(rowIndex, count);
 
-            worksheet.Cells.InsertRows(rowIndex, count);
-            workbook.Save(outputPath);
-
-            return $"Inserted {count} row(s) at row {rowIndex}. Output: {outputPath}";
-        });
+        ctx.Save(outputPath);
+        return $"Inserted {count} row(s) at row {rowIndex}. {ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Deletes rows from the worksheet.
+    ///     Deletes rows starting from the specified position.
     /// </summary>
-    /// <param name="path">Excel file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="sheetIndex">Worksheet index (0-based).</param>
-    /// <param name="arguments">JSON arguments containing rowIndex, optional count.</param>
-    /// <returns>Success message.</returns>
-    /// <exception cref="ArgumentException">Thrown when sheetIndex is out of range.</exception>
-    private Task<string> DeleteRowAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
+    /// <param name="ctx">The document context containing the workbook.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="sheetIndex">The zero-based index of the worksheet.</param>
+    /// <param name="rowIndex">The zero-based index of the first row to delete.</param>
+    /// <param name="count">The number of rows to delete.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    private static string DeleteRow(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex, int rowIndex,
+        int count)
     {
-        return Task.Run(() =>
-        {
-            var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex");
-            var count = ArgumentHelper.GetInt(arguments, "count", 1);
+        var workbook = ctx.Document;
+        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
 
-            using var workbook = new Workbook(path);
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        worksheet.Cells.DeleteRows(rowIndex, count);
 
-            worksheet.Cells.DeleteRows(rowIndex, count);
-            workbook.Save(outputPath);
-
-            return $"Deleted {count} row(s) starting from row {rowIndex}. Output: {outputPath}";
-        });
+        ctx.Save(outputPath);
+        return $"Deleted {count} row(s) starting from row {rowIndex}. {ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Inserts columns into the worksheet.
+    ///     Inserts columns at the specified position.
     /// </summary>
-    /// <param name="path">Excel file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="sheetIndex">Worksheet index (0-based).</param>
-    /// <param name="arguments">JSON arguments containing columnIndex, optional count.</param>
-    /// <returns>Success message.</returns>
-    /// <exception cref="ArgumentException">Thrown when sheetIndex is out of range.</exception>
-    private Task<string> InsertColumnAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
+    /// <param name="ctx">The document context containing the workbook.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="sheetIndex">The zero-based index of the worksheet.</param>
+    /// <param name="columnIndex">The zero-based index where columns will be inserted.</param>
+    /// <param name="count">The number of columns to insert.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    private static string InsertColumn(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex,
+        int columnIndex, int count)
     {
-        return Task.Run(() =>
-        {
-            var columnIndex = ArgumentHelper.GetInt(arguments, "columnIndex");
-            var count = ArgumentHelper.GetInt(arguments, "count", 1);
+        var workbook = ctx.Document;
+        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
 
-            using var workbook = new Workbook(path);
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        worksheet.Cells.InsertColumns(columnIndex, count);
 
-            worksheet.Cells.InsertColumns(columnIndex, count);
-            workbook.Save(outputPath);
-
-            return $"Inserted {count} column(s) at column {columnIndex}. Output: {outputPath}";
-        });
+        ctx.Save(outputPath);
+        return $"Inserted {count} column(s) at column {columnIndex}. {ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Deletes columns from the worksheet.
+    ///     Deletes columns starting from the specified position.
     /// </summary>
-    /// <param name="path">Excel file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="sheetIndex">Worksheet index (0-based).</param>
-    /// <param name="arguments">JSON arguments containing columnIndex, optional count.</param>
-    /// <returns>Success message.</returns>
-    /// <exception cref="ArgumentException">Thrown when sheetIndex is out of range.</exception>
-    private Task<string> DeleteColumnAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
+    /// <param name="ctx">The document context containing the workbook.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="sheetIndex">The zero-based index of the worksheet.</param>
+    /// <param name="columnIndex">The zero-based index of the first column to delete.</param>
+    /// <param name="count">The number of columns to delete.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    private static string DeleteColumn(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex,
+        int columnIndex, int count)
     {
-        return Task.Run(() =>
-        {
-            var columnIndex = ArgumentHelper.GetInt(arguments, "columnIndex");
-            var count = ArgumentHelper.GetInt(arguments, "count", 1);
+        var workbook = ctx.Document;
+        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
 
-            using var workbook = new Workbook(path);
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        worksheet.Cells.DeleteColumns(columnIndex, count, true);
 
-            worksheet.Cells.DeleteColumns(columnIndex, count, true);
-            workbook.Save(outputPath);
-
-            return $"Deleted {count} column(s) starting from column {columnIndex}. Output: {outputPath}";
-        });
+        ctx.Save(outputPath);
+        return $"Deleted {count} column(s) starting from column {columnIndex}. {ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Inserts cells into the worksheet.
+    ///     Inserts cells in a range and shifts existing cells.
     /// </summary>
-    /// <param name="path">Excel file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="sheetIndex">Worksheet index (0-based).</param>
-    /// <param name="arguments">JSON arguments containing range, shiftDirection.</param>
-    /// <returns>Success message.</returns>
-    /// <exception cref="ArgumentException">Thrown when sheetIndex is out of range or range format is invalid.</exception>
-    private Task<string> InsertCellsAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
+    /// <param name="ctx">The document context containing the workbook.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="sheetIndex">The zero-based index of the worksheet.</param>
+    /// <param name="range">The cell range where cells will be inserted (e.g., 'A1:C5').</param>
+    /// <param name="shiftDirection">The direction to shift existing cells ('Right' or 'Down').</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when range or shiftDirection is null or empty.</exception>
+    private static string InsertCells(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex, string? range,
+        string? shiftDirection)
     {
-        return Task.Run(() =>
-        {
-            var range = ArgumentHelper.GetString(arguments, "range");
-            var shiftDirection = ArgumentHelper.GetString(arguments, "shiftDirection");
+        if (string.IsNullOrEmpty(range))
+            throw new ArgumentException("range is required for insert_cells operation");
+        if (string.IsNullOrEmpty(shiftDirection))
+            throw new ArgumentException("shiftDirection is required for insert_cells operation");
 
-            using var workbook = new Workbook(path);
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var workbook = ctx.Document;
+        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
 
-            var rangeObj = ExcelHelper.CreateRange(worksheet.Cells, range);
-            var shiftType = string.Equals(shiftDirection, "right", StringComparison.OrdinalIgnoreCase)
-                ? ShiftType.Right
-                : ShiftType.Down;
+        var rangeObj = ExcelHelper.CreateRange(worksheet.Cells, range);
+        var shiftType = string.Equals(shiftDirection, "right", StringComparison.OrdinalIgnoreCase)
+            ? ShiftType.Right
+            : ShiftType.Down;
 
-            var cellArea = CellArea.CreateCellArea(
-                rangeObj.FirstRow,
-                rangeObj.FirstColumn,
-                rangeObj.FirstRow + rangeObj.RowCount - 1,
-                rangeObj.FirstColumn + rangeObj.ColumnCount - 1);
+        var cellArea = CellArea.CreateCellArea(
+            rangeObj.FirstRow,
+            rangeObj.FirstColumn,
+            rangeObj.FirstRow + rangeObj.RowCount - 1,
+            rangeObj.FirstColumn + rangeObj.ColumnCount - 1);
 
-            worksheet.Cells.InsertRange(cellArea, shiftType);
-            workbook.Save(outputPath);
+        worksheet.Cells.InsertRange(cellArea, shiftType);
 
-            return $"Cells inserted in range {range}, shifted {shiftDirection}. Output: {outputPath}";
-        });
+        ctx.Save(outputPath);
+        return $"Cells inserted in range {range}, shifted {shiftDirection}. {ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Deletes cells from the worksheet.
+    ///     Deletes cells in a range and shifts remaining cells.
     /// </summary>
-    /// <param name="path">Excel file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="sheetIndex">Worksheet index (0-based).</param>
-    /// <param name="arguments">JSON arguments containing range, shiftDirection.</param>
-    /// <returns>Success message.</returns>
-    /// <exception cref="ArgumentException">Thrown when sheetIndex is out of range or range format is invalid.</exception>
-    private Task<string> DeleteCellsAsync(string path, string outputPath, int sheetIndex, JsonObject? arguments)
+    /// <param name="ctx">The document context containing the workbook.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="sheetIndex">The zero-based index of the worksheet.</param>
+    /// <param name="range">The cell range where cells will be deleted (e.g., 'A1:C5').</param>
+    /// <param name="shiftDirection">The direction to shift remaining cells ('Left' or 'Up').</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when range or shiftDirection is null or empty.</exception>
+    private static string DeleteCells(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex, string? range,
+        string? shiftDirection)
     {
-        return Task.Run(() =>
-        {
-            var range = ArgumentHelper.GetString(arguments, "range");
-            var shiftDirection = ArgumentHelper.GetString(arguments, "shiftDirection");
+        if (string.IsNullOrEmpty(range))
+            throw new ArgumentException("range is required for delete_cells operation");
+        if (string.IsNullOrEmpty(shiftDirection))
+            throw new ArgumentException("shiftDirection is required for delete_cells operation");
 
-            using var workbook = new Workbook(path);
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var workbook = ctx.Document;
+        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
 
-            var rangeObj = ExcelHelper.CreateRange(worksheet.Cells, range);
-            var shiftType = string.Equals(shiftDirection, "left", StringComparison.OrdinalIgnoreCase)
-                ? ShiftType.Left
-                : ShiftType.Up;
+        var rangeObj = ExcelHelper.CreateRange(worksheet.Cells, range);
+        var shiftType = string.Equals(shiftDirection, "left", StringComparison.OrdinalIgnoreCase)
+            ? ShiftType.Left
+            : ShiftType.Up;
 
-            worksheet.Cells.DeleteRange(
-                rangeObj.FirstRow,
-                rangeObj.FirstColumn,
-                Math.Max(1, rangeObj.RowCount),
-                Math.Max(1, rangeObj.ColumnCount),
-                shiftType);
+        worksheet.Cells.DeleteRange(
+            rangeObj.FirstRow,
+            rangeObj.FirstColumn,
+            Math.Max(1, rangeObj.RowCount),
+            Math.Max(1, rangeObj.ColumnCount),
+            shiftType);
 
-            workbook.Save(outputPath);
-            return $"Cells deleted in range {range}, shifted {shiftDirection}. Output: {outputPath}";
-        });
+        ctx.Save(outputPath);
+        return $"Cells deleted in range {range}, shifted {shiftDirection}. {ctx.GetOutputMessage(outputPath)}";
     }
 }

@@ -1,8 +1,9 @@
+using System.ComponentModel;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using Aspose.Words;
 using Aspose.Words.Fields;
-using AsposeMcpServer.Core;
+using AsposeMcpServer.Core.Session;
+using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Word;
 
@@ -10,406 +11,361 @@ namespace AsposeMcpServer.Tools.Word;
 ///     Unified tool for managing Word hyperlinks (add, edit, delete, get)
 ///     Merges: WordAddHyperlinkTool, WordEditHyperlinkTool, WordDeleteHyperlinkTool, WordGetHyperlinksTool
 /// </summary>
-public class WordHyperlinkTool : IAsposeTool
+[McpServerToolType]
+public class WordHyperlinkTool
 {
     /// <summary>
-    ///     Gets the description of the tool and its usage examples
+    ///     Session manager for document session operations
     /// </summary>
-    public string Description => @"Manage Word hyperlinks. Supports 4 operations: add, edit, delete, get.
+    private readonly DocumentSessionManager? _sessionManager;
+
+    /// <summary>
+    ///     Initializes a new instance of the WordHyperlinkTool class
+    /// </summary>
+    /// <param name="sessionManager">Optional session manager for in-memory document operations</param>
+    public WordHyperlinkTool(DocumentSessionManager? sessionManager = null)
+    {
+        _sessionManager = sessionManager;
+    }
+
+    [McpServerTool(Name = "word_hyperlink")]
+    [Description(@"Manage Word hyperlinks. Supports 4 operations: add, edit, delete, get.
 
 Usage examples:
 - Add hyperlink: word_hyperlink(operation='add', path='doc.docx', text='Link', url='https://example.com', paragraphIndex=0)
 - Edit hyperlink: word_hyperlink(operation='edit', path='doc.docx', hyperlinkIndex=0, url='https://newurl.com')
 - Delete hyperlink: word_hyperlink(operation='delete', path='doc.docx', hyperlinkIndex=0)
-- Get hyperlinks: word_hyperlink(operation='get', path='doc.docx')";
-
-    /// <summary>
-    ///     Gets the JSON schema defining the input parameters for the tool
-    /// </summary>
-    public object InputSchema => new
-    {
-        type = "object",
-        properties = new
-        {
-            operation = new
-            {
-                type = "string",
-                description = @"Operation to perform.
+- Get hyperlinks: word_hyperlink(operation='get', path='doc.docx')")]
+    public string Execute(
+        [Description(@"Operation to perform.
 - 'add': Add a hyperlink (required params: path, text, url)
 - 'edit': Edit a hyperlink (required params: path, hyperlinkIndex, url)
 - 'delete': Delete a hyperlink (required params: path, hyperlinkIndex)
-- 'get': Get all hyperlinks (required params: path)",
-                @enum = new[] { "add", "edit", "delete", "get" }
-            },
-            path = new
-            {
-                type = "string",
-                description = "Document file path (required for all operations)"
-            },
-            outputPath = new
-            {
-                type = "string",
-                description = "Output file path (if not provided, overwrites input, for add/edit/delete operations)"
-            },
-            text = new
-            {
-                type = "string",
-                description = "Display text for the hyperlink (required for add operation)"
-            },
-            url = new
-            {
-                type = "string",
-                description =
-                    "URL or target address (required for add operation unless subAddress is provided, optional for edit operation)"
-            },
-            subAddress = new
-            {
-                type = "string",
-                description =
-                    "Internal bookmark name for document navigation (e.g., '_Toc123456'). Use with empty url for internal links. (optional, for add/edit operations)"
-            },
-            paragraphIndex = new
-            {
-                type = "number",
-                description =
-                    "Paragraph index to insert hyperlink after (0-based, optional, for add operation). When specified, creates a NEW paragraph after the specified paragraph (does not insert into existing paragraph). Valid range: 0 to (total paragraphs - 1), or -1 for document start."
-            },
-            tooltip = new
-            {
-                type = "string",
-                description = "Tooltip text (optional, for add/edit operations)"
-            },
-            hyperlinkIndex = new
-            {
-                type = "number",
-                description = "Hyperlink index (0-based, required for edit/delete operations)"
-            },
-            displayText = new
-            {
-                type = "string",
-                description = "New display text (optional, for edit operation)"
-            },
-            keepText = new
-            {
-                type = "boolean",
-                description =
-                    "Keep display text when deleting hyperlink (unlink instead of remove, optional, default: false, for delete operation)"
-            }
-        },
-        required = new[] { "operation", "path" }
-    };
-
-    /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments
-    /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters</param>
-    /// <returns>Result message as a string</returns>
-    /// <exception cref="ArgumentException">Thrown when operation is unknown or required parameters are missing.</exception>
-    public async Task<string> ExecuteAsync(JsonObject? arguments)
+- 'get': Get all hyperlinks (required params: path)")]
+        string operation,
+        [Description("Document file path (required if no sessionId)")]
+        string? path = null,
+        [Description("Session ID for in-memory editing")]
+        string? sessionId = null,
+        [Description("Output file path (file mode only)")]
+        string? outputPath = null,
+        [Description("Display text for the hyperlink (required for add operation)")]
+        string? text = null,
+        [Description(
+            "URL or target address (required for add operation unless subAddress is provided, optional for edit operation)")]
+        string? url = null,
+        [Description(
+            "Internal bookmark name for document navigation (e.g., '_Toc123456'). Use with empty url for internal links. (optional, for add/edit operations)")]
+        string? subAddress = null,
+        [Description(
+            "Paragraph index to insert hyperlink after (0-based, optional, for add operation). When specified, creates a NEW paragraph after the specified paragraph (does not insert into existing paragraph). Valid range: 0 to (total paragraphs - 1), or -1 for document start.")]
+        int? paragraphIndex = null,
+        [Description("Tooltip text (optional, for add/edit operations)")]
+        string? tooltip = null,
+        [Description("Hyperlink index (0-based, required for edit/delete operations)")]
+        int? hyperlinkIndex = null,
+        [Description("New display text (optional, for edit operation)")]
+        string? displayText = null,
+        [Description(
+            "Keep display text when deleting hyperlink (unlink instead of remove, optional, default: false, for delete operation)")]
+        bool keepText = false)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation");
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
 
         return operation.ToLower() switch
         {
-            "add" => await AddHyperlinkAsync(path, outputPath, arguments),
-            "edit" => await EditHyperlinkAsync(path, outputPath, arguments),
-            "delete" => await DeleteHyperlinkAsync(path, outputPath, arguments),
-            "get" => await GetHyperlinksAsync(path),
+            "add" => AddHyperlink(ctx, outputPath, text!, url, subAddress, paragraphIndex, tooltip),
+            "edit" => EditHyperlink(ctx, outputPath, hyperlinkIndex ?? 0, url, subAddress, displayText, tooltip),
+            "delete" => DeleteHyperlink(ctx, outputPath, hyperlinkIndex ?? 0, keepText),
+            "get" => GetHyperlinks(ctx),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
 
     /// <summary>
-    ///     Adds a hyperlink to the document
+    ///     Adds a hyperlink to the document.
     /// </summary>
-    /// <param name="path">Document file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing text, url, optional subAddress, paragraphIndex, tooltip</param>
-    /// <returns>Success message</returns>
-    private Task<string> AddHyperlinkAsync(string path, string outputPath, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="text">The display text for the hyperlink.</param>
+    /// <param name="url">The URL or target address.</param>
+    /// <param name="subAddress">The internal bookmark name for document navigation.</param>
+    /// <param name="paragraphIndex">The paragraph index to insert after.</param>
+    /// <param name="tooltip">The tooltip text.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when neither url nor subAddress is provided, or URL format is invalid, or
+    ///     paragraph index is out of range.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">Thrown when the paragraph cannot be found or accessed.</exception>
+    private static string AddHyperlink(DocumentContext<Document> ctx, string? outputPath, string text, string? url,
+        string? subAddress, int? paragraphIndex, string? tooltip)
     {
-        return Task.Run(() =>
+        // Validate: either url or subAddress must be provided
+        if (string.IsNullOrEmpty(url) && string.IsNullOrEmpty(subAddress))
+            throw new ArgumentException("Either 'url' or 'subAddress' must be provided for add operation");
+
+        // Validate URL format if provided
+        if (!string.IsNullOrEmpty(url))
+            ValidateUrlFormat(url);
+
+        var doc = ctx.Document;
+        var builder = new DocumentBuilder(doc);
+
+        // Determine insertion position
+        if (paragraphIndex.HasValue)
         {
-            var text = ArgumentHelper.GetString(arguments, "text");
-            var url = ArgumentHelper.GetStringNullable(arguments, "url");
-            var subAddress = ArgumentHelper.GetStringNullable(arguments, "subAddress");
-            var paragraphIndex = ArgumentHelper.GetIntNullable(arguments, "paragraphIndex");
-            var tooltip = ArgumentHelper.GetStringNullable(arguments, "tooltip");
-
-            // Validate: either url or subAddress must be provided
-            if (string.IsNullOrEmpty(url) && string.IsNullOrEmpty(subAddress))
-                throw new ArgumentException("Either 'url' or 'subAddress' must be provided for add operation");
-
-            // Validate URL format if provided
-            if (!string.IsNullOrEmpty(url))
-                ValidateUrlFormat(url);
-
-            var doc = new Document(path);
-            var builder = new DocumentBuilder(doc);
-
-            // Determine insertion position
-            if (paragraphIndex.HasValue)
+            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
+            if (paragraphIndex.Value == -1)
             {
-                var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
-                if (paragraphIndex.Value == -1)
+                // Insert at the beginning - create new paragraph
+                if (paragraphs.Count > 0)
                 {
-                    // Insert at the beginning - create new paragraph
-                    if (paragraphs.Count > 0)
+                    if (paragraphs[0] is Paragraph firstPara)
                     {
-                        if (paragraphs[0] is Paragraph firstPara)
-                        {
-                            // Insert new paragraph before the first paragraph
-                            var newPara = new Paragraph(doc);
-                            doc.FirstSection.Body.InsertBefore(newPara, firstPara);
-                            builder.MoveTo(newPara);
-                        }
-                        else
-                        {
-                            builder.MoveToDocumentStart();
-                        }
+                        // Insert new paragraph before the first paragraph
+                        var newPara = new Paragraph(doc);
+                        doc.FirstSection.Body.InsertBefore(newPara, firstPara);
+                        builder.MoveTo(newPara);
                     }
                     else
                     {
                         builder.MoveToDocumentStart();
                     }
                 }
-                else if (paragraphIndex.Value >= 0 && paragraphIndex.Value < paragraphs.Count)
+                else
                 {
-                    // Insert after the specified paragraph - create new paragraph
-                    if (paragraphs[paragraphIndex.Value] is Paragraph targetPara)
+                    builder.MoveToDocumentStart();
+                }
+            }
+            else if (paragraphIndex.Value >= 0 && paragraphIndex.Value < paragraphs.Count)
+            {
+                // Insert after the specified paragraph - create new paragraph
+                if (paragraphs[paragraphIndex.Value] is Paragraph targetPara)
+                {
+                    // Insert new paragraph after the target paragraph
+                    var newPara = new Paragraph(doc);
+                    var parentNode = targetPara.ParentNode;
+                    if (parentNode != null)
                     {
-                        // Insert new paragraph after the target paragraph
-                        var newPara = new Paragraph(doc);
-                        var parentNode = targetPara.ParentNode;
-                        if (parentNode != null)
-                        {
-                            parentNode.InsertAfter(newPara, targetPara);
-                            builder.MoveTo(newPara);
-                        }
-                        else
-                        {
-                            throw new InvalidOperationException(
-                                $"Unable to find parent node of paragraph at index {paragraphIndex.Value}");
-                        }
+                        parentNode.InsertAfter(newPara, targetPara);
+                        builder.MoveTo(newPara);
                     }
                     else
                     {
                         throw new InvalidOperationException(
-                            $"Unable to find paragraph at index {paragraphIndex.Value}");
+                            $"Unable to find parent node of paragraph at index {paragraphIndex.Value}");
                     }
                 }
                 else
                 {
-                    throw new ArgumentException(
-                        $"Paragraph index {paragraphIndex.Value} is out of range (document has {paragraphs.Count} paragraphs)");
+                    throw new InvalidOperationException(
+                        $"Unable to find paragraph at index {paragraphIndex.Value}");
                 }
             }
             else
             {
-                // Default: Move to end of document
-                builder.MoveToDocumentEnd();
+                throw new ArgumentException(
+                    $"Paragraph index {paragraphIndex.Value} is out of range (document has {paragraphs.Count} paragraphs)");
             }
+        }
+        else
+        {
+            // Default: Move to end of document
+            builder.MoveToDocumentEnd();
+        }
 
-            // Insert hyperlink
-            if (!string.IsNullOrEmpty(subAddress))
-                // Internal bookmark link
-                builder.InsertHyperlink(text, subAddress, true);
-            else
-                // External URL link
-                builder.InsertHyperlink(text, url!, false);
+        // Insert hyperlink
+        if (!string.IsNullOrEmpty(subAddress))
+            // Internal bookmark link
+            builder.InsertHyperlink(text, subAddress, true);
+        else
+            // External URL link
+            builder.InsertHyperlink(text, url!, false);
 
-            // Set tooltip and subAddress if provided
-            var fields = doc.Range.Fields;
-            if (fields.Count > 0)
+        // Set tooltip and subAddress if provided
+        var fields = doc.Range.Fields;
+        if (fields.Count > 0)
+        {
+            var lastField = fields[^1];
+            if (lastField is FieldHyperlink hyperlinkField)
             {
-                var lastField = fields[^1];
-                if (lastField is FieldHyperlink hyperlinkField)
+                if (!string.IsNullOrEmpty(tooltip))
+                    hyperlinkField.ScreenTip = tooltip;
+                // Set both Address and SubAddress for combined links
+                if (!string.IsNullOrEmpty(url) && !string.IsNullOrEmpty(subAddress))
                 {
-                    if (!string.IsNullOrEmpty(tooltip))
-                        hyperlinkField.ScreenTip = tooltip;
-                    // Set both Address and SubAddress for combined links
-                    if (!string.IsNullOrEmpty(url) && !string.IsNullOrEmpty(subAddress))
-                    {
-                        hyperlinkField.Address = url;
-                        hyperlinkField.SubAddress = subAddress;
-                    }
+                    hyperlinkField.Address = url;
+                    hyperlinkField.SubAddress = subAddress;
                 }
             }
+        }
 
-            doc.Save(outputPath);
+        ctx.Save(outputPath);
 
-            var result = "Hyperlink added successfully\n";
-            result += $"Display text: {text}\n";
-            if (!string.IsNullOrEmpty(url)) result += $"URL: {url}\n";
-            if (!string.IsNullOrEmpty(subAddress)) result += $"SubAddress (bookmark): {subAddress}\n";
-            if (!string.IsNullOrEmpty(tooltip)) result += $"Tooltip: {tooltip}\n";
-            if (paragraphIndex.HasValue)
-            {
-                if (paragraphIndex.Value == -1)
-                    result += "Insert position: beginning of document\n";
-                else
-                    result += $"Insert position: after paragraph #{paragraphIndex.Value}\n";
-            }
-            else
-            {
-                result += "Insert position: end of document\n";
-            }
-
-            result += $"Output: {outputPath}";
-
-            return result;
-        });
-    }
-
-    /// <summary>
-    ///     Edits an existing hyperlink
-    /// </summary>
-    /// <param name="path">Document file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing hyperlinkIndex, optional url, subAddress, displayText, tooltip</param>
-    /// <returns>Success message</returns>
-    private Task<string> EditHyperlinkAsync(string path, string outputPath, JsonObject? arguments)
-    {
-        return Task.Run(() =>
+        var result = "Hyperlink added successfully\n";
+        result += $"Display text: {text}\n";
+        if (!string.IsNullOrEmpty(url)) result += $"URL: {url}\n";
+        if (!string.IsNullOrEmpty(subAddress)) result += $"SubAddress (bookmark): {subAddress}\n";
+        if (!string.IsNullOrEmpty(tooltip)) result += $"Tooltip: {tooltip}\n";
+        if (paragraphIndex.HasValue)
         {
-            var hyperlinkIndex = ArgumentHelper.GetInt(arguments, "hyperlinkIndex");
-            var url = ArgumentHelper.GetStringNullable(arguments, "url");
-            var subAddress = ArgumentHelper.GetStringNullable(arguments, "subAddress");
-            var displayText = ArgumentHelper.GetStringNullable(arguments, "displayText");
-            var tooltip = ArgumentHelper.GetStringNullable(arguments, "tooltip");
-
-            var doc = new Document(path);
-            var hyperlinkFields = GetAllHyperlinks(doc);
-
-            if (hyperlinkIndex < 0 || hyperlinkIndex >= hyperlinkFields.Count)
-            {
-                var availableInfo = hyperlinkFields.Count > 0
-                    ? $" (valid index: 0-{hyperlinkFields.Count - 1})"
-                    : " (document has no hyperlinks)";
-                throw new ArgumentException(
-                    $"Hyperlink index {hyperlinkIndex} is out of range (document has {hyperlinkFields.Count} hyperlinks){availableInfo}. Use get operation to view all available hyperlinks");
-            }
-
-            var hyperlinkField = hyperlinkFields[hyperlinkIndex];
-            var changes = new List<string>();
-
-            // Update URL if provided
-            if (!string.IsNullOrEmpty(url))
-            {
-                ValidateUrlFormat(url);
-                hyperlinkField.Address = url;
-                changes.Add($"URL: {url}");
-            }
-
-            // Update subAddress if provided
-            if (!string.IsNullOrEmpty(subAddress))
-            {
-                hyperlinkField.SubAddress = subAddress;
-                changes.Add($"SubAddress: {subAddress}");
-            }
-
-            // Update display text if provided
-            if (!string.IsNullOrEmpty(displayText))
-            {
-                hyperlinkField.Result = displayText;
-                changes.Add($"Display text: {displayText}");
-            }
-
-            // Update tooltip if provided
-            if (!string.IsNullOrEmpty(tooltip))
-            {
-                hyperlinkField.ScreenTip = tooltip;
-                changes.Add($"Tooltip: {tooltip}");
-            }
-
-            // Update the field
-            hyperlinkField.Update();
-
-            doc.Save(outputPath);
-
-            var result = $"Hyperlink #{hyperlinkIndex} edited successfully\n";
-            if (changes.Count > 0)
-                result += $"Changes: {string.Join(", ", changes)}\n";
+            if (paragraphIndex.Value == -1)
+                result += "Insert position: beginning of document\n";
             else
-                result += "No change parameters provided\n";
-            result += $"Output: {outputPath}";
-
-            return result;
-        });
-    }
-
-    /// <summary>
-    ///     Deletes a hyperlink from the document
-    /// </summary>
-    /// <param name="path">Document file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing hyperlinkIndex, optional keepText</param>
-    /// <returns>Success message</returns>
-    private Task<string> DeleteHyperlinkAsync(string path, string outputPath, JsonObject? arguments)
-    {
-        return Task.Run(() =>
+                result += $"Insert position: after paragraph #{paragraphIndex.Value}\n";
+        }
+        else
         {
-            var hyperlinkIndex = ArgumentHelper.GetInt(arguments, "hyperlinkIndex");
-            var keepText = ArgumentHelper.GetBool(arguments, "keepText", false);
+            result += "Insert position: end of document\n";
+        }
 
-            var doc = new Document(path);
-            var hyperlinkFields = GetAllHyperlinks(doc);
+        result += ctx.GetOutputMessage(outputPath);
 
-            if (hyperlinkIndex < 0 || hyperlinkIndex >= hyperlinkFields.Count)
-            {
-                var availableInfo = hyperlinkFields.Count > 0
-                    ? $" (valid index: 0-{hyperlinkFields.Count - 1})"
-                    : " (document has no hyperlinks)";
-                throw new ArgumentException(
-                    $"Hyperlink index {hyperlinkIndex} is out of range (document has {hyperlinkFields.Count} hyperlinks){availableInfo}. Use get operation to view all available hyperlinks");
-            }
-
-            var hyperlinkField = hyperlinkFields[hyperlinkIndex];
-
-            // Get hyperlink info before deletion
-            var displayText = hyperlinkField.Result ?? "";
-            var address = hyperlinkField.Address ?? "";
-
-            // Delete the hyperlink field
-            if (keepText)
-                // Unlink: remove hyperlink but keep display text
-                hyperlinkField.Unlink();
-            else
-                // Remove: delete hyperlink and its content
-                hyperlinkField.Remove();
-
-            doc.Save(outputPath);
-
-            var remainingCount = GetAllHyperlinks(doc).Count;
-
-            var result = $"Hyperlink #{hyperlinkIndex} deleted successfully\n";
-            result += $"Display text: {displayText}\n";
-            result += $"Address: {address}\n";
-            result += $"Keep text: {(keepText ? "Yes (unlinked)" : "No (removed)")}\n";
-            result += $"Remaining hyperlinks in document: {remainingCount}\n";
-            result += $"Output: {outputPath}";
-
-            return result;
-        });
+        return result;
     }
 
     /// <summary>
-    ///     Gets all hyperlink fields from the document
+    ///     Edits an existing hyperlink.
     /// </summary>
-    /// <param name="doc">The Word document</param>
-    /// <returns>List of FieldHyperlink objects</returns>
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="hyperlinkIndex">The zero-based hyperlink index.</param>
+    /// <param name="url">The new URL or target address.</param>
+    /// <param name="subAddress">The new internal bookmark name.</param>
+    /// <param name="displayText">The new display text.</param>
+    /// <param name="tooltip">The new tooltip text.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when the hyperlink index is out of range or URL format is invalid.</exception>
+    private static string EditHyperlink(DocumentContext<Document> ctx, string? outputPath, int hyperlinkIndex,
+        string? url, string? subAddress, string? displayText, string? tooltip)
+    {
+        var doc = ctx.Document;
+        var hyperlinkFields = GetAllHyperlinks(doc);
+
+        if (hyperlinkIndex < 0 || hyperlinkIndex >= hyperlinkFields.Count)
+        {
+            var availableInfo = hyperlinkFields.Count > 0
+                ? $" (valid index: 0-{hyperlinkFields.Count - 1})"
+                : " (document has no hyperlinks)";
+            throw new ArgumentException(
+                $"Hyperlink index {hyperlinkIndex} is out of range (document has {hyperlinkFields.Count} hyperlinks){availableInfo}. Use get operation to view all available hyperlinks");
+        }
+
+        var hyperlinkField = hyperlinkFields[hyperlinkIndex];
+        List<string> changes = [];
+
+        // Update URL if provided
+        if (!string.IsNullOrEmpty(url))
+        {
+            ValidateUrlFormat(url);
+            hyperlinkField.Address = url;
+            changes.Add($"URL: {url}");
+        }
+
+        // Update subAddress if provided
+        if (!string.IsNullOrEmpty(subAddress))
+        {
+            hyperlinkField.SubAddress = subAddress;
+            changes.Add($"SubAddress: {subAddress}");
+        }
+
+        // Update display text if provided
+        if (!string.IsNullOrEmpty(displayText))
+        {
+            hyperlinkField.Result = displayText;
+            changes.Add($"Display text: {displayText}");
+        }
+
+        // Update tooltip if provided
+        if (!string.IsNullOrEmpty(tooltip))
+        {
+            hyperlinkField.ScreenTip = tooltip;
+            changes.Add($"Tooltip: {tooltip}");
+        }
+
+        // Update the field
+        hyperlinkField.Update();
+
+        ctx.Save(outputPath);
+
+        var result = $"Hyperlink #{hyperlinkIndex} edited successfully\n";
+        if (changes.Count > 0)
+            result += $"Changes: {string.Join(", ", changes)}\n";
+        else
+            result += "No change parameters provided\n";
+        result += ctx.GetOutputMessage(outputPath);
+
+        return result;
+    }
+
+    /// <summary>
+    ///     Deletes a hyperlink from the document.
+    /// </summary>
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="hyperlinkIndex">The zero-based hyperlink index.</param>
+    /// <param name="keepText">Whether to keep the display text when deleting.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when the hyperlink index is out of range.</exception>
+    private static string DeleteHyperlink(DocumentContext<Document> ctx, string? outputPath, int hyperlinkIndex,
+        bool keepText)
+    {
+        var doc = ctx.Document;
+        var hyperlinkFields = GetAllHyperlinks(doc);
+
+        if (hyperlinkIndex < 0 || hyperlinkIndex >= hyperlinkFields.Count)
+        {
+            var availableInfo = hyperlinkFields.Count > 0
+                ? $" (valid index: 0-{hyperlinkFields.Count - 1})"
+                : " (document has no hyperlinks)";
+            throw new ArgumentException(
+                $"Hyperlink index {hyperlinkIndex} is out of range (document has {hyperlinkFields.Count} hyperlinks){availableInfo}. Use get operation to view all available hyperlinks");
+        }
+
+        var hyperlinkField = hyperlinkFields[hyperlinkIndex];
+
+        // Get hyperlink info before deletion
+        var displayTextValue = hyperlinkField.Result ?? "";
+        var address = hyperlinkField.Address ?? "";
+
+        // Delete the hyperlink field
+        if (keepText)
+            // Unlink: remove hyperlink but keep display text
+            hyperlinkField.Unlink();
+        else
+            // Remove: delete hyperlink and its content
+            hyperlinkField.Remove();
+
+        ctx.Save(outputPath);
+
+        var remainingCount = GetAllHyperlinks(doc).Count;
+
+        var result = $"Hyperlink #{hyperlinkIndex} deleted successfully\n";
+        result += $"Display text: {displayTextValue}\n";
+        result += $"Address: {address}\n";
+        result += $"Keep text: {(keepText ? "Yes (unlinked)" : "No (removed)")}\n";
+        result += $"Remaining hyperlinks in document: {remainingCount}\n";
+        result += ctx.GetOutputMessage(outputPath);
+
+        return result;
+    }
+
+    /// <summary>
+    ///     Gets all hyperlink fields from the document.
+    /// </summary>
+    /// <param name="doc">The Word document.</param>
+    /// <returns>A list of FieldHyperlink objects representing all hyperlinks.</returns>
     private static List<FieldHyperlink> GetAllHyperlinks(Document doc)
     {
         return doc.Range.Fields.OfType<FieldHyperlink>().ToList();
     }
 
     /// <summary>
-    ///     Validates URL format to prevent invalid field commands
+    ///     Validates URL format to prevent invalid field commands.
     /// </summary>
-    /// <param name="url">The URL to validate</param>
+    /// <param name="url">The URL to validate.</param>
+    /// <exception cref="ArgumentException">Thrown when the URL format is invalid.</exception>
     private static void ValidateUrlFormat(string url)
     {
         var validPrefixes = new[] { "http://", "https://", "mailto:", "ftp://", "file://", "#" };
@@ -419,72 +375,69 @@ Usage examples:
     }
 
     /// <summary>
-    ///     Gets all hyperlinks from the document
+    ///     Gets all hyperlinks from the document.
     /// </summary>
-    /// <param name="path">Document file path</param>
-    /// <returns>JSON formatted string with all hyperlinks</returns>
-    private Task<string> GetHyperlinksAsync(string path)
+    /// <param name="ctx">The document context.</param>
+    /// <returns>A JSON string containing hyperlink information.</returns>
+    private static string GetHyperlinks(DocumentContext<Document> ctx)
     {
-        return Task.Run(() =>
+        var doc = ctx.Document;
+        var hyperlinkFields = GetAllHyperlinks(doc);
+
+        if (hyperlinkFields.Count == 0)
+            return JsonSerializer.Serialize(new
+                { count = 0, hyperlinks = Array.Empty<object>(), message = "No hyperlinks found in document" });
+
+        // Build paragraph lookup for finding hyperlink positions
+        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
+
+        List<object> hyperlinkList = [];
+        for (var index = 0; index < hyperlinkFields.Count; index++)
         {
-            var doc = new Document(path);
-            var hyperlinkFields = GetAllHyperlinks(doc);
+            var hyperlinkField = hyperlinkFields[index];
+            var displayText = "";
+            var address = "";
+            var subAddress = "";
+            var tooltip = "";
+            int? paragraphIndexValue = null;
 
-            if (hyperlinkFields.Count == 0)
-                return JsonSerializer.Serialize(new
-                    { count = 0, hyperlinks = Array.Empty<object>(), message = "No hyperlinks found in document" });
-
-            // Build paragraph lookup for finding hyperlink positions
-            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
-
-            var hyperlinkList = new List<object>();
-            for (var index = 0; index < hyperlinkFields.Count; index++)
+            try
             {
-                var hyperlinkField = hyperlinkFields[index];
-                var displayText = "";
-                var address = "";
-                var subAddress = "";
-                var tooltip = "";
-                int? paragraphIndex = null;
+                displayText = hyperlinkField.Result ?? "";
+                address = hyperlinkField.Address ?? "";
+                subAddress = hyperlinkField.SubAddress ?? "";
+                tooltip = hyperlinkField.ScreenTip ?? "";
 
-                try
+                // Find paragraph index
+                var fieldStart = hyperlinkField.Start;
+                if (fieldStart?.ParentNode is Paragraph para)
                 {
-                    displayText = hyperlinkField.Result ?? "";
-                    address = hyperlinkField.Address ?? "";
-                    subAddress = hyperlinkField.SubAddress ?? "";
-                    tooltip = hyperlinkField.ScreenTip ?? "";
-
-                    // Find paragraph index
-                    var fieldStart = hyperlinkField.Start;
-                    if (fieldStart?.ParentNode is Paragraph para)
-                    {
-                        paragraphIndex = paragraphs.IndexOf(para);
-                        if (paragraphIndex == -1) paragraphIndex = null;
-                    }
+                    paragraphIndexValue = paragraphs.IndexOf(para);
+                    if (paragraphIndexValue == -1) paragraphIndexValue = null;
                 }
-                catch (Exception ex)
-                {
-                    Console.Error.WriteLine($"[WARN] Error reading hyperlink properties: {ex.Message}");
-                }
-
-                hyperlinkList.Add(new
-                {
-                    index,
-                    displayText,
-                    address,
-                    subAddress = string.IsNullOrEmpty(subAddress) ? null : subAddress,
-                    tooltip = string.IsNullOrEmpty(tooltip) ? null : tooltip,
-                    paragraphIndex
-                });
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[WARN] Error reading hyperlink properties: {ex.Message}");
             }
 
-            var result = new
+            hyperlinkList.Add(new
             {
-                count = hyperlinkFields.Count,
-                hyperlinks = hyperlinkList
-            };
+                index,
+                displayText,
+                address,
+                subAddress = string.IsNullOrEmpty(subAddress) ? null : subAddress,
+                tooltip = string.IsNullOrEmpty(tooltip) ? null : tooltip,
+                paragraphIndex = paragraphIndexValue
+            });
+        }
 
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
-        });
+        var result = new
+        {
+            count = hyperlinkFields.Count,
+            hyperlinks = hyperlinkList
+        };
+
+        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
     }
 }

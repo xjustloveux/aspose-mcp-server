@@ -17,17 +17,26 @@
 ## ✨ 特性
 
 ### 核心功能
-- **90 個統一工具** - Word(24)、Excel(25)、PowerPoint(24)、PDF(15)、轉換工具(2) 已整合
+- **88 個統一工具** - Word(24)、Excel(25)、PowerPoint(21)、PDF(15)、轉換(2)、Session(1) 已整合
 - **按需啟用** - 只啟用需要的文檔類型，減少資源佔用
 - **跨平台** - Windows、Linux、macOS (Intel + ARM)，單一可執行檔案
 - **開箱即用** - 預編譯版本無需安裝 .NET Runtime
 - **完整讀寫** - 支援從A文檔讀取格式應用到B文檔
 
+### 傳輸模式
+- **Stdio 模式** (預設) - 標準輸入輸出，適用於本地 MCP 客戶端
+- **SSE 模式** - HTTP Server-Sent Events，適用於網頁應用
+- **WebSocket 模式** - 雙向通訊，適用於即時互動
+
+### 進階功能
+- **Session 管理** - 在記憶體中編輯文件，支援 open/save/close 操作
+- **認證機制** - 可選的 API Key 和 JWT 認證（4 種驗證模式）
+- **追蹤系統** - 結構化日誌、Webhook 通知、Prometheus Metrics
+
 ### 技術特性
-- **MCP 2025-11-25 規範支援** - 完全符合最新 MCP 協議規範，自動工具註解（readonly/destructive）基於命名約定，完整的 JSON-RPC 2.0 錯誤處理
+- **MCP SDK 原生整合** - 使用官方 ModelContextProtocol NuGet 套件
 - **統一字型設定** - 多個工具支援中英文字型分別設定（`fontNameAscii` 和 `fontNameFarEast` 參數）
-- **靈活的授權配置** - 支援總授權或單一組件授權，自動搜尋、環境變數或命令列參數配置，試用模式降級（找不到授權時）
-- **自動工具發現** - 基於命名約定的自動工具註冊系統
+- **靈活的授權配置** - 支援總授權或單一組件授權，自動搜尋、環境變數或命令列參數配置
 - **安全加固** - 全面的路徑驗證、輸入驗證和錯誤處理
 
 ## 📑 目錄
@@ -35,7 +44,14 @@
 **開始使用**
 - [🚀 快速開始](#-快速開始) - 下載、配置、啟動
 - [📦 功能概覽](#-功能概覽) - Word、Excel、PowerPoint、PDF、轉換工具
-- [📋 工具列表](#-工具列表) - 90 個工具的詳細說明
+- [📋 工具列表](#-工具列表) - 88 個工具的詳細說明
+
+**進階配置**
+- [🔌 傳輸模式](#-傳輸模式) - Stdio、SSE、WebSocket 配置
+- [📂 Session 管理](#-session-管理) - 文件記憶體編輯、DocumentSessionTool
+- [🔐 認證機制](#-認證機制) - API Key、JWT 認證配置
+- [📡 追蹤系統](#-追蹤系統) - 日誌、Webhook、Prometheus Metrics
+- [🚢 部署指南](#-部署指南) - Docker、Kubernetes、IIS 部署
 
 **開發與技術**
 - [🛠️ 開發者指南](#️-開發者指南) - 倉庫結構、本地開發、多平台構建、運行測試
@@ -114,7 +130,10 @@
 - `--powerpoint` / `--ppt` - PowerPoint 工具（自動包含轉換功能）
 - `--pdf` - PDF 工具
 - `--all` - 所有工具
+- `--session-enabled` - 啟用 Session 管理（`document_session` 工具）
 - `--license:路徑` 或 `--license=路徑` - 指定授權檔案路徑（可選）
+
+> **工具過濾**：只有啟用的工具類別會出現在 MCP 工具列表中。例如使用 `--word` 時，只會顯示 `word_*` 相關工具。
 
 **轉換功能說明**：
 - 啟用任何文檔工具（`--word`、`--excel`、`--ppt`）時，自動包含 `convert_to_pdf`（轉換為PDF）
@@ -145,13 +164,13 @@
 **格式設定**：單元格格式、條件格式、樣式  
 **高級功能**：圖表、公式、資料透視表、凍結窗格、超連結、圖片、頁面設定、陣列公式、列印設定、工作表外觀設定、分組、命名範圍
 
-### PowerPoint (24個工具)
+### PowerPoint (21個工具)
 
-**檔案操作**：創建、讀取、轉換、合併、拆分  
-**投影片管理**：添加、刪除、移動、複製、隱藏、設定版面配置、設定大小  
-**內容編輯**：文字、圖片、表格、圖表、形狀、SmartArt、媒體（音訊/影片）  
-**格式設定**：文字格式、形狀格式、背景、頁眉頁腳、主題  
-**高級功能**：動畫、轉場、備註、章節、超連結、文檔屬性、保護
+**檔案操作**：創建、讀取、轉換、合併、拆分
+**投影片管理**：添加、刪除、移動、複製、隱藏、設定版面配置、設定大小
+**內容編輯**：文字、圖片、表格、圖表、形狀、SmartArt、媒體（音訊/影片）
+**格式設定**：文字格式、形狀格式、背景、頁眉頁腳、主題
+**高級功能**：動畫、轉場、備註、章節、超連結、文檔屬性
 
 ### PDF (15個工具)
 
@@ -166,6 +185,409 @@
 - `convert_to_pdf` - 將任何文檔轉換為PDF（啟用任何文檔工具時自動可用）
 - `convert_document` - 跨格式轉換（啟用兩個或以上文檔工具時自動可用）
 
+## 🔌 傳輸模式
+
+Aspose MCP Server 支援三種傳輸模式，可透過命令列參數或環境變數配置：
+
+### Stdio 模式（預設）
+
+標準輸入輸出模式，適用於本地 MCP 客戶端整合：
+
+```bash
+# 預設使用 Stdio 模式
+AsposeMcpServer.exe --word
+```
+
+### SSE 模式
+
+HTTP Server-Sent Events 模式，適用於網頁應用：
+
+```bash
+# 命令列參數
+AsposeMcpServer.exe --sse --port 3000 --word
+
+# 或使用環境變數
+set ASPOSE_TRANSPORT=sse
+set ASPOSE_PORT=3000
+AsposeMcpServer.exe --word
+```
+
+連接端點：`http://localhost:3000/mcp`
+
+### WebSocket 模式
+
+雙向通訊模式，適用於即時互動應用：
+
+```bash
+# 命令列參數
+AsposeMcpServer.exe --ws --port 3000 --word
+
+# 或使用環境變數
+set ASPOSE_TRANSPORT=ws
+set ASPOSE_PORT=3000
+AsposeMcpServer.exe --word
+```
+
+連接端點：`ws://localhost:3000/ws`
+
+### 傳輸模式環境變數
+
+| 變數 | 說明 | 預設值 |
+|------|------|--------|
+| `ASPOSE_TRANSPORT` | 傳輸模式 (stdio/sse/ws) | stdio |
+| `ASPOSE_PORT` | 監聽埠號 | 3000 |
+| `ASPOSE_HOST` | 監聽位址 | localhost |
+| `ASPOSE_TOOLS` | 啟用的工具 (all 或 word,excel,pdf,ppt) | all |
+
+> **注意**: Docker/Kubernetes 部署時需設定 `ASPOSE_HOST=0.0.0.0` 以便容器外部可以訪問。
+
+## 📂 Session 管理
+
+Session 管理功能允許在記憶體中編輯文件，避免頻繁的磁碟讀寫操作。
+
+> **注意**：Session 功能預設停用。必須使用 `--session-enabled` 參數或設定 `ASPOSE_SESSION_ENABLED=true` 環境變數才會啟用 `document_session` 工具。
+
+### DocumentSessionTool
+
+使用 `document_session` 工具管理文件 Session：
+
+```
+# 開啟文件到記憶體
+document_session(operation="open", path="document.docx", sessionId="my-session")
+
+# 在記憶體中編輯（使用其他工具時指定 sessionId）
+word_text(operation="add", sessionId="my-session", text="新增內容")
+
+# 儲存變更到磁碟
+document_session(operation="save", sessionId="my-session")
+
+# 另存為新檔案
+document_session(operation="save_as", sessionId="my-session", outputPath="new-document.docx")
+
+# 關閉 Session（不儲存）
+document_session(operation="close", sessionId="my-session")
+
+# 列出所有 Session
+document_session(operation="list")
+```
+
+### Session 操作
+
+| 操作 | 說明 |
+|------|------|
+| `open` | 開啟文件到記憶體 Session |
+| `save` | 儲存 Session 變更到原始檔案 |
+| `close` | 關閉 Session（可選擇儲存或捨棄變更） |
+| `list` | 列出所有活動 Session |
+| `status` | 取得特定 Session 狀態 |
+
+### 暫存檔操作
+
+當 Session 因斷線或超時而中斷時，變更會儲存到暫存檔。使用以下操作管理暫存檔：
+
+| 操作 | 說明 |
+|------|------|
+| `list_temp` | 列出可恢復的暫存檔 |
+| `recover` | 恢復暫存檔到原始路徑或指定路徑 |
+| `delete_temp` | 刪除特定暫存檔 |
+| `cleanup` | 清理過期暫存檔 |
+| `temp_stats` | 取得暫存檔統計資訊 |
+
+**暫存檔恢復範例：**
+```
+# 列出可恢復的暫存檔
+document_session(operation="list_temp")
+
+# 恢復到原始路徑
+document_session(operation="recover", sessionId="sess_abc123")
+
+# 恢復到指定路徑
+document_session(operation="recover", sessionId="sess_abc123", outputPath="recovered.docx")
+```
+
+### Session 配置
+
+**環境變數：**
+
+| 變數 | 說明 | 預設值 |
+|------|------|--------|
+| `ASPOSE_SESSION_ENABLED` | 啟用 Session 管理 | false |
+| `ASPOSE_SESSION_MAX` | 最大 Session 數 | 10 |
+| `ASPOSE_SESSION_TIMEOUT` | 閒置超時（分鐘） | 30 |
+| `ASPOSE_SESSION_MAX_FILE_SIZE_MB` | 最大檔案大小（MB） | 100 |
+| `ASPOSE_SESSION_TEMP_DIR` | 臨時目錄 | 系統臨時目錄 |
+| `ASPOSE_SESSION_TEMP_RETENTION_HOURS` | 暫存檔保留時間（小時） | 24 |
+| `ASPOSE_SESSION_ON_DISCONNECT` | 斷線行為 (SaveToTemp/Discard/KeepInMemory) | SaveToTemp |
+
+**命令行參數：**
+
+| 參數 | 說明 |
+|------|------|
+| `--session-enabled` | 啟用 Session 管理 |
+| `--session-disabled` | 停用 Session 管理 |
+| `--session-max:N` | 最大 Session 數 |
+| `--session-timeout:N` | 閒置超時（分鐘） |
+| `--session-max-file-size:N` | 最大檔案大小（MB） |
+| `--session-temp-dir:path` | 臨時目錄 |
+| `--session-temp-retention-hours:N` | 暫存檔保留時間（小時） |
+| `--session-on-disconnect:behavior` | 斷線行為 |
+
+## 🔐 認證機制
+
+啟用 SSE 或 WebSocket 模式時，可配置認證機制保護 API：
+
+### API Key 認證
+
+支援四種驗證模式：
+
+**Local 模式**（本地驗證）：
+```bash
+set ASPOSE_AUTH_APIKEY_ENABLED=true
+set ASPOSE_AUTH_APIKEY_MODE=local
+set ASPOSE_AUTH_APIKEY_KEYS=key1:tenant1,key2:tenant2
+```
+
+**Gateway 模式**（信任 API Gateway 傳遞的標頭）：
+```bash
+set ASPOSE_AUTH_APIKEY_ENABLED=true
+set ASPOSE_AUTH_APIKEY_MODE=gateway
+# 從 X-API-Key 和 X-Tenant-Id 標頭讀取
+```
+
+**Introspection 模式**（呼叫外部端點驗證）：
+```bash
+set ASPOSE_AUTH_APIKEY_ENABLED=true
+set ASPOSE_AUTH_APIKEY_MODE=introspection
+set ASPOSE_AUTH_APIKEY_INTROSPECTION_URL=https://auth.example.com/validate
+```
+
+**Custom 模式**（自訂驗證邏輯）：
+```bash
+set ASPOSE_AUTH_APIKEY_ENABLED=true
+set ASPOSE_AUTH_APIKEY_MODE=custom
+set ASPOSE_AUTH_APIKEY_CUSTOM_URL=https://auth.example.com/custom
+```
+
+### JWT 認證
+
+支援四種驗證模式：
+
+**Local 模式**（本地驗證 JWT）：
+```bash
+set ASPOSE_AUTH_JWT_ENABLED=true
+set ASPOSE_AUTH_JWT_MODE=local
+set ASPOSE_AUTH_JWT_SECRET=your-256-bit-secret
+set ASPOSE_AUTH_JWT_ISSUER=your-issuer
+set ASPOSE_AUTH_JWT_AUDIENCE=your-audience
+```
+
+**使用 RSA 公鑰驗證**：
+```bash
+set ASPOSE_AUTH_JWT_ENABLED=true
+set ASPOSE_AUTH_JWT_MODE=local
+set ASPOSE_AUTH_JWT_PUBLIC_KEY_PATH=/path/to/public.pem
+```
+
+**Gateway/Introspection/Custom 模式**：與 API Key 類似配置
+
+### 認證配置
+
+**環境變數：**
+
+| 變數 | 說明 | 預設值 |
+|------|------|--------|
+| `ASPOSE_AUTH_APIKEY_ENABLED` | 啟用 API Key 認證 | false |
+| `ASPOSE_AUTH_APIKEY_MODE` | 模式 (local/gateway/introspection/custom) | local |
+| `ASPOSE_AUTH_APIKEY_KEYS` | API Key 列表 (key:tenant,...) | - |
+| `ASPOSE_AUTH_APIKEY_HEADER` | API Key 標頭名稱 | X-API-Key |
+| `ASPOSE_AUTH_APIKEY_TENANT_HEADER` | 租戶 ID 標頭名稱 (Gateway 模式) | X-Tenant-Id |
+| `ASPOSE_AUTH_APIKEY_INTROSPECTION_AUTH` | Introspection 認證標頭值 | - |
+| `ASPOSE_AUTH_APIKEY_CUSTOM_TIMEOUT` | Custom 端點逾時（秒） | 5 |
+| `ASPOSE_AUTH_JWT_ENABLED` | 啟用 JWT 認證 | false |
+| `ASPOSE_AUTH_JWT_MODE` | 模式 (local/gateway/introspection/custom) | local |
+| `ASPOSE_AUTH_JWT_SECRET` | HMAC 密鑰 | - |
+| `ASPOSE_AUTH_JWT_ISSUER` | 預期發行者 | - |
+| `ASPOSE_AUTH_JWT_AUDIENCE` | 預期受眾 | - |
+| `ASPOSE_AUTH_JWT_TENANT_CLAIM` | 租戶 ID Claim 名稱 | tenant_id |
+| `ASPOSE_AUTH_JWT_TENANT_HEADER` | 租戶 ID 標頭名稱 (Gateway 模式) | X-Tenant-Id |
+| `ASPOSE_AUTH_JWT_USER_HEADER` | 使用者 ID 標頭名稱 (Gateway 模式) | X-User-Id |
+| `ASPOSE_AUTH_JWT_CUSTOM_TIMEOUT` | Custom 端點逾時（秒） | 5 |
+| `ASPOSE_RATE_LIMIT` | 每分鐘請求限制 | 0 (無限制) |
+| `ASPOSE_ALLOWED_ORIGINS` | CORS 允許的來源 | - |
+
+**命令行參數：**
+
+| 參數 | 說明 |
+|------|------|
+| `--auth-apikey-enabled` | 啟用 API Key 認證 |
+| `--auth-apikey-disabled` | 停用 API Key 認證 |
+| `--auth-apikey-mode:mode` | API Key 驗證模式 |
+| `--auth-apikey-keys:key1:tenant1,key2:tenant2` | API Key 列表 |
+| `--auth-apikey-header:name` | API Key 標頭名稱 |
+| `--auth-apikey-tenant-header:name` | 租戶 ID 標頭名稱 |
+| `--auth-apikey-introspection-auth:value` | Introspection 認證標頭值 |
+| `--auth-apikey-custom-timeout:N` | Custom 端點逾時（秒） |
+| `--auth-jwt-enabled` | 啟用 JWT 認證 |
+| `--auth-jwt-disabled` | 停用 JWT 認證 |
+| `--auth-jwt-mode:mode` | JWT 驗證模式 |
+| `--auth-jwt-secret:value` | HMAC 密鑰 |
+| `--auth-jwt-issuer:value` | 預期發行者 |
+| `--auth-jwt-audience:value` | 預期受眾 |
+| `--auth-jwt-tenant-claim:name` | 租戶 ID Claim 名稱 |
+| `--auth-jwt-tenant-header:name` | 租戶 ID 標頭名稱 |
+| `--auth-jwt-user-header:name` | 使用者 ID 標頭名稱 |
+| `--auth-jwt-custom-timeout:N` | Custom 端點逾時（秒） |
+| `--rate-limit:N` | 每分鐘請求限制 |
+| `--allowed-origins:origin1,origin2` | CORS 允許的來源 |
+
+## 📡 追蹤系統
+
+追蹤系統提供多種監控和日誌記錄方式：
+
+### 結構化日誌
+
+```bash
+set ASPOSE_LOG_ENABLED=true
+set ASPOSE_LOG_TARGETS=Console,EventLog
+```
+
+支援的日誌目標：
+- `Console` - 輸出到 stderr（遵循 MCP 規範）
+- `EventLog` - Windows 事件日誌（僅限 Windows）
+
+> **注意**：如需將日誌寫入檔案，建議使用外部工具（如 Docker 日誌驅動、systemd journal、IIS stdout 日誌）進行日誌收集。
+
+### Webhook 通知
+
+每次工具呼叫時發送 HTTP POST 通知：
+
+```bash
+set ASPOSE_WEBHOOK_ENABLED=true
+set ASPOSE_WEBHOOK_URL=https://your-server.com/webhook
+```
+
+Webhook 載荷格式：
+```json
+{
+  "timestamp": "2025-01-01T12:00:00Z",
+  "tenantId": "tenant1",
+  "tool": "word_text",
+  "operation": "add",
+  "durationMs": 150,
+  "success": true,
+  "errorMessage": null
+}
+```
+
+### Prometheus Metrics
+
+暴露 `/metrics` 端點供 Prometheus 抓取：
+
+```bash
+set ASPOSE_METRICS_ENABLED=true
+set ASPOSE_METRICS_PATH=/metrics
+```
+
+可用指標：
+- `aspose_mcp_requests_total` - 總請求數（按工具、操作、狀態分類）
+- `aspose_mcp_request_duration_seconds` - 請求處理時間
+
+### 追蹤配置
+
+**環境變數：**
+
+| 變數 | 說明 | 預設值 |
+|------|------|--------|
+| `ASPOSE_LOG_ENABLED` | 啟用日誌 | true |
+| `ASPOSE_LOG_TARGETS` | 日誌目標 (Console,EventLog) | Console |
+| `ASPOSE_WEBHOOK_ENABLED` | 啟用 Webhook | false |
+| `ASPOSE_WEBHOOK_URL` | Webhook URL | - |
+| `ASPOSE_WEBHOOK_TIMEOUT` | Webhook 超時（秒） | 5 |
+| `ASPOSE_METRICS_ENABLED` | 啟用 Metrics | false |
+| `ASPOSE_METRICS_PATH` | Metrics 路徑 | /metrics |
+
+**命令行參數：**
+
+| 參數 | 說明 |
+|------|------|
+| `--log-enabled` | 啟用日誌 |
+| `--log-disabled` | 停用日誌 |
+| `--log-targets:Console,EventLog` | 日誌目標 |
+| `--webhook-enabled` | 啟用 Webhook |
+| `--webhook-disabled` | 停用 Webhook |
+| `--webhook-url:url` | Webhook URL（設定後自動啟用） |
+| `--webhook-timeout:N` | Webhook 超時（秒） |
+| `--metrics-enabled` | 啟用 Metrics |
+| `--metrics-disabled` | 停用 Metrics |
+| `--metrics-path:path` | Metrics 路徑 |
+
+## 🚢 部署指南
+
+Aspose MCP Server 支援多種部署方式：
+
+### Docker 部署
+
+```bash
+# 建置映像
+docker build -t aspose-mcp-server .
+
+# 執行容器
+docker run -d -p 3000:3000 \
+  -v ./license:/app/license:ro \
+  -v ./documents:/app/documents \
+  aspose-mcp-server
+```
+
+使用 Docker Compose：
+```bash
+docker-compose up -d
+```
+
+### Kubernetes 部署
+
+```bash
+# 建立 License Secret
+kubectl create namespace aspose-mcp
+kubectl create secret generic aspose-license \
+  --from-file=Aspose.Total.lic=/path/to/license \
+  -n aspose-mcp
+
+# 使用 Kustomize 部署
+kubectl apply -k deploy/kubernetes/
+```
+
+包含的資源：
+- Deployment（健康檢查、資源限制、安全上下文）
+- Service（ClusterIP + Headless）
+- Ingress（nginx、TLS、WebSocket/SSE 支援）
+- HPA（自動擴展）
+- ConfigMap 和 Secret
+
+### IIS 部署
+
+```powershell
+# 發布應用程式
+dotnet publish -c Release -o ./publish
+
+# 以系統管理員身分執行安裝腳本
+.\deploy\iis\install.ps1 -SiteName "AsposeMcpServer" -Port 3000 -PublishPath "./publish"
+```
+
+前置需求：
+- Windows Server 2019/2022
+- IIS 10.0+
+- .NET 8.0 Hosting Bundle
+- WebSocket 功能已啟用
+
+### Health Check 端點
+
+SSE/WebSocket 模式下提供以下端點：
+- `GET /health` - 健康檢查
+- `GET /ready` - 就緒檢查
+- `GET /metrics` - Prometheus 指標（需啟用）
+
+詳細部署說明請參閱 [部署指南](https://xjustloveux.github.io/aspose-mcp-server/deployment.html)。
+
 ## 🔒 安全特性
 
 ### 路徑驗證
@@ -179,7 +601,7 @@
 - ✅ 字串長度驗證（`SecurityHelper.ValidateStringLength`，最大10000字元）
 
 ### 錯誤處理
-- ✅ 錯誤訊息清理（`McpErrorHandler.SanitizeErrorMessage`），防止資訊洩露
+- ✅ 錯誤訊息清理，防止資訊洩露
 - ✅ 移除檔案路徑、堆疊追蹤等敏感資訊
 - ✅ 生產環境不暴露詳細錯誤資訊
 
@@ -195,27 +617,43 @@
 ### 倉庫結構
 ```
 aspose-mcp-server/
-├── Tools/            📁 工具原始碼
-│   ├── Word/         24 個工具
-│   ├── Excel/        25 個工具
-│   ├── PowerPoint/   24 個工具
-│   ├── PDF/          15 個工具
-│   └── Conversion/   2 個工具
-├── Core/             🔧 MCP 伺服器核心
-│   ├── SecurityHelper.cs      - 安全驗證工具
-│   ├── McpErrorHandler.cs     - 錯誤處理
-│   ├── ToolRegistry.cs        - 工具註冊
-│   └── ServerConfig.cs        - 伺服器配置
-├── Tests/            🧪 單元測試
-│   ├── Word/         24 個測試類
-│   ├── Excel/        25 個測試類
-│   ├── PowerPoint/   24 個測試類
-│   ├── Pdf/          15 個測試類
-│   ├── Conversion/   2 個測試類
-│   └── Helpers/       測試基礎設施
-├── .github/
-│   └── workflows/    🔄 GitHub Actions 工作流程
-└── bin/              ❌ 本地編譯輸出（不在版本控制）
+├── Tools/                 📁 工具原始碼
+│   ├── Word/              24 個工具
+│   ├── Excel/             25 個工具
+│   ├── PowerPoint/        21 個工具
+│   ├── PDF/               15 個工具
+│   ├── Conversion/        2 個工具
+│   └── Session/           1 個工具 (DocumentSessionTool)
+├── Core/                  🔧 MCP 伺服器核心
+│   ├── Helpers/           通用輔助工具（Security、Color、Font、Value、Version）
+│   ├── Security/          認證與追蹤模組（API Key、JWT、Tracking）
+│   ├── Session/           Session 管理模組
+│   ├── Transport/         傳輸層模組（TransportConfig、WebSocketConnectionHandler）
+│   ├── ShapeDetailProviders/ PowerPoint 形狀詳細資訊提供者
+│   ├── ServerConfig.cs    伺服器配置（工具、授權）
+│   └── LicenseManager.cs  授權管理
+├── Tests/                 🧪 單元測試
+│   ├── Core/              核心功能測試
+│   │   ├── Helpers/       Helper 測試
+│   │   ├── Security/      認證測試
+│   │   ├── Session/       Session 測試
+│   │   └── Transport/     傳輸層測試
+│   ├── Tools/             工具測試
+│   │   ├── Word/          24 個測試類
+│   │   ├── Excel/         25 個測試類
+│   │   ├── PowerPoint/    21 個測試類
+│   │   ├── Pdf/           15 個測試類
+│   │   ├── Conversion/    2 個測試類
+│   │   └── Session/       Session 工具測試
+│   └── Helpers/           測試基礎設施
+├── deploy/                🚢 部署配置
+│   ├── Dockerfile         Docker 映像
+│   ├── docker-compose.yml Docker Compose
+│   ├── deployment.yaml    Kubernetes 部署
+│   └── web.config         IIS 配置
+├── docs/                  📚 GitHub Pages 文檔
+├── .github/workflows/     🔄 GitHub Actions 工作流程
+└── bin/                   ❌ 本地編譯輸出（不在版本控制）
 ```
 
 ### 本地開發
@@ -226,13 +664,13 @@ git clone https://github.com/xjustloveux/aspose-mcp-server.git
 cd aspose-mcp-server
 
 # 編譯 Release 版本
-pwsh build.ps1 --configuration Release
+pwsh deploy/build.ps1 --configuration Release
 
 # 發布 Windows 版本
-pwsh publish.ps1 -Windows
+pwsh deploy/publish.ps1 -Windows
 
 # 發布所有平台
-pwsh publish.ps1 -All
+pwsh deploy/publish.ps1 -All
 ```
 
 ### 多平台構建
@@ -240,19 +678,19 @@ pwsh publish.ps1 -All
 **本地構建：**
 ```bash
 # Windows
-pwsh publish.ps1 -Windows
+pwsh deploy/publish.ps1 -Windows
 
 # Linux
-pwsh publish.ps1 -Linux
+pwsh deploy/publish.ps1 -Linux
 
 # macOS (Intel + ARM)
-pwsh publish.ps1 -MacOS
+pwsh deploy/publish.ps1 -MacOS
 
 # 所有平台
-pwsh publish.ps1 -All
+pwsh deploy/publish.ps1 -All
 
 # 清理後構建
-pwsh publish.ps1 -All -Clean
+pwsh deploy/publish.ps1 -All -Clean
 ```
 
 **構建產物位置：**
@@ -268,8 +706,8 @@ pwsh publish.ps1 -All -Clean
 本專案包含完整的單元測試套件，使用 xUnit 測試框架。推薦使用 `test.ps1` 腳本運行測試，它提供了 UTF-8 編碼支援和便捷的參數選項。
 
 **測試統計：**
-- **測試類**: 90 個測試類
-- **測試用例**: 683 個測試用例
+- **測試類**: 100+ 個測試類（含 Session、Security、Helpers 測試）
+- **測試用例**: 2,100+ 個測試用例
 - **測試框架**: xUnit 2.9.2
 
 **運行測試：**
@@ -313,11 +751,12 @@ pwsh test.ps1 -Verbose -Coverage -Filter "FullyQualifiedName~Word"
 - `-SkipLicense` - 跳過授權載入，強制使用評估模式
 
 **測試結構：**
-- `Tests/Word/` - Word 工具測試（24 個測試類）
-- `Tests/Excel/` - Excel 工具測試（25 個測試類）
-- `Tests/PowerPoint/` - PowerPoint 工具測試（24 個測試類）
-- `Tests/Pdf/` - PDF 工具測試（15 個測試類）
-- `Tests/Conversion/` - 轉換工具測試（2 個測試類）
+- `Tests/Core/` - 核心功能測試（Helpers、Security、Session）
+- `Tests/Tools/Word/` - Word 工具測試（24 個測試類）
+- `Tests/Tools/Excel/` - Excel 工具測試（25 個測試類）
+- `Tests/Tools/PowerPoint/` - PowerPoint 工具測試（21 個測試類）
+- `Tests/Tools/Pdf/` - PDF 工具測試（15 個測試類）
+- `Tests/Tools/Conversion/` - 轉換工具測試（2 個測試類）
 - `Tests/Helpers/` - 測試基礎設施（TestBase、WordTestBase、ExcelTestBase、PdfTestBase）
 
 **CI/CD 集成：**
@@ -376,7 +815,7 @@ pwsh code-quality.ps1 -CleanupCode -InspectCode
 - `word_paragraph` - 插入、刪除、編輯段落格式（7個操作：insert, delete, edit, get, get_format, copy_format, merge）
 - `word_table` - 添加、編輯、刪除表格，插入/刪除行列，合併/拆分單元格（17個操作：add_table, edit_table_format, delete_table, get_tables, insert_row, delete_row, insert_column, delete_column, merge_cells, split_cell, edit_cell_format, move_table, copy_table, get_table_structure, set_table_border, set_column_width, set_row_height）
 - `word_image` - 添加、編輯、刪除、替換圖片，提取圖片（6個操作：add, edit, delete, get, replace, extract）
-- `word_shape` - 添加線條、文字框、圖表、形狀管理（9個操作：add_line, add_textbox, get_textboxes, edit_textbox_content, set_textbox_border, add_chart, add, get, delete）
+- `word_shape` - 添加線條、文字框、圖表、形狀管理，支援邊框樣式：solid, dash, dot, dashDot, dashDotDot, roundDot（9個操作：add_line, add_textbox, get_textboxes, edit_textbox_content, set_textbox_border, add_chart, add, get, delete）
 - `word_list` - 添加、編輯、刪除清單項目，重新編號、轉換為清單（8個操作：add_list, add_item, delete_item, edit_item, set_format, get_format, restart_numbering, convert_to_list）
 
 **格式設定 (4)**
@@ -447,7 +886,7 @@ pwsh code-quality.ps1 -CleanupCode -InspectCode
 - `excel_properties` - 獲取、設定工作簿/工作表屬性（5個操作：get_workbook_properties, set_workbook_properties, get_sheet_properties, edit_sheet_properties, get_sheet_info）
 - `excel_get_cell_address` - 單元格地址格式轉換（A1 ↔ 行列索引）
 
-### PowerPoint 演示文稿處理 (24 個工具)
+### PowerPoint 演示文稿處理 (21 個工具)
 
 **檔案操作 (1)**
 - `ppt_file_operations` - 創建、轉換、合併演示文稿、拆分演示文稿（4個操作：create, convert, merge, split）
@@ -457,32 +896,29 @@ pwsh code-quality.ps1 -CleanupCode -InspectCode
 
 **內容編輯 (5)**
 - `ppt_text` - 添加、編輯、替換文字（3個操作：add, edit, replace）
-- `ppt_image` - 添加、編輯、刪除圖片（2個操作：add, edit）
+- `ppt_image` - 添加、編輯、刪除、獲取圖片，匯出投影片為圖片、提取圖片（6個操作：add, edit, delete, get, export_slides, extract）
 - `ppt_table` - 添加、編輯、刪除表格，插入/刪除行列（9個操作：add, edit, delete, get_content, insert_row, insert_column, delete_row, delete_column, edit_cell）
 - `ppt_chart` - 添加、編輯、刪除、獲取圖表，更新圖表資料（5個操作：add, edit, delete, get_data, update_data）
-- `ppt_shape` - 添加、編輯、刪除、獲取形狀，設定形狀格式（4個操作：edit, delete, get, get_details）
+- `ppt_shape` - 統一形狀管理工具（12個操作：get, get_details, delete, edit, set_format, clear_format, group, ungroup, copy, reorder, align, flip）
 
-**格式設定 (4)**
+**格式設定 (2)**
 - `ppt_text_format` - 批次格式化文字
-- `ppt_shape_format` - 設定形狀位置、尺寸、旋轉、填充、線條（2個操作：set, get）
 - `ppt_background` - 設定投影片背景（顏色/圖片）（2個操作：set, get）
-- `ppt_header_footer` - 設定頁眉頁尾、頁碼、日期（4個操作：set_header, set_footer, batch_set, set_slide_numbering）
 
 **高級功能 (8)**
-- `ppt_animation` - 添加、編輯、刪除動畫（3個操作：add, edit, delete）
+- `ppt_animation` - 添加、編輯、刪除、獲取動畫（4個操作：add, edit, delete, get）
 - `ppt_transition` - 設定、刪除、獲取轉場效果（3個操作：set, get, delete）
 - `ppt_hyperlink` - 添加、編輯、刪除、獲取超連結（4個操作：add, edit, delete, get）
 - `ppt_media` - 添加、刪除音訊/影片，設定播放設定（5個操作：add_audio, delete_audio, add_video, delete_video, set_playback）
 - `ppt_smart_art` - 添加、管理 SmartArt 節點（2個操作：add, manage_nodes）
 - `ppt_section` - 添加、重新命名、刪除章節（4個操作：add, rename, delete, get）
-- `ppt_notes` - 添加、編輯、獲取、清空講者備註（4個操作：add, edit, get, clear）
+- `ppt_notes` - 設定、獲取、清空講者備註，設定頁首頁尾（4個操作：set, get, clear, set_header_footer）
 - `ppt_layout` - 設定投影片版面配置，批次應用版面配置（6個操作：set, get_layouts, get_masters, apply_master, apply_layout_range, apply_theme）
 
-**操作與設定 (5)**
-- `ppt_shape_operations` - 對齊形狀、調整順序、組合/取消組合、翻轉形狀、複製形狀（6個操作：group, ungroup, copy, reorder, align, flip）
-- `ppt_image_operations` - 替換圖片、提取圖片、匯出投影片為圖片（3個操作：export_slides, extract_images, replace_with_compression）
-- `ppt_data_operations` - 批次替換文字、批次設定頁眉頁尾（3個操作：get_statistics, get_content, get_slide_details）
-- `ppt_slide_settings` - 設定投影片大小、方向、編號（2個操作：set_size, set_orientation）
+**頁面與設定 (4)**
+- `ppt_page_setup` - 設定投影片大小、方向、頁尾、頁碼（4個操作：set_size, set_orientation, set_footer, set_slide_numbering）
+- `ppt_handout` - 設定講義頁首頁尾（1個操作：set_header_footer）
+- `ppt_data_operations` - 獲取統計資訊、內容、投影片詳情（3個操作：get_statistics, get_content, get_slide_details）
 - `ppt_properties` - 獲取、設定文檔屬性（2個操作：get, set）
 
 ### PDF 檔案處理 (15 個工具)
@@ -713,38 +1149,40 @@ A: 檢查：
 A: 檢查 MCP 客戶端的錯誤日誌。生產環境中，詳細錯誤資訊會被清理以防止資訊洩露。開發環境（DEBUG 模式）會顯示完整錯誤資訊。
 
 ### Q: 可以自訂工具嗎？
-A: 可以。工具基於命名約定自動發現，您可以：
-1. 創建新的工具類（實現 `IAsposeTool` 介面）
+A: 可以。工具使用 MCP SDK 的 `[McpServerToolType]` 屬性自動發現：
+1. 創建新的工具類並添加 `[McpServerToolType]` 屬性
 2. 遵循命名約定（`*Tool.cs`）
 3. 放在對應的 `Tools/` 子目錄中
-4. 工具會自動註冊
+4. 工具會透過 MCP SDK 自動註冊
 
 ## 🔗 相關資源
 
 **官方文檔：**
 - [Aspose.Total for .NET](https://products.aspose.com/total/net/)
-- [Model Context Protocol](https://modelcontextprotocol.io/)
-- [MCP Specification](https://spec.modelcontextprotocol.io/)
+- [Model Context Protocol](https://modelcontextprotocol.io/) - MCP 官方網站與規範
+- [.NET MCP SDK](https://github.com/modelcontextprotocol/csharp-sdk) - 官方 C# SDK（本專案使用）
 
 **MCP 客戶端：**
-- [Claude Desktop](https://claude.ai/desktop) - Anthropic 官方 MCP 客戶端
+- [Claude Desktop](https://claude.ai/download) - Anthropic 官方 MCP 客戶端
 - [Cursor](https://cursor.sh/) - AI 程式碼編輯器，支援 MCP
 - [Continue](https://continue.dev/) - VS Code 擴展，支援 MCP
 
 **專案資源：**
 - [GitHub Repository](https://github.com/xjustloveux/aspose-mcp-server)
+- [GitHub Pages 文檔](https://xjustloveux.github.io/aspose-mcp-server/) - 完整文檔網站
 - [配置範例](config_example.json) - 詳細的 MCP 客戶端配置範例
-- [開發者文檔](docs/developers.html) - 開發者指南和 API 文檔
-- [工具列表](docs/tools.html) - 完整的工具列表和使用說明
 
 ## 📊 專案統計
 
-- **總工具數：** 90 個
-- **程式碼行數：** ~15,000+ 行
-- **測試類數：** 90 個測試類
-- **測試用例數：** 683 個測試用例
+- **總工具數：** 88 個（Word 24、Excel 25、PowerPoint 21、PDF 15、轉換 2、Session 1）
+- **程式碼行數：** ~40,000+ 行
+- **測試類數：** 100+ 個測試類
+- **測試用例數：** 2,100+ 個測試用例
 - **測試框架：** xUnit 2.9.2
-- **CI/CD：** GitHub Actions 自動測試
+- **CI/CD：** GitHub Actions 自動測試與多平台構建
 - **支援格式：** Word、Excel、PowerPoint、PDF 及其相互轉換
+- **傳輸模式：** Stdio、SSE、WebSocket
+- **認證機制：** API Key（4 種模式）、JWT（4 種模式）
+- **部署方式：** Docker、Kubernetes、IIS
 - **目標框架：** .NET 8.0
 - **授權：** 需要 Aspose 商業授權（見上方授權章節）

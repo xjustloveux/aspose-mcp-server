@@ -115,3 +115,4 @@ $RECYCLE.BIN/
 .Trash-*
 Tests/TestResults/
 .claude/
+.backup/

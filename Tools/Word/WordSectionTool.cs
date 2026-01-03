@@ -1,7 +1,8 @@
+using System.ComponentModel;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using Aspose.Words;
-using AsposeMcpServer.Core;
+using AsposeMcpServer.Core.Session;
+using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Word;
 
@@ -9,12 +10,25 @@ namespace AsposeMcpServer.Tools.Word;
 ///     Unified tool for managing Word sections (insert, delete, get info)
 ///     Merges: WordInsertSectionTool, WordDeleteSectionTool, WordGetSectionsTool, WordGetSectionsInfoTool
 /// </summary>
-public class WordSectionTool : IAsposeTool
+[McpServerToolType]
+public class WordSectionTool
 {
     /// <summary>
-    ///     Gets the description of the tool and its usage examples
+    ///     Session manager for document session operations
     /// </summary>
-    public string Description => @"Manage Word document sections. Supports 3 operations: insert, delete, get.
+    private readonly DocumentSessionManager? _sessionManager;
+
+    /// <summary>
+    ///     Initializes a new instance of the WordSectionTool class
+    /// </summary>
+    /// <param name="sessionManager">Optional session manager for in-memory document operations</param>
+    public WordSectionTool(DocumentSessionManager? sessionManager = null)
+    {
+        _sessionManager = sessionManager;
+    }
+
+    [McpServerTool(Name = "word_section")]
+    [Description(@"Manage Word document sections. Supports 3 operations: insert, delete, get.
 
 Usage examples:
 - Insert section: word_section(operation='insert', path='doc.docx', sectionBreakType='NextPage', insertAtParagraphIndex=5)
@@ -24,144 +38,95 @@ Usage examples:
 Notes:
 - Section break types: NextPage (new page), Continuous (same page), EvenPage, OddPage
 - IMPORTANT: Deleting a section will also delete all content within that section (paragraphs, tables, images)
-- Use 'get' operation first to see section indices and their content statistics before deleting";
-
-    /// <summary>
-    ///     Gets the JSON schema defining the input parameters for the tool
-    /// </summary>
-    public object InputSchema => new
+- Use 'get' operation first to see section indices and their content statistics before deleting")]
+    public string Execute(
+        [Description("Operation: insert, delete, get")]
+        string operation,
+        [Description("Document file path (required if no sessionId)")]
+        string? path = null,
+        [Description("Session ID for in-memory editing")]
+        string? sessionId = null,
+        [Description("Output file path (file mode only)")]
+        string? outputPath = null,
+        [Description("Section break type: NextPage, Continuous, EvenPage, OddPage (for insert)")]
+        string? sectionBreakType = null,
+        [Description("Paragraph index to insert section break after (0-based, for insert)")]
+        int? insertAtParagraphIndex = null,
+        [Description("Section index (0-based, for insert/delete/get)")]
+        int? sectionIndex = null,
+        [Description("Array of section indices to delete (0-based, overrides sectionIndex, for delete)")]
+        int[]? sectionIndices = null)
     {
-        type = "object",
-        properties = new
-        {
-            operation = new
-            {
-                type = "string",
-                description = @"Operation to perform.
-- 'insert': Insert a section break (required params: path, sectionBreakType)
-- 'delete': Delete a section (required params: path, sectionIndex)
-- 'get': Get all sections info (required params: path)",
-                @enum = new[] { "insert", "delete", "get" }
-            },
-            path = new
-            {
-                type = "string",
-                description = "Document file path (required for all operations)"
-            },
-            outputPath = new
-            {
-                type = "string",
-                description = "Output file path (if not provided, overwrites input, for insert/delete operations)"
-            },
-            sectionBreakType = new
-            {
-                type = "string",
-                description =
-                    "Section break type: 'NextPage', 'Continuous', 'EvenPage', 'OddPage' (required for insert operation)",
-                @enum = new[] { "NextPage", "Continuous", "EvenPage", "OddPage" }
-            },
-            insertAtParagraphIndex = new
-            {
-                type = "number",
-                description =
-                    "Paragraph index to insert section break after (0-based, optional, default: end of document, for insert operation)"
-            },
-            sectionIndex = new
-            {
-                type = "number",
-                description = "Section index (0-based, required for delete operation, optional for get operation)"
-            },
-            sectionIndices = new
-            {
-                type = "array",
-                items = new { type = "number" },
-                description =
-                    "Array of section indices to delete (0-based, optional, overrides sectionIndex, for delete operation)"
-            }
-        },
-        required = new[] { "operation", "path" }
-    };
-
-    /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments
-    /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters</param>
-    /// <returns>Result message as a string</returns>
-    /// <exception cref="ArgumentException">Thrown when operation is unknown or required parameters are missing.</exception>
-    public async Task<string> ExecuteAsync(JsonObject? arguments)
-    {
-        var operation = ArgumentHelper.GetString(arguments, "operation");
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetStringNullable(arguments, "outputPath") ?? path;
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
 
         return operation.ToLower() switch
         {
-            "insert" => await InsertSectionAsync(path, outputPath, arguments),
-            "delete" => await DeleteSectionAsync(path, outputPath, arguments),
-            "get" => await GetSectionsAsync(path, arguments),
+            "insert" => InsertSection(ctx, outputPath, sectionBreakType, insertAtParagraphIndex, sectionIndex),
+            "delete" => DeleteSection(ctx, outputPath, sectionIndex, sectionIndices),
+            "get" => GetSections(ctx, sectionIndex),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
 
     /// <summary>
-    ///     Inserts a section break into the document at specified position
+    ///     Inserts a section break into the document at specified position.
     /// </summary>
-    /// <param name="path">Source document file path</param>
-    /// <param name="outputPath">Output document file path</param>
-    /// <param name="arguments">JSON arguments containing sectionBreakType, optional insertAtParagraphIndex, sectionIndex</param>
-    /// <returns>Success message with break type and output path</returns>
-    /// <exception cref="ArgumentException">Thrown when sectionIndex or insertAtParagraphIndex is out of range</exception>
-    private Task<string> InsertSectionAsync(string path, string outputPath, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="sectionBreakType">The type of section break to insert.</param>
+    /// <param name="insertAtParagraphIndex">The paragraph index to insert the section break after.</param>
+    /// <param name="sectionIndex">The section index containing the target paragraph.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when sectionBreakType is null or empty, or indices are invalid.</exception>
+    private static string InsertSection(DocumentContext<Document> ctx, string? outputPath, string? sectionBreakType,
+        int? insertAtParagraphIndex, int? sectionIndex)
     {
-        return Task.Run(() =>
+        if (string.IsNullOrEmpty(sectionBreakType))
+            throw new ArgumentException("sectionBreakType is required for insert operation");
+
+        var doc = ctx.Document;
+        var builder = new DocumentBuilder(doc);
+
+        var breakType = GetSectionStart(sectionBreakType);
+
+        if (insertAtParagraphIndex.HasValue && insertAtParagraphIndex.Value != -1)
         {
-            var sectionBreakType = ArgumentHelper.GetString(arguments, "sectionBreakType");
-            var insertAtParagraphIndex = ArgumentHelper.GetIntNullable(arguments, "insertAtParagraphIndex");
-            var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
+            var actualSectionIndex = sectionIndex ?? 0;
+            if (actualSectionIndex < 0 || actualSectionIndex >= doc.Sections.Count)
+                throw new ArgumentException(
+                    $"sectionIndex must be between 0 and {doc.Sections.Count - 1}, got: {actualSectionIndex}");
 
-            var doc = new Document(path);
-            var builder = new DocumentBuilder(doc);
+            var section = doc.Sections[actualSectionIndex];
+            var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
 
-            var breakType = GetSectionStart(sectionBreakType);
+            if (paragraphs.Count == 0)
+                throw new ArgumentException("Section has no paragraphs to insert section break after");
 
-            if (insertAtParagraphIndex.HasValue && insertAtParagraphIndex.Value != -1)
-            {
-                var actualSectionIndex = sectionIndex ?? 0;
-                if (actualSectionIndex < 0 || actualSectionIndex >= doc.Sections.Count)
-                    throw new ArgumentException(
-                        $"sectionIndex must be between 0 and {doc.Sections.Count - 1}, got: {actualSectionIndex}");
+            if (insertAtParagraphIndex.Value < 0 || insertAtParagraphIndex.Value >= paragraphs.Count)
+                throw new ArgumentException(
+                    $"insertAtParagraphIndex must be between 0 and {paragraphs.Count - 1}, got: {insertAtParagraphIndex.Value}");
 
-                var section = doc.Sections[actualSectionIndex];
-                var paragraphs = section.Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
+            builder.MoveTo(paragraphs[insertAtParagraphIndex.Value]);
+        }
+        else
+        {
+            builder.MoveToDocumentEnd();
+        }
 
-                if (paragraphs.Count == 0)
-                    throw new ArgumentException("Section has no paragraphs to insert section break after");
+        builder.InsertBreak(BreakType.SectionBreakContinuous);
+        builder.CurrentSection.PageSetup.SectionStart = breakType;
 
-                if (insertAtParagraphIndex.Value < 0 || insertAtParagraphIndex.Value >= paragraphs.Count)
-                    throw new ArgumentException(
-                        $"insertAtParagraphIndex must be between 0 and {paragraphs.Count - 1}, got: {insertAtParagraphIndex.Value}");
-
-                builder.MoveTo(paragraphs[insertAtParagraphIndex.Value]);
-            }
-            else
-            {
-                builder.MoveToDocumentEnd();
-            }
-
-            builder.InsertBreak(BreakType.SectionBreakContinuous);
-            builder.CurrentSection.PageSetup.SectionStart = breakType;
-
-            doc.Save(outputPath);
-            return $"Section break inserted ({sectionBreakType}): {outputPath}";
-        });
+        ctx.Save(outputPath);
+        var result = $"Section break inserted ({sectionBreakType})\n";
+        result += ctx.GetOutputMessage(outputPath);
+        return result;
     }
 
     /// <summary>
-    ///     Converts section break type string to SectionStart enum
+    ///     Converts section break type string to SectionStart enum.
     /// </summary>
-    /// <param name="sectionBreakType">Break type string: NextPage, Continuous, EvenPage, OddPage</param>
-    /// <returns>Corresponding SectionStart enum value, defaults to NewPage</returns>
+    /// <param name="sectionBreakType">The section break type string.</param>
+    /// <returns>The corresponding SectionStart enum value.</returns>
     private static SectionStart GetSectionStart(string sectionBreakType)
     {
         return sectionBreakType switch
@@ -175,107 +140,99 @@ Notes:
     }
 
     /// <summary>
-    ///     Deletes one or more sections from the document (including all content within)
+    ///     Deletes one or more sections from the document (including all content within).
     /// </summary>
-    /// <param name="path">Source document file path</param>
-    /// <param name="outputPath">Output document file path</param>
-    /// <param name="arguments">JSON arguments containing sectionIndex or sectionIndices array</param>
-    /// <returns>Success message with deleted count, remaining sections, and output path</returns>
-    /// <exception cref="ArgumentException">Thrown when trying to delete the last section or missing parameters</exception>
-    private Task<string> DeleteSectionAsync(string path, string outputPath, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="sectionIndex">The single section index to delete.</param>
+    /// <param name="sectionIndices">The array of section indices to delete.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when no section index is provided or document has only one section.</exception>
+    private static string DeleteSection(DocumentContext<Document> ctx, string? outputPath, int? sectionIndex,
+        int[]? sectionIndices)
     {
-        return Task.Run(() =>
+        var doc = ctx.Document;
+        if (doc.Sections.Count <= 1)
+            throw new ArgumentException("Cannot delete the last section. Document must have at least one section.");
+
+        List<int> sectionsToDelete;
+        if (sectionIndices is { Length: > 0 })
+            sectionsToDelete = sectionIndices.OrderByDescending(s => s).ToList();
+        else if (sectionIndex.HasValue)
+            sectionsToDelete = [sectionIndex.Value];
+        else
+            throw new ArgumentException(
+                "Either sectionIndex or sectionIndices must be provided for delete operation");
+
+        var deletedCount = 0;
+        foreach (var idx in sectionsToDelete)
         {
-            var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
-            var sectionIndicesArray = ArgumentHelper.GetArray(arguments, "sectionIndices", false);
+            if (idx < 0 || idx >= doc.Sections.Count) continue;
+            if (doc.Sections.Count <= 1) break;
+            doc.Sections.RemoveAt(idx);
+            deletedCount++;
+        }
 
-            var doc = new Document(path);
-            if (doc.Sections.Count <= 1)
-                throw new ArgumentException("Cannot delete the last section. Document must have at least one section.");
-
-            List<int> sectionsToDelete;
-            if (sectionIndicesArray is { Count: > 0 })
-                sectionsToDelete = sectionIndicesArray.Select(s => s?.GetValue<int>()).Where(s => s.HasValue)
-                    .Select(s => s!.Value).OrderByDescending(s => s).ToList();
-            else if (sectionIndex.HasValue)
-                sectionsToDelete = [sectionIndex.Value];
-            else
-                throw new ArgumentException(
-                    "Either sectionIndex or sectionIndices must be provided for delete operation");
-
-            var deletedCount = 0;
-            foreach (var idx in sectionsToDelete)
-            {
-                if (idx < 0 || idx >= doc.Sections.Count) continue;
-                if (doc.Sections.Count <= 1) break;
-                doc.Sections.RemoveAt(idx);
-                deletedCount++;
-            }
-
-            doc.Save(outputPath);
-            return
-                $"Deleted {deletedCount} section(s) with their content. Remaining sections: {doc.Sections.Count}. Output: {outputPath}";
-        });
+        ctx.Save(outputPath);
+        var result =
+            $"Deleted {deletedCount} section(s) with their content. Remaining sections: {doc.Sections.Count}.\n";
+        result += ctx.GetOutputMessage(outputPath);
+        return result;
     }
 
     /// <summary>
-    ///     Gets section information from the document
+    ///     Gets section information from the document.
     /// </summary>
-    /// <param name="path">Source document file path</param>
-    /// <param name="arguments">JSON arguments containing optional sectionIndex to get specific section</param>
-    /// <returns>JSON formatted string with section details including page setup, content statistics, and headers/footers</returns>
-    /// <exception cref="ArgumentException">Thrown when sectionIndex is out of range</exception>
-    private Task<string> GetSectionsAsync(string path, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="sectionIndex">The specific section index to retrieve, or null for all sections.</param>
+    /// <returns>A JSON string containing section information.</returns>
+    /// <exception cref="ArgumentException">Thrown when section index is out of range.</exception>
+    private static string GetSections(DocumentContext<Document> ctx, int? sectionIndex)
     {
-        return Task.Run(() =>
+        var doc = ctx.Document;
+
+        if (sectionIndex.HasValue)
         {
-            var sectionIndex = ArgumentHelper.GetIntNullable(arguments, "sectionIndex");
+            if (sectionIndex.Value < 0 || sectionIndex.Value >= doc.Sections.Count)
+                throw new ArgumentException(
+                    $"sectionIndex must be between 0 and {doc.Sections.Count - 1}, got: {sectionIndex.Value}");
 
-            var doc = new Document(path);
+            var section = doc.Sections[sectionIndex.Value];
+            var sectionInfo = BuildSectionInfo(section, sectionIndex.Value);
 
-            if (sectionIndex.HasValue)
+            var result = new
             {
-                if (sectionIndex.Value < 0 || sectionIndex.Value >= doc.Sections.Count)
-                    throw new ArgumentException(
-                        $"sectionIndex must be between 0 and {doc.Sections.Count - 1}, got: {sectionIndex.Value}");
+                totalSections = doc.Sections.Count,
+                section = sectionInfo
+            };
 
-                var section = doc.Sections[sectionIndex.Value];
-                var sectionInfo = BuildSectionInfo(section, sectionIndex.Value);
-
-                var result = new
-                {
-                    totalSections = doc.Sections.Count,
-                    section = sectionInfo
-                };
-
-                return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
-            }
-            else
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        }
+        else
+        {
+            List<object> sectionList = [];
+            for (var i = 0; i < doc.Sections.Count; i++)
             {
-                var sectionList = new List<object>();
-                for (var i = 0; i < doc.Sections.Count; i++)
-                {
-                    var section = doc.Sections[i];
-                    sectionList.Add(BuildSectionInfo(section, i));
-                }
-
-                var result = new
-                {
-                    totalSections = doc.Sections.Count,
-                    sections = sectionList
-                };
-
-                return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+                var section = doc.Sections[i];
+                sectionList.Add(BuildSectionInfo(section, i));
             }
-        });
+
+            var result = new
+            {
+                totalSections = doc.Sections.Count,
+                sections = sectionList
+            };
+
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        }
     }
 
     /// <summary>
     ///     Builds section information as a structured object
     /// </summary>
-    /// <param name="section">Section to get information from</param>
-    /// <param name="index">Section index for display</param>
-    /// <returns>Anonymous object with section details</returns>
+    /// <param name="section">The section to extract information from</param>
+    /// <param name="index">The index of the section in the document</param>
+    /// <returns>An object containing section information</returns>
     private static object BuildSectionInfo(Section section, int index)
     {
         var pageSetup = section.PageSetup;
@@ -345,7 +302,7 @@ Notes:
     /// <summary>
     ///     Converts SectionStart enum to human-readable name
     /// </summary>
-    /// <param name="sectionStart">SectionStart enum value</param>
+    /// <param name="sectionStart">The SectionStart enum value</param>
     /// <returns>Human-readable section break type name</returns>
     private static string GetSectionStartName(SectionStart sectionStart)
     {

@@ -7,20 +7,22 @@ namespace AsposeMcpServer.Core.ShapeDetailProviders;
 /// </summary>
 public class GroupShapeDetailProvider : IShapeDetailProvider
 {
+    /// <inheritdoc />
     public string TypeName => "Group";
 
+    /// <inheritdoc />
     public bool CanHandle(IShape shape)
     {
         return shape is IGroupShape;
     }
 
+    /// <inheritdoc />
     public object? GetDetails(IShape shape, IPresentation presentation)
     {
         if (shape is not IGroupShape groupShape)
             return null;
 
-        // Extract child shapes manually since IShapeCollection may not support LINQ Select with index
-        var childShapeList = new List<object>();
+        List<object> childShapeList = [];
         for (var i = 0; i < groupShape.Shapes.Count; i++)
         {
             var s = groupShape.Shapes[i];

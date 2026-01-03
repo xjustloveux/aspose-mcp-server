@@ -1,7 +1,7 @@
-using System.Text.Json.Nodes;
+using System.ComponentModel;
 using Aspose.Slides;
-using Aspose.Slides.Export;
-using AsposeMcpServer.Core;
+using AsposeMcpServer.Core.Session;
+using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.PowerPoint;
 
@@ -9,77 +9,55 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 ///     Tool for managing PowerPoint handout settings (header/footer).
 ///     Note: Handout pages have separate header and footer fields (unlike slides which only have footer).
 /// </summary>
-public class PptHandoutTool : IAsposeTool
+[McpServerToolType]
+public class PptHandoutTool
 {
-    public string Description => @"Manage PowerPoint handout settings. Supports 1 operation: set_header_footer.
+    /// <summary>
+    ///     Session manager for document lifecycle management.
+    /// </summary>
+    private readonly DocumentSessionManager? _sessionManager;
+
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="PptHandoutTool" /> class.
+    /// </summary>
+    /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
+    public PptHandoutTool(DocumentSessionManager? sessionManager = null)
+    {
+        _sessionManager = sessionManager;
+    }
+
+    [McpServerTool(Name = "ppt_handout")]
+    [Description(@"Manage PowerPoint handout settings. Supports 1 operation: set_header_footer.
 
 Note: Handout pages have separate header and footer fields (unlike slides which only have footer).
 Important: Presentation must have a handout master (created via PowerPoint: View > Handout Master).
 
 Usage examples:
-- Set header/footer: ppt_handout(operation='set_header_footer', path='presentation.pptx', headerText='Header', footerText='Footer')";
-
-    public object InputSchema => new
+- Set header/footer: ppt_handout(operation='set_header_footer', path='presentation.pptx', headerText='Header', footerText='Footer')")]
+    public string Execute(
+        [Description("Operation: set_header_footer")]
+        string operation,
+        [Description("Presentation file path (required if no sessionId)")]
+        string? path = null,
+        [Description("Session ID for in-memory editing")]
+        string? sessionId = null,
+        [Description("Output file path (file mode only)")]
+        string? outputPath = null,
+        [Description("Header text for handout pages")]
+        string? headerText = null,
+        [Description("Footer text for handout pages")]
+        string? footerText = null,
+        [Description("Date/time text for handout pages")]
+        string? dateText = null,
+        [Description("Show page number on handout pages (default: true)")]
+        bool showPageNumber = true)
     {
-        type = "object",
-        properties = new
-        {
-            operation = new
-            {
-                type = "string",
-                description = @"Operation to perform.
-- 'set_header_footer': Set header/footer for handout master (required params: path)",
-                @enum = new[] { "set_header_footer" }
-            },
-            path = new
-            {
-                type = "string",
-                description = "Presentation file path (required for all operations)"
-            },
-            headerText = new
-            {
-                type = "string",
-                description = "Header text for handout pages (optional)"
-            },
-            footerText = new
-            {
-                type = "string",
-                description = "Footer text for handout pages (optional)"
-            },
-            dateText = new
-            {
-                type = "string",
-                description = "Date/time text for handout pages (optional)"
-            },
-            showPageNumber = new
-            {
-                type = "boolean",
-                description = "Show page number on handout pages (optional, default: true)"
-            },
-            outputPath = new
-            {
-                type = "string",
-                description = "Output file path (optional, defaults to input path)"
-            }
-        },
-        required = new[] { "operation", "path" }
-    };
-
-    /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments.
-    /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters.</param>
-    /// <returns>Result message as a string.</returns>
-    /// <exception cref="ArgumentException">Thrown when operation is unknown.</exception>
-    public async Task<string> ExecuteAsync(JsonObject? arguments)
-    {
-        var operation = ArgumentHelper.GetString(arguments, "operation");
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path);
 
         return operation.ToLower() switch
         {
-            "set_header_footer" => await SetHandoutHeaderFooterAsync(path, outputPath, arguments),
+            "set_header_footer" => SetHandoutHeaderFooter(ctx, outputPath, headerText, footerText, dateText,
+                showPageNumber),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -88,60 +66,57 @@ Usage examples:
     ///     Sets header and footer for handout master.
     ///     Note: Handout pages have separate header and footer fields (unlike slides which only have footer).
     /// </summary>
-    /// <param name="path">PowerPoint file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="arguments">JSON arguments containing headerText, footerText, dateText, showPageNumber.</param>
-    /// <returns>Success message.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when presentation does not have a handout master slide.</exception>
-    private Task<string> SetHandoutHeaderFooterAsync(string path, string outputPath, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="headerText">The header text.</param>
+    /// <param name="footerText">The footer text.</param>
+    /// <param name="dateText">The date/time text.</param>
+    /// <param name="showPageNumber">Whether to show page numbers.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the presentation does not have a handout master slide.</exception>
+    private static string SetHandoutHeaderFooter(DocumentContext<Presentation> ctx, string? outputPath,
+        string? headerText, string? footerText, string? dateText, bool showPageNumber)
     {
-        return Task.Run(() =>
+        var presentation = ctx.Document;
+
+        var handoutMaster = presentation.MasterHandoutSlideManager.MasterHandoutSlide;
+        if (handoutMaster == null)
+            throw new InvalidOperationException(
+                "Presentation does not have a handout master slide. " +
+                "Please open the presentation in PowerPoint, go to View > Handout Master to create one, then save.");
+
+        var manager = handoutMaster.HeaderFooterManager;
+
+        if (!string.IsNullOrEmpty(headerText))
         {
-            var headerText = ArgumentHelper.GetStringNullable(arguments, "headerText");
-            var footerText = ArgumentHelper.GetStringNullable(arguments, "footerText");
-            var dateText = ArgumentHelper.GetStringNullable(arguments, "dateText");
-            var showPageNumber = ArgumentHelper.GetBool(arguments, "showPageNumber", true);
+            manager.SetHeaderText(headerText);
+            manager.SetHeaderVisibility(true);
+        }
 
-            using var presentation = new Presentation(path);
+        if (!string.IsNullOrEmpty(footerText))
+        {
+            manager.SetFooterText(footerText);
+            manager.SetFooterVisibility(true);
+        }
 
-            // Check if handout master exists
-            var handoutMaster = presentation.MasterHandoutSlideManager.MasterHandoutSlide;
-            if (handoutMaster == null)
-                throw new InvalidOperationException(
-                    "Presentation does not have a handout master slide. " +
-                    "Please open the presentation in PowerPoint, go to View > Handout Master to create one, then save.");
+        if (!string.IsNullOrEmpty(dateText))
+        {
+            manager.SetDateTimeText(dateText);
+            manager.SetDateTimeVisibility(true);
+        }
 
-            var manager = handoutMaster.HeaderFooterManager;
+        manager.SetSlideNumberVisibility(showPageNumber);
 
-            if (!string.IsNullOrEmpty(headerText))
-            {
-                manager.SetHeaderText(headerText);
-                manager.SetHeaderVisibility(true);
-            }
+        ctx.Save(outputPath);
 
-            if (!string.IsNullOrEmpty(footerText))
-            {
-                manager.SetFooterText(footerText);
-                manager.SetFooterVisibility(true);
-            }
+        List<string> settings = [];
+        if (!string.IsNullOrEmpty(headerText)) settings.Add("header");
+        if (!string.IsNullOrEmpty(footerText)) settings.Add("footer");
+        if (!string.IsNullOrEmpty(dateText)) settings.Add("date");
+        settings.Add(showPageNumber ? "page number shown" : "page number hidden");
 
-            if (!string.IsNullOrEmpty(dateText))
-            {
-                manager.SetDateTimeText(dateText);
-                manager.SetDateTimeVisibility(true);
-            }
-
-            manager.SetSlideNumberVisibility(showPageNumber);
-
-            presentation.Save(outputPath, SaveFormat.Pptx);
-
-            var settings = new List<string>();
-            if (!string.IsNullOrEmpty(headerText)) settings.Add("header");
-            if (!string.IsNullOrEmpty(footerText)) settings.Add("footer");
-            if (!string.IsNullOrEmpty(dateText)) settings.Add("date");
-            settings.Add(showPageNumber ? "page number shown" : "page number hidden");
-
-            return $"Handout master header/footer updated ({string.Join(", ", settings)}). Output: {outputPath}";
-        });
+        var result = $"Handout master header/footer updated ({string.Join(", ", settings)}). ";
+        result += ctx.GetOutputMessage(outputPath);
+        return result;
     }
 }

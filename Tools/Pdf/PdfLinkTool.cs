@@ -1,281 +1,285 @@
+using System.ComponentModel;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
-using AsposeMcpServer.Core;
+using AsposeMcpServer.Core.Session;
+using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Pdf;
 
 /// <summary>
 ///     Tool for managing links in PDF documents (add, delete, edit, get)
 /// </summary>
-public class PdfLinkTool : IAsposeTool
+[McpServerToolType]
+public class PdfLinkTool
 {
-    public string Description => @"Manage links in PDF documents. Supports 4 operations: add, delete, edit, get.
+    /// <summary>
+    ///     The document session manager for managing in-memory document sessions.
+    /// </summary>
+    private readonly DocumentSessionManager? _sessionManager;
+
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="PdfLinkTool" /> class.
+    /// </summary>
+    /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
+    public PdfLinkTool(DocumentSessionManager? sessionManager = null)
+    {
+        _sessionManager = sessionManager;
+    }
+
+    [McpServerTool(Name = "pdf_link")]
+    [Description(@"Manage links in PDF documents. Supports 4 operations: add, delete, edit, get.
 
 Usage examples:
 - Add link: pdf_link(operation='add', path='doc.pdf', pageIndex=1, x=100, y=100, width=200, height=30, url='https://example.com')
 - Delete link: pdf_link(operation='delete', path='doc.pdf', pageIndex=1, linkIndex=0)
 - Edit link: pdf_link(operation='edit', path='doc.pdf', pageIndex=1, linkIndex=0, url='https://newurl.com')
-- Get links: pdf_link(operation='get', path='doc.pdf', pageIndex=1)";
-
-    public object InputSchema => new
-    {
-        type = "object",
-        properties = new
-        {
-            operation = new
-            {
-                type = "string",
-                description = @"Operation to perform.
+- Get links: pdf_link(operation='get', path='doc.pdf', pageIndex=1)")]
+    public string Execute(
+        [Description(@"Operation to perform.
 - 'add': Add a link (required params: path, pageIndex, x, y, width, height, url)
 - 'delete': Delete a link (required params: path, pageIndex, linkIndex)
 - 'edit': Edit a link (required params: path, pageIndex, linkIndex, url)
-- 'get': Get all links (required params: path, pageIndex)",
-                @enum = new[] { "add", "delete", "edit", "get" }
-            },
-            path = new
-            {
-                type = "string",
-                description = "PDF file path (required for all operations)"
-            },
-            outputPath = new
-            {
-                type = "string",
-                description = "Output file path (optional, defaults to overwrite input)"
-            },
-            pageIndex = new
-            {
-                type = "number",
-                description = "Page index (1-based, required for add, delete, edit)"
-            },
-            linkIndex = new
-            {
-                type = "number",
-                description = "Link index (0-based, required for delete, edit)"
-            },
-            x = new
-            {
-                type = "number",
-                description =
-                    "X position of link area in PDF coordinates, origin at bottom-left corner (required for add)"
-            },
-            y = new
-            {
-                type = "number",
-                description =
-                    "Y position of link area in PDF coordinates, origin at bottom-left corner (required for add)"
-            },
-            width = new
-            {
-                type = "number",
-                description = "Width of link area in PDF points (required for add)"
-            },
-            height = new
-            {
-                type = "number",
-                description = "Height of link area in PDF points (required for add)"
-            },
-            url = new
-            {
-                type = "string",
-                description = "URL to link to (for add, edit)"
-            },
-            targetPage = new
-            {
-                type = "number",
-                description = "Target page number (1-based, for add, edit)"
-            }
-        },
-        required = new[] { "operation", "path" }
-    };
-
-    /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments
-    /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters</param>
-    /// <returns>Result message as a string</returns>
-    public async Task<string> ExecuteAsync(JsonObject? arguments)
+- 'get': Get all links (required params: path, pageIndex)")]
+        string operation,
+        [Description("PDF file path (required if no sessionId)")]
+        string? path = null,
+        [Description("Session ID for in-memory editing")]
+        string? sessionId = null,
+        [Description("Output file path (optional, defaults to overwrite input)")]
+        string? outputPath = null,
+        [Description("Page index (1-based, required for add, delete, edit)")]
+        int pageIndex = 0,
+        [Description("Link index (0-based, required for delete, edit)")]
+        int linkIndex = 0,
+        [Description("X position of link area in PDF coordinates, origin at bottom-left corner (required for add)")]
+        double x = 0,
+        [Description("Y position of link area in PDF coordinates, origin at bottom-left corner (required for add)")]
+        double y = 0,
+        [Description("Width of link area in PDF points (required for add)")]
+        double width = 0,
+        [Description("Height of link area in PDF points (required for add)")]
+        double height = 0,
+        [Description("URL to link to (for add, edit)")]
+        string? url = null,
+        [Description("Target page number (1-based, for add, edit)")]
+        int? targetPage = null)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation");
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-
-        // Only get outputPath for operations that modify the document
-        string? outputPath = null;
-        if (operation.ToLower() != "get")
-            outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-
         return operation.ToLower() switch
         {
-            "add" => await AddLink(path, outputPath!, arguments),
-            "delete" => await DeleteLink(path, outputPath!, arguments),
-            "edit" => await EditLink(path, outputPath!, arguments),
-            "get" => await GetLinks(path, arguments),
+            "add" => AddLink(sessionId, path, outputPath, pageIndex, x, y, width, height, url, targetPage),
+            "delete" => DeleteLink(sessionId, path, outputPath, pageIndex, linkIndex),
+            "edit" => EditLink(sessionId, path, outputPath, pageIndex, linkIndex, url, targetPage),
+            "get" => GetLinks(sessionId, path, pageIndex),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
 
     /// <summary>
-    ///     Adds a link to a PDF page
+    ///     Adds a link annotation to the specified page.
     /// </summary>
-    /// <param name="path">Input file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing pageIndex, x, y, width, height, url or targetPage</param>
-    /// <returns>Success message</returns>
-    private Task<string> AddLink(string path, string outputPath, JsonObject? arguments)
+    /// <param name="sessionId">The session ID for in-memory editing.</param>
+    /// <param name="path">The PDF file path.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="pageIndex">The 1-based page index.</param>
+    /// <param name="x">The X position of the link area.</param>
+    /// <param name="y">The Y position of the link area.</param>
+    /// <param name="width">The width of the link area.</param>
+    /// <param name="height">The height of the link area.</param>
+    /// <param name="url">Optional URL for an external link.</param>
+    /// <param name="targetPage">Optional target page number for an internal link.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or invalid.</exception>
+    private string AddLink(string? sessionId, string? path, string? outputPath, int pageIndex, double x, double y,
+        double width, double height, string? url, int? targetPage)
     {
-        return Task.Run(() =>
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        var document = ctx.Document;
+
+        if (pageIndex < 1 || pageIndex > document.Pages.Count)
+            throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
+
+        var page = document.Pages[pageIndex];
+        var rect = new Rectangle(x, y, x + width, y + height);
+        LinkAnnotation link;
+
+        if (!string.IsNullOrEmpty(url))
         {
-            var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
-            var x = ArgumentHelper.GetDouble(arguments, "x");
-            var y = ArgumentHelper.GetDouble(arguments, "y");
-            var width = ArgumentHelper.GetDouble(arguments, "width");
-            var height = ArgumentHelper.GetDouble(arguments, "height");
-            var url = ArgumentHelper.GetStringNullable(arguments, "url");
-            var targetPage = ArgumentHelper.GetIntNullable(arguments, "targetPage");
+            link = new LinkAnnotation(page, rect) { Action = new GoToURIAction(url) };
+        }
+        else if (targetPage.HasValue)
+        {
+            if (targetPage.Value < 1 || targetPage.Value > document.Pages.Count)
+                throw new ArgumentException($"targetPage must be between 1 and {document.Pages.Count}");
+            link = new LinkAnnotation(page, rect) { Action = new GoToAction(document.Pages[targetPage.Value]) };
+        }
+        else
+        {
+            throw new ArgumentException("Either url or targetPage must be provided");
+        }
 
-            using var document = new Document(path);
-            if (pageIndex < 1 || pageIndex > document.Pages.Count)
-                throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
+        page.Annotations.Add(link);
 
-            var page = document.Pages[pageIndex];
-            var rect = new Rectangle(x, y, x + width, y + height);
-            LinkAnnotation link;
+        ctx.Save(outputPath);
 
-            if (!string.IsNullOrEmpty(url))
-            {
-                link = new LinkAnnotation(page, rect) { Action = new GoToURIAction(url) };
-            }
-            else if (targetPage.HasValue)
-            {
-                if (targetPage.Value < 1 || targetPage.Value > document.Pages.Count)
-                    throw new ArgumentException($"targetPage must be between 1 and {document.Pages.Count}");
-                link = new LinkAnnotation(page, rect) { Action = new GoToAction(document.Pages[targetPage.Value]) };
-            }
-            else
-            {
-                throw new ArgumentException("Either url or targetPage must be provided");
-            }
-
-            page.Annotations.Add(link);
-            document.Save(outputPath);
-            return $"Added link to page {pageIndex}. Output: {outputPath}";
-        });
+        return $"Added link to page {pageIndex}. {ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Deletes a link from a PDF page
+    ///     Deletes a link annotation from the specified page.
     /// </summary>
-    /// <param name="path">Input file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing pageIndex, linkIndex</param>
-    /// <returns>Success message</returns>
-    private Task<string> DeleteLink(string path, string outputPath, JsonObject? arguments)
+    /// <param name="sessionId">The session ID for in-memory editing.</param>
+    /// <param name="path">The PDF file path.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="pageIndex">The 1-based page index.</param>
+    /// <param name="linkIndex">The 0-based link index.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when the page or link index is invalid.</exception>
+    private string DeleteLink(string? sessionId, string? path, string? outputPath, int pageIndex, int linkIndex)
     {
-        return Task.Run(() =>
-        {
-            var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
-            var linkIndex = ArgumentHelper.GetInt(arguments, "linkIndex");
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        var document = ctx.Document;
 
-            using var document = new Document(path);
-            if (pageIndex < 1 || pageIndex > document.Pages.Count)
+        if (pageIndex < 1 || pageIndex > document.Pages.Count)
+            throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
+
+        var page = document.Pages[pageIndex];
+        var links = page.Annotations.OfType<LinkAnnotation>().ToList();
+        if (linkIndex < 0 || linkIndex >= links.Count)
+            throw new ArgumentException($"linkIndex must be between 0 and {links.Count - 1}");
+
+        page.Annotations.Delete(links[linkIndex]);
+
+        ctx.Save(outputPath);
+
+        return $"Deleted link {linkIndex} from page {pageIndex}. {ctx.GetOutputMessage(outputPath)}";
+    }
+
+    /// <summary>
+    ///     Edits an existing link annotation on the specified page.
+    /// </summary>
+    /// <param name="sessionId">The session ID for in-memory editing.</param>
+    /// <param name="path">The PDF file path.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="pageIndex">The 1-based page index.</param>
+    /// <param name="linkIndex">The 0-based link index.</param>
+    /// <param name="url">Optional new URL for an external link.</param>
+    /// <param name="targetPage">Optional new target page number for an internal link.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when the page or link index is invalid.</exception>
+    private string EditLink(string? sessionId, string? path, string? outputPath, int pageIndex, int linkIndex,
+        string? url, int? targetPage)
+    {
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        var document = ctx.Document;
+
+        if (pageIndex < 1 || pageIndex > document.Pages.Count)
+            throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
+
+        var page = document.Pages[pageIndex];
+        var links = page.Annotations.OfType<LinkAnnotation>().ToList();
+        if (linkIndex < 0 || linkIndex >= links.Count)
+            throw new ArgumentException($"linkIndex must be between 0 and {links.Count - 1}");
+
+        var link = links[linkIndex];
+        if (!string.IsNullOrEmpty(url))
+        {
+            link.Action = new GoToURIAction(url);
+        }
+        else if (targetPage.HasValue)
+        {
+            if (targetPage.Value < 1 || targetPage.Value > document.Pages.Count)
+                throw new ArgumentException($"targetPage must be between 1 and {document.Pages.Count}");
+            link.Action = new GoToAction(document.Pages[targetPage.Value]);
+        }
+
+        ctx.Save(outputPath);
+
+        return $"Edited link {linkIndex} on page {pageIndex}. {ctx.GetOutputMessage(outputPath)}";
+    }
+
+    /// <summary>
+    ///     Retrieves all link annotations from the PDF document.
+    /// </summary>
+    /// <param name="sessionId">The session ID for in-memory editing.</param>
+    /// <param name="path">The PDF file path.</param>
+    /// <param name="pageIndex">Optional 1-based page index to get links from a specific page.</param>
+    /// <returns>A JSON string containing link information.</returns>
+    /// <exception cref="ArgumentException">Thrown when the page index is out of range.</exception>
+    private string GetLinks(string? sessionId, string? path, int? pageIndex)
+    {
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        var document = ctx.Document;
+        List<object> linkList = [];
+
+        if (pageIndex is > 0)
+        {
+            if (pageIndex.Value < 1 || pageIndex.Value > document.Pages.Count)
                 throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
 
-            var page = document.Pages[pageIndex];
+            var page = document.Pages[pageIndex.Value];
             var links = page.Annotations.OfType<LinkAnnotation>().ToList();
-            if (linkIndex < 0 || linkIndex >= links.Count)
-                throw new ArgumentException($"linkIndex must be between 0 and {links.Count - 1}");
 
-            page.Annotations.Delete(links[linkIndex]);
-            document.Save(outputPath);
-            return $"Deleted link {linkIndex} from page {pageIndex}. Output: {outputPath}";
-        });
-    }
-
-    /// <summary>
-    ///     Edits a link in a PDF
-    /// </summary>
-    /// <param name="path">Input file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing pageIndex, linkIndex, optional url, targetPage</param>
-    /// <returns>Success message</returns>
-    private Task<string> EditLink(string path, string outputPath, JsonObject? arguments)
-    {
-        return Task.Run(() =>
-        {
-            var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
-            var linkIndex = ArgumentHelper.GetInt(arguments, "linkIndex");
-            var url = ArgumentHelper.GetStringNullable(arguments, "url");
-            var targetPage = ArgumentHelper.GetIntNullable(arguments, "targetPage");
-
-            using var document = new Document(path);
-            if (pageIndex < 1 || pageIndex > document.Pages.Count)
-                throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
-
-            var page = document.Pages[pageIndex];
-            var links = page.Annotations.OfType<LinkAnnotation>().ToList();
-            if (linkIndex < 0 || linkIndex >= links.Count)
-                throw new ArgumentException($"linkIndex must be between 0 and {links.Count - 1}");
-
-            var link = links[linkIndex];
-            if (!string.IsNullOrEmpty(url))
+            if (links.Count == 0)
             {
-                link.Action = new GoToURIAction(url);
-            }
-            else if (targetPage.HasValue)
-            {
-                if (targetPage.Value < 1 || targetPage.Value > document.Pages.Count)
-                    throw new ArgumentException($"targetPage must be between 1 and {document.Pages.Count}");
-                link.Action = new GoToAction(document.Pages[targetPage.Value]);
-            }
-
-            document.Save(outputPath);
-            return $"Edited link {linkIndex} on page {pageIndex}. Output: {outputPath}";
-        });
-    }
-
-    /// <summary>
-    ///     Gets all links from a PDF page
-    /// </summary>
-    /// <param name="path">Input file path</param>
-    /// <param name="arguments">JSON arguments containing optional pageIndex</param>
-    /// <returns>JSON string with all links</returns>
-    private Task<string> GetLinks(string path, JsonObject? arguments)
-    {
-        return Task.Run(() =>
-        {
-            var pageIndex = ArgumentHelper.GetIntNullable(arguments, "pageIndex");
-
-            using var document = new Document(path);
-            var linkList = new List<object>();
-
-            if (pageIndex.HasValue)
-            {
-                if (pageIndex.Value < 1 || pageIndex.Value > document.Pages.Count)
-                    throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
-
-                var page = document.Pages[pageIndex.Value];
-                var links = page.Annotations.OfType<LinkAnnotation>().ToList();
-
-                if (links.Count == 0)
+                var emptyResult = new
                 {
-                    var emptyResult = new
-                    {
-                        count = 0,
-                        pageIndex = pageIndex.Value,
-                        items = Array.Empty<object>(),
-                        message = $"No links found on page {pageIndex.Value}"
-                    };
-                    return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
+                    count = 0,
+                    pageIndex = pageIndex.Value,
+                    items = Array.Empty<object>(),
+                    message = $"No links found on page {pageIndex.Value}"
+                };
+                return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
+            }
+
+            for (var i = 0; i < links.Count; i++)
+            {
+                var link = links[i];
+                var linkInfo = new Dictionary<string, object?>
+                {
+                    ["index"] = i,
+                    ["pageIndex"] = pageIndex.Value,
+                    ["x"] = link.Rect.LLX,
+                    ["y"] = link.Rect.LLY
+                };
+                if (link.Action is GoToURIAction uriAction)
+                {
+                    linkInfo["type"] = "url";
+                    linkInfo["url"] = uriAction.URI;
+                }
+                else if (link.Action is GoToAction gotoAction)
+                {
+                    linkInfo["type"] = "page";
+                    if (gotoAction.Destination is XYZExplicitDestination xyzDest)
+                        linkInfo["destinationPage"] = xyzDest.PageNumber;
+                    else if (gotoAction.Destination is ExplicitDestination explicitDest)
+                        linkInfo["destinationPage"] = explicitDest.PageNumber;
                 }
 
+                linkList.Add(linkInfo);
+            }
+
+            var result = new
+            {
+                count = linkList.Count,
+                pageIndex = pageIndex.Value,
+                items = linkList
+            };
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        }
+        else
+        {
+            for (var p = 1; p <= document.Pages.Count; p++)
+            {
+                var page = document.Pages[p];
+                var links = page.Annotations.OfType<LinkAnnotation>().ToList();
                 for (var i = 0; i < links.Count; i++)
                 {
                     var link = links[i];
                     var linkInfo = new Dictionary<string, object?>
                     {
                         ["index"] = i,
-                        ["pageIndex"] = pageIndex.Value,
+                        ["pageIndex"] = p,
                         ["x"] = link.Rect.LLX,
                         ["y"] = link.Rect.LLY
                     };
@@ -295,67 +299,25 @@ Usage examples:
 
                     linkList.Add(linkInfo);
                 }
-
-                var result = new
-                {
-                    count = linkList.Count,
-                    pageIndex = pageIndex.Value,
-                    items = linkList
-                };
-                return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
             }
-            else
+
+            if (linkList.Count == 0)
             {
-                for (var p = 1; p <= document.Pages.Count; p++)
+                var emptyResult = new
                 {
-                    var page = document.Pages[p];
-                    var links = page.Annotations.OfType<LinkAnnotation>().ToList();
-                    for (var i = 0; i < links.Count; i++)
-                    {
-                        var link = links[i];
-                        var linkInfo = new Dictionary<string, object?>
-                        {
-                            ["index"] = i,
-                            ["pageIndex"] = p,
-                            ["x"] = link.Rect.LLX,
-                            ["y"] = link.Rect.LLY
-                        };
-                        if (link.Action is GoToURIAction uriAction)
-                        {
-                            linkInfo["type"] = "url";
-                            linkInfo["url"] = uriAction.URI;
-                        }
-                        else if (link.Action is GoToAction gotoAction)
-                        {
-                            linkInfo["type"] = "page";
-                            if (gotoAction.Destination is XYZExplicitDestination xyzDest)
-                                linkInfo["destinationPage"] = xyzDest.PageNumber;
-                            else if (gotoAction.Destination is ExplicitDestination explicitDest)
-                                linkInfo["destinationPage"] = explicitDest.PageNumber;
-                        }
-
-                        linkList.Add(linkInfo);
-                    }
-                }
-
-                if (linkList.Count == 0)
-                {
-                    var emptyResult = new
-                    {
-                        count = 0,
-                        items = Array.Empty<object>(),
-                        message = "No links found in document"
-                    };
-                    return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
-                }
-
-                var result = new
-                {
-                    count = linkList.Count,
-                    items = linkList
+                    count = 0,
+                    items = Array.Empty<object>(),
+                    message = "No links found in document"
                 };
-                return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+                return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
             }
-        });
+
+            var result = new
+            {
+                count = linkList.Count,
+                items = linkList
+            };
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        }
     }
 }

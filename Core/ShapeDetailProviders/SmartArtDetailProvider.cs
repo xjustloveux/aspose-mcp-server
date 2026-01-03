@@ -8,19 +8,21 @@ namespace AsposeMcpServer.Core.ShapeDetailProviders;
 /// </summary>
 public class SmartArtDetailProvider : IShapeDetailProvider
 {
+    /// <inheritdoc />
     public string TypeName => "SmartArt";
 
+    /// <inheritdoc />
     public bool CanHandle(IShape shape)
     {
         return shape is ISmartArt;
     }
 
+    /// <inheritdoc />
     public object? GetDetails(IShape shape, IPresentation presentation)
     {
         if (shape is not ISmartArt smartArt)
             return null;
 
-        // Get all nodes text
         var nodeTexts = GetNodeTexts(smartArt.AllNodes);
 
         return new
@@ -34,9 +36,14 @@ public class SmartArtDetailProvider : IShapeDetailProvider
         };
     }
 
+    /// <summary>
+    ///     Recursively extracts text and hierarchy information from SmartArt nodes.
+    /// </summary>
+    /// <param name="nodes">The SmartArt node collection to process.</param>
+    /// <returns>An array of objects containing node text and hierarchy details.</returns>
     private static object[] GetNodeTexts(ISmartArtNodeCollection nodes)
     {
-        var result = new List<object>();
+        List<object> result = [];
         foreach (var node in nodes)
         {
             var text = node.TextFrame?.Text;

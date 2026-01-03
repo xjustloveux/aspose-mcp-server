@@ -1,8 +1,9 @@
-﻿using System.Text.Json;
-using System.Text.Json.Nodes;
+using System.ComponentModel;
+using System.Text.Json;
 using Aspose.Slides;
-using Aspose.Slides.Export;
-using AsposeMcpServer.Core;
+using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Session;
+using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.PowerPoint;
 
@@ -12,32 +13,40 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 ///     PptInsertTableRowTool, PptInsertTableColumnTool, PptDeleteTableRowTool, PptDeleteTableColumnTool,
 ///     PptEditTableCellTool
 /// </summary>
-public class PptTableTool : IAsposeTool
+[McpServerToolType]
+public class PptTableTool
 {
-    public string Description =>
+    /// <summary>
+    ///     Session manager for document session handling.
+    /// </summary>
+    private readonly DocumentSessionManager? _sessionManager;
+
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="PptTableTool" /> class.
+    /// </summary>
+    /// <param name="sessionManager">Optional session manager for in-memory editing.</param>
+    public PptTableTool(DocumentSessionManager? sessionManager = null)
+    {
+        _sessionManager = sessionManager;
+    }
+
+    [McpServerTool(Name = "ppt_table")]
+    [Description(
         @"Manage PowerPoint tables. Supports 9 operations: add, edit, delete, get_content, insert_row, insert_column, delete_row, delete_column, edit_cell.
 
 Coordinate unit: 1 inch = 72 points.
 
 Usage examples:
 - Add table: ppt_table(operation='add', path='presentation.pptx', slideIndex=0, rows=3, columns=3, x=100, y=100)
-- Edit table: ppt_table(operation='edit', path='presentation.pptx', slideIndex=0, shapeIndex=0, data=[['A','B'],['C','D']])
+- Edit table: ppt_table(operation='edit', path='presentation.pptx', slideIndex=0, shapeIndex=0, data='[[""A"",""B""],[""C"",""D""]]')
 - Delete table: ppt_table(operation='delete', path='presentation.pptx', slideIndex=0, shapeIndex=0)
-- Get content: ppt_table(operation='get_content', path='presentation.pptx', slideIndex=0, shapeIndex=0) → Returns JSON with rows, columns, and cell data
+- Get content: ppt_table(operation='get_content', path='presentation.pptx', slideIndex=0, shapeIndex=0)
 - Insert row: ppt_table(operation='insert_row', path='presentation.pptx', slideIndex=0, shapeIndex=0, rowIndex=1)
 - Insert column: ppt_table(operation='insert_column', path='presentation.pptx', slideIndex=0, shapeIndex=0, columnIndex=1)
 - Delete row: ppt_table(operation='delete_row', path='presentation.pptx', slideIndex=0, shapeIndex=0, rowIndex=1)
-- Edit cell: ppt_table(operation='edit_cell', path='presentation.pptx', slideIndex=0, shapeIndex=0, rowIndex=0, columnIndex=0, text='New Value')";
-
-    public object InputSchema => new
-    {
-        type = "object",
-        properties = new
-        {
-            operation = new
-            {
-                type = "string",
-                description = @"Operation to perform.
+- Edit cell: ppt_table(operation='edit_cell', path='presentation.pptx', slideIndex=0, shapeIndex=0, rowIndex=0, columnIndex=0, text='New Value')")]
+    public string Execute(
+        [Description(@"Operation to perform.
 - 'add': Add a table (required params: path, slideIndex, rows, columns)
 - 'edit': Edit table data (required params: path, slideIndex, shapeIndex, data)
 - 'delete': Delete a table (required params: path, slideIndex, shapeIndex)
@@ -46,106 +55,47 @@ Usage examples:
 - 'insert_column': Insert a column (required params: path, slideIndex, shapeIndex, columnIndex)
 - 'delete_row': Delete a row (required params: path, slideIndex, shapeIndex, rowIndex)
 - 'delete_column': Delete a column (required params: path, slideIndex, shapeIndex, columnIndex)
-- 'edit_cell': Edit cell content (required params: path, slideIndex, shapeIndex, rowIndex, columnIndex, text)",
-                @enum = new[]
-                {
-                    "add", "edit", "delete", "get_content", "insert_row", "insert_column", "delete_row",
-                    "delete_column", "edit_cell"
-                }
-            },
-            path = new
-            {
-                type = "string",
-                description = "Presentation file path (required for all operations)"
-            },
-            slideIndex = new
-            {
-                type = "number",
-                description = "Slide index (0-based)"
-            },
-            shapeIndex = new
-            {
-                type = "number",
-                description = "Shape index of the table (0-based, required for most operations)"
-            },
-            rows = new
-            {
-                type = "number",
-                description = "Number of rows (required for add)"
-            },
-            columns = new
-            {
-                type = "number",
-                description = "Number of columns (required for add)"
-            },
-            x = new
-            {
-                type = "number",
-                description = "X position in points (optional for add, defaults to 50)"
-            },
-            y = new
-            {
-                type = "number",
-                description = "Y position in points (optional for add, defaults to 50)"
-            },
-            data = new
-            {
-                type = "array",
-                description = "2D array of cell data (optional, for add/edit)",
-                items = new
-                {
-                    type = "array",
-                    items = new { type = "string" }
-                }
-            },
-            rowIndex = new
-            {
-                type = "number",
-                description = "Row index (0-based, required for insert_row/delete_row/edit_cell)"
-            },
-            columnIndex = new
-            {
-                type = "number",
-                description = "Column index (0-based, required for insert_column/delete_column/edit_cell)"
-            },
-            text = new
-            {
-                type = "string",
-                description = "Cell text content (required for edit_cell)"
-            },
-            outputPath = new
-            {
-                type = "string",
-                description = "Output file path (optional, for add/edit/delete operations, defaults to input path)"
-            }
-        },
-        required = new[] { "operation", "path", "slideIndex" }
-    };
-
-    /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments.
-    /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters.</param>
-    /// <returns>Result message as a string.</returns>
-    /// <exception cref="ArgumentException">Thrown when operation is unknown.</exception>
-    public async Task<string> ExecuteAsync(JsonObject? arguments)
+- 'edit_cell': Edit cell content (required params: path, slideIndex, shapeIndex, rowIndex, columnIndex, text)")]
+        string operation,
+        [Description("Presentation file path (required if no sessionId)")]
+        string? path = null,
+        [Description("Session ID for in-memory editing")]
+        string? sessionId = null,
+        [Description("Output file path (optional, defaults to input path)")]
+        string? outputPath = null,
+        [Description("Slide index (0-based)")] int slideIndex = 0,
+        [Description("Shape index of the table (0-based, required for most operations)")]
+        int? shapeIndex = null,
+        [Description("Number of rows (required for add)")]
+        int? rows = null,
+        [Description("Number of columns (required for add)")]
+        int? columns = null,
+        [Description("X position in points (optional for add, defaults to 50)")]
+        float x = 50,
+        [Description("Y position in points (optional for add, defaults to 50)")]
+        float y = 50,
+        [Description("2D array of cell data as JSON (optional, for add/edit)")]
+        string? data = null,
+        [Description("Row index (0-based, required for insert_row/delete_row/edit_cell)")]
+        int? rowIndex = null,
+        [Description("Column index (0-based, required for insert_column/delete_column/edit_cell)")]
+        int? columnIndex = null,
+        [Description("Cell text content (required for edit_cell)")]
+        string? text = null)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation");
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-        var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
+        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path);
 
         return operation.ToLower() switch
         {
-            "add" => await AddTableAsync(path, outputPath, slideIndex, arguments),
-            "edit" => await EditTableAsync(path, outputPath, slideIndex, arguments),
-            "delete" => await DeleteTableAsync(path, outputPath, slideIndex, arguments),
-            "get_content" => await GetTableContentAsync(path, slideIndex, arguments),
-            "insert_row" => await InsertRowAsync(path, outputPath, slideIndex, arguments),
-            "insert_column" => await InsertColumnAsync(path, outputPath, slideIndex, arguments),
-            "delete_row" => await DeleteRowAsync(path, outputPath, slideIndex, arguments),
-            "delete_column" => await DeleteColumnAsync(path, outputPath, slideIndex, arguments),
-            "edit_cell" => await EditCellAsync(path, outputPath, slideIndex, arguments),
+            "add" => AddTable(ctx, outputPath, slideIndex, rows, columns, x, y, data),
+            "edit" => EditTable(ctx, outputPath, slideIndex, shapeIndex, data),
+            "delete" => DeleteTable(ctx, outputPath, slideIndex, shapeIndex),
+            "get_content" => GetTableContent(ctx, slideIndex, shapeIndex),
+            "insert_row" => InsertRow(ctx, outputPath, slideIndex, shapeIndex, rowIndex),
+            "insert_column" => InsertColumn(ctx, outputPath, slideIndex, shapeIndex, columnIndex),
+            "delete_row" => DeleteRow(ctx, outputPath, slideIndex, shapeIndex, rowIndex),
+            "delete_column" => DeleteColumn(ctx, outputPath, slideIndex, shapeIndex, columnIndex),
+            "edit_cell" => EditCell(ctx, outputPath, slideIndex, shapeIndex, rowIndex, columnIndex, text),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -153,322 +103,346 @@ Usage examples:
     /// <summary>
     ///     Adds a table to a slide.
     /// </summary>
-    /// <param name="path">PowerPoint file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="slideIndex">Slide index (0-based).</param>
-    /// <param name="arguments">JSON arguments containing rows, columns, x, y, optional data.</param>
-    /// <returns>Success message with table dimensions.</returns>
-    /// <exception cref="ArgumentException">Thrown when rows or columns are out of valid range (1-1000).</exception>
-    private Task<string> AddTableAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <param name="rows">The number of rows.</param>
+    /// <param name="columns">The number of columns.</param>
+    /// <param name="x">The X position in points.</param>
+    /// <param name="y">The Y position in points.</param>
+    /// <param name="dataJson">The table data as JSON 2D array.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when rows or columns are not provided or invalid.</exception>
+    private static string AddTable(DocumentContext<Presentation> ctx, string? outputPath, int slideIndex,
+        int? rows, int? columns, float x, float y, string? dataJson)
     {
-        return Task.Run(() =>
+        if (!rows.HasValue)
+            throw new ArgumentException("rows is required for add operation");
+        if (!columns.HasValue)
+            throw new ArgumentException("columns is required for add operation");
+        if (rows.Value <= 0 || rows.Value > 1000)
+            throw new ArgumentException("rows must be between 1 and 1000");
+        if (columns.Value <= 0 || columns.Value > 1000)
+            throw new ArgumentException("columns must be between 1 and 1000");
+
+        var presentation = ctx.Document;
+        if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
+            throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
+
+        var slide = presentation.Slides[slideIndex];
+
+        var columnWidths = new double[columns.Value];
+        var rowHeights = new double[rows.Value];
+
+        for (var i = 0; i < columns.Value; i++)
+            columnWidths[i] = 100;
+        for (var i = 0; i < rows.Value; i++)
+            rowHeights[i] = 50;
+
+        var table = slide.Shapes.AddTable(x, y, columnWidths, rowHeights);
+
+        if (!string.IsNullOrWhiteSpace(dataJson))
         {
-            var rows = ArgumentHelper.GetInt(arguments, "rows");
-            var columns = ArgumentHelper.GetInt(arguments, "columns");
-            var x = ArgumentHelper.GetFloat(arguments, "x", 50);
-            var y = ArgumentHelper.GetFloat(arguments, "y", 50);
-            var dataArray = ArgumentHelper.GetArray(arguments, "data", false);
-
-            if (rows <= 0 || rows > 1000) throw new ArgumentException("rows must be between 1 and 1000");
-            if (columns <= 0 || columns > 1000) throw new ArgumentException("columns must be between 1 and 1000");
-
-            using var presentation = new Presentation(path);
-            if (slideIndex < 0 || slideIndex >= presentation.Slides.Count)
-                throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
-
-            var slide = presentation.Slides[slideIndex];
-
-            var columnWidths = new double[columns];
-            var rowHeights = new double[rows];
-
-            for (var i = 0; i < columns; i++)
-                columnWidths[i] = 100;
-            for (var i = 0; i < rows; i++)
-                rowHeights[i] = 50;
-
-            var table = slide.Shapes.AddTable(x, y, columnWidths, rowHeights);
-
+            var dataArray = JsonSerializer.Deserialize<string[][]>(dataJson);
             if (dataArray != null)
-                for (var i = 0; i < Math.Min(rows, dataArray.Count); i++)
+                for (var i = 0; i < Math.Min(rows.Value, dataArray.Length); i++)
                 {
-                    var rowArray = dataArray[i]?.AsArray();
-                    if (rowArray != null)
-                        for (var j = 0; j < Math.Min(columns, rowArray.Count); j++)
-                            table[i, j].TextFrame.Text = rowArray[j]?.GetValue<string>() ?? "";
+                    var rowArray = dataArray[i];
+                    for (var j = 0; j < Math.Min(columns.Value, rowArray.Length); j++)
+                        table[i, j].TextFrame.Text = rowArray[j];
                 }
+        }
 
-            presentation.Save(outputPath, SaveFormat.Pptx);
+        ctx.Save(outputPath);
 
-            return $"Table ({rows}x{columns}) added to slide {slideIndex}. Output: {outputPath}";
-        });
+        return $"Table ({rows.Value}x{columns.Value}) added to slide {slideIndex}. {ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
     ///     Edits table data.
     /// </summary>
-    /// <param name="path">PowerPoint file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="slideIndex">Slide index (0-based).</param>
-    /// <param name="arguments">JSON arguments containing shapeIndex, optional data.</param>
-    /// <returns>Success message.</returns>
-    /// <exception cref="ArgumentException">Thrown when shape is not a table.</exception>
-    private Task<string> EditTableAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <param name="shapeIndex">The shape index of the table (0-based).</param>
+    /// <param name="dataJson">The table data as JSON 2D array.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when shapeIndex is not provided or shape is not a table.</exception>
+    private static string EditTable(DocumentContext<Presentation> ctx, string? outputPath, int slideIndex,
+        int? shapeIndex, string? dataJson)
     {
-        return Task.Run(() =>
+        if (!shapeIndex.HasValue)
+            throw new ArgumentException("shapeIndex is required for edit operation");
+
+        var presentation = ctx.Document;
+        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+        var shape = PowerPointHelper.GetShape(slide, shapeIndex.Value);
+        if (shape is not ITable table) throw new ArgumentException($"Shape at index {shapeIndex.Value} is not a table");
+
+        if (!string.IsNullOrWhiteSpace(dataJson))
         {
-            var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
-            var dataArray = ArgumentHelper.GetArray(arguments, "data", false);
-
-            using var presentation = new Presentation(path);
-            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-            var shape = PowerPointHelper.GetShape(slide, shapeIndex);
-            if (shape is not ITable table) throw new ArgumentException($"Shape at index {shapeIndex} is not a table");
-
+            var dataArray = JsonSerializer.Deserialize<string[][]>(dataJson);
             if (dataArray != null)
-                for (var i = 0; i < Math.Min(table.Rows.Count, dataArray.Count); i++)
+                for (var i = 0; i < Math.Min(table.Rows.Count, dataArray.Length); i++)
                 {
-                    var rowArray = dataArray[i]?.AsArray();
-                    if (rowArray != null)
-                        for (var j = 0; j < Math.Min(table.Columns.Count, rowArray.Count); j++)
-                            table[i, j].TextFrame.Text = rowArray[j]?.GetValue<string>() ?? "";
+                    var rowArray = dataArray[i];
+                    for (var j = 0; j < Math.Min(table.Columns.Count, rowArray.Length); j++)
+                        table[i, j].TextFrame.Text = rowArray[j];
                 }
+        }
 
-            presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Table on slide {slideIndex}, shape {shapeIndex} updated. Output: {outputPath}";
-        });
+        ctx.Save(outputPath);
+        return $"Table on slide {slideIndex}, shape {shapeIndex.Value} updated. {ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
     ///     Deletes a table from a slide.
     /// </summary>
-    /// <param name="path">PowerPoint file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="slideIndex">Slide index (0-based).</param>
-    /// <param name="arguments">JSON arguments containing shapeIndex.</param>
-    /// <returns>Success message.</returns>
-    /// <exception cref="ArgumentException">Thrown when shape is not a table.</exception>
-    private Task<string> DeleteTableAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <param name="shapeIndex">The shape index of the table (0-based).</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when shapeIndex is not provided or shape is not a table.</exception>
+    private static string DeleteTable(DocumentContext<Presentation> ctx, string? outputPath, int slideIndex,
+        int? shapeIndex)
     {
-        return Task.Run(() =>
-        {
-            var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
+        if (!shapeIndex.HasValue)
+            throw new ArgumentException("shapeIndex is required for delete operation");
 
-            using var presentation = new Presentation(path);
-            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-            var shape = PowerPointHelper.GetShape(slide, shapeIndex);
-            if (shape is not ITable) throw new ArgumentException($"Shape at index {shapeIndex} is not a table");
+        var presentation = ctx.Document;
+        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+        var shape = PowerPointHelper.GetShape(slide, shapeIndex.Value);
+        if (shape is not ITable) throw new ArgumentException($"Shape at index {shapeIndex.Value} is not a table");
 
-            slide.Shapes.Remove(shape);
+        slide.Shapes.Remove(shape);
 
-            presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Table on slide {slideIndex}, shape {shapeIndex} deleted. Output: {outputPath}";
-        });
+        ctx.Save(outputPath);
+        return $"Table on slide {slideIndex}, shape {shapeIndex.Value} deleted. {ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
     ///     Gets table content as JSON.
     /// </summary>
-    /// <param name="path">PowerPoint file path.</param>
-    /// <param name="slideIndex">Slide index (0-based).</param>
-    /// <param name="arguments">JSON arguments containing shapeIndex.</param>
-    /// <returns>JSON string with slideIndex, shapeIndex, columns, rows, and data array.</returns>
-    /// <exception cref="ArgumentException">Thrown when shape is not a table.</exception>
-    private Task<string> GetTableContentAsync(string path, int slideIndex, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <param name="shapeIndex">The shape index of the table (0-based).</param>
+    /// <returns>A JSON string containing the table content.</returns>
+    /// <exception cref="ArgumentException">Thrown when shapeIndex is not provided or shape is not a table.</exception>
+    private static string GetTableContent(DocumentContext<Presentation> ctx, int slideIndex, int? shapeIndex)
     {
-        return Task.Run(() =>
+        if (!shapeIndex.HasValue)
+            throw new ArgumentException("shapeIndex is required for get_content operation");
+
+        var presentation = ctx.Document;
+        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+        var shape = PowerPointHelper.GetShape(slide, shapeIndex.Value);
+        if (shape is not ITable table) throw new ArgumentException($"Shape at index {shapeIndex.Value} is not a table");
+
+        List<object> rowsList = [];
+        for (var i = 0; i < table.Rows.Count; i++)
         {
-            var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
-
-            using var presentation = new Presentation(path);
-            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-            var shape = PowerPointHelper.GetShape(slide, shapeIndex);
-            if (shape is not ITable table) throw new ArgumentException($"Shape at index {shapeIndex} is not a table");
-
-            var rowsList = new List<object>();
-            for (var i = 0; i < table.Rows.Count; i++)
+            List<object> cellsList = [];
+            for (var j = 0; j < table.Columns.Count; j++)
             {
-                var cellsList = new List<object>();
-                for (var j = 0; j < table.Columns.Count; j++)
+                var cell = table[i, j];
+                var text = cell.TextFrame?.Text ?? "";
+                cellsList.Add(new
                 {
-                    var cell = table[i, j];
-                    var text = cell.TextFrame?.Text ?? "";
-                    cellsList.Add(new
-                    {
-                        columnIndex = j,
-                        text
-                    });
-                }
-
-                rowsList.Add(new
-                {
-                    rowIndex = i,
-                    cells = cellsList
+                    columnIndex = j,
+                    text
                 });
             }
 
-            var result = new
+            rowsList.Add(new
             {
-                slideIndex,
-                shapeIndex,
-                columns = table.Columns.Count,
-                rows = table.Rows.Count,
-                data = rowsList
-            };
+                rowIndex = i,
+                cells = cellsList
+            });
+        }
 
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
-        });
+        var result = new
+        {
+            slideIndex,
+            shapeIndex = shapeIndex.Value,
+            columns = table.Columns.Count,
+            rows = table.Rows.Count,
+            data = rowsList
+        };
+
+        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
     }
 
     /// <summary>
     ///     Inserts a row into a table by cloning an existing row.
     /// </summary>
-    /// <param name="path">PowerPoint file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="slideIndex">Slide index (0-based).</param>
-    /// <param name="arguments">JSON arguments containing shapeIndex, rowIndex.</param>
-    /// <returns>Success message with new row count.</returns>
-    /// <exception cref="ArgumentException">Thrown when shape is not a table or rowIndex is out of range.</exception>
-    private Task<string> InsertRowAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <param name="shapeIndex">The shape index of the table (0-based).</param>
+    /// <param name="rowIndex">The row index where to insert (0-based).</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when shapeIndex or rowIndex is not provided, shape is not a table, or index
+    ///     is out of range.
+    /// </exception>
+    private static string InsertRow(DocumentContext<Presentation> ctx, string? outputPath, int slideIndex,
+        int? shapeIndex, int? rowIndex)
     {
-        return Task.Run(() =>
-        {
-            var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
-            var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex");
+        if (!shapeIndex.HasValue)
+            throw new ArgumentException("shapeIndex is required for insert_row operation");
+        if (!rowIndex.HasValue)
+            throw new ArgumentException("rowIndex is required for insert_row operation");
 
-            using var presentation = new Presentation(path);
-            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-            var shape = PowerPointHelper.GetShape(slide, shapeIndex);
-            if (shape is not ITable table) throw new ArgumentException("Shape is not a table");
+        var presentation = ctx.Document;
+        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+        var shape = PowerPointHelper.GetShape(slide, shapeIndex.Value);
+        if (shape is not ITable table) throw new ArgumentException("Shape is not a table");
 
-            if (rowIndex < 0 || rowIndex > table.Rows.Count)
-                throw new ArgumentException($"rowIndex {rowIndex} is out of range (0-{table.Rows.Count})");
+        if (rowIndex.Value < 0 || rowIndex.Value > table.Rows.Count)
+            throw new ArgumentException($"rowIndex {rowIndex.Value} is out of range (0-{table.Rows.Count})");
 
-            var templateRow = table.Rows[Math.Min(rowIndex, table.Rows.Count - 1)];
-            table.Rows.InsertClone(rowIndex, templateRow, false);
+        var templateRow = table.Rows[Math.Min(rowIndex.Value, table.Rows.Count - 1)];
+        table.Rows.InsertClone(rowIndex.Value, templateRow, false);
 
-            presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Row inserted at index {rowIndex}. Table now has {table.Rows.Count} rows. Output: {outputPath}";
-        });
+        ctx.Save(outputPath);
+        return
+            $"Row inserted at index {rowIndex.Value}. Table now has {table.Rows.Count} rows. {ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
     ///     Inserts a column into a table by cloning an existing column.
     /// </summary>
-    /// <param name="path">PowerPoint file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="slideIndex">Slide index (0-based).</param>
-    /// <param name="arguments">JSON arguments containing shapeIndex, columnIndex.</param>
-    /// <returns>Success message with new column count.</returns>
-    /// <exception cref="ArgumentException">Thrown when shape is not a table or columnIndex is out of range.</exception>
-    private Task<string> InsertColumnAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <param name="shapeIndex">The shape index of the table (0-based).</param>
+    /// <param name="columnIndex">The column index where to insert (0-based).</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when shapeIndex or columnIndex is not provided, shape is not a table, or
+    ///     index is out of range.
+    /// </exception>
+    private static string InsertColumn(DocumentContext<Presentation> ctx, string? outputPath, int slideIndex,
+        int? shapeIndex, int? columnIndex)
     {
-        return Task.Run(() =>
-        {
-            var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
-            var columnIndex = ArgumentHelper.GetInt(arguments, "columnIndex");
+        if (!shapeIndex.HasValue)
+            throw new ArgumentException("shapeIndex is required for insert_column operation");
+        if (!columnIndex.HasValue)
+            throw new ArgumentException("columnIndex is required for insert_column operation");
 
-            using var presentation = new Presentation(path);
-            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-            var shape = PowerPointHelper.GetShape(slide, shapeIndex);
-            if (shape is not ITable table) throw new ArgumentException("Shape is not a table");
+        var presentation = ctx.Document;
+        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+        var shape = PowerPointHelper.GetShape(slide, shapeIndex.Value);
+        if (shape is not ITable table) throw new ArgumentException("Shape is not a table");
 
-            if (columnIndex < 0 || columnIndex > table.Columns.Count)
-                throw new ArgumentException($"columnIndex {columnIndex} is out of range (0-{table.Columns.Count})");
+        if (columnIndex.Value < 0 || columnIndex.Value > table.Columns.Count)
+            throw new ArgumentException($"columnIndex {columnIndex.Value} is out of range (0-{table.Columns.Count})");
 
-            var templateColumn = table.Columns[Math.Min(columnIndex, table.Columns.Count - 1)];
-            table.Columns.InsertClone(columnIndex, templateColumn, false);
+        var templateColumn = table.Columns[Math.Min(columnIndex.Value, table.Columns.Count - 1)];
+        table.Columns.InsertClone(columnIndex.Value, templateColumn, false);
 
-            presentation.Save(outputPath, SaveFormat.Pptx);
-            return
-                $"Column inserted at index {columnIndex}. Table now has {table.Columns.Count} columns. Output: {outputPath}";
-        });
+        ctx.Save(outputPath);
+        return
+            $"Column inserted at index {columnIndex.Value}. Table now has {table.Columns.Count} columns. {ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
     ///     Deletes a row from a table.
     /// </summary>
-    /// <param name="path">PowerPoint file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="slideIndex">Slide index (0-based).</param>
-    /// <param name="arguments">JSON arguments containing shapeIndex, rowIndex.</param>
-    /// <returns>Success message.</returns>
-    /// <exception cref="ArgumentException">Thrown when shape is not a table.</exception>
-    private Task<string> DeleteRowAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <param name="shapeIndex">The shape index of the table (0-based).</param>
+    /// <param name="rowIndex">The row index to delete (0-based).</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when shapeIndex or rowIndex is not provided, or shape is not a table.</exception>
+    private static string DeleteRow(DocumentContext<Presentation> ctx, string? outputPath, int slideIndex,
+        int? shapeIndex, int? rowIndex)
     {
-        return Task.Run(() =>
-        {
-            var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
-            var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex");
+        if (!shapeIndex.HasValue)
+            throw new ArgumentException("shapeIndex is required for delete_row operation");
+        if (!rowIndex.HasValue)
+            throw new ArgumentException("rowIndex is required for delete_row operation");
 
-            using var presentation = new Presentation(path);
-            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-            var shape = PowerPointHelper.GetShape(slide, shapeIndex);
-            if (shape is not ITable table) throw new ArgumentException("Shape is not a table");
+        var presentation = ctx.Document;
+        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+        var shape = PowerPointHelper.GetShape(slide, shapeIndex.Value);
+        if (shape is not ITable table) throw new ArgumentException("Shape is not a table");
 
-            table.Rows.RemoveAt(rowIndex, false);
-            presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Row {rowIndex} deleted. Output: {outputPath}";
-        });
+        table.Rows.RemoveAt(rowIndex.Value, false);
+        ctx.Save(outputPath);
+        return $"Row {rowIndex.Value} deleted. {ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
     ///     Deletes a column from a table.
     /// </summary>
-    /// <param name="path">PowerPoint file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="slideIndex">Slide index (0-based).</param>
-    /// <param name="arguments">JSON arguments containing shapeIndex, columnIndex.</param>
-    /// <returns>Success message.</returns>
-    /// <exception cref="ArgumentException">Thrown when shape is not a table.</exception>
-    private Task<string> DeleteColumnAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <param name="shapeIndex">The shape index of the table (0-based).</param>
+    /// <param name="columnIndex">The column index to delete (0-based).</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when shapeIndex or columnIndex is not provided, or shape is not a table.</exception>
+    private static string DeleteColumn(DocumentContext<Presentation> ctx, string? outputPath, int slideIndex,
+        int? shapeIndex, int? columnIndex)
     {
-        return Task.Run(() =>
-        {
-            var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
-            var columnIndex = ArgumentHelper.GetInt(arguments, "columnIndex");
+        if (!shapeIndex.HasValue)
+            throw new ArgumentException("shapeIndex is required for delete_column operation");
+        if (!columnIndex.HasValue)
+            throw new ArgumentException("columnIndex is required for delete_column operation");
 
-            using var presentation = new Presentation(path);
-            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-            var shape = PowerPointHelper.GetShape(slide, shapeIndex);
-            if (shape is not ITable table) throw new ArgumentException("Shape is not a table");
+        var presentation = ctx.Document;
+        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+        var shape = PowerPointHelper.GetShape(slide, shapeIndex.Value);
+        if (shape is not ITable table) throw new ArgumentException("Shape is not a table");
 
-            table.Columns.RemoveAt(columnIndex, false);
-            presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Column {columnIndex} deleted. Output: {outputPath}";
-        });
+        table.Columns.RemoveAt(columnIndex.Value, false);
+        ctx.Save(outputPath);
+        return $"Column {columnIndex.Value} deleted. {ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
     ///     Edits a cell in a table.
     /// </summary>
-    /// <param name="path">PowerPoint file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="slideIndex">Slide index (0-based).</param>
-    /// <param name="arguments">JSON arguments containing shapeIndex, rowIndex, columnIndex, text.</param>
-    /// <returns>Success message.</returns>
-    /// <exception cref="ArgumentException">Thrown when shape is not a table or row/column index is out of range.</exception>
-    private Task<string> EditCellAsync(string path, string outputPath, int slideIndex, JsonObject? arguments)
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <param name="shapeIndex">The shape index of the table (0-based).</param>
+    /// <param name="rowIndex">The row index of the cell (0-based).</param>
+    /// <param name="columnIndex">The column index of the cell (0-based).</param>
+    /// <param name="text">The new text content for the cell.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when required parameters are not provided, shape is not a table, or indices
+    ///     are out of range.
+    /// </exception>
+    private static string EditCell(DocumentContext<Presentation> ctx, string? outputPath, int slideIndex,
+        int? shapeIndex, int? rowIndex, int? columnIndex, string? text)
     {
-        return Task.Run(() =>
-        {
-            var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
-            var rowIndex = ArgumentHelper.GetInt(arguments, "rowIndex");
-            var columnIndex = ArgumentHelper.GetInt(arguments, "columnIndex");
-            var text = ArgumentHelper.GetString(arguments, "text");
+        if (!shapeIndex.HasValue)
+            throw new ArgumentException("shapeIndex is required for edit_cell operation");
+        if (!rowIndex.HasValue)
+            throw new ArgumentException("rowIndex is required for edit_cell operation");
+        if (!columnIndex.HasValue)
+            throw new ArgumentException("columnIndex is required for edit_cell operation");
+        if (text == null)
+            throw new ArgumentException("text is required for edit_cell operation");
 
-            using var presentation = new Presentation(path);
-            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-            var shape = PowerPointHelper.GetShape(slide, shapeIndex);
-            if (shape is not ITable table) throw new ArgumentException("Shape is not a table");
+        var presentation = ctx.Document;
+        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+        var shape = PowerPointHelper.GetShape(slide, shapeIndex.Value);
+        if (shape is not ITable table) throw new ArgumentException("Shape is not a table");
 
-            if (rowIndex < 0 || rowIndex >= table.Rows.Count)
-                throw new ArgumentException($"rowIndex {rowIndex} is out of range (0-{table.Rows.Count - 1})");
-            if (columnIndex < 0 || columnIndex >= table.Columns.Count)
-                throw new ArgumentException($"columnIndex {columnIndex} is out of range (0-{table.Columns.Count - 1})");
+        if (rowIndex.Value < 0 || rowIndex.Value >= table.Rows.Count)
+            throw new ArgumentException($"rowIndex {rowIndex.Value} is out of range (0-{table.Rows.Count - 1})");
+        if (columnIndex.Value < 0 || columnIndex.Value >= table.Columns.Count)
+            throw new ArgumentException(
+                $"columnIndex {columnIndex.Value} is out of range (0-{table.Columns.Count - 1})");
 
-            table[rowIndex, columnIndex].TextFrame.Text = text;
-            presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Cell [{rowIndex},{columnIndex}] updated. Output: {outputPath}";
-        });
+        table[rowIndex.Value, columnIndex.Value].TextFrame.Text = text;
+        ctx.Save(outputPath);
+        return $"Cell [{rowIndex.Value},{columnIndex.Value}] updated. {ctx.GetOutputMessage(outputPath)}";
     }
 }

@@ -7,13 +7,16 @@ namespace AsposeMcpServer.Core.ShapeDetailProviders;
 /// </summary>
 public class TableDetailProvider : IShapeDetailProvider
 {
+    /// <inheritdoc />
     public string TypeName => "Table";
 
+    /// <inheritdoc />
     public bool CanHandle(IShape shape)
     {
         return shape is ITable;
     }
 
+    /// <inheritdoc />
     public object? GetDetails(IShape shape, IPresentation presentation)
     {
         if (shape is not ITable table)
@@ -21,11 +24,9 @@ public class TableDetailProvider : IShapeDetailProvider
 
         var firstRow = table.FirstRow;
 
-        // Calculate total cells
         var totalCells = table.Rows.Sum(row => row.Count);
 
-        // Get merged cell info
-        var mergedCells = new List<object>();
+        List<object> mergedCells = [];
         for (var row = 0; row < table.Rows.Count; row++)
         for (var col = 0; col < table.Columns.Count; col++)
         {

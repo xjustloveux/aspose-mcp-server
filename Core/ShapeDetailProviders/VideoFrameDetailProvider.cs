@@ -7,13 +7,16 @@ namespace AsposeMcpServer.Core.ShapeDetailProviders;
 /// </summary>
 public class VideoFrameDetailProvider : IShapeDetailProvider
 {
+    /// <inheritdoc />
     public string TypeName => "Video";
 
+    /// <inheritdoc />
     public bool CanHandle(IShape shape)
     {
         return shape is IVideoFrame;
     }
 
+    /// <inheritdoc />
     public object? GetDetails(IShape shape, IPresentation presentation)
     {
         if (shape is not IVideoFrame video)

@@ -1,292 +1,270 @@
+using System.ComponentModel;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using Aspose.Pdf;
 using Aspose.Pdf.Annotations;
-using AsposeMcpServer.Core;
+using AsposeMcpServer.Core.Session;
+using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Pdf;
 
 /// <summary>
 ///     Tool for managing annotations in PDF documents (add, delete, edit, get)
 /// </summary>
-public class PdfAnnotationTool : IAsposeTool
+[McpServerToolType]
+public class PdfAnnotationTool
 {
-    public string Description => @"Manage annotations in PDF documents. Supports 4 operations: add, delete, edit, get.
+    /// <summary>
+    ///     The document session manager for managing in-memory document sessions.
+    /// </summary>
+    private readonly DocumentSessionManager? _sessionManager;
+
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="PdfAnnotationTool" /> class.
+    /// </summary>
+    /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
+    public PdfAnnotationTool(DocumentSessionManager? sessionManager = null)
+    {
+        _sessionManager = sessionManager;
+    }
+
+    [McpServerTool(Name = "pdf_annotation")]
+    [Description(@"Manage annotations in PDF documents. Supports 4 operations: add, delete, edit, get.
 
 Usage examples:
 - Add annotation: pdf_annotation(operation='add', path='doc.pdf', pageIndex=1, text='Note', x=100, y=100)
 - Delete annotation: pdf_annotation(operation='delete', path='doc.pdf', pageIndex=1, annotationIndex=1)
 - Edit annotation: pdf_annotation(operation='edit', path='doc.pdf', pageIndex=1, annotationIndex=1, text='Updated Note')
-- Get annotations: pdf_annotation(operation='get', path='doc.pdf', pageIndex=1)";
-
-    public object InputSchema => new
-    {
-        type = "object",
-        properties = new
-        {
-            operation = new
-            {
-                type = "string",
-                description = @"Operation to perform.
+- Get annotations: pdf_annotation(operation='get', path='doc.pdf', pageIndex=1)")]
+    public string Execute(
+        [Description(@"Operation to perform.
 - 'add': Add an annotation (required params: path, pageIndex, text, x, y)
 - 'delete': Delete annotation(s) (required params: path, pageIndex; optional: annotationIndex, deletes all if omitted)
 - 'edit': Edit an annotation (required params: path, pageIndex, annotationIndex, text)
-- 'get': Get all annotations (required params: path, pageIndex)",
-                @enum = new[] { "add", "delete", "edit", "get" }
-            },
-            path = new
-            {
-                type = "string",
-                description = "PDF file path (required for all operations)"
-            },
-            outputPath = new
-            {
-                type = "string",
-                description = "Output file path (optional, defaults to overwrite input)"
-            },
-            pageIndex = new
-            {
-                type = "number",
-                description = "Page index (1-based, required for add, delete, edit)"
-            },
-            annotationIndex = new
-            {
-                type = "number",
-                description =
-                    "Annotation index (1-based, required for edit, optional for delete - deletes all if omitted)"
-            },
-            text = new
-            {
-                type = "string",
-                description = "Annotation text (required for add, edit)"
-            },
-            x = new
-            {
-                type = "number",
-                description =
-                    "X position in points (origin is bottom-left, 72 points = 1 inch, for add/edit, default: 100)"
-            },
-            y = new
-            {
-                type = "number",
-                description =
-                    "Y position in points (origin is bottom-left, 72 points = 1 inch, for add/edit, default: 700)"
-            }
-        },
-        required = new[] { "operation", "path" }
-    };
-
-    /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments
-    /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters</param>
-    /// <returns>Result message as a string</returns>
-    public async Task<string> ExecuteAsync(JsonObject? arguments)
+- 'get': Get all annotations (required params: path, pageIndex)")]
+        string operation,
+        [Description("PDF file path (required if no sessionId)")]
+        string? path = null,
+        [Description("Session ID for in-memory editing")]
+        string? sessionId = null,
+        [Description("Output file path (file mode only)")]
+        string? outputPath = null,
+        [Description("Page index (1-based, required for add, delete, edit)")]
+        int? pageIndex = null,
+        [Description("Annotation index (1-based, required for edit, optional for delete - deletes all if omitted)")]
+        int? annotationIndex = null,
+        [Description("Annotation text (required for add, edit)")]
+        string? text = null,
+        [Description("X position in points (origin is bottom-left, 72 points = 1 inch, for add/edit, default: 100)")]
+        double x = 100,
+        [Description("Y position in points (origin is bottom-left, 72 points = 1 inch, for add/edit, default: 700)")]
+        double y = 700)
     {
-        var operation = ArgumentHelper.GetString(arguments, "operation");
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-
-        string? outputPath = null;
-        if (operation.ToLower() != "get")
-            outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
-
         return operation.ToLower() switch
         {
-            "add" => await AddAnnotation(path, outputPath!, arguments),
-            "delete" => await DeleteAnnotation(path, outputPath!, arguments),
-            "edit" => await EditAnnotation(path, outputPath!, arguments),
-            "get" => await GetAnnotations(path, arguments),
+            "add" => AddAnnotation(sessionId, path, outputPath, pageIndex, text, x, y),
+            "delete" => DeleteAnnotation(sessionId, path, outputPath, pageIndex, annotationIndex),
+            "edit" => EditAnnotation(sessionId, path, outputPath, pageIndex, annotationIndex, text, x, y),
+            "get" => GetAnnotations(sessionId, path, pageIndex),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
 
     /// <summary>
-    ///     Adds an annotation to a PDF page
+    ///     Adds a new text annotation to the specified page.
     /// </summary>
-    /// <param name="path">Input file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing pageIndex, text, x, y</param>
-    /// <returns>Success message</returns>
-    /// <exception cref="ArgumentException">Thrown when pageIndex is out of range</exception>
-    private Task<string> AddAnnotation(string path, string outputPath, JsonObject? arguments)
+    /// <param name="sessionId">The session ID for in-memory editing.</param>
+    /// <param name="path">The PDF file path.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="pageIndex">The 1-based page index.</param>
+    /// <param name="text">The annotation text content.</param>
+    /// <param name="x">The X position in PDF coordinates.</param>
+    /// <param name="y">The Y position in PDF coordinates.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or invalid.</exception>
+    private string AddAnnotation(string? sessionId, string? path, string? outputPath, int? pageIndex, string? text,
+        double x, double y)
     {
-        return Task.Run(() =>
+        if (!pageIndex.HasValue)
+            throw new ArgumentException("pageIndex is required for add operation");
+        if (string.IsNullOrEmpty(text))
+            throw new ArgumentException("text is required for add operation");
+
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        var document = ctx.Document;
+
+        if (pageIndex.Value < 1 || pageIndex.Value > document.Pages.Count)
+            throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
+
+        var page = document.Pages[pageIndex.Value];
+        var annotation = new TextAnnotation(page, new Rectangle(x, y, x + 200, y + 50))
         {
-            var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
-            var text = ArgumentHelper.GetString(arguments, "text");
-            var x = ArgumentHelper.GetDouble(arguments, "x", "x", false, 100);
-            var y = ArgumentHelper.GetDouble(arguments, "y", "y", false, 700);
+            Title = "Comment",
+            Subject = "Annotation",
+            Contents = text,
+            Open = false,
+            Icon = TextIcon.Note
+        };
 
-            using var document = new Document(path);
-            if (pageIndex < 1 || pageIndex > document.Pages.Count)
-                throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
+        page.Annotations.Add(annotation);
 
-            var page = document.Pages[pageIndex];
-            var annotation = new TextAnnotation(page, new Rectangle(x, y, x + 200, y + 50))
-            {
-                Title = "Comment",
-                Subject = "Annotation",
-                Contents = text,
-                Open = false,
-                Icon = TextIcon.Note
-            };
-
-            page.Annotations.Add(annotation);
-            document.Save(outputPath);
-            return $"Added annotation to page {pageIndex}. Output: {outputPath}";
-        });
+        ctx.Save(outputPath);
+        return $"Added annotation to page {pageIndex.Value}. {ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Deletes annotation(s) from a PDF page
+    ///     Deletes one or all annotations from the specified page.
     /// </summary>
-    /// <param name="path">Input file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing pageIndex, optional annotationIndex (deletes all if omitted)</param>
-    /// <returns>Success message</returns>
-    /// <exception cref="ArgumentException">Thrown when pageIndex or annotationIndex is out of range</exception>
-    private Task<string> DeleteAnnotation(string path, string outputPath, JsonObject? arguments)
+    /// <param name="sessionId">The session ID for in-memory editing.</param>
+    /// <param name="path">The PDF file path.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="pageIndex">The 1-based page index.</param>
+    /// <param name="annotationIndex">The 1-based annotation index, or null to delete all annotations.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or invalid.</exception>
+    private string DeleteAnnotation(string? sessionId, string? path, string? outputPath, int? pageIndex,
+        int? annotationIndex)
     {
-        return Task.Run(() =>
+        if (!pageIndex.HasValue)
+            throw new ArgumentException("pageIndex is required for delete operation");
+
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        var document = ctx.Document;
+
+        if (pageIndex.Value < 1 || pageIndex.Value > document.Pages.Count)
+            throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
+
+        var page = document.Pages[pageIndex.Value];
+
+        if (annotationIndex.HasValue)
         {
-            var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
-            var annotationIndex = ArgumentHelper.GetIntNullable(arguments, "annotationIndex");
-
-            using var document = new Document(path);
-            if (pageIndex < 1 || pageIndex > document.Pages.Count)
-                throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
-
-            var page = document.Pages[pageIndex];
-
-            if (annotationIndex.HasValue)
-            {
-                if (annotationIndex.Value < 1 || annotationIndex.Value > page.Annotations.Count)
-                    throw new ArgumentException($"annotationIndex must be between 1 and {page.Annotations.Count}");
-
-                page.Annotations.Delete(annotationIndex.Value);
-                document.Save(outputPath);
-                return $"Deleted annotation {annotationIndex.Value} from page {pageIndex}. Output: {outputPath}";
-            }
-
-            var count = page.Annotations.Count;
-            if (count == 0)
-                throw new ArgumentException($"No annotations found on page {pageIndex}");
-
-            page.Annotations.Delete();
-            document.Save(outputPath);
-            return $"Deleted all {count} annotation(s) from page {pageIndex}. Output: {outputPath}";
-        });
-    }
-
-    /// <summary>
-    ///     Edits an annotation in a PDF
-    /// </summary>
-    /// <param name="path">Input file path</param>
-    /// <param name="outputPath">Output file path</param>
-    /// <param name="arguments">JSON arguments containing pageIndex, annotationIndex, text, optional x, y</param>
-    /// <returns>Success message</returns>
-    /// <exception cref="ArgumentException">
-    ///     Thrown when pageIndex or annotationIndex is out of range, or annotation is not a
-    ///     TextAnnotation
-    /// </exception>
-    private Task<string> EditAnnotation(string path, string outputPath, JsonObject? arguments)
-    {
-        return Task.Run(() =>
-        {
-            var pageIndex = ArgumentHelper.GetInt(arguments, "pageIndex");
-            var annotationIndex = ArgumentHelper.GetInt(arguments, "annotationIndex");
-            var text = ArgumentHelper.GetString(arguments, "text");
-            var x = ArgumentHelper.GetDoubleNullable(arguments, "x");
-            var y = ArgumentHelper.GetDoubleNullable(arguments, "y");
-
-            using var document = new Document(path);
-            if (pageIndex < 1 || pageIndex > document.Pages.Count)
-                throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
-
-            var page = document.Pages[pageIndex];
-            if (annotationIndex < 1 || annotationIndex > page.Annotations.Count)
+            if (annotationIndex.Value < 1 || annotationIndex.Value > page.Annotations.Count)
                 throw new ArgumentException($"annotationIndex must be between 1 and {page.Annotations.Count}");
 
-            try
-            {
-                var annotation = page.Annotations[annotationIndex];
-                if (annotation is TextAnnotation textAnnotation)
-                {
-                    textAnnotation.Contents = text;
-                    if (x.HasValue && y.HasValue)
-                        textAnnotation.Rect = new Rectangle(x.Value, y.Value, x.Value + 200, y.Value + 50);
-                }
-                else
-                {
-                    throw new ArgumentException(
-                        $"Annotation at index {annotationIndex} is not a TextAnnotation and cannot be edited");
-                }
-            }
-            catch (Exception ex)
-            {
-                throw new ArgumentException($"Failed to edit annotation: {ex.Message}");
-            }
+            page.Annotations.Delete(annotationIndex.Value);
+            ctx.Save(outputPath);
+            return
+                $"Deleted annotation {annotationIndex.Value} from page {pageIndex.Value}. {ctx.GetOutputMessage(outputPath)}";
+        }
 
-            document.Save(outputPath);
-            return $"Edited annotation {annotationIndex} on page {pageIndex}. Output: {outputPath}";
-        });
+        var count = page.Annotations.Count;
+        if (count == 0)
+            throw new ArgumentException($"No annotations found on page {pageIndex.Value}");
+
+        page.Annotations.Delete();
+        ctx.Save(outputPath);
+        return $"Deleted all {count} annotation(s) from page {pageIndex.Value}. {ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Gets all annotations from a PDF page
+    ///     Edits an existing text annotation on the specified page.
     /// </summary>
-    /// <param name="path">Input file path</param>
-    /// <param name="arguments">JSON arguments containing optional pageIndex</param>
-    /// <returns>JSON string with all annotations</returns>
-    /// <exception cref="ArgumentException">Thrown when pageIndex is out of range or failed to get annotations</exception>
-    private Task<string> GetAnnotations(string path, JsonObject? arguments)
+    /// <param name="sessionId">The session ID for in-memory editing.</param>
+    /// <param name="path">The PDF file path.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="pageIndex">The 1-based page index.</param>
+    /// <param name="annotationIndex">The 1-based annotation index.</param>
+    /// <param name="text">The new annotation text content.</param>
+    /// <param name="x">The new X position in PDF coordinates.</param>
+    /// <param name="y">The new Y position in PDF coordinates.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or invalid.</exception>
+    private string EditAnnotation(string? sessionId, string? path, string? outputPath, int? pageIndex,
+        int? annotationIndex, string? text, double x, double y)
     {
-        return Task.Run(() =>
+        if (!pageIndex.HasValue)
+            throw new ArgumentException("pageIndex is required for edit operation");
+        if (!annotationIndex.HasValue)
+            throw new ArgumentException("annotationIndex is required for edit operation");
+        if (string.IsNullOrEmpty(text))
+            throw new ArgumentException("text is required for edit operation");
+
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        var document = ctx.Document;
+
+        if (pageIndex.Value < 1 || pageIndex.Value > document.Pages.Count)
+            throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
+
+        var page = document.Pages[pageIndex.Value];
+        if (annotationIndex.Value < 1 || annotationIndex.Value > page.Annotations.Count)
+            throw new ArgumentException($"annotationIndex must be between 1 and {page.Annotations.Count}");
+
+        try
         {
-            var pageIndex = ArgumentHelper.GetIntNullable(arguments, "pageIndex");
-
-            using var document = new Document(path);
-            var annotationList = new List<object>();
-
-            if (pageIndex.HasValue)
+            var annotation = page.Annotations[annotationIndex.Value];
+            if (annotation is TextAnnotation textAnnotation)
             {
-                if (pageIndex.Value < 1 || pageIndex.Value > document.Pages.Count)
-                    throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
-
-                var page = document.Pages[pageIndex.Value];
-                CollectAnnotationsFromPage(page, pageIndex.Value, annotationList);
-
-                var result = new
-                {
-                    count = annotationList.Count,
-                    pageIndex = pageIndex.Value,
-                    items = annotationList
-                };
-                return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+                textAnnotation.Contents = text;
+                if (Math.Abs(x - 100) > 0.001 || Math.Abs(y - 700) > 0.001)
+                    textAnnotation.Rect = new Rectangle(x, y, x + 200, y + 50);
             }
-
-            for (var i = 1; i <= document.Pages.Count; i++)
+            else
             {
-                var page = document.Pages[i];
-                CollectAnnotationsFromPage(page, i, annotationList);
+                throw new ArgumentException(
+                    $"Annotation at index {annotationIndex.Value} is not a TextAnnotation and cannot be edited");
             }
+        }
+        catch (Exception ex) when (ex is not ArgumentException)
+        {
+            throw new ArgumentException($"Failed to edit annotation: {ex.Message}");
+        }
 
-            var allResult = new
+        ctx.Save(outputPath);
+        return
+            $"Edited annotation {annotationIndex.Value} on page {pageIndex.Value}. {ctx.GetOutputMessage(outputPath)}";
+    }
+
+    /// <summary>
+    ///     Retrieves annotations from the specified page or all pages.
+    /// </summary>
+    /// <param name="sessionId">The session ID for in-memory editing.</param>
+    /// <param name="path">The PDF file path.</param>
+    /// <param name="pageIndex">The 1-based page index, or null for all pages.</param>
+    /// <returns>A JSON string containing annotation information.</returns>
+    /// <exception cref="ArgumentException">Thrown when the page index is out of range.</exception>
+    private string GetAnnotations(string? sessionId, string? path, int? pageIndex)
+    {
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        var document = ctx.Document;
+        List<object> annotationList = [];
+
+        if (pageIndex.HasValue)
+        {
+            if (pageIndex.Value < 1 || pageIndex.Value > document.Pages.Count)
+                throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
+
+            var page = document.Pages[pageIndex.Value];
+            CollectAnnotationsFromPage(page, pageIndex.Value, annotationList);
+
+            var result = new
             {
                 count = annotationList.Count,
-                items = annotationList,
-                message = annotationList.Count == 0 ? "No annotations found" : null
+                pageIndex = pageIndex.Value,
+                items = annotationList
             };
-            return JsonSerializer.Serialize(allResult, new JsonSerializerOptions { WriteIndented = true });
-        });
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        }
+
+        for (var i = 1; i <= document.Pages.Count; i++)
+        {
+            var page = document.Pages[i];
+            CollectAnnotationsFromPage(page, i, annotationList);
+        }
+
+        var allResult = new
+        {
+            count = annotationList.Count,
+            items = annotationList,
+            message = annotationList.Count == 0 ? "No annotations found" : null
+        };
+        return JsonSerializer.Serialize(allResult, new JsonSerializerOptions { WriteIndented = true });
     }
 
     /// <summary>
-    ///     Collects annotation information from a page
+    ///     Collects annotation information from a single page.
     /// </summary>
-    /// <param name="page">The PDF page</param>
-    /// <param name="pageIndex">The page index (1-based)</param>
-    /// <param name="annotationList">The list to add annotation info to</param>
+    /// <param name="page">The PDF page to collect annotations from.</param>
+    /// <param name="pageIndex">The 1-based page index for reference.</param>
+    /// <param name="annotationList">The list to add annotation information to.</param>
     private static void CollectAnnotationsFromPage(Page page, int pageIndex, List<object> annotationList)
     {
         for (var i = 1; i <= page.Annotations.Count; i++)

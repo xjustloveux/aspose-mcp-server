@@ -1,0 +1,139 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aspose-mcp-server
+  labels:
+    app: aspose-mcp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aspose-mcp
+  template:
+    metadata:
+      labels:
+        app: aspose-mcp
+    spec:
+      containers:
+        - name: aspose-mcp
+          image: ghcr.io/xjustloveux/aspose-mcp-server:latest
+          ports:
+            - containerPort: 3000
+          env:
+            # === Transport Settings (Required) ===
+            - name: ASPOSE_TRANSPORT
+              value: "sse"                # stdio, sse, ws
+            - name: ASPOSE_PORT
+              value: "3000"
+            - name: ASPOSE_HOST
+              value: "0.0.0.0"
+
+            # === Tools (Required) ===
+            - name: ASPOSE_TOOLS
+              value: "all"                # all, or comma-separated: word,excel,pdf,ppt
+
+            # === License (Optional) ===
+            # - name: ASPOSE_LICENSE_PATH
+            #   value: "/app/license/Aspose.Total.lic"
+
+            # === Session Settings (Optional) ===
+            # - name: ASPOSE_SESSION_ENABLED
+            #   value: "true"               # Enable session management (required for document_session tool)
+            # - name: ASPOSE_SESSION_MAX
+            #   value: "10"                 # Max concurrent sessions (default: 10)
+            # - name: ASPOSE_SESSION_TIMEOUT
+            #   value: "30"                 # Session timeout in minutes (default: 30)
+            # - name: ASPOSE_SESSION_TEMP_RETENTION_HOURS
+            #   value: "24"                 # Temp file retention in hours (default: 24)
+
+            # === API Key Authentication (Optional) ===
+            # - name: ASPOSE_AUTH_APIKEY_ENABLED
+            #   value: "true"
+            # - name: ASPOSE_AUTH_APIKEY_MODE
+            #   value: "local"            # local, gateway, introspection, custom
+            # - name: ASPOSE_AUTH_APIKEY_KEYS
+            #   value: "key1:tenant1,key2:tenant2"
+            # - name: ASPOSE_AUTH_APIKEY_HEADER
+            #   value: "X-API-Key"
+            # - name: ASPOSE_AUTH_APIKEY_TENANT_HEADER
+            #   value: "X-Tenant-Id"
+            # - name: ASPOSE_AUTH_APIKEY_INTROSPECTION_AUTH
+            #   value: "Bearer token"
+            # - name: ASPOSE_AUTH_APIKEY_CUSTOM_TIMEOUT
+            #   value: "5"
+
+            # === JWT Authentication (Optional) ===
+            # - name: ASPOSE_AUTH_JWT_ENABLED
+            #   value: "true"
+            # - name: ASPOSE_AUTH_JWT_MODE
+            #   value: "local"            # local, gateway, introspection, custom
+            # - name: ASPOSE_AUTH_JWT_SECRET
+            #   value: "your-secret-key"
+            # - name: ASPOSE_AUTH_JWT_ISSUER
+            #   value: "your-issuer"
+            # - name: ASPOSE_AUTH_JWT_AUDIENCE
+            #   value: "your-audience"
+            # - name: ASPOSE_AUTH_JWT_TENANT_CLAIM
+            #   value: "tenant_id"
+            # - name: ASPOSE_AUTH_JWT_TENANT_HEADER
+            #   value: "X-Tenant-Id"
+            # - name: ASPOSE_AUTH_JWT_USER_HEADER
+            #   value: "X-User-Id"
+            # - name: ASPOSE_AUTH_JWT_CUSTOM_TIMEOUT
+            #   value: "5"
+
+            # === Logging (Optional) ===
+            # - name: ASPOSE_LOG_ENABLED
+            #   value: "true"
+            # - name: ASPOSE_LOG_TARGETS
+            #   value: "Console"          # Console, EventLog (Windows only)
+
+            # === Webhook (Optional) ===
+            # - name: ASPOSE_WEBHOOK_URL
+            #   value: "https://your-webhook.example.com/events"
+            # - name: ASPOSE_WEBHOOK_SECRET
+            #   value: "your-webhook-secret"
+
+            # === Prometheus Metrics (Optional) ===
+            # - name: ASPOSE_METRICS_ENABLED
+            #   value: "true"
+            # - name: ASPOSE_METRICS_PATH
+            #   value: "/metrics"
+
+          # === Volume Mounts (Optional) ===
+          # volumeMounts:
+          #   - name: license
+          #     mountPath: /app/license
+          #     readOnly: true
+
+          # === Resources (Optional) ===
+          # resources:
+          #   requests:
+          #     memory: "256Mi"
+          #     cpu: "250m"
+          #   limits:
+          #     memory: "1Gi"
+          #     cpu: "1000m"
+
+          # === Liveness Probe (Optional) ===
+          # livenessProbe:
+          #   httpGet:
+          #     path: /health
+          #     port: 3000
+          #   initialDelaySeconds: 10
+          #   periodSeconds: 30
+
+          # === Readiness Probe (Optional) ===
+          # readinessProbe:
+          #   httpGet:
+          #     path: /ready
+          #     port: 3000
+          #   initialDelaySeconds: 5
+          #   periodSeconds: 10
+
+      # === Volumes (Optional) ===
+      # volumes:
+      #   - name: license
+      #     secret:
+      #       secretName: aspose-license
+      #       optional: true

@@ -7,13 +7,16 @@ namespace AsposeMcpServer.Core.ShapeDetailProviders;
 /// </summary>
 public class ConnectorDetailProvider : IShapeDetailProvider
 {
+    /// <inheritdoc />
     public string TypeName => "Connector";
 
+    /// <inheritdoc />
     public bool CanHandle(IShape shape)
     {
         return shape is IConnector;
     }
 
+    /// <inheritdoc />
     public object? GetDetails(IShape shape, IPresentation presentation)
     {
         if (shape is not IConnector connector)

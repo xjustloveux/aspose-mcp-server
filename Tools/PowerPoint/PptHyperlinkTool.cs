@@ -1,18 +1,34 @@
-﻿using System.Text.Json;
-using System.Text.Json.Nodes;
+using System.ComponentModel;
+using System.Text.Json;
 using Aspose.Slides;
-using Aspose.Slides.Export;
-using AsposeMcpServer.Core;
+using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Session;
+using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.PowerPoint;
 
 /// <summary>
 ///     Unified tool for managing PowerPoint hyperlinks (add, edit, delete, get)
-///     Merges: PptAddHyperlinkTool, PptEditHyperlinkTool, PptDeleteHyperlinkTool, PptGetHyperlinksTool
 /// </summary>
-public class PptHyperlinkTool : IAsposeTool
+[McpServerToolType]
+public class PptHyperlinkTool
 {
-    public string Description => @"Manage PowerPoint hyperlinks. Supports 4 operations: add, edit, delete, get.
+    /// <summary>
+    ///     Session manager for document lifecycle management.
+    /// </summary>
+    private readonly DocumentSessionManager? _sessionManager;
+
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="PptHyperlinkTool" /> class.
+    /// </summary>
+    /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
+    public PptHyperlinkTool(DocumentSessionManager? sessionManager = null)
+    {
+        _sessionManager = sessionManager;
+    }
+
+    [McpServerTool(Name = "ppt_hyperlink")]
+    [Description(@"Manage PowerPoint hyperlinks. Supports 4 operations: add, edit, delete, get.
 
 Usage examples:
 - Add hyperlink (URL, shape-level): ppt_hyperlink(operation='add', path='presentation.pptx', slideIndex=0, text='Click here', url='https://example.com')
@@ -20,111 +36,48 @@ Usage examples:
 - Add hyperlink (internal): ppt_hyperlink(operation='add', path='presentation.pptx', slideIndex=0, text='Go to slide 5', slideTargetIndex=4)
 - Edit hyperlink: ppt_hyperlink(operation='edit', path='presentation.pptx', slideIndex=0, shapeIndex=0, url='https://newurl.com')
 - Delete hyperlink: ppt_hyperlink(operation='delete', path='presentation.pptx', slideIndex=0, shapeIndex=0)
-- Get hyperlinks: ppt_hyperlink(operation='get', path='presentation.pptx', slideIndex=0)";
-
-    public object InputSchema => new
+- Get hyperlinks: ppt_hyperlink(operation='get', path='presentation.pptx', slideIndex=0)")]
+    public string Execute(
+        [Description("Operation: add, edit, delete, get")]
+        string operation,
+        [Description("Presentation file path (required if no sessionId)")]
+        string? path = null,
+        [Description("Session ID for in-memory editing")]
+        string? sessionId = null,
+        [Description("Output file path (file mode only)")]
+        string? outputPath = null,
+        [Description("Slide index (0-based)")] int? slideIndex = null,
+        [Description("Shape index (0-based, required for edit/delete, optional for add)")]
+        int? shapeIndex = null,
+        [Description("Display text (required for add)")]
+        string? text = null,
+        [Description(
+            "Specific text to apply hyperlink to (optional, for add). When provided, only this text portion will have the hyperlink.")]
+        string? linkText = null,
+        [Description("Hyperlink URL (required for add, optional for edit)")]
+        string? url = null,
+        [Description("Target slide index for internal link (0-based, optional, for add/edit)")]
+        int? slideTargetIndex = null,
+        [Description("Remove hyperlink (optional, for edit)")]
+        bool removeHyperlink = false,
+        [Description("X position (optional, for add, default: 50)")]
+        float x = 50,
+        [Description("Y position (optional, for add, default: 50)")]
+        float y = 50,
+        [Description("Width (optional, for add, default: 300)")]
+        float width = 300,
+        [Description("Height (optional, for add, default: 50)")]
+        float height = 50)
     {
-        type = "object",
-        properties = new
-        {
-            operation = new
-            {
-                type = "string",
-                description = @"Operation to perform.
-- 'add': Add hyperlink to shape (required params: path, slideIndex, text, url or slideTargetIndex)
-- 'edit': Edit hyperlink (required params: path, slideIndex, shapeIndex, url or slideTargetIndex)
-- 'delete': Delete hyperlink (required params: path, slideIndex, shapeIndex)
-- 'get': Get all hyperlinks (required params: path)",
-                @enum = new[] { "add", "edit", "delete", "get" }
-            },
-            path = new
-            {
-                type = "string",
-                description = "Presentation file path (required for all operations)"
-            },
-            slideIndex = new
-            {
-                type = "number",
-                description = "Slide index (0-based)"
-            },
-            shapeIndex = new
-            {
-                type = "number",
-                description = "Shape index (0-based, required for edit/delete, optional for add)"
-            },
-            text = new
-            {
-                type = "string",
-                description = "Display text (required for add)"
-            },
-            linkText = new
-            {
-                type = "string",
-                description =
-                    "Specific text to apply hyperlink to (optional, for add). When provided, only this text portion will have the hyperlink. When omitted, the entire shape will be clickable."
-            },
-            url = new
-            {
-                type = "string",
-                description = "Hyperlink URL (required for add, optional for edit)"
-            },
-            slideTargetIndex = new
-            {
-                type = "number",
-                description = "Target slide index for internal link (0-based, optional, for add/edit)"
-            },
-            removeHyperlink = new
-            {
-                type = "boolean",
-                description = "Remove hyperlink (optional, for edit)"
-            },
-            x = new
-            {
-                type = "number",
-                description = "X position (optional, for add, default: 50)"
-            },
-            y = new
-            {
-                type = "number",
-                description = "Y position (optional, for add, default: 50)"
-            },
-            width = new
-            {
-                type = "number",
-                description = "Width (optional, for add, default: 300)"
-            },
-            height = new
-            {
-                type = "number",
-                description = "Height (optional, for add, default: 50)"
-            },
-            outputPath = new
-            {
-                type = "string",
-                description = "Output file path (optional, for add/edit/delete operations, defaults to input path)"
-            }
-        },
-        required = new[] { "operation", "path" }
-    };
-
-    /// <summary>
-    ///     Executes the tool operation with the provided JSON arguments.
-    /// </summary>
-    /// <param name="arguments">JSON arguments object containing operation parameters.</param>
-    /// <returns>Result message as a string.</returns>
-    /// <exception cref="ArgumentException">Thrown when operation is unknown.</exception>
-    public async Task<string> ExecuteAsync(JsonObject? arguments)
-    {
-        var operation = ArgumentHelper.GetString(arguments, "operation");
-        var path = ArgumentHelper.GetAndValidatePath(arguments);
-        var outputPath = ArgumentHelper.GetAndValidateOutputPath(arguments, path);
+        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path);
 
         return operation.ToLower() switch
         {
-            "add" => await AddHyperlinkAsync(path, outputPath, arguments),
-            "edit" => await EditHyperlinkAsync(path, outputPath, arguments),
-            "delete" => await DeleteHyperlinkAsync(path, outputPath, arguments),
-            "get" => await GetHyperlinksAsync(path, arguments),
+            "add" => AddHyperlink(ctx, outputPath, slideIndex, url, slideTargetIndex, text, linkText, shapeIndex, x, y,
+                width, height),
+            "edit" => EditHyperlink(ctx, outputPath, slideIndex, shapeIndex, url, slideTargetIndex, removeHyperlink),
+            "delete" => DeleteHyperlink(ctx, outputPath, slideIndex, shapeIndex),
+            "get" => GetHyperlinks(ctx, slideIndex),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -132,287 +85,274 @@ Usage examples:
     /// <summary>
     ///     Adds a hyperlink to a shape or specific text portion.
     /// </summary>
-    /// <param name="path">PowerPoint file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="arguments">
-    ///     JSON arguments containing slideIndex, url or slideTargetIndex, optional text, linkText,
-    ///     shapeIndex, position.
-    /// </param>
-    /// <returns>Success message.</returns>
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <param name="url">The hyperlink URL.</param>
+    /// <param name="slideTargetIndex">The target slide index for internal links.</param>
+    /// <param name="text">The display text for the hyperlink.</param>
+    /// <param name="linkText">The specific text portion to apply hyperlink to.</param>
+    /// <param name="shapeIndex">The shape index to add hyperlink to.</param>
+    /// <param name="x">The X position for new shape.</param>
+    /// <param name="y">The Y position for new shape.</param>
+    /// <param name="width">The width for new shape.</param>
+    /// <param name="height">The height for new shape.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
     /// <exception cref="ArgumentException">
-    ///     Thrown when slideIndex or slideTargetIndex is out of range, neither url nor
-    ///     slideTargetIndex is provided, or linkText is not found in text.
+    ///     Thrown when slideIndex is not provided, or when neither url nor slideTargetIndex is
+    ///     provided, or when linkText is not found in text.
     /// </exception>
-    private Task<string> AddHyperlinkAsync(string path, string outputPath, JsonObject? arguments)
+    private static string AddHyperlink(DocumentContext<Presentation> ctx, string? outputPath,
+        int? slideIndex, string? url, int? slideTargetIndex, string? text, string? linkText,
+        int? shapeIndex, float x, float y, float width, float height)
     {
-        return Task.Run(() =>
+        if (!slideIndex.HasValue)
+            throw new ArgumentException("slideIndex is required for add operation");
+
+        var presentation = ctx.Document;
+        var slide = PowerPointHelper.GetSlide(presentation, slideIndex.Value);
+        IAutoShape autoShape;
+
+        if (shapeIndex is >= 0 && shapeIndex.Value < slide.Shapes.Count)
         {
-            var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
-            var url = ArgumentHelper.GetStringNullable(arguments, "url");
-            var slideTargetIndex = ArgumentHelper.GetIntNullable(arguments, "slideTargetIndex");
-            var text = ArgumentHelper.GetStringNullable(arguments, "text");
-            var linkText = ArgumentHelper.GetStringNullable(arguments, "linkText");
-            var shapeIndex = ArgumentHelper.GetIntNullable(arguments, "shapeIndex");
-            var x = ArgumentHelper.GetFloatNullable(arguments, "x");
-            var y = ArgumentHelper.GetFloatNullable(arguments, "y");
-            var width = ArgumentHelper.GetFloatNullable(arguments, "width");
-            var height = ArgumentHelper.GetFloatNullable(arguments, "height");
-
-            using var presentation = new Presentation(path);
-            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-            IAutoShape autoShape;
-
-            if (shapeIndex is >= 0 && shapeIndex.Value < slide.Shapes.Count)
-            {
-                if (slide.Shapes[shapeIndex.Value] is IAutoShape existingAutoShape)
-                    autoShape = existingAutoShape;
-                else
-                    throw new ArgumentException($"Shape at index {shapeIndex.Value} is not an AutoShape");
-            }
+            if (slide.Shapes[shapeIndex.Value] is IAutoShape existingAutoShape)
+                autoShape = existingAutoShape;
             else
+                throw new ArgumentException($"Shape at index {shapeIndex.Value} is not an AutoShape");
+        }
+        else
+        {
+            autoShape = slide.Shapes.AddAutoShape(ShapeType.Rectangle, x, y, width, height);
+        }
+
+        IHyperlink hyperlink;
+        string linkDescription;
+        if (!string.IsNullOrEmpty(url))
+        {
+            hyperlink = new Hyperlink(url);
+            linkDescription = url;
+        }
+        else if (slideTargetIndex.HasValue)
+        {
+            PowerPointHelper.ValidateSlideIndex(slideTargetIndex.Value, presentation);
+            hyperlink = new Hyperlink(presentation.Slides[slideTargetIndex.Value]);
+            linkDescription = $"Slide {slideTargetIndex.Value}";
+        }
+        else
+        {
+            throw new ArgumentException("Either url or slideTargetIndex must be provided");
+        }
+
+        if (!string.IsNullOrEmpty(linkText) && !string.IsNullOrEmpty(text))
+        {
+            var linkIndex = text.IndexOf(linkText, StringComparison.Ordinal);
+            if (linkIndex < 0)
+                throw new ArgumentException($"linkText '{linkText}' not found in text '{text}'");
+
+            autoShape.TextFrame.Paragraphs.Clear();
+            var paragraph = new Paragraph();
+
+            if (linkIndex > 0)
             {
-                var defaultX = x ?? 50;
-                var defaultY = y ?? 50;
-                var defaultWidth = width ?? 300;
-                var defaultHeight = height ?? 50;
-                autoShape = slide.Shapes.AddAutoShape(ShapeType.Rectangle, defaultX, defaultY, defaultWidth,
-                    defaultHeight);
+                var beforePortion = new Portion(text[..linkIndex]);
+                paragraph.Portions.Add(beforePortion);
             }
 
-            // Create hyperlink object
-            IHyperlink hyperlink;
-            string linkDescription;
-            if (!string.IsNullOrEmpty(url))
+            var linkPortion = new Portion(linkText)
             {
-                hyperlink = new Hyperlink(url);
-                linkDescription = url;
-            }
-            else if (slideTargetIndex.HasValue)
+                PortionFormat = { HyperlinkClick = hyperlink }
+            };
+            paragraph.Portions.Add(linkPortion);
+
+            var afterIndex = linkIndex + linkText.Length;
+            if (afterIndex < text.Length)
             {
-                PowerPointHelper.ValidateSlideIndex(slideTargetIndex.Value, presentation);
-                hyperlink = new Hyperlink(presentation.Slides[slideTargetIndex.Value]);
-                linkDescription = $"Slide {slideTargetIndex.Value}";
-            }
-            else
-            {
-                throw new ArgumentException("Either url or slideTargetIndex must be provided");
+                var afterPortion = new Portion(text[afterIndex..]);
+                paragraph.Portions.Add(afterPortion);
             }
 
-            // Check if we need to apply hyperlink to specific text (Portion-level)
-            if (!string.IsNullOrEmpty(linkText) && !string.IsNullOrEmpty(text))
-            {
-                var linkIndex = text.IndexOf(linkText, StringComparison.Ordinal);
-                if (linkIndex < 0)
-                    throw new ArgumentException($"linkText '{linkText}' not found in text '{text}'");
+            autoShape.TextFrame.Paragraphs.Add(paragraph);
+            linkDescription += $" (on text: '{linkText}')";
+        }
+        else
+        {
+            autoShape.HyperlinkClick = hyperlink;
 
-                // Clear existing text and create portions
-                autoShape.TextFrame.Paragraphs.Clear();
-                var paragraph = new Paragraph();
+            if (!string.IsNullOrEmpty(text) && autoShape.TextFrame != null)
+                autoShape.TextFrame.Text = text;
+        }
 
-                // Text before the link
-                if (linkIndex > 0)
-                {
-                    var beforePortion = new Portion(text[..linkIndex]);
-                    paragraph.Portions.Add(beforePortion);
-                }
+        ctx.Save(outputPath);
 
-                // The link text portion
-                var linkPortion = new Portion(linkText)
-                {
-                    PortionFormat = { HyperlinkClick = hyperlink }
-                };
-                paragraph.Portions.Add(linkPortion);
-
-                // Text after the link
-                var afterIndex = linkIndex + linkText.Length;
-                if (afterIndex < text.Length)
-                {
-                    var afterPortion = new Portion(text[afterIndex..]);
-                    paragraph.Portions.Add(afterPortion);
-                }
-
-                autoShape.TextFrame.Paragraphs.Add(paragraph);
-                linkDescription += $" (on text: '{linkText}')";
-            }
-            else
-            {
-                // Shape-level hyperlink (original behavior)
-                autoShape.HyperlinkClick = hyperlink;
-
-                if (!string.IsNullOrEmpty(text) && autoShape.TextFrame != null)
-                    autoShape.TextFrame.Text = text;
-            }
-
-            presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Hyperlink added to slide {slideIndex}: {linkDescription}. Output: {outputPath}";
-        });
+        var result = $"Hyperlink added to slide {slideIndex}: {linkDescription}. ";
+        result += ctx.GetOutputMessage(outputPath);
+        return result;
     }
 
     /// <summary>
     ///     Edits an existing hyperlink.
     /// </summary>
-    /// <param name="path">PowerPoint file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="arguments">
-    ///     JSON arguments containing slideIndex, shapeIndex, optional url, slideTargetIndex,
-    ///     removeHyperlink.
-    /// </param>
-    /// <returns>Success message.</returns>
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <param name="shapeIndex">The shape index (0-based).</param>
+    /// <param name="url">The new hyperlink URL.</param>
+    /// <param name="slideTargetIndex">The new target slide index for internal links.</param>
+    /// <param name="removeHyperlink">Whether to remove the hyperlink.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
     /// <exception cref="ArgumentException">
-    ///     Thrown when slideIndex, shapeIndex, or slideTargetIndex is out of range, or no
-    ///     valid action is specified.
+    ///     Thrown when slideIndex or shapeIndex is not provided, or when neither url,
+    ///     slideTargetIndex, nor removeHyperlink is provided.
     /// </exception>
-    private Task<string> EditHyperlinkAsync(string path, string outputPath, JsonObject? arguments)
+    private static string EditHyperlink(DocumentContext<Presentation> ctx, string? outputPath,
+        int? slideIndex, int? shapeIndex, string? url, int? slideTargetIndex, bool removeHyperlink)
     {
-        return Task.Run(() =>
+        if (!slideIndex.HasValue)
+            throw new ArgumentException("slideIndex is required for edit operation");
+        if (!shapeIndex.HasValue)
+            throw new ArgumentException("shapeIndex is required for edit operation");
+
+        var presentation = ctx.Document;
+        var slide = PowerPointHelper.GetSlide(presentation, slideIndex.Value);
+        var shape = PowerPointHelper.GetShape(slide, shapeIndex.Value);
+
+        if (removeHyperlink)
         {
-            var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
-            var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
-            var url = ArgumentHelper.GetStringNullable(arguments, "url");
-            var slideTargetIndex = ArgumentHelper.GetIntNullable(arguments, "slideTargetIndex");
-            var removeHyperlink = ArgumentHelper.GetBool(arguments, "removeHyperlink", false);
-
-            using var presentation = new Presentation(path);
-            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-            var shape = PowerPointHelper.GetShape(slide, shapeIndex);
-
-            if (removeHyperlink)
-            {
-                if (shape is IAutoShape { TextFrame: not null } autoShape)
-                    foreach (var paragraph in autoShape.TextFrame.Paragraphs)
-                    foreach (var portion in paragraph.Portions)
-                        portion.PortionFormat.HyperlinkClick = null;
-
-                shape.HyperlinkClick = null;
-            }
-            else if (!string.IsNullOrEmpty(url))
-            {
-                shape.HyperlinkClick = new Hyperlink(url);
-            }
-            else if (slideTargetIndex.HasValue)
-            {
-                if (slideTargetIndex.Value < 0 || slideTargetIndex.Value >= presentation.Slides.Count)
-                    throw new ArgumentException(
-                        $"slideTargetIndex must be between 0 and {presentation.Slides.Count - 1}");
-                shape.HyperlinkClick = new Hyperlink(presentation.Slides[slideTargetIndex.Value]);
-            }
-            else
-            {
-                throw new ArgumentException("Either url, slideTargetIndex, or removeHyperlink must be provided");
-            }
-
-            presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Hyperlink updated on slide {slideIndex}, shape {shapeIndex}. Output: {outputPath}";
-        });
-    }
-
-    /// <summary>
-    ///     Deletes a hyperlink from a shape.
-    /// </summary>
-    /// <param name="path">PowerPoint file path.</param>
-    /// <param name="outputPath">Output file path.</param>
-    /// <param name="arguments">JSON arguments containing slideIndex, shapeIndex.</param>
-    /// <returns>Success message.</returns>
-    /// <exception cref="ArgumentException">Thrown when slideIndex or shapeIndex is out of range.</exception>
-    private Task<string> DeleteHyperlinkAsync(string path, string outputPath, JsonObject? arguments)
-    {
-        return Task.Run(() =>
-        {
-            var slideIndex = ArgumentHelper.GetInt(arguments, "slideIndex");
-            var shapeIndex = ArgumentHelper.GetInt(arguments, "shapeIndex");
-
-            using var presentation = new Presentation(path);
-            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-            var shape = PowerPointHelper.GetShape(slide, shapeIndex);
-            shape.HyperlinkClick = null;
-
             if (shape is IAutoShape { TextFrame: not null } autoShape)
                 foreach (var paragraph in autoShape.TextFrame.Paragraphs)
                 foreach (var portion in paragraph.Portions)
                     portion.PortionFormat.HyperlinkClick = null;
 
-            presentation.Save(outputPath, SaveFormat.Pptx);
-            return $"Hyperlink deleted from slide {slideIndex}, shape {shapeIndex}. Output: {outputPath}";
-        });
+            shape.HyperlinkClick = null;
+        }
+        else if (!string.IsNullOrEmpty(url))
+        {
+            shape.HyperlinkClick = new Hyperlink(url);
+        }
+        else if (slideTargetIndex.HasValue)
+        {
+            if (slideTargetIndex.Value < 0 || slideTargetIndex.Value >= presentation.Slides.Count)
+                throw new ArgumentException(
+                    $"slideTargetIndex must be between 0 and {presentation.Slides.Count - 1}");
+            shape.HyperlinkClick = new Hyperlink(presentation.Slides[slideTargetIndex.Value]);
+        }
+        else
+        {
+            throw new ArgumentException("Either url, slideTargetIndex, or removeHyperlink must be provided");
+        }
+
+        ctx.Save(outputPath);
+
+        var result = $"Hyperlink updated on slide {slideIndex}, shape {shapeIndex}. ";
+        result += ctx.GetOutputMessage(outputPath);
+        return result;
+    }
+
+    /// <summary>
+    ///     Deletes a hyperlink from a shape.
+    /// </summary>
+    /// <param name="ctx">The document context.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="slideIndex">The slide index (0-based).</param>
+    /// <param name="shapeIndex">The shape index (0-based).</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when slideIndex or shapeIndex is not provided.</exception>
+    private static string DeleteHyperlink(DocumentContext<Presentation> ctx, string? outputPath,
+        int? slideIndex, int? shapeIndex)
+    {
+        if (!slideIndex.HasValue)
+            throw new ArgumentException("slideIndex is required for delete operation");
+        if (!shapeIndex.HasValue)
+            throw new ArgumentException("shapeIndex is required for delete operation");
+
+        var presentation = ctx.Document;
+        var slide = PowerPointHelper.GetSlide(presentation, slideIndex.Value);
+        var shape = PowerPointHelper.GetShape(slide, shapeIndex.Value);
+        shape.HyperlinkClick = null;
+
+        if (shape is IAutoShape { TextFrame: not null } autoShape)
+            foreach (var paragraph in autoShape.TextFrame.Paragraphs)
+            foreach (var portion in paragraph.Portions)
+                portion.PortionFormat.HyperlinkClick = null;
+
+        ctx.Save(outputPath);
+
+        var result = $"Hyperlink deleted from slide {slideIndex}, shape {shapeIndex}. ";
+        result += ctx.GetOutputMessage(outputPath);
+        return result;
     }
 
     /// <summary>
     ///     Gets all hyperlinks from the presentation.
     /// </summary>
-    /// <param name="path">PowerPoint file path.</param>
-    /// <param name="arguments">JSON arguments containing optional slideIndex.</param>
-    /// <returns>JSON string with all hyperlinks.</returns>
+    /// <param name="ctx">The document context.</param>
+    /// <param name="slideIndex">The slide index (0-based), or null for all slides.</param>
+    /// <returns>A JSON string containing the hyperlinks information.</returns>
     /// <exception cref="ArgumentException">Thrown when slideIndex is out of range.</exception>
-    private Task<string> GetHyperlinksAsync(string path, JsonObject? arguments)
+    private static string GetHyperlinks(DocumentContext<Presentation> ctx, int? slideIndex)
     {
-        return Task.Run(() =>
+        var presentation = ctx.Document;
+
+        if (slideIndex.HasValue)
         {
-            var slideIndex = ArgumentHelper.GetIntNullable(arguments, "slideIndex");
+            if (slideIndex.Value < 0 || slideIndex.Value >= presentation.Slides.Count)
+                throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
+            var slide = presentation.Slides[slideIndex.Value];
+            var hyperlinksList = GetHyperlinksFromSlideAsJson(presentation, slide);
 
-            using var presentation = new Presentation(path);
-
-            if (slideIndex.HasValue)
+            var result = new
             {
-                if (slideIndex.Value < 0 || slideIndex.Value >= presentation.Slides.Count)
-                    throw new ArgumentException($"slideIndex must be between 0 and {presentation.Slides.Count - 1}");
-                var slide = presentation.Slides[slideIndex.Value];
-                var hyperlinksList = GetHyperlinksFromSlideAsJson(presentation, slide);
+                slideIndex = slideIndex.Value,
+                count = hyperlinksList.Count,
+                hyperlinks = hyperlinksList
+            };
 
-                var result = new
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        }
+        else
+        {
+            List<object> slidesList = [];
+            var totalCount = 0;
+
+            for (var i = 0; i < presentation.Slides.Count; i++)
+            {
+                var slide = presentation.Slides[i];
+                var hyperlinksList = GetHyperlinksFromSlideAsJson(presentation, slide);
+                totalCount += hyperlinksList.Count;
+
+                slidesList.Add(new
                 {
-                    slideIndex = slideIndex.Value,
+                    slideIndex = i,
                     count = hyperlinksList.Count,
                     hyperlinks = hyperlinksList
-                };
-
-                return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+                });
             }
-            else
+
+            var result = new
             {
-                var slidesList = new List<object>();
-                var totalCount = 0;
+                totalCount,
+                slides = slidesList
+            };
 
-                for (var i = 0; i < presentation.Slides.Count; i++)
-                {
-                    var slide = presentation.Slides[i];
-                    var hyperlinksList = GetHyperlinksFromSlideAsJson(presentation, slide);
-                    totalCount += hyperlinksList.Count;
-
-                    slidesList.Add(new
-                    {
-                        slideIndex = i,
-                        count = hyperlinksList.Count,
-                        hyperlinks = hyperlinksList
-                    });
-                }
-
-                var result = new
-                {
-                    totalCount,
-                    slides = slidesList
-                };
-
-                return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
-            }
-        });
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        }
     }
 
     /// <summary>
     ///     Gets hyperlinks from a slide as JSON objects.
     ///     Detects both shape-level and portion-level (text) hyperlinks.
     /// </summary>
-    /// <param name="presentation">Presentation to get slide indices from.</param>
-    /// <param name="slide">Slide to get hyperlinks from.</param>
-    /// <returns>List of hyperlink objects.</returns>
+    /// <param name="presentation">The presentation object.</param>
+    /// <param name="slide">The slide to extract hyperlinks from.</param>
+    /// <returns>A list of hyperlink objects containing shape index, level, trigger type, and URL.</returns>
     private static List<object> GetHyperlinksFromSlideAsJson(IPresentation presentation, ISlide slide)
     {
-        var hyperlinksList = new List<object>();
+        List<object> hyperlinksList = [];
 
         for (var shapeIndex = 0; shapeIndex < slide.Shapes.Count; shapeIndex++)
         {
             if (slide.Shapes[shapeIndex] is not IAutoShape autoShape) continue;
 
-            // Shape-level hyperlinks
             if (autoShape.HyperlinkClick != null)
             {
                 var targetSlide = autoShape.HyperlinkClick.TargetSlide;
@@ -447,7 +387,6 @@ Usage examples:
                 });
             }
 
-            // Portion-level (text) hyperlinks
             if (autoShape.TextFrame == null) continue;
 
             foreach (var paragraph in autoShape.TextFrame.Paragraphs)

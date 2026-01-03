@@ -7,13 +7,16 @@ namespace AsposeMcpServer.Core.ShapeDetailProviders;
 /// </summary>
 public class PictureFrameDetailProvider : IShapeDetailProvider
 {
+    /// <inheritdoc />
     public string TypeName => "Picture";
 
+    /// <inheritdoc />
     public bool CanHandle(IShape shape)
     {
         return shape is IPictureFrame;
     }
 
+    /// <inheritdoc />
     public object? GetDetails(IShape shape, IPresentation presentation)
     {
         if (shape is not IPictureFrame picture)
