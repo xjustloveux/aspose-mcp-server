@@ -18,6 +18,11 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 public class PptImageTool
 {
     /// <summary>
+    ///     Identity accessor for session isolation.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document lifecycle management.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -26,11 +31,38 @@ public class PptImageTool
     ///     Initializes a new instance of the <see cref="PptImageTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
-    public PptImageTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation.</param>
+    public PptImageTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a PowerPoint image operation (add, edit, delete, get, export_slides, extract).
+    /// </summary>
+    /// <param name="operation">The operation to perform: add, edit, delete, get, export_slides, extract.</param>
+    /// <param name="path">Presentation file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="slideIndex">Slide index (0-based, required for add/edit/delete/get).</param>
+    /// <param name="imageIndex">Image index on the slide (0-based, required for edit/delete).</param>
+    /// <param name="imagePath">Image file path (required for add, optional for edit).</param>
+    /// <param name="x">X position in points (optional for add/edit, default: 100).</param>
+    /// <param name="y">Y position in points (optional for add/edit, default: 100).</param>
+    /// <param name="width">Width in points (optional for add/edit).</param>
+    /// <param name="height">Height in points (optional for add/edit).</param>
+    /// <param name="jpegQuality">JPEG quality 10-100 (optional for edit, re-encode image as JPEG).</param>
+    /// <param name="maxWidth">Maximum width in pixels for resize (optional for edit).</param>
+    /// <param name="maxHeight">Maximum height in pixels for resize (optional for edit).</param>
+    /// <param name="outputDir">Output directory (required for export_slides/extract).</param>
+    /// <param name="format">Image format: png|jpeg (optional for export_slides/extract, default: png).</param>
+    /// <param name="scale">Scaling factor (optional for export_slides, default: 1.0).</param>
+    /// <param name="slideIndexes">Comma-separated slide indexes to export (optional for export_slides).</param>
+    /// <param name="skipDuplicates">Skip duplicate images based on content hash (optional for extract, default: false).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "ppt_image")]
     [Description(@"Manage PowerPoint images. Supports 6 operations: add, edit, delete, get, export_slides, extract.
 
@@ -87,7 +119,7 @@ Usage examples:
         if (operation.ToLower() == "extract")
             return ExtractImages(path!, outputDir, format, skipDuplicates);
 
-        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {
@@ -99,8 +131,6 @@ Usage examples:
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
-
-    #region Add Operation
 
     /// <summary>
     ///     Adds an image to a slide.
@@ -150,10 +180,6 @@ Usage examples:
         return result;
     }
 
-    #endregion
-
-    #region Delete Operation
-
     /// <summary>
     ///     Deletes an image from a slide.
     /// </summary>
@@ -188,10 +214,6 @@ Usage examples:
         result += ctx.GetOutputMessage(outputPath);
         return result;
     }
-
-    #endregion
-
-    #region Get Operation
 
     /// <summary>
     ///     Gets image information from a slide.
@@ -228,10 +250,6 @@ Usage examples:
 
         return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
     }
-
-    #endregion
-
-    #region Export Slides Operation
 
     /// <summary>
     ///     Exports slides as image files.
@@ -277,10 +295,6 @@ Usage examples:
 
         return $"Exported {exportedCount} slides. Output: {Path.GetFullPath(actualOutputDir)}";
     }
-
-    #endregion
-
-    #region Extract Operation
 
     /// <summary>
     ///     Extracts embedded images from the presentation.
@@ -345,10 +359,6 @@ Usage examples:
 
         return result;
     }
-
-    #endregion
-
-    #region Edit Operation
 
     /// <summary>
     ///     Edits image properties with optional compression and resize.
@@ -484,10 +494,6 @@ Usage examples:
         return presentation.Images.AddImage(fs);
     }
 
-    #endregion
-
-    #region Helper Methods
-
     /// <summary>
     ///     Calculates final dimensions maintaining aspect ratio.
     /// </summary>
@@ -587,6 +593,4 @@ Usage examples:
         var hashBytes = MD5.HashData(data);
         return Convert.ToHexString(hashBytes);
     }
-
-    #endregion
 }

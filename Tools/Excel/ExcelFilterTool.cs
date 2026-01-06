@@ -15,6 +15,11 @@ namespace AsposeMcpServer.Tools.Excel;
 public class ExcelFilterTool
 {
     /// <summary>
+    ///     Session identity accessor for session isolation support.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Document session manager for in-memory editing support.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -23,11 +28,28 @@ public class ExcelFilterTool
     ///     Initializes a new instance of the <see cref="ExcelFilterTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
-    public ExcelFilterTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    public ExcelFilterTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes an Excel filter operation (apply, remove, filter, or get_status).
+    /// </summary>
+    /// <param name="operation">The operation to perform: apply, remove, filter, or get_status.</param>
+    /// <param name="path">Excel file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="sheetIndex">Sheet index (0-based).</param>
+    /// <param name="range">Cell range to apply filter (e.g., 'A1:C10', required for apply/filter).</param>
+    /// <param name="columnIndex">Column index within filter range to apply criteria (0-based, required for filter).</param>
+    /// <param name="criteria">Filter criteria value (required for filter operation).</param>
+    /// <param name="filterOperator">Filter operator for custom filter.</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get_status operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "excel_filter")]
     [Description(@"Manage Excel filters. Supports 4 operations: apply, remove, filter, get_status.
 
@@ -86,7 +108,7 @@ Usage examples:
         if (string.IsNullOrEmpty(range))
             throw new ArgumentException("range is required for apply operation");
 
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var worksheet = ExcelHelper.GetWorksheet(ctx.Document, sheetIndex);
 
         ExcelHelper.CreateRange(worksheet.Cells, range);
@@ -106,7 +128,7 @@ Usage examples:
     /// <returns>A message indicating the result of the operation.</returns>
     private string RemoveFilter(string? path, string? sessionId, string? outputPath, int sheetIndex)
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var worksheet = ExcelHelper.GetWorksheet(ctx.Document, sheetIndex);
 
         worksheet.RemoveAutoFilter();
@@ -135,7 +157,7 @@ Usage examples:
         if (string.IsNullOrEmpty(criteria))
             throw new ArgumentException("criteria is required for filter operation");
 
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var worksheet = ExcelHelper.GetWorksheet(ctx.Document, sheetIndex);
 
         ExcelHelper.CreateRange(worksheet.Cells, range);
@@ -144,9 +166,19 @@ Usage examples:
         var filterOperator = ParseFilterOperator(filterOperatorStr);
 
         if (filterOperator == FilterOperatorType.Equal)
+        {
             worksheet.AutoFilter.Filter(columnIndex, criteria);
+        }
         else
-            worksheet.AutoFilter.Custom(columnIndex, filterOperator, criteria);
+        {
+            object criteriaValue = criteria;
+            if (IsNumericOperator(filterOperator) && double.TryParse(criteria, out var numericValue))
+                criteriaValue = numericValue;
+
+            worksheet.AutoFilter.Custom(columnIndex, filterOperator, criteriaValue);
+        }
+
+        worksheet.AutoFilter.Refresh();
 
         ctx.Save(outputPath);
         return
@@ -162,7 +194,7 @@ Usage examples:
     /// <returns>A JSON string containing the filter status information.</returns>
     private string GetFilterStatus(string? path, string? sessionId, int sheetIndex)
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var worksheet = ExcelHelper.GetWorksheet(ctx.Document, sheetIndex);
         var autoFilter = worksheet.AutoFilter;
 
@@ -201,6 +233,17 @@ Usage examples:
         };
 
         return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+    }
+
+    /// <summary>
+    ///     Determines if the filter operator is a numeric comparison operator.
+    /// </summary>
+    /// <param name="op">The filter operator type to check.</param>
+    /// <returns>True if the operator requires numeric comparison (GreaterThan, LessThan, etc.); otherwise false.</returns>
+    private static bool IsNumericOperator(FilterOperatorType op)
+    {
+        return op is FilterOperatorType.GreaterThan or FilterOperatorType.GreaterOrEqual
+            or FilterOperatorType.LessThan or FilterOperatorType.LessOrEqual;
     }
 
     /// <summary>

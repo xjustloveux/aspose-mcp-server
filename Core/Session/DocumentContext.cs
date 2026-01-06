@@ -2,6 +2,7 @@ using Aspose.Cells;
 using Aspose.Slides;
 using Aspose.Words;
 using AsposeMcpServer.Core.Helpers;
+using LoadOptions = Aspose.Words.Loading.LoadOptions;
 using SaveFormat = Aspose.Slides.Export.SaveFormat;
 
 namespace AsposeMcpServer.Core.Session;
@@ -11,6 +12,11 @@ namespace AsposeMcpServer.Core.Session;
 /// </summary>
 public class DocumentContext<T> : IDisposable where T : class
 {
+    /// <summary>
+    ///     The identity of the requestor for session isolation
+    /// </summary>
+    private readonly SessionIdentity _identity;
+
     /// <summary>
     ///     Indicates whether this context owns the document and should dispose it
     /// </summary>
@@ -39,14 +45,16 @@ public class DocumentContext<T> : IDisposable where T : class
     /// <param name="sessionId">Session ID (null for file mode)</param>
     /// <param name="path">Source file path (null for session mode)</param>
     /// <param name="ownsDocument">Whether this context owns and should dispose the document</param>
+    /// <param name="identity">The requestor identity for session isolation</param>
     private DocumentContext(T document, DocumentSessionManager? sessionManager, string? sessionId, string? path,
-        bool ownsDocument)
+        bool ownsDocument, SessionIdentity identity)
     {
         Document = document;
         _sessionManager = sessionManager;
         _sessionId = sessionId;
         SourcePath = path;
         _ownsDocument = ownsDocument;
+        _identity = identity;
     }
 
     /// <summary>
@@ -82,17 +90,29 @@ public class DocumentContext<T> : IDisposable where T : class
     /// <param name="sessionManager">Session manager (can be null if sessions not enabled)</param>
     /// <param name="sessionId">Session ID (if using session mode)</param>
     /// <param name="path">File path (if using file mode)</param>
+    /// <param name="identityAccessor">
+    ///     Identity accessor for session isolation (required for session mode with isolation
+    ///     enabled)
+    /// </param>
+    /// <param name="password">Optional password for opening encrypted documents</param>
     /// <returns>Document context</returns>
-    public static DocumentContext<T> Create(DocumentSessionManager? sessionManager, string? sessionId, string? path)
+    public static DocumentContext<T> Create(
+        DocumentSessionManager? sessionManager,
+        string? sessionId,
+        string? path,
+        ISessionIdentityAccessor? identityAccessor = null,
+        string? password = null)
     {
+        var identity = identityAccessor?.GetCurrentIdentity() ?? SessionIdentity.GetAnonymous();
+
         if (!string.IsNullOrEmpty(sessionId))
         {
             if (sessionManager == null)
                 throw new InvalidOperationException(
                     "Session management is not enabled. Use --enable-sessions flag or provide a file path.");
 
-            var doc = sessionManager.GetDocument<T>(sessionId);
-            return new DocumentContext<T>(doc, sessionManager, sessionId, null, false);
+            var doc = sessionManager.GetDocument<T>(sessionId, identity);
+            return new DocumentContext<T>(doc, sessionManager, sessionId, null, false, identity);
         }
 
         if (string.IsNullOrEmpty(path))
@@ -100,8 +120,8 @@ public class DocumentContext<T> : IDisposable where T : class
 
         SecurityHelper.ValidateFilePath(path, "path", true);
 
-        var document = LoadDocument(path);
-        return new DocumentContext<T>(document, null, null, path, true);
+        var document = LoadDocument(path, password);
+        return new DocumentContext<T>(document, null, null, path, true, identity);
     }
 
     /// <summary>
@@ -109,7 +129,7 @@ public class DocumentContext<T> : IDisposable where T : class
     /// </summary>
     public void MarkDirty()
     {
-        if (_sessionId != null && _sessionManager != null) _sessionManager.MarkDirty(_sessionId);
+        if (_sessionId != null && _sessionManager != null) _sessionManager.MarkDirty(_sessionId, _identity);
     }
 
     /// <summary>
@@ -146,25 +166,102 @@ public class DocumentContext<T> : IDisposable where T : class
     ///     Loads a document from the specified file path based on type T.
     /// </summary>
     /// <param name="path">The file path to load the document from.</param>
+    /// <param name="password">Optional password for encrypted documents.</param>
     /// <returns>The loaded document instance.</returns>
     /// <exception cref="NotSupportedException">Thrown when the document type is not supported.</exception>
-    private static T LoadDocument(string path)
+    private static T LoadDocument(string path, string? password)
     {
         var type = typeof(T);
 
         if (type == typeof(Document))
-            return (T)(object)new Document(path);
+            return (T)(object)LoadWordDocument(path, password);
 
         if (type == typeof(Workbook))
-            return (T)(object)new Workbook(path);
+            return (T)(object)LoadExcelWorkbook(path, password);
 
         if (type == typeof(Presentation))
-            return (T)(object)new Presentation(path);
+            return (T)(object)LoadPowerPointPresentation(path, password);
 
         if (type == typeof(Aspose.Pdf.Document))
-            return (T)(object)new Aspose.Pdf.Document(path);
+            return (T)(object)LoadPdfDocument(path, password);
 
         throw new NotSupportedException($"Document type {type.Name} is not supported");
+    }
+
+    /// <summary>
+    ///     Loads a Word document with optional password support.
+    /// </summary>
+    private static Document LoadWordDocument(string path, string? password)
+    {
+        if (!string.IsNullOrEmpty(password))
+            try
+            {
+                var loadOptions = new LoadOptions { Password = password };
+                return new Document(path, loadOptions);
+            }
+            catch (IncorrectPasswordException)
+            {
+                // Password didn't work for opening, try without password
+                // (file might not be encrypted, password is for other operations like protection)
+            }
+
+        return new Document(path);
+    }
+
+    /// <summary>
+    ///     Loads an Excel workbook with optional password support.
+    /// </summary>
+    private static Workbook LoadExcelWorkbook(string path, string? password)
+    {
+        if (!string.IsNullOrEmpty(password))
+            try
+            {
+                var loadOptions = new Aspose.Cells.LoadOptions { Password = password };
+                return new Workbook(path, loadOptions);
+            }
+            catch (CellsException)
+            {
+                // Password didn't work for opening, try without password
+            }
+
+        return new Workbook(path);
+    }
+
+    /// <summary>
+    ///     Loads a PowerPoint presentation with optional password support.
+    /// </summary>
+    private static Presentation LoadPowerPointPresentation(string path, string? password)
+    {
+        if (!string.IsNullOrEmpty(password))
+            try
+            {
+                var loadOptions = new Aspose.Slides.LoadOptions { Password = password };
+                return new Presentation(path, loadOptions);
+            }
+            catch (InvalidPasswordException)
+            {
+                // Password didn't work for opening, try without password
+            }
+
+        return new Presentation(path);
+    }
+
+    /// <summary>
+    ///     Loads a PDF document with optional password support.
+    /// </summary>
+    private static Aspose.Pdf.Document LoadPdfDocument(string path, string? password)
+    {
+        if (!string.IsNullOrEmpty(password))
+            try
+            {
+                return new Aspose.Pdf.Document(path, password);
+            }
+            catch (Aspose.Pdf.InvalidPasswordException)
+            {
+                // Password didn't work for opening, try without password
+            }
+
+        return new Aspose.Pdf.Document(path);
     }
 
     /// <summary>

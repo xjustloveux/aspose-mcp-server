@@ -17,7 +17,7 @@ public class PdfWatermarkToolTests : PdfTestBase
     private string CreatePdfDocument(string fileName, int pageCount = 1)
     {
         var filePath = CreateTestFilePath(fileName);
-        var document = new Document();
+        using var document = new Document();
         for (var i = 0; i < pageCount; i++)
         {
             var page = document.Pages.Add();
@@ -28,342 +28,433 @@ public class PdfWatermarkToolTests : PdfTestBase
         return filePath;
     }
 
-    #region General Tests
+    #region General
 
     [Fact]
-    public void AddWatermark_WithText_ShouldAddWatermark()
+    public void Add_WithText_ShouldAddWatermark()
     {
-        var pdfPath = CreatePdfDocument("test_add_watermark.pdf");
-        var outputPath = CreateTestFilePath("test_add_watermark_output.pdf");
-        var result = _tool.Execute(
-            "add",
-            text: "Confidential",
-            path: pdfPath,
-            outputPath: outputPath);
-        Assert.True(File.Exists(outputPath), "PDF file should be created");
-        Assert.Contains("Watermark added to 1 page(s)", result);
+        const string watermarkText = "Confidential";
+        var pdfPath = CreatePdfDocument("test_add.pdf");
+        var outputPath = CreateTestFilePath("test_add_output.pdf");
+
+        var result = _tool.Execute("add", text: watermarkText, path: pdfPath, outputPath: outputPath);
+
+        Assert.True(File.Exists(outputPath));
+        Assert.StartsWith("Watermark added to 1 page(s)", result);
+
+        using var outputDoc = new Document(outputPath);
+        var textAbsorber = new TextAbsorber();
+        outputDoc.Pages.Accept(textAbsorber);
+        Assert.Contains(watermarkText, textAbsorber.Text);
     }
 
     [Fact]
-    public void AddWatermark_WithFontOptions_ShouldApplyFontOptions()
+    public void Add_WithFontOptions_ShouldApplyFontOptions()
     {
-        var pdfPath = CreatePdfDocument("test_add_watermark_font.pdf");
-        var outputPath = CreateTestFilePath("test_add_watermark_font_output.pdf");
-        var result = _tool.Execute(
-            "add",
-            text: "Watermark",
-            path: pdfPath,
-            outputPath: outputPath,
-            fontName: "Arial",
+        const string watermarkText = "Watermark";
+        var pdfPath = CreatePdfDocument("test_font.pdf");
+        var outputPath = CreateTestFilePath("test_font_output.pdf");
+
+        var result = _tool.Execute("add", text: watermarkText, path: pdfPath, outputPath: outputPath, fontName: "Arial",
             fontSize: 72);
-        Assert.True(File.Exists(outputPath), "PDF file should be created");
-        Assert.Contains("Watermark added", result);
+
+        Assert.True(File.Exists(outputPath));
+        Assert.StartsWith("Watermark added to 1 page(s)", result);
+
+        using var outputDoc = new Document(outputPath);
+        var textAbsorber = new TextAbsorber();
+        outputDoc.Pages.Accept(textAbsorber);
+        Assert.Contains(watermarkText, textAbsorber.Text);
     }
 
     [Fact]
-    public void AddWatermark_WithOpacity_ShouldApplyOpacity()
+    public void Add_WithOpacity_ShouldApplyOpacity()
     {
-        var pdfPath = CreatePdfDocument("test_add_watermark_opacity.pdf");
-        var outputPath = CreateTestFilePath("test_add_watermark_opacity_output.pdf");
-        _tool.Execute(
-            "add",
-            text: "Watermark",
-            path: pdfPath,
-            outputPath: outputPath,
-            opacity: 0.5);
-        Assert.True(File.Exists(outputPath), "PDF file should be created");
+        const string watermarkText = "Watermark";
+        var pdfPath = CreatePdfDocument("test_opacity.pdf");
+        var outputPath = CreateTestFilePath("test_opacity_output.pdf");
+
+        _tool.Execute("add", text: watermarkText, path: pdfPath, outputPath: outputPath, opacity: 0.5);
+
+        Assert.True(File.Exists(outputPath));
+
+        using var outputDoc = new Document(outputPath);
+        var textAbsorber = new TextAbsorber();
+        outputDoc.Pages.Accept(textAbsorber);
+        Assert.Contains(watermarkText, textAbsorber.Text);
     }
 
     [Fact]
-    public void AddWatermark_WithRotation_ShouldApplyRotation()
+    public void Add_WithRotation_ShouldApplyRotation()
     {
-        var pdfPath = CreatePdfDocument("test_add_watermark_rotation.pdf");
-        var outputPath = CreateTestFilePath("test_add_watermark_rotation_output.pdf");
-        _tool.Execute(
-            "add",
-            text: "Watermark",
-            path: pdfPath,
-            outputPath: outputPath,
-            rotation: 45);
-        Assert.True(File.Exists(outputPath), "PDF file should be created");
+        const string watermarkText = "Watermark";
+        var pdfPath = CreatePdfDocument("test_rotation.pdf");
+        var outputPath = CreateTestFilePath("test_rotation_output.pdf");
+
+        _tool.Execute("add", text: watermarkText, path: pdfPath, outputPath: outputPath, rotation: 45);
+
+        Assert.True(File.Exists(outputPath));
+
+        using var outputDoc = new Document(outputPath);
+        var textAbsorber = new TextAbsorber();
+        outputDoc.Pages.Accept(textAbsorber);
+        Assert.Contains(watermarkText, textAbsorber.Text);
     }
 
     [Fact]
-    public void AddWatermark_WithAlignment_ShouldApplyAlignment()
+    public void Add_WithAlignment_ShouldApplyAlignment()
     {
-        var pdfPath = CreatePdfDocument("test_add_watermark_alignment.pdf");
-        var outputPath = CreateTestFilePath("test_add_watermark_alignment_output.pdf");
-        _tool.Execute(
-            "add",
-            text: "Watermark",
-            path: pdfPath,
-            outputPath: outputPath,
-            horizontalAlignment: "Left",
+        const string watermarkText = "Watermark";
+        var pdfPath = CreatePdfDocument("test_alignment.pdf");
+        var outputPath = CreateTestFilePath("test_alignment_output.pdf");
+
+        _tool.Execute("add", text: watermarkText, path: pdfPath, outputPath: outputPath, horizontalAlignment: "Left",
             verticalAlignment: "Top");
-        Assert.True(File.Exists(outputPath), "PDF file should be created");
+
+        Assert.True(File.Exists(outputPath));
+
+        using var outputDoc = new Document(outputPath);
+        var textAbsorber = new TextAbsorber();
+        outputDoc.Pages.Accept(textAbsorber);
+        Assert.Contains(watermarkText, textAbsorber.Text);
     }
 
     [Fact]
-    public void AddWatermark_WithColor_ShouldApplyColor()
+    public void Add_WithNamedColor_ShouldApplyColor()
     {
-        var pdfPath = CreatePdfDocument("test_add_watermark_color.pdf");
-        var outputPath = CreateTestFilePath("test_add_watermark_color_output.pdf");
-        var result = _tool.Execute(
-            "add",
-            text: "URGENT",
-            path: pdfPath,
-            outputPath: outputPath,
-            color: "Red");
-        Assert.True(File.Exists(outputPath), "PDF file should be created");
-        Assert.Contains("Watermark added", result);
+        const string watermarkText = "URGENT";
+        var pdfPath = CreatePdfDocument("test_color.pdf");
+        var outputPath = CreateTestFilePath("test_color_output.pdf");
+
+        var result = _tool.Execute("add", text: watermarkText, path: pdfPath, outputPath: outputPath, color: "Red");
+
+        Assert.True(File.Exists(outputPath));
+        Assert.StartsWith("Watermark added to 1 page(s)", result);
+
+        using var outputDoc = new Document(outputPath);
+        var textAbsorber = new TextAbsorber();
+        outputDoc.Pages.Accept(textAbsorber);
+        Assert.Contains(watermarkText, textAbsorber.Text);
     }
 
     [Fact]
-    public void AddWatermark_WithHexColor_ShouldApplyHexColor()
+    public void Add_WithHexColor_ShouldApplyHexColor()
     {
-        var pdfPath = CreatePdfDocument("test_add_watermark_hex.pdf");
-        var outputPath = CreateTestFilePath("test_add_watermark_hex_output.pdf");
-        _tool.Execute(
-            "add",
-            text: "Custom Color",
-            path: pdfPath,
-            outputPath: outputPath,
-            color: "#FF5500");
-        Assert.True(File.Exists(outputPath), "PDF file should be created");
+        const string watermarkText = "Custom Color";
+        var pdfPath = CreatePdfDocument("test_hex.pdf");
+        var outputPath = CreateTestFilePath("test_hex_output.pdf");
+
+        _tool.Execute("add", text: watermarkText, path: pdfPath, outputPath: outputPath, color: "#FF5500");
+
+        Assert.True(File.Exists(outputPath));
+
+        using var outputDoc = new Document(outputPath);
+        var textAbsorber = new TextAbsorber();
+        outputDoc.Pages.Accept(textAbsorber);
+        Assert.Contains(watermarkText, textAbsorber.Text);
+    }
+
+    [Fact]
+    public void Add_WithUnknownColor_ShouldUseGray()
+    {
+        const string watermarkText = "Unknown Color";
+        var pdfPath = CreatePdfDocument("test_unknown_color.pdf");
+        var outputPath = CreateTestFilePath("test_unknown_color_output.pdf");
+
+        _tool.Execute("add", text: watermarkText, path: pdfPath, outputPath: outputPath, color: "InvalidColor");
+
+        Assert.True(File.Exists(outputPath));
+
+        using var outputDoc = new Document(outputPath);
+        var textAbsorber = new TextAbsorber();
+        outputDoc.Pages.Accept(textAbsorber);
+        Assert.Contains(watermarkText, textAbsorber.Text);
+    }
+
+    [Fact]
+    public void Add_WithIsBackground_ShouldSetBackground()
+    {
+        const string watermarkText = "Background Watermark";
+        var pdfPath = CreatePdfDocument("test_bg.pdf");
+        var outputPath = CreateTestFilePath("test_bg_output.pdf");
+
+        _tool.Execute("add", text: watermarkText, path: pdfPath, outputPath: outputPath, isBackground: true);
+
+        Assert.True(File.Exists(outputPath));
+
+        using var outputDoc = new Document(outputPath);
+        var textAbsorber = new TextAbsorber();
+        outputDoc.Pages.Accept(textAbsorber);
+        Assert.Contains(watermarkText, textAbsorber.Text);
+    }
+
+    [Fact]
+    public void Add_WithMultiplePages_ShouldApplyToAllPages()
+    {
+        const string watermarkText = "All Pages";
+        var pdfPath = CreatePdfDocument("test_multi.pdf", 3);
+        var outputPath = CreateTestFilePath("test_multi_output.pdf");
+
+        var result = _tool.Execute("add", text: watermarkText, path: pdfPath, outputPath: outputPath);
+
+        Assert.True(File.Exists(outputPath));
+        Assert.StartsWith("Watermark added to 3 page(s)", result);
+
+        using var outputDoc = new Document(outputPath);
+        for (var i = 1; i <= 3; i++)
+        {
+            var textAbsorber = new TextAbsorber();
+            outputDoc.Pages[i].Accept(textAbsorber);
+            Assert.Contains(watermarkText, textAbsorber.Text);
+        }
+    }
+
+    [Fact]
+    public void Add_WithPageRange_ShouldApplyToSpecificPages()
+    {
+        const string watermarkText = "Selected Pages";
+        var pdfPath = CreatePdfDocument("test_range.pdf", 3);
+        var outputPath = CreateTestFilePath("test_range_output.pdf");
+
+        var result = _tool.Execute("add", text: watermarkText, path: pdfPath, outputPath: outputPath,
+            pageRange: "1,3");
+
+        Assert.True(File.Exists(outputPath));
+        Assert.StartsWith("Watermark added to 2 page(s)", result);
+
+        using var outputDoc = new Document(outputPath);
+
+        var textAbsorber1 = new TextAbsorber();
+        outputDoc.Pages[1].Accept(textAbsorber1);
+        Assert.Contains(watermarkText, textAbsorber1.Text);
+
+        var textAbsorber3 = new TextAbsorber();
+        outputDoc.Pages[3].Accept(textAbsorber3);
+        Assert.Contains(watermarkText, textAbsorber3.Text);
+    }
+
+    [Fact]
+    public void Add_WithPageRangeHyphen_ShouldApplyToRange()
+    {
+        const string watermarkText = "Range Pages";
+        var pdfPath = CreatePdfDocument("test_hyphen.pdf", 4);
+        var outputPath = CreateTestFilePath("test_hyphen_output.pdf");
+
+        var result = _tool.Execute("add", text: watermarkText, path: pdfPath, outputPath: outputPath, pageRange: "2-4");
+
+        Assert.True(File.Exists(outputPath));
+        Assert.StartsWith("Watermark added to 3 page(s)", result);
+    }
+
+    [Fact]
+    public void Add_WithMixedPageRange_ShouldApplyCorrectly()
+    {
+        const string watermarkText = "Mixed Range";
+        var pdfPath = CreatePdfDocument("test_mixed.pdf", 4);
+        var outputPath = CreateTestFilePath("test_mixed_output.pdf");
+
+        var result = _tool.Execute("add", text: watermarkText, path: pdfPath, outputPath: outputPath,
+            pageRange: "1,3-4");
+
+        Assert.True(File.Exists(outputPath));
+        Assert.StartsWith("Watermark added to 3 page(s)", result);
+    }
+
+    [Fact]
+    public void Add_WithAllOptions_ShouldApplyAllOptions()
+    {
+        const string watermarkText = "Confidential";
+        var pdfPath = CreatePdfDocument("test_all.pdf", 3);
+        var outputPath = CreateTestFilePath("test_all_output.pdf");
+
+        var result = _tool.Execute("add", text: watermarkText, path: pdfPath, outputPath: outputPath,
+            fontName: "Arial", fontSize: 72, opacity: 0.3, rotation: 45, color: "Red",
+            pageRange: "1-2", isBackground: true, horizontalAlignment: "Center", verticalAlignment: "Center");
+
+        Assert.True(File.Exists(outputPath));
+        Assert.StartsWith("Watermark added to 2 page(s)", result);
+
+        using var outputDoc = new Document(outputPath);
+        var textAbsorber = new TextAbsorber();
+        outputDoc.Pages[1].Accept(textAbsorber);
+        Assert.Contains(watermarkText, textAbsorber.Text);
     }
 
     [SkippableFact]
-    public void AddWatermark_WithPageRange_ShouldApplyToSpecificPages()
+    public void Add_WithManyPages_ShouldApplyToAllPages()
     {
-        // Skip in evaluation mode - 5 pages exceeds 4-page limit
         SkipInEvaluationMode(AsposeLibraryType.Pdf, "5 pages exceeds 4-page limit in evaluation mode");
-        var pdfPath = CreatePdfDocument("test_add_watermark_range.pdf", 5);
-        var outputPath = CreateTestFilePath("test_add_watermark_range_output.pdf");
-        var result = _tool.Execute(
-            "add",
-            text: "Selected Pages",
-            path: pdfPath,
-            outputPath: outputPath,
-            pageRange: "1,3,5");
-        Assert.True(File.Exists(outputPath), "PDF file should be created");
-        Assert.Contains("Watermark added to 3 page(s)", result);
+        const string watermarkText = "All Pages";
+        var pdfPath = CreatePdfDocument("test_many.pdf", 5);
+        var outputPath = CreateTestFilePath("test_many_output.pdf");
+
+        var result = _tool.Execute("add", text: watermarkText, path: pdfPath, outputPath: outputPath);
+
+        Assert.True(File.Exists(outputPath));
+        Assert.StartsWith("Watermark added to 5 page(s)", result);
     }
 
     [SkippableFact]
-    public void AddWatermark_WithPageRangeHyphen_ShouldApplyToRange()
+    public void Add_WithLargePageRange_ShouldApplyCorrectly()
     {
-        // Skip in evaluation mode - 10 pages exceeds 4-page limit
         SkipInEvaluationMode(AsposeLibraryType.Pdf, "10 pages exceeds 4-page limit in evaluation mode");
-        var pdfPath = CreatePdfDocument("test_add_watermark_hyphen.pdf", 10);
-        var outputPath = CreateTestFilePath("test_add_watermark_hyphen_output.pdf");
-        var result = _tool.Execute(
-            "add",
-            text: "Range Pages",
-            path: pdfPath,
-            outputPath: outputPath,
-            pageRange: "2-5");
-        Assert.True(File.Exists(outputPath), "PDF file should be created");
-        Assert.Contains("Watermark added to 4 page(s)", result);
+        var pdfPath = CreatePdfDocument("test_large_range.pdf", 10);
+        var outputPath = CreateTestFilePath("test_large_range_output.pdf");
+
+        var result = _tool.Execute("add", text: "Range Pages", path: pdfPath, outputPath: outputPath, pageRange: "2-5");
+
+        Assert.True(File.Exists(outputPath));
+        Assert.StartsWith("Watermark added to 4 page(s)", result);
     }
 
-    [SkippableFact]
-    public void AddWatermark_WithMixedPageRange_ShouldApplyCorrectly()
+    [Theory]
+    [InlineData("ADD")]
+    [InlineData("Add")]
+    [InlineData("add")]
+    public void Operation_ShouldBeCaseInsensitive_Add(string operation)
     {
-        // Skip in evaluation mode - 10 pages exceeds 4-page limit
-        SkipInEvaluationMode(AsposeLibraryType.Pdf, "10 pages exceeds 4-page limit in evaluation mode");
-        var pdfPath = CreatePdfDocument("test_add_watermark_mixed.pdf", 10);
-        var outputPath = CreateTestFilePath("test_add_watermark_mixed_output.pdf");
-        var result = _tool.Execute(
-            "add",
-            text: "Mixed Range",
-            path: pdfPath,
-            outputPath: outputPath,
-            pageRange: "1,3-5,8");
-        Assert.True(File.Exists(outputPath), "PDF file should be created");
-        Assert.Contains("Watermark added to 5 page(s)", result);
+        var pdfPath = CreatePdfDocument($"test_case_{operation}.pdf");
+        var outputPath = CreateTestFilePath($"test_case_{operation}_output.pdf");
+
+        var result = _tool.Execute(operation, text: "Watermark", path: pdfPath, outputPath: outputPath);
+
+        Assert.StartsWith("Watermark added to 1 page(s)", result);
     }
 
-    [Fact]
-    public void AddWatermark_WithIsBackground_ShouldSetBackground()
-    {
-        var pdfPath = CreatePdfDocument("test_add_watermark_bg.pdf");
-        var outputPath = CreateTestFilePath("test_add_watermark_bg_output.pdf");
-        _tool.Execute(
-            "add",
-            text: "Background Watermark",
-            path: pdfPath,
-            outputPath: outputPath,
-            isBackground: true);
-        Assert.True(File.Exists(outputPath), "PDF file should be created");
-    }
+    #endregion
 
-    [Fact]
-    public void AddWatermark_WithAllOptions_ShouldApplyAllOptions()
-    {
-        var pdfPath = CreatePdfDocument("test_add_watermark_all.pdf", 3);
-        var outputPath = CreateTestFilePath("test_add_watermark_all_output.pdf");
-        var result = _tool.Execute(
-            "add",
-            text: "Confidential",
-            path: pdfPath,
-            outputPath: outputPath,
-            fontName: "Arial",
-            fontSize: 72,
-            opacity: 0.3,
-            rotation: 45,
-            color: "Red",
-            pageRange: "1-2",
-            isBackground: true,
-            horizontalAlignment: "Center",
-            verticalAlignment: "Center");
-        Assert.True(File.Exists(outputPath), "PDF file should be created");
-        Assert.Contains("Watermark added to 2 page(s)", result);
-    }
-
-    [Fact]
-    public void AddWatermark_WithInvalidPageRange_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreatePdfDocument("test_invalid_range.pdf", 3);
-        var exception = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", text: "Test", path: pdfPath, pageRange: "invalid"));
-        Assert.Contains("Invalid page number", exception.Message);
-    }
-
-    [Fact]
-    public void AddWatermark_WithOutOfBoundsPageRange_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreatePdfDocument("test_oob_range.pdf", 3);
-        var exception = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", text: "Test", path: pdfPath, pageRange: "1,5"));
-        Assert.Contains("out of bounds", exception.Message);
-    }
-
-    [SkippableFact]
-    public void AddWatermark_WithInvalidRangeFormat_ShouldThrowArgumentException()
-    {
-        // Skip in evaluation mode - 5 pages exceeds 4-page limit
-        SkipInEvaluationMode(AsposeLibraryType.Pdf, "5 pages exceeds 4-page limit in evaluation mode");
-        var pdfPath = CreatePdfDocument("test_invalid_format.pdf", 5);
-        var exception = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", text: "Test", path: pdfPath, pageRange: "3-1"));
-        Assert.Contains("out of bounds", exception.Message);
-    }
+    #region Exception
 
     [Fact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
     {
         var pdfPath = CreatePdfDocument("test_unknown_op.pdf");
-        var exception = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("unknown", text: "Test", path: pdfPath));
-        Assert.Contains("Unknown operation", exception.Message);
-    }
-
-    [SkippableFact]
-    public void AddWatermark_WithMultiplePages_ShouldApplyToAllPages()
-    {
-        // Skip in evaluation mode - 5 pages exceeds 4-page limit
-        SkipInEvaluationMode(AsposeLibraryType.Pdf, "5 pages exceeds 4-page limit in evaluation mode");
-        var pdfPath = CreatePdfDocument("test_multi_page.pdf", 5);
-        var outputPath = CreateTestFilePath("test_multi_page_output.pdf");
-        var result = _tool.Execute(
-            "add",
-            text: "All Pages",
-            path: pdfPath,
-            outputPath: outputPath);
-        Assert.True(File.Exists(outputPath), "PDF file should be created");
-        Assert.Contains("Watermark added to 5 page(s)", result);
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", text: "Test", path: pdfPath));
+        Assert.StartsWith("Unknown operation: unknown", ex.Message);
     }
 
     [Fact]
-    public void AddWatermark_WithUnknownColor_ShouldUseGray()
+    public void Add_WithMissingText_ShouldThrowArgumentException()
     {
-        var pdfPath = CreatePdfDocument("test_unknown_color.pdf");
-        var outputPath = CreateTestFilePath("test_unknown_color_output.pdf");
-        _tool.Execute(
-            "add",
-            text: "Unknown Color",
-            path: pdfPath,
-            outputPath: outputPath,
-            color: "InvalidColor");
-        Assert.True(File.Exists(outputPath), "PDF file should be created");
+        var pdfPath = CreatePdfDocument("test_missing_text.pdf");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("add", pdfPath, text: null));
+        Assert.Equal("text is required for add operation", ex.Message);
     }
 
-    #endregion
+    [Fact]
+    public void Add_WithEmptyText_ShouldThrowArgumentException()
+    {
+        var pdfPath = CreatePdfDocument("test_empty_text.pdf");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("add", pdfPath, text: ""));
+        Assert.Equal("text is required for add operation", ex.Message);
+    }
 
-    #region Exception Tests
+    [Fact]
+    public void Add_WithInvalidPageRange_ShouldThrowArgumentException()
+    {
+        var pdfPath = CreatePdfDocument("test_invalid_range.pdf", 3);
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("add", text: "Test", path: pdfPath, pageRange: "invalid"));
+        Assert.StartsWith("Invalid page number", ex.Message);
+    }
+
+    [Fact]
+    public void Add_WithOutOfBoundsPageRange_ShouldThrowArgumentException()
+    {
+        var pdfPath = CreatePdfDocument("test_oob_range.pdf", 3);
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("add", text: "Test", path: pdfPath, pageRange: "1,5"));
+        Assert.StartsWith("Page number 5 is out of bounds", ex.Message);
+    }
+
+    [Fact]
+    public void Add_WithInvalidRangeFormat_ShouldThrowArgumentException()
+    {
+        var pdfPath = CreatePdfDocument("test_invalid_format.pdf", 3);
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("add", text: "Test", path: pdfPath, pageRange: "3-1"));
+        Assert.StartsWith("Page range '3-1' is out of bounds", ex.Message);
+    }
 
     [Fact]
     public void Execute_WithNoPathOrSessionId_ShouldThrowException()
     {
-        Assert.ThrowsAny<Exception>(() => _tool.Execute(
-            "add",
-            text: "Test",
-            path: null,
-            sessionId: null));
-    }
-
-    [Fact]
-    public void AddWatermark_WithMissingText_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreatePdfDocument("test_missing_text.pdf");
-        var exception = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", pdfPath, text: null));
-        Assert.Contains("text is required", exception.Message);
+        Assert.ThrowsAny<Exception>(() => _tool.Execute("add", text: "Test", path: null, sessionId: null));
     }
 
     #endregion
 
-    #region Session ID Tests
+    #region Session
 
     [Fact]
-    public void AddWatermark_WithSessionId_ShouldModifyInMemory()
+    public void Add_WithSessionId_ShouldModifyInMemory()
     {
-        var pdfPath = CreatePdfDocument("test_session_add_watermark.pdf");
+        const string watermarkText = "Confidential";
+        var pdfPath = CreatePdfDocument("test_session_add.pdf");
         var sessionId = OpenSession(pdfPath);
-        var result = _tool.Execute(
-            "add",
-            text: "Confidential",
-            sessionId: sessionId);
-        Assert.Contains("Watermark added to 1 page(s)", result);
+
+        var result = _tool.Execute("add", text: watermarkText, sessionId: sessionId);
+
+        Assert.StartsWith("Watermark added to 1 page(s)", result);
+        Assert.Contains(sessionId, result);
         var document = SessionManager.GetDocument<Document>(sessionId);
         Assert.NotNull(document);
         Assert.Single(document.Pages);
+
+        var textAbsorber = new TextAbsorber();
+        document.Pages.Accept(textAbsorber);
+        Assert.Contains(watermarkText, textAbsorber.Text);
     }
 
     [Fact]
-    public void AddWatermark_WithSessionId_AndOptions_ShouldApplyOptionsInMemory()
+    public void Add_WithSessionId_AndOptions_ShouldApplyOptionsInMemory()
     {
-        var pdfPath = CreatePdfDocument("test_session_watermark_options.pdf", 2);
+        const string watermarkText = "DRAFT";
+        var pdfPath = CreatePdfDocument("test_session_options.pdf", 2);
         var sessionId = OpenSession(pdfPath);
-        var result = _tool.Execute(
-            "add",
-            text: "DRAFT",
-            sessionId: sessionId,
-            fontName: "Arial",
-            fontSize: 72,
-            opacity: 0.5,
-            rotation: 45,
-            color: "Red");
-        Assert.Contains("Watermark added to 2 page(s)", result);
+
+        var result = _tool.Execute("add", text: watermarkText, sessionId: sessionId,
+            fontName: "Arial", fontSize: 72, opacity: 0.5, rotation: 45, color: "Red");
+
+        Assert.StartsWith("Watermark added to 2 page(s)", result);
         var document = SessionManager.GetDocument<Document>(sessionId);
-        Assert.NotNull(document);
         Assert.Equal(2, document.Pages.Count);
+
+        var textAbsorber = new TextAbsorber();
+        document.Pages.Accept(textAbsorber);
+        Assert.Contains(watermarkText, textAbsorber.Text);
     }
 
     [Fact]
-    public void AddWatermark_WithSessionId_AndPageRange_ShouldApplyToSpecificPages()
+    public void Add_WithSessionId_AndPageRange_ShouldApplyToSpecificPages()
     {
-        var pdfPath = CreatePdfDocument("test_session_watermark_range.pdf", 3);
+        const string watermarkText = "Selected";
+        var pdfPath = CreatePdfDocument("test_session_range.pdf", 3);
         var sessionId = OpenSession(pdfPath);
-        var result = _tool.Execute(
-            "add",
-            text: "Selected",
-            sessionId: sessionId,
-            pageRange: "1,3");
-        Assert.Contains("Watermark added to 2 page(s)", result);
+
+        var result = _tool.Execute("add", text: watermarkText, sessionId: sessionId, pageRange: "1,3");
+
+        Assert.StartsWith("Watermark added to 2 page(s)", result);
         var document = SessionManager.GetDocument<Document>(sessionId);
-        Assert.NotNull(document);
         Assert.Equal(3, document.Pages.Count);
+    }
+
+    [Fact]
+    public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
+    {
+        Assert.Throws<KeyNotFoundException>(() => _tool.Execute("add", text: "Test", sessionId: "invalid_session"));
+    }
+
+    [Fact]
+    public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
+    {
+        var pdfPath1 = CreatePdfDocument("test_path_watermark.pdf");
+        var pdfPath2 = CreatePdfDocument("test_session_watermark.pdf", 3);
+        var sessionId = OpenSession(pdfPath2);
+
+        var result = _tool.Execute("add", text: "Test", path: pdfPath1, sessionId: sessionId);
+
+        Assert.StartsWith("Watermark added to 3 page(s)", result);
     }
 
     #endregion

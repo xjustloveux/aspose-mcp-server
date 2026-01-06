@@ -15,6 +15,11 @@ namespace AsposeMcpServer.Tools.Word;
 public class WordFormatTool
 {
     /// <summary>
+    ///     Identity accessor for session isolation
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document session operations
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -23,11 +28,53 @@ public class WordFormatTool
     ///     Initializes a new instance of the WordFormatTool class
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document operations</param>
-    public WordFormatTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation</param>
+    public WordFormatTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a Word format operation (get_run_format, set_run_format, get_tab_stops, add_tab_stop, clear_tab_stops,
+    ///     set_paragraph_border).
+    /// </summary>
+    /// <param name="operation">
+    ///     The operation to perform: get_run_format, set_run_format, get_tab_stops, add_tab_stop,
+    ///     clear_tab_stops, set_paragraph_border.
+    /// </param>
+    /// <param name="path">Word document file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="paragraphIndex">Paragraph index (0-based).</param>
+    /// <param name="runIndex">Run index within paragraph (0-based, optional).</param>
+    /// <param name="sectionIndex">Section index (0-based, default: 0).</param>
+    /// <param name="includeInherited">Include inherited format from paragraph/style (for get_run_format, default: false).</param>
+    /// <param name="fontName">Font name (for set_run_format).</param>
+    /// <param name="fontNameAscii">Font name for ASCII characters (for set_run_format).</param>
+    /// <param name="fontNameFarEast">Font name for Far East characters (for set_run_format).</param>
+    /// <param name="fontSize">Font size in points (for set_run_format).</param>
+    /// <param name="bold">Bold text (for set_run_format).</param>
+    /// <param name="italic">Italic text (for set_run_format).</param>
+    /// <param name="underline">Underline style (for set_run_format).</param>
+    /// <param name="color">Text color hex (for set_run_format).</param>
+    /// <param name="tabPosition">Tab stop position in points (for add_tab_stop).</param>
+    /// <param name="tabAlignment">Tab alignment: left, center, right, decimal (for add_tab_stop).</param>
+    /// <param name="tabLeader">Tab leader: none, dots, dashes, line (for add_tab_stop).</param>
+    /// <param name="borderPosition">Border position: all, top, bottom, left, right (for set_paragraph_border).</param>
+    /// <param name="borderTop">Show top border (for set_paragraph_border).</param>
+    /// <param name="borderBottom">Show bottom border (for set_paragraph_border).</param>
+    /// <param name="borderLeft">Show left border (for set_paragraph_border).</param>
+    /// <param name="borderRight">Show right border (for set_paragraph_border).</param>
+    /// <param name="lineStyle">Border line style: single, double, thick (for set_paragraph_border).</param>
+    /// <param name="lineWidth">Border line width in points (for set_paragraph_border).</param>
+    /// <param name="lineColor">Border color hex (for set_paragraph_border).</param>
+    /// <param name="location">Where to get tab stops from: header, footer, body (for get_tab_stops).</param>
+    /// <param name="allParagraphs">Read tab stops from all paragraphs (for get_tab_stops).</param>
+    /// <param name="includeStyle">Include tab stops from paragraph style (for get_tab_stops).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "word_format")]
     [Description(
         @"Manage formatting in Word documents. Supports 6 operations: get_run_format, set_run_format, get_tab_stops, add_tab_stop, clear_tab_stops, set_paragraph_border.
@@ -111,7 +158,7 @@ Usage examples:
         [Description("Border line color hex (for set_paragraph_border, default: 000000)")]
         string lineColor = "000000")
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {
@@ -262,17 +309,14 @@ Usage examples:
         var para = GetTargetParagraph(doc, paragraphIndex);
         var runs = para.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
 
-        // If paragraph has no runs and runIndex is specified, create a run
         if (runs.Count == 0 && runIndex.HasValue)
         {
             if (runIndex.Value != 0)
                 throw new ArgumentException("Paragraph has no Run nodes, runIndex must be 0 to create a new Run");
-            // Create a new run with empty text
             var newRun = new Run(doc);
             para.AppendChild(newRun);
             runs = para.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
         }
-        // If paragraph has no runs and no runIndex specified, create a run
         else if (runs.Count == 0)
         {
             var newRun = new Run(doc);
@@ -297,7 +341,6 @@ Usage examples:
 
         foreach (var run in runsToFormat)
         {
-            // Apply font settings using FontHelper
             var underlineStr = underline.HasValue ? underline.Value ? "single" : "none" : null;
 
             if (isAutoColor)

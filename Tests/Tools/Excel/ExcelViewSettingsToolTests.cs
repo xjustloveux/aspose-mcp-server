@@ -13,38 +13,16 @@ public class ExcelViewSettingsToolTests : ExcelTestBase
         _tool = new ExcelViewSettingsTool(SessionManager);
     }
 
-    #region Exception Tests
-
-    [Fact]
-    public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_invalid_operation.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "invalid_operation",
-            workbookPath));
-        Assert.Contains("Unknown operation", ex.Message);
-    }
-
-    // Note: SetColumnWidth_WithMissingColumnIndex test removed - columnIndex has default value and is not nullable
-
-    #endregion
-
-    #region General Tests
+    #region General
 
     [Fact]
     public void SetZoom_ShouldSetZoomLevel()
     {
         var workbookPath = CreateExcelWorkbookWithData("test_set_zoom.xlsx", 5, 5);
         var outputPath = CreateTestFilePath("test_set_zoom_output.xlsx");
-        _tool.Execute(
-            "set_zoom",
-            workbookPath,
-            zoom: 150,
-            outputPath: outputPath);
-        Assert.True(File.Exists(outputPath), "Output workbook should be created");
+        _tool.Execute("set_zoom", workbookPath, outputPath: outputPath, zoom: 150);
         var workbook = new Workbook(outputPath);
-        var worksheet = workbook.Worksheets[0];
-        Assert.Equal(150, worksheet.Zoom);
+        Assert.Equal(150, workbook.Worksheets[0].Zoom);
     }
 
     [Fact]
@@ -52,48 +30,9 @@ public class ExcelViewSettingsToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbook("test_set_gridlines.xlsx");
         var outputPath = CreateTestFilePath("test_set_gridlines_output.xlsx");
-        _tool.Execute(
-            "set_gridlines",
-            workbookPath,
-            visible: false,
-            outputPath: outputPath);
+        _tool.Execute("set_gridlines", workbookPath, outputPath: outputPath, visible: false);
         var workbook = new Workbook(outputPath);
-        var worksheet = workbook.Worksheets[0];
-        Assert.False(worksheet.IsGridlinesVisible, "Gridlines should be hidden");
-    }
-
-    [Fact]
-    public void SetColumnWidth_ShouldSetColumnWidth()
-    {
-        var workbookPath = CreateExcelWorkbookWithData("test_set_column_width.xlsx", 5, 5);
-        var outputPath = CreateTestFilePath("test_set_column_width_output.xlsx");
-        _tool.Execute(
-            "set_column_width",
-            workbookPath,
-            columnIndex: 0,
-            width: 20.0,
-            outputPath: outputPath);
-        var workbook = new Workbook(outputPath);
-        var worksheet = workbook.Worksheets[0];
-        Assert.True(Math.Abs(worksheet.Cells.GetColumnWidth(0) - 20.0) < 0.1,
-            $"Column width should be approximately 20, got {worksheet.Cells.GetColumnWidth(0)}");
-    }
-
-    [Fact]
-    public void SetRowHeight_ShouldSetRowHeight()
-    {
-        var workbookPath = CreateExcelWorkbookWithData("test_set_row_height.xlsx", 5, 5);
-        var outputPath = CreateTestFilePath("test_set_row_height_output.xlsx");
-        _tool.Execute(
-            "set_row_height",
-            workbookPath,
-            rowIndex: 0,
-            height: 30.0,
-            outputPath: outputPath);
-        var workbook = new Workbook(outputPath);
-        var worksheet = workbook.Worksheets[0];
-        Assert.True(Math.Abs(worksheet.Cells.GetRowHeight(0) - 30.0) < 0.1,
-            $"Row height should be approximately 30, got {worksheet.Cells.GetRowHeight(0)}");
+        Assert.False(workbook.Worksheets[0].IsGridlinesVisible);
     }
 
     [Fact]
@@ -101,14 +40,9 @@ public class ExcelViewSettingsToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbook("test_set_headers.xlsx");
         var outputPath = CreateTestFilePath("test_set_headers_output.xlsx");
-        _tool.Execute(
-            "set_headers",
-            workbookPath,
-            visible: false,
-            outputPath: outputPath);
+        _tool.Execute("set_headers", workbookPath, outputPath: outputPath, visible: false);
         var workbook = new Workbook(outputPath);
-        var worksheet = workbook.Worksheets[0];
-        Assert.False(worksheet.IsRowColumnHeadersVisible, "Headers should be hidden");
+        Assert.False(workbook.Worksheets[0].IsRowColumnHeadersVisible);
     }
 
     [Fact]
@@ -116,14 +50,29 @@ public class ExcelViewSettingsToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbook("test_set_zero_values.xlsx");
         var outputPath = CreateTestFilePath("test_set_zero_values_output.xlsx");
-        _tool.Execute(
-            "set_zero_values",
-            workbookPath,
-            visible: false,
-            outputPath: outputPath);
+        _tool.Execute("set_zero_values", workbookPath, outputPath: outputPath, visible: false);
         var workbook = new Workbook(outputPath);
-        var worksheet = workbook.Worksheets[0];
-        Assert.False(worksheet.DisplayZeros, "Zero values should be hidden");
+        Assert.False(workbook.Worksheets[0].DisplayZeros);
+    }
+
+    [Fact]
+    public void SetColumnWidth_ShouldSetColumnWidth()
+    {
+        var workbookPath = CreateExcelWorkbookWithData("test_set_column_width.xlsx", 5, 5);
+        var outputPath = CreateTestFilePath("test_set_column_width_output.xlsx");
+        _tool.Execute("set_column_width", workbookPath, outputPath: outputPath, columnIndex: 0, width: 20.0);
+        var workbook = new Workbook(outputPath);
+        Assert.True(Math.Abs(workbook.Worksheets[0].Cells.GetColumnWidth(0) - 20.0) < 0.1);
+    }
+
+    [Fact]
+    public void SetRowHeight_ShouldSetRowHeight()
+    {
+        var workbookPath = CreateExcelWorkbookWithData("test_set_row_height.xlsx", 5, 5);
+        var outputPath = CreateTestFilePath("test_set_row_height_output.xlsx");
+        _tool.Execute("set_row_height", workbookPath, outputPath: outputPath, rowIndex: 0, height: 30.0);
+        var workbook = new Workbook(outputPath);
+        Assert.True(Math.Abs(workbook.Worksheets[0].Cells.GetRowHeight(0) - 30.0) < 0.1);
     }
 
     [Fact]
@@ -131,50 +80,34 @@ public class ExcelViewSettingsToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbook("test_set_tab_color.xlsx");
         var outputPath = CreateTestFilePath("test_set_tab_color_output.xlsx");
-        _tool.Execute(
-            "set_tab_color",
-            workbookPath,
-            color: "FF0000", // Red
-            outputPath: outputPath);
+        _tool.Execute("set_tab_color", workbookPath, outputPath: outputPath, color: "FF0000");
         var workbook = new Workbook(outputPath);
-        var worksheet = workbook.Worksheets[0];
-        var tabColor = worksheet.TabColor.ToArgb() & 0xFFFFFF;
+        var tabColor = workbook.Worksheets[0].TabColor.ToArgb() & 0xFFFFFF;
         Assert.Equal(0xFF0000, tabColor);
     }
 
     [Fact]
     public void SetAll_ShouldSetMultipleSettings()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_set_all_view_settings.xlsx", 5, 5);
-        var outputPath = CreateTestFilePath("test_set_all_view_settings_output.xlsx");
-        _tool.Execute(
-            "set_all",
-            workbookPath,
-            zoom: 120,
-            showGridlines: true,
-            showRowColumnHeaders: true,
-            showZeroValues: true,
-            outputPath: outputPath);
+        var workbookPath = CreateExcelWorkbookWithData("test_set_all.xlsx", 5, 5);
+        var outputPath = CreateTestFilePath("test_set_all_output.xlsx");
+        _tool.Execute("set_all", workbookPath, outputPath: outputPath,
+            zoom: 120, showGridlines: true, showRowColumnHeaders: true, showZeroValues: true);
         var workbook = new Workbook(outputPath);
-        var worksheet = workbook.Worksheets[0];
-        Assert.Equal(120, worksheet.Zoom);
-        Assert.True(worksheet.IsGridlinesVisible, "Gridlines should be visible");
-        Assert.True(worksheet.IsRowColumnHeadersVisible, "Headers should be visible");
+        Assert.Equal(120, workbook.Worksheets[0].Zoom);
+        Assert.True(workbook.Worksheets[0].IsGridlinesVisible);
+        Assert.True(workbook.Worksheets[0].IsRowColumnHeadersVisible);
     }
 
     [Fact]
     public void FreezePanes_ShouldFreezePanes()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_freeze_panes.xlsx", 10, 5);
-        var outputPath = CreateTestFilePath("test_freeze_panes_output.xlsx");
-        var result = _tool.Execute(
-            "freeze_panes",
-            workbookPath,
-            freezeRow: 2,
-            freezeColumn: 1,
-            outputPath: outputPath);
-        Assert.True(File.Exists(outputPath), "Output workbook should be created");
-        Assert.Contains("frozen", result);
+        var workbookPath = CreateExcelWorkbookWithData("test_freeze.xlsx", 10, 5);
+        var outputPath = CreateTestFilePath("test_freeze_output.xlsx");
+        var result = _tool.Execute("freeze_panes", workbookPath, outputPath: outputPath,
+            freezeRow: 2, freezeColumn: 1);
+        Assert.StartsWith("Panes frozen", result);
+        Assert.True(File.Exists(outputPath));
     }
 
     [Fact]
@@ -182,18 +115,37 @@ public class ExcelViewSettingsToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbookWithData("test_unfreeze.xlsx", 10, 5);
         var workbook = new Workbook(workbookPath);
-        var worksheet = workbook.Worksheets[0];
-        worksheet.FreezePanes(2, 2, 2, 2);
+        workbook.Worksheets[0].FreezePanes(2, 2, 2, 2);
         workbook.Save(workbookPath);
 
         var outputPath = CreateTestFilePath("test_unfreeze_output.xlsx");
-        var result = _tool.Execute(
-            "freeze_panes",
-            workbookPath,
-            unfreeze: true,
-            outputPath: outputPath);
-        Assert.True(File.Exists(outputPath), "Output workbook should be created");
-        Assert.Contains("unfrozen", result);
+        var result = _tool.Execute("freeze_panes", workbookPath, outputPath: outputPath, unfreeze: true);
+        Assert.StartsWith("Panes unfrozen", result);
+    }
+
+    [Fact]
+    public void SplitWindow_ShouldSplitWindow()
+    {
+        var workbookPath = CreateExcelWorkbookWithData("test_split.xlsx", 20, 10);
+        var outputPath = CreateTestFilePath("test_split_output.xlsx");
+        var result = _tool.Execute("split_window", workbookPath, outputPath: outputPath,
+            splitRow: 5, splitColumn: 3);
+        Assert.StartsWith("Window split", result);
+        Assert.True(File.Exists(outputPath));
+    }
+
+    [Fact]
+    public void SplitWindow_RemoveSplit_ShouldRemoveSplit()
+    {
+        var workbookPath = CreateExcelWorkbookWithData("test_remove_split.xlsx", 20, 10);
+        var workbook = new Workbook(workbookPath);
+        workbook.Worksheets[0].ActiveCell = "E10";
+        workbook.Worksheets[0].Split();
+        workbook.Save(workbookPath);
+
+        var outputPath = CreateTestFilePath("test_remove_split_output.xlsx");
+        var result = _tool.Execute("split_window", workbookPath, outputPath: outputPath, removeSplit: true);
+        Assert.Contains("split removed", result);
     }
 
     [Fact]
@@ -205,13 +157,8 @@ public class ExcelViewSettingsToolTests : ExcelTestBase
         workbook.Save(workbookPath);
 
         var outputPath = CreateTestFilePath("test_auto_fit_column_output.xlsx");
-        var result = _tool.Execute(
-            "auto_fit_column",
-            workbookPath,
-            columnIndex: 0,
-            outputPath: outputPath);
-        Assert.True(File.Exists(outputPath), "Output workbook should be created");
-        Assert.Contains("auto-fitted", result);
+        var result = _tool.Execute("auto_fit_column", workbookPath, outputPath: outputPath, columnIndex: 0);
+        Assert.StartsWith("Column 0 auto-fitted", result);
     }
 
     [Fact]
@@ -219,15 +166,9 @@ public class ExcelViewSettingsToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbookWithData("test_auto_fit_column_range.xlsx", 10, 5);
         var outputPath = CreateTestFilePath("test_auto_fit_column_range_output.xlsx");
-        var result = _tool.Execute(
-            "auto_fit_column",
-            workbookPath,
-            columnIndex: 0,
-            startRow: 0,
-            endRow: 5,
-            outputPath: outputPath);
-        Assert.True(File.Exists(outputPath), "Output workbook should be created");
-        Assert.Contains("auto-fitted", result);
+        var result = _tool.Execute("auto_fit_column", workbookPath, outputPath: outputPath,
+            columnIndex: 0, startRow: 0, endRow: 5);
+        Assert.StartsWith("Column 0 auto-fitted", result);
     }
 
     [Fact]
@@ -242,17 +183,12 @@ public class ExcelViewSettingsToolTests : ExcelTestBase
         workbook.Save(workbookPath);
 
         var outputPath = CreateTestFilePath("test_auto_fit_row_output.xlsx");
-        var result = _tool.Execute(
-            "auto_fit_row",
-            workbookPath,
-            rowIndex: 0,
-            outputPath: outputPath);
-        Assert.True(File.Exists(outputPath), "Output workbook should be created");
-        Assert.Contains("auto-fitted", result);
+        var result = _tool.Execute("auto_fit_row", workbookPath, outputPath: outputPath, rowIndex: 0);
+        Assert.StartsWith("Row 0 auto-fitted", result);
     }
 
     [Fact]
-    public void ShowFormulas_ShouldShowFormulas()
+    public void ShowFormulas_Show_ShouldShowFormulas()
     {
         var workbookPath = CreateExcelWorkbook("test_show_formulas.xlsx");
         var workbook = new Workbook(workbookPath);
@@ -261,13 +197,8 @@ public class ExcelViewSettingsToolTests : ExcelTestBase
         workbook.Save(workbookPath);
 
         var outputPath = CreateTestFilePath("test_show_formulas_output.xlsx");
-        var result = _tool.Execute(
-            "show_formulas",
-            workbookPath,
-            visible: true,
-            outputPath: outputPath);
-        Assert.True(File.Exists(outputPath), "Output workbook should be created");
-        Assert.Contains("shown", result);
+        var result = _tool.Execute("show_formulas", workbookPath, outputPath: outputPath, visible: true);
+        Assert.StartsWith("Formulas shown", result);
         var resultWorkbook = new Workbook(outputPath);
         Assert.True(resultWorkbook.Worksheets[0].ShowFormulas);
     }
@@ -283,109 +214,119 @@ public class ExcelViewSettingsToolTests : ExcelTestBase
         workbook.Save(workbookPath);
 
         var outputPath = CreateTestFilePath("test_hide_formulas_output.xlsx");
-        var result = _tool.Execute(
-            "show_formulas",
-            workbookPath,
-            visible: false,
-            outputPath: outputPath);
-        Assert.True(File.Exists(outputPath), "Output workbook should be created");
-        Assert.Contains("hidden", result);
+        var result = _tool.Execute("show_formulas", workbookPath, outputPath: outputPath, visible: false);
+        Assert.StartsWith("Formulas hidden", result);
         var resultWorkbook = new Workbook(outputPath);
         Assert.False(resultWorkbook.Worksheets[0].ShowFormulas);
     }
 
-    [Fact]
-    public void FreezePanes_WithoutParams_ShouldThrowArgumentException()
+    [Theory]
+    [InlineData("SET_ZOOM")]
+    [InlineData("Set_Zoom")]
+    [InlineData("set_zoom")]
+    public void Operation_ShouldBeCaseInsensitive_SetZoom(string operation)
     {
-        var workbookPath = CreateExcelWorkbook("test_freeze_no_params.xlsx");
-        Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "freeze_panes",
-            workbookPath));
+        var workbookPath = CreateExcelWorkbook($"test_case_{operation.Replace("_", "")}.xlsx");
+        var outputPath = CreateTestFilePath($"test_case_{operation.Replace("_", "")}_output.xlsx");
+        _tool.Execute(operation, workbookPath, outputPath: outputPath, zoom: 120);
+        var workbook = new Workbook(outputPath);
+        Assert.Equal(120, workbook.Worksheets[0].Zoom);
+    }
+
+    [Theory]
+    [InlineData("SET_GRIDLINES")]
+    [InlineData("Set_Gridlines")]
+    [InlineData("set_gridlines")]
+    public void Operation_ShouldBeCaseInsensitive_SetGridlines(string operation)
+    {
+        var workbookPath = CreateExcelWorkbook($"test_case_grid_{operation.Replace("_", "")}.xlsx");
+        var outputPath = CreateTestFilePath($"test_case_grid_{operation.Replace("_", "")}_output.xlsx");
+        _tool.Execute(operation, workbookPath, outputPath: outputPath, visible: false);
+        var workbook = new Workbook(outputPath);
+        Assert.False(workbook.Worksheets[0].IsGridlinesVisible);
+    }
+
+    #endregion
+
+    #region Exception
+
+    [Fact]
+    public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateExcelWorkbook("test_unknown_op.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", workbookPath));
+        Assert.Contains("Unknown operation", ex.Message);
     }
 
     [Fact]
     public void SetZoom_OutOfRange_ShouldThrowArgumentException()
     {
         var workbookPath = CreateExcelWorkbook("test_zoom_out_of_range.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "set_zoom",
-            workbookPath,
-            zoom: 500)); // Out of range (10-400)
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("set_zoom", workbookPath, zoom: 500));
         Assert.Contains("Zoom", ex.Message);
     }
 
     [Fact]
-    public void SplitWindow_ShouldSplitWindow()
+    public void SetTabColor_WithMissingColor_ShouldThrowArgumentException()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_split_window.xlsx", 20, 10);
-        var outputPath = CreateTestFilePath("test_split_window_output.xlsx");
-        var result = _tool.Execute(
-            "split_window",
-            workbookPath,
-            splitRow: 5,
-            splitColumn: 3,
-            outputPath: outputPath);
-        Assert.True(File.Exists(outputPath), "Output workbook should be created");
-        Assert.Contains("split", result);
+        var workbookPath = CreateExcelWorkbook("test_tab_color_no_color.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("set_tab_color", workbookPath));
+        Assert.Contains("color is required", ex.Message);
     }
 
     [Fact]
-    public void SplitWindow_RowOnly_ShouldSplitHorizontally()
+    public void SetBackground_WithMissingParams_ShouldThrowArgumentException()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_split_row_only.xlsx", 20, 10);
-        var outputPath = CreateTestFilePath("test_split_row_only_output.xlsx");
-        var result = _tool.Execute(
-            "split_window",
-            workbookPath,
-            splitRow: 10,
-            outputPath: outputPath);
-        Assert.True(File.Exists(outputPath), "Output workbook should be created");
-        Assert.Contains("split", result);
+        var workbookPath = CreateExcelWorkbook("test_background_no_params.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("set_background", workbookPath));
+        Assert.Contains("imagePath or removeBackground", ex.Message);
     }
 
     [Fact]
-    public void SplitWindow_RemoveSplit_ShouldRemoveSplit()
+    public void SetBackground_WithNonExistentFile_ShouldThrowFileNotFoundException()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_remove_split.xlsx", 20, 10);
-        var workbook = new Workbook(workbookPath);
-        workbook.Worksheets[0].ActiveCell = "E10";
-        workbook.Worksheets[0].Split();
-        workbook.Save(workbookPath);
-
-        var outputPath = CreateTestFilePath("test_remove_split_output.xlsx");
-        var result = _tool.Execute(
-            "split_window",
-            workbookPath,
-            removeSplit: true,
-            outputPath: outputPath);
-        Assert.True(File.Exists(outputPath), "Output workbook should be created");
-        Assert.Contains("removed", result);
+        var workbookPath = CreateExcelWorkbook("test_background_notfound.xlsx");
+        Assert.Throws<FileNotFoundException>(() =>
+            _tool.Execute("set_background", workbookPath, imagePath: "nonexistent.png"));
     }
 
     [Fact]
-    public void SplitWindow_WithoutParams_ShouldThrowArgumentException()
+    public void FreezePanes_WithMissingParams_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateExcelWorkbook("test_freeze_no_params.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("freeze_panes", workbookPath));
+        Assert.Contains("freezeRow, freezeColumn, or unfreeze", ex.Message);
+    }
+
+    [Fact]
+    public void SplitWindow_WithMissingParams_ShouldThrowArgumentException()
     {
         var workbookPath = CreateExcelWorkbook("test_split_no_params.xlsx");
-        Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "split_window",
-            workbookPath));
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("split_window", workbookPath));
+        Assert.Contains("splitRow, splitColumn, or removeSplit", ex.Message);
+    }
+
+    [Fact]
+    public void Execute_WithNoPathOrSessionId_ShouldThrowException()
+    {
+        Assert.ThrowsAny<Exception>(() => _tool.Execute("set_zoom", zoom: 100));
     }
 
     #endregion
 
-    #region Session ID Tests
+    #region Session
 
     [Fact]
     public void SetZoom_WithSessionId_ShouldSetZoomInMemory()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_session_set_zoom.xlsx", 5, 5);
+        var workbookPath = CreateExcelWorkbookWithData("test_session_zoom.xlsx", 5, 5);
         var sessionId = OpenSession(workbookPath);
-        _tool.Execute(
-            "set_zoom",
-            sessionId: sessionId,
-            zoom: 150);
-
-        // Assert - verify in-memory change
+        _tool.Execute("set_zoom", sessionId: sessionId, zoom: 150);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.Equal(150, workbook.Worksheets[0].Zoom);
     }
@@ -393,14 +334,9 @@ public class ExcelViewSettingsToolTests : ExcelTestBase
     [Fact]
     public void SetGridlines_WithSessionId_ShouldSetGridlinesInMemory()
     {
-        var workbookPath = CreateExcelWorkbook("test_session_set_gridlines.xlsx");
+        var workbookPath = CreateExcelWorkbook("test_session_gridlines.xlsx");
         var sessionId = OpenSession(workbookPath);
-        _tool.Execute(
-            "set_gridlines",
-            sessionId: sessionId,
-            visible: false);
-
-        // Assert - verify in-memory change
+        _tool.Execute("set_gridlines", sessionId: sessionId, visible: false);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.False(workbook.Worksheets[0].IsGridlinesVisible);
     }
@@ -408,15 +344,9 @@ public class ExcelViewSettingsToolTests : ExcelTestBase
     [Fact]
     public void SetColumnWidth_WithSessionId_ShouldSetWidthInMemory()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_session_set_col_width.xlsx", 5, 5);
+        var workbookPath = CreateExcelWorkbookWithData("test_session_col_width.xlsx", 5, 5);
         var sessionId = OpenSession(workbookPath);
-        _tool.Execute(
-            "set_column_width",
-            sessionId: sessionId,
-            columnIndex: 0,
-            width: 25.0);
-
-        // Assert - verify in-memory change
+        _tool.Execute("set_column_width", sessionId: sessionId, columnIndex: 0, width: 25.0);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.True(Math.Abs(workbook.Worksheets[0].Cells.GetColumnWidth(0) - 25.0) < 0.1);
     }
@@ -426,21 +356,31 @@ public class ExcelViewSettingsToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbookWithData("test_session_freeze.xlsx", 10, 5);
         var sessionId = OpenSession(workbookPath);
-        var result = _tool.Execute(
-            "freeze_panes",
-            sessionId: sessionId,
-            freezeRow: 2,
-            freezeColumn: 1);
-        Assert.Contains("frozen", result);
+        var result = _tool.Execute("freeze_panes", sessionId: sessionId, freezeRow: 2, freezeColumn: 1);
+        Assert.StartsWith("Panes frozen", result);
+        Assert.Contains("session", result); // Verify session was used
     }
 
     [Fact]
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
-        Assert.Throws<KeyNotFoundException>(() => _tool.Execute(
-            "set_zoom",
-            sessionId: "invalid_session_id",
-            zoom: 100));
+        Assert.Throws<KeyNotFoundException>(() =>
+            _tool.Execute("set_zoom", sessionId: "invalid_session", zoom: 100));
+    }
+
+    [Fact]
+    public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
+    {
+        var workbookPath1 = CreateExcelWorkbook("test_path_file.xlsx");
+        var workbookPath2 = CreateExcelWorkbookWithData("test_session_file.xlsx", 5, 5);
+        var sessionId = OpenSession(workbookPath2);
+
+        _ = SessionManager.GetDocument<Workbook>(sessionId);
+
+        _tool.Execute("set_zoom", workbookPath1, sessionId, zoom: 175);
+
+        var workbookAfter = SessionManager.GetDocument<Workbook>(sessionId);
+        Assert.Equal(175, workbookAfter.Worksheets[0].Zoom);
     }
 
     #endregion

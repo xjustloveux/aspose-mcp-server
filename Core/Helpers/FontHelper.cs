@@ -11,10 +11,8 @@ namespace AsposeMcpServer.Core.Helpers;
 /// </summary>
 public static class FontHelper
 {
-    #region Word Font Settings
-
     /// <summary>
-    ///     Word-specific font helper methods
+    ///     Word-specific font helper methods.
     /// </summary>
     public static class Word
     {
@@ -219,12 +217,8 @@ public static class FontHelper
         }
     }
 
-    #endregion
-
-    #region Excel Font Settings
-
     /// <summary>
-    ///     Excel-specific font helper methods
+    ///     Excel-specific font helper methods.
     /// </summary>
     public static class Excel
     {
@@ -262,12 +256,8 @@ public static class FontHelper
         }
     }
 
-    #endregion
-
-    #region PowerPoint Font Settings
-
     /// <summary>
-    ///     PowerPoint-specific font helper methods
+    ///     PowerPoint-specific font helper methods.
     /// </summary>
     public static class Ppt
     {
@@ -309,12 +299,8 @@ public static class FontHelper
         }
     }
 
-    #endregion
-
-    #region PDF Font Settings
-
     /// <summary>
-    ///     PDF-specific font helper methods
+    ///     PDF-specific font helper methods.
     /// </summary>
     public static class Pdf
     {
@@ -343,6 +329,4 @@ public static class FontHelper
                 textState.FontSize = (float)fontSize.Value;
         }
     }
-
-    #endregion
 }

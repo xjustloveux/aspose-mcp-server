@@ -14,6 +14,11 @@ namespace AsposeMcpServer.Tools.Pdf;
 public class PdfAnnotationTool
 {
     /// <summary>
+    ///     The session identity accessor for session isolation.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     The document session manager for managing in-memory document sessions.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -22,11 +27,28 @@ public class PdfAnnotationTool
     ///     Initializes a new instance of the <see cref="PdfAnnotationTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
-    public PdfAnnotationTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    public PdfAnnotationTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a PDF annotation operation (add, delete, edit, get).
+    /// </summary>
+    /// <param name="operation">The operation to perform: add, delete, edit, get.</param>
+    /// <param name="path">PDF file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="pageIndex">Page index (1-based, required for add, delete, edit).</param>
+    /// <param name="annotationIndex">Annotation index (1-based, required for edit, optional for delete).</param>
+    /// <param name="text">Annotation text (required for add, edit).</param>
+    /// <param name="x">X position in points (origin is bottom-left, 72 points = 1 inch).</param>
+    /// <param name="y">Y position in points (origin is bottom-left, 72 points = 1 inch).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "pdf_annotation")]
     [Description(@"Manage annotations in PDF documents. Supports 4 operations: add, delete, edit, get.
 
@@ -89,7 +111,7 @@ Usage examples:
         if (string.IsNullOrEmpty(text))
             throw new ArgumentException("text is required for add operation");
 
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var document = ctx.Document;
 
         if (pageIndex.Value < 1 || pageIndex.Value > document.Pages.Count)
@@ -127,7 +149,7 @@ Usage examples:
         if (!pageIndex.HasValue)
             throw new ArgumentException("pageIndex is required for delete operation");
 
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var document = ctx.Document;
 
         if (pageIndex.Value < 1 || pageIndex.Value > document.Pages.Count)
@@ -178,7 +200,7 @@ Usage examples:
         if (string.IsNullOrEmpty(text))
             throw new ArgumentException("text is required for edit operation");
 
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var document = ctx.Document;
 
         if (pageIndex.Value < 1 || pageIndex.Value > document.Pages.Count)
@@ -223,7 +245,7 @@ Usage examples:
     /// <exception cref="ArgumentException">Thrown when the page index is out of range.</exception>
     private string GetAnnotations(string? sessionId, string? path, int? pageIndex)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var document = ctx.Document;
         List<object> annotationList = [];
 

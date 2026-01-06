@@ -18,6 +18,11 @@ namespace AsposeMcpServer.Tools.Word;
 public class WordNoteTool
 {
     /// <summary>
+    ///     Identity accessor for session isolation
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document session operations
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -26,11 +31,34 @@ public class WordNoteTool
     ///     Initializes a new instance of the WordNoteTool class
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document operations</param>
-    public WordNoteTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation</param>
+    public WordNoteTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a Word note operation (add_footnote, add_endnote, delete_footnote, delete_endnote, edit_footnote,
+    ///     edit_endnote, get_footnotes, get_endnotes).
+    /// </summary>
+    /// <param name="operation">
+    ///     The operation to perform: add_footnote, add_endnote, delete_footnote, delete_endnote,
+    ///     edit_footnote, edit_endnote, get_footnotes, get_endnotes.
+    /// </param>
+    /// <param name="path">Word document file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="text">Note text content.</param>
+    /// <param name="paragraphIndex">Paragraph index (0-based, -1 for document end).</param>
+    /// <param name="sectionIndex">Section index (0-based, default: 0).</param>
+    /// <param name="referenceText">Reference text in document to insert note at.</param>
+    /// <param name="customMark">Custom note mark.</param>
+    /// <param name="referenceMark">Reference mark of note to delete/edit.</param>
+    /// <param name="noteIndex">Note index (0-based).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "word_note")]
     [Description(
         @"Manage footnotes and endnotes in Word documents. Supports 8 operations: add_footnote, add_endnote, delete_footnote, delete_endnote, edit_footnote, edit_endnote, get_footnotes, get_endnotes.
@@ -63,7 +91,7 @@ Usage examples:
         string? referenceMark = null,
         [Description("Note index (0-based)")] int? noteIndex = null)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {

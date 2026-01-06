@@ -14,6 +14,11 @@ namespace AsposeMcpServer.Tools.Excel;
 public class ExcelFreezePanesTool
 {
     /// <summary>
+    ///     Session identity accessor for session isolation support.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Document session manager for in-memory editing support.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -22,11 +27,26 @@ public class ExcelFreezePanesTool
     ///     Initializes a new instance of the <see cref="ExcelFreezePanesTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
-    public ExcelFreezePanesTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    public ExcelFreezePanesTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes an Excel freeze panes operation (freeze, unfreeze, get).
+    /// </summary>
+    /// <param name="operation">The operation to perform: freeze, unfreeze, get.</param>
+    /// <param name="path">Excel file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="sheetIndex">Sheet index (0-based, default: 0).</param>
+    /// <param name="row">Number of rows to freeze from top (0-based, required for freeze).</param>
+    /// <param name="column">Number of columns to freeze from left (0-based, required for freeze).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "excel_freeze_panes")]
     [Description(@"Manage Excel freeze panes. Supports 3 operations: freeze, unfreeze, get.
 
@@ -74,7 +94,7 @@ Usage examples:
     /// <returns>A message indicating the result of the operation.</returns>
     private string FreezePanes(string? path, string? sessionId, string? outputPath, int sheetIndex, int row, int column)
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var worksheet = ExcelHelper.GetWorksheet(ctx.Document, sheetIndex);
 
         worksheet.FreezePanes(row + 1, column + 1, row, column);
@@ -93,7 +113,7 @@ Usage examples:
     /// <returns>A message indicating the result of the operation.</returns>
     private string UnfreezePanes(string? path, string? sessionId, string? outputPath, int sheetIndex)
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var worksheet = ExcelHelper.GetWorksheet(ctx.Document, sheetIndex);
 
         worksheet.UnFreezePanes();
@@ -111,7 +131,7 @@ Usage examples:
     /// <returns>A JSON string containing the freeze panes status information.</returns>
     private string GetFreezePanes(string? path, string? sessionId, int sheetIndex)
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var worksheet = ExcelHelper.GetWorksheet(ctx.Document, sheetIndex);
 
         var isFrozen = worksheet.PaneState == PaneStateType.Frozen;

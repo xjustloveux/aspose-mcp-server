@@ -19,6 +19,11 @@ public class PptSectionTool
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
     /// <summary>
+    ///     Identity accessor for session isolation.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document session handling.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -27,11 +32,28 @@ public class PptSectionTool
     ///     Initializes a new instance of the <see cref="PptSectionTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory editing.</param>
-    public PptSectionTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation.</param>
+    public PptSectionTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a PowerPoint section operation (add, rename, delete, get).
+    /// </summary>
+    /// <param name="operation">The operation to perform: add, rename, delete, get.</param>
+    /// <param name="path">Presentation file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="name">Section name (required for add).</param>
+    /// <param name="slideIndex">Start slide index for section (0-based, required for add).</param>
+    /// <param name="sectionIndex">Section index (0-based, required for rename/delete).</param>
+    /// <param name="newName">New section name (required for rename).</param>
+    /// <param name="keepSlides">Keep slides in presentation (optional, for delete, default: true).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "ppt_section")]
     [Description(@"Manage PowerPoint sections. Supports 4 operations: add, rename, delete, get.
 
@@ -62,7 +84,7 @@ Usage examples:
         [Description("Keep slides in presentation (optional, for delete, default: true)")]
         bool keepSlides = true)
     {
-        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {

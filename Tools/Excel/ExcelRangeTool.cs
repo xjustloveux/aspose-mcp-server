@@ -58,6 +58,11 @@ public class ExcelRangeTool
     private const int TextFormatNumber = 49;
 
     /// <summary>
+    ///     Session identity accessor for session isolation support.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Document session manager for in-memory editing support.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -66,11 +71,46 @@ public class ExcelRangeTool
     ///     Initializes a new instance of the <see cref="ExcelRangeTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
-    public ExcelRangeTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    public ExcelRangeTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes an Excel range operation (write, edit, get, clear, copy, move, copy_format).
+    /// </summary>
+    /// <param name="operation">The operation to perform: write, edit, get, clear, copy, move, copy_format.</param>
+    /// <param name="path">Excel file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="sheetIndex">Sheet index (0-based, default: 0).</param>
+    /// <param name="sourceSheetIndex">Source sheet index (0-based, optional, for copy/move, default: same as sheetIndex).</param>
+    /// <param name="destSheetIndex">Destination sheet index (0-based, optional, for copy/move, default: same as source).</param>
+    /// <param name="startCell">Starting cell (e.g., 'A1', required for write).</param>
+    /// <param name="range">
+    ///     Source cell range (e.g., 'A1:C5', required for edit/get/clear operations, optional for
+    ///     copy_format).
+    /// </param>
+    /// <param name="sourceRange">
+    ///     Source range (e.g., 'A1:C5', required for copy/move, optional for copy_format as alternative
+    ///     to range).
+    /// </param>
+    /// <param name="destCell">Destination cell (top-left cell, e.g., 'E1', required for copy/move, optional for copy_format).</param>
+    /// <param name="destRange">Destination range (e.g., 'E1:G5', required for copy_format, or use destCell).</param>
+    /// <param name="data">Data to write as JSON array.</param>
+    /// <param name="clearRange">Clear range before writing (optional, for edit, default: false).</param>
+    /// <param name="includeFormulas">Include formulas instead of values (optional, for get, default: false).</param>
+    /// <param name="calculateFormulas">Recalculate all formulas before getting values (optional, for get, default: false).</param>
+    /// <param name="includeFormat">Include format information (optional, for get, default: false).</param>
+    /// <param name="clearContent">Clear cell content (optional, for clear, default: true).</param>
+    /// <param name="clearFormat">Clear cell format (optional, for clear, default: false).</param>
+    /// <param name="copyOptions">Copy options: 'All', 'Values', 'Formats', 'Formulas' (optional, for copy, default: 'All').</param>
+    /// <param name="copyValue">Copy cell values as well (optional, for copy_format, default: false).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "excel_range")]
     [Description(@"Manage Excel ranges. Supports 7 operations: write, edit, get, clear, copy, move, copy_format.
 
@@ -137,7 +177,7 @@ Usage examples:
         [Description("Copy cell values as well (optional, for copy_format, default: false)")]
         bool copyValue = false)
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLowerInvariant() switch
         {

@@ -13,6 +13,11 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 public class PptHandoutTool
 {
     /// <summary>
+    ///     Identity accessor for session isolation.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document lifecycle management.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -21,11 +26,28 @@ public class PptHandoutTool
     ///     Initializes a new instance of the <see cref="PptHandoutTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
-    public PptHandoutTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation.</param>
+    public PptHandoutTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a PowerPoint handout operation (set_header_footer).
+    /// </summary>
+    /// <param name="operation">The operation to perform: set_header_footer.</param>
+    /// <param name="path">Presentation file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="headerText">Header text for handout pages.</param>
+    /// <param name="footerText">Footer text for handout pages.</param>
+    /// <param name="dateText">Date/time text for handout pages.</param>
+    /// <param name="showPageNumber">Show page number on handout pages (default: true).</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when the operation is unknown.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the presentation does not have a handout master slide.</exception>
     [McpServerTool(Name = "ppt_handout")]
     [Description(@"Manage PowerPoint handout settings. Supports 1 operation: set_header_footer.
 
@@ -52,7 +74,7 @@ Usage examples:
         [Description("Show page number on handout pages (default: true)")]
         bool showPageNumber = true)
     {
-        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {

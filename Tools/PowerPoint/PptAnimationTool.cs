@@ -15,6 +15,11 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 public class PptAnimationTool
 {
     /// <summary>
+    ///     Identity accessor for session isolation.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document lifecycle management.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -23,11 +28,31 @@ public class PptAnimationTool
     ///     Initializes a new instance of the <see cref="PptAnimationTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
-    public PptAnimationTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation.</param>
+    public PptAnimationTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a PowerPoint animation operation (add, edit, delete, get).
+    /// </summary>
+    /// <param name="operation">The operation to perform: add, edit, delete, get.</param>
+    /// <param name="slideIndex">Slide index (0-based).</param>
+    /// <param name="path">Presentation file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="shapeIndex">Shape index (0-based, required for add/edit, optional for delete).</param>
+    /// <param name="animationIndex">Animation index (0-based, optional for edit/delete, targets specific animation).</param>
+    /// <param name="effectType">Animation effect type (e.g., Fade, Fly, Appear, Bounce, Zoom, Wipe, Split, etc.).</param>
+    /// <param name="effectSubtype">Animation effect subtype for direction/style.</param>
+    /// <param name="triggerType">Trigger type (OnClick, AfterPrevious, WithPrevious).</param>
+    /// <param name="duration">Animation duration in seconds.</param>
+    /// <param name="delay">Animation delay in seconds.</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "ppt_animation")]
     [Description(@"Manage PowerPoint animations. Supports 4 operations: add, edit, delete, get.
 
@@ -62,7 +87,7 @@ Usage examples:
         [Description("Animation delay in seconds")]
         float? delay = null)
     {
-        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {

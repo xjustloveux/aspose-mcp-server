@@ -12,6 +12,11 @@ namespace AsposeMcpServer.Tools.Session;
 public class DocumentSessionTool
 {
     /// <summary>
+    ///     The session identity accessor for getting current user identity.
+    /// </summary>
+    private readonly ISessionIdentityAccessor _identityAccessor;
+
+    /// <summary>
     ///     The document session manager for managing document lifecycle.
     /// </summary>
     private readonly DocumentSessionManager _sessionManager;
@@ -26,10 +31,15 @@ public class DocumentSessionTool
     /// </summary>
     /// <param name="sessionManager">The document session manager instance.</param>
     /// <param name="tempFileManager">The temp file manager instance.</param>
-    public DocumentSessionTool(DocumentSessionManager sessionManager, TempFileManager tempFileManager)
+    /// <param name="identityAccessor">The session identity accessor instance.</param>
+    public DocumentSessionTool(
+        DocumentSessionManager sessionManager,
+        TempFileManager tempFileManager,
+        ISessionIdentityAccessor identityAccessor)
     {
         _sessionManager = sessionManager;
         _tempFileManager = tempFileManager;
+        _identityAccessor = identityAccessor;
     }
 
     /// <summary>
@@ -132,8 +142,9 @@ Temp file operations:
         if (string.IsNullOrEmpty(path))
             throw new ArgumentException("path is required for 'open' operation");
 
-        var newSessionId = _sessionManager.OpenDocument(path, mode);
-        var session = _sessionManager.GetSessionStatus(newSessionId);
+        var identity = _identityAccessor.GetCurrentIdentity();
+        var newSessionId = _sessionManager.OpenDocument(path, identity, mode);
+        var session = _sessionManager.GetSessionStatus(newSessionId, identity);
 
         return JsonSerializer.Serialize(new
         {
@@ -156,8 +167,9 @@ Temp file operations:
         if (string.IsNullOrEmpty(sessionId))
             throw new ArgumentException("sessionId is required for 'save' operation");
 
-        _sessionManager.SaveDocument(sessionId, outputPath);
-        var session = _sessionManager.GetSessionStatus(sessionId);
+        var identity = _identityAccessor.GetCurrentIdentity();
+        _sessionManager.SaveDocument(sessionId, identity, outputPath);
+        var session = _sessionManager.GetSessionStatus(sessionId, identity);
 
         return JsonSerializer.Serialize(new
         {
@@ -181,7 +193,8 @@ Temp file operations:
         if (string.IsNullOrEmpty(sessionId))
             throw new ArgumentException("sessionId is required for 'close' operation");
 
-        _sessionManager.CloseDocument(sessionId, discard);
+        var identity = _identityAccessor.GetCurrentIdentity();
+        _sessionManager.CloseDocument(sessionId, identity, discard);
 
         return JsonSerializer.Serialize(new
         {
@@ -198,7 +211,8 @@ Temp file operations:
     /// <returns>A JSON string containing the list of sessions and memory usage.</returns>
     private string ListSessions()
     {
-        var sessions = _sessionManager.ListSessions().ToList();
+        var identity = _identityAccessor.GetCurrentIdentity();
+        var sessions = _sessionManager.ListSessions(identity).ToList();
 
         return JsonSerializer.Serialize(new
         {
@@ -221,7 +235,8 @@ Temp file operations:
         if (string.IsNullOrEmpty(sessionId))
             throw new ArgumentException("sessionId is required for 'status' operation");
 
-        var session = _sessionManager.GetSessionStatus(sessionId);
+        var identity = _identityAccessor.GetCurrentIdentity();
+        var session = _sessionManager.GetSessionStatus(sessionId, identity);
 
         if (session == null)
             throw new KeyNotFoundException($"Session not found: {sessionId}");
@@ -233,15 +248,14 @@ Temp file operations:
         }, new JsonSerializerOptions { WriteIndented = true });
     }
 
-    #region Temp File Operations
-
     /// <summary>
     ///     Lists all recoverable temporary files.
     /// </summary>
     /// <returns>A JSON string containing the list of recoverable files.</returns>
     private string ListTempFiles()
     {
-        var files = _tempFileManager.ListRecoverableFiles().ToList();
+        var identity = _identityAccessor.GetCurrentIdentity();
+        var files = _tempFileManager.ListRecoverableFiles(identity).ToList();
 
         return JsonSerializer.Serialize(new
         {
@@ -273,7 +287,8 @@ Temp file operations:
         if (string.IsNullOrEmpty(sessionId))
             throw new ArgumentException("sessionId is required for 'recover' operation");
 
-        var result = _tempFileManager.RecoverSession(sessionId, outputPath, deleteAfterRecover);
+        var identity = _identityAccessor.GetCurrentIdentity();
+        var result = _tempFileManager.RecoverSession(sessionId, identity, outputPath, deleteAfterRecover);
 
         return JsonSerializer.Serialize(new
         {
@@ -299,7 +314,8 @@ Temp file operations:
         if (string.IsNullOrEmpty(sessionId))
             throw new ArgumentException("sessionId is required for 'delete_temp' operation");
 
-        var deleted = _tempFileManager.DeleteTempSession(sessionId);
+        var identity = _identityAccessor.GetCurrentIdentity();
+        var deleted = _tempFileManager.DeleteTempSession(sessionId, identity);
 
         return JsonSerializer.Serialize(new
         {
@@ -346,6 +362,4 @@ Temp file operations:
             retentionHours = _sessionManager.Config.TempRetentionHours
         }, new JsonSerializerOptions { WriteIndented = true });
     }
-
-    #endregion
 }

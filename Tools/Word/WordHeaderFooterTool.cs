@@ -21,6 +21,11 @@ namespace AsposeMcpServer.Tools.Word;
 public class WordHeaderFooterTool
 {
     /// <summary>
+    ///     Identity accessor for session isolation
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document session operations
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -29,11 +34,51 @@ public class WordHeaderFooterTool
     ///     Initializes a new instance of the WordHeaderFooterTool class
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document operations</param>
-    public WordHeaderFooterTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation</param>
+    public WordHeaderFooterTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a Word header/footer operation (set_header_text, set_footer_text, set_header_image, set_footer_image,
+    ///     set_header_line, set_footer_line, set_header_tabs, set_footer_tabs, set_header_footer, get).
+    /// </summary>
+    /// <param name="operation">
+    ///     The operation to perform: set_header_text, set_footer_text, set_header_image, set_footer_image,
+    ///     set_header_line, set_footer_line, set_header_tabs, set_footer_tabs, set_header_footer, get.
+    /// </param>
+    /// <param name="path">Word document file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="headerLeft">Header left section text (for set_header_text).</param>
+    /// <param name="headerCenter">Header center section text (for set_header_text).</param>
+    /// <param name="headerRight">Header right section text (for set_header_text).</param>
+    /// <param name="footerLeft">Footer left section text (for set_footer_text).</param>
+    /// <param name="footerCenter">Footer center section text (for set_footer_text).</param>
+    /// <param name="footerRight">Footer right section text (for set_footer_text).</param>
+    /// <param name="imagePath">Path to image file (for set_header_image/set_footer_image).</param>
+    /// <param name="alignment">Image alignment: left, center, right (for image operations).</param>
+    /// <param name="imageWidth">Image width in points (for image operations).</param>
+    /// <param name="imageHeight">Image height in points (for image operations).</param>
+    /// <param name="lineStyle">Line style: single, double, thick (for line operations).</param>
+    /// <param name="lineWidth">Line width in points (for line operations).</param>
+    /// <param name="tabStops">Tab stops array (for tab operations).</param>
+    /// <param name="fontName">Font name.</param>
+    /// <param name="fontNameAscii">Font name for ASCII characters.</param>
+    /// <param name="fontNameFarEast">Font name for Far East characters.</param>
+    /// <param name="fontSize">Font size in points.</param>
+    /// <param name="sectionIndex">Section index (0-based).</param>
+    /// <param name="headerFooterType">Header/footer type: Primary, FirstPage, EvenPage.</param>
+    /// <param name="isFloating">Make image floating instead of inline.</param>
+    /// <param name="autoTabStops">Automatically add tab stops when using left/center/right text.</param>
+    /// <param name="clearExisting">Clear existing content before setting new content.</param>
+    /// <param name="clearTextOnly">Only clear text content, preserve images and shapes.</param>
+    /// <param name="removeExisting">Remove existing images before adding new one.</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "word_header_footer")]
     [Description(
         @"Manage headers and footers in Word documents. Supports 10 operations: set_header_text, set_footer_text, set_header_image, set_footer_image, set_header_line, set_footer_line, set_header_tabs, set_footer_tabs, set_header_footer, get.
@@ -115,9 +160,9 @@ Usage examples:
         [Description("Remove existing images before adding new one (optional, default: true, for image operations)")]
         bool removeExisting = true)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
-        return operation switch
+        return operation.ToLower() switch
         {
             "set_header_text" => SetHeaderText(ctx, outputPath, headerLeft, headerCenter, headerRight, fontName,
                 fontNameAscii, fontNameFarEast, fontSize, sectionIndex, headerFooterType, autoTabStops, clearExisting,

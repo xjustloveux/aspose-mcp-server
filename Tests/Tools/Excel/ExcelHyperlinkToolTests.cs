@@ -14,386 +14,400 @@ public class ExcelHyperlinkToolTests : ExcelTestBase
         _tool = new ExcelHyperlinkTool(SessionManager);
     }
 
-    #region General Tests
+    private string CreateWorkbookWithHyperlink(string fileName, string cell = "A1", string url = "https://test.com")
+    {
+        var workbookPath = CreateTestFilePath(fileName);
+        using var workbook = new Workbook();
+        workbook.Worksheets[0].Hyperlinks.Add(cell, 1, 1, url);
+        workbook.Save(workbookPath);
+        return workbookPath;
+    }
+
+    #region General
 
     [Fact]
-    public void AddHyperlink_ShouldAddHyperlink()
+    public void Add_ShouldAddHyperlink()
     {
-        var workbookPath = CreateExcelWorkbook("test_add_hyperlink.xlsx");
-        var outputPath = CreateTestFilePath("test_add_hyperlink_output.xlsx");
-        var result = _tool.Execute(
-            "add",
-            workbookPath,
-            cell: "A1",
-            url: "https://example.com",
-            displayText: "Click here",
-            outputPath: outputPath);
+        var workbookPath = CreateExcelWorkbook("test_add.xlsx");
+        var outputPath = CreateTestFilePath("test_add_output.xlsx");
+        var result = _tool.Execute("add", workbookPath, cell: "A1",
+            url: "https://example.com", displayText: "Click here", outputPath: outputPath);
         Assert.Contains("Hyperlink added to A1", result);
-        Assert.Contains("https://example.com", result);
-
         using var workbook = new Workbook(outputPath);
-        var worksheet = workbook.Worksheets[0];
-        Assert.Single(worksheet.Hyperlinks);
-        Assert.Equal("https://example.com", worksheet.Hyperlinks[0].Address);
-        Assert.Equal("Click here", worksheet.Hyperlinks[0].TextToDisplay);
+        Assert.Single(workbook.Worksheets[0].Hyperlinks);
+        Assert.Equal("https://example.com", workbook.Worksheets[0].Hyperlinks[0].Address);
+        Assert.Equal("Click here", workbook.Worksheets[0].Hyperlinks[0].TextToDisplay);
     }
 
     [Fact]
-    public void AddHyperlink_WithoutDisplayText_ShouldAddHyperlink()
+    public void Add_WithoutDisplayText_ShouldAddHyperlink()
     {
-        var workbookPath = CreateExcelWorkbook("test_add_no_display.xlsx");
-        var outputPath = CreateTestFilePath("test_add_no_display_output.xlsx");
-        var result = _tool.Execute(
-            "add",
-            workbookPath,
-            cell: "B2",
-            url: "https://test.com",
-            outputPath: outputPath);
+        var workbookPath = CreateExcelWorkbook("test_add_no_text.xlsx");
+        var outputPath = CreateTestFilePath("test_add_no_text_output.xlsx");
+        var result = _tool.Execute("add", workbookPath, cell: "B2",
+            url: "https://test.com", outputPath: outputPath);
         Assert.Contains("Hyperlink added to B2", result);
-
         using var workbook = new Workbook(outputPath);
-        var worksheet = workbook.Worksheets[0];
-        Assert.Single(worksheet.Hyperlinks);
+        Assert.Single(workbook.Worksheets[0].Hyperlinks);
     }
 
     [Fact]
-    public void GetHyperlinks_ShouldReturnAllHyperlinks()
+    public void Add_WithSheetIndex_ShouldAddToCorrectSheet()
     {
-        var workbookPath = CreateExcelWorkbook("test_get_hyperlinks.xlsx");
-        using (var workbook = new Workbook(workbookPath))
+        var workbookPath = CreateExcelWorkbook("test_add_sheet.xlsx");
+        using (var wb = new Workbook(workbookPath))
         {
-            var worksheet = workbook.Worksheets[0];
-            worksheet.Hyperlinks.Add("A1", 1, 1, "https://test1.com");
-            worksheet.Hyperlinks.Add("B2", 1, 1, "https://test2.com");
-            workbook.Save(workbookPath);
+            wb.Worksheets.Add("Sheet2");
+            wb.Save(workbookPath);
         }
 
-        var result = _tool.Execute(
-            "get",
-            workbookPath);
+        var outputPath = CreateTestFilePath("test_add_sheet_output.xlsx");
+        var result = _tool.Execute("add", workbookPath, sheetIndex: 1,
+            cell: "A1", url: "https://sheet2.com", outputPath: outputPath);
+        Assert.Contains("Hyperlink added to A1", result);
+        using var workbook = new Workbook(outputPath);
+        Assert.Empty(workbook.Worksheets[0].Hyperlinks);
+        Assert.Single(workbook.Worksheets[1].Hyperlinks);
+    }
+
+    [Fact]
+    public void Edit_ByCell_ShouldModifyHyperlink()
+    {
+        var workbookPath = CreateWorkbookWithHyperlink("test_edit_cell.xlsx", "A1", "https://old.com");
+        var outputPath = CreateTestFilePath("test_edit_cell_output.xlsx");
+        var result = _tool.Execute("edit", workbookPath, cell: "A1",
+            url: "https://new.com", displayText: "New Link", outputPath: outputPath);
+        Assert.Contains("Hyperlink at", result);
+        using var workbook = new Workbook(outputPath);
+        Assert.Equal("https://new.com", workbook.Worksheets[0].Hyperlinks[0].Address);
+        Assert.Equal("New Link", workbook.Worksheets[0].Hyperlinks[0].TextToDisplay);
+    }
+
+    [Fact]
+    public void Edit_ByIndex_ShouldModifyHyperlink()
+    {
+        var workbookPath = CreateExcelWorkbook("test_edit_index.xlsx");
+        using (var wb = new Workbook(workbookPath))
+        {
+            wb.Worksheets[0].Hyperlinks.Add("A1", 1, 1, "https://first.com");
+            wb.Worksheets[0].Hyperlinks.Add("B2", 1, 1, "https://second.com");
+            wb.Save(workbookPath);
+        }
+
+        var outputPath = CreateTestFilePath("test_edit_index_output.xlsx");
+        var result = _tool.Execute("edit", workbookPath, hyperlinkIndex: 1,
+            url: "https://modified.com", outputPath: outputPath);
+        Assert.Contains("Hyperlink at", result);
+        using var workbook = new Workbook(outputPath);
+        Assert.Equal("https://first.com", workbook.Worksheets[0].Hyperlinks[0].Address);
+        Assert.Equal("https://modified.com", workbook.Worksheets[0].Hyperlinks[1].Address);
+    }
+
+    [Fact]
+    public void Edit_DisplayTextOnly_ShouldModifyDisplayText()
+    {
+        var workbookPath = CreateWorkbookWithHyperlink("test_edit_text.xlsx", "A1", "https://keep.com");
+        var outputPath = CreateTestFilePath("test_edit_text_output.xlsx");
+        var result = _tool.Execute("edit", workbookPath, cell: "A1",
+            displayText: "New Display", outputPath: outputPath);
+        Assert.Contains("Hyperlink at", result);
+        using var workbook = new Workbook(outputPath);
+        Assert.Equal("https://keep.com", workbook.Worksheets[0].Hyperlinks[0].Address);
+        Assert.Equal("New Display", workbook.Worksheets[0].Hyperlinks[0].TextToDisplay);
+    }
+
+    [Fact]
+    public void Delete_ByCell_ShouldDeleteHyperlink()
+    {
+        var workbookPath = CreateWorkbookWithHyperlink("test_delete_cell.xlsx");
+        var outputPath = CreateTestFilePath("test_delete_cell_output.xlsx");
+        var result = _tool.Execute("delete", workbookPath, cell: "A1", outputPath: outputPath);
+        Assert.Contains("deleted", result);
+        using var workbook = new Workbook(outputPath);
+        Assert.Empty(workbook.Worksheets[0].Hyperlinks);
+    }
+
+    [Fact]
+    public void Delete_ByIndex_ShouldDeleteHyperlink()
+    {
+        var workbookPath = CreateExcelWorkbook("test_delete_index.xlsx");
+        using (var wb = new Workbook(workbookPath))
+        {
+            wb.Worksheets[0].Hyperlinks.Add("A1", 1, 1, "https://first.com");
+            wb.Worksheets[0].Hyperlinks.Add("B2", 1, 1, "https://second.com");
+            wb.Save(workbookPath);
+        }
+
+        var outputPath = CreateTestFilePath("test_delete_index_output.xlsx");
+        var result = _tool.Execute("delete", workbookPath, hyperlinkIndex: 0, outputPath: outputPath);
+        Assert.Contains("deleted", result);
+        using var workbook = new Workbook(outputPath);
+        Assert.Single(workbook.Worksheets[0].Hyperlinks);
+        Assert.Equal("https://second.com", workbook.Worksheets[0].Hyperlinks[0].Address);
+    }
+
+    [Fact]
+    public void Get_ShouldReturnAllHyperlinks()
+    {
+        var workbookPath = CreateExcelWorkbook("test_get.xlsx");
+        using (var wb = new Workbook(workbookPath))
+        {
+            wb.Worksheets[0].Hyperlinks.Add("A1", 1, 1, "https://test1.com");
+            wb.Worksheets[0].Hyperlinks.Add("B2", 1, 1, "https://test2.com");
+            wb.Save(workbookPath);
+        }
+
+        var result = _tool.Execute("get", workbookPath);
         var json = JsonDocument.Parse(result);
         var root = json.RootElement;
-
         Assert.Equal(2, root.GetProperty("count").GetInt32());
         var items = root.GetProperty("items");
         Assert.Equal(2, items.GetArrayLength());
-
-        var first = items[0];
-        Assert.Equal("A1", first.GetProperty("cell").GetString());
-        Assert.Equal("https://test1.com", first.GetProperty("url").GetString());
+        Assert.Equal("A1", items[0].GetProperty("cell").GetString());
+        Assert.Equal("https://test1.com", items[0].GetProperty("url").GetString());
     }
 
     [Fact]
-    public void GetHyperlinks_EmptyWorksheet_ShouldReturnEmptyResult()
+    public void Get_Empty_ShouldReturnEmptyResult()
     {
         var workbookPath = CreateExcelWorkbook("test_get_empty.xlsx");
-        var result = _tool.Execute(
-            "get",
-            workbookPath);
+        var result = _tool.Execute("get", workbookPath);
         var json = JsonDocument.Parse(result);
-        var root = json.RootElement;
-
-        Assert.Equal(0, root.GetProperty("count").GetInt32());
-        Assert.Equal("No hyperlinks found", root.GetProperty("message").GetString());
+        Assert.Equal(0, json.RootElement.GetProperty("count").GetInt32());
+        Assert.Equal("No hyperlinks found", json.RootElement.GetProperty("message").GetString());
     }
 
-    [Fact]
-    public void EditHyperlink_ByCell_ShouldModifyHyperlink()
+    [Theory]
+    [InlineData("ADD")]
+    [InlineData("Add")]
+    [InlineData("add")]
+    public void Operation_ShouldBeCaseInsensitive_Add(string operation)
     {
-        var workbookPath = CreateExcelWorkbook("test_edit_hyperlink.xlsx");
-        using (var workbook = new Workbook(workbookPath))
-        {
-            workbook.Worksheets[0].Hyperlinks.Add("A1", 1, 1, "https://old.com");
-            workbook.Save(workbookPath);
-        }
-
-        var outputPath = CreateTestFilePath("test_edit_hyperlink_output.xlsx");
-        var result = _tool.Execute(
-            "edit",
-            workbookPath,
-            cell: "A1",
-            url: "https://new.com",
-            displayText: "New Link",
-            outputPath: outputPath);
-        Assert.Contains("edited", result);
-        Assert.Contains("url=https://new.com", result);
-
-        using var resultWorkbook = new Workbook(outputPath);
-        var hyperlink = resultWorkbook.Worksheets[0].Hyperlinks[0];
-        Assert.Equal("https://new.com", hyperlink.Address);
-        Assert.Equal("New Link", hyperlink.TextToDisplay);
+        var workbookPath = CreateExcelWorkbook($"test_case_{operation}.xlsx");
+        var outputPath = CreateTestFilePath($"test_case_{operation}_output.xlsx");
+        var result = _tool.Execute(operation, workbookPath, cell: "A1",
+            url: "https://test.com", outputPath: outputPath);
+        Assert.Contains("Hyperlink added", result);
     }
 
-    [Fact]
-    public void EditHyperlink_ByIndex_ShouldModifyHyperlink()
+    [Theory]
+    [InlineData("GET")]
+    [InlineData("Get")]
+    [InlineData("get")]
+    public void Operation_ShouldBeCaseInsensitive_Get(string operation)
     {
-        var workbookPath = CreateExcelWorkbook("test_edit_by_index.xlsx");
-        using (var workbook = new Workbook(workbookPath))
-        {
-            workbook.Worksheets[0].Hyperlinks.Add("A1", 1, 1, "https://first.com");
-            workbook.Worksheets[0].Hyperlinks.Add("B2", 1, 1, "https://second.com");
-            workbook.Save(workbookPath);
-        }
-
-        var outputPath = CreateTestFilePath("test_edit_by_index_output.xlsx");
-        var result = _tool.Execute(
-            "edit",
-            workbookPath,
-            hyperlinkIndex: 1,
-            url: "https://modified.com",
-            outputPath: outputPath);
-        Assert.Contains("edited", result);
-
-        using var resultWorkbook = new Workbook(outputPath);
-        Assert.Equal("https://first.com", resultWorkbook.Worksheets[0].Hyperlinks[0].Address);
-        Assert.Equal("https://modified.com", resultWorkbook.Worksheets[0].Hyperlinks[1].Address);
+        var workbookPath = CreateExcelWorkbook($"test_case_get_{operation}.xlsx");
+        var result = _tool.Execute(operation, workbookPath);
+        Assert.Contains("\"count\":", result);
     }
 
-    [Fact]
-    public void DeleteHyperlink_ByCell_ShouldDeleteHyperlink()
+    [Theory]
+    [InlineData("DELETE")]
+    [InlineData("Delete")]
+    [InlineData("delete")]
+    public void Operation_ShouldBeCaseInsensitive_Delete(string operation)
     {
-        var workbookPath = CreateExcelWorkbook("test_delete_hyperlink.xlsx");
-        using (var workbook = new Workbook(workbookPath))
-        {
-            workbook.Worksheets[0].Hyperlinks.Add("A1", 1, 1, "https://delete.com");
-            workbook.Save(workbookPath);
-        }
-
-        var outputPath = CreateTestFilePath("test_delete_hyperlink_output.xlsx");
-        var result = _tool.Execute(
-            "delete",
-            workbookPath,
-            cell: "A1",
-            outputPath: outputPath);
+        var workbookPath = CreateWorkbookWithHyperlink($"test_case_del_{operation}.xlsx");
+        var outputPath = CreateTestFilePath($"test_case_del_{operation}_output.xlsx");
+        var result = _tool.Execute(operation, workbookPath, cell: "A1", outputPath: outputPath);
         Assert.Contains("deleted", result);
-        Assert.Contains("0 hyperlinks remaining", result);
-
-        using var resultWorkbook = new Workbook(outputPath);
-        Assert.Empty(resultWorkbook.Worksheets[0].Hyperlinks);
-    }
-
-    [Fact]
-    public void DeleteHyperlink_ByIndex_ShouldDeleteHyperlink()
-    {
-        var workbookPath = CreateExcelWorkbook("test_delete_by_index.xlsx");
-        using (var workbook = new Workbook(workbookPath))
-        {
-            workbook.Worksheets[0].Hyperlinks.Add("A1", 1, 1, "https://first.com");
-            workbook.Worksheets[0].Hyperlinks.Add("B2", 1, 1, "https://second.com");
-            workbook.Save(workbookPath);
-        }
-
-        var outputPath = CreateTestFilePath("test_delete_by_index_output.xlsx");
-        var result = _tool.Execute(
-            "delete",
-            workbookPath,
-            hyperlinkIndex: 0,
-            outputPath: outputPath);
-        Assert.Contains("deleted", result);
-        Assert.Contains("1 hyperlinks remaining", result);
-
-        using var resultWorkbook = new Workbook(outputPath);
-        Assert.Single(resultWorkbook.Worksheets[0].Hyperlinks);
-        Assert.Equal("https://second.com", resultWorkbook.Worksheets[0].Hyperlinks[0].Address);
     }
 
     #endregion
 
-    #region Exception Tests
+    #region Exception
 
     [Fact]
-    public void ExecuteAsync_InvalidOperation_ShouldThrowException()
+    public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
     {
-        var workbookPath = CreateExcelWorkbook("test_invalid_op.xlsx");
-        var exception = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "invalid",
-            workbookPath));
-        Assert.Contains("Unknown operation", exception.Message);
+        var workbookPath = CreateExcelWorkbook("test_unknown_op.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", workbookPath));
+        Assert.Contains("Unknown operation", ex.Message);
     }
 
     [Fact]
-    public void AddHyperlink_CellAlreadyHasHyperlink_ShouldThrowException()
+    public void Add_WithMissingCell_ShouldThrowArgumentException()
     {
-        var workbookPath = CreateExcelWorkbook("test_add_existing.xlsx");
-        using (var workbook = new Workbook(workbookPath))
-        {
-            workbook.Worksheets[0].Hyperlinks.Add("A1", 1, 1, "https://existing.com");
-            workbook.Save(workbookPath);
-        }
-
-        var exception = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "add",
-            workbookPath,
-            cell: "A1",
-            url: "https://new.com"));
-        Assert.Contains("already has a hyperlink", exception.Message);
+        var workbookPath = CreateExcelWorkbook("test_add_missing_cell.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("add", workbookPath, url: "https://test.com"));
+        Assert.Contains("cell", ex.Message.ToLower());
     }
 
     [Fact]
-    public void EditHyperlink_NoCellOrIndex_ShouldThrowException()
+    public void Add_WithMissingUrl_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateExcelWorkbook("test_add_missing_url.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("add", workbookPath, cell: "A1"));
+        Assert.Contains("url", ex.Message.ToLower());
+    }
+
+    [Fact]
+    public void Add_WithExistingHyperlink_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateWorkbookWithHyperlink("test_add_existing.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("add", workbookPath, cell: "A1", url: "https://new.com"));
+        Assert.Contains("already has a hyperlink", ex.Message);
+    }
+
+    [Fact]
+    public void Add_WithInvalidSheetIndex_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateExcelWorkbook("test_add_invalid_sheet.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("add", workbookPath, sheetIndex: 99, cell: "A1", url: "https://test.com"));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public void Edit_WithMissingCellAndIndex_ShouldThrowArgumentException()
     {
         var workbookPath = CreateExcelWorkbook("test_edit_missing.xlsx");
-        var exception = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "edit",
-            workbookPath,
-            url: "https://new.com"));
-        Assert.Contains("Either 'hyperlinkIndex' or 'cell' is required", exception.Message);
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("edit", workbookPath, url: "https://new.com"));
+        Assert.Contains("Either 'hyperlinkIndex' or 'cell' is required", ex.Message);
     }
 
     [Fact]
-    public void EditHyperlink_CellNotFound_ShouldThrowException()
+    public void Edit_WithCellNotFound_ShouldThrowArgumentException()
     {
-        var workbookPath = CreateExcelWorkbook("test_edit_not_found.xlsx");
-        var exception = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "edit",
-            workbookPath,
-            cell: "Z99",
-            url: "https://new.com"));
-        Assert.Contains("No hyperlink found at cell", exception.Message);
+        var workbookPath = CreateExcelWorkbook("test_edit_notfound.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("edit", workbookPath, cell: "Z99", url: "https://new.com"));
+        Assert.Contains("No hyperlink found at cell", ex.Message);
     }
 
     [Fact]
-    public void DeleteHyperlink_InvalidIndex_ShouldThrowException()
+    public void Edit_WithInvalidIndex_ShouldThrowArgumentException()
     {
-        var workbookPath = CreateExcelWorkbook("test_delete_invalid.xlsx");
-        using (var workbook = new Workbook(workbookPath))
-        {
-            workbook.Worksheets[0].Hyperlinks.Add("A1", 1, 1, "https://test.com");
-            workbook.Save(workbookPath);
-        }
-
-        var exception = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "delete",
-            workbookPath,
-            hyperlinkIndex: 99));
-        Assert.Contains("out of range", exception.Message);
+        var workbookPath = CreateWorkbookWithHyperlink("test_edit_invalid.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("edit", workbookPath, hyperlinkIndex: 99, url: "https://new.com"));
+        Assert.Contains("out of range", ex.Message);
     }
 
     [Fact]
-    public void AddHyperlink_InvalidSheetIndex_ShouldThrowException()
+    public void Delete_WithMissingCellAndIndex_ShouldThrowArgumentException()
     {
-        var workbookPath = CreateExcelWorkbook("test_invalid_sheet.xlsx");
-        Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "add",
-            workbookPath,
-            sheetIndex: 99,
-            cell: "A1",
-            url: "https://test.com"));
+        var workbookPath = CreateExcelWorkbook("test_delete_missing.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("delete", workbookPath));
+        Assert.Contains("Either 'hyperlinkIndex' or 'cell' is required", ex.Message);
+    }
+
+    [Fact]
+    public void Delete_WithCellNotFound_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateExcelWorkbook("test_delete_notfound.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("delete", workbookPath, cell: "Z99"));
+        Assert.Contains("No hyperlink found at cell", ex.Message);
+    }
+
+    [Fact]
+    public void Delete_WithInvalidIndex_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateWorkbookWithHyperlink("test_delete_invalid.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("delete", workbookPath, hyperlinkIndex: 99));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public void Get_WithInvalidSheetIndex_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateExcelWorkbook("test_get_invalid_sheet.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("get", workbookPath, sheetIndex: 99));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public void Execute_WithEmptyPath_ShouldThrowException()
+    {
+        Assert.Throws<ArgumentException>(() => _tool.Execute("get", ""));
+    }
+
+    [Fact]
+    public void Execute_WithNoPathOrSessionId_ShouldThrowException()
+    {
+        Assert.ThrowsAny<Exception>(() => _tool.Execute("get"));
     }
 
     #endregion
 
-    #region Session ID Tests
-
-    [Fact]
-    public void Get_WithSessionId_ShouldGetFromMemory()
-    {
-        var workbookPath = CreateExcelWorkbook("test_session_get.xlsx");
-        using (var workbook = new Workbook(workbookPath))
-        {
-            var worksheet = workbook.Worksheets[0];
-            worksheet.Hyperlinks.Add("A1", 1, 1, "https://test1.com");
-            worksheet.Hyperlinks.Add("B2", 1, 1, "https://test2.com");
-            workbook.Save(workbookPath);
-        }
-
-        var sessionId = OpenSession(workbookPath);
-        var result = _tool.Execute(
-            "get",
-            sessionId: sessionId);
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(2, json.RootElement.GetProperty("count").GetInt32());
-    }
+    #region Session
 
     [Fact]
     public void Add_WithSessionId_ShouldAddInMemory()
     {
         var workbookPath = CreateExcelWorkbook("test_session_add.xlsx");
         var sessionId = OpenSession(workbookPath);
-        var result = _tool.Execute(
-            "add",
-            sessionId: sessionId,
-            cell: "A1",
-            url: "https://session-test.com",
-            displayText: "Session Link");
+        var result = _tool.Execute("add", sessionId: sessionId, cell: "A1",
+            url: "https://session.com", displayText: "Session Link");
         Assert.Contains("Hyperlink added to A1", result);
-
-        // Verify in-memory workbook has the hyperlink
+        Assert.Contains("session", result);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.Single(workbook.Worksheets[0].Hyperlinks);
-        Assert.Equal("https://session-test.com", workbook.Worksheets[0].Hyperlinks[0].Address);
+        Assert.Equal("https://session.com", workbook.Worksheets[0].Hyperlinks[0].Address);
     }
 
     [Fact]
     public void Edit_WithSessionId_ShouldEditInMemory()
     {
-        var workbookPath = CreateExcelWorkbook("test_session_edit.xlsx");
-        using (var workbook = new Workbook(workbookPath))
-        {
-            workbook.Worksheets[0].Hyperlinks.Add("A1", 1, 1, "https://old.com");
-            workbook.Save(workbookPath);
-        }
-
+        var workbookPath = CreateWorkbookWithHyperlink("test_session_edit.xlsx", "A1", "https://old.com");
         var sessionId = OpenSession(workbookPath);
-        var result = _tool.Execute(
-            "edit",
-            sessionId: sessionId,
-            cell: "A1",
-            url: "https://new-session.com");
-        Assert.Contains("edited", result);
-
-        // Verify in-memory workbook has the updated hyperlink
-        var sessionWorkbook = SessionManager.GetDocument<Workbook>(sessionId);
-        Assert.Equal("https://new-session.com", sessionWorkbook.Worksheets[0].Hyperlinks[0].Address);
+        var result = _tool.Execute("edit", sessionId: sessionId, cell: "A1", url: "https://new-session.com");
+        Assert.Contains("Hyperlink at", result);
+        Assert.Contains("session", result);
+        var workbook = SessionManager.GetDocument<Workbook>(sessionId);
+        Assert.Equal("https://new-session.com", workbook.Worksheets[0].Hyperlinks[0].Address);
     }
 
     [Fact]
     public void Delete_WithSessionId_ShouldDeleteInMemory()
     {
-        var workbookPath = CreateExcelWorkbook("test_session_delete.xlsx");
+        var workbookPath = CreateWorkbookWithHyperlink("test_session_delete.xlsx");
+        var sessionId = OpenSession(workbookPath);
+        var result = _tool.Execute("delete", sessionId: sessionId, cell: "A1");
+        Assert.Contains("deleted", result);
+        Assert.Contains("session", result);
+        var workbook = SessionManager.GetDocument<Workbook>(sessionId);
+        Assert.Empty(workbook.Worksheets[0].Hyperlinks);
+    }
+
+    [Fact]
+    public void Get_WithSessionId_ShouldGetFromMemory()
+    {
+        var workbookPath = CreateExcelWorkbook("test_session_get.xlsx");
         using (var wb = new Workbook(workbookPath))
         {
-            wb.Worksheets[0].Hyperlinks.Add("A1", 1, 1, "https://delete.com");
+            wb.Worksheets[0].Hyperlinks.Add("A1", 1, 1, "https://test1.com");
+            wb.Worksheets[0].Hyperlinks.Add("B2", 1, 1, "https://test2.com");
             wb.Save(workbookPath);
         }
 
         var sessionId = OpenSession(workbookPath);
-        var result = _tool.Execute(
-            "delete",
-            sessionId: sessionId,
-            cell: "A1");
-        Assert.Contains("deleted", result);
-
-        // Verify in-memory workbook has no hyperlinks
-        var sessionWorkbook = SessionManager.GetDocument<Workbook>(sessionId);
-        Assert.Empty(sessionWorkbook.Worksheets[0].Hyperlinks);
-    }
-
-    [Fact]
-    public void Add_WithSessionId_ShouldNotModifyOriginalFile()
-    {
-        var workbookPath = CreateExcelWorkbook("test_session_add_original.xlsx");
-        var sessionId = OpenSession(workbookPath);
-        _tool.Execute(
-            "add",
-            sessionId: sessionId,
-            cell: "A1",
-            url: "https://session-only.com");
-
-        // Assert - original file should not have the hyperlink
-        using var originalWorkbook = new Workbook(workbookPath);
-        Assert.Empty(originalWorkbook.Worksheets[0].Hyperlinks);
-
-        // But session workbook should have the hyperlink
-        var sessionWorkbook = SessionManager.GetDocument<Workbook>(sessionId);
-        Assert.Single(sessionWorkbook.Worksheets[0].Hyperlinks);
+        var result = _tool.Execute("get", sessionId: sessionId);
+        var json = JsonDocument.Parse(result);
+        Assert.Equal(2, json.RootElement.GetProperty("count").GetInt32());
     }
 
     [Fact]
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
-        Assert.Throws<KeyNotFoundException>(() =>
-            _tool.Execute("get", sessionId: "invalid_session_id"));
+        Assert.Throws<KeyNotFoundException>(() => _tool.Execute("get", sessionId: "invalid_session"));
+    }
+
+    [Fact]
+    public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
+    {
+        var workbookPath1 = CreateExcelWorkbook("test_path_file.xlsx");
+        var workbookPath2 = CreateWorkbookWithHyperlink("test_session_file.xlsx", "A1", "https://session.com");
+        var sessionId = OpenSession(workbookPath2);
+        var result = _tool.Execute("get", workbookPath1, sessionId);
+        Assert.Contains("https://session.com", result);
     }
 
     #endregion

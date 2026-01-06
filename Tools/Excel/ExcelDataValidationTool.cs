@@ -14,6 +14,11 @@ namespace AsposeMcpServer.Tools.Excel;
 public class ExcelDataValidationTool
 {
     /// <summary>
+    ///     Session identity accessor for session isolation support.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Document session manager for in-memory editing support.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -22,11 +27,33 @@ public class ExcelDataValidationTool
     ///     Initializes a new instance of the <see cref="ExcelDataValidationTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
-    public ExcelDataValidationTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    public ExcelDataValidationTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes an Excel data validation operation (add, edit, delete, get, or set_messages).
+    /// </summary>
+    /// <param name="operation">The operation to perform: add, edit, delete, get, or set_messages.</param>
+    /// <param name="path">Excel file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="sheetIndex">Sheet index (0-based).</param>
+    /// <param name="range">Cell range to apply validation (e.g., 'A1:A10', required for add).</param>
+    /// <param name="validationIndex">Data validation index (0-based, required for edit/delete/set_messages).</param>
+    /// <param name="validationType">Validation type: WholeNumber, Decimal, List, Date, Time, TextLength, Custom.</param>
+    /// <param name="operatorType">Operator type: Between, Equal, NotEqual, GreaterThan, LessThan, GreaterOrEqual, LessOrEqual.</param>
+    /// <param name="formula1">First formula/value (e.g., '1,2,3' for List, '0' for minimum, required for add).</param>
+    /// <param name="formula2">Second formula/value (required for 'Between' operator).</param>
+    /// <param name="inCellDropDown">Show dropdown list in cell (only for List type).</param>
+    /// <param name="errorMessage">Error message to show when validation fails.</param>
+    /// <param name="inputMessage">Input message to show when cell is selected.</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "excel_data_validation")]
     [Description(@"Manage Excel data validation. Supports 5 operations: add, edit, delete, get, set_messages.
 
@@ -68,7 +95,7 @@ Usage examples:
         [Description("Input message to show when cell is selected (optional)")]
         string? inputMessage = null)
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {

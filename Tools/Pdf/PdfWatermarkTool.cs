@@ -14,6 +14,11 @@ namespace AsposeMcpServer.Tools.Pdf;
 public class PdfWatermarkTool
 {
     /// <summary>
+    ///     The session identity accessor for session isolation.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     The document session manager for managing in-memory document sessions.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -22,11 +27,33 @@ public class PdfWatermarkTool
     ///     Initializes a new instance of the <see cref="PdfWatermarkTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
-    public PdfWatermarkTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    public PdfWatermarkTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a PDF watermark operation (add).
+    /// </summary>
+    /// <param name="operation">The operation to perform: add.</param>
+    /// <param name="path">PDF file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="text">Watermark text (required for add).</param>
+    /// <param name="opacity">Opacity (0.0 to 1.0).</param>
+    /// <param name="fontSize">Font size in points.</param>
+    /// <param name="fontName">Font name.</param>
+    /// <param name="rotation">Rotation angle in degrees.</param>
+    /// <param name="color">Watermark color name or hex code.</param>
+    /// <param name="pageRange">Page range to apply watermark (e.g., '1,3,5-10').</param>
+    /// <param name="isBackground">If true, watermark is placed behind text content.</param>
+    /// <param name="horizontalAlignment">Horizontal alignment.</param>
+    /// <param name="verticalAlignment">Vertical alignment.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "pdf_watermark")]
     [Description(@"Manage watermarks in PDF documents. Supports 1 operation: add.
 
@@ -65,7 +92,7 @@ Usage examples:
         [Description("Vertical alignment (default: Center)")]
         string verticalAlignment = "Center")
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {

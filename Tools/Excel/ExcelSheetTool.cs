@@ -19,6 +19,11 @@ public class ExcelSheetTool
     private static readonly char[] InvalidSheetNameChars = ['\\', '/', '?', '*', '[', ']', ':'];
 
     /// <summary>
+    ///     Session identity accessor for session isolation support.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Document session manager for in-memory editing support.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -27,11 +32,30 @@ public class ExcelSheetTool
     ///     Initializes a new instance of the <see cref="ExcelSheetTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
-    public ExcelSheetTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    public ExcelSheetTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes an Excel sheet operation (add, delete, get, rename, move, copy, or hide).
+    /// </summary>
+    /// <param name="operation">The operation to perform: add, delete, get, rename, move, copy, or hide.</param>
+    /// <param name="path">Excel file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="sheetIndex">Sheet index (0-based, required for delete/rename/move/copy/hide).</param>
+    /// <param name="sheetName">Name of the sheet (required for add operation).</param>
+    /// <param name="newName">New name for the sheet (required for rename, max 31 characters).</param>
+    /// <param name="insertAt">Position to insert the sheet (0-based, optional for add/move).</param>
+    /// <param name="targetIndex">Target index for move/copy operation (0-based).</param>
+    /// <param name="copyToPath">Target file path for copy operation (optional).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when attempting to delete the last worksheet.</exception>
     [McpServerTool(Name = "excel_sheet")]
     [Description(@"Manage Excel sheets. Supports 7 operations: add, delete, get, rename, move, copy, hide.
 
@@ -65,7 +89,7 @@ Usage examples:
         [Description("Target file path for copy operation (optional)")]
         string? copyToPath = null)
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLowerInvariant() switch
         {

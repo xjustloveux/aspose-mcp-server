@@ -19,6 +19,11 @@ public class PdfAttachmentTool
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
     /// <summary>
+    ///     The session identity accessor for session isolation.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     The document session manager for managing in-memory document sessions.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -27,11 +32,26 @@ public class PdfAttachmentTool
     ///     Initializes a new instance of the <see cref="PdfAttachmentTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
-    public PdfAttachmentTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    public PdfAttachmentTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a PDF attachment operation (add, delete, get).
+    /// </summary>
+    /// <param name="operation">The operation to perform: add, delete, get.</param>
+    /// <param name="path">PDF file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="attachmentPath">Attachment file path (required for add).</param>
+    /// <param name="attachmentName">Attachment name in PDF (required for add, delete).</param>
+    /// <param name="description">Attachment description (optional for add).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "pdf_attachment")]
     [Description(@"Manage attachments in PDF documents. Supports 3 operations: add, delete, get.
 
@@ -95,7 +115,7 @@ Usage examples:
         if (!File.Exists(attachmentPath))
             throw new FileNotFoundException($"Attachment file not found: {attachmentPath}");
 
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var document = ctx.Document;
 
         var existingNames = CollectAttachmentNames(document.EmbeddedFiles);
@@ -128,7 +148,7 @@ Usage examples:
         if (string.IsNullOrEmpty(attachmentName))
             throw new ArgumentException("attachmentName is required for delete operation");
 
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var document = ctx.Document;
         var embeddedFiles = document.EmbeddedFiles;
 
@@ -154,7 +174,7 @@ Usage examples:
     /// <returns>A JSON string containing attachment information.</returns>
     private string GetAttachments(string? sessionId, string? path)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var document = ctx.Document;
         var embeddedFiles = document.EmbeddedFiles;
 

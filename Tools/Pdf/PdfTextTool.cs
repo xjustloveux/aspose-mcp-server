@@ -16,6 +16,11 @@ namespace AsposeMcpServer.Tools.Pdf;
 public class PdfTextTool
 {
     /// <summary>
+    ///     The session identity accessor for session isolation.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     The document session manager for managing in-memory document sessions.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -24,11 +29,33 @@ public class PdfTextTool
     ///     Initializes a new instance of the <see cref="PdfTextTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
-    public PdfTextTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    public PdfTextTool(DocumentSessionManager? sessionManager = null, ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a PDF text operation (add, edit, extract).
+    /// </summary>
+    /// <param name="operation">The operation to perform: add, edit, extract.</param>
+    /// <param name="path">PDF file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="pageIndex">Page index (1-based).</param>
+    /// <param name="text">Text to add (required for add).</param>
+    /// <param name="x">X position in PDF coordinates (for add).</param>
+    /// <param name="y">Y position in PDF coordinates (for add).</param>
+    /// <param name="fontName">Font name (for add).</param>
+    /// <param name="fontSize">Font size (for add).</param>
+    /// <param name="oldText">Text to replace (required for edit).</param>
+    /// <param name="newText">New text (required for edit).</param>
+    /// <param name="replaceAll">Replace all occurrences (for edit).</param>
+    /// <param name="includeFontInfo">Include font information (for extract).</param>
+    /// <param name="extractionMode">Text extraction mode (for extract).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for extract operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "pdf_text")]
     [Description(@"Manage text in PDF documents. Supports 3 operations: add, edit, extract.
 
@@ -71,7 +98,7 @@ Usage examples:
         [Description("Text extraction mode (for extract, default: 'pure')")]
         string extractionMode = "pure")
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {

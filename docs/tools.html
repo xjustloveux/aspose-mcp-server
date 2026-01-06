@@ -158,7 +158,7 @@
             <span class="tool-name">word_paragraph</span><span class="tool-desc">- 插入、刪除、編輯段落格式</span><span class="tool-ops">（7個操作：insert, delete, edit, get, get_format, copy_format, merge）</span>
         </li>
         <li>
-            <span class="tool-name">word_table</span><span class="tool-desc">- 添加、編輯、刪除表格，插入/刪除行列，合併/拆分單元格</span><span class="tool-ops">（17個操作：add_table, edit_table_format, delete_table, get_tables, insert_row, delete_row, insert_column, delete_column, merge_cells, split_cell, edit_cell_format, move_table, copy_table, get_table_structure, set_table_border, set_column_width, set_row_height）</span>
+            <span class="tool-name">word_table</span><span class="tool-desc">- 創建、刪除、獲取表格，插入/刪除行列，合併/拆分單元格</span><span class="tool-ops">（16個操作：create, delete, get, insert_row, delete_row, insert_column, delete_column, merge_cells, split_cell, edit_cell_format, move_table, copy_table, get_structure, set_border, set_column_width, set_row_height）</span>
         </li>
         <li>
             <span class="tool-name">word_image</span><span class="tool-desc">- 添加、編輯、刪除、替換圖片，提取圖片</span><span class="tool-ops">（6個操作：add, edit, delete, get, replace, extract）</span>
@@ -297,7 +297,7 @@
             <span class="tool-name">excel_data_validation</span><span class="tool-desc">- 添加、編輯、刪除、獲取資料驗證，設定輸入/錯誤訊息</span><span class="tool-ops">（5個操作：add, edit, delete, get, set_messages）</span>
         </li>
         <li>
-            <span class="tool-name">excel_image</span><span class="tool-desc">- 添加、刪除、獲取圖片</span><span class="tool-ops">（3個操作：add, delete, get）</span>
+            <span class="tool-name">excel_image</span><span class="tool-desc">- 添加、刪除、獲取、提取圖片</span><span class="tool-ops">（4個操作：add, delete, get, extract）</span>
         </li>
         <li>
             <span class="tool-name">excel_hyperlink</span><span class="tool-desc">- 添加、編輯、刪除、獲取超連結</span><span class="tool-ops">（4個操作：add, edit, delete, get）</span>
@@ -316,7 +316,7 @@
             <span class="tool-name">excel_protect</span><span class="tool-desc">- 保護、解除保護工作簿/工作表，獲取保護資訊，設定單元格鎖定</span><span class="tool-ops">（4個操作：protect, unprotect, get, set_cell_locked）</span>
         </li>
         <li>
-            <span class="tool-name">excel_filter</span><span class="tool-desc">- 應用、移除自動篩選，獲取篩選狀態</span><span class="tool-ops">（3個操作：apply, remove, get_status）</span>
+            <span class="tool-name">excel_filter</span><span class="tool-desc">- 應用、移除自動篩選，篩選資料，獲取篩選狀態</span><span class="tool-ops">（4個操作：apply, remove, filter, get_status）</span>
         </li>
         <li>
             <span class="tool-name">excel_freeze_panes</span><span class="tool-desc">- 凍結、解凍窗格，獲取凍結狀態</span><span class="tool-ops">（3個操作：freeze, unfreeze, get）</span>
@@ -329,7 +329,7 @@
     <h3>外觀與視圖 (3)</h3>
     <ul class="tool-list">
         <li>
-            <span class="tool-name">excel_view_settings</span><span class="tool-desc">- 設定工作表視圖（縮放、網格線、標題、零值、背景、標籤顏色、視窗分割）</span><span class="tool-ops">（10個操作：set_zoom, set_gridlines, set_headers, set_zero_values, set_column_width, set_row_height, set_background, set_tab_color, set_all, split_window）</span>
+            <span class="tool-name">excel_view_settings</span><span class="tool-desc">- 設定工作表視圖（縮放、網格線、標題、零值、背景、標籤顏色、凍結窗格、視窗分割、自動調整欄寬列高、顯示公式）</span><span class="tool-ops">（14個操作：set_zoom, set_gridlines, set_headers, set_zero_values, set_column_width, set_row_height, set_background, set_tab_color, set_all, freeze_panes, split_window, auto_fit_column, auto_fit_row, show_formulas）</span>
         </li>
         <li>
             <span class="tool-name">excel_print_settings</span><span class="tool-desc">- 設定列印區域、標題行、頁面設定</span><span class="tool-ops">（4個操作：set_print_area, set_print_titles, set_page_setup, set_all）</span>
@@ -447,7 +447,7 @@
     <h3>檔案操作 (1)</h3>
     <ul class="tool-list">
         <li>
-            <span class="tool-name">pdf_file</span><span class="tool-desc">- 創建、合併、拆分、壓縮、加密PDF</span><span class="tool-ops">（5個操作：create, merge, split, compress, encrypt）</span>
+            <span class="tool-name">pdf_file</span><span class="tool-desc">- 創建、合併、拆分、壓縮、加密、線性化PDF</span><span class="tool-ops">（6個操作：create, merge, split, compress, encrypt, linearize）</span>
         </li>
     </ul>
 
@@ -532,7 +532,7 @@
     <h3>Session 操作</h3>
     <ul class="tool-list">
         <li>
-            <span class="tool-name">document_session</span><span class="tool-desc">- 管理文檔工作階段（需要啟用 <code>--session-enabled</code>）</span><span class="tool-ops">（11個操作：open, save, save_as, close, list, status, list_temp, recover, delete_temp, cleanup, temp_stats）</span>
+            <span class="tool-name">document_session</span><span class="tool-desc">- 管理文檔工作階段（需要啟用 <code>--session-enabled</code>）</span><span class="tool-ops">（10個操作：open, save, close, list, status, list_temp, recover, delete_temp, cleanup, temp_stats）</span>
         </li>
     </ul>
 
@@ -552,13 +552,7 @@
             <td>
                 <code>save</code>
             </td>
-            <td>儲存 Session 變更到原始檔案</td>
-        </tr>
-        <tr>
-            <td>
-                <code>save_as</code>
-            </td>
-            <td>另存 Session 到指定路徑</td>
+            <td>儲存 Session 變更到檔案（可選 outputPath 參數另存為）</td>
         </tr>
         <tr>
             <td>

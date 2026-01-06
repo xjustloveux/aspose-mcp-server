@@ -13,6 +13,11 @@ namespace AsposeMcpServer.Tools.Excel;
 public class ExcelGroupTool
 {
     /// <summary>
+    ///     Session identity accessor for session isolation support.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Document session manager for in-memory editing support.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -21,11 +26,29 @@ public class ExcelGroupTool
     ///     Initializes a new instance of the <see cref="ExcelGroupTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
-    public ExcelGroupTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    public ExcelGroupTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes an Excel group operation (group_rows, ungroup_rows, group_columns, ungroup_columns).
+    /// </summary>
+    /// <param name="operation">The operation to perform: group_rows, ungroup_rows, group_columns, ungroup_columns.</param>
+    /// <param name="path">Excel file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="sheetIndex">Sheet index (0-based, default: 0).</param>
+    /// <param name="startRow">Start row index (0-based, required for group_rows/ungroup_rows).</param>
+    /// <param name="endRow">End row index (0-based, must be >= startRow, required for group_rows/ungroup_rows).</param>
+    /// <param name="startColumn">Start column index (0-based, required for group_columns/ungroup_columns).</param>
+    /// <param name="endColumn">End column index (0-based, must be >= startColumn, required for group_columns/ungroup_columns).</param>
+    /// <param name="isCollapsed">Collapse group initially (optional, for group_rows/group_columns, default: false).</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "excel_group")]
     [Description(@"Manage Excel groups. Supports 4 operations: group_rows, ungroup_rows, group_columns, ungroup_columns.
 
@@ -56,7 +79,7 @@ Usage examples:
         [Description("Collapse group initially (optional, for group_rows/group_columns, default: false)")]
         bool isCollapsed = false)
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {

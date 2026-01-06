@@ -1,0 +1,45 @@
+# EditorConfig: https://editorconfig.org
+root = true
+
+# All files
+[*]
+indent_style = space
+indent_size = 4
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+# C# files
+[*.cs]
+indent_size = 4
+
+# ===== JetBrains ReSharper/InspectCode 規則排除 =====
+# 參考文件: CODE_QUALITY_EXCEPTIONS.md
+
+# JSON 序列化相關（配置類需要 public setter）
+resharper_auto_property_can_be_made_get_only_global_highlighting = none
+resharper_property_can_be_made_init_only_global_highlighting = none
+resharper_unused_auto_property_accessor_global_highlighting = none
+
+# 公開 API 相關（供外部使用者調用）
+resharper_unused_member_global_highlighting = none
+resharper_unused_type_global_highlighting = none
+resharper_member_can_be_private_global_highlighting = none
+
+# XML and config files
+[*.{xml,config,json,yml,yaml}]
+indent_size = 2
+
+# Markdown files
+[*.md]
+trim_trailing_whitespace = false
+
+# PowerShell scripts
+[*.ps1]
+indent_size = 4
+end_of_line = crlf
+
+# Shell scripts
+[*.sh]
+end_of_line = lf

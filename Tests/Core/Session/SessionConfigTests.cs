@@ -94,4 +94,98 @@ public class SessionConfigTests
 
         Assert.Equal(customPath, config.TempDirectory);
     }
+
+    #region Isolation Mode Tests
+
+    [Fact]
+    public void SessionConfig_IsolationMode_DefaultShouldBeUser()
+    {
+        var config = new SessionConfig();
+
+        Assert.Equal(SessionIsolationMode.User, config.IsolationMode);
+    }
+
+    [Fact]
+    public void SessionConfig_IsolationMode_ShouldBeSettable()
+    {
+        var config = new SessionConfig { IsolationMode = SessionIsolationMode.Tenant };
+
+        Assert.Equal(SessionIsolationMode.Tenant, config.IsolationMode);
+    }
+
+    [Fact]
+    public void SessionConfig_LoadFromArgs_IsolationNone()
+    {
+        var config = SessionConfig.LoadFromArgs(["--session-isolation:none"]);
+
+        Assert.Equal(SessionIsolationMode.None, config.IsolationMode);
+    }
+
+    [Fact]
+    public void SessionConfig_LoadFromArgs_IsolationTenant()
+    {
+        var config = SessionConfig.LoadFromArgs(["--session-isolation:tenant"]);
+
+        Assert.Equal(SessionIsolationMode.Tenant, config.IsolationMode);
+    }
+
+    [Fact]
+    public void SessionConfig_LoadFromArgs_IsolationUser()
+    {
+        var config = SessionConfig.LoadFromArgs(["--session-isolation:user"]);
+
+        Assert.Equal(SessionIsolationMode.User, config.IsolationMode);
+    }
+
+    [Fact]
+    public void SessionConfig_LoadFromArgs_IsolationCaseInsensitive()
+    {
+        var config = SessionConfig.LoadFromArgs(["--session-isolation:TENANT"]);
+
+        Assert.Equal(SessionIsolationMode.Tenant, config.IsolationMode);
+    }
+
+    [Fact]
+    public void SessionConfig_LoadFromArgs_IsolationWithEqualsSign()
+    {
+        var config = SessionConfig.LoadFromArgs(["--session-isolation=none"]);
+
+        Assert.Equal(SessionIsolationMode.None, config.IsolationMode);
+    }
+
+    [Fact]
+    public void SessionConfig_LoadFromEnvironment_Isolation()
+    {
+        Environment.SetEnvironmentVariable("ASPOSE_SESSION_ISOLATION", "tenant");
+
+        try
+        {
+            var config = SessionConfig.LoadFromArgs([]);
+
+            Assert.Equal(SessionIsolationMode.Tenant, config.IsolationMode);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("ASPOSE_SESSION_ISOLATION", null);
+        }
+    }
+
+    [Fact]
+    public void SessionConfig_LoadFromArgs_IsolationOverridesEnvironment()
+    {
+        Environment.SetEnvironmentVariable("ASPOSE_SESSION_ISOLATION", "tenant");
+
+        try
+        {
+            var config = SessionConfig.LoadFromArgs(["--session-isolation:user"]);
+
+            Assert.Equal(SessionIsolationMode.User, config.IsolationMode);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("ASPOSE_SESSION_ISOLATION", null);
+        }
+    }
+
+    #endregion
 }

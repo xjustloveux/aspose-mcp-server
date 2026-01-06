@@ -48,7 +48,6 @@ public abstract class TestBase : IDisposable
     /// </summary>
     private TempFileManager? _tempFileManager;
 
-    // Static constructor, executed before first use of the class
     static TestBase()
     {
         LoadAsposeLicenses();
@@ -81,18 +80,15 @@ public abstract class TestBase : IDisposable
     ///     Gets the shared session tool (creates if not exists)
     /// </summary>
     protected DocumentSessionTool SessionTool =>
-        _sessionTool ??= new DocumentSessionTool(SessionManager, TempFileManager);
+        _sessionTool ??= new DocumentSessionTool(SessionManager, TempFileManager, new StdioSessionIdentityAccessor());
 
     public virtual void Dispose()
     {
-        // Clean up session manager and temp file manager
         _sessionManager?.Dispose();
         _tempFileManager?.Dispose();
 
-        // Clean up test files with retry mechanism
         foreach (var file in TestFiles) DeleteFileWithRetry(file);
 
-        // Delete directory with retry mechanism
         DeleteDirectoryWithRetry(TestDir);
     }
 
@@ -112,7 +108,6 @@ public abstract class TestBase : IDisposable
     /// </summary>
     private static void LoadAsposeLicenses()
     {
-        // Check if license loading should be skipped (set by test.ps1 -SkipLicense parameter)
         var skipLicense = Environment.GetEnvironmentVariable("SKIP_ASPOSE_LICENSE");
         if (string.Equals(skipLicense, "true", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(skipLicense, "1", StringComparison.OrdinalIgnoreCase))
@@ -140,7 +135,6 @@ public abstract class TestBase : IDisposable
             }
         }
 
-        // Add common license file names
         licenseFileNames.AddRange(
         [
             "Aspose.Total.lic",
@@ -160,7 +154,6 @@ public abstract class TestBase : IDisposable
             Path.Combine(currentDirectory, "Aspose.Pdf.lic")
         ]);
 
-        // Search for all .lic files
         var searchDirectories = new[] { baseDirectory, currentDirectory };
         foreach (var dir in searchDirectories)
             try
@@ -187,7 +180,6 @@ public abstract class TestBase : IDisposable
             return;
         }
 
-        // Load all Aspose component licenses
         try
         {
             var wordsLicense = new License();

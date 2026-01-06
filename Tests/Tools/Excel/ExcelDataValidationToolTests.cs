@@ -14,493 +14,275 @@ public class ExcelDataValidationToolTests : ExcelTestBase
         _tool = new ExcelDataValidationTool(SessionManager);
     }
 
-    #region General Tests
+    private string CreateWorkbookWithValidation(string fileName, ValidationType type = ValidationType.List,
+        string formula = "1,2,3")
+    {
+        var path = CreateExcelWorkbook(fileName);
+        using var workbook = new Workbook(path);
+        var worksheet = workbook.Worksheets[0];
+        var area = new CellArea { StartRow = 0, StartColumn = 0, EndRow = 9, EndColumn = 0 };
+        var idx = worksheet.Validations.Add(area);
+        worksheet.Validations[idx].Type = type;
+        worksheet.Validations[idx].Formula1 = formula;
+        workbook.Save(path);
+        return path;
+    }
+
+    #region General
 
     [Fact]
-    public void AddDataValidation_WithList_ShouldAddListValidation()
+    public void Add_WithList_ShouldAddListValidation()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_add_validation.xlsx");
-        var outputPath = CreateTestFilePath("test_add_validation_output.xlsx");
-
-        var result = _tool.Execute(
-            "add",
-            workbookPath,
-            range: "A1:A10",
-            validationType: "List",
-            formula1: "Option1,Option2,Option3",
-            outputPath: outputPath);
-
-        Assert.Contains("Data validation added", result);
+        var workbookPath = CreateExcelWorkbookWithData("test_add_list.xlsx");
+        var outputPath = CreateTestFilePath("test_add_list_output.xlsx");
+        var result = _tool.Execute("add", workbookPath, range: "A1:A10", validationType: "List",
+            formula1: "Option1,Option2,Option3", outputPath: outputPath);
+        Assert.StartsWith("Data validation added", result);
         Assert.Contains("index: 0", result);
-
-        var workbook = new Workbook(outputPath);
-        var worksheet = workbook.Worksheets[0];
-        var validation = worksheet.Validations[^1];
-        Assert.NotNull(validation);
+        using var workbook = new Workbook(outputPath);
+        var validation = workbook.Worksheets[0].Validations[^1];
         Assert.Equal(ValidationType.List, validation.Type);
         Assert.True(validation.InCellDropDown);
     }
 
     [Fact]
-    public void AddDataValidation_WithList_InCellDropDownFalse_ShouldDisableDropdown()
+    public void Add_WithList_InCellDropDownFalse_ShouldDisableDropdown()
     {
         var workbookPath = CreateExcelWorkbook("test_add_list_no_dropdown.xlsx");
         var outputPath = CreateTestFilePath("test_add_list_no_dropdown_output.xlsx");
-
-        _tool.Execute(
-            "add",
-            workbookPath,
-            range: "A1:A10",
-            validationType: "List",
-            formula1: "1,2,3",
-            inCellDropDown: false,
-            outputPath: outputPath);
-
-        var workbook = new Workbook(outputPath);
-        var worksheet = workbook.Worksheets[0];
-        var validation = worksheet.Validations[^1];
+        _tool.Execute("add", workbookPath, range: "A1:A10", validationType: "List", formula1: "1,2,3",
+            inCellDropDown: false, outputPath: outputPath);
+        using var workbook = new Workbook(outputPath);
+        var validation = workbook.Worksheets[0].Validations[^1];
         Assert.Equal(ValidationType.List, validation.Type);
         Assert.False(validation.InCellDropDown);
     }
 
     [Fact]
-    public void AddDataValidation_WithWholeNumber_ShouldAddNumberValidation()
+    public void Add_WithWholeNumber_ShouldAddNumberValidation()
     {
-        var workbookPath = CreateExcelWorkbook("test_add_number_validation.xlsx");
-        var outputPath = CreateTestFilePath("test_add_number_validation_output.xlsx");
-
-        _tool.Execute(
-            "add",
-            workbookPath,
-            range: "A1:A10",
-            validationType: "WholeNumber",
-            formula1: "0",
-            formula2: "100",
-            outputPath: outputPath);
-
-        var workbook = new Workbook(outputPath);
-        var worksheet = workbook.Worksheets[0];
-        var validation = worksheet.Validations[^1];
+        var workbookPath = CreateExcelWorkbook("test_add_number.xlsx");
+        var outputPath = CreateTestFilePath("test_add_number_output.xlsx");
+        _tool.Execute("add", workbookPath, range: "A1:A10", validationType: "WholeNumber", formula1: "0",
+            formula2: "100", outputPath: outputPath);
+        using var workbook = new Workbook(outputPath);
+        var validation = workbook.Worksheets[0].Validations[^1];
         Assert.Equal(ValidationType.WholeNumber, validation.Type);
         Assert.Equal(OperatorType.Between, validation.Operator);
     }
 
     [Fact]
-    public void AddDataValidation_WithOperatorGreaterThan_ShouldUseGreaterThanOperator()
+    public void Add_WithMessages_ShouldSetMessages()
     {
-        var workbookPath = CreateExcelWorkbook("test_add_greater_than.xlsx");
-        var outputPath = CreateTestFilePath("test_add_greater_than_output.xlsx");
-
-        _tool.Execute(
-            "add",
-            workbookPath,
-            range: "A1:A10",
-            validationType: "WholeNumber",
-            operatorType: "GreaterThan",
-            formula1: "0",
-            outputPath: outputPath);
-
-        var workbook = new Workbook(outputPath);
-        var worksheet = workbook.Worksheets[0];
-        var validation = worksheet.Validations[^1];
-        Assert.Equal(ValidationType.WholeNumber, validation.Type);
-        Assert.Equal(OperatorType.GreaterThan, validation.Operator);
-    }
-
-    [Fact]
-    public void AddDataValidation_WithOperatorLessThan_ShouldUseLessThanOperator()
-    {
-        var workbookPath = CreateExcelWorkbook("test_add_less_than.xlsx");
-        var outputPath = CreateTestFilePath("test_add_less_than_output.xlsx");
-
-        _tool.Execute(
-            "add",
-            workbookPath,
-            range: "B1:B10",
-            validationType: "Decimal",
-            operatorType: "LessThan",
-            formula1: "100.5",
-            outputPath: outputPath);
-
-        var workbook = new Workbook(outputPath);
-        var worksheet = workbook.Worksheets[0];
-        var validation = worksheet.Validations[^1];
-        Assert.Equal(ValidationType.Decimal, validation.Type);
-        Assert.Equal(OperatorType.LessThan, validation.Operator);
-    }
-
-    [Fact]
-    public void AddDataValidation_WithMessages_ShouldSetMessages()
-    {
-        var workbookPath = CreateExcelWorkbook("test_add_with_messages.xlsx");
-        var outputPath = CreateTestFilePath("test_add_with_messages_output.xlsx");
-
-        _tool.Execute(
-            "add",
-            workbookPath,
-            range: "A1:A10",
-            validationType: "List",
-            formula1: "Yes,No",
-            inputMessage: "Please select Yes or No",
-            errorMessage: "Invalid selection",
-            outputPath: outputPath);
-
-        var workbook = new Workbook(outputPath);
-        var worksheet = workbook.Worksheets[0];
-        var validation = worksheet.Validations[^1];
+        var workbookPath = CreateExcelWorkbook("test_add_messages.xlsx");
+        var outputPath = CreateTestFilePath("test_add_messages_output.xlsx");
+        _tool.Execute("add", workbookPath, range: "A1:A10", validationType: "List", formula1: "Yes,No",
+            inputMessage: "Please select Yes or No", errorMessage: "Invalid selection", outputPath: outputPath);
+        using var workbook = new Workbook(outputPath);
+        var validation = workbook.Worksheets[0].Validations[^1];
         Assert.Equal("Please select Yes or No", validation.InputMessage);
         Assert.Equal("Invalid selection", validation.ErrorMessage);
         Assert.True(validation.ShowInput);
         Assert.True(validation.ShowError);
     }
 
-    [Fact]
-    public void GetDataValidation_ShouldReturnValidationInfo()
+    [Theory]
+    [InlineData("WholeNumber")]
+    [InlineData("Decimal")]
+    [InlineData("Date")]
+    [InlineData("Time")]
+    [InlineData("TextLength")]
+    [InlineData("Custom")]
+    public void Add_AllValidationTypes_ShouldWork(string validationType)
     {
-        var workbookPath = CreateExcelWorkbook("test_get_validation.xlsx");
-        var workbook = new Workbook(workbookPath);
-        var worksheet = workbook.Worksheets[0];
-        var area = new CellArea { StartRow = 0, StartColumn = 0, EndRow = 9, EndColumn = 0 };
-        var validationIndex = worksheet.Validations.Add(area);
-        var validation = worksheet.Validations[validationIndex];
-        validation.Type = ValidationType.List;
-        validation.Formula1 = "1,2,3";
-        workbook.Save(workbookPath);
+        var workbookPath = CreateExcelWorkbook($"test_type_{validationType}.xlsx");
+        var outputPath = CreateTestFilePath($"test_type_{validationType}_output.xlsx");
+        var result = _tool.Execute("add", workbookPath, range: "A1:A10", validationType: validationType, formula1: "1",
+            outputPath: outputPath);
+        Assert.StartsWith("Data validation added", result);
+        Assert.Contains($"type: {validationType}", result);
+    }
 
-        var result = _tool.Execute(
-            "get",
-            workbookPath);
+    [Theory]
+    [InlineData("Between", "100")]
+    [InlineData("Equal", null)]
+    [InlineData("NotEqual", null)]
+    [InlineData("GreaterThan", null)]
+    [InlineData("LessThan", null)]
+    [InlineData("GreaterOrEqual", null)]
+    [InlineData("LessOrEqual", null)]
+    public void Add_AllOperatorTypes_ShouldWork(string operatorType, string? formula2)
+    {
+        var workbookPath = CreateExcelWorkbook($"test_op_{operatorType}.xlsx");
+        var outputPath = CreateTestFilePath($"test_op_{operatorType}_output.xlsx");
+        var result = _tool.Execute("add", workbookPath, range: "A1:A10", validationType: "WholeNumber",
+            operatorType: operatorType, formula1: "0", formula2: formula2, outputPath: outputPath);
+        Assert.StartsWith("Data validation added", result);
+    }
 
-        Assert.NotNull(result);
+    [Fact]
+    public void Get_ShouldReturnValidationInfo()
+    {
+        var workbookPath = CreateWorkbookWithValidation("test_get.xlsx");
+        var result = _tool.Execute("get", workbookPath);
         var json = JsonDocument.Parse(result);
         Assert.Equal(1, json.RootElement.GetProperty("count").GetInt32());
         Assert.True(json.RootElement.GetProperty("items").GetArrayLength() > 0);
     }
 
     [Fact]
-    public void GetDataValidation_EmptyWorksheet_ShouldReturnEmptyList()
+    public void Get_EmptyWorksheet_ShouldReturnEmptyList()
     {
         var workbookPath = CreateExcelWorkbook("test_get_empty.xlsx");
-
-        var result = _tool.Execute(
-            "get",
-            workbookPath);
-
+        var result = _tool.Execute("get", workbookPath);
         var json = JsonDocument.Parse(result);
         Assert.Equal(0, json.RootElement.GetProperty("count").GetInt32());
         Assert.Equal(0, json.RootElement.GetProperty("items").GetArrayLength());
     }
 
     [Fact]
+    public void Edit_ShouldEditValidation()
+    {
+        var workbookPath = CreateWorkbookWithValidation("test_edit.xlsx");
+        var outputPath = CreateTestFilePath("test_edit_output.xlsx");
+        var result = _tool.Execute("edit", workbookPath, validationIndex: 0, validationType: "WholeNumber",
+            formula1: "0", formula2: "100", outputPath: outputPath);
+        Assert.StartsWith("Edited data validation #0", result);
+        Assert.Contains("Type=WholeNumber", result);
+        using var workbook = new Workbook(outputPath);
+        Assert.Equal(ValidationType.WholeNumber, workbook.Worksheets[0].Validations[0].Type);
+    }
+
+    [Fact]
+    public void Edit_ChangeOperatorType_ShouldUpdateOperator()
+    {
+        var workbookPath = CreateExcelWorkbook("test_edit_operator.xlsx");
+        using (var wb = new Workbook(workbookPath))
+        {
+            var area = new CellArea { StartRow = 0, StartColumn = 0, EndRow = 9, EndColumn = 0 };
+            var idx = wb.Worksheets[0].Validations.Add(area);
+            wb.Worksheets[0].Validations[idx].Type = ValidationType.WholeNumber;
+            wb.Worksheets[0].Validations[idx].Formula1 = "0";
+            wb.Worksheets[0].Validations[idx].Operator = OperatorType.Equal;
+            wb.Save(workbookPath);
+        }
+
+        var outputPath = CreateTestFilePath("test_edit_operator_output.xlsx");
+        var result = _tool.Execute("edit", workbookPath, validationIndex: 0, operatorType: "GreaterOrEqual",
+            outputPath: outputPath);
+        Assert.StartsWith("Edited data validation #0", result);
+        Assert.Contains("Operator=GreaterOrEqual", result);
+        using var workbook = new Workbook(outputPath);
+        Assert.Equal(OperatorType.GreaterOrEqual, workbook.Worksheets[0].Validations[0].Operator);
+    }
+
+    [Fact]
+    public void Edit_ChangeInCellDropDown_ShouldUpdateDropdown()
+    {
+        var workbookPath = CreateWorkbookWithValidation("test_edit_dropdown.xlsx");
+        var outputPath = CreateTestFilePath("test_edit_dropdown_output.xlsx");
+        var result = _tool.Execute("edit", workbookPath, validationIndex: 0, inCellDropDown: false,
+            outputPath: outputPath);
+        Assert.StartsWith("Edited data validation #0", result);
+        Assert.Contains("InCellDropDown=False", result);
+        using var workbook = new Workbook(outputPath);
+        Assert.False(workbook.Worksheets[0].Validations[0].InCellDropDown);
+    }
+
+    [Fact]
+    public void Delete_ShouldDeleteValidation()
+    {
+        var workbookPath = CreateWorkbookWithValidation("test_delete.xlsx");
+        var outputPath = CreateTestFilePath("test_delete_output.xlsx");
+        var result = _tool.Execute("delete", workbookPath, validationIndex: 0, outputPath: outputPath);
+        Assert.StartsWith("Deleted data validation #0", result);
+        Assert.Contains("remaining: 0", result);
+        using var workbook = new Workbook(outputPath);
+        Assert.Empty(workbook.Worksheets[0].Validations);
+    }
+
+    [Fact]
     public void SetMessages_ShouldSetInputAndErrorMessage()
     {
-        var workbookPath = CreateExcelWorkbook("test_set_messages.xlsx");
-        var workbook = new Workbook(workbookPath);
-        var worksheet = workbook.Worksheets[0];
-        var area = new CellArea { StartRow = 0, StartColumn = 0, EndRow = 9, EndColumn = 0 };
-        worksheet.Validations.Add(area);
-        workbook.Save(workbookPath);
-
+        var workbookPath = CreateWorkbookWithValidation("test_set_messages.xlsx");
         var outputPath = CreateTestFilePath("test_set_messages_output.xlsx");
-
-        var result = _tool.Execute(
-            "set_messages",
-            workbookPath,
-            validationIndex: 0,
-            inputMessage: "Please select a value",
-            errorMessage: "Invalid value selected",
-            outputPath: outputPath);
-
-        Assert.Contains("Updated data validation", result);
+        var result = _tool.Execute("set_messages", workbookPath, validationIndex: 0,
+            inputMessage: "Please select a value", errorMessage: "Invalid value selected", outputPath: outputPath);
+        Assert.StartsWith("Updated data validation #0", result);
         Assert.Contains("InputMessage=Please select a value", result);
         Assert.Contains("ErrorMessage=Invalid value selected", result);
-
-        var resultWorkbook = new Workbook(outputPath);
-        var resultWorksheet = resultWorkbook.Worksheets[0];
-        var validationResult = resultWorksheet.Validations[0];
-        Assert.Equal("Please select a value", validationResult.InputMessage);
-        Assert.Equal("Invalid value selected", validationResult.ErrorMessage);
+        using var workbook = new Workbook(outputPath);
+        var validation = workbook.Worksheets[0].Validations[0];
+        Assert.Equal("Please select a value", validation.InputMessage);
+        Assert.Equal("Invalid value selected", validation.ErrorMessage);
     }
 
     [Fact]
     public void SetMessages_ClearMessage_ShouldClearAndDisableShow()
     {
         var workbookPath = CreateExcelWorkbook("test_clear_messages.xlsx");
-        var workbook = new Workbook(workbookPath);
-        var worksheet = workbook.Worksheets[0];
-        var area = new CellArea { StartRow = 0, StartColumn = 0, EndRow = 9, EndColumn = 0 };
-        var idx = worksheet.Validations.Add(area);
-        worksheet.Validations[idx].InputMessage = "Old message";
-        worksheet.Validations[idx].ShowInput = true;
-        workbook.Save(workbookPath);
+        using (var wb = new Workbook(workbookPath))
+        {
+            var area = new CellArea { StartRow = 0, StartColumn = 0, EndRow = 9, EndColumn = 0 };
+            var idx = wb.Worksheets[0].Validations.Add(area);
+            wb.Worksheets[0].Validations[idx].InputMessage = "Old message";
+            wb.Worksheets[0].Validations[idx].ShowInput = true;
+            wb.Save(workbookPath);
+        }
 
         var outputPath = CreateTestFilePath("test_clear_messages_output.xlsx");
-
-        _tool.Execute(
-            "set_messages",
-            workbookPath,
-            validationIndex: 0,
-            inputMessage: "",
-            outputPath: outputPath);
-
-        var resultWorkbook = new Workbook(outputPath);
-        var validation = resultWorkbook.Worksheets[0].Validations[0];
+        _tool.Execute("set_messages", workbookPath, validationIndex: 0, inputMessage: "", outputPath: outputPath);
+        using var workbook = new Workbook(outputPath);
+        var validation = workbook.Worksheets[0].Validations[0];
         Assert.True(string.IsNullOrEmpty(validation.InputMessage));
         Assert.False(validation.ShowInput);
     }
 
-    [Fact]
-    public void DeleteDataValidation_ShouldDeleteValidation()
+    [Theory]
+    [InlineData("ADD")]
+    [InlineData("Add")]
+    [InlineData("add")]
+    public void Operation_ShouldBeCaseInsensitive_Add(string operation)
     {
-        var workbookPath = CreateExcelWorkbook("test_delete_validation.xlsx");
-        var workbook = new Workbook(workbookPath);
-        var worksheet = workbook.Worksheets[0];
-        var area = new CellArea { StartRow = 0, StartColumn = 0, EndRow = 9, EndColumn = 0 };
-        worksheet.Validations.Add(area);
-        workbook.Save(workbookPath);
-
-        var validationsBefore = worksheet.Validations.Count;
-        Assert.True(validationsBefore > 0);
-
-        var outputPath = CreateTestFilePath("test_delete_validation_output.xlsx");
-
-        var result = _tool.Execute(
-            "delete",
-            workbookPath,
-            validationIndex: 0,
+        var workbookPath = CreateExcelWorkbook($"test_case_{operation}.xlsx");
+        var outputPath = CreateTestFilePath($"test_case_{operation}_output.xlsx");
+        var result = _tool.Execute(operation, workbookPath, range: "A1:A10", validationType: "List", formula1: "A,B,C",
             outputPath: outputPath);
-
-        Assert.Contains("Deleted data validation #0", result);
-        Assert.Contains("remaining: 0", result);
-
-        var resultWorkbook = new Workbook(outputPath);
-        Assert.Empty(resultWorkbook.Worksheets[0].Validations);
+        Assert.StartsWith("Data validation added", result);
     }
 
-    [Fact]
-    public void DeleteDataValidation_InvalidIndex_ShouldThrowException()
+    [Theory]
+    [InlineData("GET")]
+    [InlineData("Get")]
+    [InlineData("get")]
+    public void Operation_ShouldBeCaseInsensitive_Get(string operation)
     {
-        var workbookPath = CreateExcelWorkbook("test_delete_invalid.xlsx");
-
-        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "delete",
-            workbookPath,
-            validationIndex: 99));
-        Assert.Contains("out of range", ex.Message);
+        var workbookPath = CreateExcelWorkbook($"test_case_get_{operation}.xlsx");
+        var result = _tool.Execute(operation, workbookPath);
+        Assert.Contains("count", result);
     }
 
-    [Fact]
-    public void EditDataValidation_ShouldEditValidation()
+    [Theory]
+    [InlineData("DELETE")]
+    [InlineData("Delete")]
+    [InlineData("delete")]
+    public void Operation_ShouldBeCaseInsensitive_Delete(string operation)
     {
-        var workbookPath = CreateExcelWorkbook("test_edit_validation.xlsx");
-        var workbook = new Workbook(workbookPath);
-        var worksheet = workbook.Worksheets[0];
-        var area = new CellArea { StartRow = 0, StartColumn = 0, EndRow = 9, EndColumn = 0 };
-        var validationIndex = worksheet.Validations.Add(area);
-        var validation = worksheet.Validations[validationIndex];
-        validation.Type = ValidationType.List;
-        validation.Formula1 = "1,2,3";
-        workbook.Save(workbookPath);
-
-        var outputPath = CreateTestFilePath("test_edit_validation_output.xlsx");
-
-        var result = _tool.Execute(
-            "edit",
-            workbookPath,
-            validationIndex: 0,
-            validationType: "WholeNumber",
-            formula1: "0",
-            formula2: "100",
-            outputPath: outputPath);
-
-        Assert.Contains("Edited data validation #0", result);
-        Assert.Contains("Type=WholeNumber", result);
-
-        var resultWorkbook = new Workbook(outputPath);
-        var resultValidation = resultWorkbook.Worksheets[0].Validations[0];
-        Assert.Equal(ValidationType.WholeNumber, resultValidation.Type);
-    }
-
-    [Fact]
-    public void EditDataValidation_ChangeOperatorType_ShouldUpdateOperator()
-    {
-        var workbookPath = CreateExcelWorkbook("test_edit_operator.xlsx");
-        var workbook = new Workbook(workbookPath);
-        var worksheet = workbook.Worksheets[0];
-        var area = new CellArea { StartRow = 0, StartColumn = 0, EndRow = 9, EndColumn = 0 };
-        var idx = worksheet.Validations.Add(area);
-        worksheet.Validations[idx].Type = ValidationType.WholeNumber;
-        worksheet.Validations[idx].Formula1 = "0";
-        worksheet.Validations[idx].Operator = OperatorType.Equal;
-        workbook.Save(workbookPath);
-
-        var outputPath = CreateTestFilePath("test_edit_operator_output.xlsx");
-
-        var result = _tool.Execute(
-            "edit",
-            workbookPath,
-            validationIndex: 0,
-            operatorType: "GreaterOrEqual",
-            outputPath: outputPath);
-
-        Assert.Contains("Operator=GreaterOrEqual", result);
-
-        var resultWorkbook = new Workbook(outputPath);
-        var validation = resultWorkbook.Worksheets[0].Validations[0];
-        Assert.Equal(OperatorType.GreaterOrEqual, validation.Operator);
-    }
-
-    [Fact]
-    public void EditDataValidation_ChangeInCellDropDown_ShouldUpdateDropdown()
-    {
-        var workbookPath = CreateExcelWorkbook("test_edit_dropdown.xlsx");
-        var workbook = new Workbook(workbookPath);
-        var worksheet = workbook.Worksheets[0];
-        var area = new CellArea { StartRow = 0, StartColumn = 0, EndRow = 9, EndColumn = 0 };
-        var idx = worksheet.Validations.Add(area);
-        worksheet.Validations[idx].Type = ValidationType.List;
-        worksheet.Validations[idx].Formula1 = "A,B,C";
-        worksheet.Validations[idx].InCellDropDown = true;
-        workbook.Save(workbookPath);
-
-        var outputPath = CreateTestFilePath("test_edit_dropdown_output.xlsx");
-
-        var result = _tool.Execute(
-            "edit",
-            workbookPath,
-            validationIndex: 0,
-            inCellDropDown: false,
-            outputPath: outputPath);
-
-        Assert.Contains("InCellDropDown=False", result);
-
-        var resultWorkbook = new Workbook(outputPath);
-        var validation = resultWorkbook.Worksheets[0].Validations[0];
-        Assert.False(validation.InCellDropDown);
-    }
-
-    [Fact]
-    public void EditDataValidation_InvalidIndex_ShouldThrowException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_edit_invalid.xlsx");
-
-        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "edit",
-            workbookPath,
-            validationIndex: 99,
-            formula1: "test"));
-        Assert.Contains("out of range", ex.Message);
-    }
-
-    [Fact]
-    public void SetMessages_InvalidIndex_ShouldThrowException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_set_messages_invalid.xlsx");
-
-        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "set_messages",
-            workbookPath,
-            validationIndex: 99,
-            inputMessage: "test"));
-        Assert.Contains("out of range", ex.Message);
-    }
-
-    [Fact]
-    public void AddDataValidation_InvalidValidationType_ShouldThrowException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_add_invalid_type.xlsx");
-
-        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "add",
-            workbookPath,
-            range: "A1:A10",
-            validationType: "InvalidType",
-            formula1: "test"));
-        Assert.Contains("Unsupported validation type", ex.Message);
-    }
-
-    [Fact]
-    public void AddDataValidation_InvalidOperatorType_ShouldThrowException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_add_invalid_operator.xlsx");
-
-        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "add",
-            workbookPath,
-            range: "A1:A10",
-            validationType: "WholeNumber",
-            operatorType: "InvalidOperator",
-            formula1: "0"));
-        Assert.Contains("Unsupported operator type", ex.Message);
-    }
-
-    [Fact]
-    public void UnknownOperation_ShouldThrowException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_unknown_op.xlsx");
-
-        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "unknown",
-            workbookPath));
-        Assert.Contains("Unknown operation", ex.Message);
-    }
-
-    [Fact]
-    public void AddDataValidation_AllValidationTypes_ShouldWork()
-    {
-        var validationTypes = new[] { "WholeNumber", "Decimal", "Date", "Time", "TextLength", "Custom" };
-
-        foreach (var validationType in validationTypes)
-        {
-            var workbookPath = CreateExcelWorkbook($"test_type_{validationType}.xlsx");
-            var outputPath = CreateTestFilePath($"test_type_{validationType}_output.xlsx");
-
-            var result = _tool.Execute(
-                "add",
-                workbookPath,
-                range: "A1:A10",
-                validationType: validationType,
-                formula1: "1",
-                outputPath: outputPath);
-            Assert.Contains($"type: {validationType}", result);
-        }
-    }
-
-    [Fact]
-    public void AddDataValidation_AllOperatorTypes_ShouldWork()
-    {
-        var operatorTypes = new[]
-            { "Between", "Equal", "NotEqual", "GreaterThan", "LessThan", "GreaterOrEqual", "LessOrEqual" };
-
-        foreach (var operatorType in operatorTypes)
-        {
-            var workbookPath = CreateExcelWorkbook($"test_op_{operatorType}.xlsx");
-            var outputPath = CreateTestFilePath($"test_op_{operatorType}_output.xlsx");
-
-            var result = _tool.Execute(
-                "add",
-                workbookPath,
-                range: "A1:A10",
-                validationType: "WholeNumber",
-                operatorType: operatorType,
-                formula1: "0",
-                formula2: operatorType == "Between" ? "100" : null,
-                outputPath: outputPath);
-            Assert.Contains("Data validation added", result);
-        }
+        var workbookPath = CreateWorkbookWithValidation($"test_case_delete_{operation}.xlsx");
+        var outputPath = CreateTestFilePath($"test_case_delete_{operation}_output.xlsx");
+        var result = _tool.Execute(operation, workbookPath, validationIndex: 0, outputPath: outputPath);
+        Assert.StartsWith("Deleted data validation #0", result);
     }
 
     #endregion
 
-    #region Exception Tests
+    #region Exception
 
     [Fact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
     {
-        var workbookPath = CreateExcelWorkbook("test_ex_unknown_op.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("unknown_operation", workbookPath));
-
+        var workbookPath = CreateExcelWorkbook("test_unknown_op.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", workbookPath));
         Assert.Contains("Unknown operation", ex.Message);
     }
 
@@ -508,10 +290,8 @@ public class ExcelDataValidationToolTests : ExcelTestBase
     public void Add_WithMissingRange_ShouldThrowArgumentException()
     {
         var workbookPath = CreateExcelWorkbook("test_missing_range.xlsx");
-        var outputPath = CreateTestFilePath("test_missing_range_output.xlsx");
         var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", workbookPath, validationType: "List", formula1: "A,B,C", outputPath: outputPath));
-
+            _tool.Execute("add", workbookPath, validationType: "List", formula1: "A,B,C"));
         Assert.Contains("range is required", ex.Message);
     }
 
@@ -519,101 +299,159 @@ public class ExcelDataValidationToolTests : ExcelTestBase
     public void Add_WithMissingValidationType_ShouldThrowArgumentException()
     {
         var workbookPath = CreateExcelWorkbook("test_missing_type.xlsx");
-        var outputPath = CreateTestFilePath("test_missing_type_output.xlsx");
         var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", workbookPath, range: "A1:A10", formula1: "A,B,C", outputPath: outputPath));
-
+            _tool.Execute("add", workbookPath, range: "A1:A10", formula1: "A,B,C"));
         Assert.Contains("validationType is required", ex.Message);
+    }
+
+    [Fact]
+    public void Add_WithMissingFormula1_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateExcelWorkbook("test_missing_formula.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("add", workbookPath, range: "A1:A10", validationType: "List"));
+        Assert.Contains("formula1 is required", ex.Message);
+    }
+
+    [Fact]
+    public void Add_WithInvalidValidationType_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateExcelWorkbook("test_invalid_type.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("add", workbookPath, range: "A1:A10", validationType: "InvalidType", formula1: "test"));
+        Assert.Contains("Unsupported validation type", ex.Message);
+    }
+
+    [Fact]
+    public void Add_WithInvalidOperatorType_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateExcelWorkbook("test_invalid_operator.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("add", workbookPath, range: "A1:A10", validationType: "WholeNumber",
+                operatorType: "InvalidOperator", formula1: "0"));
+        Assert.Contains("Unsupported operator type", ex.Message);
+    }
+
+    [Fact]
+    public void Edit_WithInvalidIndex_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateExcelWorkbook("test_edit_invalid.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("edit", workbookPath, validationIndex: 99, formula1: "test"));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public void Delete_WithInvalidIndex_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateExcelWorkbook("test_delete_invalid.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("delete", workbookPath, validationIndex: 99));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public void SetMessages_WithInvalidIndex_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateExcelWorkbook("test_set_messages_invalid.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("set_messages", workbookPath, validationIndex: 99, inputMessage: "test"));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public void Execute_WithEmptyPath_ShouldThrowException()
+    {
+        Assert.Throws<ArgumentException>(() => _tool.Execute("get", ""));
+    }
+
+    [Fact]
+    public void Execute_WithNoPathOrSessionId_ShouldThrowException()
+    {
+        Assert.ThrowsAny<Exception>(() => _tool.Execute("get"));
     }
 
     #endregion
 
-    #region Session ID Tests
+    #region Session
+
+    [Fact]
+    public void Add_WithSessionId_ShouldAddInMemory()
+    {
+        var workbookPath = CreateExcelWorkbook("test_session_add.xlsx");
+        var sessionId = OpenSession(workbookPath);
+        var result = _tool.Execute("add", sessionId: sessionId, range: "A1:A10", validationType: "List",
+            formula1: "SessionOpt1,SessionOpt2");
+        Assert.StartsWith("Data validation added", result);
+        Assert.Contains("session", result);
+        var workbook = SessionManager.GetDocument<Workbook>(sessionId);
+        Assert.True(workbook.Worksheets[0].Validations.Count > 0);
+        Assert.Equal(ValidationType.List, workbook.Worksheets[0].Validations[0].Type);
+    }
 
     [Fact]
     public void Get_WithSessionId_ShouldGetFromMemory()
     {
-        var workbookPath = CreateExcelWorkbook("test_session_get_validation.xlsx");
-        var workbook = new Workbook(workbookPath);
-        var worksheet = workbook.Worksheets[0];
-        var area = new CellArea { StartRow = 0, StartColumn = 0, EndRow = 9, EndColumn = 0 };
-        var validationIndex = worksheet.Validations.Add(area);
-        var validation = worksheet.Validations[validationIndex];
-        validation.Type = ValidationType.List;
-        validation.Formula1 = "Session1,Session2,Session3";
-        workbook.Save(workbookPath);
-
+        var workbookPath = CreateWorkbookWithValidation("test_session_get.xlsx");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("get", sessionId: sessionId);
-        Assert.NotNull(result);
         var json = JsonDocument.Parse(result);
         Assert.Equal(1, json.RootElement.GetProperty("count").GetInt32());
     }
 
     [Fact]
-    public void Add_WithSessionId_ShouldAddInMemory()
-    {
-        var workbookPath = CreateExcelWorkbook("test_session_add_validation.xlsx");
-        var sessionId = OpenSession(workbookPath);
-        var result = _tool.Execute("add", sessionId: sessionId, range: "A1:A10", validationType: "List",
-            formula1: "SessionOpt1,SessionOpt2");
-        Assert.Contains("Data validation added", result);
-
-        // Verify in-memory workbook has the validation
-        var sessionWorkbook = SessionManager.GetDocument<Workbook>(sessionId);
-        Assert.True(sessionWorkbook.Worksheets[0].Validations.Count > 0, "Validation should be added in memory");
-        Assert.Equal(ValidationType.List, sessionWorkbook.Worksheets[0].Validations[0].Type);
-    }
-
-    [Fact]
     public void Edit_WithSessionId_ShouldEditInMemory()
     {
-        var workbookPath = CreateExcelWorkbook("test_session_edit_validation.xlsx");
-        var workbook = new Workbook(workbookPath);
-        var worksheet = workbook.Worksheets[0];
-        var area = new CellArea { StartRow = 0, StartColumn = 0, EndRow = 9, EndColumn = 0 };
-        var validationIndex = worksheet.Validations.Add(area);
-        var validation = worksheet.Validations[validationIndex];
-        validation.Type = ValidationType.List;
-        validation.Formula1 = "1,2,3";
-        workbook.Save(workbookPath);
-
+        var workbookPath = CreateWorkbookWithValidation("test_session_edit.xlsx");
         var sessionId = OpenSession(workbookPath);
         _tool.Execute("edit", sessionId: sessionId, validationIndex: 0, validationType: "WholeNumber", formula1: "0",
             formula2: "100");
-
-        // Assert - verify in-memory change
-        var sessionWorkbook = SessionManager.GetDocument<Workbook>(sessionId);
-        Assert.Equal(ValidationType.WholeNumber, sessionWorkbook.Worksheets[0].Validations[0].Type);
+        var workbook = SessionManager.GetDocument<Workbook>(sessionId);
+        Assert.Equal(ValidationType.WholeNumber, workbook.Worksheets[0].Validations[0].Type);
     }
 
     [Fact]
     public void Delete_WithSessionId_ShouldDeleteInMemory()
     {
-        var workbookPath = CreateExcelWorkbook("test_session_delete_validation.xlsx");
-        var workbook = new Workbook(workbookPath);
-        var worksheet = workbook.Worksheets[0];
-        var area = new CellArea { StartRow = 0, StartColumn = 0, EndRow = 9, EndColumn = 0 };
-        worksheet.Validations.Add(area);
-        workbook.Save(workbookPath);
-
+        var workbookPath = CreateWorkbookWithValidation("test_session_delete.xlsx");
         var sessionId = OpenSession(workbookPath);
-
-        // Verify validation exists before delete
         var beforeWorkbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.True(beforeWorkbook.Worksheets[0].Validations.Count > 0);
         _tool.Execute("delete", sessionId: sessionId, validationIndex: 0);
+        var workbook = SessionManager.GetDocument<Workbook>(sessionId);
+        Assert.Empty(workbook.Worksheets[0].Validations);
+    }
 
-        // Assert - verify in-memory change
-        var sessionWorkbook = SessionManager.GetDocument<Workbook>(sessionId);
-        Assert.Empty(sessionWorkbook.Worksheets[0].Validations);
+    [Fact]
+    public void SetMessages_WithSessionId_ShouldSetInMemory()
+    {
+        var workbookPath = CreateWorkbookWithValidation("test_session_set_messages.xlsx");
+        var sessionId = OpenSession(workbookPath);
+        _tool.Execute("set_messages", sessionId: sessionId, validationIndex: 0, inputMessage: "Session message");
+        var workbook = SessionManager.GetDocument<Workbook>(sessionId);
+        Assert.Equal("Session message", workbook.Worksheets[0].Validations[0].InputMessage);
     }
 
     [Fact]
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
-        Assert.Throws<KeyNotFoundException>(() =>
-            _tool.Execute("get", sessionId: "invalid_session_id"));
+        Assert.Throws<KeyNotFoundException>(() => _tool.Execute("get", sessionId: "invalid_session"));
+    }
+
+    [Fact]
+    public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
+    {
+        var pathWorkbook = CreateExcelWorkbook("test_path_file.xlsx");
+        var sessionWorkbook = CreateWorkbookWithValidation("test_session_file.xlsx");
+        using (var wb = new Workbook(sessionWorkbook))
+        {
+            wb.Worksheets[0].Name = "SessionSheet";
+            wb.Save(sessionWorkbook);
+        }
+
+        var sessionId = OpenSession(sessionWorkbook);
+        var result = _tool.Execute("get", pathWorkbook, sessionId);
+        Assert.Contains("SessionSheet", result);
     }
 
     #endregion

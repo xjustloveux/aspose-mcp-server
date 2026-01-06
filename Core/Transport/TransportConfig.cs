@@ -1,3 +1,5 @@
+using System.Net;
+
 namespace AsposeMcpServer.Core.Transport;
 
 /// <summary>
@@ -46,7 +48,42 @@ public class TransportConfig
         var config = new TransportConfig();
         config.LoadFromEnvironment();
         config.LoadFromCommandLine(args);
+        config.Validate();
         return config;
+    }
+
+    /// <summary>
+    ///     Validates the configuration values
+    /// </summary>
+    private void Validate()
+    {
+        if (Port is < 1 or > 65535)
+        {
+            Console.Error.WriteLine($"[WARN] Invalid port {Port}, using default 3000");
+            Port = 3000;
+        }
+
+        if (!IsValidHost(Host))
+        {
+            Console.Error.WriteLine($"[WARN] Invalid host '{Host}', using default 'localhost'");
+            Host = "localhost";
+        }
+    }
+
+    /// <summary>
+    ///     Checks if the host value is valid
+    /// </summary>
+    /// <param name="host">The host value to validate</param>
+    /// <returns>True if valid, false otherwise</returns>
+    private static bool IsValidHost(string host)
+    {
+        if (string.IsNullOrWhiteSpace(host))
+            return false;
+
+        if (host is "localhost" or "0.0.0.0" or "*")
+            return true;
+
+        return IPAddress.TryParse(host, out _);
     }
 
     /// <summary>
@@ -54,7 +91,6 @@ public class TransportConfig
     /// </summary>
     private void LoadFromEnvironment()
     {
-        // Transport mode
         var transport = Environment.GetEnvironmentVariable("ASPOSE_TRANSPORT");
         if (!string.IsNullOrEmpty(transport))
             Mode = transport.ToLower() switch
@@ -65,12 +101,10 @@ public class TransportConfig
                 _ => Mode
             };
 
-        // Port
         var portStr = Environment.GetEnvironmentVariable("ASPOSE_PORT");
         if (!string.IsNullOrEmpty(portStr) && int.TryParse(portStr, out var port))
             Port = port;
 
-        // Host
         var host = Environment.GetEnvironmentVariable("ASPOSE_HOST");
         if (!string.IsNullOrEmpty(host))
             Host = host;
@@ -86,7 +120,6 @@ public class TransportConfig
         {
             var arg = args[i];
 
-            // Transport mode
             if (arg.Equals("--stdio", StringComparison.OrdinalIgnoreCase))
             {
                 Mode = TransportMode.Stdio;
@@ -100,14 +133,12 @@ public class TransportConfig
             {
                 Mode = TransportMode.WebSocket;
             }
-            // Port with space separator
             else if (arg.Equals("--port", StringComparison.OrdinalIgnoreCase) &&
                      i + 1 < args.Length && int.TryParse(args[i + 1], out var port1))
             {
                 Port = port1;
                 i++;
             }
-            // Port with : or = separator
             else if (arg.StartsWith("--port:", StringComparison.OrdinalIgnoreCase) &&
                      int.TryParse(arg["--port:".Length..], out var port2))
             {
@@ -118,13 +149,11 @@ public class TransportConfig
             {
                 Port = port3;
             }
-            // Host with space separator
             else if (arg.Equals("--host", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
             {
                 Host = args[i + 1];
                 i++;
             }
-            // Host with : or = separator
             else if (arg.StartsWith("--host:", StringComparison.OrdinalIgnoreCase))
             {
                 Host = arg["--host:".Length..];

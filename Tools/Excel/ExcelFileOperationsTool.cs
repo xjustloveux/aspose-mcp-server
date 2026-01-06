@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using Aspose.Cells;
 using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Session;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -12,21 +13,65 @@ namespace AsposeMcpServer.Tools.Excel;
 [McpServerToolType]
 public class ExcelFileOperationsTool
 {
+    /// <summary>
+    ///     The session identity accessor for session isolation.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
+    ///     The document session manager for managing in-memory document sessions.
+    /// </summary>
+    private readonly DocumentSessionManager? _sessionManager;
+
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="ExcelFileOperationsTool" /> class.
+    /// </summary>
+    /// <param name="sessionManager">Optional session manager for in-memory document operations.</param>
+    /// <param name="identityAccessor">Optional identity accessor for session isolation.</param>
+    public ExcelFileOperationsTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
+    {
+        _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
+    }
+
+    /// <summary>
+    ///     Executes an Excel file operation (create, convert, merge, or split).
+    /// </summary>
+    /// <param name="operation">The operation to perform: create, convert, merge, or split.</param>
+    /// <param name="sessionId">Session ID to read workbook from session (for convert, split).</param>
+    /// <param name="path">File path (output path for create/merge, input path for split).</param>
+    /// <param name="outputPath">Output file path (required for convert, optional for create).</param>
+    /// <param name="inputPath">Input file path (required for convert/split).</param>
+    /// <param name="outputDirectory">Output directory path (required for split).</param>
+    /// <param name="sheetName">Initial sheet name (optional, for create).</param>
+    /// <param name="format">Output format: pdf, html, csv, xlsx, xls, ods, txt, tsv (required for convert).</param>
+    /// <param name="inputPaths">Array of input workbook file paths (required for merge).</param>
+    /// <param name="mergeSheets">When true, merges data from sheets with same name by appending rows.</param>
+    /// <param name="sheetIndices">Sheet indices to split (0-based, optional).</param>
+    /// <param name="outputFileNamePattern">Output file name pattern with {index} and {name} placeholders.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when the operation is unknown or required parameters are missing.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when session management is not enabled but sessionId is provided.</exception>
     [McpServerTool(Name = "excel_file_operations")]
     [Description(@"Excel file operations. Supports 4 operations: create, convert, merge, split.
 
 Usage examples:
 - Create workbook: excel_file_operations(operation='create', path='new.xlsx')
 - Convert format: excel_file_operations(operation='convert', inputPath='book.xlsx', outputPath='book.pdf', format='pdf')
+- Convert from session: excel_file_operations(operation='convert', sessionId='sess_xxx', outputPath='book.pdf', format='pdf')
 - Merge workbooks: excel_file_operations(operation='merge', path='merged.xlsx', inputPaths=['book1.xlsx', 'book2.xlsx'])
-- Split workbook: excel_file_operations(operation='split', inputPath='book.xlsx', outputDirectory='output/')")]
+- Split workbook: excel_file_operations(operation='split', inputPath='book.xlsx', outputDirectory='output/')
+- Split from session: excel_file_operations(operation='split', sessionId='sess_xxx', outputDirectory='output/')")]
     public string Execute(
         [Description(@"Operation to perform.
 - 'create': Create a new workbook (required params: path or outputPath)
-- 'convert': Convert workbook format (required params: inputPath, outputPath, format)
+- 'convert': Convert workbook format (required params: inputPath or sessionId, outputPath, format)
 - 'merge': Merge workbooks (required params: path or outputPath, inputPaths)
-- 'split': Split workbook (required params: inputPath or path, outputDirectory)")]
+- 'split': Split workbook (required params: inputPath, path, or sessionId, outputDirectory)")]
         string operation,
+        [Description("Session ID to read workbook from session (for convert, split)")]
+        string? sessionId = null,
         [Description("File path (output path for create/merge operations, input path for split operation)")]
         string? path = null,
         [Description("Output file path (required for convert, optional for create)")]
@@ -53,9 +98,9 @@ Usage examples:
         return operation.ToLower() switch
         {
             "create" => CreateWorkbook(path, outputPath, sheetName),
-            "convert" => ConvertWorkbook(inputPath, outputPath, format),
+            "convert" => ConvertWorkbook(inputPath, sessionId, outputPath, format),
             "merge" => MergeWorkbooks(path, outputPath, inputPaths, mergeSheets),
-            "split" => SplitWorkbook(inputPath, path, outputDirectory, sheetIndices, outputFileNamePattern),
+            "split" => SplitWorkbook(inputPath, path, sessionId, outputDirectory, sheetIndices, outputFileNamePattern),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
@@ -86,23 +131,40 @@ Usage examples:
     ///     Converts an Excel workbook to a different format.
     /// </summary>
     /// <param name="inputPath">The source workbook file path.</param>
+    /// <param name="sessionId">Session ID to read workbook from session.</param>
     /// <param name="outputPath">The output file path.</param>
     /// <param name="format">The target format (pdf, html, csv, xlsx, xls, ods, txt, tsv).</param>
     /// <returns>A message indicating the result of the operation.</returns>
     /// <exception cref="ArgumentException">
-    ///     Thrown when inputPath, outputPath, or format is not provided, or when the format is
+    ///     Thrown when neither inputPath nor sessionId is provided, outputPath is not provided, or when the format is
     ///     unsupported.
     /// </exception>
-    private static string ConvertWorkbook(string? inputPath, string? outputPath, string? format)
+    private string ConvertWorkbook(string? inputPath, string? sessionId, string? outputPath, string? format)
     {
-        if (string.IsNullOrEmpty(inputPath))
-            throw new ArgumentException("inputPath is required for convert operation");
+        if (string.IsNullOrEmpty(inputPath) && string.IsNullOrEmpty(sessionId))
+            throw new ArgumentException("Either inputPath or sessionId is required for convert operation");
         if (string.IsNullOrEmpty(outputPath))
             throw new ArgumentException("outputPath is required for convert operation");
         if (string.IsNullOrEmpty(format))
             throw new ArgumentException("format is required for convert operation");
 
-        using var workbook = new Workbook(inputPath);
+        Workbook workbook;
+        string sourceDescription;
+
+        if (!string.IsNullOrEmpty(sessionId))
+        {
+            if (_sessionManager == null)
+                throw new InvalidOperationException("Session management is not enabled");
+
+            var identity = _identityAccessor?.GetCurrentIdentity() ?? SessionIdentity.GetAnonymous();
+            workbook = _sessionManager.GetDocument<Workbook>(sessionId, identity);
+            sourceDescription = $"session {sessionId}";
+        }
+        else
+        {
+            workbook = new Workbook(inputPath);
+            sourceDescription = inputPath!;
+        }
 
         var saveFormat = format.ToLower() switch
         {
@@ -118,7 +180,7 @@ Usage examples:
         };
 
         workbook.Save(outputPath, saveFormat);
-        return $"Workbook converted to {format} format. Output: {outputPath}";
+        return $"Workbook from {sourceDescription} converted to {format} format. Output: {outputPath}";
     }
 
     /// <summary>
@@ -203,25 +265,42 @@ Usage examples:
     /// </summary>
     /// <param name="inputPath">The source workbook file path.</param>
     /// <param name="path">Alternative source file path.</param>
+    /// <param name="sessionId">Session ID to read workbook from session.</param>
     /// <param name="outputDirectory">The directory to save split files.</param>
     /// <param name="sheetIndices">Optional array of specific sheet indices to split.</param>
     /// <param name="fileNamePattern">The output file name pattern with {index} and {name} placeholders.</param>
     /// <returns>A message indicating the result of the operation.</returns>
     /// <exception cref="ArgumentException">
-    ///     Thrown when neither inputPath nor path is provided, or when outputDirectory is not
+    ///     Thrown when neither inputPath, path, nor sessionId is provided, or when outputDirectory is not
     ///     provided.
     /// </exception>
-    private static string SplitWorkbook(string? inputPath, string? path, string? outputDirectory, int[]? sheetIndices,
+    private string SplitWorkbook(string? inputPath, string? path, string? sessionId, string? outputDirectory,
+        int[]? sheetIndices,
         string fileNamePattern)
     {
-        var sourcePath = inputPath ?? path ?? throw new ArgumentException("inputPath or path is required");
+        var sourcePath = inputPath ?? path;
+        if (string.IsNullOrEmpty(sourcePath) && string.IsNullOrEmpty(sessionId))
+            throw new ArgumentException("Either inputPath, path, or sessionId is required");
         if (string.IsNullOrEmpty(outputDirectory))
             throw new ArgumentException("outputDirectory is required for split operation");
 
         if (!Directory.Exists(outputDirectory))
             Directory.CreateDirectory(outputDirectory);
 
-        using var sourceWorkbook = new Workbook(sourcePath);
+        Workbook sourceWorkbook;
+
+        if (!string.IsNullOrEmpty(sessionId))
+        {
+            if (_sessionManager == null)
+                throw new InvalidOperationException("Session management is not enabled");
+
+            var identity = _identityAccessor?.GetCurrentIdentity() ?? SessionIdentity.GetAnonymous();
+            sourceWorkbook = _sessionManager.GetDocument<Workbook>(sessionId, identity);
+        }
+        else
+        {
+            sourceWorkbook = new Workbook(sourcePath);
+        }
 
         var indicesToSplit = sheetIndices is { Length: > 0 }
             ? sheetIndices.Distinct().ToList()

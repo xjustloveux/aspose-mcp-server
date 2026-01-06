@@ -91,6 +91,30 @@ public class TransportConfigTests
         Assert.Equal(3000, config.Port);
     }
 
+    [Fact]
+    public void LoadFromArgs_WithPortOutOfRange_ShouldResetToDefault()
+    {
+        var config = TransportConfig.LoadFromArgs(["--port:70000"]);
+
+        Assert.Equal(3000, config.Port);
+    }
+
+    [Fact]
+    public void LoadFromArgs_WithNegativePort_ShouldResetToDefault()
+    {
+        var config = TransportConfig.LoadFromArgs(["--port:-1"]);
+
+        Assert.Equal(3000, config.Port);
+    }
+
+    [Fact]
+    public void LoadFromArgs_WithZeroPort_ShouldResetToDefault()
+    {
+        var config = TransportConfig.LoadFromArgs(["--port:0"]);
+
+        Assert.Equal(3000, config.Port);
+    }
+
     #endregion
 
     #region Host Tests
@@ -117,6 +141,46 @@ public class TransportConfigTests
         var config = TransportConfig.LoadFromArgs(["--host=192.168.1.1"]);
 
         Assert.Equal("192.168.1.1", config.Host);
+    }
+
+    [Fact]
+    public void LoadFromArgs_WithInvalidHost_ShouldResetToDefault()
+    {
+        var config = TransportConfig.LoadFromArgs(["--host:invalid-host"]);
+
+        Assert.Equal("localhost", config.Host);
+    }
+
+    [Fact]
+    public void LoadFromArgs_WithEmptyHost_ShouldResetToDefault()
+    {
+        var config = TransportConfig.LoadFromArgs(["--host:"]);
+
+        Assert.Equal("localhost", config.Host);
+    }
+
+    [Fact]
+    public void LoadFromArgs_WithAsteriskHost_ShouldSetHost()
+    {
+        var config = TransportConfig.LoadFromArgs(["--host:*"]);
+
+        Assert.Equal("*", config.Host);
+    }
+
+    [Fact]
+    public void LoadFromArgs_WithLocalhostHost_ShouldSetHost()
+    {
+        var config = TransportConfig.LoadFromArgs(["--host:localhost"]);
+
+        Assert.Equal("localhost", config.Host);
+    }
+
+    [Fact]
+    public void LoadFromArgs_WithIPv6Host_ShouldSetHost()
+    {
+        var config = TransportConfig.LoadFromArgs(["--host:::1"]);
+
+        Assert.Equal("::1", config.Host);
     }
 
     #endregion

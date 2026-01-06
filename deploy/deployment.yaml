@@ -43,8 +43,16 @@ spec:
             #   value: "10"                 # Max concurrent sessions (default: 10)
             # - name: ASPOSE_SESSION_TIMEOUT
             #   value: "30"                 # Session timeout in minutes (default: 30)
+            # - name: ASPOSE_SESSION_MAX_FILE_SIZE_MB
+            #   value: "100"                # Max file size in MB (default: 100)
+            # - name: ASPOSE_SESSION_TEMP_DIR
+            #   value: "/tmp"               # Temp directory (default: system temp)
             # - name: ASPOSE_SESSION_TEMP_RETENTION_HOURS
             #   value: "24"                 # Temp file retention in hours (default: 24)
+            # - name: ASPOSE_SESSION_ON_DISCONNECT
+            #   value: "SaveToTemp"         # Disconnect behavior: SaveToTemp, Discard, KeepInMemory
+            # - name: ASPOSE_SESSION_ISOLATION
+            #   value: "user"               # Isolation mode: none (no isolation), tenant (tenant-level), user (user-level, default)
 
             # === API Key Authentication (Optional) ===
             # - name: ASPOSE_AUTH_APIKEY_ENABLED
@@ -57,8 +65,12 @@ spec:
             #   value: "X-API-Key"
             # - name: ASPOSE_AUTH_APIKEY_TENANT_HEADER
             #   value: "X-Tenant-Id"
+            # - name: ASPOSE_AUTH_APIKEY_INTROSPECTION_URL
+            #   value: "https://auth.example.com/introspect"
             # - name: ASPOSE_AUTH_APIKEY_INTROSPECTION_AUTH
             #   value: "Bearer token"
+            # - name: ASPOSE_AUTH_APIKEY_CUSTOM_URL
+            #   value: "https://auth.example.com/validate"
             # - name: ASPOSE_AUTH_APIKEY_CUSTOM_TIMEOUT
             #   value: "5"
 
@@ -69,16 +81,28 @@ spec:
             #   value: "local"            # local, gateway, introspection, custom
             # - name: ASPOSE_AUTH_JWT_SECRET
             #   value: "your-secret-key"
+            # - name: ASPOSE_AUTH_JWT_PUBLIC_KEY_PATH
+            #   value: "/app/keys/public.pem"
             # - name: ASPOSE_AUTH_JWT_ISSUER
             #   value: "your-issuer"
             # - name: ASPOSE_AUTH_JWT_AUDIENCE
             #   value: "your-audience"
             # - name: ASPOSE_AUTH_JWT_TENANT_CLAIM
             #   value: "tenant_id"
+            # - name: ASPOSE_AUTH_JWT_USER_CLAIM
+            #   value: "sub"
             # - name: ASPOSE_AUTH_JWT_TENANT_HEADER
             #   value: "X-Tenant-Id"
             # - name: ASPOSE_AUTH_JWT_USER_HEADER
             #   value: "X-User-Id"
+            # - name: ASPOSE_AUTH_JWT_INTROSPECTION_URL
+            #   value: "https://auth.example.com/introspect"
+            # - name: ASPOSE_AUTH_JWT_CLIENT_ID
+            #   value: "your-client-id"
+            # - name: ASPOSE_AUTH_JWT_CLIENT_SECRET
+            #   value: "your-client-secret"
+            # - name: ASPOSE_AUTH_JWT_CUSTOM_URL
+            #   value: "https://auth.example.com/validate"
             # - name: ASPOSE_AUTH_JWT_CUSTOM_TIMEOUT
             #   value: "5"
 
@@ -91,8 +115,8 @@ spec:
             # === Webhook (Optional) ===
             # - name: ASPOSE_WEBHOOK_URL
             #   value: "https://your-webhook.example.com/events"
-            # - name: ASPOSE_WEBHOOK_SECRET
-            #   value: "your-webhook-secret"
+            # - name: ASPOSE_WEBHOOK_AUTH_HEADER
+            #   value: "Bearer your-token"
 
             # === Prometheus Metrics (Optional) ===
             # - name: ASPOSE_METRICS_ENABLED

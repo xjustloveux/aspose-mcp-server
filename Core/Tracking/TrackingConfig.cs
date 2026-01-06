@@ -1,4 +1,4 @@
-namespace AsposeMcpServer.Core.Security;
+namespace AsposeMcpServer.Core.Tracking;
 
 /// <summary>
 ///     Log output target
@@ -72,7 +72,22 @@ public class TrackingConfig
         var config = new TrackingConfig();
         config.LoadFromEnvironment();
         config.LoadFromCommandLine(args);
+        config.Validate();
         return config;
+    }
+
+    /// <summary>
+    ///     Validates the configuration values
+    /// </summary>
+    private void Validate()
+    {
+        if (WebhookTimeoutSeconds is < 1 or > 300)
+        {
+            Console.Error.WriteLine($"[WARN] Invalid webhook timeout {WebhookTimeoutSeconds}, using default 5");
+            WebhookTimeoutSeconds = 5;
+        }
+
+        if (!string.IsNullOrEmpty(MetricsPath) && !MetricsPath.StartsWith('/')) MetricsPath = "/" + MetricsPath;
     }
 
     /// <summary>
@@ -114,7 +129,6 @@ public class TrackingConfig
     private void LoadFromCommandLine(string[] args)
     {
         foreach (var arg in args)
-            // Logging
             if (arg.Equals("--log-enabled", StringComparison.OrdinalIgnoreCase))
             {
                 LogEnabled = true;
@@ -131,7 +145,6 @@ public class TrackingConfig
             {
                 ParseLogTargets(arg["--log-targets=".Length..]);
             }
-            // Webhook
             else if (arg.Equals("--webhook-enabled", StringComparison.OrdinalIgnoreCase))
             {
                 WebhookEnabled = true;
@@ -162,7 +175,14 @@ public class TrackingConfig
             {
                 WebhookTimeoutSeconds = timeout2;
             }
-            // Metrics
+            else if (arg.StartsWith("--webhook-auth-header:", StringComparison.OrdinalIgnoreCase))
+            {
+                WebhookAuthHeader = arg["--webhook-auth-header:".Length..];
+            }
+            else if (arg.StartsWith("--webhook-auth-header=", StringComparison.OrdinalIgnoreCase))
+            {
+                WebhookAuthHeader = arg["--webhook-auth-header=".Length..];
+            }
             else if (arg.Equals("--metrics-enabled", StringComparison.OrdinalIgnoreCase))
             {
                 MetricsEnabled = true;

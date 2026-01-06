@@ -15,6 +15,11 @@ namespace AsposeMcpServer.Tools.Excel;
 public class ExcelRowColumnTool
 {
     /// <summary>
+    ///     Session identity accessor for session isolation support.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Document session manager for in-memory editing support.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -23,11 +28,33 @@ public class ExcelRowColumnTool
     ///     Initializes a new instance of the <see cref="ExcelRowColumnTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
-    public ExcelRowColumnTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    public ExcelRowColumnTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes an Excel row/column operation (insert_row, delete_row, insert_column, delete_column, insert_cells,
+    ///     delete_cells).
+    /// </summary>
+    /// <param name="operation">
+    ///     The operation to perform: insert_row, delete_row, insert_column, delete_column, insert_cells,
+    ///     delete_cells.
+    /// </param>
+    /// <param name="path">Excel file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="sheetIndex">Sheet index (0-based, default: 0).</param>
+    /// <param name="rowIndex">Row index (0-based, required for insert_row/delete_row).</param>
+    /// <param name="columnIndex">Column index (0-based, required for insert_column/delete_column).</param>
+    /// <param name="range">Cell range (e.g., 'A1:C5', required for insert_cells/delete_cells).</param>
+    /// <param name="count">Number of rows/columns to insert/delete (default: 1).</param>
+    /// <param name="shiftDirection">Shift direction: 'Right'/'Down' for insert_cells, 'Left'/'Up' for delete_cells.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "excel_row_column")]
     [Description(
         @"Manage Excel rows and columns. Supports 6 operations: insert_row, delete_row, insert_column, delete_column, insert_cells, delete_cells.
@@ -62,7 +89,7 @@ Usage examples:
         [Description("Shift direction: 'Right'/'Down' for insert_cells, 'Left'/'Up' for delete_cells")]
         string? shiftDirection = null)
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLowerInvariant() switch
         {
@@ -229,8 +256,8 @@ Usage examples:
         worksheet.Cells.DeleteRange(
             rangeObj.FirstRow,
             rangeObj.FirstColumn,
-            Math.Max(1, rangeObj.RowCount),
-            Math.Max(1, rangeObj.ColumnCount),
+            rangeObj.FirstRow + rangeObj.RowCount - 1,
+            rangeObj.FirstColumn + rangeObj.ColumnCount - 1,
             shiftType);
 
         ctx.Save(outputPath);

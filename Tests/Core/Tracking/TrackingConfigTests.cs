@@ -1,6 +1,6 @@
-using AsposeMcpServer.Core.Security;
+using AsposeMcpServer.Core.Tracking;
 
-namespace AsposeMcpServer.Tests.Core.Security;
+namespace AsposeMcpServer.Tests.Core.Tracking;
 
 public class TrackingConfigTests
 {
@@ -117,4 +117,99 @@ public class TrackingConfigTests
         Assert.Equal("sess_123", evt.SessionId);
         Assert.Equal("req_abc", evt.RequestId);
     }
+
+    #region Command Line Argument Tests
+
+    [Fact]
+    public void TrackingConfig_LoadFromArgs_WithLogEnabled()
+    {
+        var config = TrackingConfig.LoadFromArgs(["--log-enabled"]);
+        Assert.True(config.LogEnabled);
+    }
+
+    [Fact]
+    public void TrackingConfig_LoadFromArgs_WithLogDisabled()
+    {
+        var config = TrackingConfig.LoadFromArgs(["--log-disabled"]);
+        Assert.False(config.LogEnabled);
+    }
+
+    [Fact]
+    public void TrackingConfig_LoadFromArgs_WithLogTargets()
+    {
+        var config = TrackingConfig.LoadFromArgs(["--log-targets:Console,EventLog"]);
+        Assert.Equal(2, config.LogTargets.Length);
+        Assert.Contains(LogTarget.Console, config.LogTargets);
+        Assert.Contains(LogTarget.EventLog, config.LogTargets);
+    }
+
+    [Fact]
+    public void TrackingConfig_LoadFromArgs_WithWebhookUrl()
+    {
+        var config = TrackingConfig.LoadFromArgs(["--webhook-url:https://example.com/hook"]);
+        Assert.True(config.WebhookEnabled); // Auto-enabled
+        Assert.Equal("https://example.com/hook", config.WebhookUrl);
+    }
+
+    [Fact]
+    public void TrackingConfig_LoadFromArgs_WithWebhookTimeout()
+    {
+        var config = TrackingConfig.LoadFromArgs(["--webhook-timeout:15"]);
+        Assert.Equal(15, config.WebhookTimeoutSeconds);
+    }
+
+    [Fact]
+    public void TrackingConfig_LoadFromArgs_WithWebhookAuthHeader()
+    {
+        var config = TrackingConfig.LoadFromArgs(["--webhook-auth-header:Bearer token123"]);
+        Assert.Equal("Bearer token123", config.WebhookAuthHeader);
+    }
+
+    [Fact]
+    public void TrackingConfig_LoadFromArgs_WithMetricsEnabled()
+    {
+        var config = TrackingConfig.LoadFromArgs(["--metrics-enabled"]);
+        Assert.True(config.MetricsEnabled);
+    }
+
+    [Fact]
+    public void TrackingConfig_LoadFromArgs_WithMetricsPath()
+    {
+        var config = TrackingConfig.LoadFromArgs(["--metrics-path:/custom"]);
+        Assert.Equal("/custom", config.MetricsPath);
+    }
+
+    #endregion
+
+    #region Validation Tests
+
+    [Fact]
+    public void TrackingConfig_Validate_InvalidTimeout_ShouldResetToDefault()
+    {
+        var config = TrackingConfig.LoadFromArgs(["--webhook-timeout:0"]);
+        Assert.Equal(5, config.WebhookTimeoutSeconds);
+    }
+
+    [Fact]
+    public void TrackingConfig_Validate_NegativeTimeout_ShouldResetToDefault()
+    {
+        var config = TrackingConfig.LoadFromArgs(["--webhook-timeout:-1"]);
+        Assert.Equal(5, config.WebhookTimeoutSeconds);
+    }
+
+    [Fact]
+    public void TrackingConfig_Validate_TooLargeTimeout_ShouldResetToDefault()
+    {
+        var config = TrackingConfig.LoadFromArgs(["--webhook-timeout:500"]);
+        Assert.Equal(5, config.WebhookTimeoutSeconds);
+    }
+
+    [Fact]
+    public void TrackingConfig_Validate_MetricsPathWithoutSlash_ShouldAddSlash()
+    {
+        var config = TrackingConfig.LoadFromArgs(["--metrics-path:metrics"]);
+        Assert.Equal("/metrics", config.MetricsPath);
+    }
+
+    #endregion
 }

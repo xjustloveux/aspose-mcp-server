@@ -1,6 +1,7 @@
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.Versioning;
+using System.Text.Json;
 using Aspose.Pdf;
 using AsposeMcpServer.Tests.Helpers;
 using AsposeMcpServer.Tools.Pdf;
@@ -22,477 +23,384 @@ public class PdfImageToolTests : PdfTestBase
     private string CreateTestImage(string fileName)
     {
         var imagePath = CreateTestFilePath(fileName);
-        using var bitmap = new Bitmap(1, 1);
-        bitmap.SetPixel(0, 0, DrawingColor.Red);
+        using var bitmap = new Bitmap(100, 100);
+        using (var g = Graphics.FromImage(bitmap))
+        {
+            g.Clear(DrawingColor.Red);
+        }
+
         bitmap.Save(imagePath, ImageFormat.Png);
         return imagePath;
     }
 
-    private string CreateTestPdf(string fileName)
+    private string CreateTestPdf(string fileName, int pageCount = 1)
     {
         var filePath = CreateTestFilePath(fileName);
-        var document = new Document();
-        document.Pages.Add();
+        using var document = new Document();
+        for (var i = 0; i < pageCount; i++)
+            document.Pages.Add();
         document.Save(filePath);
         return filePath;
     }
 
-    #region General Tests
-
-    [Fact]
-    public void AddImage_ShouldAddImageToPdf()
+    private string CreatePdfWithImage(string fileName)
     {
-        var pdfPath = CreateTestFilePath("test_add_image.pdf");
-        var document = new Document();
-        document.Pages.Add();
-        document.Save(pdfPath);
-
-        var imagePath = CreateTestImage("test_image.png");
-        var outputPath = CreateTestFilePath("test_add_image_output.pdf");
-        _tool.Execute(
-            "add",
-            pdfPath,
-            pageIndex: 0,
-            outputPath: outputPath,
-            imagePath: imagePath,
-            x: 100,
-            y: 100);
-        Assert.True(File.Exists(outputPath), "PDF with image should be created");
-        var doc = new Document(outputPath);
-        Assert.True(doc.Pages.Count > 0, "PDF should have pages");
-    }
-
-    [Fact]
-    public void GetImages_ShouldReturnAllImages()
-    {
-        var pdfPath = CreateTestFilePath("test_get_images.pdf");
-        var document = new Document();
+        var filePath = CreateTestFilePath(fileName);
+        using var document = new Document();
         var page = document.Pages.Add();
-        var imagePath = CreateTestImage("test_image2.png");
+        var imagePath = CreateTestImage($"img_{Guid.NewGuid()}.png");
         using (var imageStream = new FileStream(imagePath, FileMode.Open))
         {
-            var rect = new Rectangle(100, 100, 300, 300);
-            page.AddImage(imageStream, rect);
+            page.AddImage(imageStream, new Rectangle(100, 100, 300, 300));
         }
 
-        document.Save(pdfPath);
-        var result = _tool.Execute("get", pdfPath);
-        Assert.NotNull(result);
-        Assert.NotEmpty(result);
-        Assert.Contains("count", result);
+        document.Save(filePath);
+        return filePath;
+    }
+
+    #region General
+
+    [Fact]
+    public void Add_ShouldAddImageToPdf()
+    {
+        var pdfPath = CreateTestPdf("test_add.pdf");
+        var imagePath = CreateTestImage("test_add_image.png");
+        var outputPath = CreateTestFilePath("test_add_output.pdf");
+        var result = _tool.Execute("add", pdfPath, outputPath: outputPath,
+            pageIndex: 1, imagePath: imagePath, x: 100, y: 100);
+        Assert.StartsWith("Added image", result);
+        using var document = new Document(outputPath);
+        Assert.True(document.Pages[1].Resources.Images.Count > 0);
     }
 
     [Fact]
-    public void DeleteImage_ShouldDeleteImage()
+    public void Add_WithWidthHeight_ShouldAddWithSize()
     {
-        var pdfPath = CreateTestFilePath("test_delete_image.pdf");
-        var document = new Document();
-        var page = document.Pages.Add();
-        var imagePath = CreateTestImage("test_image3.png");
-        using (var imageStream = new FileStream(imagePath, FileMode.Open))
-        {
-            var rect = new Rectangle(100, 100, 300, 300);
-            page.AddImage(imageStream, rect);
-        }
-
-        document.Save(pdfPath);
-
-        var outputPath = CreateTestFilePath("test_delete_image_output.pdf");
-        _tool.Execute(
-            "delete",
-            pdfPath,
-            pageIndex: 0,
-            outputPath: outputPath,
-            imageIndex: 0);
-        Assert.True(File.Exists(outputPath), "Output PDF should be created");
+        var pdfPath = CreateTestPdf("test_add_size.pdf");
+        var imagePath = CreateTestImage("test_add_size_image.png");
+        var outputPath = CreateTestFilePath("test_add_size_output.pdf");
+        var result = _tool.Execute("add", pdfPath, outputPath: outputPath,
+            pageIndex: 1, imagePath: imagePath, x: 100, y: 100, width: 300, height: 300);
+        Assert.StartsWith("Added image", result);
+        Assert.True(File.Exists(outputPath));
     }
 
     [Fact]
-    public void EditImage_ShouldEditImagePosition()
+    public void Delete_ShouldDeleteImage()
     {
-        var pdfPath = CreateTestFilePath("test_edit_image.pdf");
-        var document = new Document();
-        var page = document.Pages.Add();
-        var originalImagePath = CreateTestImage("test_image4.png");
-        using (var imageStream = new FileStream(originalImagePath, FileMode.Open))
-        {
-            var rect = new Rectangle(100, 100, 300, 300);
-            page.AddImage(imageStream, rect);
-        }
-
-        document.Save(pdfPath);
-
-        var imagePath = CreateTestImage("test_image6.png");
-        var outputPath = CreateTestFilePath("test_edit_image_output.pdf");
-        _tool.Execute(
-            "edit",
-            pdfPath,
-            pageIndex: 1,
-            outputPath: outputPath,
-            imagePath: imagePath,
-            imageIndex: 1,
-            x: 200,
-            y: 200);
-        Assert.True(File.Exists(outputPath), "Output PDF should be created");
+        var pdfPath = CreatePdfWithImage("test_delete.pdf");
+        var outputPath = CreateTestFilePath("test_delete_output.pdf");
+        var result = _tool.Execute("delete", pdfPath, outputPath: outputPath,
+            pageIndex: 1, imageIndex: 1);
+        Assert.StartsWith("Deleted image", result);
+        using var document = new Document(outputPath);
+        Assert.Empty(document.Pages[1].Resources.Images);
     }
 
     [Fact]
-    public void ExtractImage_ShouldExtractImage()
+    public void Edit_WithImagePath_ShouldReplaceImage()
     {
-        var pdfPath = CreateTestFilePath("test_extract_image.pdf");
-        var document = new Document();
-        var page = document.Pages.Add();
-        var imagePath = CreateTestImage("test_image5.png");
-        using (var imageStream = new FileStream(imagePath, FileMode.Open))
-        {
-            var rect = new Rectangle(100, 100, 300, 300);
-            page.AddImage(imageStream, rect);
-        }
-
-        document.Save(pdfPath);
-
-        var outputImagePath = CreateTestFilePath("test_extracted_image.png");
-        _tool.Execute(
-            "extract",
-            pdfPath,
-            pageIndex: 1,
-            outputPath: outputImagePath,
-            imageIndex: 1);
-        Assert.True(File.Exists(outputImagePath), "Extracted image should be created");
+        var pdfPath = CreatePdfWithImage("test_edit_replace.pdf");
+        var newImagePath = CreateTestImage("test_edit_new.png");
+        var outputPath = CreateTestFilePath("test_edit_replace_output.pdf");
+        var result = _tool.Execute("edit", pdfPath, outputPath: outputPath,
+            pageIndex: 1, imageIndex: 1, imagePath: newImagePath, x: 200, y: 200);
+        Assert.StartsWith("Replaced", result);
+        Assert.True(File.Exists(outputPath));
     }
 
     [Fact]
-    public void AddImage_WithJpegFormat_ShouldAddJpeg()
+    public void Edit_WithoutImagePath_ShouldMoveImage()
     {
-        var pdfPath = CreateTestFilePath("test_add_jpeg.pdf");
-        var document = new Document();
-        document.Pages.Add();
-        document.Save(pdfPath);
-
-        // Create JPEG image
-        var imagePath = CreateTestFilePath("test_jpeg_image.jpg");
-        using (var bitmap = new Bitmap(100, 100))
-        {
-            using (var g = Graphics.FromImage(bitmap))
-            {
-                g.Clear(DrawingColor.Blue);
-            }
-
-            bitmap.Save(imagePath, ImageFormat.Jpeg);
-        }
-
-        var outputPath = CreateTestFilePath("test_add_jpeg_output.pdf");
-        _tool.Execute(
-            "add",
-            pdfPath,
-            pageIndex: 0,
-            outputPath: outputPath,
-            imagePath: imagePath,
-            x: 50,
-            y: 50);
-        Assert.True(File.Exists(outputPath), "PDF with JPEG image should be created");
+        var pdfPath = CreatePdfWithImage("test_edit_move.pdf");
+        var outputPath = CreateTestFilePath("test_edit_move_output.pdf");
+        var result = _tool.Execute("edit", pdfPath, outputPath: outputPath,
+            pageIndex: 1, imageIndex: 1, x: 300, y: 300);
+        Assert.StartsWith("Moved", result);
+        Assert.True(File.Exists(outputPath));
     }
 
     [Fact]
-    public void EditImage_WithWidthHeight_ShouldResizeImage()
+    public void Edit_WithWidthHeight_ShouldResizeImage()
     {
-        var pdfPath = CreateTestFilePath("test_resize_image.pdf");
-        var document = new Document();
-        var page = document.Pages.Add();
-        var imagePath = CreateTestImage("test_resize_source.png");
-        using (var imageStream = new FileStream(imagePath, FileMode.Open))
-        {
-            var rect = new Rectangle(100, 100, 200, 200);
-            page.AddImage(imageStream, rect);
-        }
-
-        document.Save(pdfPath);
-
-        var newImagePath = CreateTestImage("test_resize_new.png");
-        var outputPath = CreateTestFilePath("test_resize_image_output.pdf");
-        _tool.Execute(
-            "edit",
-            pdfPath,
-            pageIndex: 1,
-            outputPath: outputPath,
-            imagePath: newImagePath,
-            imageIndex: 1,
-            width: 300,
-            height: 300);
-        Assert.True(File.Exists(outputPath), "PDF with resized image should be created");
+        var pdfPath = CreatePdfWithImage("test_edit_resize.pdf");
+        var outputPath = CreateTestFilePath("test_edit_resize_output.pdf");
+        var result = _tool.Execute("edit", pdfPath, outputPath: outputPath,
+            pageIndex: 1, imageIndex: 1, width: 400, height: 400);
+        Assert.StartsWith("Moved", result);
+        Assert.True(File.Exists(outputPath));
     }
 
     [Fact]
-    public void Extract_WithOutputDir_ShouldExtractToDirectory()
+    public void Extract_ShouldExtractImage()
     {
-        var pdfPath = CreateTestFilePath("test_extract_to_dir.pdf");
-        var document = new Document();
-        var page = document.Pages.Add();
-        var imagePath = CreateTestImage("test_dir_source.png");
-        using (var imageStream = new FileStream(imagePath, FileMode.Open))
-        {
-            var rect = new Rectangle(100, 100, 300, 300);
-            page.AddImage(imageStream, rect);
-        }
+        var pdfPath = CreatePdfWithImage("test_extract.pdf");
+        var outputImagePath = CreateTestFilePath("test_extracted.png");
+        var result = _tool.Execute("extract", pdfPath,
+            outputPath: outputImagePath, pageIndex: 1, imageIndex: 1);
+        Assert.StartsWith("Extracted image", result);
+        Assert.True(File.Exists(outputImagePath));
+    }
 
-        document.Save(pdfPath);
-
+    [Fact]
+    public void Extract_WithOutputDir_ShouldExtractAllImages()
+    {
+        var pdfPath = CreatePdfWithImage("test_extract_all.pdf");
         var outputDir = Path.Combine(Path.GetTempPath(), $"PdfImageTest_{Guid.NewGuid()}");
         Directory.CreateDirectory(outputDir);
-
         try
         {
-            _tool.Execute(
-                "extract",
-                pdfPath,
-                pageIndex: 1,
-                outputPath: Path.Combine(outputDir, "extracted.png"),
-                imageIndex: 1);
+            var result = _tool.Execute("extract", pdfPath,
+                outputDir: outputDir, pageIndex: 1);
+            Assert.StartsWith("Extracted", result);
             var files = Directory.GetFiles(outputDir, "*.png");
-            Assert.True(files.Length > 0 || File.Exists(Path.Combine(outputDir, "extracted.png")),
-                "Should extract image to directory");
+            Assert.NotEmpty(files);
         }
         finally
         {
-            // Cleanup
             if (Directory.Exists(outputDir))
                 Directory.Delete(outputDir, true);
         }
     }
 
     [Fact]
-    public void Get_FromMultiplePages_ShouldGetAllImages()
+    public void Get_WithImages_ShouldReturnImageInfo()
     {
-        var pdfPath = CreateTestFilePath("test_multi_page_images.pdf");
-        var document = new Document();
-
-        // Add images to multiple pages
-        for (var i = 0; i < 3; i++)
-        {
-            var page = document.Pages.Add();
-            var imagePath = CreateTestImage($"test_multi_page_img_{i}.png");
-            using var imageStream = new FileStream(imagePath, FileMode.Open);
-            var rect = new Rectangle(100, 100, 200, 200);
-            page.AddImage(imageStream, rect);
-        }
-
-        document.Save(pdfPath);
-        var result = _tool.Execute("get", pdfPath);
-        Assert.NotNull(result);
-        Assert.Contains("count", result);
-    }
-
-    [Fact]
-    public void EditImage_WithoutImagePath_ShouldMoveExistingImage()
-    {
-        var pdfPath = CreateTestFilePath("test_move_image.pdf");
-        var document = new Document();
-        var page = document.Pages.Add();
-        var imagePath = CreateTestImage("test_move_source.png");
-        using (var imageStream = new FileStream(imagePath, FileMode.Open))
-        {
-            var rect = new Rectangle(100, 100, 200, 200);
-            page.AddImage(imageStream, rect);
-        }
-
-        document.Save(pdfPath);
-
-        var outputPath = CreateTestFilePath("test_move_image_output.pdf");
-        var result = _tool.Execute(
-            "edit",
-            pdfPath,
-            pageIndex: 1,
-            outputPath: outputPath,
-            imageIndex: 1,
-            x: 300,
-            y: 300);
-        Assert.True(File.Exists(outputPath), "Output PDF should be created");
-        Assert.Contains("Moved", result);
-    }
-
-    [Fact]
-    public void AddImage_WithInvalidPageIndex_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreateTestFilePath("test_add_invalid_page.pdf");
-        var document = new Document();
-        document.Pages.Add();
-        document.Save(pdfPath);
-
-        var imagePath = CreateTestImage("test_invalid_page_image.png");
-        var exception = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "add",
-            pdfPath,
-            pageIndex: 99,
-            imagePath: imagePath,
-            x: 100,
-            y: 100));
-        Assert.Contains("pageIndex must be between", exception.Message);
-    }
-
-    [Fact]
-    public void DeleteImage_WithInvalidImageIndex_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreateTestFilePath("test_delete_invalid_index.pdf");
-        var document = new Document();
-        var page = document.Pages.Add();
-        var imagePath = CreateTestImage("test_delete_invalid_image.png");
-        using (var imageStream = new FileStream(imagePath, FileMode.Open))
-        {
-            var rect = new Rectangle(100, 100, 200, 200);
-            page.AddImage(imageStream, rect);
-        }
-
-        document.Save(pdfPath);
-        var exception = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "delete",
-            pdfPath,
-            pageIndex: 1,
-            imageIndex: 99));
-        Assert.Contains("imageIndex must be between", exception.Message);
-    }
-
-    [Fact]
-    public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreateTestFilePath("test_unknown_op.pdf");
-        var document = new Document();
-        document.Pages.Add();
-        document.Save(pdfPath);
-        var exception = Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", pdfPath));
-        Assert.Contains("Unknown operation", exception.Message);
-    }
-
-    [Fact]
-    public void GetImages_WithNoImages_ShouldReturnEmptyResult()
-    {
-        var pdfPath = CreateTestFilePath("test_get_no_images.pdf");
-        var document = new Document();
-        document.Pages.Add();
-        document.Save(pdfPath);
+        var pdfPath = CreatePdfWithImage("test_get.pdf");
         var result = _tool.Execute("get", pdfPath, pageIndex: 1);
-        Assert.Contains("\"count\": 0", result);
+        var json = JsonSerializer.Deserialize<JsonElement>(result);
+        Assert.True(json.GetProperty("count").GetInt32() > 0);
+        Assert.True(json.TryGetProperty("items", out _));
+    }
+
+    [Fact]
+    public void Get_WithNoImages_ShouldReturnEmptyResult()
+    {
+        var pdfPath = CreateTestPdf("test_get_empty.pdf");
+        var result = _tool.Execute("get", pdfPath, pageIndex: 1);
+        var json = JsonSerializer.Deserialize<JsonElement>(result);
+        Assert.Equal(0, json.GetProperty("count").GetInt32());
         Assert.Contains("No images found", result);
     }
 
     [Fact]
-    public void AddImage_WithNonExistentFile_ShouldThrowFileNotFoundException()
+    public void Get_WithoutPageIndex_ShouldReturnAllImages()
     {
-        var pdfPath = CreateTestFilePath("test_add_nonexistent.pdf");
-        var document = new Document();
-        document.Pages.Add();
-        document.Save(pdfPath);
-        Assert.Throws<FileNotFoundException>(() => _tool.Execute(
-            "add",
-            pdfPath,
-            pageIndex: 1,
-            imagePath: @"C:\nonexistent\image.png",
-            x: 100,
-            y: 100));
+        var pdfPath = CreatePdfWithImage("test_get_all.pdf");
+        var result = _tool.Execute("get", pdfPath);
+        var json = JsonSerializer.Deserialize<JsonElement>(result);
+        Assert.True(json.TryGetProperty("count", out _));
     }
 
-    #endregion
-
-    #region Exception Tests
-
-    [Fact]
-    public void Execute_WithMissingRequiredPath_ShouldThrowArgumentException()
+    [Theory]
+    [InlineData("ADD")]
+    [InlineData("Add")]
+    [InlineData("add")]
+    public void Operation_ShouldBeCaseInsensitive_Add(string operation)
     {
-        var exception = Assert.Throws<ArgumentException>(() => _tool.Execute("get"));
-        Assert.Contains("path", exception.Message.ToLower());
+        var pdfPath = CreateTestPdf($"test_case_{operation}.pdf");
+        var imagePath = CreateTestImage($"test_case_{operation}.png");
+        var outputPath = CreateTestFilePath($"test_case_{operation}_output.pdf");
+        var result = _tool.Execute(operation, pdfPath, outputPath: outputPath,
+            pageIndex: 1, imagePath: imagePath, x: 100, y: 100);
+        Assert.StartsWith("Added", result);
     }
 
-    [Fact]
-    public void AddImage_WithMissingImagePath_ShouldThrowArgumentException()
+    [Theory]
+    [InlineData("GET")]
+    [InlineData("Get")]
+    [InlineData("get")]
+    public void Operation_ShouldBeCaseInsensitive_Get(string operation)
     {
-        var pdfPath = CreateTestPdf("test_add_missing_image.pdf");
-        var exception = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "add",
-            pdfPath,
-            pageIndex: 1,
-            x: 100,
-            y: 100));
-        Assert.Contains("imagePath", exception.Message);
-    }
-
-    #endregion
-
-    #region Session ID Tests
-
-    [Fact]
-    public void GetImages_WithSessionId_ShouldGetFromSession()
-    {
-        var pdfPath = CreateTestFilePath("test_session_get_images.pdf");
-        var document = new Document();
-        var page = document.Pages.Add();
-        var imagePath = CreateTestImage("test_session_image.png");
-        using (var imageStream = new FileStream(imagePath, FileMode.Open))
-        {
-            var rect = new Rectangle(100, 100, 300, 300);
-            page.AddImage(imageStream, rect);
-        }
-
-        document.Save(pdfPath);
-
-        var sessionId = OpenSession(pdfPath);
-        var result = _tool.Execute("get", sessionId: sessionId, pageIndex: 1);
-        Assert.NotNull(result);
+        var pdfPath = CreateTestPdf($"test_case_get_{operation}.pdf");
+        var result = _tool.Execute(operation, pdfPath, pageIndex: 1);
         Assert.Contains("count", result);
     }
 
-    [Fact]
-    public void AddImage_WithSessionId_ShouldAddToSession()
-    {
-        var pdfPath = CreateTestPdf("test_session_add_image.pdf");
-        var sessionId = OpenSession(pdfPath);
-        var imagePath = CreateTestImage("test_session_add_image.png");
-        var result = _tool.Execute(
-            "add",
-            sessionId: sessionId,
-            pageIndex: 1,
-            imagePath: imagePath,
-            x: 100,
-            y: 100);
-        Assert.Contains("Added image", result);
-        Assert.Contains("session", result);
+    #endregion
 
-        // Verify in-memory changes
-        var doc = SessionManager.GetDocument<Document>(sessionId);
-        Assert.NotNull(doc);
-        Assert.True(doc.Pages[1].Resources.Images.Count > 0, "Image should be added to session document");
+    #region Exception
+
+    [Fact]
+    public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
+    {
+        var pdfPath = CreateTestPdf("test_unknown_op.pdf");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", pdfPath));
+        Assert.Contains("Unknown operation", ex.Message);
     }
 
     [Fact]
-    public void DeleteImage_WithSessionId_ShouldDeleteFromSession()
+    public void Add_WithInvalidPageIndex_ShouldThrowArgumentException()
     {
-        var pdfPath = CreateTestFilePath("test_session_delete_image.pdf");
-        var document = new Document();
-        var page = document.Pages.Add();
-        var imagePath = CreateTestImage("test_session_delete_img.png");
-        using (var imageStream = new FileStream(imagePath, FileMode.Open))
-        {
-            var rect = new Rectangle(100, 100, 300, 300);
-            page.AddImage(imageStream, rect);
-        }
+        var pdfPath = CreateTestPdf("test_add_invalid_page.pdf");
+        var imagePath = CreateTestImage("test_add_invalid_page.png");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("add", pdfPath, pageIndex: 99, imagePath: imagePath, x: 100, y: 100));
+        Assert.Contains("pageIndex must be between", ex.Message);
+    }
 
-        document.Save(pdfPath);
+    [Fact]
+    public void Add_WithMissingImagePath_ShouldThrowArgumentException()
+    {
+        var pdfPath = CreateTestPdf("test_add_no_image.pdf");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("add", pdfPath, pageIndex: 1, x: 100, y: 100));
+        Assert.Contains("imagePath", ex.Message);
+    }
 
+    [Fact]
+    public void Add_WithNonExistentImagePath_ShouldThrowFileNotFoundException()
+    {
+        var pdfPath = CreateTestPdf("test_add_nonexistent.pdf");
+        Assert.Throws<FileNotFoundException>(() =>
+            _tool.Execute("add", pdfPath, pageIndex: 1, imagePath: @"C:\nonexistent\image.png", x: 100, y: 100));
+    }
+
+    [Fact]
+    public void Delete_WithInvalidImageIndex_ShouldThrowArgumentException()
+    {
+        var pdfPath = CreatePdfWithImage("test_delete_invalid.pdf");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("delete", pdfPath, pageIndex: 1, imageIndex: 99));
+        Assert.Contains("imageIndex must be between", ex.Message);
+    }
+
+    [Fact]
+    public void Delete_WithNoImages_ShouldThrowArgumentException()
+    {
+        var pdfPath = CreateTestPdf("test_delete_no_images.pdf");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("delete", pdfPath, pageIndex: 1, imageIndex: 1));
+        Assert.Contains("imageIndex must be between", ex.Message);
+    }
+
+    [Fact]
+    public void Edit_WithInvalidImageIndex_ShouldThrowArgumentException()
+    {
+        var pdfPath = CreatePdfWithImage("test_edit_invalid.pdf");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("edit", pdfPath, pageIndex: 1, imageIndex: 99, x: 100, y: 100));
+        Assert.Contains("imageIndex must be between", ex.Message);
+    }
+
+    [Fact]
+    public void Extract_WithInvalidPageIndex_ShouldThrowArgumentException()
+    {
+        var pdfPath = CreatePdfWithImage("test_extract_invalid_page.pdf");
+        var outputPath = CreateTestFilePath("test_extract_invalid.png");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("extract", pdfPath, outputPath: outputPath, pageIndex: 99, imageIndex: 1));
+        Assert.Contains("pageIndex must be between", ex.Message);
+    }
+
+    [Fact]
+    public void Extract_WithInvalidImageIndex_ShouldThrowArgumentException()
+    {
+        var pdfPath = CreatePdfWithImage("test_extract_invalid_img.pdf");
+        var outputPath = CreateTestFilePath("test_extract_invalid_img.png");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("extract", pdfPath, outputPath: outputPath, pageIndex: 1, imageIndex: 99));
+        Assert.Contains("imageIndex must be between", ex.Message);
+    }
+
+    [Fact]
+    public void Extract_WithNoImages_ShouldReturnNoImagesMessage()
+    {
+        var pdfPath = CreateTestPdf("test_extract_no_images.pdf");
+        var outputPath = CreateTestFilePath("test_extract_no_images.png");
+        var result = _tool.Execute("extract", pdfPath, outputPath: outputPath, pageIndex: 1);
+        Assert.Contains("No images found", result);
+    }
+
+    [Fact]
+    public void Get_WithInvalidPageIndex_ShouldThrowArgumentException()
+    {
+        var pdfPath = CreateTestPdf("test_get_invalid_page.pdf");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("get", pdfPath, pageIndex: 99));
+        Assert.Contains("pageIndex must be between", ex.Message);
+    }
+
+    [Fact]
+    public void Execute_WithNoPathOrSessionId_ShouldThrowException()
+    {
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("get"));
+        Assert.Contains("path", ex.Message.ToLower());
+    }
+
+    #endregion
+
+    #region Session
+
+    [Fact]
+    public void Get_WithSessionId_ShouldGetFromSession()
+    {
+        var pdfPath = CreatePdfWithImage("test_session_get.pdf");
         var sessionId = OpenSession(pdfPath);
+        var result = _tool.Execute("get", sessionId: sessionId, pageIndex: 1);
+        var json = JsonSerializer.Deserialize<JsonElement>(result);
+        Assert.True(json.GetProperty("count").GetInt32() > 0);
+    }
 
-        // Verify image exists before deletion
+    [Fact]
+    public void Add_WithSessionId_ShouldAddToSession()
+    {
+        var pdfPath = CreateTestPdf("test_session_add.pdf");
+        var sessionId = OpenSession(pdfPath);
+        var imagePath = CreateTestImage("test_session_add.png");
         var docBefore = SessionManager.GetDocument<Document>(sessionId);
-        var imageCountBefore = docBefore.Pages[1].Resources.Images.Count;
-        Assert.True(imageCountBefore > 0, "Image should exist before deletion");
-        var result = _tool.Execute(
-            "delete",
-            sessionId: sessionId,
-            pageIndex: 1,
-            imageIndex: 1);
-        Assert.Contains("Deleted", result);
-
-        // Verify in-memory changes
+        var countBefore = docBefore.Pages[1].Resources.Images.Count;
+        var result = _tool.Execute("add", sessionId: sessionId,
+            pageIndex: 1, imagePath: imagePath, x: 100, y: 100);
+        Assert.StartsWith("Added image", result);
+        Assert.Contains("session", result);
         var docAfter = SessionManager.GetDocument<Document>(sessionId);
-        Assert.True(docAfter.Pages[1].Resources.Images.Count < imageCountBefore,
-            "Image should be deleted from session document");
+        Assert.True(docAfter.Pages[1].Resources.Images.Count > countBefore);
+    }
+
+    [Fact]
+    public void Delete_WithSessionId_ShouldDeleteFromSession()
+    {
+        var pdfPath = CreatePdfWithImage("test_session_delete.pdf");
+        var sessionId = OpenSession(pdfPath);
+        var docBefore = SessionManager.GetDocument<Document>(sessionId);
+        var countBefore = docBefore.Pages[1].Resources.Images.Count;
+        Assert.True(countBefore > 0);
+        var result = _tool.Execute("delete", sessionId: sessionId,
+            pageIndex: 1, imageIndex: 1);
+        Assert.StartsWith("Deleted", result);
+        Assert.Contains("session", result);
+        var docAfter = SessionManager.GetDocument<Document>(sessionId);
+        Assert.True(docAfter.Pages[1].Resources.Images.Count < countBefore);
+    }
+
+    [Fact]
+    public void Edit_WithSessionId_ShouldEditInSession()
+    {
+        var pdfPath = CreatePdfWithImage("test_session_edit.pdf");
+        var sessionId = OpenSession(pdfPath);
+        var result = _tool.Execute("edit", sessionId: sessionId,
+            pageIndex: 1, imageIndex: 1, x: 300, y: 300);
+        Assert.StartsWith("Moved", result);
+        Assert.Contains("session", result);
+    }
+
+    [Fact]
+    public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
+    {
+        Assert.Throws<KeyNotFoundException>(() =>
+            _tool.Execute("get", sessionId: "invalid_session", pageIndex: 1));
+    }
+
+    [Fact]
+    public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
+    {
+        var pdfPath1 = CreateTestPdf("test_path_image.pdf");
+        var pdfPath2 = CreatePdfWithImage("test_session_image.pdf");
+        var sessionId = OpenSession(pdfPath2);
+        var result = _tool.Execute("get", pdfPath1, sessionId, pageIndex: 1);
+        var json = JsonSerializer.Deserialize<JsonElement>(result);
+        Assert.True(json.GetProperty("count").GetInt32() > 0);
     }
 
     #endregion

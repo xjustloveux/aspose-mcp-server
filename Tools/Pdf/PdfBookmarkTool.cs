@@ -19,6 +19,11 @@ public class PdfBookmarkTool
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
     /// <summary>
+    ///     The session identity accessor for session isolation.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     The document session manager for managing in-memory document sessions.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -27,11 +32,26 @@ public class PdfBookmarkTool
     ///     Initializes a new instance of the <see cref="PdfBookmarkTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
-    public PdfBookmarkTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    public PdfBookmarkTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a PDF bookmark operation (add, delete, edit, get).
+    /// </summary>
+    /// <param name="operation">The operation to perform: add, delete, edit, get.</param>
+    /// <param name="path">PDF file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="title">Bookmark title (required for add, edit).</param>
+    /// <param name="pageIndex">Target page index (1-based, required for add, edit).</param>
+    /// <param name="bookmarkIndex">Bookmark index (1-based, required for delete, edit).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "pdf_bookmark")]
     [Description(@"Manage bookmarks in PDF documents. Supports 4 operations: add, delete, edit, get.
 
@@ -87,7 +107,7 @@ Usage examples:
         if (!pageIndex.HasValue)
             throw new ArgumentException("pageIndex is required for add operation");
 
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var document = ctx.Document;
 
         if (pageIndex.Value < 1 || pageIndex.Value > document.Pages.Count)
@@ -118,7 +138,7 @@ Usage examples:
         if (!bookmarkIndex.HasValue)
             throw new ArgumentException("bookmarkIndex is required for delete operation");
 
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var document = ctx.Document;
 
         if (bookmarkIndex.Value < 1 || bookmarkIndex.Value > document.Outlines.Count)
@@ -156,7 +176,7 @@ Usage examples:
         if (!bookmarkIndex.HasValue)
             throw new ArgumentException("bookmarkIndex is required for edit operation");
 
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var document = ctx.Document;
 
         if (bookmarkIndex.Value < 1 || bookmarkIndex.Value > document.Outlines.Count)
@@ -186,7 +206,7 @@ Usage examples:
     /// <returns>A JSON string containing bookmark information.</returns>
     private string GetBookmarks(string? sessionId, string? path)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var document = ctx.Document;
 
         if (document.Outlines.Count == 0)

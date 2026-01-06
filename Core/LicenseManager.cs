@@ -3,15 +3,15 @@ using Aspose.Words;
 namespace AsposeMcpServer.Core;
 
 /// <summary>
-///     Manages Aspose license loading and initialization
+///     Manages Aspose license loading and initialization.
 /// </summary>
 public static class LicenseManager
 {
     /// <summary>
-    ///     Sets Aspose licenses based on configuration
-    ///     Searches for license files in multiple locations and loads licenses for enabled components
+    ///     Sets Aspose licenses based on configuration.
+    ///     Searches for license files in multiple locations and loads licenses for enabled components.
     /// </summary>
-    /// <param name="config">Server configuration</param>
+    /// <param name="config">The server configuration.</param>
     public static void SetLicense(ServerConfig config)
     {
         var originalOut = Console.Out;
@@ -160,7 +160,7 @@ public static class LicenseManager
             {
                 Console.SetOut(originalOut);
                 Console.Error.WriteLine("[WARN] No Aspose license file found. Searched locations:");
-                var searchedPaths = licenseFileNames.Distinct().Take(10); // Limit output
+                var searchedPaths = licenseFileNames.Distinct().Take(10);
                 foreach (var path in searchedPaths) Console.Error.WriteLine($"[WARN]   - {Path.GetFullPath(path)}");
                 if (licenseFileNames.Count > 10)
                     Console.Error.WriteLine($"[WARN]   ... and {licenseFileNames.Count - 10} more locations");

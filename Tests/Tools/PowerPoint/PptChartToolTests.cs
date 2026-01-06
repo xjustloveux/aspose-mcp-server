@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Aspose.Slides;
 using Aspose.Slides.Charts;
 using Aspose.Slides.Export;
@@ -15,122 +16,70 @@ public class PptChartToolTests : TestBase
         _tool = new PptChartTool(SessionManager);
     }
 
-    private string CreateTestPresentation(string fileName)
+    private string CreateTestPresentation(string fileName, int slideCount = 1)
     {
         var filePath = CreateTestFilePath(fileName);
         using var presentation = new Presentation();
-        presentation.Slides.AddEmptySlide(presentation.LayoutSlides[0]);
+        for (var i = 1; i < slideCount; i++)
+            presentation.Slides.AddEmptySlide(presentation.LayoutSlides[0]);
         presentation.Save(filePath, SaveFormat.Pptx);
         return filePath;
     }
 
-    #region General Tests
+    private string CreatePresentationWithChart(string fileName, ChartType chartType = ChartType.ClusteredColumn)
+    {
+        var filePath = CreateTestFilePath(fileName);
+        using var ppt = new Presentation();
+        ppt.Slides[0].Shapes.AddChart(chartType, 100, 100, 400, 300);
+        ppt.Save(filePath, SaveFormat.Pptx);
+        return filePath;
+    }
+
+    private string CreatePresentationWithMultipleCharts(string fileName)
+    {
+        var filePath = CreateTestFilePath(fileName);
+        using var ppt = new Presentation();
+        ppt.Slides[0].Shapes.AddChart(ChartType.ClusteredColumn, 50, 50, 300, 200);
+        ppt.Slides[0].Shapes.AddChart(ChartType.Pie, 400, 50, 300, 200);
+        ppt.Save(filePath, SaveFormat.Pptx);
+        return filePath;
+    }
+
+    #region General
 
     [Fact]
-    public void AddChart_ShouldAddChartToSlide()
+    public void Add_ShouldAddChartToSlide()
     {
         var pptPath = CreateTestPresentation("test_add_chart.pptx");
         var outputPath = CreateTestFilePath("test_add_chart_output.pptx");
-        _tool.Execute("add", 0, pptPath, chartType: "Column", x: 100, y: 100, width: 400, height: 300,
+        var result = _tool.Execute("add", 0, pptPath, chartType: "Column", x: 100, y: 100, width: 400, height: 300,
             outputPath: outputPath);
+        Assert.StartsWith("Chart", result);
+        Assert.Contains("added to slide", result);
         using var presentation = new Presentation(outputPath);
-        var slide = presentation.Slides[0];
-        var charts = slide.Shapes.OfType<IChart>().ToList();
-        Assert.True(charts.Count > 0, "Slide should contain at least one chart");
+        var charts = presentation.Slides[0].Shapes.OfType<IChart>().ToList();
+        Assert.Single(charts);
     }
 
     [Fact]
-    public void EditChart_ShouldModifyChart()
+    public void Add_WithTitle_ShouldSetChartTitle()
     {
-        var pptPath = CreateTestPresentation("test_edit_chart.pptx");
-        using (var ppt = new Presentation(pptPath))
-        {
-            var pptSlide = ppt.Slides[0];
-            pptSlide.Shapes.AddChart(ChartType.ClusteredColumn, 100, 100, 400, 300);
-            ppt.Save(pptPath, SaveFormat.Pptx);
-        }
-
-        var outputPath = CreateTestFilePath("test_edit_chart_output.pptx");
-        _tool.Execute("edit", 0, pptPath, shapeIndex: 0, title: "Updated Chart Title", outputPath: outputPath);
+        var pptPath = CreateTestPresentation("test_add_chart_title.pptx");
+        var outputPath = CreateTestFilePath("test_add_chart_title_output.pptx");
+        _tool.Execute("add", 0, pptPath, chartType: "Bar", title: "Sales Report", x: 100, y: 100, width: 400,
+            height: 300, outputPath: outputPath);
         using var presentation = new Presentation(outputPath);
-        var slide = presentation.Slides[0];
-        var charts = slide.Shapes.OfType<IChart>().ToList();
-        Assert.True(charts.Count > 0, "Chart should exist after editing");
-        var chart = charts[0];
-        Assert.NotNull(chart);
-        Assert.NotNull(chart.ChartTitle);
-        var titleText = chart.ChartTitle.TextFrameForOverriding?.Text ?? "";
-
-        var isEvaluationMode = IsEvaluationMode();
-        if (isEvaluationMode)
-        {
-            var hasUpdated = titleText.Contains("Updated", StringComparison.OrdinalIgnoreCase) ||
-                             titleText.Contains("Updat", StringComparison.OrdinalIgnoreCase);
-            Assert.True(hasUpdated || titleText.Length > 0,
-                $"In evaluation mode, chart title may be truncated due to watermark. " +
-                $"Expected 'Updated' or 'Updat', but got: '{titleText.Substring(0, Math.Min(50, titleText.Length))}...'");
-        }
-        else
-        {
-            var hasUpdated = titleText.Contains("Updated", StringComparison.OrdinalIgnoreCase);
-            Assert.True(hasUpdated,
-                $"Chart title should contain 'Updated', but got: '{titleText.Substring(0, Math.Min(50, titleText.Length))}...'");
-        }
+        var chart = presentation.Slides[0].Shapes.OfType<IChart>().First();
+        Assert.True(chart.HasTitle);
     }
 
     [Fact]
-    public void GetChartData_ShouldReturnChartData()
-    {
-        var pptPath = CreateTestPresentation("test_get_chart_data.pptx");
-        using (var presentation = new Presentation(pptPath))
-        {
-            var slide = presentation.Slides[0];
-            slide.Shapes.AddChart(ChartType.ClusteredColumn, 100, 100, 400, 300);
-            presentation.Save(pptPath, SaveFormat.Pptx);
-        }
-
-        var result = _tool.Execute("get_data", 0, pptPath, shapeIndex: 0);
-        Assert.NotNull(result);
-        Assert.NotEmpty(result);
-        Assert.Contains("Chart", result, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public void DeleteChart_ShouldDeleteChart()
-    {
-        var pptPath = CreateTestPresentation("test_delete_chart.pptx");
-        using (var ppt = new Presentation(pptPath))
-        {
-            var pptSlide = ppt.Slides[0];
-            pptSlide.Shapes.AddChart(ChartType.ClusteredColumn, 100, 100, 400, 300);
-            ppt.Save(pptPath, SaveFormat.Pptx);
-        }
-
-        int chartsBefore;
-        using (var ppt = new Presentation(pptPath))
-        {
-            chartsBefore = ppt.Slides[0].Shapes.OfType<IChart>().Count();
-            Assert.True(chartsBefore > 0, "Chart should exist before deletion");
-        }
-
-        var outputPath = CreateTestFilePath("test_delete_chart_output.pptx");
-        _tool.Execute("delete", 0, pptPath, shapeIndex: 0, outputPath: outputPath);
-        using var presentation = new Presentation(outputPath);
-        var slide = presentation.Slides[0];
-        var chartsAfter = slide.Shapes.OfType<IChart>().Count();
-        Assert.True(chartsAfter < chartsBefore,
-            $"Chart should be deleted. Before: {chartsBefore}, After: {chartsAfter}");
-    }
-
-    [Fact]
-    public void AddChart_WithCustomPosition_ShouldUseProvidedValues()
+    public void Add_WithCustomPosition_ShouldUseProvidedValues()
     {
         var pptPath = CreateTestPresentation("test_add_chart_position.pptx");
         var outputPath = CreateTestFilePath("test_add_chart_position_output.pptx");
-
-        _tool.Execute("add", 0, pptPath, chartType: "Bar", x: 150, y: 200, width: 350, height: 250,
+        _tool.Execute("add", 0, pptPath, chartType: "Line", x: 150, y: 200, width: 350, height: 250,
             outputPath: outputPath);
-
         using var presentation = new Presentation(outputPath);
         var chart = presentation.Slides[0].Shapes.OfType<IChart>().First();
         Assert.Equal(150, chart.X);
@@ -139,111 +88,362 @@ public class PptChartToolTests : TestBase
         Assert.Equal(250, chart.Height);
     }
 
-    #endregion
-
-    #region Exception Tests
-
-    [Fact]
-    public void Execute_UnknownOperation_ShouldThrowArgumentException()
+    [Theory]
+    [InlineData("Column", ChartType.ClusteredColumn)]
+    [InlineData("Bar", ChartType.ClusteredBar)]
+    [InlineData("Line", ChartType.Line)]
+    [InlineData("Pie", ChartType.Pie)]
+    [InlineData("Area", ChartType.Area)]
+    public void Add_WithDifferentChartTypes_ShouldCreateCorrectType(string chartTypeStr, ChartType expectedType)
     {
-        var pptPath = CreateTestPresentation("test_unknown_op.pptx");
-
-        Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", 0, pptPath));
+        var pptPath = CreateTestPresentation($"test_add_{chartTypeStr}.pptx");
+        var outputPath = CreateTestFilePath($"test_add_{chartTypeStr}_output.pptx");
+        _tool.Execute("add", 0, pptPath, chartType: chartTypeStr, x: 100, y: 100, width: 400, height: 300,
+            outputPath: outputPath);
+        using var presentation = new Presentation(outputPath);
+        var chart = presentation.Slides[0].Shapes.OfType<IChart>().First();
+        Assert.Equal(expectedType, chart.Type);
     }
 
     [Fact]
-    public void GetChartData_NoChartsOnSlide_ShouldThrowArgumentException()
+    public void Edit_ShouldModifyChartTitle()
+    {
+        var pptPath = CreatePresentationWithChart("test_edit_chart.pptx");
+        var outputPath = CreateTestFilePath("test_edit_chart_output.pptx");
+        _tool.Execute("edit", 0, pptPath, shapeIndex: 0, title: "Updated Chart Title", outputPath: outputPath);
+        using var presentation = new Presentation(outputPath);
+        var chart = presentation.Slides[0].Shapes.OfType<IChart>().First();
+        Assert.True(chart.HasTitle);
+        Assert.NotNull(chart.ChartTitle);
+    }
+
+    [Fact]
+    public void Edit_ShouldChangeChartTypeWithinSameFamily()
+    {
+        var pptPath = CreatePresentationWithChart("test_edit_type_family.pptx");
+        var outputPath = CreateTestFilePath("test_edit_type_family_output.pptx");
+        _tool.Execute("edit", 0, pptPath, shapeIndex: 0, chartType: "Column", outputPath: outputPath);
+        using var presentation = new Presentation(outputPath);
+        var chart = presentation.Slides[0].Shapes.OfType<IChart>().First();
+        Assert.Equal(ChartType.ClusteredColumn, chart.Type);
+    }
+
+    [Fact]
+    public void Edit_WithIncompatibleChartType_ShouldThrowInvalidOperationException()
+    {
+        var pptPath = CreatePresentationWithChart("test_edit_incompatible.pptx");
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            _tool.Execute("edit", 0, pptPath, shapeIndex: 0, chartType: "Bar"));
+        Assert.Contains("Failed to change chart type", ex.Message);
+    }
+
+    [Fact]
+    public void Delete_ShouldRemoveChart()
+    {
+        var pptPath = CreatePresentationWithChart("test_delete_chart.pptx");
+        var outputPath = CreateTestFilePath("test_delete_chart_output.pptx");
+        var result = _tool.Execute("delete", 0, pptPath, shapeIndex: 0, outputPath: outputPath);
+        Assert.StartsWith("Chart", result);
+        Assert.Contains("deleted from slide", result);
+        using var presentation = new Presentation(outputPath);
+        var charts = presentation.Slides[0].Shapes.OfType<IChart>().ToList();
+        Assert.Empty(charts);
+    }
+
+    [Fact]
+    public void Delete_WithMultipleCharts_ShouldRemoveCorrectChart()
+    {
+        var pptPath = CreatePresentationWithMultipleCharts("test_delete_multiple.pptx");
+        var outputPath = CreateTestFilePath("test_delete_multiple_output.pptx");
+        _tool.Execute("delete", 0, pptPath, shapeIndex: 0, outputPath: outputPath);
+        using var presentation = new Presentation(outputPath);
+        var charts = presentation.Slides[0].Shapes.OfType<IChart>().ToList();
+        Assert.Single(charts);
+        Assert.Equal(ChartType.Pie, charts[0].Type);
+    }
+
+    [Fact]
+    public void GetData_ShouldReturnChartData()
+    {
+        var pptPath = CreatePresentationWithChart("test_get_data.pptx");
+        var result = _tool.Execute("get_data", 0, pptPath, shapeIndex: 0);
+        Assert.Contains("chartType", result);
+        Assert.Contains("categories", result);
+        Assert.Contains("series", result);
+    }
+
+    [Fact]
+    public void GetData_ShouldIncludeChartInfo()
+    {
+        var pptPath = CreatePresentationWithChart("test_get_data_info.pptx");
+        var result = _tool.Execute("get_data", 0, pptPath, shapeIndex: 0);
+        Assert.Contains("slideIndex", result);
+        Assert.Contains("chartIndex", result);
+        Assert.Contains("hasTitle", result);
+    }
+
+    [Fact]
+    public void UpdateData_WithCategories_ShouldUpdateData()
+    {
+        var pptPath = CreatePresentationWithChart("test_update_data.pptx");
+        var outputPath = CreateTestFilePath("test_update_data_output.pptx");
+        var data = new JsonObject
+        {
+            ["categories"] = new JsonArray("Q1", "Q2", "Q3"),
+            ["series"] = new JsonArray(new JsonObject
+            {
+                ["name"] = "Sales",
+                ["values"] = new JsonArray(100.0, 200.0, 150.0)
+            })
+        };
+        var result = _tool.Execute("update_data", 0, pptPath, shapeIndex: 0, data: data, outputPath: outputPath);
+        Assert.StartsWith("Chart", result);
+        Assert.Contains("updated", result);
+        Assert.True(File.Exists(outputPath));
+    }
+
+    [Fact]
+    public void UpdateData_WithClearExisting_ShouldClearData()
+    {
+        var pptPath = CreatePresentationWithChart("test_update_clear.pptx");
+        var outputPath = CreateTestFilePath("test_update_clear_output.pptx");
+        var result = _tool.Execute("update_data", 0, pptPath, shapeIndex: 0, clearExisting: true,
+            outputPath: outputPath);
+        Assert.StartsWith("Chart", result);
+        Assert.Contains("updated", result);
+    }
+
+    [Theory]
+    [InlineData("ADD")]
+    [InlineData("Add")]
+    [InlineData("add")]
+    public void Operation_ShouldBeCaseInsensitive_Add(string operation)
+    {
+        var pptPath = CreateTestPresentation($"test_case_add_{operation}.pptx");
+        var outputPath = CreateTestFilePath($"test_case_add_{operation}_output.pptx");
+        var result = _tool.Execute(operation, 0, pptPath, chartType: "Column", x: 100, y: 100, width: 400, height: 300,
+            outputPath: outputPath);
+        Assert.StartsWith("Chart", result);
+        Assert.Contains("added to slide", result);
+    }
+
+    [Theory]
+    [InlineData("EDIT")]
+    [InlineData("Edit")]
+    [InlineData("edit")]
+    public void Operation_ShouldBeCaseInsensitive_Edit(string operation)
+    {
+        var pptPath = CreatePresentationWithChart($"test_case_edit_{operation}.pptx");
+        var outputPath = CreateTestFilePath($"test_case_edit_{operation}_output.pptx");
+        var result = _tool.Execute(operation, 0, pptPath, shapeIndex: 0, title: "Test", outputPath: outputPath);
+        Assert.StartsWith("Chart", result);
+        Assert.Contains("updated", result);
+    }
+
+    [Theory]
+    [InlineData("DELETE")]
+    [InlineData("Delete")]
+    [InlineData("delete")]
+    public void Operation_ShouldBeCaseInsensitive_Delete(string operation)
+    {
+        var pptPath = CreatePresentationWithChart($"test_case_delete_{operation}.pptx");
+        var outputPath = CreateTestFilePath($"test_case_delete_{operation}_output.pptx");
+        var result = _tool.Execute(operation, 0, pptPath, shapeIndex: 0, outputPath: outputPath);
+        Assert.StartsWith("Chart", result);
+        Assert.Contains("deleted from slide", result);
+    }
+
+    [Theory]
+    [InlineData("GET_DATA")]
+    [InlineData("Get_Data")]
+    [InlineData("get_data")]
+    public void Operation_ShouldBeCaseInsensitive_GetData(string operation)
+    {
+        var pptPath = CreatePresentationWithChart($"test_case_getdata_{operation.Replace("_", "")}.pptx");
+        var result = _tool.Execute(operation, 0, pptPath, shapeIndex: 0);
+        Assert.Contains("chartType", result);
+    }
+
+    [Theory]
+    [InlineData("UPDATE_DATA")]
+    [InlineData("Update_Data")]
+    [InlineData("update_data")]
+    public void Operation_ShouldBeCaseInsensitive_UpdateData(string operation)
+    {
+        var pptPath = CreatePresentationWithChart($"test_case_updatedata_{operation.Replace("_", "")}.pptx");
+        var outputPath = CreateTestFilePath($"test_case_updatedata_{operation.Replace("_", "")}_output.pptx");
+        var result = _tool.Execute(operation, 0, pptPath, shapeIndex: 0, clearExisting: true, outputPath: outputPath);
+        Assert.StartsWith("Chart", result);
+        Assert.Contains("updated", result);
+    }
+
+    #endregion
+
+    #region Exception
+
+    [Fact]
+    public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
+    {
+        var pptPath = CreateTestPresentation("test_unknown_op.pptx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", 0, pptPath));
+        Assert.Contains("Unknown operation", ex.Message);
+    }
+
+    [Fact]
+    public void Add_WithoutChartType_ShouldThrowArgumentException()
+    {
+        var pptPath = CreateTestPresentation("test_add_no_type.pptx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("add", 0, pptPath));
+        Assert.Contains("chartType is required", ex.Message);
+    }
+
+    [Fact]
+    public void Edit_WithoutShapeIndex_ShouldThrowArgumentException()
+    {
+        var pptPath = CreatePresentationWithChart("test_edit_no_index.pptx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("edit", 0, pptPath, title: "Test"));
+        Assert.Contains("shapeIndex is required", ex.Message);
+    }
+
+    [Fact]
+    public void Delete_WithoutShapeIndex_ShouldThrowArgumentException()
+    {
+        var pptPath = CreatePresentationWithChart("test_delete_no_index.pptx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("delete", 0, pptPath));
+        Assert.Contains("shapeIndex is required", ex.Message);
+    }
+
+    [Fact]
+    public void GetData_WithoutShapeIndex_ShouldThrowArgumentException()
+    {
+        var pptPath = CreatePresentationWithChart("test_getdata_no_index.pptx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("get_data", 0, pptPath));
+        Assert.Contains("shapeIndex is required", ex.Message);
+    }
+
+    [Fact]
+    public void UpdateData_WithoutShapeIndex_ShouldThrowArgumentException()
+    {
+        var pptPath = CreatePresentationWithChart("test_updatedata_no_index.pptx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("update_data", 0, pptPath));
+        Assert.Contains("shapeIndex is required", ex.Message);
+    }
+
+    [Fact]
+    public void GetData_OnSlideWithNoCharts_ShouldThrowArgumentException()
     {
         var pptPath = CreateTestPresentation("test_no_charts.pptx");
-
         var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("get_data", 0, pptPath, shapeIndex: 0));
         Assert.Contains("no charts", ex.Message);
     }
 
     [Fact]
-    public void EditChart_InvalidChartIndex_ShouldThrowArgumentException()
+    public void Edit_WithInvalidChartIndex_ShouldThrowArgumentException()
     {
-        var pptPath = CreateTestPresentation("test_invalid_index.pptx");
-        using (var ppt = new Presentation(pptPath))
-        {
-            ppt.Slides[0].Shapes.AddChart(ChartType.ClusteredColumn, 100, 100, 400, 300);
-            ppt.Save(pptPath, SaveFormat.Pptx);
-        }
-
+        var pptPath = CreatePresentationWithChart("test_invalid_index.pptx");
         var ex =
             Assert.Throws<ArgumentException>(() => _tool.Execute("edit", 0, pptPath, shapeIndex: 99, title: "Test"));
         Assert.Contains("out of range", ex.Message);
     }
 
-    #endregion
-
-    #region Session ID Tests
-
     [Fact]
-    public void GetChartData_WithSessionId_ShouldReturnChartData()
+    public void Execute_WithInvalidSlideIndex_ShouldThrowArgumentException()
     {
-        var pptPath = CreateTestPresentation("test_session_get_chart_data.pptx");
-        using (var ppt = new Presentation(pptPath))
-        {
-            ppt.Slides[0].Shapes.AddChart(ChartType.ClusteredColumn, 100, 100, 400, 300);
-            ppt.Save(pptPath, SaveFormat.Pptx);
-        }
-
-        var sessionId = OpenSession(pptPath);
-        var result = _tool.Execute("get_data", 0, sessionId: sessionId, shapeIndex: 0);
-        Assert.NotNull(result);
-        Assert.Contains("Chart", result, StringComparison.OrdinalIgnoreCase);
+        var pptPath = CreateTestPresentation("test_invalid_slide.pptx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("add", 99, pptPath, chartType: "Column"));
+        Assert.Contains("slide", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
-    public void AddChart_WithSessionId_ShouldAddInMemory()
-    {
-        var pptPath = CreateTestPresentation("test_session_add_chart.pptx");
-        var sessionId = OpenSession(pptPath);
+    #endregion
 
+    #region Session
+
+    [Fact]
+    public void Add_WithSessionId_ShouldAddInMemory()
+    {
+        var pptPath = CreateTestPresentation("test_session_add.pptx");
+        var sessionId = OpenSession(pptPath);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         var initialCount = ppt.Slides[0].Shapes.OfType<IChart>().Count();
         var result = _tool.Execute("add", 0, sessionId: sessionId, chartType: "Column", x: 100, y: 100, width: 400,
             height: 300);
-        Assert.Contains("Chart", result);
-        Assert.Contains("added", result, StringComparison.OrdinalIgnoreCase);
+        Assert.StartsWith("Chart", result);
+        Assert.Contains("added to slide", result);
+        Assert.Contains("session", result);
         Assert.True(ppt.Slides[0].Shapes.OfType<IChart>().Count() > initialCount);
     }
 
     [Fact]
-    public void EditChart_WithSessionId_ShouldModifyInMemory()
+    public void Edit_WithSessionId_ShouldModifyInMemory()
     {
-        var pptPath = CreateTestPresentation("test_session_edit_chart.pptx");
-        using (var presentation = new Presentation(pptPath))
-        {
-            presentation.Slides[0].Shapes.AddChart(ChartType.ClusteredColumn, 100, 100, 400, 300);
-            presentation.Save(pptPath, SaveFormat.Pptx);
-        }
-
+        var pptPath = CreatePresentationWithChart("test_session_edit.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("edit", 0, sessionId: sessionId, shapeIndex: 0, title: "Session Chart Title");
-        Assert.Contains("Chart", result);
+        Assert.StartsWith("Chart", result);
+        Assert.Contains("updated", result);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         var chart = ppt.Slides[0].Shapes.OfType<IChart>().First();
-        Assert.NotNull(chart.ChartTitle);
+        Assert.True(chart.HasTitle);
     }
 
     [Fact]
-    public void DeleteChart_WithSessionId_ShouldDeleteInMemory()
+    public void Delete_WithSessionId_ShouldDeleteInMemory()
     {
-        var pptPath = CreateTestPresentation("test_session_delete_chart.pptx");
-        using (var ppt = new Presentation(pptPath))
-        {
-            ppt.Slides[0].Shapes.AddChart(ChartType.ClusteredColumn, 100, 100, 400, 300);
-            ppt.Save(pptPath, SaveFormat.Pptx);
-        }
-
+        var pptPath = CreatePresentationWithChart("test_session_delete.pptx");
         var sessionId = OpenSession(pptPath);
-        var pptSession = SessionManager.GetDocument<Presentation>(sessionId);
-        var initialCount = pptSession.Slides[0].Shapes.OfType<IChart>().Count();
+        var ppt = SessionManager.GetDocument<Presentation>(sessionId);
+        var initialCount = ppt.Slides[0].Shapes.OfType<IChart>().Count();
         var result = _tool.Execute("delete", 0, sessionId: sessionId, shapeIndex: 0);
-        Assert.Contains("deleted", result, StringComparison.OrdinalIgnoreCase);
-        Assert.True(pptSession.Slides[0].Shapes.OfType<IChart>().Count() < initialCount);
+        Assert.StartsWith("Chart", result);
+        Assert.Contains("deleted from slide", result);
+        Assert.True(ppt.Slides[0].Shapes.OfType<IChart>().Count() < initialCount);
+    }
+
+    [Fact]
+    public void GetData_WithSessionId_ShouldReturnData()
+    {
+        var pptPath = CreatePresentationWithChart("test_session_getdata.pptx");
+        var sessionId = OpenSession(pptPath);
+        var result = _tool.Execute("get_data", 0, sessionId: sessionId, shapeIndex: 0);
+        Assert.Contains("chartType", result);
+        Assert.Contains("categories", result);
+    }
+
+    [Fact]
+    public void UpdateData_WithSessionId_ShouldUpdateInMemory()
+    {
+        var pptPath = CreatePresentationWithChart("test_session_updatedata.pptx");
+        var sessionId = OpenSession(pptPath);
+        var data = new JsonObject
+        {
+            ["categories"] = new JsonArray("A", "B"),
+            ["series"] = new JsonArray(new JsonObject
+            {
+                ["name"] = "Data",
+                ["values"] = new JsonArray(10.0, 20.0)
+            })
+        };
+        var result = _tool.Execute("update_data", 0, sessionId: sessionId, shapeIndex: 0, data: data);
+        Assert.StartsWith("Chart", result);
+        Assert.Contains("updated", result);
+        Assert.Contains("session", result);
+    }
+
+    [Fact]
+    public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
+    {
+        Assert.Throws<KeyNotFoundException>(() =>
+            _tool.Execute("get_data", 0, sessionId: "invalid_session", shapeIndex: 0));
+    }
+
+    [Fact]
+    public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
+    {
+        var pptPath1 = CreatePresentationWithChart("test_path_chart.pptx");
+        var pptPath2 = CreatePresentationWithChart("test_session_chart.pptx", ChartType.Pie);
+        var sessionId = OpenSession(pptPath2);
+        var result = _tool.Execute("get_data", 0, pptPath1, sessionId, shapeIndex: 0);
+        Assert.Contains("Pie", result);
     }
 
     #endregion

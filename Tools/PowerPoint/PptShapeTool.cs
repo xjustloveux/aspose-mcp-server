@@ -27,6 +27,11 @@ public class PptShapeTool
     };
 
     /// <summary>
+    ///     Identity accessor for session isolation.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document session handling.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -35,11 +40,48 @@ public class PptShapeTool
     ///     Initializes a new instance of the <see cref="PptShapeTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory editing.</param>
-    public PptShapeTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation.</param>
+    public PptShapeTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a PowerPoint shape operation (get, get_details, delete, edit, set_format, clear_format, group, ungroup,
+    ///     copy, reorder, align, flip).
+    /// </summary>
+    /// <param name="operation">
+    ///     The operation to perform: get, get_details, delete, edit, set_format, clear_format, group,
+    ///     ungroup, copy, reorder, align, flip.
+    /// </param>
+    /// <param name="path">Presentation file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="slideIndex">Slide index (0-based, required except for copy).</param>
+    /// <param name="shapeIndex">Shape index (0-based, for single-shape operations).</param>
+    /// <param name="shapeIndices">Shape indices array (for group/align).</param>
+    /// <param name="x">X position in points (for edit).</param>
+    /// <param name="y">Y position in points (for edit).</param>
+    /// <param name="width">Width in points (for edit).</param>
+    /// <param name="height">Height in points (for edit).</param>
+    /// <param name="rotation">Rotation in degrees (for edit).</param>
+    /// <param name="text">Text content for AutoShape (for edit).</param>
+    /// <param name="fillColor">Fill color hex, e.g. #FF0000 (for set_format).</param>
+    /// <param name="lineColor">Line color hex (for set_format).</param>
+    /// <param name="lineWidth">Line width in points (for set_format).</param>
+    /// <param name="clearFill">Clear fill (for clear_format).</param>
+    /// <param name="clearLine">Clear line (for clear_format).</param>
+    /// <param name="fromSlide">Source slide index (for copy).</param>
+    /// <param name="toSlide">Target slide index (for copy).</param>
+    /// <param name="toIndex">Target Z-order index (for reorder).</param>
+    /// <param name="align">Alignment: left|center|right|top|middle|bottom (for align).</param>
+    /// <param name="alignToSlide">Align to slide bounds (for align, default: false).</param>
+    /// <param name="flipHorizontal">Flip horizontally (for flip/edit).</param>
+    /// <param name="flipVertical">Flip vertically (for flip/edit).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "ppt_shape")]
     [Description(@"Unified PowerPoint shape management tool. Supports 12 operations.
 
@@ -117,7 +159,7 @@ Usage examples:
         [Description("Flip vertically (for flip/edit)")]
         bool? flipVertical = null)
     {
-        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {
@@ -137,8 +179,6 @@ Usage examples:
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
-
-    #region Basic Operations
 
     /// <summary>
     ///     Gets all shapes from a slide.
@@ -286,10 +326,6 @@ Usage examples:
         result += ctx.GetOutputMessage(outputPath);
         return result;
     }
-
-    #endregion
-
-    #region Edit Operations
 
     /// <summary>
     ///     Edits shape properties.
@@ -490,10 +526,6 @@ Usage examples:
         result += ctx.GetOutputMessage(outputPath);
         return result;
     }
-
-    #endregion
-
-    #region Advanced Operations
 
     /// <summary>
     ///     Groups multiple shapes together.
@@ -779,6 +811,4 @@ Usage examples:
         result += ctx.GetOutputMessage(outputPath);
         return result;
     }
-
-    #endregion
 }

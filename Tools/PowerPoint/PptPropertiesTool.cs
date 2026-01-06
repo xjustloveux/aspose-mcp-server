@@ -20,6 +20,11 @@ public class PptPropertiesTool
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
     /// <summary>
+    ///     Identity accessor for session isolation.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document session handling.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -28,11 +33,35 @@ public class PptPropertiesTool
     ///     Initializes a new instance of the <see cref="PptPropertiesTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory editing.</param>
-    public PptPropertiesTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation.</param>
+    public PptPropertiesTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a PowerPoint properties operation (get, set).
+    /// </summary>
+    /// <param name="operation">The operation to perform: get, set.</param>
+    /// <param name="path">Presentation file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="title">Title (optional, for set).</param>
+    /// <param name="subject">Subject (optional, for set).</param>
+    /// <param name="author">Author (optional, for set).</param>
+    /// <param name="keywords">Keywords (optional, for set).</param>
+    /// <param name="comments">Comments (optional, for set).</param>
+    /// <param name="category">Category (optional, for set).</param>
+    /// <param name="company">Company (optional, for set).</param>
+    /// <param name="manager">Manager (optional, for set).</param>
+    /// <param name="customProperties">
+    ///     Custom properties as key-value pairs. Supports: string, int, double, bool, DateTime (ISO
+    ///     format).
+    /// </param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "ppt_properties")]
     [Description(@"Manage PowerPoint document properties. Supports 2 operations: get, set.
 
@@ -92,7 +121,7 @@ Usage examples:
     {
         if (!string.IsNullOrEmpty(sessionId))
         {
-            using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path);
+            using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
             var props = ctx.Document.DocumentProperties;
 
             var result = new
@@ -161,7 +190,7 @@ Usage examples:
         string? author, string? keywords, string? comments, string? category, string? company, string? manager,
         Dictionary<string, object>? customProperties)
     {
-        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         var props = ctx.Document.DocumentProperties;
         List<string> changes = [];

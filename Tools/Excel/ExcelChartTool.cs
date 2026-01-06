@@ -15,6 +15,11 @@ namespace AsposeMcpServer.Tools.Excel;
 public class ExcelChartTool
 {
     /// <summary>
+    ///     Session identity accessor for session isolation support.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Document session manager for in-memory editing support.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -23,11 +28,37 @@ public class ExcelChartTool
     ///     Initializes a new instance of the <see cref="ExcelChartTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
-    public ExcelChartTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    public ExcelChartTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes an Excel chart operation (add, edit, delete, get, update_data, or set_properties).
+    /// </summary>
+    /// <param name="operation">The operation to perform: add, edit, delete, get, update_data, or set_properties.</param>
+    /// <param name="path">Excel file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="sheetIndex">Sheet index (0-based).</param>
+    /// <param name="chartIndex">Chart index (0-based, required for edit/delete/update_data/set_properties).</param>
+    /// <param name="chartType">Chart type: Column, Bar, Line, Pie, Area, Scatter, etc.</param>
+    /// <param name="dataRange">Data range for chart values.</param>
+    /// <param name="categoryAxisDataRange">Category axis (X-axis) data range.</param>
+    /// <param name="title">Chart title.</param>
+    /// <param name="topRow">Top row index for chart position (0-based).</param>
+    /// <param name="leftColumn">Left column index for chart position (0-based).</param>
+    /// <param name="width">Chart width in columns.</param>
+    /// <param name="height">Chart height in rows.</param>
+    /// <param name="showLegend">Show legend (optional, for edit/set_properties).</param>
+    /// <param name="legendPosition">Legend position: Bottom, Top, Left, Right.</param>
+    /// <param name="removeTitle">Remove title (optional, for set_properties).</param>
+    /// <param name="legendVisible">Legend visibility (optional, for set_properties).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "excel_chart")]
     [Description(@"Manage Excel charts. Supports 6 operations: add, edit, delete, get, update_data, set_properties.
 
@@ -77,7 +108,7 @@ Usage examples:
         [Description("Legend visibility (optional, for set_properties)")]
         bool? legendVisible = null)
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {

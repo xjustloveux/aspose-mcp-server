@@ -13,6 +13,11 @@ namespace AsposeMcpServer.Tools.Pdf;
 public class PdfTableTool
 {
     /// <summary>
+    ///     The session identity accessor for session isolation.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     The document session manager for managing in-memory document sessions.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -21,11 +26,34 @@ public class PdfTableTool
     ///     Initializes a new instance of the <see cref="PdfTableTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
-    public PdfTableTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    public PdfTableTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a PDF table operation (add, edit).
+    /// </summary>
+    /// <param name="operation">The operation to perform: add, edit.</param>
+    /// <param name="path">PDF file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="pageIndex">Page index (1-based, required for add).</param>
+    /// <param name="rows">Number of rows (required for add).</param>
+    /// <param name="columns">Number of columns (required for add).</param>
+    /// <param name="data">Table data (array of arrays, for add).</param>
+    /// <param name="x">X position (left margin) in PDF points (for add).</param>
+    /// <param name="y">Y position (top margin) in PDF points (for add).</param>
+    /// <param name="columnWidths">Space-separated column widths in PDF points (for add).</param>
+    /// <param name="tableIndex">Table index (0-based, required for edit).</param>
+    /// <param name="cellRow">Cell row index (0-based, for edit).</param>
+    /// <param name="cellColumn">Cell column index (0-based, for edit).</param>
+    /// <param name="cellValue">New cell value (for edit).</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "pdf_table")]
     [Description(@"Manage tables in PDF documents. Supports 2 operations: add, edit.
 
@@ -67,7 +95,7 @@ Note: PDF table editing has limitations. After saving, tables may be converted t
         [Description("New cell value (for edit)")]
         string? cellValue = null)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {

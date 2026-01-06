@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Aspose.Cells;
 using AsposeMcpServer.Tests.Helpers;
 using AsposeMcpServer.Tools.Excel;
@@ -13,285 +14,273 @@ public class ExcelCellToolTests : ExcelTestBase
         _tool = new ExcelCellTool(SessionManager);
     }
 
-    #region General Tests
-
-    [Fact]
-    public void GetCellValue_ShouldReturnValue()
+    private string CreateWorkbookWithCellValue(string fileName, string cell = "A1", object? value = null)
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_get_cell_value.xlsx", 3);
-        var result = _tool.Execute("get", workbookPath, cell: "A1");
-        Assert.Contains("R1C1", result);
+        var filePath = CreateExcelWorkbook(fileName);
+        using var workbook = new Workbook(filePath);
+        workbook.Worksheets[0].Cells[cell].Value = value ?? "TestValue";
+        workbook.Save(filePath);
+        return filePath;
     }
 
-    [Fact]
-    public void SetCellValue_ShouldSetValue()
+    private string CreateWorkbookWithFormula(string fileName)
     {
-        var workbookPath = CreateExcelWorkbook("test_set_cell_value.xlsx");
-        var outputPath = CreateTestFilePath("test_set_cell_value_output.xlsx");
-        _tool.Execute("write", workbookPath, cell: "A1", value: "Test Value", outputPath: outputPath);
-        var workbook = new Workbook(outputPath);
-        var worksheet = workbook.Worksheets[0];
-        Assert.Equal("Test Value", worksheet.Cells["A1"].Value);
+        var filePath = CreateExcelWorkbook(fileName);
+        using var workbook = new Workbook(filePath);
+        var ws = workbook.Worksheets[0];
+        ws.Cells["A1"].Value = 10;
+        ws.Cells["B1"].Value = 20;
+        ws.Cells["C1"].Formula = "=A1+B1";
+        workbook.Save(filePath);
+        return filePath;
     }
 
-    [Fact]
-    public void SetCellFormula_ShouldSetFormula()
+    private string CreateWorkbookWithFormattedCell(string fileName, string cell = "A1")
     {
-        var workbookPath = CreateExcelWorkbook("test_set_cell_formula.xlsx");
-        var workbook = new Workbook(workbookPath);
-        workbook.Worksheets[0].Cells["A1"].Value = 10;
-        workbook.Worksheets[0].Cells["B1"].Value = 20;
-        workbook.Save(workbookPath);
-
-        var outputPath = CreateTestFilePath("test_set_cell_formula_output.xlsx");
-        _tool.Execute("edit", workbookPath, cell: "C1", formula: "A1+B1", outputPath: outputPath);
-        var resultWorkbook = new Workbook(outputPath);
-        var worksheet = resultWorkbook.Worksheets[0];
-        // Formula includes "=" prefix in Aspose.Cells
-        Assert.Equal("=A1+B1", worksheet.Cells["C1"].Formula);
-    }
-
-    [Fact]
-    public void GetCellFormat_ShouldReturnFormat()
-    {
-        var workbookPath = CreateExcelWorkbook("test_get_cell_format.xlsx");
-        var workbook = new Workbook(workbookPath);
-        var cell = workbook.Worksheets[0].Cells["A1"];
-        cell.Value = "Test";
-        var style = cell.GetStyle();
+        var filePath = CreateExcelWorkbook(fileName);
+        using var workbook = new Workbook(filePath);
+        var cellObj = workbook.Worksheets[0].Cells[cell];
+        cellObj.Value = "FormattedValue";
+        var style = cellObj.GetStyle();
         style.Font.IsBold = true;
-        cell.SetStyle(style);
-        workbook.Save(workbookPath);
-        var result = _tool.Execute("get", workbookPath, cell: "A1", includeFormat: true);
-        Assert.NotNull(result);
-        Assert.NotEmpty(result);
+        cellObj.SetStyle(style);
+        workbook.Save(filePath);
+        return filePath;
     }
+
+    #region General
 
     [Fact]
-    public void ClearCell_ShouldClearCellContent()
+    public void Write_ShouldWriteValue()
     {
-        var workbookPath = CreateExcelWorkbook("test_clear_cell.xlsx");
-        var workbook = new Workbook(workbookPath);
-        workbook.Worksheets[0].Cells["A1"].Value = "Test Value";
-        workbook.Save(workbookPath);
-
-        var outputPath = CreateTestFilePath("test_clear_cell_output.xlsx");
-        _tool.Execute("clear", workbookPath, cell: "A1", clearContent: true, outputPath: outputPath);
-        var resultWorkbook = new Workbook(outputPath);
-        var worksheet = resultWorkbook.Worksheets[0];
-        // Clearing cell sets value to empty string, not null
-        var value = worksheet.Cells["A1"].Value;
-        Assert.True(value == null || value.ToString() == "", $"Cell should be cleared, got: {value}");
+        var workbookPath = CreateExcelWorkbook("test_write.xlsx");
+        var outputPath = CreateTestFilePath("test_write_output.xlsx");
+        var result = _tool.Execute("write", workbookPath, cell: "A1", value: "Test Value", outputPath: outputPath);
+        Assert.Contains("written", result);
+        using var workbook = new Workbook(outputPath);
+        Assert.Equal("Test Value", workbook.Worksheets[0].Cells["A1"].Value);
     }
 
-    [Fact]
-    public void ClearCell_WithClearFormat_ShouldClearFormat()
+    [Theory]
+    [InlineData("123.45")]
+    [InlineData("true")]
+    [InlineData("2024-01-15")]
+    [InlineData("Hello World")]
+    public void Write_WithDifferentDataTypes_ShouldWriteCorrectly(string value)
     {
-        var workbookPath = CreateExcelWorkbook("test_clear_cell_format.xlsx");
-        var workbook = new Workbook(workbookPath);
-        var cell = workbook.Worksheets[0].Cells["A1"];
-        cell.Value = "Test";
-        var style = cell.GetStyle();
-        style.Font.IsBold = true;
-        cell.SetStyle(style);
-        workbook.Save(workbookPath);
-
-        var outputPath = CreateTestFilePath("test_clear_cell_format_output.xlsx");
-        _tool.Execute("clear", workbookPath, cell: "A1", clearContent: false, clearFormat: true,
-            outputPath: outputPath);
-        var resultWorkbook = new Workbook(outputPath);
-        var worksheet = resultWorkbook.Worksheets[0];
-        var resultStyle = worksheet.Cells["A1"].GetStyle();
-        // Verify format was cleared - check that bold is false (default)
-        Assert.False(resultStyle.Font.IsBold, "Cell format should be cleared (bold should be false)");
-    }
-
-    [Fact]
-    public void ClearCell_WithClearContentAndFormat_ShouldClearBoth()
-    {
-        var workbookPath = CreateExcelWorkbook("test_clear_cell_both.xlsx");
-        var workbook = new Workbook(workbookPath);
-        var cell = workbook.Worksheets[0].Cells["A1"];
-        cell.Value = "Test";
-        var style = cell.GetStyle();
-        style.Font.IsBold = true;
-        cell.SetStyle(style);
-        workbook.Save(workbookPath);
-
-        var outputPath = CreateTestFilePath("test_clear_cell_both_output.xlsx");
-        _tool.Execute("clear", workbookPath, cell: "A1", clearContent: true, clearFormat: true, outputPath: outputPath);
-        var resultWorkbook = new Workbook(outputPath);
-        var worksheet = resultWorkbook.Worksheets[0];
-        // Clearing cell sets value to empty string, not null
-        var value = worksheet.Cells["A1"].Value;
-        Assert.True(value == null || value.ToString() == "", $"Cell should be cleared, got: {value}");
-        // Verify format was also cleared
-        var resultStyle = worksheet.Cells["A1"].GetStyle();
-        Assert.False(resultStyle.Font.IsBold, "Cell format should be cleared (bold should be false)");
-    }
-
-    // Note: ExcelCellTool doesn't support setting cell format directly
-    // Format operations would require a separate tool or direct Aspose.Cells API usage
-    // This test is skipped as the operation doesn't exist in ExcelCellTool
-
-    [Fact]
-    public void Write_WithDifferentDataTypes_ShouldHandleTypes()
-    {
-        var workbookPath = CreateExcelWorkbook("test_data_types.xlsx");
-        var outputPath = CreateTestFilePath("test_data_types_output.xlsx");
-
-        // Test numeric value as string (tool converts to appropriate type)
-        _tool.Execute("write", workbookPath, cell: "A1", value: "123.45", outputPath: outputPath);
-
-        // Test boolean value as string
-        _tool.Execute("write", outputPath, cell: "A2", value: "true", outputPath: outputPath);
-
-        // Test date value as string
-        _tool.Execute("write", outputPath, cell: "A3", value: "2024-01-15", outputPath: outputPath);
-        var workbook = new Workbook(outputPath);
-        var worksheet = workbook.Worksheets[0];
-
-        // Verify values were written
-        var numValue = worksheet.Cells["A1"].Value;
-        Assert.NotNull(numValue);
-
-        var boolValue = worksheet.Cells["A2"].Value;
-        Assert.NotNull(boolValue);
-
-        // Verify date/string
-        var dateValue = worksheet.Cells["A3"].Value;
-        Assert.NotNull(dateValue);
-    }
-
-    [SkippableFact]
-    public void Get_FromDifferentSheet_ShouldGetFromSheet()
-    {
-        // Skip in evaluation mode - Aspose.Cells may limit operations across multiple sheets
-        SkipInEvaluationMode(AsposeLibraryType.Cells, "Multiple sheet operations may be limited in evaluation mode");
-        var workbookPath = CreateExcelWorkbook("test_get_from_sheet.xlsx");
-
-        var workbook = new Workbook(workbookPath);
-
-        // Add data to first sheet
-        workbook.Worksheets[0].Cells["A1"].Value = "Sheet1Data";
-
-        // Add second sheet with data
-        var sheet2 = workbook.Worksheets.Add("Sheet2");
-        sheet2.Cells["A1"].Value = "Sheet2Data";
-
-        workbook.Save(workbookPath);
-        var result = _tool.Execute("get", workbookPath, cell: "A1", sheetIndex: 1);
-        Assert.Contains("Sheet2Data", result);
-    }
-
-    [Fact]
-    public void Write_WithRange_ShouldWriteMultipleCells()
-    {
-        var workbookPath = CreateExcelWorkbook("test_write_range.xlsx");
-        var outputPath = CreateTestFilePath("test_write_range_output.xlsx");
-        _tool.Execute("write", workbookPath, cell: "A1", value: "MultiCell", outputPath: outputPath);
-
-        // Add more cells
-        _tool.Execute("write", outputPath, cell: "B1", value: "Second", outputPath: outputPath);
-        _tool.Execute("write", outputPath, cell: "C1", value: "Third", outputPath: outputPath);
-        var workbook = new Workbook(outputPath);
-        var worksheet = workbook.Worksheets[0];
-        Assert.Equal("MultiCell", worksheet.Cells["A1"].Value);
-        Assert.Equal("Second", worksheet.Cells["B1"].Value);
-        Assert.Equal("Third", worksheet.Cells["C1"].Value);
-    }
-
-    [Fact]
-    public void Write_WithInvalidCellAddress_ShouldThrowException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_invalid_cell.xlsx");
-        var outputPath = CreateTestFilePath("test_invalid_cell_output.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("write", workbookPath, cell: "InvalidCell", value: "Test", outputPath: outputPath));
-        Assert.Contains("Invalid cell address format", ex.Message);
+        var workbookPath = CreateExcelWorkbook($"test_write_{value.Replace(".", "_")}.xlsx");
+        var outputPath = CreateTestFilePath($"test_write_{value.Replace(".", "_")}_output.xlsx");
+        _tool.Execute("write", workbookPath, cell: "A1", value: value, outputPath: outputPath);
+        using var workbook = new Workbook(outputPath);
+        Assert.NotNull(workbook.Worksheets[0].Cells["A1"].Value);
     }
 
     [Fact]
     public void Write_WithDateValue_ShouldWriteAsDate()
     {
-        var workbookPath = CreateExcelWorkbook("test_date_value.xlsx");
-        var outputPath = CreateTestFilePath("test_date_value_output.xlsx");
+        var workbookPath = CreateExcelWorkbook("test_write_date.xlsx");
+        var outputPath = CreateTestFilePath("test_write_date_output.xlsx");
         _tool.Execute("write", workbookPath, cell: "A1", value: "2024-01-15", outputPath: outputPath);
-        var workbook = new Workbook(outputPath);
-        var worksheet = workbook.Worksheets[0];
-        var cell = worksheet.Cells["A1"];
-        Assert.NotNull(cell.Value);
-        // Excel stores dates as numeric values, verify using DateTimeValue
-        var dateValue = cell.DateTimeValue;
+        using var workbook = new Workbook(outputPath);
+        var dateValue = workbook.Worksheets[0].Cells["A1"].DateTimeValue;
         Assert.Equal(new DateTime(2024, 1, 15), dateValue.Date);
+    }
+
+    [Fact]
+    public void Get_ShouldReturnValue()
+    {
+        var workbookPath = CreateWorkbookWithCellValue("test_get.xlsx", "A1", "TestData");
+        var result = _tool.Execute("get", workbookPath, cell: "A1");
+        var json = JsonDocument.Parse(result);
+        Assert.Equal("TestData", json.RootElement.GetProperty("value").GetString());
+    }
+
+    [Fact]
+    public void Get_WithIncludeFormat_ShouldReturnFormatInfo()
+    {
+        var workbookPath = CreateWorkbookWithFormattedCell("test_get_format.xlsx");
+        var result = _tool.Execute("get", workbookPath, cell: "A1", includeFormat: true);
+        var json = JsonDocument.Parse(result);
+        Assert.True(json.RootElement.TryGetProperty("format", out var format));
+        Assert.True(format.GetProperty("bold").GetBoolean());
     }
 
     [Fact]
     public void Get_WithCalculateFormula_ShouldReturnCalculatedValue()
     {
-        var workbookPath = CreateExcelWorkbook("test_calculate_formula.xlsx");
-        var workbook = new Workbook(workbookPath);
-        workbook.Worksheets[0].Cells["A1"].Value = 10;
-        workbook.Worksheets[0].Cells["B1"].Value = 20;
-        workbook.Worksheets[0].Cells["C1"].Formula = "=A1+B1";
-        workbook.Save(workbookPath);
+        var workbookPath = CreateWorkbookWithFormula("test_get_calc.xlsx");
         var result = _tool.Execute("get", workbookPath, cell: "C1", calculateFormula: true);
-        Assert.Contains("30", result);
+        var json = JsonDocument.Parse(result);
+        Assert.Equal("30", json.RootElement.GetProperty("value").GetString());
+    }
+
+    [Fact]
+    public void Get_WithIncludeFormula_ShouldReturnFormula()
+    {
+        var workbookPath = CreateWorkbookWithFormula("test_get_formula.xlsx");
+        var result = _tool.Execute("get", workbookPath, cell: "C1", includeFormula: true);
+        var json = JsonDocument.Parse(result);
+        Assert.Equal("=A1+B1", json.RootElement.GetProperty("formula").GetString());
+    }
+
+    [SkippableFact]
+    public void Get_FromDifferentSheet_ShouldGetFromCorrectSheet()
+    {
+        SkipInEvaluationMode(AsposeLibraryType.Cells, "Multiple sheet operations may be limited in evaluation mode");
+        var workbookPath = CreateExcelWorkbook("test_get_sheet.xlsx");
+        using (var workbook = new Workbook(workbookPath))
+        {
+            workbook.Worksheets[0].Cells["A1"].Value = "Sheet1Data";
+            var sheet2 = workbook.Worksheets.Add("Sheet2");
+            sheet2.Cells["A1"].Value = "Sheet2Data";
+            workbook.Save(workbookPath);
+        }
+
+        var result = _tool.Execute("get", workbookPath, cell: "A1", sheetIndex: 1);
+        Assert.Contains("Sheet2Data", result);
+    }
+
+    [Fact]
+    public void Edit_WithValue_ShouldUpdateValue()
+    {
+        var workbookPath = CreateWorkbookWithCellValue("test_edit.xlsx", "A1", "Original");
+        var outputPath = CreateTestFilePath("test_edit_output.xlsx");
+        var result = _tool.Execute("edit", workbookPath, cell: "A1", value: "Updated", outputPath: outputPath);
+        Assert.StartsWith("Cell A1 edited", result);
+        using var workbook = new Workbook(outputPath);
+        Assert.Equal("Updated", workbook.Worksheets[0].Cells["A1"].Value);
+    }
+
+    [Fact]
+    public void Edit_WithFormula_ShouldSetFormula()
+    {
+        var workbookPath = CreateWorkbookWithFormula("test_edit_formula.xlsx");
+        var outputPath = CreateTestFilePath("test_edit_formula_output.xlsx");
+        _tool.Execute("edit", workbookPath, cell: "D1", formula: "A1*B1", outputPath: outputPath);
+        using var workbook = new Workbook(outputPath);
+        Assert.Equal("=A1*B1", workbook.Worksheets[0].Cells["D1"].Formula);
+    }
+
+    [Fact]
+    public void Edit_WithClearValue_ShouldClearCell()
+    {
+        var workbookPath = CreateWorkbookWithCellValue("test_edit_clear.xlsx");
+        var outputPath = CreateTestFilePath("test_edit_clear_output.xlsx");
+        _tool.Execute("edit", workbookPath, cell: "A1", clearValue: true, outputPath: outputPath);
+        using var workbook = new Workbook(outputPath);
+        var value = workbook.Worksheets[0].Cells["A1"].Value;
+        Assert.True(value == null || value.ToString() == "");
+    }
+
+    [Fact]
+    public void Clear_WithClearContent_ShouldClearContent()
+    {
+        var workbookPath = CreateWorkbookWithCellValue("test_clear_content.xlsx");
+        var outputPath = CreateTestFilePath("test_clear_content_output.xlsx");
+        var result = _tool.Execute("clear", workbookPath, cell: "A1", clearContent: true, outputPath: outputPath);
+        Assert.StartsWith("Cell A1 cleared", result);
+        using var workbook = new Workbook(outputPath);
+        var value = workbook.Worksheets[0].Cells["A1"].Value;
+        Assert.True(value == null || value.ToString() == "");
+    }
+
+    [Fact]
+    public void Clear_WithClearFormat_ShouldClearFormat()
+    {
+        var workbookPath = CreateWorkbookWithFormattedCell("test_clear_format.xlsx");
+        var outputPath = CreateTestFilePath("test_clear_format_output.xlsx");
+        _tool.Execute("clear", workbookPath, cell: "A1", clearContent: false, clearFormat: true,
+            outputPath: outputPath);
+        using var workbook = new Workbook(outputPath);
+        var style = workbook.Worksheets[0].Cells["A1"].GetStyle();
+        Assert.False(style.Font.IsBold);
+    }
+
+    [Fact]
+    public void Clear_WithBothOptions_ShouldClearContentAndFormat()
+    {
+        var workbookPath = CreateWorkbookWithFormattedCell("test_clear_both.xlsx");
+        var outputPath = CreateTestFilePath("test_clear_both_output.xlsx");
+        _tool.Execute("clear", workbookPath, cell: "A1", clearContent: true, clearFormat: true, outputPath: outputPath);
+        using var workbook = new Workbook(outputPath);
+        var cell = workbook.Worksheets[0].Cells["A1"];
+        var value = cell.Value;
+        Assert.True(value == null || value.ToString() == "");
+        Assert.False(cell.GetStyle().Font.IsBold);
+    }
+
+    [Theory]
+    [InlineData("WRITE")]
+    [InlineData("Write")]
+    [InlineData("write")]
+    public void Operation_ShouldBeCaseInsensitive_Write(string operation)
+    {
+        var workbookPath = CreateExcelWorkbook($"test_case_{operation}.xlsx");
+        var outputPath = CreateTestFilePath($"test_case_{operation}_output.xlsx");
+        var result = _tool.Execute(operation, workbookPath, cell: "A1", value: "Test", outputPath: outputPath);
+        Assert.Contains("written", result); // Verify action was completed
+    }
+
+    [Theory]
+    [InlineData("GET")]
+    [InlineData("Get")]
+    [InlineData("get")]
+    public void Operation_ShouldBeCaseInsensitive_Get(string operation)
+    {
+        var workbookPath = CreateWorkbookWithCellValue($"test_case_get_{operation}.xlsx");
+        var result = _tool.Execute(operation, workbookPath, cell: "A1");
+        Assert.Contains("value", result);
+    }
+
+    [Theory]
+    [InlineData("CLEAR")]
+    [InlineData("Clear")]
+    [InlineData("clear")]
+    public void Operation_ShouldBeCaseInsensitive_Clear(string operation)
+    {
+        var workbookPath = CreateWorkbookWithCellValue($"test_case_clear_{operation}.xlsx");
+        var outputPath = CreateTestFilePath($"test_case_clear_{operation}_output.xlsx");
+        var result = _tool.Execute(operation, workbookPath, cell: "A1", clearContent: true, outputPath: outputPath);
+        Assert.Contains("cleared", result); // Verify action was completed
     }
 
     #endregion
 
-    #region Exception Tests
+    #region Exception
 
     [Fact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
     {
         var workbookPath = CreateExcelWorkbook("test_unknown_op.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("unknown_operation", workbookPath, cell: "A1"));
-
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", workbookPath, cell: "A1"));
         Assert.Contains("Unknown operation", ex.Message);
     }
 
-    [Fact]
-    public void Execute_WithEmptyCell_ShouldThrowArgumentException()
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public void Execute_WithEmptyOrNullCell_ShouldThrowArgumentException(string? cell)
     {
         var workbookPath = CreateExcelWorkbook("test_empty_cell.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("get", workbookPath, cell: ""));
-
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("get", workbookPath, cell: cell));
         Assert.Contains("cell is required", ex.Message);
     }
 
     [Fact]
-    public void Execute_WithNullCell_ShouldThrowArgumentException()
+    public void Execute_WithInvalidCellAddress_ShouldThrowArgumentException()
     {
-        var workbookPath = CreateExcelWorkbook("test_null_cell.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("get", workbookPath, cell: null));
-
-        Assert.Contains("cell is required", ex.Message);
+        var workbookPath = CreateExcelWorkbook("test_invalid_cell.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("get", workbookPath, cell: "InvalidCell"));
+        Assert.Contains("Invalid cell address format", ex.Message);
     }
 
-    [Fact]
-    public void Write_WithoutValue_ShouldThrowArgumentException()
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public void Write_WithEmptyOrNullValue_ShouldThrowArgumentException(string? value)
     {
         var workbookPath = CreateExcelWorkbook("test_write_no_value.xlsx");
-        var outputPath = CreateTestFilePath("test_write_no_value_output.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("write", workbookPath, cell: "A1", value: null, outputPath: outputPath));
-
-        Assert.Contains("value is required", ex.Message);
-    }
-
-    [Fact]
-    public void Write_WithEmptyValue_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_write_empty_value.xlsx");
-        var outputPath = CreateTestFilePath("test_write_empty_value_output.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("write", workbookPath, cell: "A1", value: "", outputPath: outputPath));
-
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("write", workbookPath, cell: "A1", value: value));
         Assert.Contains("value is required", ex.Message);
     }
 
@@ -299,10 +288,7 @@ public class ExcelCellToolTests : ExcelTestBase
     public void Edit_WithNoChanges_ShouldThrowArgumentException()
     {
         var workbookPath = CreateExcelWorkbook("test_edit_no_changes.xlsx");
-        var outputPath = CreateTestFilePath("test_edit_no_changes_output.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("edit", workbookPath, cell: "A1", outputPath: outputPath));
-
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("edit", workbookPath, cell: "A1"));
         Assert.Contains("Either value, formula, or clearValue must be provided", ex.Message);
     }
 
@@ -312,7 +298,6 @@ public class ExcelCellToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbook("test_invalid_sheet.xlsx");
         var ex = Assert.Throws<ArgumentException>(() =>
             _tool.Execute("get", workbookPath, cell: "A1", sheetIndex: 999));
-
         Assert.Contains("out of range", ex.Message);
     }
 
@@ -320,15 +305,25 @@ public class ExcelCellToolTests : ExcelTestBase
     public void Execute_WithNegativeSheetIndex_ShouldThrowArgumentException()
     {
         var workbookPath = CreateExcelWorkbook("test_neg_sheet.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("get", workbookPath, cell: "A1", sheetIndex: -1));
-
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("get", workbookPath, cell: "A1", sheetIndex: -1));
         Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public void Execute_WithEmptyPath_ShouldThrowException()
+    {
+        Assert.Throws<ArgumentException>(() => _tool.Execute("get", "", cell: "A1"));
+    }
+
+    [Fact]
+    public void Execute_WithNoPathOrSessionId_ShouldThrowException()
+    {
+        Assert.ThrowsAny<Exception>(() => _tool.Execute("get", cell: "A1"));
     }
 
     #endregion
 
-    #region Session ID Tests
+    #region Session
 
     [Fact]
     public void Write_WithSessionId_ShouldWriteInMemory()
@@ -336,9 +331,8 @@ public class ExcelCellToolTests : ExcelTestBase
         var workbookPath = CreateExcelWorkbook("test_session_write.xlsx");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("write", sessionId: sessionId, cell: "A1", value: "Session Value");
-        Assert.Contains("A1", result);
-
-        // Verify in-memory workbook has the value
+        Assert.Contains("written", result); // Verify action was completed
+        Assert.Contains("session", result); // Verify session was used
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.Equal("Session Value", workbook.Worksheets[0].Cells["A1"].Value?.ToString());
     }
@@ -346,54 +340,47 @@ public class ExcelCellToolTests : ExcelTestBase
     [Fact]
     public void Get_WithSessionId_ShouldGetFromMemory()
     {
-        var workbookPath = CreateExcelWorkbook("test_session_get.xlsx");
-        var workbook = new Workbook(workbookPath);
-        workbook.Worksheets[0].Cells["A1"].Value = "Test Data";
-        workbook.Save(workbookPath);
-
+        var workbookPath = CreateWorkbookWithCellValue("test_session_get.xlsx", "A1", "Session Data");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("get", sessionId: sessionId, cell: "A1");
-        Assert.Contains("Test Data", result);
+        Assert.Contains("Session Data", result);
     }
 
     [Fact]
     public void Edit_WithSessionId_ShouldEditInMemory()
     {
-        var workbookPath = CreateExcelWorkbook("test_session_edit.xlsx");
-        var workbook = new Workbook(workbookPath);
-        workbook.Worksheets[0].Cells["A1"].Value = "Original";
-        workbook.Save(workbookPath);
-
+        var workbookPath = CreateWorkbookWithCellValue("test_session_edit.xlsx", "A1", "Original");
         var sessionId = OpenSession(workbookPath);
         _tool.Execute("edit", sessionId: sessionId, cell: "A1", value: "Updated");
-
-        // Assert - verify in-memory change
-        var sessionWorkbook = SessionManager.GetDocument<Workbook>(sessionId);
-        Assert.Equal("Updated", sessionWorkbook.Worksheets[0].Cells["A1"].Value?.ToString());
+        var workbook = SessionManager.GetDocument<Workbook>(sessionId);
+        Assert.Equal("Updated", workbook.Worksheets[0].Cells["A1"].Value?.ToString());
     }
 
     [Fact]
     public void Clear_WithSessionId_ShouldClearInMemory()
     {
-        var workbookPath = CreateExcelWorkbook("test_session_clear.xlsx");
-        var workbook = new Workbook(workbookPath);
-        workbook.Worksheets[0].Cells["A1"].Value = "Clear Me";
-        workbook.Save(workbookPath);
-
+        var workbookPath = CreateWorkbookWithCellValue("test_session_clear.xlsx");
         var sessionId = OpenSession(workbookPath);
         _tool.Execute("clear", sessionId: sessionId, cell: "A1", clearContent: true);
-
-        // Assert - verify in-memory change
-        var sessionWorkbook = SessionManager.GetDocument<Workbook>(sessionId);
-        var value = sessionWorkbook.Worksheets[0].Cells["A1"].Value;
+        var workbook = SessionManager.GetDocument<Workbook>(sessionId);
+        var value = workbook.Worksheets[0].Cells["A1"].Value;
         Assert.True(value == null || value.ToString() == "");
     }
 
     [Fact]
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
-        Assert.Throws<KeyNotFoundException>(() =>
-            _tool.Execute("get", sessionId: "invalid_session_id", cell: "A1"));
+        Assert.Throws<KeyNotFoundException>(() => _tool.Execute("get", sessionId: "invalid_session", cell: "A1"));
+    }
+
+    [Fact]
+    public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
+    {
+        var pathWorkbook = CreateWorkbookWithCellValue("test_path_file.xlsx", "A1", "PathData");
+        var sessionWorkbook = CreateWorkbookWithCellValue("test_session_file.xlsx", "A1", "SessionData");
+        var sessionId = OpenSession(sessionWorkbook);
+        var result = _tool.Execute("get", pathWorkbook, sessionId, cell: "A1");
+        Assert.Contains("SessionData", result);
     }
 
     #endregion

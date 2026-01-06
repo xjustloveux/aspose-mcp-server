@@ -18,6 +18,11 @@ namespace AsposeMcpServer.Tools.Word;
 public class WordListTool
 {
     /// <summary>
+    ///     Identity accessor for session isolation
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document session operations
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -26,11 +31,45 @@ public class WordListTool
     ///     Initializes a new instance of the WordListTool class
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document operations</param>
-    public WordListTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation</param>
+    public WordListTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a Word list operation (add_list, add_item, delete_item, edit_item, set_format, get_format,
+    ///     restart_numbering, convert_to_list).
+    /// </summary>
+    /// <param name="operation">
+    ///     The operation to perform: add_list, add_item, delete_item, edit_item, set_format, get_format,
+    ///     restart_numbering, convert_to_list.
+    /// </param>
+    /// <param name="path">Word document file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="items">List items for add_list operation (string array or object array with text/level).</param>
+    /// <param name="listType">List type: bullet, number, custom (default: bullet).</param>
+    /// <param name="bulletChar">Custom bullet character (for custom type).</param>
+    /// <param name="numberFormat">Number format: arabic, roman, letter (default: arabic).</param>
+    /// <param name="continuePrevious">Continue numbering from last list (default: false).</param>
+    /// <param name="text">List item text content.</param>
+    /// <param name="styleName">Style name for the list item.</param>
+    /// <param name="listLevel">List level (0-8).</param>
+    /// <param name="applyStyleIndent">Use style-defined indent (default: true).</param>
+    /// <param name="paragraphIndex">Paragraph index (0-based).</param>
+    /// <param name="level">List level for edit (0-8).</param>
+    /// <param name="numberStyle">Number style: arabic, roman, letter, bullet, none.</param>
+    /// <param name="indentLevel">Indentation level (0-8, each level = 36 points).</param>
+    /// <param name="leftIndent">Left indent in points.</param>
+    /// <param name="firstLineIndent">First line indent in points.</param>
+    /// <param name="startAt">Number to restart at (default: 1).</param>
+    /// <param name="startParagraphIndex">Starting paragraph index (for convert_to_list).</param>
+    /// <param name="endParagraphIndex">Ending paragraph index (for convert_to_list).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get_format operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "word_list")]
     [Description(
         @"Manage lists in Word documents. Supports 8 operations: add_list, add_item, delete_item, edit_item, set_format, get_format, restart_numbering, convert_to_list.
@@ -89,7 +128,7 @@ Usage examples:
         [Description("Ending paragraph index (for convert_to_list)")]
         int? endParagraphIndex = null)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {
@@ -172,7 +211,6 @@ Usage examples:
             }
         }
 
-        // Add list items
         foreach (var item in parsedItems)
         {
             builder.ListFormat.List = list;
@@ -180,7 +218,6 @@ Usage examples:
             builder.Writeln(item.text);
         }
 
-        // Remove list formatting after adding items
         builder.ListFormat.RemoveNumbers();
         ctx.Save(outputPath);
 

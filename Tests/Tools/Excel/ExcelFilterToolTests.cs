@@ -14,67 +14,46 @@ public class ExcelFilterToolTests : ExcelTestBase
         _tool = new ExcelFilterTool(SessionManager);
     }
 
-    #region General Tests
-
-    #region All Operators Test
-
-    [Theory]
-    [InlineData("Equal")]
-    [InlineData("NotEqual")]
-    [InlineData("GreaterThan")]
-    [InlineData("GreaterOrEqual")]
-    [InlineData("LessThan")]
-    [InlineData("LessOrEqual")]
-    [InlineData("Contains")]
-    [InlineData("NotContains")]
-    [InlineData("BeginsWith")]
-    [InlineData("EndsWith")]
-    public void Filter_AllOperators_ShouldWork(string operatorType)
+    private string CreateWorkbookWithFilter(string fileName, string range = "A1:C5")
     {
-        var workbookPath = CreateExcelWorkbookWithData($"test_op_{operatorType}.xlsx", 5, 2);
-        var outputPath = CreateTestFilePath($"test_op_{operatorType}_output.xlsx");
-
-        var result = _tool.Execute(
-            "filter",
-            workbookPath,
-            range: "A1:B5",
-            columnIndex: 0,
-            criteria: "test",
-            filterOperator: operatorType,
-            outputPath: outputPath);
-
-        Assert.Contains("Filter applied", result);
-        Assert.Contains($"operator: {operatorType}", result);
+        var path = CreateExcelWorkbookWithData(fileName);
+        using var workbook = new Workbook(path);
+        workbook.Worksheets[0].AutoFilter.Range = range;
+        workbook.Save(path);
+        return path;
     }
 
-    #endregion
+    private string CreateWorkbookWithFilterData(string fileName)
+    {
+        var path = CreateExcelWorkbook(fileName);
+        using var workbook = new Workbook(path);
+        var ws = workbook.Worksheets[0];
+        ws.Cells["A1"].Value = "Status";
+        ws.Cells["A2"].Value = "Active";
+        ws.Cells["A3"].Value = "Inactive";
+        ws.Cells["A4"].Value = "Active";
+        ws.Cells["A5"].Value = "Pending";
+        workbook.Save(path);
+        return path;
+    }
 
-    #region Apply Tests
+    #region General
 
     [Fact]
-    public void ApplyFilter_ShouldApplyAutoFilter()
+    public void Apply_ShouldApplyAutoFilter()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_apply_filter.xlsx");
-        var outputPath = CreateTestFilePath("test_apply_filter_output.xlsx");
-
-        var result = _tool.Execute(
-            "apply",
-            workbookPath,
-            range: "A1:C5",
-            outputPath: outputPath);
-
-        Assert.Contains("Auto filter applied", result);
-        Assert.Contains("A1:C5", result);
-
+        var workbookPath = CreateExcelWorkbookWithData("test_apply.xlsx");
+        var outputPath = CreateTestFilePath("test_apply_output.xlsx");
+        var result = _tool.Execute("apply", workbookPath, range: "A1:C5", outputPath: outputPath);
+        Assert.Contains("Auto filter applied to range A1:C5", result);
         using var workbook = new Workbook(outputPath);
-        var worksheet = workbook.Worksheets[0];
-        Assert.False(string.IsNullOrEmpty(worksheet.AutoFilter.Range));
+        Assert.False(string.IsNullOrEmpty(workbook.Worksheets[0].AutoFilter.Range));
     }
 
     [Fact]
-    public void ApplyFilter_WithSheetIndex_ShouldApplyToCorrectSheet()
+    public void Apply_WithSheetIndex_ShouldApplyToCorrectSheet()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_apply_filter_sheet.xlsx");
+        var workbookPath = CreateExcelWorkbookWithData("test_apply_sheet.xlsx");
         using (var wb = new Workbook(workbookPath))
         {
             wb.Worksheets.Add("Sheet2");
@@ -83,89 +62,49 @@ public class ExcelFilterToolTests : ExcelTestBase
             wb.Save(workbookPath);
         }
 
-        var outputPath = CreateTestFilePath("test_apply_filter_sheet_output.xlsx");
-
-        var result = _tool.Execute(
-            "apply",
-            workbookPath,
-            sheetIndex: 1,
-            range: "A1:A2",
-            outputPath: outputPath);
-
-        Assert.Contains("sheet 1", result);
+        var outputPath = CreateTestFilePath("test_apply_sheet_output.xlsx");
+        var result = _tool.Execute("apply", workbookPath, sheetIndex: 1, range: "A1:A2", outputPath: outputPath);
+        Assert.Contains("Auto filter applied to range A1:A2", result);
+        using var workbook = new Workbook(outputPath);
+        Assert.False(string.IsNullOrEmpty(workbook.Worksheets[1].AutoFilter.Range));
     }
 
-    #endregion
-
-    #region Remove Tests
-
     [Fact]
-    public void RemoveFilter_ShouldRemoveAutoFilter()
+    public void Remove_ShouldRemoveAutoFilter()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_remove_filter.xlsx");
-        using (var wb = new Workbook(workbookPath))
-        {
-            wb.Worksheets[0].AutoFilter.Range = "A1:C5";
-            wb.Save(workbookPath);
-        }
-
-        var outputPath = CreateTestFilePath("test_remove_filter_output.xlsx");
-
-        var result = _tool.Execute(
-            "remove",
-            workbookPath,
-            outputPath: outputPath);
-
+        var workbookPath = CreateWorkbookWithFilter("test_remove.xlsx");
+        var outputPath = CreateTestFilePath("test_remove_output.xlsx");
+        var result = _tool.Execute("remove", workbookPath, outputPath: outputPath);
         Assert.Contains("Auto filter removed", result);
-
-        using var resultWorkbook = new Workbook(outputPath);
-        Assert.True(string.IsNullOrEmpty(resultWorkbook.Worksheets[0].AutoFilter.Range));
+        using var workbook = new Workbook(outputPath);
+        Assert.True(string.IsNullOrEmpty(workbook.Worksheets[0].AutoFilter.Range));
     }
 
     [Fact]
-    public void RemoveFilter_NoExistingFilter_ShouldSucceed()
+    public void Remove_NoExistingFilter_ShouldSucceed()
     {
         var workbookPath = CreateExcelWorkbookWithData("test_remove_no_filter.xlsx", 3);
         var outputPath = CreateTestFilePath("test_remove_no_filter_output.xlsx");
-
-        var result = _tool.Execute(
-            "remove",
-            workbookPath,
-            outputPath: outputPath);
-
+        var result = _tool.Execute("remove", workbookPath, outputPath: outputPath);
         Assert.Contains("Auto filter removed", result);
     }
-
-    #endregion
-
-    #region Filter by Value Tests
 
     [Fact]
     public void Filter_ByValue_ShouldApplyCriteria()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_filter_value.xlsx");
-        using (var wb = new Workbook(workbookPath))
-        {
-            wb.Worksheets[0].Cells["A1"].Value = "Status";
-            wb.Worksheets[0].Cells["A2"].Value = "Active";
-            wb.Worksheets[0].Cells["A3"].Value = "Inactive";
-            wb.Worksheets[0].Cells["A4"].Value = "Active";
-            wb.Worksheets[0].Cells["A5"].Value = "Pending";
-            wb.Save(workbookPath);
-        }
-
+        var workbookPath = CreateWorkbookWithFilterData("test_filter_value.xlsx");
         var outputPath = CreateTestFilePath("test_filter_value_output.xlsx");
-
-        var result = _tool.Execute(
-            "filter",
-            workbookPath,
-            range: "A1:A5",
-            columnIndex: 0,
-            criteria: "Active",
+        var result = _tool.Execute("filter", workbookPath, range: "A1:A5", columnIndex: 0, criteria: "Active",
             outputPath: outputPath);
-
         Assert.Contains("Filter applied to column 0", result);
-        Assert.Contains("criteria 'Active'", result);
+
+        using var resultWorkbook = new Workbook(outputPath);
+        var ws = resultWorkbook.Worksheets[0];
+        Assert.False(ws.Cells.Rows[0].IsHidden, "Header row should be visible");
+        Assert.False(ws.Cells.Rows[1].IsHidden, "Row with 'Active' should be visible");
+        Assert.True(ws.Cells.Rows[2].IsHidden, "Row with 'Inactive' should be hidden");
+        Assert.False(ws.Cells.Rows[3].IsHidden, "Row with 'Active' should be visible");
+        Assert.True(ws.Cells.Rows[4].IsHidden, "Row with 'Pending' should be hidden");
     }
 
     [Fact]
@@ -183,18 +122,17 @@ public class ExcelFilterToolTests : ExcelTestBase
         }
 
         var outputPath = CreateTestFilePath("test_filter_gt_output.xlsx");
-
-        var result = _tool.Execute(
-            "filter",
-            workbookPath,
-            range: "A1:B5",
-            columnIndex: 1,
-            criteria: "100",
-            filterOperator: "GreaterThan",
-            outputPath: outputPath);
-
+        var result = _tool.Execute("filter", workbookPath, range: "A1:B5", columnIndex: 1, criteria: "100",
+            filterOperator: "GreaterThan", outputPath: outputPath);
         Assert.Contains("Filter applied to column 1", result);
-        Assert.Contains("operator: GreaterThan", result);
+
+        using var resultWorkbook = new Workbook(outputPath);
+        var ws = resultWorkbook.Worksheets[0];
+        Assert.False(ws.Cells.Rows[0].IsHidden, "Header row should be visible");
+        Assert.True(ws.Cells.Rows[1].IsHidden, "Row with Amount=50 should be hidden");
+        Assert.False(ws.Cells.Rows[2].IsHidden, "Row with Amount=150 should be visible");
+        Assert.True(ws.Cells.Rows[3].IsHidden, "Row with Amount=75 should be hidden");
+        Assert.False(ws.Cells.Rows[4].IsHidden, "Row with Amount=200 should be visible");
     }
 
     [Fact]
@@ -212,174 +150,184 @@ public class ExcelFilterToolTests : ExcelTestBase
         }
 
         var outputPath = CreateTestFilePath("test_filter_contains_output.xlsx");
+        var result = _tool.Execute("filter", workbookPath, range: "A1:A5", columnIndex: 0, criteria: "Smith",
+            filterOperator: "Contains", outputPath: outputPath);
+        Assert.Contains("Filter applied to column 0", result);
 
-        var result = _tool.Execute(
-            "filter",
-            workbookPath,
-            range: "A1:A5",
-            columnIndex: 0,
-            criteria: "Smith",
-            filterOperator: "Contains",
-            outputPath: outputPath);
+        using var resultWorkbook = new Workbook(outputPath);
+        var ws = resultWorkbook.Worksheets[0];
+        Assert.False(ws.Cells.Rows[0].IsHidden, "Header row should be visible");
+        Assert.False(ws.Cells.Rows[1].IsHidden, "Row with 'John Smith' should be visible");
+        Assert.True(ws.Cells.Rows[2].IsHidden, "Row with 'Jane Doe' should be hidden");
+        Assert.True(ws.Cells.Rows[3].IsHidden, "Row with 'Bob Johnson' should be hidden");
+        Assert.False(ws.Cells.Rows[4].IsHidden, "Row with 'Alice Smith' should be visible");
+    }
 
-        Assert.Contains("Filter applied", result);
-        Assert.Contains("operator: Contains", result);
+    [Theory]
+    [InlineData("Equal")]
+    [InlineData("NotEqual")]
+    [InlineData("GreaterThan")]
+    [InlineData("GreaterOrEqual")]
+    [InlineData("LessThan")]
+    [InlineData("LessOrEqual")]
+    [InlineData("Contains")]
+    [InlineData("NotContains")]
+    [InlineData("BeginsWith")]
+    [InlineData("EndsWith")]
+    public void Filter_AllOperators_ShouldWork(string operatorType)
+    {
+        var workbookPath = CreateExcelWorkbookWithData($"test_op_{operatorType}.xlsx", 5, 2);
+        var outputPath = CreateTestFilePath($"test_op_{operatorType}_output.xlsx");
+        var result = _tool.Execute("filter", workbookPath, range: "A1:B5", columnIndex: 0, criteria: "test",
+            filterOperator: operatorType, outputPath: outputPath);
+        Assert.Contains("Filter applied to column 0", result);
     }
 
     [Fact]
-    public void Filter_InvalidOperator_ShouldThrowException()
+    public void GetStatus_WithFilter_ShouldReturnEnabled()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_filter_invalid_op.xlsx", 3, 2);
-
-        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "filter",
-            workbookPath,
-            range: "A1:A3",
-            columnIndex: 0,
-            criteria: "test",
-            filterOperator: "InvalidOperator"));
-        Assert.Contains("Unsupported filter operator", ex.Message);
-    }
-
-    #endregion
-
-    #region Get Status Tests
-
-    [Fact]
-    public void GetFilterStatus_WithFilter_ShouldReturnEnabled()
-    {
-        var workbookPath = CreateExcelWorkbookWithData("test_get_status_enabled.xlsx");
-        using (var wb = new Workbook(workbookPath))
-        {
-            wb.Worksheets[0].AutoFilter.Range = "A1:C5";
-            wb.Save(workbookPath);
-        }
-
-        var result = _tool.Execute(
-            "get_status",
-            workbookPath);
-
-        Assert.NotNull(result);
+        var workbookPath = CreateWorkbookWithFilter("test_get_status_enabled.xlsx");
+        var result = _tool.Execute("get_status", workbookPath);
         var json = JsonDocument.Parse(result);
         Assert.True(json.RootElement.GetProperty("isFilterEnabled").GetBoolean());
         Assert.Contains("A1:C5", json.RootElement.GetProperty("filterRange").GetString());
     }
 
     [Fact]
-    public void GetFilterStatus_WithoutFilter_ShouldReturnDisabled()
+    public void GetStatus_WithoutFilter_ShouldReturnDisabled()
     {
         var workbookPath = CreateExcelWorkbookWithData("test_get_status_disabled.xlsx", 3);
-
-        var result = _tool.Execute(
-            "get_status",
-            workbookPath);
-
+        var result = _tool.Execute("get_status", workbookPath);
         var json = JsonDocument.Parse(result);
         Assert.False(json.RootElement.GetProperty("isFilterEnabled").GetBoolean());
         Assert.Contains("not enabled", json.RootElement.GetProperty("status").GetString());
     }
 
     [Fact]
-    public void GetFilterStatus_ShouldIncludeWorksheetName()
+    public void GetStatus_ShouldIncludeWorksheetName()
     {
         var workbookPath = CreateExcelWorkbookWithData("test_get_status_name.xlsx", 3);
-
-        var result = _tool.Execute(
-            "get_status",
-            workbookPath);
-
+        var result = _tool.Execute("get_status", workbookPath);
         var json = JsonDocument.Parse(result);
         Assert.True(json.RootElement.TryGetProperty("worksheetName", out _));
     }
 
-    #endregion
+    [Theory]
+    [InlineData("APPLY")]
+    [InlineData("Apply")]
+    [InlineData("apply")]
+    public void Operation_ShouldBeCaseInsensitive_Apply(string operation)
+    {
+        var workbookPath = CreateExcelWorkbookWithData($"test_case_{operation}.xlsx");
+        var outputPath = CreateTestFilePath($"test_case_{operation}_output.xlsx");
+        var result = _tool.Execute(operation, workbookPath, range: "A1:C5", outputPath: outputPath);
+        Assert.Contains("Auto filter applied to range A1:C5", result);
+    }
+
+    [Theory]
+    [InlineData("REMOVE")]
+    [InlineData("Remove")]
+    [InlineData("remove")]
+    public void Operation_ShouldBeCaseInsensitive_Remove(string operation)
+    {
+        var workbookPath = CreateWorkbookWithFilter($"test_case_remove_{operation}.xlsx");
+        var outputPath = CreateTestFilePath($"test_case_remove_{operation}_output.xlsx");
+        var result = _tool.Execute(operation, workbookPath, outputPath: outputPath);
+        Assert.Contains("Auto filter removed", result);
+    }
+
+    [Theory]
+    [InlineData("GET_STATUS")]
+    [InlineData("Get_Status")]
+    [InlineData("get_status")]
+    public void Operation_ShouldBeCaseInsensitive_GetStatus(string operation)
+    {
+        var workbookPath = CreateExcelWorkbookWithData($"test_case_get_{operation}.xlsx");
+        var result = _tool.Execute(operation, workbookPath);
+        Assert.Contains("\"isFilterEnabled\":", result);
+    }
 
     #endregion
 
-    #region Exception Tests
+    #region Exception
 
     [Fact]
-    public void UnknownOperation_ShouldThrowException()
+    public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
     {
         var workbookPath = CreateExcelWorkbookWithData("test_unknown_op.xlsx");
-
-        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "unknown",
-            workbookPath));
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", workbookPath));
         Assert.Contains("Unknown operation", ex.Message);
     }
 
     [Fact]
-    public void InvalidSheetIndex_ShouldThrowException()
+    public void Apply_WithInvalidSheetIndex_ShouldThrowArgumentException()
     {
         var workbookPath = CreateExcelWorkbookWithData("test_invalid_sheet.xlsx");
-
-        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "apply",
-            workbookPath,
-            sheetIndex: 99,
-            range: "A1:C5"));
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("apply", workbookPath, sheetIndex: 99, range: "A1:C5"));
         Assert.Contains("out of range", ex.Message);
     }
 
     [Fact]
-    public void Filter_MissingRange_ShouldThrowException()
+    public void Apply_WithMissingRange_ShouldThrowArgumentException()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_filter_missing_range.xlsx");
-
-        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "filter",
-            workbookPath,
-            columnIndex: 0,
-            criteria: "test"));
+        var workbookPath = CreateExcelWorkbookWithData("test_apply_missing_range.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("apply", workbookPath));
         Assert.Contains("range", ex.Message.ToLower());
     }
 
     [Fact]
-    public void Apply_MissingRange_ShouldThrowException()
+    public void Filter_WithMissingRange_ShouldThrowArgumentException()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_apply_missing_range.xlsx");
-
-        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "apply",
-            workbookPath));
+        var workbookPath = CreateExcelWorkbookWithData("test_filter_missing_range.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("filter", workbookPath, columnIndex: 0, criteria: "test"));
         Assert.Contains("range", ex.Message.ToLower());
+    }
+
+    [Fact]
+    public void Filter_WithMissingCriteria_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateExcelWorkbookWithData("test_filter_missing_criteria.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("filter", workbookPath, range: "A1:A5", columnIndex: 0));
+        Assert.Contains("criteria", ex.Message.ToLower());
+    }
+
+    [Fact]
+    public void Filter_WithInvalidOperator_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateExcelWorkbookWithData("test_filter_invalid_op.xlsx", 3, 2);
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("filter", workbookPath, range: "A1:A3", columnIndex: 0, criteria: "test",
+                filterOperator: "InvalidOperator"));
+        Assert.Contains("Unsupported filter operator", ex.Message);
+    }
+
+    [Fact]
+    public void Execute_WithEmptyPath_ShouldThrowException()
+    {
+        Assert.Throws<ArgumentException>(() => _tool.Execute("get_status", ""));
+    }
+
+    [Fact]
+    public void Execute_WithNoPathOrSessionId_ShouldThrowException()
+    {
+        Assert.ThrowsAny<Exception>(() => _tool.Execute("get_status"));
     }
 
     #endregion
 
-    #region Session ID Tests
-
-    [Fact]
-    public void GetStatus_WithSessionId_ShouldGetFromMemory()
-    {
-        var workbookPath = CreateExcelWorkbookWithData("test_session_get_status.xlsx");
-        using (var wb = new Workbook(workbookPath))
-        {
-            wb.Worksheets[0].AutoFilter.Range = "A1:C5";
-            wb.Save(workbookPath);
-        }
-
-        var sessionId = OpenSession(workbookPath);
-        var result = _tool.Execute(
-            "get_status",
-            sessionId: sessionId);
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.GetProperty("isFilterEnabled").GetBoolean());
-    }
+    #region Session
 
     [Fact]
     public void Apply_WithSessionId_ShouldModifyInMemory()
     {
         var workbookPath = CreateExcelWorkbookWithData("test_session_apply.xlsx");
         var sessionId = OpenSession(workbookPath);
-        var result = _tool.Execute(
-            "apply",
-            sessionId: sessionId,
-            range: "A1:C5");
-        Assert.Contains("Auto filter applied", result);
-
-        // Verify in-memory workbook has the filter
+        var result = _tool.Execute("apply", sessionId: sessionId, range: "A1:C5");
+        Assert.Contains("Auto filter applied to range A1:C5", result);
+        Assert.Contains("session", result);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.False(string.IsNullOrEmpty(workbook.Worksheets[0].AutoFilter.Range));
     }
@@ -387,20 +335,11 @@ public class ExcelFilterToolTests : ExcelTestBase
     [Fact]
     public void Remove_WithSessionId_ShouldModifyInMemory()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_session_remove.xlsx");
-        using (var wb = new Workbook(workbookPath))
-        {
-            wb.Worksheets[0].AutoFilter.Range = "A1:C5";
-            wb.Save(workbookPath);
-        }
-
+        var workbookPath = CreateWorkbookWithFilter("test_session_remove.xlsx");
         var sessionId = OpenSession(workbookPath);
-        var result = _tool.Execute(
-            "remove",
-            sessionId: sessionId);
+        var result = _tool.Execute("remove", sessionId: sessionId);
         Assert.Contains("Auto filter removed", result);
-
-        // Verify in-memory workbook has no filter
+        Assert.Contains("session", result);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.True(string.IsNullOrEmpty(workbook.Worksheets[0].AutoFilter.Range));
     }
@@ -408,34 +347,45 @@ public class ExcelFilterToolTests : ExcelTestBase
     [Fact]
     public void Filter_WithSessionId_ShouldApplyInMemory()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_session_filter.xlsx");
-        using (var wb = new Workbook(workbookPath))
-        {
-            wb.Worksheets[0].Cells["A1"].Value = "Status";
-            wb.Worksheets[0].Cells["A2"].Value = "Active";
-            wb.Worksheets[0].Cells["A3"].Value = "Inactive";
-            wb.Save(workbookPath);
-        }
-
+        var workbookPath = CreateWorkbookWithFilterData("test_session_filter.xlsx");
         var sessionId = OpenSession(workbookPath);
-        var result = _tool.Execute(
-            "filter",
-            sessionId: sessionId,
-            range: "A1:A3",
-            columnIndex: 0,
-            criteria: "Active");
-        Assert.Contains("Filter applied", result);
-
-        // Verify in-memory workbook has the filter
+        var result = _tool.Execute("filter", sessionId: sessionId, range: "A1:A5", columnIndex: 0, criteria: "Active");
+        Assert.Contains("Filter applied to column 0", result);
+        Assert.Contains("session", result);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.False(string.IsNullOrEmpty(workbook.Worksheets[0].AutoFilter.Range));
     }
 
     [Fact]
+    public void GetStatus_WithSessionId_ShouldGetFromMemory()
+    {
+        var workbookPath = CreateWorkbookWithFilter("test_session_get_status.xlsx");
+        var sessionId = OpenSession(workbookPath);
+        var result = _tool.Execute("get_status", sessionId: sessionId);
+        var json = JsonDocument.Parse(result);
+        Assert.True(json.RootElement.GetProperty("isFilterEnabled").GetBoolean());
+    }
+
+    [Fact]
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
-        Assert.Throws<KeyNotFoundException>(() =>
-            _tool.Execute("get_status", sessionId: "invalid_session_id"));
+        Assert.Throws<KeyNotFoundException>(() => _tool.Execute("get_status", sessionId: "invalid_session"));
+    }
+
+    [Fact]
+    public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
+    {
+        var pathWorkbook = CreateExcelWorkbookWithData("test_path_file.xlsx");
+        var sessionWorkbook = CreateWorkbookWithFilter("test_session_file.xlsx");
+        using (var wb = new Workbook(sessionWorkbook))
+        {
+            wb.Worksheets[0].Name = "SessionSheet";
+            wb.Save(sessionWorkbook);
+        }
+
+        var sessionId = OpenSession(sessionWorkbook);
+        var result = _tool.Execute("get_status", pathWorkbook, sessionId);
+        Assert.Contains("SessionSheet", result);
     }
 
     #endregion

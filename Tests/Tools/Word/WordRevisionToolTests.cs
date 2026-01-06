@@ -13,7 +13,7 @@ public class WordRevisionToolTests : WordTestBase
         _tool = new WordRevisionTool(SessionManager);
     }
 
-    #region General Tests
+    #region General
 
     [Fact]
     public void GetRevisions_ShouldReturnRevisions()
@@ -29,8 +29,8 @@ public class WordRevisionToolTests : WordTestBase
         var result = _tool.Execute("get_revisions", docPath);
         Assert.NotNull(result);
         Assert.NotEmpty(result);
-        Assert.Contains("\"revisions\"", result); // JSON format
-        Assert.Contains("\"index\"", result); // Has index property
+        Assert.Contains("\"revisions\"", result);
+        Assert.Contains("\"index\"", result);
     }
 
     [Fact]
@@ -38,7 +38,7 @@ public class WordRevisionToolTests : WordTestBase
     {
         var docPath = CreateWordDocumentWithContent("test_no_revisions.docx", "Plain text");
         var result = _tool.Execute("get_revisions", docPath);
-        Assert.Contains("\"count\": 0", result); // JSON format
+        Assert.Contains("\"count\": 0", result);
     }
 
     [Fact]
@@ -59,7 +59,7 @@ public class WordRevisionToolTests : WordTestBase
         var result = _tool.Execute("accept_all", docPath, outputPath: outputPath);
         var resultDoc = new Document(outputPath);
         Assert.Equal(0, resultDoc.Revisions.Count);
-        Assert.Contains("Accepted", result);
+        Assert.StartsWith("Accepted", result);
     }
 
     [Fact]
@@ -77,7 +77,7 @@ public class WordRevisionToolTests : WordTestBase
         var result = _tool.Execute("reject_all", docPath, outputPath: outputPath);
         var resultDoc = new Document(outputPath);
         Assert.Equal(0, resultDoc.Revisions.Count);
-        Assert.Contains("Rejected", result);
+        Assert.StartsWith("Rejected", result);
     }
 
     [Fact]
@@ -118,21 +118,6 @@ public class WordRevisionToolTests : WordTestBase
     }
 
     [Fact]
-    public void ManageRevision_WithInvalidIndex_ShouldThrowException()
-    {
-        var docPath = CreateWordDocument("test_manage_invalid_index.docx");
-        var doc = new Document(docPath);
-        doc.StartTrackRevisions("Test Author");
-        var builder = new DocumentBuilder(doc);
-        builder.Writeln("Single revision");
-        doc.StopTrackRevisions();
-        doc.Save(docPath);
-        var exception = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("manage", docPath, revisionIndex: 99, action: "accept"));
-        Assert.Contains("revisionIndex must be between", exception.Message);
-    }
-
-    [Fact]
     public void ManageRevision_WithNoRevisions_ShouldReturnMessage()
     {
         var docPath = CreateWordDocumentWithContent("test_manage_no_rev.docx", "Plain text");
@@ -149,7 +134,7 @@ public class WordRevisionToolTests : WordTestBase
         var result = _tool.Execute("compare", outputPath: outputPath,
             originalPath: originalPath, revisedPath: revisedPath);
         Assert.True(File.Exists(outputPath));
-        Assert.Contains("Comparison completed", result);
+        Assert.StartsWith("Comparison completed", result);
         Assert.Contains("difference(s) found", result);
     }
 
@@ -163,12 +148,134 @@ public class WordRevisionToolTests : WordTestBase
             originalPath: originalPath, revisedPath: revisedPath,
             ignoreFormatting: true, ignoreComments: true);
         Assert.True(File.Exists(outputPath));
-        Assert.Contains("Comparison completed", result);
+        Assert.StartsWith("Comparison completed", result);
+    }
+
+    [Theory]
+    [InlineData("GET_REVISIONS")]
+    [InlineData("GeT_ReViSiOnS")]
+    [InlineData("get_revisions")]
+    public void Execute_GetRevisionsOperationIsCaseInsensitive(string operation)
+    {
+        var docPath = CreateWordDocumentWithContent($"test_case_{operation.Replace("_", "")}.docx", "Content");
+        var result = _tool.Execute(operation, docPath);
+        Assert.Contains("\"revisions\"", result);
+    }
+
+    [Theory]
+    [InlineData("ACCEPT_ALL")]
+    [InlineData("AccEpT_aLl")]
+    [InlineData("accept_all")]
+    public void Execute_AcceptAllOperationIsCaseInsensitive(string operation)
+    {
+        var docPath = CreateWordDocument($"test_accept_{operation.Replace("_", "")}.docx");
+        var doc = new Document(docPath);
+        doc.StartTrackRevisions("Author");
+        var builder = new DocumentBuilder(doc);
+        builder.Writeln("Revision");
+        doc.StopTrackRevisions();
+        doc.Save(docPath);
+
+        var outputPath = CreateTestFilePath($"test_accept_{operation.Replace("_", "")}_output.docx");
+        var result = _tool.Execute(operation, docPath, outputPath: outputPath);
+        Assert.StartsWith("Accepted", result);
+    }
+
+    [Theory]
+    [InlineData("REJECT_ALL")]
+    [InlineData("ReJeCt_AlL")]
+    [InlineData("reject_all")]
+    public void Execute_RejectAllOperationIsCaseInsensitive(string operation)
+    {
+        var docPath = CreateWordDocument($"test_reject_{operation.Replace("_", "")}.docx");
+        var doc = new Document(docPath);
+        doc.StartTrackRevisions("Author");
+        var builder = new DocumentBuilder(doc);
+        builder.Writeln("Revision");
+        doc.StopTrackRevisions();
+        doc.Save(docPath);
+
+        var outputPath = CreateTestFilePath($"test_reject_{operation.Replace("_", "")}_output.docx");
+        var result = _tool.Execute(operation, docPath, outputPath: outputPath);
+        Assert.StartsWith("Rejected", result);
+    }
+
+    [Theory]
+    [InlineData("MANAGE")]
+    [InlineData("MaNaGe")]
+    [InlineData("manage")]
+    public void Execute_ManageOperationIsCaseInsensitive(string operation)
+    {
+        var docPath = CreateWordDocument($"test_manage_{operation}.docx");
+        var doc = new Document(docPath);
+        doc.StartTrackRevisions("Author");
+        var builder = new DocumentBuilder(doc);
+        builder.Writeln("Revision");
+        doc.StopTrackRevisions();
+        doc.Save(docPath);
+
+        var outputPath = CreateTestFilePath($"test_manage_{operation}_output.docx");
+        var result = _tool.Execute(operation, docPath, outputPath: outputPath,
+            revisionIndex: 0, action: "accept");
+        Assert.Contains("accepted", result);
+    }
+
+    [Theory]
+    [InlineData("COMPARE")]
+    [InlineData("CoMpArE")]
+    [InlineData("compare")]
+    public void Execute_CompareOperationIsCaseInsensitive(string operation)
+    {
+        var originalPath = CreateWordDocumentWithContent($"test_compare_{operation}_orig.docx", "Original");
+        var revisedPath = CreateWordDocumentWithContent($"test_compare_{operation}_rev.docx", "Revised");
+        var outputPath = CreateTestFilePath($"test_compare_{operation}_output.docx");
+        var result = _tool.Execute(operation, outputPath: outputPath,
+            originalPath: originalPath, revisedPath: revisedPath);
+        Assert.StartsWith("Comparison completed", result);
+    }
+
+    [Theory]
+    [InlineData("ACCEPT")]
+    [InlineData("accept")]
+    public void ManageRevision_AcceptActionIsCaseInsensitive(string action)
+    {
+        var docPath = CreateWordDocument($"test_action_{action}.docx");
+        var doc = new Document(docPath);
+        doc.StartTrackRevisions("Author");
+        var builder = new DocumentBuilder(doc);
+        builder.Writeln("Revision");
+        doc.StopTrackRevisions();
+        doc.Save(docPath);
+
+        var outputPath = CreateTestFilePath($"test_action_{action}_output.docx");
+        var result = _tool.Execute("manage", docPath, outputPath: outputPath,
+            revisionIndex: 0, action: action);
+        Assert.Contains("[0]", result);
+    }
+
+    [Theory]
+    [InlineData("REJECT")]
+    [InlineData("RejECT")]
+    [InlineData("reject")]
+    public void ManageRevision_RejectActionIsCaseInsensitive(string action)
+    {
+        var docPath = CreateWordDocument($"test_action_reject_{action}.docx");
+        var doc = new Document(docPath);
+        doc.StartTrackRevisions("Author");
+        var builder = new DocumentBuilder(doc);
+        builder.Writeln("Revision");
+        doc.StopTrackRevisions();
+        doc.Save(docPath);
+
+        var outputPath = CreateTestFilePath($"test_action_reject_{action}_output.docx");
+        var result = _tool.Execute("manage", docPath, outputPath: outputPath,
+            revisionIndex: 0, action: action);
+        Assert.Contains("[0]", result);
     }
 
     #endregion
 
-    #region Exception Tests
+    #region Exception
 
     [Fact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
@@ -198,6 +305,69 @@ public class WordRevisionToolTests : WordTestBase
     }
 
     [Fact]
+    public void ManageRevision_WithInvalidAction_ShouldThrowException()
+    {
+        var docPath = CreateWordDocument("test_manage_invalid_action.docx");
+        var doc = new Document(docPath);
+        doc.StartTrackRevisions("Author");
+        var builder = new DocumentBuilder(doc);
+        builder.Writeln("Revision");
+        doc.StopTrackRevisions();
+        doc.Save(docPath);
+
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("manage", docPath, revisionIndex: 0, action: "invalid_action"));
+        Assert.Contains("action must be 'accept' or 'reject'", ex.Message);
+    }
+
+    [Fact]
+    public void ManageRevision_WithInvalidIndex_ShouldThrowException()
+    {
+        var docPath = CreateWordDocument("test_manage_invalid_index.docx");
+        var doc = new Document(docPath);
+        doc.StartTrackRevisions("Test Author");
+        var builder = new DocumentBuilder(doc);
+        builder.Writeln("Single revision");
+        doc.StopTrackRevisions();
+        doc.Save(docPath);
+        var exception = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("manage", docPath, revisionIndex: 99, action: "accept"));
+        Assert.Contains("revisionIndex must be between", exception.Message);
+    }
+
+    [Fact]
+    public void ManageRevision_WithNegativeRevisionIndex_ShouldThrowException()
+    {
+        var docPath = CreateWordDocument("test_manage_neg_index.docx");
+        var doc = new Document(docPath);
+        doc.StartTrackRevisions("Author");
+        var builder = new DocumentBuilder(doc);
+        builder.Writeln("Revision");
+        doc.StopTrackRevisions();
+        doc.Save(docPath);
+
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("manage", docPath, revisionIndex: -1, action: "accept"));
+        Assert.Contains("revisionIndex must be between", ex.Message);
+    }
+
+    [Fact]
+    public void ManageRevision_WithoutRevisionIndex_ShouldThrowException()
+    {
+        var docPath = CreateWordDocument("test_manage_no_index.docx");
+        var doc = new Document(docPath);
+        doc.StartTrackRevisions("Author");
+        var builder = new DocumentBuilder(doc);
+        builder.Writeln("Revision");
+        doc.StopTrackRevisions();
+        doc.Save(docPath);
+
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("manage", docPath, action: "accept"));
+        Assert.Contains("revisionIndex is required", ex.Message);
+    }
+
+    [Fact]
     public void Compare_WithMissingOriginalPath_ShouldThrowArgumentException()
     {
         var revisedPath = CreateWordDocumentWithContent("test_compare_missing.docx", "Content");
@@ -208,9 +378,31 @@ public class WordRevisionToolTests : WordTestBase
         Assert.Contains("originalPath", ex.Message);
     }
 
+    [Fact]
+    public void Compare_WithMissingRevisedPath_ShouldThrowException()
+    {
+        var originalPath = CreateWordDocumentWithContent("test_compare_no_rev.docx", "Content");
+        var outputPath = CreateTestFilePath("test_compare_no_rev_output.docx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("compare", outputPath: outputPath,
+                originalPath: originalPath, revisedPath: ""));
+        Assert.Contains("revisedPath", ex.Message);
+    }
+
+    [Fact]
+    public void Compare_WithMissingOutputPath_ShouldThrowException()
+    {
+        var originalPath = CreateWordDocumentWithContent("test_compare_no_out_orig.docx", "Original");
+        var revisedPath = CreateWordDocumentWithContent("test_compare_no_out_rev.docx", "Revised");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("compare", outputPath: "",
+                originalPath: originalPath, revisedPath: revisedPath));
+        Assert.Contains("outputPath", ex.Message);
+    }
+
     #endregion
 
-    #region Session ID Tests
+    #region Session
 
     [Fact]
     public void GetRevisions_WithSessionId_ShouldReturnRevisions()
@@ -241,9 +433,27 @@ public class WordRevisionToolTests : WordTestBase
 
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("accept_all", sessionId: sessionId);
-        Assert.Contains("Accepted", result);
+        Assert.StartsWith("Accepted", result);
 
-        // Verify in-memory document has no revisions
+        var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
+        Assert.Equal(0, sessionDoc.Revisions.Count);
+    }
+
+    [Fact]
+    public void RejectAllRevisions_WithSessionId_ShouldRejectInMemory()
+    {
+        var docPath = CreateWordDocument("test_session_reject_all.docx");
+        var doc = new Document(docPath);
+        doc.StartTrackRevisions("Test Author");
+        var builder = new DocumentBuilder(doc);
+        builder.Writeln("Session revision to reject");
+        doc.StopTrackRevisions();
+        doc.Save(docPath);
+
+        var sessionId = OpenSession(docPath);
+        var result = _tool.Execute("reject_all", sessionId: sessionId);
+        Assert.StartsWith("Rejected", result);
+
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         Assert.Equal(0, sessionDoc.Revisions.Count);
     }
@@ -293,10 +503,8 @@ public class WordRevisionToolTests : WordTestBase
 
         var sessionId = OpenSession(docPath2);
 
-        // Act - provide both path and sessionId
         var result = _tool.Execute("get_revisions", docPath1, sessionId);
 
-        // Assert - should use sessionId
         Assert.Contains("\"revisions\"", result);
     }
 

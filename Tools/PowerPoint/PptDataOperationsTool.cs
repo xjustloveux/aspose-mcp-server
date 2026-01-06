@@ -15,6 +15,11 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 public class PptDataOperationsTool
 {
     /// <summary>
+    ///     Identity accessor for session isolation.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document lifecycle management.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -23,11 +28,24 @@ public class PptDataOperationsTool
     ///     Initializes a new instance of the <see cref="PptDataOperationsTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
-    public PptDataOperationsTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation.</param>
+    public PptDataOperationsTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a PowerPoint data operation (get_statistics, get_content, get_slide_details).
+    /// </summary>
+    /// <param name="operation">The operation to perform: get_statistics, get_content, get_slide_details.</param>
+    /// <param name="path">Presentation file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="slideIndex">Slide index (0-based, required for get_slide_details).</param>
+    /// <param name="includeThumbnail">Include Base64 encoded thumbnail image (optional for get_slide_details, default false).</param>
+    /// <returns>A JSON string containing the requested data (statistics, content, or slide details).</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "ppt_data_operations")]
     [Description(@"PowerPoint data operations. Supports 3 operations: get_statistics, get_content, get_slide_details.
 
@@ -48,7 +66,7 @@ Usage examples:
         [Description("Include Base64 encoded thumbnail image (optional for get_slide_details, default false)")]
         bool includeThumbnail = false)
     {
-        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {

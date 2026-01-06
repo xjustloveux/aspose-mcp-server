@@ -18,6 +18,11 @@ namespace AsposeMcpServer.Tools.Word;
 public class WordShapeTool
 {
     /// <summary>
+    ///     Identity accessor for session isolation
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document session operations
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -26,11 +31,67 @@ public class WordShapeTool
     ///     Initializes a new instance of the WordShapeTool class
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document operations</param>
-    public WordShapeTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation</param>
+    public WordShapeTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a Word shape operation (add_line, add_textbox, get_textboxes, edit_textbox_content, set_textbox_border,
+    ///     add_chart, add, get, delete).
+    /// </summary>
+    /// <param name="operation">
+    ///     The operation to perform: add_line, add_textbox, get_textboxes, edit_textbox_content,
+    ///     set_textbox_border, add_chart, add, get, delete.
+    /// </param>
+    /// <param name="path">Word document file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="location">Location: body, header, footer (for add_line, default: body).</param>
+    /// <param name="position">Position: start, end (for add_line, default: end).</param>
+    /// <param name="lineStyle">Line style: border, shape (for add_line, default: shape).</param>
+    /// <param name="lineWidth">Line width in points (for add_line, default: 1.0).</param>
+    /// <param name="lineColor">Line color hex (for add_line, default: 000000).</param>
+    /// <param name="width">Width/length in points (for add_line: line length; for add: shape width).</param>
+    /// <param name="text">Text content (for add_textbox, edit_textbox_content).</param>
+    /// <param name="textboxWidth">Textbox width in points (for add_textbox, default: 200).</param>
+    /// <param name="textboxHeight">Textbox height in points (for add_textbox, default: 100).</param>
+    /// <param name="positionX">Horizontal position in points (for add_textbox, default: 100).</param>
+    /// <param name="positionY">Vertical position in points (for add_textbox, default: 100).</param>
+    /// <param name="backgroundColor">Background color hex (for add_textbox).</param>
+    /// <param name="borderColor">Border color hex (for add_textbox, set_textbox_border).</param>
+    /// <param name="borderWidth">Border width in points (for add_textbox, set_textbox_border, default: 1).</param>
+    /// <param name="fontName">Font name.</param>
+    /// <param name="fontSize">Font size in points.</param>
+    /// <param name="fontNameAscii">Font name for ASCII characters.</param>
+    /// <param name="fontNameFarEast">Font name for Far East characters.</param>
+    /// <param name="bold">Bold text.</param>
+    /// <param name="italic">Italic text.</param>
+    /// <param name="color">Text color hex.</param>
+    /// <param name="textAlignment">Text alignment: left, center, right.</param>
+    /// <param name="textboxIndex">Textbox index (0-based, for textbox operations).</param>
+    /// <param name="shapeIndex">Shape index (0-based, for general shape operations).</param>
+    /// <param name="shapeType">Shape type: Rectangle, RoundedRectangle, Ellipse, etc. (for add).</param>
+    /// <param name="height">Shape height in points (for add).</param>
+    /// <param name="x">Shape X position in points (for add).</param>
+    /// <param name="y">Shape Y position in points (for add).</param>
+    /// <param name="appendText">Append text to existing content (for edit_textbox_content).</param>
+    /// <param name="clearFormatting">Clear existing formatting (for edit_textbox_content).</param>
+    /// <param name="borderVisible">Show border (for set_textbox_border).</param>
+    /// <param name="borderStyle">Border style (for set_textbox_border).</param>
+    /// <param name="includeContent">Include textbox content (for get_textboxes).</param>
+    /// <param name="chartType">Chart type: Column, Bar, Line, Pie, etc. (for add_chart).</param>
+    /// <param name="data">Chart data as JSON 2D array (for add_chart).</param>
+    /// <param name="chartTitle">Chart title (for add_chart).</param>
+    /// <param name="chartWidth">Chart width in points (for add_chart).</param>
+    /// <param name="chartHeight">Chart height in points (for add_chart).</param>
+    /// <param name="paragraphIndex">Paragraph index to insert after (for add_chart).</param>
+    /// <param name="alignment">Chart alignment (for add_chart).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "word_shape")]
     [Description(
         @"Manage shapes in Word documents. Supports 9 operations: add_line, add_textbox, get_textboxes, edit_textbox_content, set_textbox_border, add_chart, add, get, delete.
@@ -141,7 +202,7 @@ Usage examples:
         [Description("Chart alignment: left, center, right (for add_chart, default: left)")]
         string alignment = "left")
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {
@@ -478,24 +539,19 @@ Usage examples:
 
         var textbox = textboxes[textboxIndex.Value];
 
-        // Use false to get only direct child paragraphs of the textbox (not recursive)
         var paragraphs = textbox.GetChildNodes(NodeType.Paragraph, false);
         Paragraph para;
 
         if (paragraphs.Count == 0)
         {
-            // Create a new paragraph inside the textbox
             para = new Paragraph(doc);
             textbox.AppendChild(para);
         }
         else
         {
-            // Use the first paragraph that is a direct child of the textbox
             para = paragraphs[0] as Paragraph ?? throw new Exception("Cannot get textbox paragraph");
         }
 
-        // Ensure we're working only with content inside the textbox
-        // Get runs that are direct children of the paragraph (which is inside the textbox)
         var runsCollection = para.GetChildNodes(NodeType.Run, false);
         var runs = runsCollection.Cast<Run>().ToList();
 
@@ -503,20 +559,16 @@ Usage examples:
         {
             if (appendText && runsCollection.Count > 0)
             {
-                // Append new run to existing content
                 var newRun = new Run(doc, text);
                 para.AppendChild(newRun);
             }
             else
             {
-                // Clear existing content and set new text
-                // Only remove direct children of the paragraph (runs inside textbox)
                 para.RemoveAllChildren();
                 var newRun = new Run(doc, text);
                 para.AppendChild(newRun);
             }
 
-            // Refresh runs list after modification
             runs = para.GetChildNodes(NodeType.Run, false).Cast<Run>().ToList();
         }
 
@@ -531,7 +583,6 @@ Usage examples:
         if (hasFormatting)
             foreach (var run in runs)
             {
-                // Apply font settings using FontHelper
                 FontHelper.Word.ApplyFontSettings(
                     run,
                     fontName,

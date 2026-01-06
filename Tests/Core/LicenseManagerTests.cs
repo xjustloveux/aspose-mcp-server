@@ -35,7 +35,6 @@ public class LicenseManagerTests : IDisposable
     [Fact]
     public void SetLicense_WithNoLicenseFile_ShouldOutputMessage()
     {
-        // Use LoadFromArgs with a nonexistent license path
         var config = ServerConfig.LoadFromArgs(["--all", "--license:nonexistent_license.lic"]);
 
         LicenseManager.SetLicense(config);
@@ -131,7 +130,6 @@ public class LicenseManagerTests : IDisposable
     {
         var config = ServerConfig.LoadFromArgs(["--word"]);
 
-        // Reset console to capture output properly
         Console.SetOut(_originalConsoleOut);
         Console.SetError(_consoleError);
 

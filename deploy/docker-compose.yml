@@ -22,7 +22,11 @@ services:
       # - ASPOSE_SESSION_ENABLED=true       # Enable session management (required for document_session tool)
       # - ASPOSE_SESSION_MAX=10             # Max concurrent sessions (default: 10)
       # - ASPOSE_SESSION_TIMEOUT=30         # Session timeout in minutes (default: 30)
+      # - ASPOSE_SESSION_MAX_FILE_SIZE_MB=100  # Max file size in MB (default: 100)
+      # - ASPOSE_SESSION_TEMP_DIR=/tmp      # Temp directory (default: system temp)
       # - ASPOSE_SESSION_TEMP_RETENTION_HOURS=24  # Temp file retention in hours (default: 24)
+      # - ASPOSE_SESSION_ON_DISCONNECT=SaveToTemp  # Disconnect behavior: SaveToTemp, Discard, KeepInMemory
+      # - ASPOSE_SESSION_ISOLATION=user     # Isolation mode: none (no isolation), tenant (tenant-level), user (user-level, default)
 
       # === API Key Authentication (Optional) ===
       # - ASPOSE_AUTH_APIKEY_ENABLED=true
@@ -30,18 +34,26 @@ services:
       # - ASPOSE_AUTH_APIKEY_KEYS=key1:tenant1,key2:tenant2
       # - ASPOSE_AUTH_APIKEY_HEADER=X-API-Key
       # - ASPOSE_AUTH_APIKEY_TENANT_HEADER=X-Tenant-Id
+      # - ASPOSE_AUTH_APIKEY_INTROSPECTION_URL=https://auth.example.com/introspect
       # - ASPOSE_AUTH_APIKEY_INTROSPECTION_AUTH=Bearer token
+      # - ASPOSE_AUTH_APIKEY_CUSTOM_URL=https://auth.example.com/validate
       # - ASPOSE_AUTH_APIKEY_CUSTOM_TIMEOUT=5
 
       # === JWT Authentication (Optional) ===
       # - ASPOSE_AUTH_JWT_ENABLED=true
       # - ASPOSE_AUTH_JWT_MODE=local       # local, gateway, introspection, custom
       # - ASPOSE_AUTH_JWT_SECRET=your-secret-key
+      # - ASPOSE_AUTH_JWT_PUBLIC_KEY_PATH=/app/keys/public.pem
       # - ASPOSE_AUTH_JWT_ISSUER=your-issuer
       # - ASPOSE_AUTH_JWT_AUDIENCE=your-audience
       # - ASPOSE_AUTH_JWT_TENANT_CLAIM=tenant_id
+      # - ASPOSE_AUTH_JWT_USER_CLAIM=sub
       # - ASPOSE_AUTH_JWT_TENANT_HEADER=X-Tenant-Id
       # - ASPOSE_AUTH_JWT_USER_HEADER=X-User-Id
+      # - ASPOSE_AUTH_JWT_INTROSPECTION_URL=https://auth.example.com/introspect
+      # - ASPOSE_AUTH_JWT_CLIENT_ID=your-client-id
+      # - ASPOSE_AUTH_JWT_CLIENT_SECRET=your-client-secret
+      # - ASPOSE_AUTH_JWT_CUSTOM_URL=https://auth.example.com/validate
       # - ASPOSE_AUTH_JWT_CUSTOM_TIMEOUT=5
 
       # === Logging (Optional) ===
@@ -50,7 +62,7 @@ services:
 
       # === Webhook (Optional) ===
       # - ASPOSE_WEBHOOK_URL=https://your-webhook.example.com/events
-      # - ASPOSE_WEBHOOK_SECRET=your-webhook-secret
+      # - ASPOSE_WEBHOOK_AUTH_HEADER=Bearer your-token
 
       # === Prometheus Metrics (Optional) ===
       # - ASPOSE_METRICS_ENABLED=true

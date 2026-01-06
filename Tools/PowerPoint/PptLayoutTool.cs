@@ -37,6 +37,11 @@ public class PptLayoutTool
     private static readonly string SupportedLayoutTypes = string.Join(", ", LayoutTypeMap.Keys);
 
     /// <summary>
+    ///     Identity accessor for session isolation.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document lifecycle management.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -45,11 +50,36 @@ public class PptLayoutTool
     ///     Initializes a new instance of the <see cref="PptLayoutTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
-    public PptLayoutTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation.</param>
+    public PptLayoutTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a PowerPoint layout operation (set, get_layouts, get_masters, apply_master, apply_layout_range,
+    ///     apply_theme).
+    /// </summary>
+    /// <param name="operation">
+    ///     The operation to perform: set, get_layouts, get_masters, apply_master, apply_layout_range,
+    ///     apply_theme.
+    /// </param>
+    /// <param name="path">Presentation file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="slideIndex">Slide index (0-based, required for set).</param>
+    /// <param name="layout">
+    ///     Layout type: Title, TitleOnly, Blank, TwoColumn, SectionHeader, TitleAndContent, ObjectAndText,
+    ///     PictureAndCaption.
+    /// </param>
+    /// <param name="masterIndex">Master index (0-based, optional for get_layouts, required for apply_master).</param>
+    /// <param name="layoutIndex">Layout index under master (0-based, required for apply_master).</param>
+    /// <param name="slideIndices">Slide indices array as JSON (required for apply_layout_range, optional for apply_master).</param>
+    /// <param name="themePath">Theme template file path (.potx/.pptx, required for apply_theme).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "ppt_layout")]
     [Description(
         @"Manage PowerPoint layouts. Supports 6 operations: set, get_layouts, get_masters, apply_master, apply_layout_range, apply_theme.
@@ -84,7 +114,7 @@ Usage examples:
         [Description("Theme template file path (.potx/.pptx, required for apply_theme)")]
         string? themePath = null)
     {
-        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {
@@ -347,8 +377,6 @@ Usage examples:
         return result;
     }
 
-    #region Helper Methods
-
     /// <summary>
     ///     Parses JSON array of slide indices.
     /// </summary>
@@ -427,6 +455,4 @@ Usage examples:
 
         return layoutsList;
     }
-
-    #endregion
 }

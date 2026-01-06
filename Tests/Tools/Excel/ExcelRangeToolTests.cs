@@ -14,37 +14,13 @@ public class ExcelRangeToolTests : ExcelTestBase
         _tool = new ExcelRangeTool(SessionManager);
     }
 
-    #region General Tests
-
-    #region Move Tests
+    #region General
 
     [Fact]
-    public void MoveRange_ShouldMoveRangeToDestination()
+    public void Write_ShouldWriteDataToRange()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_move_range.xlsx", 3);
-        var sourceA1Value = new Workbook(workbookPath).Worksheets[0].Cells["A1"].Value;
-        var outputPath = CreateTestFilePath("test_move_range_output.xlsx");
-        _tool.Execute("move", workbookPath, sourceRange: "A1:B2", destCell: "C1", outputPath: outputPath);
-        var workbook = new Workbook(outputPath);
-        var worksheet = workbook.Worksheets[0];
-        // Verify data was moved (destination should have data)
-        var destC1 = worksheet.Cells["C1"].Value;
-        Assert.Equal(sourceA1Value, destC1);
-        // Source should be cleared (moved, not copied)
-        var sourceA1 = worksheet.Cells["A1"].Value;
-        Assert.True(sourceA1 == null || sourceA1.ToString() == "",
-            $"Source cell A1 should be cleared after move, got: {sourceA1}");
-    }
-
-    #endregion
-
-    #region Write Tests
-
-    [Fact]
-    public void WriteRange_ShouldWriteDataToRange()
-    {
-        var workbookPath = CreateExcelWorkbook("test_write_range.xlsx");
-        var outputPath = CreateTestFilePath("test_write_range_output.xlsx");
+        var workbookPath = CreateExcelWorkbook("test_write.xlsx");
+        var outputPath = CreateTestFilePath("test_write_output.xlsx");
         var data = "[[\"A\", \"B\"], [\"C\", \"D\"]]";
         _tool.Execute("write", workbookPath, startCell: "A1", data: data, outputPath: outputPath);
         var workbook = new Workbook(outputPath);
@@ -56,10 +32,10 @@ public class ExcelRangeToolTests : ExcelTestBase
     }
 
     [Fact]
-    public void WriteRange_WithObjectFormat_ShouldWriteData()
+    public void Write_WithObjectFormat_ShouldWriteData()
     {
-        var workbookPath = CreateExcelWorkbook("test_write_object_format.xlsx");
-        var outputPath = CreateTestFilePath("test_write_object_format_output.xlsx");
+        var workbookPath = CreateExcelWorkbook("test_write_object.xlsx");
+        var outputPath = CreateTestFilePath("test_write_object_output.xlsx");
         var data = "[{\"cell\": \"A1\", \"value\": \"10\"}, {\"cell\": \"B2\", \"value\": \"20\"}]";
         _tool.Execute("write", workbookPath, startCell: "A1", data: data, outputPath: outputPath);
         using var workbook = new Workbook(outputPath);
@@ -69,7 +45,7 @@ public class ExcelRangeToolTests : ExcelTestBase
     }
 
     [Fact]
-    public void WriteRange_WithNumericValues_ShouldStoreAsNumbers()
+    public void Write_WithNumericValues_ShouldStoreAsNumbers()
     {
         var workbookPath = CreateExcelWorkbook("test_write_numeric.xlsx");
         var outputPath = CreateTestFilePath("test_write_numeric_output.xlsx");
@@ -83,24 +59,38 @@ public class ExcelRangeToolTests : ExcelTestBase
     }
 
     [Fact]
-    public void WriteRange_WithInvalidSheetIndex_ShouldThrowException()
+    public void Edit_ShouldEditRangeData()
     {
-        var workbookPath = CreateExcelWorkbook("test_write_invalid_sheet.xlsx");
-        var outputPath = CreateTestFilePath("test_write_invalid_sheet_output.xlsx");
-        var data = "[[\"A\"]]";
-        var exception = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("write", workbookPath, sheetIndex: 99, startCell: "A1", data: data, outputPath: outputPath));
-        Assert.Contains("out of range", exception.Message);
+        var workbookPath = CreateExcelWorkbookWithData("test_edit.xlsx", 3);
+        var outputPath = CreateTestFilePath("test_edit_output.xlsx");
+        var data = "[[\"X\", \"Y\"], [\"Z\", \"W\"]]";
+        _tool.Execute("edit", workbookPath, range: "A1:B2", data: data, outputPath: outputPath);
+        var workbook = new Workbook(outputPath);
+        var worksheet = workbook.Worksheets[0];
+        Assert.Equal("X", worksheet.Cells["A1"].Value);
+        Assert.Equal("Y", worksheet.Cells["B1"].Value);
+        Assert.Equal("Z", worksheet.Cells["A2"].Value);
+        Assert.Equal("W", worksheet.Cells["B2"].Value);
     }
 
-    #endregion
-
-    #region Get Tests
+    [Fact]
+    public void Edit_WithClearRange_ShouldClearBeforeEdit()
+    {
+        var workbookPath = CreateExcelWorkbookWithData("test_edit_clear.xlsx", 3);
+        var outputPath = CreateTestFilePath("test_edit_clear_output.xlsx");
+        var data = "[[\"X\"]]";
+        _tool.Execute("edit", workbookPath, range: "A1:C3", data: data, clearRange: true, outputPath: outputPath);
+        using var workbook = new Workbook(outputPath);
+        var worksheet = workbook.Worksheets[0];
+        Assert.Equal("X", worksheet.Cells["A1"].Value);
+        var b1 = worksheet.Cells["B1"].Value;
+        Assert.True(b1 == null || b1.ToString() == "");
+    }
 
     [Fact]
-    public void GetRange_ShouldReturnRangeData()
+    public void Get_ShouldReturnRangeData()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_get_range.xlsx", 3);
+        var workbookPath = CreateExcelWorkbookWithData("test_get.xlsx", 3);
         var result = _tool.Execute("get", workbookPath, range: "A1:B2");
         Assert.NotNull(result);
         Assert.NotEmpty(result);
@@ -109,9 +99,9 @@ public class ExcelRangeToolTests : ExcelTestBase
     }
 
     [Fact]
-    public void GetRange_WithCalculateFormulas_ShouldRecalculate()
+    public void Get_WithCalculateFormulas_ShouldRecalculate()
     {
-        var workbookPath = CreateExcelWorkbook("test_get_calculate.xlsx");
+        var workbookPath = CreateExcelWorkbook("test_get_calc.xlsx");
         using (var wb = new Workbook(workbookPath))
         {
             wb.Worksheets[0].Cells["A1"].Value = 10;
@@ -125,7 +115,7 @@ public class ExcelRangeToolTests : ExcelTestBase
     }
 
     [Fact]
-    public void GetRange_WithIncludeFormat_ShouldReturnFormatInfo()
+    public void Get_WithIncludeFormat_ShouldReturnFormatInfo()
     {
         var workbookPath = CreateExcelWorkbookWithData("test_get_format.xlsx", 1);
         var result = _tool.Execute("get", workbookPath, range: "A1", includeFormat: true);
@@ -136,34 +126,19 @@ public class ExcelRangeToolTests : ExcelTestBase
     }
 
     [Fact]
-    public void GetRange_WithInvalidSheetIndex_ShouldThrowException()
+    public void Clear_ShouldClearRangeContent()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_get_invalid_sheet.xlsx", 3);
-        var exception = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("get", workbookPath, sheetIndex: 99, range: "A1:B2"));
-        Assert.Contains("out of range", exception.Message);
-    }
-
-    #endregion
-
-    #region Clear Tests
-
-    [Fact]
-    public void ClearRange_ShouldClearRangeContent()
-    {
-        var workbookPath = CreateExcelWorkbookWithData("test_clear_range.xlsx", 3);
-        var outputPath = CreateTestFilePath("test_clear_range_output.xlsx");
+        var workbookPath = CreateExcelWorkbookWithData("test_clear.xlsx", 3);
+        var outputPath = CreateTestFilePath("test_clear_output.xlsx");
         _tool.Execute("clear", workbookPath, range: "A1:B2", outputPath: outputPath);
         var workbook = new Workbook(outputPath);
         var worksheet = workbook.Worksheets[0];
-        // Cleared cells should be empty
         var a1Value = worksheet.Cells["A1"].Value;
-        Assert.True(a1Value == null || a1Value.ToString() == "",
-            $"Cell A1 should be cleared, got: {a1Value}");
+        Assert.True(a1Value == null || a1Value.ToString() == "");
     }
 
     [Fact]
-    public void ClearRange_WithClearFormat_ShouldClearFormat()
+    public void Clear_WithClearFormat_ShouldClearFormat()
     {
         var workbookPath = CreateExcelWorkbook("test_clear_format.xlsx");
         using (var wb = new Workbook(workbookPath))
@@ -183,26 +158,22 @@ public class ExcelRangeToolTests : ExcelTestBase
         Assert.False(resultStyle.Font.IsBold);
     }
 
-    #endregion
-
-    #region Copy Tests
-
     [Fact]
-    public void CopyRange_ShouldCopyRangeToDestination()
+    public void Copy_ShouldCopyRangeToDestination()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_copy_range.xlsx", 3);
-        var outputPath = CreateTestFilePath("test_copy_range_output.xlsx");
+        var workbookPath = CreateExcelWorkbookWithData("test_copy.xlsx", 3);
+        var outputPath = CreateTestFilePath("test_copy_output.xlsx");
         _tool.Execute("copy", workbookPath, sourceRange: "A1:B2", destCell: "C1", outputPath: outputPath);
         var workbook = new Workbook(outputPath);
         var worksheet = workbook.Worksheets[0];
-        // Verify data was copied
-        var sourceA1 = worksheet.Cells["A1"].Value?.ToString() ?? "";
-        var destC1 = worksheet.Cells["C1"].Value?.ToString() ?? "";
-        Assert.Equal(sourceA1, destC1);
+        Assert.Equal(worksheet.Cells["A1"].Value?.ToString() ?? "", worksheet.Cells["C1"].Value?.ToString() ?? "");
+        Assert.Equal(worksheet.Cells["B1"].Value?.ToString() ?? "", worksheet.Cells["D1"].Value?.ToString() ?? "");
+        Assert.Equal(worksheet.Cells["A2"].Value?.ToString() ?? "", worksheet.Cells["C2"].Value?.ToString() ?? "");
+        Assert.Equal(worksheet.Cells["B2"].Value?.ToString() ?? "", worksheet.Cells["D2"].Value?.ToString() ?? "");
     }
 
     [Fact]
-    public void CopyRange_WithValuesOnly_ShouldCopyValuesOnly()
+    public void Copy_WithValuesOnly_ShouldCopyValuesOnly()
     {
         var workbookPath = CreateExcelWorkbook("test_copy_values.xlsx");
         using (var wb = new Workbook(workbookPath))
@@ -223,42 +194,35 @@ public class ExcelRangeToolTests : ExcelTestBase
         Assert.False(destStyle.Font.IsBold);
     }
 
-    #endregion
-
-    #region Edit Tests
-
     [Fact]
-    public void EditRange_ShouldEditRangeData()
+    public void Move_ShouldMoveRangeToDestination()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_edit_range.xlsx", 3);
-        var outputPath = CreateTestFilePath("test_edit_range_output.xlsx");
-        var data = "[[\"X\", \"Y\"], [\"Z\", \"W\"]]";
-        _tool.Execute("edit", workbookPath, range: "A1:B2", data: data, outputPath: outputPath);
+        var workbookPath = CreateExcelWorkbookWithData("test_move.xlsx", 3);
+        var originalWorkbook = new Workbook(workbookPath);
+        var sourceA1Value = originalWorkbook.Worksheets[0].Cells["A1"].Value;
+        var sourceB1Value = originalWorkbook.Worksheets[0].Cells["B1"].Value;
+        var sourceA2Value = originalWorkbook.Worksheets[0].Cells["A2"].Value;
+        var sourceB2Value = originalWorkbook.Worksheets[0].Cells["B2"].Value;
+
+        var outputPath = CreateTestFilePath("test_move_output.xlsx");
+        _tool.Execute("move", workbookPath, sourceRange: "A1:B2", destCell: "C1", outputPath: outputPath);
         var workbook = new Workbook(outputPath);
         var worksheet = workbook.Worksheets[0];
-        Assert.Equal("X", worksheet.Cells["A1"].Value);
-        Assert.Equal("Y", worksheet.Cells["B1"].Value);
-        Assert.Equal("Z", worksheet.Cells["A2"].Value);
-        Assert.Equal("W", worksheet.Cells["B2"].Value);
-    }
 
-    [Fact]
-    public void EditRange_WithClearRange_ShouldClearBeforeEdit()
-    {
-        var workbookPath = CreateExcelWorkbookWithData("test_edit_clear.xlsx", 3);
-        var outputPath = CreateTestFilePath("test_edit_clear_output.xlsx");
-        var data = "[[\"X\"]]";
-        _tool.Execute("edit", workbookPath, range: "A1:C3", data: data, clearRange: true, outputPath: outputPath);
-        using var workbook = new Workbook(outputPath);
-        var worksheet = workbook.Worksheets[0];
-        Assert.Equal("X", worksheet.Cells["A1"].Value);
+        Assert.Equal(sourceA1Value, worksheet.Cells["C1"].Value);
+        Assert.Equal(sourceB1Value, worksheet.Cells["D1"].Value);
+        Assert.Equal(sourceA2Value, worksheet.Cells["C2"].Value);
+        Assert.Equal(sourceB2Value, worksheet.Cells["D2"].Value);
+
+        var a1 = worksheet.Cells["A1"].Value;
+        var a2 = worksheet.Cells["A2"].Value;
         var b1 = worksheet.Cells["B1"].Value;
-        Assert.True(b1 == null || b1.ToString() == "");
+        var b2 = worksheet.Cells["B2"].Value;
+        Assert.True(a1 == null || a1.ToString() == "", "A1 should be cleared after move");
+        Assert.True(a2 == null || a2.ToString() == "", "A2 should be cleared after move");
+        Assert.True(b1 == null || b1.ToString() == "", "B1 should be cleared after move");
+        Assert.True(b2 == null || b2.ToString() == "", "B2 should be cleared after move");
     }
-
-    #endregion
-
-    #region CopyFormat Tests
 
     [Fact]
     public void CopyFormat_ShouldCopyFormatOnly()
@@ -273,13 +237,12 @@ public class ExcelRangeToolTests : ExcelTestBase
         style.Font.Size = 14;
         sourceCell.SetStyle(style);
         workbook.Save(workbookPath);
-
         var outputPath = CreateTestFilePath("test_copy_format_output.xlsx");
         _tool.Execute("copy_format", workbookPath, sourceRange: "A1", destCell: "B1", outputPath: outputPath);
         var resultWorkbook = new Workbook(outputPath);
         var resultWorksheet = resultWorkbook.Worksheets[0];
         var destStyle = resultWorksheet.Cells["B1"].GetStyle();
-        Assert.True(destStyle.Font.IsBold, "Format should be copied (bold should be true)");
+        Assert.True(destStyle.Font.IsBold);
         Assert.Equal(14, destStyle.Font.Size);
     }
 
@@ -305,69 +268,50 @@ public class ExcelRangeToolTests : ExcelTestBase
         Assert.True(destStyle.Font.IsBold);
     }
 
-    [Fact]
-    public void CopyFormat_WithMissingDestination_ShouldThrowException()
+    [Theory]
+    [InlineData("WRITE")]
+    [InlineData("Write")]
+    [InlineData("write")]
+    public void Operation_ShouldBeCaseInsensitive_Write(string operation)
     {
-        var workbookPath = CreateExcelWorkbook("test_copy_format_no_dest.xlsx");
-        var outputPath = CreateTestFilePath("test_copy_format_no_dest_output.xlsx");
-        var exception = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("copy_format", workbookPath, range: "A1", outputPath: outputPath));
-        Assert.Contains("destRange or destCell is required", exception.Message);
+        var workbookPath = CreateExcelWorkbook($"test_case_{operation}.xlsx");
+        var outputPath = CreateTestFilePath($"test_case_{operation}_output.xlsx");
+        var data = "[[\"Test\"]]";
+        var result = _tool.Execute(operation, workbookPath, startCell: "A1", data: data, outputPath: outputPath);
+        Assert.Contains("A1", result);
+    }
+
+    [Theory]
+    [InlineData("GET")]
+    [InlineData("Get")]
+    [InlineData("get")]
+    public void Operation_ShouldBeCaseInsensitive_Get(string operation)
+    {
+        var workbookPath = CreateExcelWorkbookWithData($"test_case_{operation}.xlsx", 1);
+        var result = _tool.Execute(operation, workbookPath, range: "A1");
+        Assert.Contains("items", result);
     }
 
     #endregion
 
-    #region Error Handling Tests
-
-    [Fact]
-    public void ExecuteAsync_WithMissingPath_ShouldThrowException()
-    {
-        Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("get", ""));
-    }
-
-    [Fact]
-    public void WriteRange_WithMissingStartCell_ShouldThrowException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_write_no_start.xlsx");
-        var outputPath = CreateTestFilePath("test_write_no_start_output.xlsx");
-        var data = "[[\"A\"]]";
-
-        // Act & Assert - either ArgumentException from our validation or CellsException from Aspose
-        Assert.ThrowsAny<Exception>(() =>
-            _tool.Execute("write", workbookPath, data: data, outputPath: outputPath));
-    }
-
-    [Fact]
-    public void GetRange_WithMissingRange_ShouldThrowException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_get_no_range.xlsx");
-        Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("get", workbookPath));
-    }
-
-    [Fact]
-    public void CopyRange_WithMissingSourceRange_ShouldThrowException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_copy_no_source.xlsx");
-        var outputPath = CreateTestFilePath("test_copy_no_source_output.xlsx");
-        Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("copy", workbookPath, destCell: "B1", outputPath: outputPath));
-    }
-
-    #endregion
-
-    #endregion
-
-    #region Exception Tests
+    #region Exception
 
     [Fact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
     {
-        var workbookPath = CreateExcelWorkbook("test_unknown_operation.xlsx");
-        var exception = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("invalid_operation", workbookPath));
-        Assert.Contains("Unknown operation", exception.Message);
+        var workbookPath = CreateExcelWorkbook("test_unknown_op.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", workbookPath));
+        Assert.Contains("Unknown operation", ex.Message);
+    }
+
+    [Fact]
+    public void Write_WithMissingStartCell_ShouldThrowException()
+    {
+        var workbookPath = CreateExcelWorkbook("test_write_no_start.xlsx");
+        var outputPath = CreateTestFilePath("test_write_no_start_output.xlsx");
+        var data = "[[\"A\"]]";
+        Assert.ThrowsAny<Exception>(() =>
+            _tool.Execute("write", workbookPath, data: data, outputPath: outputPath));
     }
 
     [Fact]
@@ -375,19 +319,114 @@ public class ExcelRangeToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbook("test_write_no_data.xlsx");
         var outputPath = CreateTestFilePath("test_write_no_data_output.xlsx");
-        var exception = Assert.Throws<ArgumentException>(() =>
+        var ex = Assert.Throws<ArgumentException>(() =>
             _tool.Execute("write", workbookPath, startCell: "A1", data: "", outputPath: outputPath));
-        Assert.Contains("data", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("data", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Write_WithInvalidSheetIndex_ShouldThrowException()
+    {
+        var workbookPath = CreateExcelWorkbook("test_write_invalid_sheet.xlsx");
+        var outputPath = CreateTestFilePath("test_write_invalid_sheet_output.xlsx");
+        var data = "[[\"A\"]]";
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("write", workbookPath, sheetIndex: 99, startCell: "A1", data: data, outputPath: outputPath));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public void Get_WithMissingRange_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateExcelWorkbook("test_get_no_range.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("get", workbookPath));
+        Assert.Contains("range is required", ex.Message);
+    }
+
+    [Fact]
+    public void Get_WithInvalidSheetIndex_ShouldThrowException()
+    {
+        var workbookPath = CreateExcelWorkbookWithData("test_get_invalid_sheet.xlsx", 3);
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("get", workbookPath, sheetIndex: 99, range: "A1:B2"));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public void Copy_WithMissingSourceRange_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateExcelWorkbook("test_copy_no_source.xlsx");
+        var outputPath = CreateTestFilePath("test_copy_no_source_output.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("copy", workbookPath, destCell: "B1", outputPath: outputPath));
+        Assert.Contains("sourceRange is required", ex.Message);
+    }
+
+    [Fact]
+    public void Copy_WithMissingDestCell_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateExcelWorkbook("test_copy_no_dest.xlsx");
+        var outputPath = CreateTestFilePath("test_copy_no_dest_output.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("copy", workbookPath, sourceRange: "A1:B2", outputPath: outputPath));
+        Assert.Contains("destCell is required", ex.Message);
+    }
+
+    [Fact]
+    public void CopyFormat_WithMissingDestination_ShouldThrowException()
+    {
+        var workbookPath = CreateExcelWorkbook("test_copy_format_no_dest.xlsx");
+        var outputPath = CreateTestFilePath("test_copy_format_no_dest_output.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("copy_format", workbookPath, range: "A1", outputPath: outputPath));
+        Assert.Contains("destRange or destCell is required", ex.Message);
+    }
+
+    [Fact]
+    public void Execute_WithEmptyPath_ShouldThrowException()
+    {
+        Assert.Throws<ArgumentException>(() => _tool.Execute("get", ""));
+    }
+
+    [Fact]
+    public void Execute_WithNoPathOrSessionId_ShouldThrowException()
+    {
+        Assert.ThrowsAny<Exception>(() => _tool.Execute("get", range: "A1"));
     }
 
     #endregion
 
-    #region Session ID Tests
+    #region Session
 
     [Fact]
-    public void GetRange_WithSessionId_ShouldGetFromMemory()
+    public void Write_WithSessionId_ShouldWriteInMemory()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_session_get_range.xlsx", 3);
+        var workbookPath = CreateExcelWorkbook("test_session_write.xlsx");
+        var sessionId = OpenSession(workbookPath);
+        var data = "[[\"SessionA\", \"SessionB\"], [\"SessionC\", \"SessionD\"]]";
+        var result = _tool.Execute("write", sessionId: sessionId, startCell: "A1", data: data);
+        Assert.StartsWith("Data written", result);
+        var workbook = SessionManager.GetDocument<Workbook>(sessionId);
+        Assert.Equal("SessionA", workbook.Worksheets[0].Cells["A1"].Value);
+        Assert.Equal("SessionB", workbook.Worksheets[0].Cells["B1"].Value);
+    }
+
+    [Fact]
+    public void Edit_WithSessionId_ShouldEditInMemory()
+    {
+        var workbookPath = CreateExcelWorkbookWithData("test_session_edit.xlsx", 3);
+        var sessionId = OpenSession(workbookPath);
+        var data = "[[\"X\", \"Y\"]]";
+        var result = _tool.Execute("edit", sessionId: sessionId, range: "A1:B1", data: data);
+        Assert.StartsWith("Range A1:B1 edited", result);
+        var workbook = SessionManager.GetDocument<Workbook>(sessionId);
+        Assert.Equal("X", workbook.Worksheets[0].Cells["A1"].Value);
+    }
+
+    [Fact]
+    public void Get_WithSessionId_ShouldGetFromMemory()
+    {
+        var workbookPath = CreateExcelWorkbookWithData("test_session_get.xlsx", 3);
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("get", sessionId: sessionId, range: "A1:B2");
         Assert.NotNull(result);
@@ -396,29 +435,24 @@ public class ExcelRangeToolTests : ExcelTestBase
     }
 
     [Fact]
-    public void WriteRange_WithSessionId_ShouldWriteInMemory()
+    public void Clear_WithSessionId_ShouldClearInMemory()
     {
-        var workbookPath = CreateExcelWorkbook("test_session_write_range.xlsx");
+        var workbookPath = CreateExcelWorkbookWithData("test_session_clear.xlsx", 3);
         var sessionId = OpenSession(workbookPath);
-        var data = "[[\"SessionA\", \"SessionB\"], [\"SessionC\", \"SessionD\"]]";
-        _tool.Execute("write", sessionId: sessionId, startCell: "A1", data: data);
-
-        // Assert - verify in-memory change
+        var result = _tool.Execute("clear", sessionId: sessionId, range: "A1:B2");
+        Assert.StartsWith("Range A1:B2 cleared", result);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
-        Assert.Equal("SessionA", workbook.Worksheets[0].Cells["A1"].Value);
-        Assert.Equal("SessionB", workbook.Worksheets[0].Cells["B1"].Value);
-        Assert.Equal("SessionC", workbook.Worksheets[0].Cells["A2"].Value);
-        Assert.Equal("SessionD", workbook.Worksheets[0].Cells["B2"].Value);
+        var a1Value = workbook.Worksheets[0].Cells["A1"].Value;
+        Assert.True(a1Value == null || a1Value.ToString() == "");
     }
 
     [Fact]
-    public void CopyRange_WithSessionId_ShouldCopyInMemory()
+    public void Copy_WithSessionId_ShouldCopyInMemory()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_session_copy_range.xlsx", 3);
+        var workbookPath = CreateExcelWorkbookWithData("test_session_copy.xlsx", 3);
         var sessionId = OpenSession(workbookPath);
-        _tool.Execute("copy", sessionId: sessionId, sourceRange: "A1:B2", destCell: "D1");
-
-        // Assert - verify in-memory change
+        var result = _tool.Execute("copy", sessionId: sessionId, sourceRange: "A1:B2", destCell: "D1");
+        Assert.StartsWith("Range A1:B2 copied", result);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         var worksheet = workbook.Worksheets[0];
         var sourceA1 = worksheet.Cells["A1"].Value?.ToString() ?? "";
@@ -427,23 +461,55 @@ public class ExcelRangeToolTests : ExcelTestBase
     }
 
     [Fact]
-    public void ClearRange_WithSessionId_ShouldClearInMemory()
+    public void Move_WithSessionId_ShouldMoveInMemory()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_session_clear_range.xlsx", 3);
+        var workbookPath = CreateExcelWorkbookWithData("test_session_move.xlsx", 3);
         var sessionId = OpenSession(workbookPath);
-        _tool.Execute("clear", sessionId: sessionId, range: "A1:B2");
-
-        // Assert - verify in-memory change
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
-        var a1Value = workbook.Worksheets[0].Cells["A1"].Value;
-        Assert.True(a1Value == null || a1Value.ToString() == "");
+        var originalValue = workbook.Worksheets[0].Cells["A1"].Value;
+        var result = _tool.Execute("move", sessionId: sessionId, sourceRange: "A1:B2", destCell: "D1");
+        Assert.StartsWith("Range A1:B2 moved", result);
+        Assert.Equal(originalValue, workbook.Worksheets[0].Cells["D1"].Value);
+        var a1 = workbook.Worksheets[0].Cells["A1"].Value;
+        Assert.True(a1 == null || a1.ToString() == "");
+    }
+
+    [Fact]
+    public void CopyFormat_WithSessionId_ShouldCopyInMemory()
+    {
+        var workbookPath = CreateExcelWorkbook("test_session_copy_format.xlsx");
+        using (var wb = new Workbook(workbookPath))
+        {
+            var style = wb.CreateStyle();
+            style.Font.IsBold = true;
+            wb.Worksheets[0].Cells["A1"].SetStyle(style);
+            wb.Worksheets[0].Cells["A1"].Value = "Test";
+            wb.Save(workbookPath);
+        }
+
+        var sessionId = OpenSession(workbookPath);
+        var result = _tool.Execute("copy_format", sessionId: sessionId, range: "A1", destCell: "B1");
+        Assert.StartsWith("Format copied", result);
+        var workbook = SessionManager.GetDocument<Workbook>(sessionId);
+        var destStyle = workbook.Worksheets[0].Cells["B1"].GetStyle();
+        Assert.True(destStyle.Font.IsBold);
     }
 
     [Fact]
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
         Assert.Throws<KeyNotFoundException>(() =>
-            _tool.Execute("get", sessionId: "invalid_session_id", range: "A1"));
+            _tool.Execute("get", sessionId: "invalid_session", range: "A1"));
+    }
+
+    [Fact]
+    public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
+    {
+        var workbookPath1 = CreateExcelWorkbookWithData("test_path_file.xlsx", 2);
+        var workbookPath2 = CreateExcelWorkbookWithData("test_session_file.xlsx");
+        var sessionId = OpenSession(workbookPath2);
+        var result = _tool.Execute("get", workbookPath1, sessionId, range: "A1:C5");
+        Assert.Contains("R5C3", result);
     }
 
     #endregion

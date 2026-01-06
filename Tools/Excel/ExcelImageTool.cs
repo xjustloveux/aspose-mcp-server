@@ -40,6 +40,11 @@ public class ExcelImageTool
     };
 
     /// <summary>
+    ///     Session identity accessor for session isolation support.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Document session manager for in-memory editing support.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -48,11 +53,34 @@ public class ExcelImageTool
     ///     Initializes a new instance of the <see cref="ExcelImageTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
-    public ExcelImageTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    public ExcelImageTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes an Excel image operation (add, delete, get, extract).
+    /// </summary>
+    /// <param name="operation">The operation to perform: add, delete, get, extract.</param>
+    /// <param name="path">Excel file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="sheetIndex">Sheet index (0-based, default: 0).</param>
+    /// <param name="imagePath">
+    ///     Path to the image file. Supported formats: png, jpg, jpeg, gif, bmp, tiff, emf, wmf (required
+    ///     for add).
+    /// </param>
+    /// <param name="cell">Top-left cell reference (e.g., 'A1', required for add).</param>
+    /// <param name="width">Image width in pixels (optional for add).</param>
+    /// <param name="height">Image height in pixels (optional for add).</param>
+    /// <param name="keepAspectRatio">Keep aspect ratio when resizing (optional for add, default: true).</param>
+    /// <param name="imageIndex">Image index (0-based, required for delete/extract).</param>
+    /// <param name="exportPath">Path to export the extracted image (required for extract).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "excel_image")]
     [Description(@"Manage Excel images. Supports 4 operations: add, delete, get, extract.
 
@@ -93,7 +121,7 @@ Note: When deleting images, the indices of remaining images will be re-ordered."
             "Path to export the extracted image (required for extract). Format determined by file extension (png, jpg, gif, bmp, tiff)")]
         string? exportPath = null)
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {

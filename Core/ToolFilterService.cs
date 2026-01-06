@@ -3,18 +3,25 @@ using AsposeMcpServer.Core.Session;
 namespace AsposeMcpServer.Core;
 
 /// <summary>
-///     Service for filtering tools based on configuration
+///     Service for filtering tools based on configuration.
 /// </summary>
 public class ToolFilterService
 {
+    /// <summary>
+    ///     The server configuration containing tool category enablement settings.
+    /// </summary>
     private readonly ServerConfig _serverConfig;
+
+    /// <summary>
+    ///     The session configuration for session tool filtering.
+    /// </summary>
     private readonly SessionConfig _sessionConfig;
 
     /// <summary>
-    ///     Creates a new tool filter service
+    ///     Initializes a new instance of the <see cref="ToolFilterService" /> class.
     /// </summary>
-    /// <param name="serverConfig">Server configuration</param>
-    /// <param name="sessionConfig">Session configuration</param>
+    /// <param name="serverConfig">The server configuration.</param>
+    /// <param name="sessionConfig">The session configuration.</param>
     public ToolFilterService(ServerConfig serverConfig, SessionConfig sessionConfig)
     {
         _serverConfig = serverConfig;
@@ -22,42 +29,35 @@ public class ToolFilterService
     }
 
     /// <summary>
-    ///     Determines if a tool should be enabled based on its name
+    ///     Determines if a tool should be enabled based on its name.
     /// </summary>
-    /// <param name="toolName">The tool name (e.g., "word_text", "excel_cell")</param>
-    /// <returns>True if the tool should be enabled</returns>
+    /// <param name="toolName">The tool name (e.g., "word_text", "excel_cell").</param>
+    /// <returns><c>true</c> if the tool should be enabled; otherwise, <c>false</c>.</returns>
     public bool IsToolEnabled(string toolName)
     {
         if (string.IsNullOrEmpty(toolName))
             return false;
 
-        // Session tool
         if (toolName == "document_session")
             return _sessionConfig.Enabled;
 
-        // Word tools
         if (toolName.StartsWith("word_", StringComparison.OrdinalIgnoreCase))
             return _serverConfig.EnableWord;
 
-        // Excel tools
         if (toolName.StartsWith("excel_", StringComparison.OrdinalIgnoreCase))
             return _serverConfig.EnableExcel;
 
-        // PowerPoint tools
         if (toolName.StartsWith("ppt_", StringComparison.OrdinalIgnoreCase))
             return _serverConfig.EnablePowerPoint;
 
-        // PDF tools
         if (toolName.StartsWith("pdf_", StringComparison.OrdinalIgnoreCase))
             return _serverConfig.EnablePdf;
 
-        // Conversion tools
         if (toolName == "convert_to_pdf")
             return _serverConfig.EnableWord || _serverConfig.EnableExcel || _serverConfig.EnablePowerPoint;
 
         if (toolName == "convert_document")
         {
-            // Need at least 2 document types enabled for cross-format conversion
             var enabledCount = 0;
             if (_serverConfig.EnableWord) enabledCount++;
             if (_serverConfig.EnableExcel) enabledCount++;
@@ -65,14 +65,13 @@ public class ToolFilterService
             return enabledCount >= 2;
         }
 
-        // Unknown tools are enabled by default
         return true;
     }
 
     /// <summary>
-    ///     Gets a list of enabled tool categories for logging
+    ///     Gets a list of enabled tool categories for logging.
     /// </summary>
-    /// <returns>Comma-separated list of enabled categories</returns>
+    /// <returns>A comma-separated list of enabled categories.</returns>
     public string GetEnabledCategories()
     {
         var categories = new List<string>();

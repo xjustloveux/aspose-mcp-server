@@ -14,6 +14,11 @@ namespace AsposeMcpServer.Tools.Word;
 public class WordWatermarkTool
 {
     /// <summary>
+    ///     Identity accessor for session isolation
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document session operations
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -22,11 +27,31 @@ public class WordWatermarkTool
     ///     Initializes a new instance of the WordWatermarkTool class
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document operations</param>
-    public WordWatermarkTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation</param>
+    public WordWatermarkTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a Word watermark operation (add, add_image, remove).
+    /// </summary>
+    /// <param name="operation">The operation to perform: add (text watermark), add_image (image watermark), remove.</param>
+    /// <param name="path">Word document file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only, defaults to overwrite input).</param>
+    /// <param name="text">Watermark text (required for add).</param>
+    /// <param name="fontFamily">Font family (for add, default: Arial).</param>
+    /// <param name="fontSize">Font size (for add, default: 72).</param>
+    /// <param name="isSemitransparent">Semitransparent watermark (for add, default: true).</param>
+    /// <param name="layout">Layout: Diagonal or Horizontal (for add, default: Diagonal).</param>
+    /// <param name="imagePath">Image file path for watermark (required for add_image).</param>
+    /// <param name="scale">Image scale factor (for add_image, default: 1.0).</param>
+    /// <param name="isWashout">Apply washout effect to image (for add_image, default: true).</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "word_watermark")]
     [Description(@"Manage watermarks in Word documents. Supports 3 operations: add, add_image, remove.
 
@@ -62,7 +87,7 @@ Note: On Linux/Docker environments, ensure the specified font (default: Arial) i
         [Description("Apply washout effect to make image lighter (optional, default: true)")]
         bool isWashout = true)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var effectiveOutputPath = outputPath ?? path;
 
         return operation.ToLower() switch

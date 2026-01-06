@@ -14,6 +14,11 @@ namespace AsposeMcpServer.Core.Transport;
 public class WebSocketConnectionHandler
 {
     /// <summary>
+    ///     Maximum allowed message size (10 MB) to prevent DoS attacks.
+    /// </summary>
+    private const int MaxMessageSize = 10 * 1024 * 1024;
+
+    /// <summary>
     ///     Path to the MCP server executable.
     /// </summary>
     private readonly string _executablePath;
@@ -46,7 +51,13 @@ public class WebSocketConnectionHandler
     /// </summary>
     /// <param name="webSocket">The WebSocket connection to handle.</param>
     /// <param name="cancellationToken">Cancellation token for the operation.</param>
-    public async Task HandleConnectionAsync(WebSocket webSocket, CancellationToken cancellationToken)
+    /// <param name="tenantId">Optional tenant ID from authentication (passed to child process).</param>
+    /// <param name="userId">Optional user ID from authentication (passed to child process).</param>
+    public async Task HandleConnectionAsync(
+        WebSocket webSocket,
+        CancellationToken cancellationToken,
+        string? tenantId = null,
+        string? userId = null)
     {
         var connectionId = Guid.NewGuid().ToString("N")[..8];
         _logger?.LogInformation("WebSocket connection {ConnectionId} established", connectionId);
@@ -55,32 +66,37 @@ public class WebSocketConnectionHandler
 
         try
         {
-            process = new Process
+            var startInfo = new ProcessStartInfo
             {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = _executablePath,
-                    Arguments = $"{_toolArgs} --stdio",
-                    UseShellExecute = false,
-                    RedirectStandardInput = true,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true,
-                    StandardInputEncoding = Encoding.UTF8,
-                    StandardOutputEncoding = Encoding.UTF8,
-                    StandardErrorEncoding = Encoding.UTF8
-                }
+                FileName = _executablePath,
+                Arguments = $"{_toolArgs} --stdio",
+                UseShellExecute = false,
+                RedirectStandardInput = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+                StandardInputEncoding = Encoding.UTF8,
+                StandardOutputEncoding = Encoding.UTF8,
+                StandardErrorEncoding = Encoding.UTF8
             };
+
+            // Pass authentication context to child process via environment variables
+            if (!string.IsNullOrEmpty(tenantId))
+                startInfo.Environment["ASPOSE_SESSION_TENANT_ID"] = tenantId;
+            if (!string.IsNullOrEmpty(userId))
+                startInfo.Environment["ASPOSE_SESSION_USER_ID"] = userId;
+
+            process = new Process { StartInfo = startInfo };
 
             process.Start();
             _logger?.LogDebug("Started Stdio process {ProcessId} for WebSocket {ConnectionId}", process.Id,
                 connectionId);
 
             var readTask = ReadFromProcessAsync(process, webSocket, connectionId, cancellationToken);
-
             var writeTask = WriteToProcessAsync(webSocket, process, connectionId, cancellationToken);
+            var stderrTask = ReadStderrAsync(process, connectionId, cancellationToken);
 
-            await Task.WhenAny(readTask, writeTask);
+            await Task.WhenAny(readTask, writeTask, stderrTask);
         }
         catch (WebSocketException ex) when (ex.WebSocketErrorCode == WebSocketError.ConnectionClosedPrematurely)
         {
@@ -128,6 +144,7 @@ public class WebSocketConnectionHandler
 
     /// <summary>
     ///     Reads output from the Stdio process and forwards it to the WebSocket client.
+    ///     Uses ReadLineAsync to ensure complete JSON-RPC messages are sent.
     /// </summary>
     /// <param name="process">The Stdio process to read from.</param>
     /// <param name="webSocket">The WebSocket to send data to.</param>
@@ -139,16 +156,15 @@ public class WebSocketConnectionHandler
         try
         {
             var reader = process.StandardOutput;
-            var buffer = new char[4096];
 
             while (!process.HasExited && webSocket.State == WebSocketState.Open &&
                    !cancellationToken.IsCancellationRequested)
             {
-                var count = await reader.ReadAsync(buffer, 0, buffer.Length);
-                if (count == 0) break;
+                // Use ReadLineAsync to read complete JSON-RPC messages (one per line)
+                var line = await reader.ReadLineAsync(cancellationToken);
+                if (line == null) break;
 
-                var message = new string(buffer, 0, count);
-                var bytes = Encoding.UTF8.GetBytes(message);
+                var bytes = Encoding.UTF8.GetBytes(line);
 
                 await webSocket.SendAsync(
                     new ArraySegment<byte>(bytes),
@@ -160,6 +176,33 @@ public class WebSocketConnectionHandler
         catch (Exception ex)
         {
             _logger?.LogDebug(ex, "Error reading from process for WebSocket {ConnectionId}", connectionId);
+        }
+    }
+
+    /// <summary>
+    ///     Reads stderr from the Stdio process and logs it.
+    ///     This prevents the stderr buffer from filling up and blocking the process.
+    /// </summary>
+    /// <param name="process">The Stdio process to read stderr from.</param>
+    /// <param name="connectionId">Connection identifier for logging.</param>
+    /// <param name="cancellationToken">Cancellation token for the operation.</param>
+    private async Task ReadStderrAsync(Process process, string connectionId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var reader = process.StandardError;
+
+            while (!process.HasExited && !cancellationToken.IsCancellationRequested)
+            {
+                var line = await reader.ReadLineAsync(cancellationToken);
+                if (line == null) break;
+
+                _logger?.LogDebug("WebSocket {ConnectionId} stderr: {Line}", connectionId, line);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug(ex, "Error reading stderr for WebSocket {ConnectionId}", connectionId);
         }
     }
 
@@ -176,6 +219,7 @@ public class WebSocketConnectionHandler
         try
         {
             var buffer = new byte[4096];
+            using var messageBuffer = new MemoryStream();
 
             while (!process.HasExited && webSocket.State == WebSocketState.Open &&
                    !cancellationToken.IsCancellationRequested)
@@ -186,9 +230,30 @@ public class WebSocketConnectionHandler
 
                 if (result.MessageType == WebSocketMessageType.Text)
                 {
-                    var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
-                    await process.StandardInput.WriteLineAsync(message);
-                    await process.StandardInput.FlushAsync(cancellationToken);
+                    // Check message size limit to prevent DoS
+                    if (messageBuffer.Length + result.Count > MaxMessageSize)
+                    {
+                        _logger?.LogWarning(
+                            "WebSocket {ConnectionId} message exceeds maximum size ({MaxSize} bytes), closing connection",
+                            connectionId, MaxMessageSize);
+                        await webSocket.CloseAsync(
+                            WebSocketCloseStatus.MessageTooBig,
+                            $"Message exceeds maximum size of {MaxMessageSize} bytes",
+                            cancellationToken);
+                        break;
+                    }
+
+                    // Accumulate message fragments
+                    messageBuffer.Write(buffer, 0, result.Count);
+
+                    // Only process when we have the complete message
+                    if (result.EndOfMessage)
+                    {
+                        var message = Encoding.UTF8.GetString(messageBuffer.ToArray());
+                        await process.StandardInput.WriteLineAsync(message);
+                        await process.StandardInput.FlushAsync(cancellationToken);
+                        messageBuffer.SetLength(0); // Reset buffer for next message
+                    }
                 }
             }
         }

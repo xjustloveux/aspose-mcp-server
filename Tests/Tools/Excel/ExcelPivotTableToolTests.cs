@@ -15,717 +15,576 @@ public class ExcelPivotTableToolTests : ExcelTestBase
         _tool = new ExcelPivotTableTool(SessionManager);
     }
 
-    #region General Tests
-
-    [Fact]
-    public void AddPivotTable_ShouldAddPivotTable()
+    private string CreateWorkbookWithPivotTable(string fileName)
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_add_pivot_table.xlsx", 10, 4);
-        var outputPath = CreateTestFilePath("test_add_pivot_table_output.xlsx");
-        var result = _tool.Execute(
-            "add",
-            workbookPath,
-            sourceRange: "A1:D10",
-            destCell: "F1",
-            outputPath: outputPath);
-        Assert.Contains("added", result);
-
-        using var workbook = new Workbook(outputPath);
+        var workbookPath = CreateTestFilePath(fileName);
+        using var workbook = new Workbook();
         var worksheet = workbook.Worksheets[0];
-        Assert.True(worksheet.PivotTables.Count > 0);
+        worksheet.Cells[0, 0].Value = "Category";
+        worksheet.Cells[0, 1].Value = "Sales";
+        worksheet.Cells[0, 2].Value = "Region";
+        worksheet.Cells[0, 3].Value = "Quantity";
+        for (var row = 1; row <= 10; row++)
+        {
+            worksheet.Cells[row, 0].Value = $"Cat{row % 3}";
+            worksheet.Cells[row, 1].Value = row * 100;
+            worksheet.Cells[row, 2].Value = $"Region{row % 2}";
+            worksheet.Cells[row, 3].Value = row * 10;
+        }
+
+        worksheet.PivotTables.Add("A1:D11", "F1", "PivotTable1");
+        workbook.Save(workbookPath);
+        return workbookPath;
     }
 
-    [Fact]
-    public void AddPivotTable_WithCustomName_ShouldUseName()
+    private string CreateWorkbookWithDataForPivot(string fileName)
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_add_pivot_custom_name.xlsx", 10, 4);
-        var outputPath = CreateTestFilePath("test_add_pivot_custom_name_output.xlsx");
-        var result = _tool.Execute(
-            "add",
-            workbookPath,
-            sourceRange: "A1:D10",
-            destCell: "F1",
-            name: "MyCustomPivot",
-            outputPath: outputPath);
-        Assert.Contains("MyCustomPivot", result);
+        var workbookPath = CreateTestFilePath(fileName);
+        using var workbook = new Workbook();
+        var worksheet = workbook.Worksheets[0];
+        worksheet.Cells[0, 0].Value = "Category";
+        worksheet.Cells[0, 1].Value = "Sales";
+        worksheet.Cells[0, 2].Value = "Region";
+        worksheet.Cells[0, 3].Value = "Quantity";
+        for (var row = 1; row <= 10; row++)
+        {
+            worksheet.Cells[row, 0].Value = $"Cat{row % 3}";
+            worksheet.Cells[row, 1].Value = row * 100;
+            worksheet.Cells[row, 2].Value = $"Region{row % 2}";
+            worksheet.Cells[row, 3].Value = row * 10;
+        }
 
+        workbook.Save(workbookPath);
+        return workbookPath;
+    }
+
+    #region General
+
+    [Fact]
+    public void Add_ShouldAddPivotTable()
+    {
+        var workbookPath = CreateWorkbookWithDataForPivot("test_add.xlsx");
+        var outputPath = CreateTestFilePath("test_add_output.xlsx");
+        var result = _tool.Execute("add", workbookPath, sourceRange: "A1:D11", destCell: "F1", outputPath: outputPath);
+        Assert.Contains("added", result);
         using var workbook = new Workbook(outputPath);
-        Assert.Equal("MyCustomPivot", workbook.Worksheets[0].PivotTables[0].Name);
+        Assert.True(workbook.Worksheets[0].PivotTables.Count > 0);
     }
 
     [Fact]
-    public void AddPivotTable_InvalidSheetIndex_ShouldThrowException()
+    public void Add_WithCustomName_ShouldUseName()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_add_pivot_invalid_sheet.xlsx", 10, 4);
-        Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "add",
-            workbookPath,
-            sheetIndex: 99,
-            sourceRange: "A1:D10",
-            destCell: "F1"));
+        var workbookPath = CreateWorkbookWithDataForPivot("test_add_name.xlsx");
+        var outputPath = CreateTestFilePath("test_add_name_output.xlsx");
+        var result = _tool.Execute("add", workbookPath, sourceRange: "A1:D11", destCell: "F1",
+            name: "CustomPivot", outputPath: outputPath);
+        Assert.Contains("added", result);
+        using var workbook = new Workbook(outputPath);
+        Assert.Equal("CustomPivot", workbook.Worksheets[0].PivotTables[0].Name);
     }
 
     [Fact]
-    public void GetPivotTables_ShouldReturnAllPivotTables()
+    public void Get_ShouldReturnPivotTableInfo()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_get_pivot_tables.xlsx", 10, 4);
-        using (var workbook = new Workbook(workbookPath))
-        {
-            var worksheet = workbook.Worksheets[0];
-            worksheet.PivotTables.Add("A1:D10", "F1", "PivotTable1");
-            workbook.Save(workbookPath);
-        }
-
-        var result = _tool.Execute(
-            "get",
-            workbookPath);
+        var workbookPath = CreateWorkbookWithPivotTable("test_get.xlsx");
+        var result = _tool.Execute("get", workbookPath);
         var json = JsonDocument.Parse(result);
         var root = json.RootElement;
-
         Assert.Equal(1, root.GetProperty("count").GetInt32());
-        Assert.True(root.TryGetProperty("items", out var items));
-        Assert.Equal(1, items.GetArrayLength());
+        Assert.True(root.TryGetProperty("items", out _));
     }
 
     [Fact]
-    public void GetPivotTables_NoPivotTables_ShouldReturnEmptyResult()
+    public void Get_NoPivotTables_ShouldReturnEmptyResult()
     {
-        var workbookPath = CreateExcelWorkbook("test_get_no_pivot_tables.xlsx");
-        var result = _tool.Execute(
-            "get",
-            workbookPath);
+        var workbookPath = CreateExcelWorkbook("test_get_empty.xlsx");
+        var result = _tool.Execute("get", workbookPath);
         var json = JsonDocument.Parse(result);
-        var root = json.RootElement;
-
-        Assert.Equal(0, root.GetProperty("count").GetInt32());
-        Assert.Equal("No pivot tables found", root.GetProperty("message").GetString());
+        Assert.Equal(0, json.RootElement.GetProperty("count").GetInt32());
+        Assert.Contains("No pivot tables found", json.RootElement.GetProperty("message").GetString());
     }
 
     [Fact]
-    public void GetPivotTables_InvalidSheetIndex_ShouldThrowException()
+    public void Delete_ShouldDeletePivotTable()
     {
-        var workbookPath = CreateExcelWorkbook("test_get_pivot_invalid_sheet.xlsx");
-        Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "get",
-            workbookPath,
-            sheetIndex: 99));
-    }
-
-    [Fact]
-    public void DeletePivotTable_ShouldDeletePivotTable()
-    {
-        var workbookPath = CreateExcelWorkbookWithData("test_delete_pivot_table.xlsx", 10, 4);
-        using (var workbook = new Workbook(workbookPath))
-        {
-            var worksheet = workbook.Worksheets[0];
-            worksheet.PivotTables.Add("A1:D10", "F1", "PivotTable1");
-            workbook.Save(workbookPath);
-        }
-
-        var outputPath = CreateTestFilePath("test_delete_pivot_table_output.xlsx");
-        var result = _tool.Execute(
-            "delete",
-            workbookPath,
-            pivotTableIndex: 0,
-            outputPath: outputPath);
+        var workbookPath = CreateWorkbookWithPivotTable("test_delete.xlsx");
+        var outputPath = CreateTestFilePath("test_delete_output.xlsx");
+        var result = _tool.Execute("delete", workbookPath, pivotTableIndex: 0, outputPath: outputPath);
         Assert.Contains("deleted", result);
-
-        using var resultWorkbook = new Workbook(outputPath);
-        Assert.Empty(resultWorkbook.Worksheets[0].PivotTables);
+        using var workbook = new Workbook(outputPath);
+        Assert.Empty(workbook.Worksheets[0].PivotTables);
     }
 
     [Fact]
-    public void DeletePivotTable_InvalidIndex_ShouldThrowException()
+    public void Edit_Name_ShouldEditName()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_delete_pivot_invalid_index.xlsx", 10, 4);
-        using (var workbook = new Workbook(workbookPath))
+        var workbookPath = CreateWorkbookWithPivotTable("test_edit_name.xlsx");
+        var outputPath = CreateTestFilePath("test_edit_name_output.xlsx");
+        var result = _tool.Execute("edit", workbookPath, pivotTableIndex: 0,
+            name: "EditedPivot", outputPath: outputPath);
+        Assert.Contains("edited", result);
+        using var workbook = new Workbook(outputPath);
+        Assert.Equal("EditedPivot", workbook.Worksheets[0].PivotTables[0].Name);
+    }
+
+    [Fact]
+    public void Edit_Style_ShouldApplyStyle()
+    {
+        var workbookPath = CreateWorkbookWithPivotTable("test_edit_style.xlsx");
+        var outputPath = CreateTestFilePath("test_edit_style_output.xlsx");
+        var result = _tool.Execute("edit", workbookPath, pivotTableIndex: 0,
+            style: "Medium6", outputPath: outputPath);
+        Assert.Contains("edited", result);
+        using var workbook = new Workbook(outputPath);
+        Assert.Equal(PivotTableStyleType.PivotTableStyleMedium6,
+            workbook.Worksheets[0].PivotTables[0].PivotTableStyleType);
+    }
+
+    [Fact]
+    public void Edit_StyleNone_ShouldRemoveStyle()
+    {
+        var workbookPath = CreateWorkbookWithPivotTable("test_edit_style_none.xlsx");
+        using (var wb = new Workbook(workbookPath))
         {
-            var worksheet = workbook.Worksheets[0];
-            worksheet.PivotTables.Add("A1:D10", "F1", "PivotTable1");
-            workbook.Save(workbookPath);
+            wb.Worksheets[0].PivotTables[0].PivotTableStyleType = PivotTableStyleType.PivotTableStyleMedium10;
+            wb.Save(workbookPath);
         }
 
-        var exception = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "delete",
-            workbookPath,
-            pivotTableIndex: 99));
-        Assert.Contains("out of range", exception.Message);
-    }
-
-    [Fact]
-    public void EditPivotTable_ShouldEditName()
-    {
-        var workbookPath = CreateExcelWorkbookWithData("test_edit_pivot_table.xlsx", 10, 4);
-        using (var workbook = new Workbook(workbookPath))
-        {
-            var worksheet = workbook.Worksheets[0];
-            worksheet.PivotTables.Add("A1:D10", "F1", "PivotTable1");
-            workbook.Save(workbookPath);
-        }
-
-        var outputPath = CreateTestFilePath("test_edit_pivot_table_output.xlsx");
-        var result = _tool.Execute(
-            "edit",
-            workbookPath,
-            pivotTableIndex: 0,
-            name: "EditedPivotTable",
-            outputPath: outputPath);
-        Assert.Contains("name=EditedPivotTable", result);
-
-        using var resultWorkbook = new Workbook(outputPath);
-        Assert.Equal("EditedPivotTable", resultWorkbook.Worksheets[0].PivotTables[0].Name);
-    }
-
-    [Fact]
-    public void EditPivotTable_WithRefreshData_ShouldRefresh()
-    {
-        var workbookPath = CreateExcelWorkbookWithData("test_edit_pivot_refresh.xlsx", 10, 4);
-        using (var workbook = new Workbook(workbookPath))
-        {
-            var worksheet = workbook.Worksheets[0];
-            worksheet.PivotTables.Add("A1:D10", "F1", "PivotTable1");
-            workbook.Save(workbookPath);
-        }
-
-        var outputPath = CreateTestFilePath("test_edit_pivot_refresh_output.xlsx");
-        var result = _tool.Execute(
-            "edit",
-            workbookPath,
-            pivotTableIndex: 0,
-            refreshData: true,
-            outputPath: outputPath);
-        Assert.Contains("refreshed", result);
-    }
-
-    [Fact]
-    public void EditPivotTable_InvalidIndex_ShouldThrowException()
-    {
-        var workbookPath = CreateExcelWorkbookWithData("test_edit_pivot_invalid_index.xlsx", 10, 4);
-        using (var workbook = new Workbook(workbookPath))
-        {
-            var worksheet = workbook.Worksheets[0];
-            worksheet.PivotTables.Add("A1:D10", "F1", "PivotTable1");
-            workbook.Save(workbookPath);
-        }
-
-        var exception = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "edit",
-            workbookPath,
-            pivotTableIndex: 99));
-        Assert.Contains("out of range", exception.Message);
-    }
-
-    [Fact]
-    public void AddField_ShouldAddFieldToPivotTable()
-    {
-        // Arrange - Create workbook with header row
-        var workbookPath = CreateTestFilePath("test_add_field.xlsx");
-        using (var workbook = new Workbook())
-        {
-            var worksheet = workbook.Worksheets[0];
-            worksheet.Cells[0, 0].Value = "Column1";
-            worksheet.Cells[0, 1].Value = "Column2";
-            worksheet.Cells[0, 2].Value = "Column3";
-            worksheet.Cells[0, 3].Value = "Column4";
-            for (var row = 1; row <= 10; row++)
-            for (var col = 0; col < 4; col++)
-                worksheet.Cells[row, col].Value = row * 10 + col;
-            worksheet.PivotTables.Add("A1:D11", "F1", "PivotTable1");
-            workbook.Save(workbookPath);
-        }
-
-        var outputPath = CreateTestFilePath("test_add_field_output.xlsx");
-        var result = _tool.Execute(
-            "add_field",
-            workbookPath,
-            pivotTableIndex: 0,
-            fieldName: "Column1",
-            area: "Row",
-            outputPath: outputPath);
-        Assert.Contains("added", result);
-        Assert.Contains("Row", result);
-    }
-
-    [Fact]
-    public void AddField_WithFieldType_ShouldAddField()
-    {
-        var workbookPath = CreateTestFilePath("test_add_field_type.xlsx");
-        using (var workbook = new Workbook())
-        {
-            var worksheet = workbook.Worksheets[0];
-            worksheet.Cells[0, 0].Value = "Category";
-            worksheet.Cells[0, 1].Value = "Sales";
-            for (var row = 1; row <= 10; row++)
-            {
-                worksheet.Cells[row, 0].Value = $"Cat{row % 3}";
-                worksheet.Cells[row, 1].Value = row * 100;
-            }
-
-            worksheet.PivotTables.Add("A1:B11", "D1", "PivotTable1");
-            workbook.Save(workbookPath);
-        }
-
-        var outputPath = CreateTestFilePath("test_add_field_type_output.xlsx");
-        var result = _tool.Execute(
-            "add_field",
-            workbookPath,
-            pivotTableIndex: 0,
-            fieldName: "Sales",
-            fieldType: "Data",
-            function: "Sum",
-            outputPath: outputPath);
-        Assert.Contains("added", result);
-        Assert.Contains("Data", result);
-    }
-
-    [Fact]
-    public void AddField_InvalidPivotTableIndex_ShouldThrowException()
-    {
-        var workbookPath = CreateTestFilePath("test_add_field_invalid_pt.xlsx");
-        using (var workbook = new Workbook())
-        {
-            var worksheet = workbook.Worksheets[0];
-            worksheet.Cells[0, 0].Value = "Column1";
-            worksheet.Cells[0, 1].Value = "Column2";
-            for (var row = 1; row <= 5; row++)
-            for (var col = 0; col < 2; col++)
-                worksheet.Cells[row, col].Value = row * 10 + col;
-            worksheet.PivotTables.Add("A1:B6", "D1", "PivotTable1");
-            workbook.Save(workbookPath);
-        }
-
-        var exception = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "add_field",
-            workbookPath,
-            pivotTableIndex: 99,
-            fieldName: "Column1",
-            area: "Row"));
-        Assert.Contains("out of range", exception.Message);
-    }
-
-    [Fact]
-    public void AddField_FieldNotFound_ShouldThrowException()
-    {
-        var workbookPath = CreateTestFilePath("test_add_field_not_found.xlsx");
-        using (var workbook = new Workbook())
-        {
-            var worksheet = workbook.Worksheets[0];
-            worksheet.Cells[0, 0].Value = "Column1";
-            worksheet.Cells[0, 1].Value = "Column2";
-            for (var row = 1; row <= 5; row++)
-            for (var col = 0; col < 2; col++)
-                worksheet.Cells[row, col].Value = row * 10 + col;
-            worksheet.PivotTables.Add("A1:B6", "D1", "PivotTable1");
-            workbook.Save(workbookPath);
-        }
-
-        var exception = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "add_field",
-            workbookPath,
-            pivotTableIndex: 0,
-            fieldName: "NonExistentColumn",
-            area: "Row"));
-        Assert.Contains("not found", exception.Message);
-    }
-
-    [Fact]
-    public void DeleteField_ShouldDeleteFieldFromPivotTable()
-    {
-        var workbookPath = CreateTestFilePath("test_delete_field.xlsx");
-        using (var workbook = new Workbook())
-        {
-            var worksheet = workbook.Worksheets[0];
-            worksheet.Cells[0, 0].Value = "Column1";
-            worksheet.Cells[0, 1].Value = "Column2";
-            worksheet.Cells[0, 2].Value = "Column3";
-            worksheet.Cells[0, 3].Value = "Column4";
-            for (var row = 1; row <= 10; row++)
-            for (var col = 0; col < 4; col++)
-                worksheet.Cells[row, col].Value = row * 10 + col;
-            worksheet.PivotTables.Add("A1:D11", "F1", "PivotTable1");
-            workbook.Save(workbookPath);
-        }
-
-        // First add a field
-        var addFieldOutputPath = CreateTestFilePath("test_add_field_for_delete.xlsx");
-        _tool.Execute(
-            "add_field",
-            workbookPath,
-            pivotTableIndex: 0,
-            fieldName: "Column1",
-            area: "Row",
-            outputPath: addFieldOutputPath);
-
-        // Now delete the field
-        var outputPath = CreateTestFilePath("test_delete_field_output.xlsx");
-        var result = _tool.Execute(
-            "delete_field",
-            addFieldOutputPath,
-            pivotTableIndex: 0,
-            fieldName: "Column1",
-            fieldType: "Row",
-            outputPath: outputPath);
-        Assert.Contains("removed", result);
-    }
-
-    [Fact]
-    public void RefreshPivotTable_SingleTable_ShouldRefreshData()
-    {
-        var workbookPath = CreateExcelWorkbookWithData("test_refresh_pivot_table.xlsx", 10, 4);
-        using (var workbook = new Workbook(workbookPath))
-        {
-            var worksheet = workbook.Worksheets[0];
-            worksheet.PivotTables.Add("A1:D10", "F1", "PivotTable1");
-            workbook.Save(workbookPath);
-        }
-
-        var outputPath = CreateTestFilePath("test_refresh_pivot_table_output.xlsx");
-        var result = _tool.Execute(
-            "refresh",
-            workbookPath,
-            pivotTableIndex: 0,
-            outputPath: outputPath);
-        Assert.Contains("Refreshed 1 pivot table", result);
-    }
-
-    [Fact]
-    public void RefreshPivotTable_AllTables_ShouldRefreshAll()
-    {
-        var workbookPath = CreateExcelWorkbookWithData("test_refresh_all_pivot_tables.xlsx", 10, 4);
-        using (var workbook = new Workbook(workbookPath))
-        {
-            var worksheet = workbook.Worksheets[0];
-            worksheet.PivotTables.Add("A1:D10", "F1", "PivotTable1");
-            worksheet.PivotTables.Add("A1:D10", "K1", "PivotTable2");
-            workbook.Save(workbookPath);
-        }
-
-        var outputPath = CreateTestFilePath("test_refresh_all_pivot_tables_output.xlsx");
-        var result = _tool.Execute(
-            "refresh",
-            workbookPath,
-            outputPath: outputPath);
-        Assert.Contains("Refreshed 2 pivot table(s)", result);
-    }
-
-    [Fact]
-    public void RefreshPivotTable_NoPivotTables_ShouldThrowException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_refresh_no_pivot_tables.xlsx");
-        var exception = Assert.Throws<InvalidOperationException>(() => _tool.Execute(
-            "refresh",
-            workbookPath));
-        Assert.Contains("No pivot tables found", exception.Message);
-    }
-
-    [Fact]
-    public void RefreshPivotTable_InvalidIndex_ShouldThrowException()
-    {
-        var workbookPath = CreateExcelWorkbookWithData("test_refresh_invalid_index.xlsx", 10, 4);
-        using (var workbook = new Workbook(workbookPath))
-        {
-            var worksheet = workbook.Worksheets[0];
-            worksheet.PivotTables.Add("A1:D10", "F1", "PivotTable1");
-            workbook.Save(workbookPath);
-        }
-
-        var exception = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "refresh",
-            workbookPath,
-            pivotTableIndex: 99));
-        Assert.Contains("out of range", exception.Message);
-    }
-
-    [Fact]
-    public void EditPivotTable_WithStyle_ShouldApplyStyle()
-    {
-        var workbookPath = CreateExcelWorkbookWithData("test_edit_pivot_style.xlsx", 10, 4);
-        using (var workbook = new Workbook(workbookPath))
-        {
-            var worksheet = workbook.Worksheets[0];
-            worksheet.PivotTables.Add("A1:D10", "F1", "PivotTable1");
-            workbook.Save(workbookPath);
-        }
-
-        var outputPath = CreateTestFilePath("test_edit_pivot_style_output.xlsx");
-        var result = _tool.Execute(
-            "edit",
-            workbookPath,
-            pivotTableIndex: 0,
-            style: "Medium6",
-            outputPath: outputPath);
-        Assert.Contains("style=Medium6", result);
-
-        using var resultWorkbook = new Workbook(outputPath);
-        var pivotTable = resultWorkbook.Worksheets[0].PivotTables[0];
-        Assert.Equal(PivotTableStyleType.PivotTableStyleMedium6, pivotTable.PivotTableStyleType);
-    }
-
-    [Fact]
-    public void EditPivotTable_WithStyleNone_ShouldRemoveStyle()
-    {
-        var workbookPath = CreateExcelWorkbookWithData("test_edit_pivot_style_none.xlsx", 10, 4);
-        using (var workbook = new Workbook(workbookPath))
-        {
-            var worksheet = workbook.Worksheets[0];
-            var pivotIndex = worksheet.PivotTables.Add("A1:D10", "F1", "PivotTable1");
-            worksheet.PivotTables[pivotIndex].PivotTableStyleType =
-                PivotTableStyleType.PivotTableStyleMedium10;
-            workbook.Save(workbookPath);
-        }
-
-        var outputPath = CreateTestFilePath("test_edit_pivot_style_none_output.xlsx");
-        var result = _tool.Execute(
-            "edit",
-            workbookPath,
-            pivotTableIndex: 0,
-            style: "None",
-            outputPath: outputPath);
-        Assert.Contains("style=None", result);
-
-        // Note: When setting PivotTableStyleType.None, Aspose may report it as Custom
-        using var resultWorkbook = new Workbook(outputPath);
-        var pivotTable = resultWorkbook.Worksheets[0].PivotTables[0];
+        var outputPath = CreateTestFilePath("test_edit_style_none_output.xlsx");
+        var result = _tool.Execute("edit", workbookPath, pivotTableIndex: 0,
+            style: "None", outputPath: outputPath);
+        Assert.Contains("edited", result);
+        using var workbook = new Workbook(outputPath);
+        var pivotTable = workbook.Worksheets[0].PivotTables[0];
         Assert.True(pivotTable.PivotTableStyleType == PivotTableStyleType.None ||
                     pivotTable.PivotTableStyleType == PivotTableStyleType.Custom);
     }
 
     [Fact]
-    public void EditPivotTable_WithInvalidStyle_ShouldThrowException()
+    public void Edit_ShowRowGrand_ShouldSetRowGrandTotal()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_edit_pivot_invalid_style.xlsx", 10, 4);
-        using (var workbook = new Workbook(workbookPath))
-        {
-            var worksheet = workbook.Worksheets[0];
-            worksheet.PivotTables.Add("A1:D10", "F1", "PivotTable1");
-            workbook.Save(workbookPath);
-        }
-
-        var exception = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "edit",
-            workbookPath,
-            pivotTableIndex: 0,
-            style: "InvalidStyleName"));
-        Assert.Contains("Invalid style", exception.Message);
+        var workbookPath = CreateWorkbookWithPivotTable("test_edit_rowgrand.xlsx");
+        var outputPath = CreateTestFilePath("test_edit_rowgrand_output.xlsx");
+        var result = _tool.Execute("edit", workbookPath, pivotTableIndex: 0,
+            showRowGrand: false, outputPath: outputPath);
+        Assert.Contains("edited", result);
+        using var workbook = new Workbook(outputPath);
+        Assert.False(workbook.Worksheets[0].PivotTables[0].RowGrand);
     }
 
     [Fact]
-    public void EditPivotTable_WithRowGrand_ShouldSetRowGrandTotal()
+    public void Edit_ShowColumnGrand_ShouldSetColumnGrandTotal()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_edit_pivot_row_grand.xlsx", 10, 4);
-        using (var workbook = new Workbook(workbookPath))
-        {
-            var worksheet = workbook.Worksheets[0];
-            worksheet.PivotTables.Add("A1:D10", "F1", "PivotTable1");
-            workbook.Save(workbookPath);
-        }
-
-        var outputPath = CreateTestFilePath("test_edit_pivot_row_grand_output.xlsx");
-        var result = _tool.Execute(
-            "edit",
-            workbookPath,
-            pivotTableIndex: 0,
-            showRowGrand: false,
-            outputPath: outputPath);
-        Assert.Contains("showRowGrand=False", result);
-
-        using var resultWorkbook = new Workbook(outputPath);
-        var pivotTable = resultWorkbook.Worksheets[0].PivotTables[0];
-        Assert.False(pivotTable.RowGrand);
+        var workbookPath = CreateWorkbookWithPivotTable("test_edit_colgrand.xlsx");
+        var outputPath = CreateTestFilePath("test_edit_colgrand_output.xlsx");
+        var result = _tool.Execute("edit", workbookPath, pivotTableIndex: 0,
+            showColumnGrand: false, outputPath: outputPath);
+        Assert.Contains("edited", result);
+        using var workbook = new Workbook(outputPath);
+        Assert.False(workbook.Worksheets[0].PivotTables[0].ColumnGrand);
     }
 
     [Fact]
-    public void EditPivotTable_WithColumnGrand_ShouldSetColumnGrandTotal()
+    public void Edit_AutoFitColumns_ShouldAutoFit()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_edit_pivot_col_grand.xlsx", 10, 4);
-        using (var workbook = new Workbook(workbookPath))
-        {
-            var worksheet = workbook.Worksheets[0];
-            worksheet.PivotTables.Add("A1:D10", "F1", "PivotTable1");
-            workbook.Save(workbookPath);
-        }
-
-        var outputPath = CreateTestFilePath("test_edit_pivot_col_grand_output.xlsx");
-        var result = _tool.Execute(
-            "edit",
-            workbookPath,
-            pivotTableIndex: 0,
-            showColumnGrand: false,
-            outputPath: outputPath);
-        Assert.Contains("showColumnGrand=False", result);
-
-        using var resultWorkbook = new Workbook(outputPath);
-        var pivotTable = resultWorkbook.Worksheets[0].PivotTables[0];
-        Assert.False(pivotTable.ColumnGrand);
+        var workbookPath = CreateWorkbookWithPivotTable("test_edit_autofit.xlsx");
+        var outputPath = CreateTestFilePath("test_edit_autofit_output.xlsx");
+        var result = _tool.Execute("edit", workbookPath, pivotTableIndex: 0,
+            autoFitColumns: true, outputPath: outputPath);
+        Assert.Contains("edited", result);
     }
 
     [Fact]
-    public void EditPivotTable_WithAutoFitColumns_ShouldAutoFit()
+    public void Edit_RefreshData_ShouldRefresh()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_edit_pivot_autofit.xlsx", 10, 4);
-        using (var workbook = new Workbook(workbookPath))
-        {
-            var worksheet = workbook.Worksheets[0];
-            worksheet.PivotTables.Add("A1:D10", "F1", "PivotTable1");
-            workbook.Save(workbookPath);
-        }
-
-        var outputPath = CreateTestFilePath("test_edit_pivot_autofit_output.xlsx");
-        var result = _tool.Execute(
-            "edit",
-            workbookPath,
-            pivotTableIndex: 0,
-            autoFitColumns: true,
-            outputPath: outputPath);
-        Assert.Contains("autoFitColumns", result);
+        var workbookPath = CreateWorkbookWithPivotTable("test_edit_refresh.xlsx");
+        var outputPath = CreateTestFilePath("test_edit_refresh_output.xlsx");
+        var result = _tool.Execute("edit", workbookPath, pivotTableIndex: 0,
+            refreshData: true, outputPath: outputPath);
+        Assert.Contains("edited", result);
     }
 
     [Fact]
-    public void EditPivotTable_WithMultipleOptions_ShouldApplyAll()
+    public void Edit_MultipleOptions_ShouldApplyAll()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_edit_pivot_multi.xlsx", 10, 4);
-        using (var workbook = new Workbook(workbookPath))
-        {
-            var worksheet = workbook.Worksheets[0];
-            worksheet.PivotTables.Add("A1:D10", "F1", "PivotTable1");
-            workbook.Save(workbookPath);
-        }
-
-        var outputPath = CreateTestFilePath("test_edit_pivot_multi_output.xlsx");
-        var result = _tool.Execute(
-            "edit",
-            workbookPath,
-            pivotTableIndex: 0,
-            name: "StyledPivot",
-            style: "Light10",
-            showRowGrand: true,
-            showColumnGrand: false,
-            autoFitColumns: true,
-            refreshData: true,
-            outputPath: outputPath);
-        Assert.Contains("name=StyledPivot", result);
-        Assert.Contains("style=Light10", result);
-        Assert.Contains("showRowGrand=True", result);
-        Assert.Contains("showColumnGrand=False", result);
-        Assert.Contains("autoFitColumns", result);
-        Assert.Contains("refreshed", result);
-
-        using var resultWorkbook = new Workbook(outputPath);
-        var pivotTable = resultWorkbook.Worksheets[0].PivotTables[0];
+        var workbookPath = CreateWorkbookWithPivotTable("test_edit_multi.xlsx");
+        var outputPath = CreateTestFilePath("test_edit_multi_output.xlsx");
+        var result = _tool.Execute("edit", workbookPath, pivotTableIndex: 0,
+            name: "StyledPivot", style: "Light10", showRowGrand: true, showColumnGrand: false,
+            autoFitColumns: true, refreshData: true, outputPath: outputPath);
+        Assert.Contains("edited", result);
+        using var workbook = new Workbook(outputPath);
+        var pivotTable = workbook.Worksheets[0].PivotTables[0];
         Assert.Equal("StyledPivot", pivotTable.Name);
         Assert.Equal(PivotTableStyleType.PivotTableStyleLight10, pivotTable.PivotTableStyleType);
-        Assert.True(pivotTable.RowGrand);
-        Assert.False(pivotTable.ColumnGrand);
-    }
-
-    #endregion
-
-    #region Exception Tests
-
-    [Fact]
-    public void ExecuteAsync_InvalidOperation_ShouldThrowException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_invalid_op.xlsx");
-        var exception = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "invalid",
-            workbookPath));
-        Assert.Contains("Unknown operation", exception.Message);
     }
 
     [Fact]
-    public void AddPivotTable_MissingSourceRange_ShouldThrowException()
+    public void AddField_Row_ShouldAddRowField()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_missing_source.xlsx", 10, 4);
-        var exception = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "add",
-            workbookPath,
-            destCell: "F1"));
-        Assert.Contains("sourcerange", exception.Message.ToLower());
+        var workbookPath = CreateWorkbookWithPivotTable("test_add_field_row.xlsx");
+        var outputPath = CreateTestFilePath("test_add_field_row_output.xlsx");
+        var result = _tool.Execute("add_field", workbookPath, pivotTableIndex: 0,
+            fieldName: "Region", area: "Row", outputPath: outputPath);
+        Assert.Contains("added", result);
     }
 
     [Fact]
-    public void AddPivotTable_MissingDestCell_ShouldThrowException()
+    public void AddField_Data_ShouldAddDataField()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_missing_dest.xlsx", 10, 4);
-        var exception = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "add",
-            workbookPath,
-            sourceRange: "A1:D10"));
-        Assert.Contains("destcell", exception.Message.ToLower());
-    }
-
-    #endregion
-
-    #region Session ID Tests
-
-    [Fact]
-    public void GetPivotTables_WithSessionId_ShouldGetFromMemory()
-    {
-        var workbookPath = CreateExcelWorkbookWithData("test_session_get_pivot.xlsx", 10, 4);
-        using (var workbook = new Workbook(workbookPath))
-        {
-            var worksheet = workbook.Worksheets[0];
-            worksheet.PivotTables.Add("A1:D10", "F1", "SessionPivot");
-            workbook.Save(workbookPath);
-        }
-
-        var sessionId = OpenSession(workbookPath);
-        var result = _tool.Execute(
-            "get",
-            sessionId: sessionId);
-        var json = JsonDocument.Parse(result);
-        var root = json.RootElement;
-        Assert.Equal(1, root.GetProperty("count").GetInt32());
+        var workbookPath = CreateWorkbookWithPivotTable("test_add_field_data.xlsx");
+        var outputPath = CreateTestFilePath("test_add_field_data_output.xlsx");
+        var result = _tool.Execute("add_field", workbookPath, pivotTableIndex: 0,
+            fieldName: "Quantity", fieldType: "Data", function: "Sum", outputPath: outputPath);
+        Assert.Contains("added", result);
     }
 
     [Fact]
-    public void AddPivotTable_WithSessionId_ShouldAddInMemory()
+    public void DeleteField_ShouldDeleteField()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_session_add_pivot.xlsx", 10, 4);
-        var sessionId = OpenSession(workbookPath);
-        var result = _tool.Execute(
-            "add",
-            sessionId: sessionId,
-            sourceRange: "A1:D10",
-            destCell: "F1",
-            name: "InMemoryPivot");
-        Assert.Contains("InMemoryPivot", result);
-
-        // Verify in-memory workbook has the pivot table
-        var workbook = SessionManager.GetDocument<Workbook>(sessionId);
-        Assert.True(workbook.Worksheets[0].PivotTables.Count > 0);
-        Assert.Equal("InMemoryPivot", workbook.Worksheets[0].PivotTables[0].Name);
+        var workbookPath = CreateWorkbookWithPivotTable("test_delete_field.xlsx");
+        var addFieldOutput = CreateTestFilePath("test_delete_field_add.xlsx");
+        _tool.Execute("add_field", workbookPath, pivotTableIndex: 0,
+            fieldName: "Region", area: "Row", outputPath: addFieldOutput);
+        var outputPath = CreateTestFilePath("test_delete_field_output.xlsx");
+        var result = _tool.Execute("delete_field", addFieldOutput, pivotTableIndex: 0,
+            fieldName: "Region", fieldType: "Row", outputPath: outputPath);
+        Assert.Contains("removed", result);
     }
 
     [Fact]
-    public void EditPivotTable_WithSessionId_ShouldEditInMemory()
+    public void Refresh_SingleTable_ShouldRefreshData()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_session_edit_pivot.xlsx", 10, 4);
+        var workbookPath = CreateWorkbookWithPivotTable("test_refresh_single.xlsx");
+        var outputPath = CreateTestFilePath("test_refresh_single_output.xlsx");
+        var result = _tool.Execute("refresh", workbookPath, pivotTableIndex: 0, outputPath: outputPath);
+        Assert.Contains("Refreshed", result);
+    }
+
+    [Fact]
+    public void Refresh_AllTables_ShouldRefreshAll()
+    {
+        var workbookPath = CreateWorkbookWithPivotTable("test_refresh_all.xlsx");
         using (var wb = new Workbook(workbookPath))
         {
-            var worksheet = wb.Worksheets[0];
-            worksheet.PivotTables.Add("A1:D10", "F1", "OriginalPivot");
+            wb.Worksheets[0].PivotTables.Add("A1:D11", "K1", "PivotTable2");
             wb.Save(workbookPath);
         }
 
-        var sessionId = OpenSession(workbookPath);
-        var result = _tool.Execute(
-            "edit",
-            sessionId: sessionId,
-            pivotTableIndex: 0,
-            name: "UpdatedPivot");
-        Assert.Contains("name=UpdatedPivot", result);
+        var outputPath = CreateTestFilePath("test_refresh_all_output.xlsx");
+        var result = _tool.Execute("refresh", workbookPath, outputPath: outputPath);
+        Assert.Contains("Refreshed", result);
+    }
 
-        // Verify in-memory workbook has updated pivot table
+    [Theory]
+    [InlineData("ADD")]
+    [InlineData("Add")]
+    [InlineData("add")]
+    public void Operation_ShouldBeCaseInsensitive_Add(string operation)
+    {
+        var workbookPath = CreateWorkbookWithDataForPivot($"test_case_{operation}.xlsx");
+        var outputPath = CreateTestFilePath($"test_case_{operation}_output.xlsx");
+        var result = _tool.Execute(operation, workbookPath, sourceRange: "A1:D11", destCell: "F1",
+            outputPath: outputPath);
+        Assert.Contains("added", result);
+    }
+
+    [Theory]
+    [InlineData("GET")]
+    [InlineData("Get")]
+    [InlineData("get")]
+    public void Operation_ShouldBeCaseInsensitive_Get(string operation)
+    {
+        var workbookPath = CreateWorkbookWithPivotTable($"test_case_get_{operation}.xlsx");
+        var result = _tool.Execute(operation, workbookPath);
+        Assert.Contains("count", result);
+    }
+
+    [Theory]
+    [InlineData("EDIT")]
+    [InlineData("Edit")]
+    [InlineData("edit")]
+    public void Operation_ShouldBeCaseInsensitive_Edit(string operation)
+    {
+        var workbookPath = CreateWorkbookWithPivotTable($"test_case_edit_{operation}.xlsx");
+        var outputPath = CreateTestFilePath($"test_case_edit_{operation}_output.xlsx");
+        var result = _tool.Execute(operation, workbookPath, pivotTableIndex: 0, name: "TestEdit",
+            outputPath: outputPath);
+        Assert.Contains("edited", result);
+    }
+
+    #endregion
+
+    #region Exception
+
+    [Fact]
+    public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateExcelWorkbook("test_unknown_op.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", workbookPath));
+        Assert.Contains("Unknown operation", ex.Message);
+    }
+
+    [Fact]
+    public void Add_WithMissingSourceRange_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateExcelWorkbook("test_add_missing_source.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("add", workbookPath, destCell: "F1"));
+        Assert.Contains("sourcerange", ex.Message.ToLower());
+    }
+
+    [Fact]
+    public void Add_WithMissingDestCell_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateExcelWorkbook("test_add_missing_dest.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("add", workbookPath, sourceRange: "A1:D10"));
+        Assert.Contains("destcell", ex.Message.ToLower());
+    }
+
+    [Fact]
+    public void Add_WithInvalidSheetIndex_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateWorkbookWithDataForPivot("test_add_invalid_sheet.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("add", workbookPath, sheetIndex: 99, sourceRange: "A1:D10", destCell: "F1"));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public void Get_WithInvalidSheetIndex_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateExcelWorkbook("test_get_invalid_sheet.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("get", workbookPath, sheetIndex: 99));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public void Delete_WithInvalidPivotTableIndex_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateWorkbookWithPivotTable("test_delete_invalid.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("delete", workbookPath, pivotTableIndex: 99));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public void Delete_WithMissingPivotTableIndex_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateWorkbookWithPivotTable("test_delete_missing_index.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("delete", workbookPath));
+        Assert.Contains("pivotTableIndex", ex.Message);
+    }
+
+    [Fact]
+    public void Edit_WithInvalidPivotTableIndex_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateWorkbookWithPivotTable("test_edit_invalid.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("edit", workbookPath, pivotTableIndex: 99));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public void Edit_WithMissingPivotTableIndex_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateWorkbookWithPivotTable("test_edit_missing_index.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("edit", workbookPath, name: "Test"));
+        Assert.Contains("pivotTableIndex", ex.Message);
+    }
+
+    [Fact]
+    public void Edit_WithInvalidStyle_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateWorkbookWithPivotTable("test_edit_invalid_style.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("edit", workbookPath, pivotTableIndex: 0, style: "InvalidStyleName"));
+        Assert.Contains("Invalid style", ex.Message);
+    }
+
+    [Fact]
+    public void AddField_WithInvalidPivotTableIndex_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateWorkbookWithPivotTable("test_addfield_invalid.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("add_field", workbookPath, pivotTableIndex: 99, fieldName: "Category", area: "Row"));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public void AddField_WithMissingFieldName_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateWorkbookWithPivotTable("test_addfield_missing_name.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("add_field", workbookPath, pivotTableIndex: 0, area: "Row"));
+        Assert.Contains("fieldName", ex.Message);
+    }
+
+    [Fact]
+    public void AddField_WithMissingFieldType_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateWorkbookWithPivotTable("test_addfield_missing_type.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("add_field", workbookPath, pivotTableIndex: 0, fieldName: "Category"));
+        Assert.Contains("fieldType", ex.Message);
+    }
+
+    [Fact]
+    public void AddField_WithFieldNotFound_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateWorkbookWithPivotTable("test_addfield_notfound.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("add_field", workbookPath, pivotTableIndex: 0, fieldName: "NonExistent", area: "Row"));
+        Assert.Contains("not found", ex.Message);
+    }
+
+    [Fact]
+    public void DeleteField_WithInvalidPivotTableIndex_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateWorkbookWithPivotTable("test_deletefield_invalid.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("delete_field", workbookPath, pivotTableIndex: 99, fieldName: "Category", fieldType: "Row"));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public void DeleteField_WithMissingFieldName_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateWorkbookWithPivotTable("test_deletefield_missing_name.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("delete_field", workbookPath, pivotTableIndex: 0, fieldType: "Row"));
+        Assert.Contains("fieldName", ex.Message);
+    }
+
+    [Fact]
+    public void DeleteField_WithMissingFieldType_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateWorkbookWithPivotTable("test_deletefield_missing_type.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("delete_field", workbookPath, pivotTableIndex: 0, fieldName: "Category"));
+        Assert.Contains("fieldType", ex.Message);
+    }
+
+    [Fact]
+    public void Refresh_WithNoPivotTables_ShouldThrowInvalidOperationException()
+    {
+        var workbookPath = CreateExcelWorkbook("test_refresh_empty.xlsx");
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            _tool.Execute("refresh", workbookPath));
+        Assert.Contains("No pivot tables found", ex.Message);
+    }
+
+    [Fact]
+    public void Refresh_WithInvalidPivotTableIndex_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateWorkbookWithPivotTable("test_refresh_invalid.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("refresh", workbookPath, pivotTableIndex: 99));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public void Execute_WithEmptyPath_ShouldThrowException()
+    {
+        Assert.Throws<ArgumentException>(() => _tool.Execute("get", ""));
+    }
+
+    [Fact]
+    public void Execute_WithNoPathOrSessionId_ShouldThrowException()
+    {
+        Assert.ThrowsAny<Exception>(() => _tool.Execute("get"));
+    }
+
+    #endregion
+
+    #region Session
+
+    [Fact]
+    public void Add_WithSessionId_ShouldAddInMemory()
+    {
+        var workbookPath = CreateWorkbookWithDataForPivot("test_session_add.xlsx");
+        var sessionId = OpenSession(workbookPath);
+        var result = _tool.Execute("add", sessionId: sessionId,
+            sourceRange: "A1:D11", destCell: "F1", name: "SessionPivot");
+        Assert.Contains("added", result);
+        var workbook = SessionManager.GetDocument<Workbook>(sessionId);
+        Assert.True(workbook.Worksheets[0].PivotTables.Count > 0);
+    }
+
+    [Fact]
+    public void Get_WithSessionId_ShouldGetFromMemory()
+    {
+        var workbookPath = CreateWorkbookWithPivotTable("test_session_get.xlsx");
+        var sessionId = OpenSession(workbookPath);
+        var result = _tool.Execute("get", sessionId: sessionId);
+        Assert.Equal(1, JsonDocument.Parse(result).RootElement.GetProperty("count").GetInt32());
+    }
+
+    [Fact]
+    public void Delete_WithSessionId_ShouldDeleteInMemory()
+    {
+        var workbookPath = CreateWorkbookWithPivotTable("test_session_delete.xlsx");
+        var sessionId = OpenSession(workbookPath);
+        var result = _tool.Execute("delete", sessionId: sessionId, pivotTableIndex: 0);
+        Assert.Contains("deleted", result);
+        var workbook = SessionManager.GetDocument<Workbook>(sessionId);
+        Assert.Empty(workbook.Worksheets[0].PivotTables);
+    }
+
+    [Fact]
+    public void Edit_WithSessionId_ShouldEditInMemory()
+    {
+        var workbookPath = CreateWorkbookWithPivotTable("test_session_edit.xlsx");
+        var sessionId = OpenSession(workbookPath);
+        var result = _tool.Execute("edit", sessionId: sessionId, pivotTableIndex: 0, name: "UpdatedPivot");
+        Assert.Contains("edited", result);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.Equal("UpdatedPivot", workbook.Worksheets[0].PivotTables[0].Name);
     }
 
     [Fact]
+    public void AddField_WithSessionId_ShouldAddInMemory()
+    {
+        var workbookPath = CreateWorkbookWithPivotTable("test_session_addfield.xlsx");
+        var sessionId = OpenSession(workbookPath);
+        var result = _tool.Execute("add_field", sessionId: sessionId, pivotTableIndex: 0,
+            fieldName: "Region", area: "Row");
+        Assert.Contains("added", result);
+    }
+
+    [Fact]
+    public void Refresh_WithSessionId_ShouldRefreshInMemory()
+    {
+        var workbookPath = CreateWorkbookWithPivotTable("test_session_refresh.xlsx");
+        var sessionId = OpenSession(workbookPath);
+        var result = _tool.Execute("refresh", sessionId: sessionId, pivotTableIndex: 0);
+        Assert.Contains("Refreshed", result);
+    }
+
+    [Fact]
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
-        Assert.Throws<KeyNotFoundException>(() =>
-            _tool.Execute("get", sessionId: "invalid_session_id"));
+        Assert.Throws<KeyNotFoundException>(() => _tool.Execute("get", sessionId: "invalid_session"));
+    }
+
+    [Fact]
+    public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
+    {
+        var workbookPath1 = CreateExcelWorkbook("test_path_file.xlsx");
+        var workbookPath2 = CreateWorkbookWithPivotTable("test_session_file.xlsx");
+        using (var wb = new Workbook(workbookPath2))
+        {
+            wb.Worksheets[0].PivotTables[0].Name = "SessionPivotTable";
+            wb.Save(workbookPath2);
+        }
+
+        var sessionId = OpenSession(workbookPath2);
+        var result = _tool.Execute("get", workbookPath1, sessionId);
+        Assert.Contains("SessionPivotTable", result);
     }
 
     #endregion

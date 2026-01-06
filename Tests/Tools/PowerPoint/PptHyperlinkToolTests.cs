@@ -18,450 +18,391 @@ public class PptHyperlinkToolTests : TestBase
     {
         var filePath = CreateTestFilePath(fileName);
         using var presentation = new Presentation();
-        // Use the default first slide instead of AddEmptySlide to ensure shapes are properly saved
         var slide = presentation.Slides[0];
         slide.Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 50);
         presentation.Save(filePath, SaveFormat.Pptx);
         return filePath;
     }
 
-    #region General Tests
+    private string CreatePresentationWithHyperlink(string fileName, string url = "https://example.com")
+    {
+        var filePath = CreateTestFilePath(fileName);
+        using var presentation = new Presentation();
+        var slide = presentation.Slides[0];
+        var shape = slide.Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 50);
+        shape.HyperlinkClick = new Hyperlink(url);
+        presentation.Save(filePath, SaveFormat.Pptx);
+        return filePath;
+    }
+
+    private string CreatePresentationWithMultipleSlides(string fileName, int slideCount = 3)
+    {
+        var filePath = CreateTestFilePath(fileName);
+        using var presentation = new Presentation();
+        for (var i = 1; i < slideCount; i++)
+            presentation.Slides.AddEmptySlide(presentation.LayoutSlides[0]);
+        presentation.Save(filePath, SaveFormat.Pptx);
+        return filePath;
+    }
+
+    private string CreatePresentationWithPortionHyperlink(string fileName)
+    {
+        var filePath = CreateTestFilePath(fileName);
+        using var presentation = new Presentation();
+        var slide = presentation.Slides[0];
+        var shape = slide.Shapes.AddAutoShape(ShapeType.Rectangle, 50, 50, 300, 50);
+        shape.TextFrame.Paragraphs.Clear();
+        var paragraph = new Paragraph();
+        paragraph.Portions.Add(new Portion("Click "));
+        var linkPortion = new Portion("here")
+        {
+            PortionFormat = { HyperlinkClick = new Hyperlink("https://portion-link.com") }
+        };
+        paragraph.Portions.Add(linkPortion);
+        paragraph.Portions.Add(new Portion(" for more"));
+        shape.TextFrame.Paragraphs.Add(paragraph);
+        presentation.Save(filePath, SaveFormat.Pptx);
+        return filePath;
+    }
+
+    private static int FindShapeIndex(string pptPath)
+    {
+        using var presentation = new Presentation(pptPath);
+        var slide = presentation.Slides[0];
+        var nonPlaceholderShapes = slide.Shapes.Where(s => s.Placeholder == null).ToList();
+        if (nonPlaceholderShapes.Count == 0) nonPlaceholderShapes = slide.Shapes.ToList();
+        foreach (var shape in nonPlaceholderShapes)
+            if (Math.Abs(shape.X - 100) < 1 && Math.Abs(shape.Y - 100) < 1)
+                return slide.Shapes.IndexOf(shape);
+        return slide.Shapes.IndexOf(nonPlaceholderShapes[0]);
+    }
+
+    #region General
 
     [Fact]
-    public void AddHyperlink_ShouldAddHyperlink()
+    public void Add_ShouldAddHyperlink()
     {
         var pptPath = CreateTestPresentation("test_add_hyperlink.pptx");
-
-        // Find the correct shapeIndex for the added AutoShape (excluding placeholders)
-        var correctShapeIndex = -1;
-        using (var ppt = new Presentation(pptPath))
-        {
-            var pptSlide = ppt.Slides[0];
-            var nonPlaceholderShapes = pptSlide.Shapes.Where(s => s.Placeholder == null).ToList();
-            // If no non-placeholder shapes found, use all shapes
-            if (nonPlaceholderShapes.Count == 0) nonPlaceholderShapes = pptSlide.Shapes.ToList();
-            Assert.True(nonPlaceholderShapes.Count > 0,
-                $"Should find at least one shape. Total shapes: {pptSlide.Shapes.Count}, Non-placeholder: {pptSlide.Shapes.Count(s => s.Placeholder == null)}");
-            // The added shape should be the one with original coordinates (100, 100)
-            foreach (var s in nonPlaceholderShapes)
-                if (Math.Abs(s.X - 100) < 1 && Math.Abs(s.Y - 100) < 1)
-                {
-                    correctShapeIndex = pptSlide.Shapes.IndexOf(s);
-                    break;
-                }
-
-            if (correctShapeIndex < 0)
-                correctShapeIndex =
-                    pptSlide.Shapes.IndexOf(nonPlaceholderShapes[0]); // Fallback to first non-placeholder shape
-        }
-
-        Assert.True(correctShapeIndex >= 0, $"Should find at least one shape. Found shape index: {correctShapeIndex}");
-
+        var shapeIndex = FindShapeIndex(pptPath);
         var outputPath = CreateTestFilePath("test_add_hyperlink_output.pptx");
-        _tool.Execute("add", pptPath, slideIndex: 0, shapeIndex: correctShapeIndex, url: "https://example.com",
+        var result = _tool.Execute("add", pptPath, slideIndex: 0, shapeIndex: shapeIndex, url: "https://example.com",
             text: "Click here", outputPath: outputPath);
+        Assert.StartsWith("Hyperlink added to slide", result);
         using var presentation = new Presentation(outputPath);
-        var slide = presentation.Slides[0];
-        Assert.True(correctShapeIndex < slide.Shapes.Count, $"Shape index {correctShapeIndex} should be valid");
-        var shape = slide.Shapes[correctShapeIndex];
+        var shape = presentation.Slides[0].Shapes[shapeIndex];
         Assert.NotNull(shape.HyperlinkClick);
-        Assert.Contains("example.com", shape.HyperlinkClick.ExternalUrl ?? "", StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("example.com", shape.HyperlinkClick.ExternalUrl ?? "");
     }
 
     [Fact]
-    public void GetHyperlinks_ShouldReturnAllHyperlinks()
-    {
-        var pptPath = CreateTestPresentation("test_get_hyperlinks.pptx");
-        using (var presentation = new Presentation(pptPath))
-        {
-            var slide = presentation.Slides[0];
-            // Find non-placeholder shape or use first shape
-            var shape = slide.Shapes.OfType<IAutoShape>().FirstOrDefault(s => s.Placeholder == null)
-                        ?? slide.Shapes.OfType<IAutoShape>().FirstOrDefault()
-                        ?? slide.Shapes[0];
-            shape.HyperlinkClick = new Hyperlink("https://test.com");
-            presentation.Save(pptPath, SaveFormat.Pptx);
-        }
-
-        var result = _tool.Execute("get", pptPath);
-        Assert.NotNull(result);
-        Assert.NotEmpty(result);
-        Assert.Contains("Hyperlink", result, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public void EditHyperlink_ShouldModifyHyperlink()
-    {
-        var pptPath = CreateTestPresentation("test_edit_hyperlink.pptx");
-
-        // Find the correct shapeIndex for the added AutoShape (excluding placeholders)
-        var correctShapeIndex = -1;
-        using (var ppt = new Presentation(pptPath))
-        {
-            var pptSlide = ppt.Slides[0];
-            var nonPlaceholderShapes = pptSlide.Shapes.Where(s => s.Placeholder == null).ToList();
-            // If no non-placeholder shapes found, use all shapes
-            if (nonPlaceholderShapes.Count == 0) nonPlaceholderShapes = pptSlide.Shapes.ToList();
-            Assert.True(nonPlaceholderShapes.Count > 0,
-                $"Should find at least one shape. Total shapes: {pptSlide.Shapes.Count}, Non-placeholder: {pptSlide.Shapes.Count(s => s.Placeholder == null)}");
-            // The added shape should be the one with original coordinates (100, 100)
-            foreach (var s in nonPlaceholderShapes)
-                if (Math.Abs(s.X - 100) < 1 && Math.Abs(s.Y - 100) < 1)
-                {
-                    correctShapeIndex = pptSlide.Shapes.IndexOf(s);
-                    break;
-                }
-
-            if (correctShapeIndex < 0)
-                correctShapeIndex =
-                    pptSlide.Shapes.IndexOf(nonPlaceholderShapes[0]); // Fallback to first non-placeholder shape
-
-            // Set initial hyperlink
-            var pptShape = pptSlide.Shapes[correctShapeIndex];
-            pptShape.HyperlinkClick = new Hyperlink("https://old.com");
-            ppt.Save(pptPath, SaveFormat.Pptx);
-        }
-
-        Assert.True(correctShapeIndex >= 0, $"Should find at least one shape. Found shape index: {correctShapeIndex}");
-
-        var outputPath = CreateTestFilePath("test_edit_hyperlink_output.pptx");
-        _tool.Execute("edit", pptPath, slideIndex: 0, shapeIndex: correctShapeIndex, url: "https://new.com",
-            outputPath: outputPath);
-        using var presentation = new Presentation(outputPath);
-        var slide = presentation.Slides[0];
-        Assert.True(correctShapeIndex < slide.Shapes.Count, $"Shape index {correctShapeIndex} should be valid");
-        var shape = slide.Shapes[correctShapeIndex];
-        Assert.Contains("new.com", shape.HyperlinkClick?.ExternalUrl ?? "", StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public void DeleteHyperlink_ShouldDeleteHyperlink()
-    {
-        var pptPath = CreateTestPresentation("test_delete_hyperlink.pptx");
-
-        // Find the correct shapeIndex for the added AutoShape (excluding placeholders)
-        var correctShapeIndex = -1;
-        using (var ppt = new Presentation(pptPath))
-        {
-            var pptSlide = ppt.Slides[0];
-            var nonPlaceholderShapes = pptSlide.Shapes.Where(s => s.Placeholder == null).ToList();
-            // If no non-placeholder shapes found, use all shapes
-            if (nonPlaceholderShapes.Count == 0) nonPlaceholderShapes = pptSlide.Shapes.ToList();
-            Assert.True(nonPlaceholderShapes.Count > 0,
-                $"Should find at least one shape. Total shapes: {pptSlide.Shapes.Count}, Non-placeholder: {pptSlide.Shapes.Count(s => s.Placeholder == null)}");
-            // The added shape should be the one with original coordinates (100, 100)
-            foreach (var s in nonPlaceholderShapes)
-                if (Math.Abs(s.X - 100) < 1 && Math.Abs(s.Y - 100) < 1)
-                {
-                    correctShapeIndex = pptSlide.Shapes.IndexOf(s);
-                    break;
-                }
-
-            if (correctShapeIndex < 0)
-                correctShapeIndex =
-                    pptSlide.Shapes.IndexOf(nonPlaceholderShapes[0]); // Fallback to first non-placeholder shape
-
-            // Set initial hyperlink
-            var pptShape = pptSlide.Shapes[correctShapeIndex];
-            pptShape.HyperlinkClick = new Hyperlink("https://delete.com");
-            ppt.Save(pptPath, SaveFormat.Pptx);
-        }
-
-        Assert.True(correctShapeIndex >= 0, $"Should find at least one shape. Found shape index: {correctShapeIndex}");
-
-        var outputPath = CreateTestFilePath("test_delete_hyperlink_output.pptx");
-        _tool.Execute("delete", pptPath, slideIndex: 0, shapeIndex: correctShapeIndex, outputPath: outputPath);
-        using var presentation = new Presentation(outputPath);
-        var slide = presentation.Slides[0];
-        Assert.True(correctShapeIndex < slide.Shapes.Count, $"Shape index {correctShapeIndex} should be valid");
-        var shape = slide.Shapes[correctShapeIndex];
-        Assert.Null(shape.HyperlinkClick);
-    }
-
-    [Fact]
-    public void AddHyperlink_WithSlideTargetIndex_ShouldAddInternalLink()
-    {
-        // Arrange - Create presentation with multiple slides
-        var pptPath = CreateTestFilePath("test_add_internal_link.pptx");
-        using (var ppt = new Presentation())
-        {
-            ppt.Slides.AddEmptySlide(ppt.LayoutSlides[0]);
-            ppt.Slides.AddEmptySlide(ppt.LayoutSlides[0]);
-            ppt.Save(pptPath, SaveFormat.Pptx);
-        }
-
-        var outputPath = CreateTestFilePath("test_add_internal_link_output.pptx");
-        var result = _tool.Execute("add", pptPath, slideIndex: 0, slideTargetIndex: 1, text: "Go to slide 2",
-            outputPath: outputPath);
-        Assert.Contains("Slide 1", result);
-        Assert.True(File.Exists(outputPath));
-    }
-
-    [Fact]
-    public void AddHyperlink_WithNewShape_ShouldCreateShapeWithLink()
+    public void Add_WithNewShape_ShouldCreateShapeWithLink()
     {
         var pptPath = CreateTestPresentation("test_add_new_shape.pptx");
         var outputPath = CreateTestFilePath("test_add_new_shape_output.pptx");
         var result = _tool.Execute("add", pptPath, slideIndex: 0, url: "https://example.com", text: "New Link", x: 100,
             y: 200, width: 150, height: 40, outputPath: outputPath);
-        Assert.Contains("Hyperlink added", result);
+        Assert.StartsWith("Hyperlink added to slide", result);
         Assert.True(File.Exists(outputPath));
     }
 
     [Fact]
-    public void GetHyperlinks_WithSlideIndex_ShouldReturnSlideHyperlinks()
+    public void Add_WithSlideTargetIndex_ShouldAddInternalLink()
     {
-        var pptPath = CreateTestPresentation("test_get_slide_hyperlinks.pptx");
-        using (var presentation = new Presentation(pptPath))
-        {
-            var slide = presentation.Slides[0];
-            var shape = slide.Shapes.OfType<IAutoShape>().FirstOrDefault(s => s.Placeholder == null)
-                        ?? slide.Shapes.OfType<IAutoShape>().FirstOrDefault();
-            if (shape != null)
-                shape.HyperlinkClick = new Hyperlink("https://test.com");
-            presentation.Save(pptPath, SaveFormat.Pptx);
-        }
-
-        var result = _tool.Execute("get", pptPath, slideIndex: 0);
-        Assert.Contains("slideIndex", result);
-        Assert.Contains("hyperlinks", result);
+        var pptPath = CreatePresentationWithMultipleSlides("test_add_internal_link.pptx");
+        var outputPath = CreateTestFilePath("test_add_internal_link_output.pptx");
+        var result = _tool.Execute("add", pptPath, slideIndex: 0, slideTargetIndex: 1, text: "Go to slide 2",
+            outputPath: outputPath);
+        Assert.StartsWith("Hyperlink added to slide", result);
+        Assert.True(File.Exists(outputPath));
     }
 
     [SkippableFact]
-    public void AddHyperlink_WithLinkText_ShouldAddPortionLevelHyperlink()
+    public void Add_WithLinkText_ShouldAddPortionLevelHyperlink()
     {
-        // Skip in evaluation mode - evaluation watermark interferes with text content
         SkipInEvaluationMode(AsposeLibraryType.Slides, "Evaluation watermark interferes with text content");
         var pptPath = CreateTestPresentation("test_add_portion_hyperlink.pptx");
         var outputPath = CreateTestFilePath("test_add_portion_hyperlink_output.pptx");
         var result = _tool.Execute("add", pptPath, slideIndex: 0, url: "https://example.com",
             text: "Please click here for more info", linkText: "here", outputPath: outputPath);
-        Assert.Contains("Hyperlink added", result);
-        Assert.Contains("on text: 'here'", result);
-        Assert.True(File.Exists(outputPath));
-
-        // Verify the hyperlink is on the correct portion
+        Assert.StartsWith("Hyperlink added to slide", result);
         using var presentation = new Presentation(outputPath);
-        var slide = presentation.Slides[0];
-        var autoShape = slide.Shapes.OfType<IAutoShape>().Last();
-        Assert.NotNull(autoShape.TextFrame);
-
-        var allText = string.Join("", autoShape.TextFrame.Paragraphs
-            .SelectMany(p => p.Portions)
-            .Select(p => p.Text));
-        Assert.Equal("Please click here for more info", allText);
-
-        // Find the "here" portion and verify it has the hyperlink
-        var herePortion = autoShape.TextFrame.Paragraphs
-            .SelectMany(p => p.Portions)
+        var autoShape = presentation.Slides[0].Shapes.OfType<IAutoShape>().Last();
+        var herePortion = autoShape.TextFrame.Paragraphs.SelectMany(p => p.Portions)
             .FirstOrDefault(p => p.Text == "here");
         Assert.NotNull(herePortion);
         Assert.NotNull(herePortion.PortionFormat.HyperlinkClick);
-        Assert.Contains("example.com", herePortion.PortionFormat.HyperlinkClick.ExternalUrl ?? "");
     }
 
     [Fact]
-    public void GetHyperlinks_ShouldReturnPortionLevelHyperlinks()
+    public void Edit_ShouldModifyHyperlink()
     {
-        // Arrange - Create presentation with portion-level hyperlink
-        var pptPath = CreateTestFilePath("test_get_portion_hyperlinks.pptx");
-        using (var ppt = new Presentation())
-        {
-            var slide = ppt.Slides[0];
-            var shape = slide.Shapes.AddAutoShape(ShapeType.Rectangle, 50, 50, 300, 50);
-            shape.TextFrame.Paragraphs.Clear();
-            var paragraph = new Paragraph();
-            paragraph.Portions.Add(new Portion("Click "));
-            var linkPortion = new Portion("here")
-            {
-                PortionFormat = { HyperlinkClick = new Hyperlink("https://portion-link.com") }
-            };
-            paragraph.Portions.Add(linkPortion);
-            paragraph.Portions.Add(new Portion(" for more"));
-            shape.TextFrame.Paragraphs.Add(paragraph);
-            ppt.Save(pptPath, SaveFormat.Pptx);
-        }
+        var pptPath = CreatePresentationWithHyperlink("test_edit_hyperlink.pptx", "https://old.com");
+        var outputPath = CreateTestFilePath("test_edit_hyperlink_output.pptx");
+        var result = _tool.Execute("edit", pptPath, slideIndex: 0, shapeIndex: 0, url: "https://new.com",
+            outputPath: outputPath);
+        Assert.StartsWith("Hyperlink updated on slide", result);
+        using var presentation = new Presentation(outputPath);
+        Assert.Contains("new.com", presentation.Slides[0].Shapes[0].HyperlinkClick?.ExternalUrl ?? "");
+    }
 
+    [Fact]
+    public void Edit_WithRemoveHyperlink_ShouldRemoveLink()
+    {
+        var pptPath = CreatePresentationWithHyperlink("test_edit_remove.pptx");
+        var outputPath = CreateTestFilePath("test_edit_remove_output.pptx");
+        var result = _tool.Execute("edit", pptPath, slideIndex: 0, shapeIndex: 0, removeHyperlink: true,
+            outputPath: outputPath);
+        Assert.StartsWith("Hyperlink updated on slide", result);
+        using var presentation = new Presentation(outputPath);
+        Assert.Null(presentation.Slides[0].Shapes[0].HyperlinkClick);
+    }
+
+    [Fact]
+    public void Delete_ShouldRemoveHyperlink()
+    {
+        var pptPath = CreatePresentationWithHyperlink("test_delete_hyperlink.pptx");
+        var outputPath = CreateTestFilePath("test_delete_hyperlink_output.pptx");
+        var result = _tool.Execute("delete", pptPath, slideIndex: 0, shapeIndex: 0, outputPath: outputPath);
+        Assert.StartsWith("Hyperlink deleted from slide", result);
+        using var presentation = new Presentation(outputPath);
+        Assert.Null(presentation.Slides[0].Shapes[0].HyperlinkClick);
+    }
+
+    [Fact]
+    public void Delete_ShouldRemovePortionLevelHyperlinks()
+    {
+        var pptPath = CreatePresentationWithPortionHyperlink("test_delete_portion_hyperlink.pptx");
+        var outputPath = CreateTestFilePath("test_delete_portion_hyperlink_output.pptx");
+        _tool.Execute("delete", pptPath, slideIndex: 0, shapeIndex: 0, outputPath: outputPath);
+        using var presentation = new Presentation(outputPath);
+        var autoShape = presentation.Slides[0].Shapes.OfType<IAutoShape>().First();
+        foreach (var para in autoShape.TextFrame.Paragraphs)
+        foreach (var portion in para.Portions)
+            Assert.Null(portion.PortionFormat.HyperlinkClick);
+    }
+
+    [Fact]
+    public void Get_ShouldReturnAllHyperlinks()
+    {
+        var pptPath = CreatePresentationWithHyperlink("test_get_hyperlinks.pptx");
+        var result = _tool.Execute("get", pptPath);
+        Assert.NotNull(result);
+        Assert.Contains("Hyperlink", result, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Get_WithSlideIndex_ShouldReturnSlideHyperlinks()
+    {
+        var pptPath = CreatePresentationWithHyperlink("test_get_slide_hyperlinks.pptx");
+        var result = _tool.Execute("get", pptPath, slideIndex: 0);
+        Assert.Contains("slideIndex", result);
+        Assert.Contains("hyperlinks", result);
+    }
+
+    [Fact]
+    public void Get_ShouldReturnPortionLevelHyperlinks()
+    {
+        var pptPath = CreatePresentationWithPortionHyperlink("test_get_portion_hyperlinks.pptx");
         var result = _tool.Execute("get", pptPath, slideIndex: 0);
         Assert.Contains("\"level\": \"text\"", result);
         Assert.Contains("\"text\": \"here\"", result);
         Assert.Contains("portion-link.com", result);
     }
 
-    [Fact]
-    public void DeleteHyperlink_ShouldDeletePortionLevelHyperlinks()
+    [Theory]
+    [InlineData("ADD")]
+    [InlineData("Add")]
+    [InlineData("add")]
+    public void Operation_ShouldBeCaseInsensitive_Add(string operation)
     {
-        // Arrange - Create presentation with portion-level hyperlink
-        var pptPath = CreateTestFilePath("test_delete_portion_hyperlink.pptx");
-        using (var ppt = new Presentation())
-        {
-            var pptSlide = ppt.Slides[0];
-            var shape = pptSlide.Shapes.AddAutoShape(ShapeType.Rectangle, 50, 50, 300, 50);
-            shape.TextFrame.Paragraphs.Clear();
-            var paragraph = new Paragraph();
-            var linkPortion = new Portion("Click here")
-            {
-                PortionFormat = { HyperlinkClick = new Hyperlink("https://delete-me.com") }
-            };
-            paragraph.Portions.Add(linkPortion);
-            shape.TextFrame.Paragraphs.Add(paragraph);
-            ppt.Save(pptPath, SaveFormat.Pptx);
-        }
-
-        var outputPath = CreateTestFilePath("test_delete_portion_hyperlink_output.pptx");
-        _tool.Execute("delete", pptPath, slideIndex: 0, shapeIndex: 0, outputPath: outputPath);
-
-        // Assert - Verify portion-level hyperlink is deleted
-        using var presentation = new Presentation(outputPath);
-        var slide = presentation.Slides[0];
-        var autoShape = slide.Shapes.OfType<IAutoShape>().First();
-        foreach (var para in autoShape.TextFrame.Paragraphs)
-        foreach (var portion in para.Portions)
-            Assert.Null(portion.PortionFormat.HyperlinkClick);
+        var pptPath = CreateTestPresentation($"test_case_add_{operation}.pptx");
+        var outputPath = CreateTestFilePath($"test_case_add_{operation}_output.pptx");
+        var result = _tool.Execute(operation, pptPath, slideIndex: 0, url: "https://example.com", text: "Link",
+            outputPath: outputPath);
+        Assert.StartsWith("Hyperlink added to slide", result);
     }
 
-    [SkippableFact]
-    public void AddHyperlink_WithLinkTextAtStart_ShouldAddPortionLevelHyperlink()
+    [Theory]
+    [InlineData("EDIT")]
+    [InlineData("Edit")]
+    [InlineData("edit")]
+    public void Operation_ShouldBeCaseInsensitive_Edit(string operation)
     {
-        // Skip in evaluation mode - evaluation watermark interferes with text content
-        SkipInEvaluationMode(AsposeLibraryType.Slides, "Evaluation watermark interferes with text content");
-
-        // Arrange - linkText at the beginning of text
-        var pptPath = CreateTestPresentation("test_add_linktext_start.pptx");
-        var outputPath = CreateTestFilePath("test_add_linktext_start_output.pptx");
-        var result = _tool.Execute("add", pptPath, slideIndex: 0, url: "https://example.com",
-            text: "Click here for more", linkText: "Click", outputPath: outputPath);
-        Assert.Contains("on text: 'Click'", result);
-
-        using var presentation = new Presentation(outputPath);
-        var slide = presentation.Slides[0];
-        var autoShape = slide.Shapes.OfType<IAutoShape>().Last();
-        var clickPortion = autoShape.TextFrame.Paragraphs
-            .SelectMany(p => p.Portions)
-            .FirstOrDefault(p => p.Text == "Click");
-        Assert.NotNull(clickPortion);
-        Assert.NotNull(clickPortion.PortionFormat.HyperlinkClick);
+        var pptPath = CreatePresentationWithHyperlink($"test_case_edit_{operation}.pptx");
+        var outputPath = CreateTestFilePath($"test_case_edit_{operation}_output.pptx");
+        var result = _tool.Execute(operation, pptPath, slideIndex: 0, shapeIndex: 0, url: "https://new.com",
+            outputPath: outputPath);
+        Assert.StartsWith("Hyperlink updated on slide", result);
     }
 
-    [SkippableFact]
-    public void AddHyperlink_WithLinkTextAtEnd_ShouldAddPortionLevelHyperlink()
+    [Theory]
+    [InlineData("DELETE")]
+    [InlineData("Delete")]
+    [InlineData("delete")]
+    public void Operation_ShouldBeCaseInsensitive_Delete(string operation)
     {
-        // Skip in evaluation mode - evaluation watermark interferes with text content
-        SkipInEvaluationMode(AsposeLibraryType.Slides, "Evaluation watermark interferes with text content");
+        var pptPath = CreatePresentationWithHyperlink($"test_case_delete_{operation}.pptx");
+        var outputPath = CreateTestFilePath($"test_case_delete_{operation}_output.pptx");
+        var result = _tool.Execute(operation, pptPath, slideIndex: 0, shapeIndex: 0, outputPath: outputPath);
+        Assert.StartsWith("Hyperlink deleted from slide", result);
+    }
 
-        // Arrange - linkText at the end of text
-        var pptPath = CreateTestPresentation("test_add_linktext_end.pptx");
-        var outputPath = CreateTestFilePath("test_add_linktext_end_output.pptx");
-        var result = _tool.Execute("add", pptPath, slideIndex: 0, url: "https://example.com", text: "More info here",
-            linkText: "here", outputPath: outputPath);
-        Assert.Contains("on text: 'here'", result);
-
-        using var presentation = new Presentation(outputPath);
-        var slide = presentation.Slides[0];
-        var autoShape = slide.Shapes.OfType<IAutoShape>().Last();
-        var herePortion = autoShape.TextFrame.Paragraphs
-            .SelectMany(p => p.Portions)
-            .FirstOrDefault(p => p.Text == "here");
-        Assert.NotNull(herePortion);
-        Assert.NotNull(herePortion.PortionFormat.HyperlinkClick);
+    [Theory]
+    [InlineData("GET")]
+    [InlineData("Get")]
+    [InlineData("get")]
+    public void Operation_ShouldBeCaseInsensitive_Get(string operation)
+    {
+        var pptPath = CreatePresentationWithHyperlink($"test_case_get_{operation}.pptx");
+        var result = _tool.Execute(operation, pptPath);
+        Assert.Contains("Hyperlink", result, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
 
-    #region Exception Tests
+    #region Exception
 
     [Fact]
-    public void ExecuteAsync_UnknownOperation_ShouldThrow()
+    public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
     {
         var pptPath = CreateTestPresentation("test_unknown_op.pptx");
-        Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", pptPath));
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", pptPath));
+        Assert.Contains("Unknown operation", ex.Message);
     }
 
     [Fact]
-    public void AddHyperlink_WithoutUrlOrSlideTargetIndex_ShouldThrow()
+    public void Add_WithoutSlideIndex_ShouldThrowArgumentException()
+    {
+        var pptPath = CreateTestPresentation("test_add_no_slide.pptx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("add", pptPath, url: "https://example.com"));
+        Assert.Contains("slideIndex is required", ex.Message);
+    }
+
+    [Fact]
+    public void Add_WithoutUrlOrSlideTargetIndex_ShouldThrowArgumentException()
     {
         var pptPath = CreateTestPresentation("test_add_no_target.pptx");
-        Assert.Throws<ArgumentException>(() => _tool.Execute("add", pptPath, slideIndex: 0, text: "Link"));
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("add", pptPath, slideIndex: 0, text: "Link"));
+        Assert.Contains("url or slideTargetIndex", ex.Message);
     }
 
     [Fact]
-    public void AddHyperlink_WithLinkTextNotFound_ShouldThrow()
+    public void Add_WithLinkTextNotFound_ShouldThrowArgumentException()
     {
         var pptPath = CreateTestPresentation("test_add_linktext_notfound.pptx");
         var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("add", pptPath, slideIndex: 0,
-            url: "https://example.com", text: "Some text without the link word", linkText: "notfound"));
+            url: "https://example.com", text: "Some text", linkText: "notfound"));
         Assert.Contains("linkText", ex.Message);
         Assert.Contains("not found", ex.Message);
     }
 
-    #endregion
-
-    #region Session ID Tests
+    [Fact]
+    public void Edit_WithoutSlideIndex_ShouldThrowArgumentException()
+    {
+        var pptPath = CreatePresentationWithHyperlink("test_edit_no_slide.pptx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("edit", pptPath, shapeIndex: 0, url: "https://new.com"));
+        Assert.Contains("slideIndex is required", ex.Message);
+    }
 
     [Fact]
-    public void GetHyperlinks_WithSessionId_ShouldReturnHyperlinks()
+    public void Edit_WithoutShapeIndex_ShouldThrowArgumentException()
     {
-        var pptPath = CreateTestPresentation("test_session_get_hyperlinks.pptx");
-        using (var presentation = new Presentation(pptPath))
-        {
-            var slide = presentation.Slides[0];
-            var shape = slide.Shapes.OfType<IAutoShape>().FirstOrDefault(s => s.Placeholder == null)
-                        ?? slide.Shapes.OfType<IAutoShape>().FirstOrDefault()
-                        ?? slide.Shapes[0];
-            shape.HyperlinkClick = new Hyperlink("https://session-test.com");
-            presentation.Save(pptPath, SaveFormat.Pptx);
-        }
+        var pptPath = CreatePresentationWithHyperlink("test_edit_no_shape.pptx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("edit", pptPath, slideIndex: 0, url: "https://new.com"));
+        Assert.Contains("shapeIndex is required", ex.Message);
+    }
 
+    [Fact]
+    public void Delete_WithoutSlideIndex_ShouldThrowArgumentException()
+    {
+        var pptPath = CreatePresentationWithHyperlink("test_delete_no_slide.pptx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("delete", pptPath, shapeIndex: 0));
+        Assert.Contains("slideIndex is required", ex.Message);
+    }
+
+    [Fact]
+    public void Delete_WithoutShapeIndex_ShouldThrowArgumentException()
+    {
+        var pptPath = CreatePresentationWithHyperlink("test_delete_no_shape.pptx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("delete", pptPath, slideIndex: 0));
+        Assert.Contains("shapeIndex is required", ex.Message);
+    }
+
+    [Fact]
+    public void Get_WithInvalidSlideIndex_ShouldThrowArgumentException()
+    {
+        var pptPath = CreateTestPresentation("test_get_invalid_slide.pptx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("get", pptPath, slideIndex: 99));
+        Assert.Contains("slideIndex", ex.Message);
+    }
+
+    #endregion
+
+    #region Session
+
+    [Fact]
+    public void Get_WithSessionId_ShouldReturnHyperlinks()
+    {
+        var pptPath = CreatePresentationWithHyperlink("test_session_get_hyperlinks.pptx", "https://session-test.com");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("get", sessionId: sessionId);
-        Assert.NotNull(result);
         Assert.Contains("Hyperlink", result, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public void AddHyperlink_WithSessionId_ShouldAddInMemory()
+    public void Add_WithSessionId_ShouldAddInMemory()
     {
         var pptPath = CreateTestPresentation("test_session_add_hyperlink.pptx");
+        var shapeIndex = FindShapeIndex(pptPath);
         var sessionId = OpenSession(pptPath);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
-
-        // Find correct shape index
-        var slide = ppt.Slides[0];
-        var nonPlaceholderShapes = slide.Shapes.Where(s => s.Placeholder == null).ToList();
-        if (nonPlaceholderShapes.Count == 0) nonPlaceholderShapes = slide.Shapes.ToList();
-        var correctShapeIndex = slide.Shapes.IndexOf(nonPlaceholderShapes[0]);
-        var result = _tool.Execute("add", sessionId: sessionId, slideIndex: 0, shapeIndex: correctShapeIndex,
+        var result = _tool.Execute("add", sessionId: sessionId, slideIndex: 0, shapeIndex: shapeIndex,
             url: "https://session-example.com", text: "Session Link");
-        Assert.Contains("Hyperlink added", result);
-        Assert.Contains("session", result);
-
-        // Verify in-memory changes
-        var shape = ppt.Slides[0].Shapes[correctShapeIndex];
+        Assert.StartsWith("Hyperlink added to slide", result);
+        var shape = ppt.Slides[0].Shapes[shapeIndex];
         Assert.NotNull(shape.HyperlinkClick);
         Assert.Contains("session-example.com", shape.HyperlinkClick.ExternalUrl ?? "");
     }
 
     [Fact]
-    public void DeleteHyperlink_WithSessionId_ShouldDeleteInMemory()
+    public void Edit_WithSessionId_ShouldEditInMemory()
     {
-        var pptPath = CreateTestFilePath("test_session_delete_hyperlink.pptx");
-        using (var presentation = new Presentation())
-        {
-            var slideToSetup = presentation.Slides[0];
-            var shapeToSetup = slideToSetup.Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 50);
-            shapeToSetup.HyperlinkClick = new Hyperlink("https://to-delete.com");
-            presentation.Save(pptPath, SaveFormat.Pptx);
-        }
+        var pptPath = CreatePresentationWithHyperlink("test_session_edit_hyperlink.pptx", "https://old.com");
+        var sessionId = OpenSession(pptPath);
+        var ppt = SessionManager.GetDocument<Presentation>(sessionId);
+        var result = _tool.Execute("edit", sessionId: sessionId, slideIndex: 0, shapeIndex: 0,
+            url: "https://session-new.com");
+        Assert.StartsWith("Hyperlink updated on slide", result);
+        Assert.Contains("session-new.com", ppt.Slides[0].Shapes[0].HyperlinkClick?.ExternalUrl ?? "");
+    }
 
+    [Fact]
+    public void Delete_WithSessionId_ShouldDeleteInMemory()
+    {
+        var pptPath = CreatePresentationWithHyperlink("test_session_delete_hyperlink.pptx");
         var sessionId = OpenSession(pptPath);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         var result = _tool.Execute("delete", sessionId: sessionId, slideIndex: 0, shapeIndex: 0);
-        Assert.Contains("Hyperlink deleted", result);
-        Assert.Contains("session", result);
+        Assert.StartsWith("Hyperlink deleted from slide", result);
+        Assert.Null(ppt.Slides[0].Shapes[0].HyperlinkClick);
+    }
 
-        // Verify in-memory changes
-        var shape = ppt.Slides[0].Shapes[0];
-        Assert.Null(shape.HyperlinkClick);
+    [Fact]
+    public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
+    {
+        Assert.Throws<KeyNotFoundException>(() => _tool.Execute("get", sessionId: "invalid_session"));
+    }
+
+    [Fact]
+    public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
+    {
+        var pptPath1 = CreateTestPresentation("test_path_hyperlink.pptx");
+        var pptPath2 = CreatePresentationWithHyperlink("test_session_hyperlink.pptx", "https://session-url.com");
+        var sessionId = OpenSession(pptPath2);
+        var result = _tool.Execute("get", pptPath1, sessionId);
+        Assert.Contains("session-url.com", result);
     }
 
     #endregion

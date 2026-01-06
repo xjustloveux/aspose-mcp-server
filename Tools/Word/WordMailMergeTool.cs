@@ -4,28 +4,69 @@ using System.Text.Json.Nodes;
 using Aspose.Words;
 using Aspose.Words.MailMerging;
 using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Session;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Word;
 
 /// <summary>
-///     Tool for performing mail merge operations on Word document templates
+///     Tool for performing mail merge operations on Word document templates.
 /// </summary>
 [McpServerToolType]
 public class WordMailMergeTool
 {
+    /// <summary>
+    ///     The session identity accessor for session isolation.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
+    ///     The document session manager for managing in-memory document sessions.
+    /// </summary>
+    private readonly DocumentSessionManager? _sessionManager;
+
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="WordMailMergeTool" /> class.
+    /// </summary>
+    /// <param name="sessionManager">Optional session manager for in-memory document operations.</param>
+    /// <param name="identityAccessor">Optional identity accessor for session isolation.</param>
+    public WordMailMergeTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
+    {
+        _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
+    }
+
+    /// <summary>
+    ///     Performs mail merge on a Word document template.
+    /// </summary>
+    /// <param name="templatePath">Template file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID to use template from session.</param>
+    /// <param name="outputPath">Output file path (required).</param>
+    /// <param name="data">Key-value pairs for mail merge fields (for single record), as JSON object.</param>
+    /// <param name="dataArray">Array of objects for multiple records, as JSON array.</param>
+    /// <param name="cleanupOptions">Cleanup options to apply after mail merge, as comma-separated string.</param>
+    /// <returns>A message indicating the mail merge result with field and file information.</returns>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when outputPath is not provided, neither templatePath nor sessionId is provided,
+    ///     neither data nor dataArray is provided, or both data and dataArray are provided.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">Thrown when session management is not enabled or document cloning fails.</exception>
     [McpServerTool(Name = "word_mail_merge")]
     [Description(@"Perform mail merge on a Word document template.
 
 Usage examples:
 - Single record: word_mail_merge(templatePath='template.docx', outputPath='output.docx', data={'name':'John','address':'123 Main St'})
-- Multiple records: word_mail_merge(templatePath='template.docx', outputPath='output.docx', dataArray=[{'name':'John'},{'name':'Jane'}])")]
+- Multiple records: word_mail_merge(templatePath='template.docx', outputPath='output.docx', dataArray=[{'name':'John'},{'name':'Jane'}])
+- From session: word_mail_merge(sessionId='sess_xxx', outputPath='output.docx', data={'name':'John'})")]
     public string Execute(
-        [Description("Template file path (required)")]
-        string templatePath,
+        [Description("Template file path (required if no sessionId)")]
+        string? templatePath = null,
+        [Description("Session ID to use template from session")]
+        string? sessionId = null,
         [Description(
             "Output file path (required). For multiple records, files will be named output_1.docx, output_2.docx, etc.")]
-        string outputPath,
+        string? outputPath = null,
         [Description("Key-value pairs for mail merge fields (for single record), as JSON object")]
         string? data = null,
         [Description(
@@ -40,10 +81,17 @@ Usage examples:
 Default: 'removeUnusedFields,removeEmptyParagraphs'")]
         string? cleanupOptions = null)
     {
-        SecurityHelper.ValidateFilePath(templatePath, "templatePath", true);
+        if (string.IsNullOrEmpty(outputPath))
+            throw new ArgumentException("outputPath is required");
+
         SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
-        // Parse data and dataArray from JSON strings
+        if (string.IsNullOrEmpty(templatePath) && string.IsNullOrEmpty(sessionId))
+            throw new ArgumentException("Either templatePath or sessionId must be provided");
+
+        if (!string.IsNullOrEmpty(templatePath))
+            SecurityHelper.ValidateFilePath(templatePath, "templatePath", true);
+
         JsonObject? dataObject = null;
         JsonArray? dataArrayObject = null;
 
@@ -51,7 +99,6 @@ Default: 'removeUnusedFields,removeEmptyParagraphs'")]
 
         if (!string.IsNullOrEmpty(dataArray)) dataArrayObject = JsonNode.Parse(dataArray) as JsonArray;
 
-        // Validate that either data or dataArray is provided
         if (dataObject == null && dataArrayObject == null)
             throw new ArgumentException(
                 "Either 'data' (for single record) or 'dataArray' (for multiple records) must be provided");
@@ -60,16 +107,13 @@ Default: 'removeUnusedFields,removeEmptyParagraphs'")]
             throw new ArgumentException(
                 "Cannot specify both 'data' and 'dataArray'. Use 'data' for single record or 'dataArray' for multiple records");
 
-        // Parse cleanup options
         var cleanupOptionsFlags = ParseCleanupOptions(cleanupOptions);
 
         if (dataArrayObject is { Count: > 0 })
-            // Multiple records mode
-            return ExecuteMultipleRecords(templatePath, outputPath, dataArrayObject, cleanupOptionsFlags);
+            return ExecuteMultipleRecords(templatePath, sessionId, outputPath, dataArrayObject, cleanupOptionsFlags);
 
         if (dataObject != null)
-            // Single record mode
-            return ExecuteSingleRecord(templatePath, outputPath, dataObject, cleanupOptionsFlags);
+            return ExecuteSingleRecord(templatePath, sessionId, outputPath, dataObject, cleanupOptionsFlags);
 
         throw new ArgumentException("No data provided for mail merge");
     }
@@ -78,14 +122,30 @@ Default: 'removeUnusedFields,removeEmptyParagraphs'")]
     ///     Executes mail merge for a single record.
     /// </summary>
     /// <param name="templatePath">The template file path.</param>
+    /// <param name="sessionId">The session ID for reading template from session.</param>
     /// <param name="outputPath">The output file path.</param>
     /// <param name="data">The JSON object containing field names and values.</param>
     /// <param name="cleanupOptions">The mail merge cleanup options to apply.</param>
     /// <returns>A message indicating the result of the mail merge operation.</returns>
-    private static string ExecuteSingleRecord(string templatePath, string outputPath, JsonObject data,
+    private string ExecuteSingleRecord(string? templatePath, string? sessionId, string outputPath, JsonObject data,
         MailMergeCleanupOptions cleanupOptions)
     {
-        var doc = new Document(templatePath) { MailMerge = { CleanupOptions = cleanupOptions } };
+        Document doc;
+        string templateSource;
+
+        if (!string.IsNullOrEmpty(sessionId))
+        {
+            using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, null, _identityAccessor);
+            doc = ctx.Document.Clone() ?? throw new InvalidOperationException("Failed to clone document from session");
+            templateSource = $"session {sessionId}";
+        }
+        else
+        {
+            doc = new Document(templatePath);
+            templateSource = Path.GetFileName(templatePath!);
+        }
+
+        doc.MailMerge.CleanupOptions = cleanupOptions;
 
         var fieldNames = data.Select(kvp => kvp.Key).ToArray();
         var fieldValues = data.Select(kvp => kvp.Value?.ToString() ?? "").Cast<object>().ToArray();
@@ -95,7 +155,7 @@ Default: 'removeUnusedFields,removeEmptyParagraphs'")]
 
         var result = new StringBuilder();
         result.AppendLine("Mail merge completed successfully");
-        result.AppendLine($"Template: {Path.GetFileName(templatePath)}");
+        result.AppendLine($"Template: {templateSource}");
         result.AppendLine($"Output: {outputPath}");
         result.AppendLine($"Fields merged: {fieldNames.Length}");
         if (cleanupOptions != MailMergeCleanupOptions.None)
@@ -108,11 +168,13 @@ Default: 'removeUnusedFields,removeEmptyParagraphs'")]
     ///     Executes mail merge for multiple records.
     /// </summary>
     /// <param name="templatePath">The template file path.</param>
+    /// <param name="sessionId">The session ID for reading template from session.</param>
     /// <param name="outputPath">The base output file path (files will be numbered).</param>
     /// <param name="dataArray">The JSON array containing multiple record objects.</param>
     /// <param name="cleanupOptions">The mail merge cleanup options to apply.</param>
     /// <returns>A message indicating the result of the mail merge operation.</returns>
-    private static string ExecuteMultipleRecords(string templatePath, string outputPath, JsonArray dataArray,
+    private string ExecuteMultipleRecords(string? templatePath, string? sessionId, string outputPath,
+        JsonArray dataArray,
         MailMergeCleanupOptions cleanupOptions)
     {
         List<string> outputFiles = [];
@@ -120,19 +182,39 @@ Default: 'removeUnusedFields,removeEmptyParagraphs'")]
         var outputName = Path.GetFileNameWithoutExtension(outputPath);
         var outputExt = Path.GetExtension(outputPath);
 
+        Document? templateDoc = null;
+        string templateSource;
+
+        if (!string.IsNullOrEmpty(sessionId))
+        {
+            using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, null, _identityAccessor);
+            templateDoc = ctx.Document;
+            templateSource = $"session {sessionId}";
+        }
+        else
+        {
+            templateSource = Path.GetFileName(templatePath!);
+        }
+
         for (var i = 0; i < dataArray.Count; i++)
         {
             var recordData = dataArray[i] as JsonObject;
             if (recordData == null) continue;
 
-            var doc = new Document(templatePath) { MailMerge = { CleanupOptions = cleanupOptions } };
+            Document doc;
+            if (templateDoc != null)
+                doc = templateDoc.Clone() ??
+                      throw new InvalidOperationException("Failed to clone document from session");
+            else
+                doc = new Document(templatePath);
+
+            doc.MailMerge.CleanupOptions = cleanupOptions;
 
             var fieldNames = recordData.Select(kvp => kvp.Key).ToArray();
             var fieldValues = recordData.Select(kvp => kvp.Value?.ToString() ?? "").Cast<object>().ToArray();
 
             doc.MailMerge.Execute(fieldNames, fieldValues);
 
-            // Generate output filename for this record
             var recordOutputPath = dataArray.Count == 1
                 ? outputPath
                 : Path.Combine(outputDir, $"{outputName}_{i + 1}{outputExt}");
@@ -143,7 +225,7 @@ Default: 'removeUnusedFields,removeEmptyParagraphs'")]
 
         var result = new StringBuilder();
         result.AppendLine("Mail merge completed successfully (multiple records)");
-        result.AppendLine($"Template: {Path.GetFileName(templatePath)}");
+        result.AppendLine($"Template: {templateSource}");
         result.AppendLine($"Records processed: {outputFiles.Count}");
         if (cleanupOptions != MailMergeCleanupOptions.None)
             result.AppendLine($"Cleanup applied: {cleanupOptions}");
@@ -160,7 +242,6 @@ Default: 'removeUnusedFields,removeEmptyParagraphs'")]
     /// <returns>The parsed MailMergeCleanupOptions flags.</returns>
     private static MailMergeCleanupOptions ParseCleanupOptions(string? optionsString)
     {
-        // Default cleanup options
         if (string.IsNullOrEmpty(optionsString))
             return MailMergeCleanupOptions.RemoveUnusedFields | MailMergeCleanupOptions.RemoveEmptyParagraphs;
 

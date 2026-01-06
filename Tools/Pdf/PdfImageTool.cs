@@ -15,6 +15,11 @@ namespace AsposeMcpServer.Tools.Pdf;
 public class PdfImageTool
 {
     /// <summary>
+    ///     The session identity accessor for session isolation.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     The document session manager for managing in-memory document sessions.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -23,11 +28,31 @@ public class PdfImageTool
     ///     Initializes a new instance of the <see cref="PdfImageTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
-    public PdfImageTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    public PdfImageTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a PDF image operation (add, delete, edit, extract, get).
+    /// </summary>
+    /// <param name="operation">The operation to perform: add, delete, edit, extract, get.</param>
+    /// <param name="path">PDF file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (optional for add/delete/edit, required for extract).</param>
+    /// <param name="pageIndex">Page index (1-based, required for add, delete, edit, extract, get).</param>
+    /// <param name="imagePath">Image file path (required for add, optional for edit).</param>
+    /// <param name="imageIndex">Image index (1-based, required for delete, edit, extract).</param>
+    /// <param name="x">X position in PDF coordinates (for add, edit).</param>
+    /// <param name="y">Y position in PDF coordinates (for add, edit).</param>
+    /// <param name="width">Image width (for add, edit, optional).</param>
+    /// <param name="height">Image height (for add, edit, optional).</param>
+    /// <param name="outputDir">Output directory for extracted images (for extract).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "pdf_image")]
     [Description(@"Manage images in PDF documents. Supports 5 operations: add, delete, edit, extract, get.
 
@@ -107,7 +132,7 @@ Usage examples:
         if (!File.Exists(imagePath))
             throw new FileNotFoundException($"Image file not found: {imagePath}");
 
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var document = ctx.Document;
 
         var actualPageIndex = pageIndex < 1 ? 1 : pageIndex;
@@ -136,7 +161,7 @@ Usage examples:
     /// <exception cref="ArgumentException">Thrown when the page or image index is invalid.</exception>
     private string DeleteImage(string? sessionId, string? path, string? outputPath, int pageIndex, int imageIndex)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var document = ctx.Document;
 
         var actualPageIndex = pageIndex < 1 ? 1 : pageIndex;
@@ -176,7 +201,7 @@ Usage examples:
     private string EditImage(string? sessionId, string? path, string? outputPath, int pageIndex, int imageIndex,
         string? imagePath, double? x, double? y, double? width, double? height)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var document = ctx.Document;
 
         var actualPageIndex = pageIndex < 1 ? 1 : pageIndex;
@@ -303,7 +328,7 @@ Usage examples:
     /// <exception cref="ArgumentException">Thrown when the page index is out of range.</exception>
     private string GetImages(string? sessionId, string? path, int? pageIndex)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var document = ctx.Document;
         List<object> imageList = [];
 

@@ -15,18 +15,20 @@ public class PptTextFormatToolTests : TestBase
         _tool = new PptTextFormatTool(SessionManager);
     }
 
-    private string CreatePptPresentation(string fileName)
+    private string CreateTestPresentation(string fileName, int slideCount = 2)
     {
         var filePath = CreateTestFilePath(fileName);
         using var presentation = new Presentation();
-        var slide = presentation.Slides.AddEmptySlide(presentation.LayoutSlides[0]);
+        var slide = presentation.Slides[0];
         var textBox = slide.Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 300, 100);
         textBox.TextFrame.Text = "Sample Text";
+        for (var i = 1; i < slideCount; i++)
+            presentation.Slides.AddEmptySlide(presentation.LayoutSlides[0]);
         presentation.Save(filePath, SaveFormat.Pptx);
         return filePath;
     }
 
-    private string CreatePptWithTable(string fileName)
+    private string CreatePresentationWithTable(string fileName)
     {
         var filePath = CreateTestFilePath(fileName);
         using var presentation = new Presentation();
@@ -40,90 +42,115 @@ public class PptTextFormatToolTests : TestBase
         return filePath;
     }
 
-    #region General Tests
+    #region General
 
     [Fact]
-    public void FormatText_WithFontOptions_ShouldApplyFontFormatting()
+    public void Execute_WithFontOptions_ShouldApplyFontFormatting()
     {
-        var pptPath = CreatePptPresentation("test_format_font.pptx");
+        var pptPath = CreateTestPresentation("test_format_font.pptx");
         var outputPath = CreateTestFilePath("test_format_font_output.pptx");
-        _tool.Execute(pptPath, fontName: "Arial", fontSize: 16, bold: true, outputPath: outputPath);
-        using var presentation = new Presentation(outputPath);
-        Assert.True(File.Exists(outputPath), "Output presentation should be created");
+        var result = _tool.Execute(pptPath, fontName: "Arial", fontSize: 16, bold: true, outputPath: outputPath);
+        Assert.StartsWith("Batch formatted text applied to", result);
+        Assert.True(File.Exists(outputPath));
     }
 
     [Fact]
-    public void FormatText_WithColor_ShouldApplyColor()
+    public void Execute_WithHexColor_ShouldApplyColor()
     {
-        var pptPath = CreatePptPresentation("test_format_color.pptx");
+        var pptPath = CreateTestPresentation("test_format_color.pptx");
         var outputPath = CreateTestFilePath("test_format_color_output.pptx");
-        _tool.Execute(pptPath, color: "#FF0000", outputPath: outputPath);
-        using var presentation = new Presentation(outputPath);
-        Assert.True(File.Exists(outputPath), "Output presentation should be created");
+        var result = _tool.Execute(pptPath, color: "#FF0000", outputPath: outputPath);
+        Assert.StartsWith("Batch formatted text applied to", result);
+        Assert.True(File.Exists(outputPath));
     }
 
     [Fact]
-    public void FormatText_WithAllFormattingOptions_ShouldApplyAllFormats()
+    public void Execute_WithNamedColor_ShouldApplyNamedColor()
     {
-        var pptPath = CreatePptPresentation("test_format_all.pptx");
+        var pptPath = CreateTestPresentation("test_format_named_color.pptx");
+        var outputPath = CreateTestFilePath("test_format_named_color_output.pptx");
+        var result = _tool.Execute(pptPath, color: "Red", outputPath: outputPath);
+        Assert.StartsWith("Batch formatted text applied to", result);
+        Assert.True(File.Exists(outputPath));
+    }
+
+    [Fact]
+    public void Execute_WithAllFormattingOptions_ShouldApplyAllFormats()
+    {
+        var pptPath = CreateTestPresentation("test_format_all.pptx");
         var outputPath = CreateTestFilePath("test_format_all_output.pptx");
-        _tool.Execute(pptPath, fontName: "Arial", fontSize: 14, bold: true, italic: true, color: "#0000FF",
+        var result = _tool.Execute(pptPath, fontName: "Arial", fontSize: 14, bold: true, italic: true, color: "#0000FF",
             outputPath: outputPath);
-        using var presentation = new Presentation(outputPath);
-        Assert.True(File.Exists(outputPath), "Output presentation should be created");
+        Assert.StartsWith("Batch formatted text applied to", result);
+        Assert.True(File.Exists(outputPath));
     }
 
     [Fact]
-    public void FormatText_WithSpecificSlides_ShouldFormatOnlySelectedSlides()
+    public void Execute_WithItalicOnly_ShouldApplyItalic()
     {
-        var pptPath = CreatePptPresentation("test_format_specific_slides.pptx");
-        using var presentation = new Presentation(pptPath);
-        presentation.Slides.AddEmptySlide(presentation.LayoutSlides[0]);
-        presentation.Save(pptPath, SaveFormat.Pptx);
+        var pptPath = CreateTestPresentation("test_format_italic.pptx");
+        var outputPath = CreateTestFilePath("test_format_italic_output.pptx");
+        var result = _tool.Execute(pptPath, italic: true, outputPath: outputPath);
+        Assert.StartsWith("Batch formatted text applied to", result);
+        Assert.True(File.Exists(outputPath));
+    }
 
-        var outputPath = CreateTestFilePath("test_format_specific_slides_output.pptx");
+    [Fact]
+    public void Execute_WithBoldOnly_ShouldApplyBold()
+    {
+        var pptPath = CreateTestPresentation("test_format_bold.pptx");
+        var outputPath = CreateTestFilePath("test_format_bold_output.pptx");
+        var result = _tool.Execute(pptPath, bold: true, outputPath: outputPath);
+        Assert.StartsWith("Batch formatted text applied to", result);
+        Assert.True(File.Exists(outputPath));
+    }
+
+    [Fact]
+    public void Execute_WithFontSizeOnly_ShouldApplyFontSize()
+    {
+        var pptPath = CreateTestPresentation("test_format_size.pptx");
+        var outputPath = CreateTestFilePath("test_format_size_output.pptx");
+        var result = _tool.Execute(pptPath, fontSize: 24, outputPath: outputPath);
+        Assert.StartsWith("Batch formatted text applied to", result);
+        Assert.True(File.Exists(outputPath));
+    }
+
+    [Fact]
+    public void Execute_WithSpecificSlides_ShouldFormatOnlySelectedSlides()
+    {
+        var pptPath = CreateTestPresentation("test_format_specific.pptx", 3);
+        var outputPath = CreateTestFilePath("test_format_specific_output.pptx");
         var slideIndicesJson = JsonSerializer.Serialize(new[] { 0 });
-        _tool.Execute(pptPath, slideIndices: slideIndicesJson, fontName: "Times New Roman", fontSize: 12,
+        var result = _tool.Execute(pptPath, slideIndices: slideIndicesJson, fontName: "Times New Roman", fontSize: 12,
             outputPath: outputPath);
-        using var resultPresentation = new Presentation(outputPath);
-        Assert.True(resultPresentation.Slides.Count >= 2);
+        Assert.Contains("1 slides", result);
+        using var presentation = new Presentation(outputPath);
+        Assert.Equal(3, presentation.Slides.Count);
     }
 
     [Fact]
-    public void FormatText_WithTableText_ShouldFormatTableCells()
+    public void Execute_WithMultipleSlideIndices_ShouldFormatMultipleSlides()
     {
-        var pptPath = CreatePptWithTable("test_format_table.pptx");
+        var pptPath = CreateTestPresentation("test_format_multi_slides.pptx", 3);
+        var outputPath = CreateTestFilePath("test_format_multi_slides_output.pptx");
+        var slideIndicesJson = JsonSerializer.Serialize(new[] { 0, 2 });
+        var result = _tool.Execute(pptPath, slideIndices: slideIndicesJson, fontName: "Arial", outputPath: outputPath);
+        Assert.Contains("2 slides", result);
+    }
+
+    [Fact]
+    public void Execute_WithTableText_ShouldFormatTableCells()
+    {
+        var pptPath = CreatePresentationWithTable("test_format_table.pptx");
         var outputPath = CreateTestFilePath("test_format_table_output.pptx");
         var result = _tool.Execute(pptPath, fontName: "Arial", fontSize: 14, bold: true, outputPath: outputPath);
         Assert.Contains("1 slides", result);
-        using var presentation = new Presentation(outputPath);
-        Assert.True(File.Exists(outputPath), "Output presentation should be created");
-    }
-
-    [Fact]
-    public void FormatText_WithNamedColor_ShouldApplyNamedColor()
-    {
-        var pptPath = CreatePptPresentation("test_format_named_color.pptx");
-        var outputPath = CreateTestFilePath("test_format_named_color_output.pptx");
-        var result = _tool.Execute(pptPath, color: "Red", outputPath: outputPath);
-        Assert.Contains("slides", result);
         Assert.True(File.Exists(outputPath));
     }
 
     [Fact]
-    public void FormatText_WithItalicOnly_ShouldApplyItalic()
+    public void Execute_WithMixedShapes_ShouldFormatBothAutoShapeAndTable()
     {
-        var pptPath = CreatePptPresentation("test_format_italic.pptx");
-        var outputPath = CreateTestFilePath("test_format_italic_output.pptx");
-        var result = _tool.Execute(pptPath, italic: true, outputPath: outputPath);
-        Assert.Contains("slides", result);
-        Assert.True(File.Exists(outputPath));
-    }
-
-    [Fact]
-    public void FormatText_WithMixedShapes_ShouldFormatBothAutoShapeAndTable()
-    {
-        // Arrange - Create presentation with both AutoShape and Table
         var filePath = CreateTestFilePath("test_format_mixed.pptx");
         using (var presentation = new Presentation())
         {
@@ -141,73 +168,149 @@ public class PptTextFormatToolTests : TestBase
         Assert.True(File.Exists(outputPath));
     }
 
-    #endregion
-
-    #region Exception Tests
-
     [Fact]
-    public void FormatText_InvalidSlideIndex_ShouldThrow()
+    public void Execute_WithNoFormattingOptions_ShouldStillSucceed()
     {
-        var pptPath = CreatePptPresentation("test_format_invalid_index.pptx");
-        var slideIndicesJson = JsonSerializer.Serialize(new[] { 99 });
-        Assert.Throws<ArgumentException>(() =>
-            _tool.Execute(pptPath, slideIndices: slideIndicesJson, fontName: "Arial"));
-    }
-
-    [Fact]
-    public void FormatText_InvalidColor_ShouldDefaultToBlack()
-    {
-        var pptPath = CreatePptPresentation("test_format_invalid_color.pptx");
-        var outputPath = CreateTestFilePath("test_format_invalid_color_output.pptx");
-
-        // Act - Invalid color names default to Black (ColorHelper.ParseColor behavior)
-        var result = _tool.Execute(pptPath, outputPath: outputPath, color: "InvalidColorName");
-
-        // Assert - Tool succeeds with default black color
+        var pptPath = CreateTestPresentation("test_format_none.pptx");
+        var outputPath = CreateTestFilePath("test_format_none_output.pptx");
+        var result = _tool.Execute(pptPath, outputPath: outputPath);
+        Assert.StartsWith("Batch formatted text applied to", result);
         Assert.True(File.Exists(outputPath));
-        Assert.Contains("formatted", result, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Execute_WithAllSlides_ShouldFormatAllSlides()
+    {
+        var pptPath = CreateTestPresentation("test_format_all_slides.pptx", 3);
+        var outputPath = CreateTestFilePath("test_format_all_slides_output.pptx");
+        var result = _tool.Execute(pptPath, fontName: "Arial", outputPath: outputPath);
+        Assert.Contains("3 slides", result);
     }
 
     #endregion
 
-    #region Session ID Tests
+    #region Exception
 
     [Fact]
-    public void FormatText_WithSessionId_ShouldFormatInMemory()
+    public void Execute_WithInvalidSlideIndex_ShouldThrowArgumentException()
     {
-        var pptPath = CreatePptPresentation("test_session_format.pptx");
+        var pptPath = CreateTestPresentation("test_invalid_index.pptx");
+        var slideIndicesJson = JsonSerializer.Serialize(new[] { 99 });
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute(pptPath, slideIndices: slideIndicesJson, fontName: "Arial"));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public void Execute_WithNegativeSlideIndex_ShouldThrowArgumentException()
+    {
+        var pptPath = CreateTestPresentation("test_neg_index.pptx");
+        var slideIndicesJson = JsonSerializer.Serialize(new[] { -1 });
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute(pptPath, slideIndices: slideIndicesJson, fontName: "Arial"));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public void Execute_WithInvalidColor_ShouldDefaultToBlack()
+    {
+        var pptPath = CreateTestPresentation("test_invalid_color.pptx");
+        var outputPath = CreateTestFilePath("test_invalid_color_output.pptx");
+        var result = _tool.Execute(pptPath, outputPath: outputPath, color: "InvalidColorName");
+        Assert.True(File.Exists(outputPath));
+        Assert.StartsWith("Batch formatted text applied to", result);
+    }
+
+    [Fact]
+    public void Execute_WithInvalidSlideIndicesJson_ShouldThrowJsonException()
+    {
+        var pptPath = CreateTestPresentation("test_invalid_json.pptx");
+        Assert.ThrowsAny<JsonException>(() =>
+            _tool.Execute(pptPath, slideIndices: "not valid json", fontName: "Arial"));
+    }
+
+    #endregion
+
+    #region Session
+
+    [Fact]
+    public void Execute_WithSessionId_ShouldFormatInMemory()
+    {
+        var pptPath = CreateTestPresentation("test_session_format.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute(sessionId: sessionId, fontName: "Arial", fontSize: 16, bold: true);
-        Assert.Contains("slides", result);
+        Assert.StartsWith("Batch formatted text applied to", result);
         Assert.Contains("session", result);
     }
 
     [Fact]
-    public void FormatText_WithSessionId_ShouldApplyColorInMemory()
+    public void Execute_WithSessionId_ShouldApplyColorInMemory()
     {
-        var pptPath = CreatePptPresentation("test_session_format_color.pptx");
+        var pptPath = CreateTestPresentation("test_session_color.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute(sessionId: sessionId, color: "#FF0000");
-        Assert.Contains("slides", result);
+        Assert.StartsWith("Batch formatted text applied to", result);
         Assert.Contains("session", result);
 
-        // Verify in-memory changes
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         Assert.NotNull(ppt);
         Assert.True(ppt.Slides.Count > 0);
     }
 
     [Fact]
-    public void FormatText_WithSessionId_MultipleFormats_ShouldApplyAll()
+    public void Execute_WithSessionId_MultipleFormats_ShouldApplyAll()
     {
-        var pptPath = CreatePptPresentation("test_session_format_multi.pptx");
+        var pptPath = CreateTestPresentation("test_session_multi.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute(sessionId: sessionId, fontName: "Verdana", fontSize: 18,
             bold: true, italic: true, color: "#0000FF");
-        Assert.Contains("slides", result);
+        Assert.StartsWith("Batch formatted text applied to", result);
         Assert.Contains("session", result);
 
-        // Verify in-memory changes
+        var ppt = SessionManager.GetDocument<Presentation>(sessionId);
+        Assert.NotNull(ppt);
+    }
+
+    [Fact]
+    public void Execute_WithSessionId_AndSlideIndices_ShouldFormatSelectedSlides()
+    {
+        var pptPath = CreateTestPresentation("test_session_slides.pptx", 3);
+        var sessionId = OpenSession(pptPath);
+        var slideIndicesJson = JsonSerializer.Serialize(new[] { 0, 2 });
+        var result = _tool.Execute(sessionId: sessionId, slideIndices: slideIndicesJson, fontName: "Arial");
+        Assert.Contains("2 slides", result);
+    }
+
+    [Fact]
+    public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
+    {
+        Assert.Throws<KeyNotFoundException>(() =>
+            _tool.Execute(sessionId: "invalid_session_id", fontName: "Arial"));
+    }
+
+    [Fact]
+    public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
+    {
+        var pptPath1 = CreateTestFilePath("test_path_format.pptx");
+        using (var pres1 = new Presentation())
+        {
+            var shape1 = pres1.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 50);
+            shape1.TextFrame.Text = "PathText";
+            pres1.Save(pptPath1, SaveFormat.Pptx);
+        }
+
+        var pptPath2 = CreateTestFilePath("test_session_format2.pptx");
+        using (var pres2 = new Presentation())
+        {
+            var shape2 = pres2.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 50);
+            shape2.TextFrame.Text = "SessionText";
+            pres2.Save(pptPath2, SaveFormat.Pptx);
+        }
+
+        var sessionId = OpenSession(pptPath2);
+        var result = _tool.Execute(pptPath1, sessionId, fontName: "Arial", bold: true);
+        Assert.Contains("session", result);
+
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         Assert.NotNull(ppt);
     }

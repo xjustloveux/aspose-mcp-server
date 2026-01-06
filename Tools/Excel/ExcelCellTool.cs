@@ -20,6 +20,11 @@ public class ExcelCellTool
     private static readonly Regex CellAddressRegex = new(@"^[A-Za-z]{1,3}\d+$", RegexOptions.Compiled);
 
     /// <summary>
+    ///     Session identity accessor for session isolation support.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Document session manager for in-memory editing support.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -28,11 +33,33 @@ public class ExcelCellTool
     ///     Initializes a new instance of the <see cref="ExcelCellTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
-    public ExcelCellTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    public ExcelCellTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes an Excel cell operation (write, edit, get, or clear).
+    /// </summary>
+    /// <param name="operation">The operation to perform: write, edit, get, or clear.</param>
+    /// <param name="path">Excel file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="sheetIndex">Sheet index (0-based).</param>
+    /// <param name="cell">Cell reference (e.g., 'A1', 'B2', 'AA100').</param>
+    /// <param name="value">Value to write.</param>
+    /// <param name="formula">Formula to set (optional, for edit, overrides value).</param>
+    /// <param name="clearValue">Clear cell value (optional, for edit).</param>
+    /// <param name="calculateFormula">Calculate formulas before reading value (optional, for get).</param>
+    /// <param name="includeFormula">Include formula if present (optional, for get).</param>
+    /// <param name="includeFormat">Include format information (optional, for get).</param>
+    /// <param name="clearContent">Clear cell content (optional, for clear).</param>
+    /// <param name="clearFormat">Clear cell format (optional, for clear).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when cell is not provided or the operation is unknown.</exception>
     [McpServerTool(Name = "excel_cell")]
     [Description(@"Manage Excel cells. Supports 4 operations: write, edit, get, clear.
 
@@ -75,7 +102,7 @@ Usage examples:
 
         ValidateCellAddress(cell);
 
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {

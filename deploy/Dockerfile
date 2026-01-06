@@ -20,6 +20,12 @@ RUN VERSION_NUM=$(echo "${VERSION}" | sed 's/^v//') && \
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 
+# Update system packages to fix security vulnerabilities (e.g., zlib CVE-2023-45853)
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
 # Create non-root user for security
 RUN groupadd -r aspose && useradd -r -g aspose aspose
 

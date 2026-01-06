@@ -96,9 +96,10 @@ public static class ColorHelper
     }
 
     /// <summary>
-    ///     Internal method that performs the actual color parsing
-    ///     Returns null if parsing fails, otherwise returns the parsed color
+    ///     Internal method that performs the actual color parsing.
     /// </summary>
+    /// <param name="colorString">The color string to parse.</param>
+    /// <returns>The parsed color, or null if parsing fails.</returns>
     private static Color? ParseColorInternal(string colorString)
     {
         colorString = colorString.Trim();

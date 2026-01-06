@@ -1,4 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Net;
 using System.Security.Claims;
 using System.Text;
 using AsposeMcpServer.Core.Security;
@@ -6,6 +7,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.IdentityModel.Tokens;
+using Moq;
+using Moq.Protected;
 
 namespace AsposeMcpServer.Tests.Core.Security;
 
@@ -108,7 +111,6 @@ public class JwtAuthenticationMiddlewareTests
         };
 
         var context = CreateHttpContext();
-        // No Authorization header
 
         var middleware = new JwtAuthenticationMiddleware(
             _ => Task.CompletedTask,
@@ -184,7 +186,6 @@ public class JwtAuthenticationMiddlewareTests
 
         var context = CreateHttpContext();
         context.Request.Headers.Authorization = "Bearer any-token";
-        // Missing identity headers
 
         var middleware = new JwtAuthenticationMiddleware(
             _ => Task.CompletedTask,
@@ -205,7 +206,6 @@ public class JwtAuthenticationMiddlewareTests
         };
 
         var context = CreateHttpContext("/health");
-        // No Authorization header
 
         var nextCalled = false;
         var middleware = new JwtAuthenticationMiddleware(
@@ -319,6 +319,240 @@ public class JwtAuthenticationMiddlewareTests
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
+    [Fact]
+    public async Task IntrospectionMode_ActiveResponse_ShouldSetTenantAndUserId()
+    {
+        var config = new JwtConfig
+        {
+            Enabled = true,
+            Mode = JwtMode.Introspection,
+            IntrospectionEndpoint = "https://auth.example.com/oauth/introspect",
+            ClientId = "test-client",
+            ClientSecret = "test-secret",
+            ExternalTimeoutSeconds = 5
+        };
+
+        var mockHandler = CreateMockHttpHandler(
+            HttpStatusCode.OK,
+            """{"active": true, "tenant_id": "introspection-tenant", "sub": "introspection-user"}""");
+        var httpClientFactory = CreateMockHttpClientFactory(mockHandler);
+
+        var context = CreateHttpContext();
+        context.Request.Headers.Authorization = "Bearer some-token";
+
+        string? capturedTenantId = null;
+        string? capturedUserId = null;
+        var middleware = new JwtAuthenticationMiddleware(
+            ctx =>
+            {
+                capturedTenantId = ctx.Items["TenantId"]?.ToString();
+                capturedUserId = ctx.Items["UserId"]?.ToString();
+                return Task.CompletedTask;
+            },
+            config,
+            _logger,
+            httpClientFactory);
+        await middleware.InvokeAsync(context);
+
+        Assert.Equal("introspection-tenant", capturedTenantId);
+        Assert.Equal("introspection-user", capturedUserId);
+        Assert.Equal(200, context.Response.StatusCode);
+    }
+
+    [Fact]
+    public async Task IntrospectionMode_InactiveResponse_ShouldReturn401()
+    {
+        var config = new JwtConfig
+        {
+            Enabled = true,
+            Mode = JwtMode.Introspection,
+            IntrospectionEndpoint = "https://auth.example.com/oauth/introspect",
+            ExternalTimeoutSeconds = 5
+        };
+
+        var mockHandler = CreateMockHttpHandler(
+            HttpStatusCode.OK,
+            """{"active": false}""");
+        var httpClientFactory = CreateMockHttpClientFactory(mockHandler);
+
+        var context = CreateHttpContext();
+        context.Request.Headers.Authorization = "Bearer invalid-token";
+
+        var middleware = new JwtAuthenticationMiddleware(
+            _ => Task.CompletedTask,
+            config,
+            _logger,
+            httpClientFactory);
+        await middleware.InvokeAsync(context);
+
+        Assert.Equal(401, context.Response.StatusCode);
+    }
+
+    [Fact]
+    public async Task IntrospectionMode_ServerError_ShouldReturn401()
+    {
+        var config = new JwtConfig
+        {
+            Enabled = true,
+            Mode = JwtMode.Introspection,
+            IntrospectionEndpoint = "https://auth.example.com/oauth/introspect",
+            ExternalTimeoutSeconds = 5
+        };
+
+        var mockHandler = CreateMockHttpHandler(HttpStatusCode.InternalServerError, "");
+        var httpClientFactory = CreateMockHttpClientFactory(mockHandler);
+
+        var context = CreateHttpContext();
+        context.Request.Headers.Authorization = "Bearer some-token";
+
+        var middleware = new JwtAuthenticationMiddleware(
+            _ => Task.CompletedTask,
+            config,
+            _logger,
+            httpClientFactory);
+        await middleware.InvokeAsync(context);
+
+        Assert.Equal(401, context.Response.StatusCode);
+    }
+
+    [Fact]
+    public async Task IntrospectionMode_NoEndpointConfigured_ShouldReturn401()
+    {
+        var config = new JwtConfig
+        {
+            Enabled = true,
+            Mode = JwtMode.Introspection,
+            IntrospectionEndpoint = null
+        };
+
+        var context = CreateHttpContext();
+        context.Request.Headers.Authorization = "Bearer some-token";
+
+        var middleware = new JwtAuthenticationMiddleware(
+            _ => Task.CompletedTask,
+            config,
+            _logger);
+        await middleware.InvokeAsync(context);
+
+        Assert.Equal(401, context.Response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CustomMode_ValidResponse_ShouldSetTenantAndUserId()
+    {
+        var config = new JwtConfig
+        {
+            Enabled = true,
+            Mode = JwtMode.Custom,
+            CustomEndpoint = "https://auth.example.com/custom",
+            ExternalTimeoutSeconds = 5
+        };
+
+        var mockHandler = CreateMockHttpHandler(
+            HttpStatusCode.OK,
+            """{"valid": true, "tenant_id": "custom-tenant", "user_id": "custom-user"}""");
+        var httpClientFactory = CreateMockHttpClientFactory(mockHandler);
+
+        var context = CreateHttpContext();
+        context.Request.Headers.Authorization = "Bearer custom-token";
+
+        string? capturedTenantId = null;
+        string? capturedUserId = null;
+        var middleware = new JwtAuthenticationMiddleware(
+            ctx =>
+            {
+                capturedTenantId = ctx.Items["TenantId"]?.ToString();
+                capturedUserId = ctx.Items["UserId"]?.ToString();
+                return Task.CompletedTask;
+            },
+            config,
+            _logger,
+            httpClientFactory);
+        await middleware.InvokeAsync(context);
+
+        Assert.Equal("custom-tenant", capturedTenantId);
+        Assert.Equal("custom-user", capturedUserId);
+        Assert.Equal(200, context.Response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CustomMode_InvalidResponse_ShouldReturn401()
+    {
+        var config = new JwtConfig
+        {
+            Enabled = true,
+            Mode = JwtMode.Custom,
+            CustomEndpoint = "https://auth.example.com/custom",
+            ExternalTimeoutSeconds = 5
+        };
+
+        var mockHandler = CreateMockHttpHandler(
+            HttpStatusCode.OK,
+            """{"valid": false, "error": "Token expired"}""");
+        var httpClientFactory = CreateMockHttpClientFactory(mockHandler);
+
+        var context = CreateHttpContext();
+        context.Request.Headers.Authorization = "Bearer expired-token";
+
+        var middleware = new JwtAuthenticationMiddleware(
+            _ => Task.CompletedTask,
+            config,
+            _logger,
+            httpClientFactory);
+        await middleware.InvokeAsync(context);
+
+        Assert.Equal(401, context.Response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CustomMode_ServerError_ShouldReturn401()
+    {
+        var config = new JwtConfig
+        {
+            Enabled = true,
+            Mode = JwtMode.Custom,
+            CustomEndpoint = "https://auth.example.com/custom",
+            ExternalTimeoutSeconds = 5
+        };
+
+        var mockHandler = CreateMockHttpHandler(HttpStatusCode.ServiceUnavailable, "");
+        var httpClientFactory = CreateMockHttpClientFactory(mockHandler);
+
+        var context = CreateHttpContext();
+        context.Request.Headers.Authorization = "Bearer some-token";
+
+        var middleware = new JwtAuthenticationMiddleware(
+            _ => Task.CompletedTask,
+            config,
+            _logger,
+            httpClientFactory);
+        await middleware.InvokeAsync(context);
+
+        Assert.Equal(401, context.Response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CustomMode_NoEndpointConfigured_ShouldReturn401()
+    {
+        var config = new JwtConfig
+        {
+            Enabled = true,
+            Mode = JwtMode.Custom,
+            CustomEndpoint = null
+        };
+
+        var context = CreateHttpContext();
+        context.Request.Headers.Authorization = "Bearer some-token";
+
+        var middleware = new JwtAuthenticationMiddleware(
+            _ => Task.CompletedTask,
+            config,
+            _logger);
+        await middleware.InvokeAsync(context);
+
+        Assert.Equal(401, context.Response.StatusCode);
+    }
+
     private static DefaultHttpContext CreateHttpContext(string path = "/api/test")
     {
         var context = new DefaultHttpContext
@@ -327,5 +561,29 @@ public class JwtAuthenticationMiddlewareTests
             Response = { Body = new MemoryStream() }
         };
         return context;
+    }
+
+    private static HttpMessageHandler CreateMockHttpHandler(HttpStatusCode statusCode, string content)
+    {
+        var mockHandler = new Mock<HttpMessageHandler>();
+        mockHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = statusCode,
+                Content = new StringContent(content)
+            });
+        return mockHandler.Object;
+    }
+
+    private static IHttpClientFactory CreateMockHttpClientFactory(HttpMessageHandler handler)
+    {
+        var mockFactory = new Mock<IHttpClientFactory>();
+        mockFactory.Setup(f => f.CreateClient(It.IsAny<string>()))
+            .Returns(new HttpClient(handler));
+        return mockFactory.Object;
     }
 }

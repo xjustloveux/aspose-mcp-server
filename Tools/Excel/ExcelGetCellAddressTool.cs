@@ -20,6 +20,14 @@ public class ExcelGetCellAddressTool
     /// </summary>
     private const int MaxExcelColumns = 16384;
 
+    /// <summary>
+    ///     Executes an Excel cell address conversion operation.
+    /// </summary>
+    /// <param name="cellAddress">Cell address in A1 notation (e.g., 'A1', 'B2', 'AA100'). Use this OR row/column, not both.</param>
+    /// <param name="row">Row index (0-based, 0 to 1048575). Use with column parameter.</param>
+    /// <param name="column">Column index (0-based, 0 to 16383). Use with row parameter.</param>
+    /// <returns>A message containing the cell address in both A1 notation and row/column index format.</returns>
+    /// <exception cref="ArgumentException">Thrown when parameters are invalid or out of range.</exception>
     [McpServerTool(Name = "excel_get_cell_address")]
     [Description(@"Convert between cell address formats (A1 notation and row/column index).
 

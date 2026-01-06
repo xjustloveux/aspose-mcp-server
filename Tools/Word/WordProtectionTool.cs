@@ -1,6 +1,5 @@
 using System.ComponentModel;
 using Aspose.Words;
-using Aspose.Words.Loading;
 using AsposeMcpServer.Core.Session;
 using ModelContextProtocol.Server;
 
@@ -14,6 +13,11 @@ namespace AsposeMcpServer.Tools.Word;
 public class WordProtectionTool
 {
     /// <summary>
+    ///     Identity accessor for session isolation
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document session operations
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -22,11 +26,25 @@ public class WordProtectionTool
     ///     Initializes a new instance of the WordProtectionTool class
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document operations</param>
-    public WordProtectionTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation</param>
+    public WordProtectionTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a Word protection operation (protect, unprotect).
+    /// </summary>
+    /// <param name="operation">The operation to perform: protect, unprotect.</param>
+    /// <param name="path">Word document file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (if not provided, overwrites input).</param>
+    /// <param name="password">Protection password (required for protect, optional for unprotect).</param>
+    /// <param name="protectionType">Protection type: ReadOnly, AllowOnlyComments, AllowOnlyFormFields, AllowOnlyRevisions.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when password is missing for protect operation or the operation is unknown.</exception>
     [McpServerTool(Name = "word_protection")]
     [Description(@"Protect or unprotect a Word document. Supports 2 operations: protect, unprotect.
 
@@ -60,8 +78,6 @@ Notes:
             "Protection type: 'ReadOnly', 'AllowOnlyComments', 'AllowOnlyFormFields', 'AllowOnlyRevisions' (required for protect operation)")]
         string protectionType = "ReadOnly")
     {
-        // For protection operations, we need special handling because encrypted files need password to open
-        // So we don't use DocumentContext for protect/unprotect operations directly
         return operation.ToLower() switch
         {
             "protect" => Protect(path, sessionId, outputPath, password, protectionType),
@@ -79,93 +95,23 @@ Notes:
     /// <param name="password">The protection password.</param>
     /// <param name="protectionType">The protection type string.</param>
     /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when password is null or empty, or path/sessionId are not provided.</exception>
-    /// <exception cref="InvalidOperationException">Thrown when session management is not enabled.</exception>
+    /// <exception cref="ArgumentException">Thrown when password is null or empty.</exception>
     private string Protect(string? path, string? sessionId, string? outputPath, string? password, string protectionType)
     {
         if (string.IsNullOrWhiteSpace(password))
             throw new ArgumentException(
                 "Password is required for protect operation. Please provide a non-empty password.");
 
-        if (!string.IsNullOrEmpty(sessionId))
-        {
-            // Session mode
-            if (_sessionManager == null)
-                throw new InvalidOperationException(
-                    "Session management is not enabled. Use --enable-sessions flag or provide a file path.");
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor, password);
+        var doc = ctx.Document;
+        var protectionTypeEnum = GetProtectionType(protectionType);
 
-            var doc = _sessionManager.GetDocument<Document>(sessionId);
-            var protectionTypeEnum = GetProtectionType(protectionType);
-            doc.Protect(protectionTypeEnum, password);
-            _sessionManager.MarkDirty(sessionId);
+        doc.Protect(protectionTypeEnum, password);
+        ctx.Save(outputPath);
 
-            return
-                $"Document protected with {protectionTypeEnum}. Changes applied to session {sessionId}. Use document_session(operation='save') to save to disk.";
-        }
-
-        // File mode
-        if (string.IsNullOrEmpty(path))
-            throw new ArgumentException("Either sessionId or path must be provided");
-
-        var document = LoadDocument(path, password);
-        var protType = GetProtectionType(protectionType);
-
-        document.Protect(protType, password);
-        var savePath = outputPath ?? path;
-        document.Save(savePath);
-
-        return $"Document protected with {protType}: {savePath}";
-    }
-
-    /// <summary>
-    ///     Loads a Word document with optional password for encrypted files.
-    /// </summary>
-    /// <param name="path">The document file path.</param>
-    /// <param name="password">The optional password for encrypted documents.</param>
-    /// <returns>The loaded Word document.</returns>
-    /// <exception cref="InvalidOperationException">
-    ///     Thrown when the document cannot be loaded due to file not found, incorrect
-    ///     password, unsupported format, or other errors.
-    /// </exception>
-    private static Document LoadDocument(string path, string? password)
-    {
-        try
-        {
-            // First try with password if provided (for encrypted documents)
-            if (!string.IsNullOrEmpty(password))
-                try
-                {
-                    var loadOptions = new LoadOptions { Password = password };
-                    return new Document(path, loadOptions);
-                }
-                catch (IncorrectPasswordException)
-                {
-                    // Password didn't work for opening, try without password
-                    // (file might not be encrypted, password is for protection)
-                }
-
-            // Try loading without password
-            return new Document(path);
-        }
-        catch (FileNotFoundException)
-        {
-            throw new InvalidOperationException($"Document not found: {path}");
-        }
-        catch (IncorrectPasswordException)
-        {
-            throw new InvalidOperationException(
-                $"Document is encrypted and requires a password to open: {path}");
-        }
-        catch (UnsupportedFileFormatException ex)
-        {
-            throw new InvalidOperationException(
-                $"Unsupported file format or corrupted document: {path}. Details: {ex.Message}");
-        }
-        catch (Exception ex) when (ex is not InvalidOperationException)
-        {
-            throw new InvalidOperationException(
-                $"Failed to load document: {path}. Details: {ex.Message}", ex);
-        }
+        return ctx.IsSession
+            ? $"Document protected with {protectionTypeEnum}. {ctx.GetOutputMessage()}"
+            : $"Document protected with {protectionTypeEnum}: {outputPath ?? path}";
     }
 
     /// <summary>
@@ -189,57 +135,20 @@ Notes:
     /// <param name="outputPath">The output file path.</param>
     /// <param name="password">The optional password for the protected document.</param>
     /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when neither path nor sessionId is provided.</exception>
-    /// <exception cref="InvalidOperationException">Thrown when session management is not enabled or unprotection fails.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when unprotection fails.</exception>
     private string Unprotect(string? path, string? sessionId, string? outputPath, string? password)
     {
-        if (!string.IsNullOrEmpty(sessionId))
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor, password);
+        var doc = ctx.Document;
+        var previousProtectionType = doc.ProtectionType;
+
+        if (previousProtectionType == ProtectionType.NoProtection)
         {
-            // Session mode
-            if (_sessionManager == null)
-                throw new InvalidOperationException(
-                    "Session management is not enabled. Use --enable-sessions flag or provide a file path.");
-
-            var doc = _sessionManager.GetDocument<Document>(sessionId);
-            var previousProtectionType = doc.ProtectionType;
-
-            if (previousProtectionType == ProtectionType.NoProtection)
-                return "Document is not protected, no need to unprotect";
-
-            try
+            if (!ctx.IsSession && outputPath != null &&
+                !string.Equals(path, outputPath, StringComparison.OrdinalIgnoreCase))
             {
-                doc.Unprotect(password);
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException(
-                    $"Failed to unprotect document: The password may be incorrect or the document has additional restrictions. Details: {ex.Message}",
-                    ex);
-            }
-
-            if (doc.ProtectionType != ProtectionType.NoProtection)
-                throw new InvalidOperationException(
-                    "Failed to unprotect document: The password may be incorrect. Please verify the password and try again.");
-
-            _sessionManager.MarkDirty(sessionId);
-            return
-                $"Protection removed successfully (was: {previousProtectionType}). Changes applied to session {sessionId}. Use document_session(operation='save') to save to disk.";
-        }
-
-        // File mode
-        if (string.IsNullOrEmpty(path))
-            throw new ArgumentException("Either sessionId or path must be provided");
-
-        var document = LoadDocument(path, password);
-        var prevProtectionType = document.ProtectionType;
-
-        if (prevProtectionType == ProtectionType.NoProtection)
-        {
-            var savePath = outputPath ?? path;
-            if (!string.Equals(path, savePath, StringComparison.OrdinalIgnoreCase))
-            {
-                document.Save(savePath);
-                return $"Document is not protected, saved to: {savePath}";
+                ctx.Save(outputPath);
+                return $"Document is not protected, saved to: {outputPath}";
             }
 
             return "Document is not protected, no need to unprotect";
@@ -247,7 +156,7 @@ Notes:
 
         try
         {
-            document.Unprotect(password);
+            doc.Unprotect(password);
         }
         catch (Exception ex)
         {
@@ -256,12 +165,14 @@ Notes:
                 ex);
         }
 
-        if (document.ProtectionType != ProtectionType.NoProtection)
+        if (doc.ProtectionType != ProtectionType.NoProtection)
             throw new InvalidOperationException(
                 "Failed to unprotect document: The password may be incorrect. Please verify the password and try again.");
 
-        var finalOutputPath = outputPath ?? path;
-        document.Save(finalOutputPath);
-        return $"Protection removed successfully (was: {prevProtectionType})\nOutput: {finalOutputPath}";
+        ctx.Save(outputPath);
+
+        return ctx.IsSession
+            ? $"Protection removed successfully (was: {previousProtectionType}). {ctx.GetOutputMessage()}"
+            : $"Protection removed successfully (was: {previousProtectionType})\nOutput: {outputPath ?? path}";
     }
 }

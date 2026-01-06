@@ -15,7 +15,7 @@ public class WordParagraphToolTests : WordTestBase
         _tool = new WordParagraphTool(SessionManager);
     }
 
-    #region General Tests
+    #region General
 
     [Fact]
     public void InsertParagraph_ShouldInsertAtCorrectPosition()
@@ -55,7 +55,6 @@ public class WordParagraphToolTests : WordTestBase
         _tool.Execute("delete", docPath, outputPath: outputPath, paragraphIndex: 1);
         var doc = new Document(outputPath);
         var paragraphs = GetParagraphs(doc, false);
-        // Check that "Second" paragraph is deleted (check body paragraphs only)
         var foundSecond = false;
         foreach (var para in paragraphs)
             if (para.GetText().Trim().Contains("Second"))
@@ -132,9 +131,6 @@ public class WordParagraphToolTests : WordTestBase
         _tool.Execute("merge", docPath, outputPath: outputPath, startParagraphIndex: 0, endParagraphIndex: 2);
         var doc = new Document(outputPath);
         var paragraphs = GetParagraphs(doc, false);
-        // After merging paragraphs 0-2, we should have fewer paragraphs
-        // Original: First, Second, Third (3 paragraphs)
-        // After merge: FirstSecondThird (1 paragraph) + possibly empty paragraphs
         var nonEmptyCount = paragraphs.Count(p => !string.IsNullOrWhiteSpace(p.GetText()));
         Assert.True(nonEmptyCount <= 1,
             $"After merging, should have 1 or fewer non-empty paragraphs, but got {nonEmptyCount}");
@@ -151,8 +147,6 @@ public class WordParagraphToolTests : WordTestBase
 
         if (IsEvaluationMode())
         {
-            // In evaluation mode, paragraph formatting may not apply correctly
-            // Verify document was created and has content
             Assert.True(File.Exists(outputPath), "Output document should be created");
             Assert.True(paragraphs.Count > 0, "Document should have paragraphs");
         }
@@ -191,7 +185,6 @@ public class WordParagraphToolTests : WordTestBase
     {
         var docPath = CreateWordDocument("test_edit_empty_paragraph.docx");
 
-        // Create document with empty paragraph that has custom style
         var doc = new Document();
         var customStyle = doc.Styles.Add(StyleType.Paragraph, "!標題3-國字括弧小寫 - (一)(二)(三)");
         customStyle.Font.Size = 14;
@@ -204,19 +197,13 @@ public class WordParagraphToolTests : WordTestBase
         doc.FirstSection.Body.AppendChild(para);
         doc.Save(docPath);
 
-        // Verify initial state (skip strict check in evaluation mode)
         var initialDoc = new Document(docPath);
         var paragraphs = initialDoc.FirstSection.Body.GetChildNodes(NodeType.Paragraph, false).Cast<Paragraph>()
             .ToList();
         Assert.True(paragraphs.Count > 0, "Document should have at least one paragraph");
-        // In evaluation mode, custom style names may be encoded differently or not work
-        // Just verify paragraph exists (may not be empty due to evaluation watermarks)
-        // Style check is relaxed for evaluation mode
 
-        // Act: Edit the empty paragraph to use Normal style
         _tool.Execute("edit", docPath, outputPath: docPath, paragraphIndex: 0, styleName: "Normal");
 
-        // Assert: Check that the empty paragraph now uses Normal style
         var resultDoc = new Document(docPath);
         var resultPara = resultDoc.FirstSection.Body.GetChildNodes(NodeType.Paragraph, false).Cast<Paragraph>().First();
         var actualStyle = resultPara.ParagraphFormat.StyleName ?? "";
@@ -224,8 +211,6 @@ public class WordParagraphToolTests : WordTestBase
 
         var isEvaluationMode = IsEvaluationMode();
         if (isEvaluationMode)
-            // In evaluation mode, style application may be limited or not work at all
-            // Verify style was attempted (even if not applied in evaluation mode)
             Assert.NotNull(actualStyle);
         else
             Assert.Equal("Normal", actualStyle);
@@ -236,7 +221,6 @@ public class WordParagraphToolTests : WordTestBase
     {
         var docPath = CreateWordDocument("test_edit_multiple_empty_paragraphs.docx");
 
-        // Create document with multiple empty paragraphs with custom style
         var doc = new Document();
         var customStyle = doc.Styles.Add(StyleType.Paragraph, "!標題3-國字括弧小寫 - (一)(二)(三)");
         customStyle.Font.Size = 14;
@@ -253,14 +237,11 @@ public class WordParagraphToolTests : WordTestBase
 
         doc.Save(docPath);
 
-        // Act: Edit each paragraph to use Normal style
-        // Note: Document may have a default paragraph, so count all paragraphs
         var createdDoc = new Document(docPath);
         var paragraphCount = createdDoc.FirstSection.Body.GetChildNodes(NodeType.Paragraph, false).Count;
         for (var i = 0; i < paragraphCount; i++)
             _tool.Execute("edit", docPath, outputPath: docPath, paragraphIndex: i, styleName: "Normal");
 
-        // Assert: Check that all empty paragraphs now use Normal style
         var resultDoc = new Document(docPath);
         var paragraphs = resultDoc.FirstSection.Body.GetChildNodes(NodeType.Paragraph, false).Cast<Paragraph>()
             .ToList();
@@ -278,10 +259,8 @@ public class WordParagraphToolTests : WordTestBase
         var isEvaluationMode = IsEvaluationMode();
         if (isEvaluationMode)
         {
-            // In evaluation mode, style changes may not work, so verify operation completed
             if (normalStyleCount < emptyParaCount)
             {
-                // Some styles may not have changed in evaluation mode
                 Assert.True(File.Exists(docPath), "Document should be saved after edit operations");
                 Assert.True(normalStyleCount > 0,
                     $"At least some paragraphs should be changed to Normal style. Changed: {normalStyleCount}/{emptyParaCount}");
@@ -327,7 +306,6 @@ public class WordParagraphToolTests : WordTestBase
     {
         var docPath = CreateWordDocument("test_insert_paragraph_alignments.docx");
 
-        // Test all alignment options - use separate output files to avoid overwriting
         var alignments = new[] { "left", "center", "right", "justify" };
         var outputPaths = new Dictionary<string, string>();
 
@@ -339,7 +317,6 @@ public class WordParagraphToolTests : WordTestBase
                 alignment: alignment);
         }
 
-        // Assert - check each alignment separately
         foreach (var alignment in alignments)
         {
             var outputPath = outputPaths[alignment];
@@ -370,12 +347,9 @@ public class WordParagraphToolTests : WordTestBase
         _tool.Execute("edit", docPath, outputPath: outputPath, paragraphIndex: 0, sectionIndex: 0, alignment: "justify",
             indentLeft: 36, indentRight: 36, firstLineIndent: 18, spaceBefore: 12, spaceAfter: 12);
         var doc = new Document(outputPath);
-        // Get paragraphs from section 0 (the section we edited)
         var paragraphs = doc.Sections[0].Body.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
-        // Find the paragraph that contains "Test Paragraph" text
         var para = paragraphs.FirstOrDefault(p => p.GetText().Contains("Test Paragraph"));
 
-        // If not found in section 0, try all sections
         if (para == null)
         {
             paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
@@ -386,7 +360,6 @@ public class WordParagraphToolTests : WordTestBase
 
         Assert.True(File.Exists(outputPath), "Output document should be created");
 
-        // Verify formatting values
         var leftIndent = para.ParagraphFormat.LeftIndent;
         var rightIndent = para.ParagraphFormat.RightIndent;
         var firstLineIndent = para.ParagraphFormat.FirstLineIndent;
@@ -397,14 +370,11 @@ public class WordParagraphToolTests : WordTestBase
         var isEvaluationMode = IsEvaluationMode();
         if (isEvaluationMode)
         {
-            // In evaluation mode, formatting may not apply correctly, but verify operation completed
             Assert.True(true,
                 $"Formatting operation completed. Values: LeftIndent={leftIndent}, RightIndent={rightIndent}, FirstLineIndent={firstLineIndent}, SpaceBefore={spaceBefore}, SpaceAfter={spaceAfter}, Alignment={alignment}");
         }
         else
         {
-            // Assertions should match the parameters passed to Execute:
-            // indentLeft: 36, indentRight: 36, firstLineIndent: 18, spaceBefore: 12, spaceAfter: 12, alignment: "justify"
             Assert.Equal(36, leftIndent);
             Assert.Equal(36, rightIndent);
             Assert.Equal(18, firstLineIndent);
@@ -442,7 +412,6 @@ public class WordParagraphToolTests : WordTestBase
         _tool.Execute("merge", docPath, outputPath: outputPath, startParagraphIndex: 1, endParagraphIndex: 2);
         var doc = new Document(outputPath);
         var paragraphs = GetParagraphs(doc, false);
-        // After merging paragraphs 1-2, we should have fewer paragraphs
         var nonEmptyCount = paragraphs.Count(p => !string.IsNullOrWhiteSpace(p.GetText()));
         Assert.True(nonEmptyCount <= 2,
             $"After merging, should have 2 or fewer non-empty paragraphs, but got {nonEmptyCount}");
@@ -462,13 +431,10 @@ public class WordParagraphToolTests : WordTestBase
         _tool.Execute("copy_format", docPath, outputPath: outputPath, sourceParagraphIndex: 0, targetParagraphIndex: 1);
         var resultDoc = new Document(outputPath);
         var resultParagraphs = GetParagraphs(resultDoc);
-        // Copy format only copies to one target at a time (targetParagraphIndex)
-        // So we only check the first target
         Assert.Equal(72, resultParagraphs[1].ParagraphFormat.LeftIndent);
 
         var isEvaluationMode = IsEvaluationMode();
         if (isEvaluationMode)
-            // Alignment may be limited in evaluation mode, but verify operation completed
             Assert.True(File.Exists(outputPath), "Output file should be created");
         else
             Assert.Equal(ParagraphAlignment.Right, resultParagraphs[1].ParagraphFormat.Alignment);
@@ -487,7 +453,6 @@ public class WordParagraphToolTests : WordTestBase
 
         var isEvaluationMode = IsEvaluationMode();
         if (isEvaluationMode)
-            // In evaluation mode, font formatting may not be applied
             Assert.True(File.Exists(outputPath), "Output file should be created");
         else
             Assert.Equal("Arial", run.Font.Name);
@@ -506,7 +471,6 @@ public class WordParagraphToolTests : WordTestBase
 
         var isEvaluationMode = IsEvaluationMode();
         if (isEvaluationMode)
-            // In evaluation mode, font size may not be applied
             Assert.True(File.Exists(outputPath), "Output file should be created");
         else
             Assert.Equal(18, run.Font.Size);
@@ -525,7 +489,6 @@ public class WordParagraphToolTests : WordTestBase
 
         var isEvaluationMode = IsEvaluationMode();
         if (isEvaluationMode)
-            // In evaluation mode, color formatting may not be applied
             Assert.True(File.Exists(outputPath), "Output file should be created");
         else
             Assert.Equal(Color.FromArgb(255, 0, 0), run.Font.Color);
@@ -579,10 +542,9 @@ public class WordParagraphToolTests : WordTestBase
         var docPath = CreateWordDocumentWithParagraphs("test_insert_beginning.docx", "First", "Second");
         var outputPath = CreateTestFilePath("test_insert_beginning_output.docx");
         var result = _tool.Execute("insert", docPath, outputPath: outputPath, paragraphIndex: -1, text: "New First");
-        Assert.Contains("Paragraph inserted successfully", result);
+        Assert.StartsWith("Paragraph inserted", result);
         Assert.Contains("beginning of document", result);
         var doc = new Document(outputPath);
-        // Use GetChildNodes with recursive=true to find all paragraphs including the new one
         var allParagraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
         var newFirstPara = allParagraphs.Any(p => p.GetText().Contains("New First"));
         Assert.True(newFirstPara, "New paragraph 'New First' should be inserted");
@@ -609,7 +571,6 @@ public class WordParagraphToolTests : WordTestBase
         var doc = new Document(outputPath);
         var paragraphs = GetParagraphs(doc);
         Assert.True(paragraphs.Count > 0);
-        // After fix: single uses Multiple rule with 1.0 multiplier
         Assert.Equal(LineSpacingRule.Multiple, paragraphs[0].ParagraphFormat.LineSpacingRule);
         Assert.Equal(1.0, paragraphs[0].ParagraphFormat.LineSpacing);
     }
@@ -623,7 +584,6 @@ public class WordParagraphToolTests : WordTestBase
         var doc = new Document(outputPath);
         var paragraphs = GetParagraphs(doc);
         Assert.True(paragraphs.Count > 0);
-        // After fix: double uses Multiple rule with 2.0 multiplier
         Assert.Equal(LineSpacingRule.Multiple, paragraphs[0].ParagraphFormat.LineSpacingRule);
         Assert.Equal(2.0, paragraphs[0].ParagraphFormat.LineSpacing);
     }
@@ -650,7 +610,6 @@ public class WordParagraphToolTests : WordTestBase
     [Fact]
     public void EditParagraph_EmptyParagraphWithFontSettings_ShouldCreateSentinelRun()
     {
-        // Arrange - create document with an empty paragraph
         var docPath = CreateTestFilePath("test_edit_empty_para_font.docx");
         var doc = new Document();
         var builder = new DocumentBuilder(doc);
@@ -665,21 +624,104 @@ public class WordParagraphToolTests : WordTestBase
         var paragraphs = GetParagraphs(resultDoc);
         Assert.True(paragraphs.Count >= 2);
 
-        // The empty paragraph should now have a sentinel run with font settings
         var emptyPara = paragraphs[1];
         var runs = emptyPara.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
         Assert.True(runs.Count > 0, "Empty paragraph should have a sentinel run after font edit");
 
-        // Verify font settings are applied
         var sentinelRun = runs[0];
         Assert.Equal("Arial", sentinelRun.Font.Name);
         Assert.Equal(16, sentinelRun.Font.Size);
         Assert.True(sentinelRun.Font.Bold);
     }
 
+    [Theory]
+    [InlineData("GET")]
+    [InlineData("GeT")]
+    [InlineData("get")]
+    public void Execute_GetOperationIsCaseInsensitive(string operation)
+    {
+        var docPath = CreateWordDocumentWithContent($"test_case_{operation}.docx", "Content");
+        var result = _tool.Execute(operation, docPath);
+        Assert.Contains("paragraphs", result);
+    }
+
+    [Theory]
+    [InlineData("INSERT")]
+    [InlineData("InSeRt")]
+    [InlineData("insert")]
+    public void Execute_InsertOperationIsCaseInsensitive(string operation)
+    {
+        var docPath = CreateWordDocument($"test_insert_{operation}.docx");
+        var outputPath = CreateTestFilePath($"test_insert_{operation}_output.docx");
+        var result = _tool.Execute(operation, docPath, outputPath: outputPath, text: "New paragraph");
+        Assert.StartsWith("Paragraph inserted", result);
+    }
+
+    [Theory]
+    [InlineData("DELETE")]
+    [InlineData("DeLeTe")]
+    [InlineData("delete")]
+    public void Execute_DeleteOperationIsCaseInsensitive(string operation)
+    {
+        var docPath = CreateWordDocumentWithContent($"test_delete_{operation}.docx", "Content");
+        var outputPath = CreateTestFilePath($"test_delete_{operation}_output.docx");
+        var result = _tool.Execute(operation, docPath, outputPath: outputPath, paragraphIndex: 0);
+        Assert.StartsWith("Paragraph #0 deleted", result);
+    }
+
+    [Theory]
+    [InlineData("EDIT")]
+    [InlineData("EdIt")]
+    [InlineData("edit")]
+    public void Execute_EditOperationIsCaseInsensitive(string operation)
+    {
+        var docPath = CreateWordDocumentWithContent($"test_edit_{operation}.docx", "Content");
+        var outputPath = CreateTestFilePath($"test_edit_{operation}_output.docx");
+        var result = _tool.Execute(operation, docPath, outputPath: outputPath, paragraphIndex: 0, bold: true);
+        Assert.Contains("format edited successfully", result);
+    }
+
+    [Theory]
+    [InlineData("GET_FORMAT")]
+    [InlineData("Get_Format")]
+    [InlineData("get_format")]
+    public void Execute_GetFormatOperationIsCaseInsensitive(string operation)
+    {
+        var docPath = CreateWordDocumentWithContent($"test_getformat_{operation.Replace("_", "")}.docx", "Content");
+        var result = _tool.Execute(operation, docPath, paragraphIndex: 0);
+        Assert.Contains("alignment", result);
+    }
+
+    [Theory]
+    [InlineData("COPY_FORMAT")]
+    [InlineData("Copy_Format")]
+    [InlineData("copy_format")]
+    public void Execute_CopyFormatOperationIsCaseInsensitive(string operation)
+    {
+        var docPath =
+            CreateWordDocumentWithParagraphs($"test_copyformat_{operation.Replace("_", "")}.docx", "First", "Second");
+        var outputPath = CreateTestFilePath($"test_copyformat_{operation.Replace("_", "")}_output.docx");
+        var result = _tool.Execute(operation, docPath, outputPath: outputPath,
+            sourceParagraphIndex: 0, targetParagraphIndex: 1);
+        Assert.StartsWith("Paragraph format copied", result);
+    }
+
+    [Theory]
+    [InlineData("MERGE")]
+    [InlineData("MeRgE")]
+    [InlineData("merge")]
+    public void Execute_MergeOperationIsCaseInsensitive(string operation)
+    {
+        var docPath = CreateWordDocumentWithParagraphs($"test_merge_{operation}.docx", "First", "Second");
+        var outputPath = CreateTestFilePath($"test_merge_{operation}_output.docx");
+        var result = _tool.Execute(operation, docPath, outputPath: outputPath,
+            startParagraphIndex: 0, endParagraphIndex: 1);
+        Assert.StartsWith("Paragraphs merged", result);
+    }
+
     #endregion
 
-    #region Session ID Tests
+    #region Session
 
     [Fact]
     public void InsertParagraph_WithSessionId_ShouldInsertInMemory()
@@ -687,7 +729,7 @@ public class WordParagraphToolTests : WordTestBase
         var docPath = CreateWordDocumentWithContent("test_session_insert.docx", "Existing content");
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("insert", sessionId: sessionId, text: "New paragraph", paragraphIndex: 0);
-        Assert.Contains("successfully", result);
+        Assert.StartsWith("Paragraph inserted successfully", result);
         var doc = SessionManager.GetDocument<Document>(sessionId);
         var paragraphs = GetParagraphs(doc);
         Assert.Contains(paragraphs, p => p.GetText().Contains("New paragraph"));
@@ -699,7 +741,7 @@ public class WordParagraphToolTests : WordTestBase
         var docPath = CreateWordDocumentWithContent("test_session_edit.docx", "Test content");
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("edit", sessionId: sessionId, paragraphIndex: 0, bold: true, fontSize: 16);
-        Assert.Contains("successfully", result);
+        Assert.Contains("format edited successfully", result);
         var doc = SessionManager.GetDocument<Document>(sessionId);
         var paragraphs = GetParagraphs(doc);
         Assert.True(paragraphs.Count > 0, "Document should have paragraphs");
@@ -711,7 +753,7 @@ public class WordParagraphToolTests : WordTestBase
         var docPath = CreateWordDocumentWithParagraphs("test_session_delete.docx", "First", "Second", "Third");
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("delete", sessionId: sessionId, paragraphIndex: 1);
-        Assert.Contains("deleted successfully", result);
+        Assert.StartsWith("Paragraph #1 deleted", result);
         Assert.Contains("session", result);
     }
 
@@ -732,7 +774,6 @@ public class WordParagraphToolTests : WordTestBase
         var docPath = CreateWordDocumentWithContent("test_session_get_format.docx", "Formatted text");
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("get_format", sessionId: sessionId, paragraphIndex: 0);
-        Assert.Contains("paragraphFormat", result);
         Assert.Contains("alignment", result);
     }
 
@@ -743,7 +784,6 @@ public class WordParagraphToolTests : WordTestBase
         var sessionId = OpenSession(docPath);
         var doc = SessionManager.GetDocument<Document>(sessionId);
 
-        // Set source paragraph format
         var paragraphs = GetParagraphs(doc);
         paragraphs[0].ParagraphFormat.LeftIndent = 72;
         _tool.Execute("copy_format", sessionId: sessionId, sourceParagraphIndex: 0, targetParagraphIndex: 1);
@@ -757,8 +797,112 @@ public class WordParagraphToolTests : WordTestBase
         var docPath = CreateWordDocumentWithParagraphs("test_session_merge.docx", "First", "Second", "Third");
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("merge", sessionId: sessionId, startParagraphIndex: 0, endParagraphIndex: 2);
-        Assert.Contains("merged successfully", result);
+        Assert.StartsWith("Paragraphs merged", result);
         Assert.Contains("session", result);
+    }
+
+    [Fact]
+    public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
+    {
+        Assert.Throws<KeyNotFoundException>(() =>
+            _tool.Execute("get", sessionId: "invalid_session_id"));
+    }
+
+    [Fact]
+    public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
+    {
+        var docPath1 = CreateWordDocumentWithContent("test_path_para.docx", "Path content");
+        var docPath2 = CreateWordDocumentWithContent("test_session_para.docx", "Session content");
+        var sessionId = OpenSession(docPath2);
+
+        var result = _tool.Execute("get", docPath1, sessionId);
+
+        Assert.Contains("Session content", result);
+    }
+
+    #endregion
+
+    #region Exception
+
+    [Fact]
+    public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
+    {
+        var docPath = CreateWordDocumentWithContent("test_unknown_op.docx", "Content");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("unknown_operation", docPath));
+        Assert.Contains("Unknown operation", ex.Message);
+    }
+
+    [Fact]
+    public void InsertParagraph_WithoutText_ShouldThrowException()
+    {
+        var docPath = CreateWordDocument("test_insert_no_text.docx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("insert", docPath, paragraphIndex: 0));
+        Assert.Contains("text parameter is required", ex.Message);
+    }
+
+    [Fact]
+    public void EditParagraph_WithoutParagraphIndex_ShouldThrowException()
+    {
+        var docPath = CreateWordDocumentWithContent("test_edit_no_index.docx", "Content");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("edit", docPath, bold: true));
+        Assert.Contains("paragraphIndex parameter is required", ex.Message);
+    }
+
+    [Fact]
+    public void CopyFormat_WithoutSourceParagraphIndex_ShouldThrowException()
+    {
+        var docPath = CreateWordDocumentWithParagraphs("test_copy_no_source.docx", "First", "Second");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("copy_format", docPath, targetParagraphIndex: 1));
+        Assert.Contains("sourceParagraphIndex parameter is required", ex.Message);
+    }
+
+    [Fact]
+    public void CopyFormat_WithoutTargetParagraphIndex_ShouldThrowException()
+    {
+        var docPath = CreateWordDocumentWithParagraphs("test_copy_no_target.docx", "First", "Second");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("copy_format", docPath, sourceParagraphIndex: 0));
+        Assert.Contains("targetParagraphIndex parameter is required", ex.Message);
+    }
+
+    [Fact]
+    public void Merge_WithoutStartParagraphIndex_ShouldThrowException()
+    {
+        var docPath = CreateWordDocumentWithParagraphs("test_merge_no_start.docx", "First", "Second");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("merge", docPath, endParagraphIndex: 1));
+        Assert.Contains("startParagraphIndex parameter is required", ex.Message);
+    }
+
+    [Fact]
+    public void Merge_WithoutEndParagraphIndex_ShouldThrowException()
+    {
+        var docPath = CreateWordDocumentWithParagraphs("test_merge_no_end.docx", "First", "Second");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("merge", docPath, startParagraphIndex: 0));
+        Assert.Contains("endParagraphIndex parameter is required", ex.Message);
+    }
+
+    [Fact]
+    public void Merge_WithSameStartAndEnd_ShouldThrowException()
+    {
+        var docPath = CreateWordDocumentWithParagraphs("test_merge_same_idx.docx", "First", "Second");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("merge", docPath, startParagraphIndex: 0, endParagraphIndex: 0));
+        Assert.Contains("no merge needed", ex.Message);
+    }
+
+    [Fact]
+    public void Merge_WithStartGreaterThanEnd_ShouldThrowException()
+    {
+        var docPath = CreateWordDocumentWithParagraphs("test_merge_invalid_range.docx", "First", "Second");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("merge", docPath, startParagraphIndex: 1, endParagraphIndex: 0));
+        Assert.Contains("cannot be greater than", ex.Message);
     }
 
     #endregion

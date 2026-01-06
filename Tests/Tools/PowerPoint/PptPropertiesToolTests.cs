@@ -37,12 +37,12 @@ public class PptPropertiesToolTests : TestBase
         return filePath;
     }
 
-    #region General Tests
+    #region General
 
     [Fact]
     public void Get_ShouldReturnPropertiesAsJson()
     {
-        var pptPath = CreateTestPresentation("test_get_properties.pptx");
+        var pptPath = CreateTestPresentation("test_get.pptx");
         var result = _tool.Execute("get", pptPath);
         Assert.NotNull(result);
         var json = JsonDocument.Parse(result);
@@ -59,8 +59,7 @@ public class PptPropertiesToolTests : TestBase
         var result = _tool.Execute("get", pptPath);
         var json = JsonDocument.Parse(result);
 
-        var isEvaluationMode = IsEvaluationMode();
-        if (isEvaluationMode)
+        if (IsEvaluationMode())
         {
             Assert.True(json.RootElement.TryGetProperty("title", out _));
         }
@@ -79,22 +78,20 @@ public class PptPropertiesToolTests : TestBase
         var outputPath = CreateTestFilePath("test_set_basic_output.pptx");
         var result = _tool.Execute("set", pptPath, title: "Test Presentation", author: "Test Author",
             subject: "Test Subject", outputPath: outputPath);
+        Assert.StartsWith("Document properties updated", result);
         Assert.Contains("Title", result);
-        Assert.Contains("Author", result);
-        Assert.Contains("Subject", result);
 
         using var presentation = new Presentation(outputPath);
-
-        var isEvaluationMode = IsEvaluationMode();
-        if (isEvaluationMode)
-        {
-            Assert.True(File.Exists(outputPath));
-        }
-        else
+        if (!IsEvaluationMode())
         {
             Assert.Equal("Test Presentation", presentation.DocumentProperties.Title);
             Assert.Equal("Test Author", presentation.DocumentProperties.Author);
             Assert.Equal("Test Subject", presentation.DocumentProperties.Subject);
+        }
+        else
+        {
+            // Fallback: verify basic structure in evaluation mode
+            Assert.NotNull(presentation.DocumentProperties);
         }
     }
 
@@ -113,10 +110,7 @@ public class PptPropertiesToolTests : TestBase
             company: "Test Company",
             manager: "Test Manager",
             outputPath: outputPath);
-        Assert.Contains("Title", result);
-        Assert.Contains("Keywords", result);
-        Assert.Contains("Company", result);
-        Assert.Contains("Manager", result);
+        Assert.StartsWith("Document properties updated", result);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -131,16 +125,18 @@ public class PptPropertiesToolTests : TestBase
             ["CustomKey2"] = "CustomValue2"
         };
         var result = _tool.Execute("set", pptPath, customProperties: customProperties, outputPath: outputPath);
-        Assert.Contains("CustomProperties", result);
+        Assert.StartsWith("Document properties updated", result);
 
         using var presentation = new Presentation(outputPath);
-        var props = presentation.DocumentProperties;
-
-        var isEvaluationMode = IsEvaluationMode();
-        if (!isEvaluationMode)
+        if (!IsEvaluationMode())
         {
-            Assert.Equal("CustomValue1", props["CustomKey1"]?.ToString());
-            Assert.Equal("CustomValue2", props["CustomKey2"]?.ToString());
+            Assert.Equal("CustomValue1", presentation.DocumentProperties["CustomKey1"]?.ToString());
+            Assert.Equal("CustomValue2", presentation.DocumentProperties["CustomKey2"]?.ToString());
+        }
+        else
+        {
+            // Fallback: verify basic structure in evaluation mode
+            Assert.NotNull(presentation.DocumentProperties);
         }
     }
 
@@ -157,18 +153,20 @@ public class PptPropertiesToolTests : TestBase
             ["StringValue"] = "Hello"
         };
         var result = _tool.Execute("set", pptPath, customProperties: customProperties, outputPath: outputPath);
-        Assert.Contains("CustomProperties", result);
+        Assert.StartsWith("Document properties updated", result);
 
         using var presentation = new Presentation(outputPath);
-        var props = presentation.DocumentProperties;
-
-        var isEvaluationMode = IsEvaluationMode();
-        if (!isEvaluationMode)
+        if (!IsEvaluationMode())
         {
-            Assert.Equal(42, props["IntValue"]);
-            Assert.Equal(3.14, props["DoubleValue"]);
-            Assert.Equal(true, props["BoolValue"]);
-            Assert.Equal("Hello", props["StringValue"]);
+            Assert.Equal(42, presentation.DocumentProperties["IntValue"]);
+            Assert.Equal(3.14, presentation.DocumentProperties["DoubleValue"]);
+            Assert.Equal(true, presentation.DocumentProperties["BoolValue"]);
+            Assert.Equal("Hello", presentation.DocumentProperties["StringValue"]);
+        }
+        else
+        {
+            // Fallback: verify basic structure in evaluation mode
+            Assert.NotNull(presentation.DocumentProperties);
         }
     }
 
@@ -178,16 +176,39 @@ public class PptPropertiesToolTests : TestBase
         var pptPath = CreateTestPresentation("test_set_empty.pptx");
         var outputPath = CreateTestFilePath("test_set_empty_output.pptx");
         var result = _tool.Execute("set", pptPath, outputPath: outputPath);
-        Assert.Contains("Output:", result);
+        Assert.StartsWith("Document properties updated", result);
         Assert.True(File.Exists(outputPath));
+    }
+
+    [Theory]
+    [InlineData("GET")]
+    [InlineData("Get")]
+    [InlineData("get")]
+    public void Operation_ShouldBeCaseInsensitive_Get(string operation)
+    {
+        var pptPath = CreateTestPresentation($"test_case_get_{operation}.pptx");
+        var result = _tool.Execute(operation, pptPath);
+        Assert.StartsWith("{", result);
+    }
+
+    [Theory]
+    [InlineData("SET")]
+    [InlineData("Set")]
+    [InlineData("set")]
+    public void Operation_ShouldBeCaseInsensitive_Set(string operation)
+    {
+        var pptPath = CreateTestPresentation($"test_case_set_{operation}.pptx");
+        var outputPath = CreateTestFilePath($"test_case_set_{operation}_output.pptx");
+        var result = _tool.Execute(operation, pptPath, title: "Test", outputPath: outputPath);
+        Assert.StartsWith("Document properties updated", result);
     }
 
     #endregion
 
-    #region Exception Tests
+    #region Exception
 
     [Fact]
-    public void ExecuteAsync_UnknownOperation_ShouldThrow()
+    public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
     {
         var pptPath = CreateTestPresentation("test_unknown_op.pptx");
         var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", pptPath));
@@ -195,15 +216,22 @@ public class PptPropertiesToolTests : TestBase
     }
 
     [Fact]
-    public void Get_MissingPath_ShouldThrow()
+    public void Get_WithoutPathOrSession_ShouldThrowArgumentException()
     {
         var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("get"));
         Assert.Contains("path", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void Set_WithoutPathOrSession_ShouldThrowArgumentException()
+    {
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("set"));
+        Assert.Contains("path", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
     #endregion
 
-    #region Session ID Tests
+    #region Session
 
     [Fact]
     public void Get_WithSessionId_ShouldReturnPropertiesFromMemory()
@@ -223,15 +251,19 @@ public class PptPropertiesToolTests : TestBase
         var pptPath = CreateTestPresentation("test_session_set.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("set", sessionId: sessionId, title: "Session Title", author: "Session Author");
-        Assert.Contains("Title", result);
+        Assert.StartsWith("Document properties updated", result);
         Assert.Contains("session", result);
 
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
-        var isEvaluationMode = IsEvaluationMode();
-        if (!isEvaluationMode)
+        if (!IsEvaluationMode())
         {
             Assert.Equal("Session Title", ppt.DocumentProperties.Title);
             Assert.Equal("Session Author", ppt.DocumentProperties.Author);
+        }
+        else
+        {
+            // Fallback: verify basic structure in evaluation mode
+            Assert.NotNull(ppt.DocumentProperties);
         }
     }
 
@@ -245,11 +277,40 @@ public class PptPropertiesToolTests : TestBase
             ["SessionKey"] = "SessionValue"
         };
         var result = _tool.Execute("set", sessionId: sessionId, customProperties: customProperties);
-        Assert.Contains("CustomProperties", result);
+        Assert.StartsWith("Document properties updated", result);
 
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
-        var isEvaluationMode = IsEvaluationMode();
-        if (!isEvaluationMode) Assert.Equal("SessionValue", ppt.DocumentProperties["SessionKey"]?.ToString());
+        if (!IsEvaluationMode())
+            Assert.Equal("SessionValue", ppt.DocumentProperties["SessionKey"]?.ToString());
+        else
+            // Fallback: verify basic structure in evaluation mode
+            Assert.NotNull(ppt.DocumentProperties);
+    }
+
+    [Fact]
+    public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
+    {
+        Assert.Throws<KeyNotFoundException>(() => _tool.Execute("get", sessionId: "invalid_session"));
+    }
+
+    [Fact]
+    public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
+    {
+        var pptPath1 = CreatePresentationWithProperties("test_path_props.pptx");
+        var pptPath2 = CreateTestPresentation("test_session_props.pptx");
+        using (var ppt = new Presentation(pptPath2))
+        {
+            ppt.DocumentProperties.Title = "SessionTitle";
+            ppt.Save(pptPath2, SaveFormat.Pptx);
+        }
+
+        var sessionId = OpenSession(pptPath2);
+        var result = _tool.Execute("get", pptPath1, sessionId);
+        if (!IsEvaluationMode())
+            Assert.Contains("SessionTitle", result);
+        else
+            // Fallback: verify basic structure in evaluation mode
+            Assert.NotNull(result);
     }
 
     #endregion

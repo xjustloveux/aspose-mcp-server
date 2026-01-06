@@ -31,7 +31,6 @@ public class TempFileManagerTests : IDisposable
     {
         _manager.Dispose();
 
-        // Clean up test directory
         try
         {
             if (Directory.Exists(_tempDir))
@@ -52,10 +51,8 @@ public class TempFileManagerTests : IDisposable
         var docPath = Path.Combine(_tempDir, $"aspose_session_{sessionId}_{timestamp}.docx");
         var metaPath = docPath + ".meta.json";
 
-        // Create document file
         File.WriteAllText(docPath, "Test document content");
 
-        // Create metadata file
         var metadata = new
         {
             SessionId = sessionId,
@@ -87,7 +84,6 @@ public class TempFileManagerTests : IDisposable
     [Fact]
     public void CleanupExpiredFiles_NonExpiredFiles_ShouldNotDelete()
     {
-        // Create a non-expired temp file
         CreateTempFile("sess_test1234", DateTime.UtcNow);
 
         var result = _manager.CleanupExpiredFiles();

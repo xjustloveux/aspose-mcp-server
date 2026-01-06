@@ -18,6 +18,11 @@ namespace AsposeMcpServer.Tools.Excel;
 public class ExcelPivotTableTool
 {
     /// <summary>
+    ///     Session identity accessor for session isolation support.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Document session manager for in-memory editing support.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -26,11 +31,43 @@ public class ExcelPivotTableTool
     ///     Initializes a new instance of the <see cref="ExcelPivotTableTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
-    public ExcelPivotTableTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    public ExcelPivotTableTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes an Excel pivot table operation (add, edit, delete, get, add_field, delete_field, refresh).
+    /// </summary>
+    /// <param name="operation">The operation to perform: add, edit, delete, get, add_field, delete_field, refresh.</param>
+    /// <param name="path">Excel file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="sheetIndex">Sheet index (0-based, default: 0).</param>
+    /// <param name="sourceRange">Source data range (e.g., 'A1:D10', required for add).</param>
+    /// <param name="destCell">Destination cell for pivot table (e.g., 'F1', required for add).</param>
+    /// <param name="pivotTableIndex">
+    ///     Pivot table index (0-based, required for edit/delete/add_field/delete_field; optional for
+    ///     refresh).
+    /// </param>
+    /// <param name="name">Pivot table name (optional, for add/edit).</param>
+    /// <param name="refreshData">Refresh pivot table data (optional, for edit/refresh).</param>
+    /// <param name="style">Pivot table style (optional, for edit).</param>
+    /// <param name="showRowGrand">Show row grand totals (optional, for edit).</param>
+    /// <param name="showColumnGrand">Show column grand totals (optional, for edit).</param>
+    /// <param name="autoFitColumns">Auto-fit column widths after editing (optional, for edit).</param>
+    /// <param name="fieldName">Field name from source data (required for add_field/delete_field).</param>
+    /// <param name="fieldType">Field type: 'Row', 'Column', 'Data', 'Page' (required for add_field and delete_field).</param>
+    /// <param name="area">Alias for fieldType (optional, for add_field/delete_field).</param>
+    /// <param name="function">
+    ///     Aggregation function for data field: 'Sum', 'Count', 'Average', 'Max', 'Min' (optional, for
+    ///     add_field).
+    /// </param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "excel_pivot_table")]
     [Description(
         @"Manage Excel pivot tables. Supports 7 operations: add, edit, delete, get, add_field, delete_field, refresh.
@@ -102,7 +139,7 @@ Usage examples:
             "Aggregation function for data field: 'Sum', 'Count', 'Average', 'Max', 'Min' (optional, for add_field)")]
         string function = "Sum")
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {

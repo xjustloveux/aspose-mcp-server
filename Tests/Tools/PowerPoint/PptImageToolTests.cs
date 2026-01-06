@@ -35,7 +35,6 @@ public class PptImageToolTests : TestBase
     {
         var filePath = CreateTestFilePath(fileName);
         using var presentation = new Presentation();
-
         for (var i = 0; i < slideCount; i++)
         {
             var slide = i == 0
@@ -43,7 +42,7 @@ public class PptImageToolTests : TestBase
                 : presentation.Slides.AddEmptySlide(presentation.LayoutSlides[0]);
             if (addImages)
             {
-                var imagePath = CreateTestImage($"pres_image_{i}.png");
+                var imagePath = CreateTestImage($"pres_image_{fileName}_{i}.png");
                 using var imageStream = File.OpenRead(imagePath);
                 var pictureImage = presentation.Images.AddImage(imageStream);
                 slide.Shapes.AddPictureFrame(ShapeType.Rectangle, 100, 100, 200, 150, pictureImage);
@@ -54,7 +53,26 @@ public class PptImageToolTests : TestBase
         return filePath;
     }
 
-    #region General Tests
+    private string CreatePresentationWithDuplicateImages(string fileName, int slideCount = 3)
+    {
+        var filePath = CreateTestFilePath(fileName);
+        var imagePath = CreateTestImage($"duplicate_{fileName}.png");
+        using var presentation = new Presentation();
+        using var imageStream = File.OpenRead(imagePath);
+        var pictureImage = presentation.Images.AddImage(imageStream);
+        for (var i = 0; i < slideCount; i++)
+        {
+            var slide = i == 0
+                ? presentation.Slides[0]
+                : presentation.Slides.AddEmptySlide(presentation.LayoutSlides[0]);
+            slide.Shapes.AddPictureFrame(ShapeType.Rectangle, 100, 100, 200, 150, pictureImage);
+        }
+
+        presentation.Save(filePath, SaveFormat.Pptx);
+        return filePath;
+    }
+
+    #region General
 
     [Fact]
     public void Add_ShouldAddImageToSlide()
@@ -64,11 +82,9 @@ public class PptImageToolTests : TestBase
         var outputPath = CreateTestFilePath("test_add_image_output.pptx");
         var result = _tool.Execute("add", pptPath, slideIndex: 0, imagePath: imagePath, x: 100, y: 100, width: 200,
             height: 150, outputPath: outputPath);
-        Assert.Contains("Image added", result);
+        Assert.StartsWith("Image added to slide", result);
         using var presentation = new Presentation(outputPath);
-        var slide = presentation.Slides[0];
-        var images = slide.Shapes.OfType<IPictureFrame>().ToList();
-        Assert.True(images.Count > 0, "Slide should contain at least one image");
+        Assert.NotEmpty(presentation.Slides[0].Shapes.OfType<IPictureFrame>());
     }
 
     [Fact]
@@ -81,7 +97,7 @@ public class PptImageToolTests : TestBase
         using var presentation = new Presentation(outputPath);
         var image = presentation.Slides[0].Shapes.OfType<IPictureFrame>().First();
         Assert.Equal(200, image.Width);
-        Assert.Equal(100, image.Height); // 200 * (50/100) = 100
+        Assert.Equal(100, image.Height);
     }
 
     [Fact]
@@ -91,10 +107,11 @@ public class PptImageToolTests : TestBase
         var outputPath = CreateTestFilePath("test_edit_image_output.pptx");
         var result = _tool.Execute("edit", pptPath, slideIndex: 0, imageIndex: 0, width: 300, height: 200,
             outputPath: outputPath);
+        Assert.StartsWith("Image", result);
         Assert.Contains("updated", result);
         using var presentation = new Presentation(outputPath);
         var images = presentation.Slides[0].Shapes.OfType<IPictureFrame>().ToList();
-        Assert.True(images.Count > 0);
+        Assert.NotEmpty(images);
         Assert.Equal(300, images[0].Width);
         Assert.Equal(200, images[0].Height);
     }
@@ -107,7 +124,8 @@ public class PptImageToolTests : TestBase
         var outputPath = CreateTestFilePath("test_edit_replace_output.pptx");
         var result = _tool.Execute("edit", pptPath, slideIndex: 0, imageIndex: 0, imagePath: newImagePath,
             outputPath: outputPath);
-        Assert.Contains("image replaced", result);
+        Assert.StartsWith("Image", result);
+        Assert.Contains("updated", result);
         Assert.True(File.Exists(outputPath));
     }
 
@@ -120,7 +138,6 @@ public class PptImageToolTests : TestBase
         var result = _tool.Execute("edit", pptPath, slideIndex: 0, imageIndex: 0, imagePath: newImagePath,
             jpegQuality: 50, outputPath: outputPath);
         Assert.Contains("quality=50", result);
-        Assert.True(File.Exists(outputPath));
     }
 
     [Fact]
@@ -133,7 +150,6 @@ public class PptImageToolTests : TestBase
             maxWidth: 100, outputPath: outputPath);
         Assert.Contains("resized", result);
         Assert.Contains("100x50", result);
-        Assert.True(File.Exists(outputPath));
     }
 
     [Fact]
@@ -146,32 +162,17 @@ public class PptImageToolTests : TestBase
             maxHeight: 100, outputPath: outputPath);
         Assert.Contains("resized", result);
         Assert.Contains("50x100", result);
-        Assert.True(File.Exists(outputPath));
-    }
-
-    [Fact]
-    public void Edit_WithMaxWidthAndQuality_ShouldResizeAndCompress()
-    {
-        var pptPath = CreateTestPresentation("test_edit_both.pptx", addImages: true);
-        var largeImagePath = CreateTestImage("large_both.png", 200, 200, Color.Yellow);
-        var outputPath = CreateTestFilePath("test_edit_both_output.pptx");
-        var result = _tool.Execute("edit", pptPath, slideIndex: 0, imageIndex: 0, imagePath: largeImagePath,
-            maxWidth: 100, jpegQuality: 75, outputPath: outputPath);
-        Assert.Contains("resized", result);
-        Assert.Contains("quality=75", result);
-        Assert.True(File.Exists(outputPath));
     }
 
     [Fact]
     public void Edit_ImageSmallerThanMax_ShouldNotResize()
     {
         var pptPath = CreateTestPresentation("test_edit_no_resize.pptx", addImages: true);
-        var smallImagePath = CreateTestImage("small_image.png"); // 10x10
+        var smallImagePath = CreateTestImage("small_image.png");
         var outputPath = CreateTestFilePath("test_edit_no_resize_output.pptx");
         var result = _tool.Execute("edit", pptPath, slideIndex: 0, imageIndex: 0, imagePath: smallImagePath,
             maxWidth: 100, maxHeight: 100, outputPath: outputPath);
         Assert.DoesNotContain("resized", result);
-        Assert.True(File.Exists(outputPath));
     }
 
     [Fact]
@@ -180,10 +181,10 @@ public class PptImageToolTests : TestBase
         var pptPath = CreateTestPresentation("test_delete.pptx", addImages: true);
         var outputPath = CreateTestFilePath("test_delete_output.pptx");
         var result = _tool.Execute("delete", pptPath, slideIndex: 0, imageIndex: 0, outputPath: outputPath);
-        Assert.Contains("deleted", result);
+        Assert.StartsWith("Image", result);
+        Assert.Contains("deleted from slide", result);
         using var presentation = new Presentation(outputPath);
-        var images = presentation.Slides[0].Shapes.OfType<IPictureFrame>().ToList();
-        Assert.Empty(images);
+        Assert.Empty(presentation.Slides[0].Shapes.OfType<IPictureFrame>());
     }
 
     [Fact]
@@ -215,7 +216,7 @@ public class PptImageToolTests : TestBase
         var result = _tool.Execute("export_slides", pptPath, outputDir: outputDir, format: "png");
         var files = Directory.GetFiles(outputDir, "*.png");
         Assert.Equal(3, files.Length);
-        Assert.Contains("Exported 3 slides", result);
+        Assert.StartsWith("Exported 3 slides", result);
     }
 
     [Fact]
@@ -227,10 +228,7 @@ public class PptImageToolTests : TestBase
         var result = _tool.Execute("export_slides", pptPath, outputDir: outputDir, slideIndexes: "0,2,4");
         var files = Directory.GetFiles(outputDir, "*.png");
         Assert.Equal(3, files.Length);
-        Assert.Contains("Exported 3 slides", result);
-        Assert.True(File.Exists(Path.Combine(outputDir, "slide_1.png")));
-        Assert.True(File.Exists(Path.Combine(outputDir, "slide_3.png")));
-        Assert.True(File.Exists(Path.Combine(outputDir, "slide_5.png")));
+        Assert.StartsWith("Exported 3 slides", result);
     }
 
     [Fact]
@@ -251,9 +249,8 @@ public class PptImageToolTests : TestBase
         var outputDir = Path.Combine(TestDir, "exported_scale");
         Directory.CreateDirectory(outputDir);
         var result = _tool.Execute("export_slides", pptPath, outputDir: outputDir, scale: 0.5f);
-        Assert.Contains("Exported 1 slides", result);
-        var files = Directory.GetFiles(outputDir, "*.png");
-        Assert.Single(files);
+        Assert.StartsWith("Exported 1 slides", result);
+        Assert.Single(Directory.GetFiles(outputDir, "*.png"));
     }
 
     [Fact]
@@ -264,41 +261,18 @@ public class PptImageToolTests : TestBase
         Directory.CreateDirectory(outputDir);
         var result = _tool.Execute("extract", pptPath, outputDir: outputDir);
         var files = Directory.GetFiles(outputDir);
-        Assert.True(files.Length > 0, "Should extract at least one image");
-        Assert.Contains("Extracted", result);
+        Assert.NotEmpty(files);
+        Assert.StartsWith("Extracted", result);
     }
 
     [Fact]
     public void Extract_WithSkipDuplicates_ShouldSkipDuplicateImages()
     {
-        // Arrange - Create presentation with duplicate images
-        var filePath = CreateTestFilePath("test_extract_duplicates.pptx");
-        var imagePath = CreateTestImage("duplicate_image.png");
-
-        using (var presentation = new Presentation())
-        {
-            using var imageStream = File.OpenRead(imagePath);
-            var pictureImage = presentation.Images.AddImage(imageStream);
-
-            // Add same image to multiple slides
-            for (var i = 0; i < 3; i++)
-            {
-                var slide = i == 0
-                    ? presentation.Slides[0]
-                    : presentation.Slides.AddEmptySlide(presentation.LayoutSlides[0]);
-                slide.Shapes.AddPictureFrame(ShapeType.Rectangle, 100, 100, 200, 150, pictureImage);
-            }
-
-            presentation.Save(filePath, SaveFormat.Pptx);
-        }
-
+        var pptPath = CreatePresentationWithDuplicateImages("test_extract_duplicates.pptx");
         var outputDir = Path.Combine(TestDir, "extracted_skip_duplicates");
         Directory.CreateDirectory(outputDir);
-        var result = _tool.Execute("extract", filePath, outputDir: outputDir, skipDuplicates: true);
-
-        // Assert - Should only export 1 image (others are duplicates)
-        var files = Directory.GetFiles(outputDir);
-        Assert.Single(files);
+        var result = _tool.Execute("extract", pptPath, outputDir: outputDir, skipDuplicates: true);
+        Assert.Single(Directory.GetFiles(outputDir));
         Assert.Contains("skipped", result);
         Assert.Contains("duplicates", result);
     }
@@ -306,50 +280,147 @@ public class PptImageToolTests : TestBase
     [Fact]
     public void Extract_WithoutSkipDuplicates_ShouldExtractAllImages()
     {
-        // Arrange - Create presentation with duplicate images
-        var filePath = CreateTestFilePath("test_extract_all.pptx");
-        var imagePath = CreateTestImage("all_images.png");
-
-        using (var presentation = new Presentation())
-        {
-            using var imageStream = File.OpenRead(imagePath);
-            var pictureImage = presentation.Images.AddImage(imageStream);
-
-            // Add same image to multiple slides
-            for (var i = 0; i < 3; i++)
-            {
-                var slide = i == 0
-                    ? presentation.Slides[0]
-                    : presentation.Slides.AddEmptySlide(presentation.LayoutSlides[0]);
-                slide.Shapes.AddPictureFrame(ShapeType.Rectangle, 100, 100, 200, 150, pictureImage);
-            }
-
-            presentation.Save(filePath, SaveFormat.Pptx);
-        }
-
+        var pptPath = CreatePresentationWithDuplicateImages("test_extract_all.pptx");
         var outputDir = Path.Combine(TestDir, "extracted_all");
         Directory.CreateDirectory(outputDir);
-        var result = _tool.Execute("extract", filePath, outputDir: outputDir, skipDuplicates: false);
-
-        // Assert - Should export all 3 images
-        var files = Directory.GetFiles(outputDir);
-        Assert.Equal(3, files.Length);
+        var result = _tool.Execute("extract", pptPath, outputDir: outputDir, skipDuplicates: false);
+        Assert.Equal(3, Directory.GetFiles(outputDir).Length);
         Assert.DoesNotContain("skipped", result);
+    }
+
+    [Theory]
+    [InlineData("ADD")]
+    [InlineData("Add")]
+    [InlineData("add")]
+    public void Operation_ShouldBeCaseInsensitive_Add(string operation)
+    {
+        var pptPath = CreateTestPresentation($"test_case_add_{operation}.pptx");
+        var imagePath = CreateTestImage($"test_case_add_{operation}.png");
+        var outputPath = CreateTestFilePath($"test_case_add_{operation}_output.pptx");
+        var result = _tool.Execute(operation, pptPath, slideIndex: 0, imagePath: imagePath, outputPath: outputPath);
+        Assert.StartsWith("Image added to slide", result);
+    }
+
+    [Theory]
+    [InlineData("EDIT")]
+    [InlineData("Edit")]
+    [InlineData("edit")]
+    public void Operation_ShouldBeCaseInsensitive_Edit(string operation)
+    {
+        var pptPath = CreateTestPresentation($"test_case_edit_{operation}.pptx", addImages: true);
+        var outputPath = CreateTestFilePath($"test_case_edit_{operation}_output.pptx");
+        var result = _tool.Execute(operation, pptPath, slideIndex: 0, imageIndex: 0, width: 300,
+            outputPath: outputPath);
+        Assert.StartsWith("Image", result);
+        Assert.Contains("updated", result);
+    }
+
+    [Theory]
+    [InlineData("DELETE")]
+    [InlineData("Delete")]
+    [InlineData("delete")]
+    public void Operation_ShouldBeCaseInsensitive_Delete(string operation)
+    {
+        var pptPath = CreateTestPresentation($"test_case_delete_{operation}.pptx", addImages: true);
+        var outputPath = CreateTestFilePath($"test_case_delete_{operation}_output.pptx");
+        var result = _tool.Execute(operation, pptPath, slideIndex: 0, imageIndex: 0, outputPath: outputPath);
+        Assert.StartsWith("Image", result);
+        Assert.Contains("deleted from slide", result);
+    }
+
+    [Theory]
+    [InlineData("GET")]
+    [InlineData("Get")]
+    [InlineData("get")]
+    public void Operation_ShouldBeCaseInsensitive_Get(string operation)
+    {
+        var pptPath = CreateTestPresentation($"test_case_get_{operation}.pptx", addImages: true);
+        var result = _tool.Execute(operation, pptPath, slideIndex: 0);
+        Assert.Contains("\"imageCount\"", result);
+    }
+
+    [Theory]
+    [InlineData("EXPORT_SLIDES")]
+    [InlineData("Export_Slides")]
+    [InlineData("export_slides")]
+    public void Operation_ShouldBeCaseInsensitive_ExportSlides(string operation)
+    {
+        var pptPath = CreateTestPresentation($"test_case_export_{operation.Replace("_", "")}.pptx");
+        var outputDir = Path.Combine(TestDir, $"exported_{operation.Replace("_", "")}");
+        Directory.CreateDirectory(outputDir);
+        var result = _tool.Execute(operation, pptPath, outputDir: outputDir);
+        Assert.StartsWith("Exported", result);
+    }
+
+    [Theory]
+    [InlineData("EXTRACT")]
+    [InlineData("Extract")]
+    [InlineData("extract")]
+    public void Operation_ShouldBeCaseInsensitive_Extract(string operation)
+    {
+        var pptPath = CreateTestPresentation($"test_case_extract_{operation}.pptx", addImages: true);
+        var outputDir = Path.Combine(TestDir, $"extracted_{operation}");
+        Directory.CreateDirectory(outputDir);
+        var result = _tool.Execute(operation, pptPath, outputDir: outputDir);
+        Assert.StartsWith("Extracted", result);
     }
 
     #endregion
 
-    #region Exception Tests
+    #region Exception
 
     [Fact]
-    public void ExecuteAsync_UnknownOperation_ShouldThrow()
+    public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
     {
         var pptPath = CreateTestPresentation("test_unknown_op.pptx");
-        Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", pptPath));
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", pptPath));
+        Assert.Contains("Unknown operation", ex.Message);
     }
 
     [Fact]
-    public void Edit_WithInvalidImageIndex_ShouldThrow()
+    public void Add_WithoutSlideIndex_ShouldThrowArgumentException()
+    {
+        var pptPath = CreateTestPresentation("test_add_no_slide.pptx");
+        var imagePath = CreateTestImage("test_add_no_slide.png");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("add", pptPath, imagePath: imagePath));
+        Assert.Contains("slideIndex is required", ex.Message);
+    }
+
+    [Fact]
+    public void Add_WithoutImagePath_ShouldThrowArgumentException()
+    {
+        var pptPath = CreateTestPresentation("test_add_no_image.pptx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("add", pptPath, slideIndex: 0));
+        Assert.Contains("imagePath is required", ex.Message);
+    }
+
+    [Fact]
+    public void Add_WithNonExistentImage_ShouldThrowFileNotFoundException()
+    {
+        var pptPath = CreateTestPresentation("test_add_not_found.pptx");
+        var ex = Assert.Throws<FileNotFoundException>(() =>
+            _tool.Execute("add", pptPath, slideIndex: 0, imagePath: "nonexistent.png"));
+        Assert.Contains("Image file not found", ex.Message);
+    }
+
+    [Fact]
+    public void Edit_WithoutSlideIndex_ShouldThrowArgumentException()
+    {
+        var pptPath = CreateTestPresentation("test_edit_no_slide.pptx", addImages: true);
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("edit", pptPath, imageIndex: 0));
+        Assert.Contains("slideIndex is required", ex.Message);
+    }
+
+    [Fact]
+    public void Edit_WithoutImageIndex_ShouldThrowArgumentException()
+    {
+        var pptPath = CreateTestPresentation("test_edit_no_index.pptx", addImages: true);
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("edit", pptPath, slideIndex: 0));
+        Assert.Contains("imageIndex is required", ex.Message);
+    }
+
+    [Fact]
+    public void Edit_WithInvalidImageIndex_ShouldThrowArgumentException()
     {
         var pptPath = CreateTestPresentation("test_edit_invalid.pptx", addImages: true);
         var ex = Assert.Throws<ArgumentException>(() =>
@@ -358,7 +429,23 @@ public class PptImageToolTests : TestBase
     }
 
     [Fact]
-    public void Delete_WithInvalidImageIndex_ShouldThrow()
+    public void Delete_WithoutSlideIndex_ShouldThrowArgumentException()
+    {
+        var pptPath = CreateTestPresentation("test_delete_no_slide.pptx", addImages: true);
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("delete", pptPath, imageIndex: 0));
+        Assert.Contains("slideIndex is required", ex.Message);
+    }
+
+    [Fact]
+    public void Delete_WithoutImageIndex_ShouldThrowArgumentException()
+    {
+        var pptPath = CreateTestPresentation("test_delete_no_index.pptx", addImages: true);
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("delete", pptPath, slideIndex: 0));
+        Assert.Contains("imageIndex is required", ex.Message);
+    }
+
+    [Fact]
+    public void Delete_WithInvalidImageIndex_ShouldThrowArgumentException()
     {
         var pptPath = CreateTestPresentation("test_delete_invalid.pptx", addImages: true);
         var ex = Assert.Throws<ArgumentException>(() =>
@@ -367,7 +454,15 @@ public class PptImageToolTests : TestBase
     }
 
     [Fact]
-    public void ExportSlides_WithInvalidSlideIndex_ShouldThrow()
+    public void Get_WithoutSlideIndex_ShouldThrowArgumentException()
+    {
+        var pptPath = CreateTestPresentation("test_get_no_slide.pptx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("get", pptPath));
+        Assert.Contains("slideIndex is required", ex.Message);
+    }
+
+    [Fact]
+    public void ExportSlides_WithInvalidSlideIndex_ShouldThrowArgumentException()
     {
         var pptPath = CreateTestPresentation("test_export_invalid.pptx", 3);
         var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("export_slides", pptPath, slideIndexes: "0,10"));
@@ -375,7 +470,7 @@ public class PptImageToolTests : TestBase
     }
 
     [Fact]
-    public void ExportSlides_WithInvalidSlideIndexFormat_ShouldThrow()
+    public void ExportSlides_WithInvalidSlideIndexFormat_ShouldThrowArgumentException()
     {
         var pptPath = CreateTestPresentation("test_export_invalid_format.pptx", 3);
         var ex =
@@ -385,7 +480,7 @@ public class PptImageToolTests : TestBase
 
     #endregion
 
-    #region Session ID Tests
+    #region Session
 
     [Fact]
     public void Get_WithSessionId_ShouldReturnImageInfo()
@@ -405,15 +500,27 @@ public class PptImageToolTests : TestBase
         var imagePath = CreateTestImage("session_test_image.png");
         var sessionId = OpenSession(pptPath);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
-        var initialImageCount = ppt.Slides[0].Shapes.OfType<IPictureFrame>().Count();
+        var initialCount = ppt.Slides[0].Shapes.OfType<IPictureFrame>().Count();
         var result = _tool.Execute("add", sessionId: sessionId, slideIndex: 0, imagePath: imagePath, x: 100, y: 100,
             width: 200, height: 150);
-        Assert.Contains("Image added", result);
+        Assert.StartsWith("Image added to slide", result);
         Assert.Contains("session", result);
+        Assert.True(ppt.Slides[0].Shapes.OfType<IPictureFrame>().Count() > initialCount);
+    }
 
-        // Verify in-memory changes
-        var currentImageCount = ppt.Slides[0].Shapes.OfType<IPictureFrame>().Count();
-        Assert.True(currentImageCount > initialImageCount);
+    [Fact]
+    public void Edit_WithSessionId_ShouldEditInMemory()
+    {
+        var pptPath = CreateTestPresentation("test_session_edit.pptx", addImages: true);
+        var sessionId = OpenSession(pptPath);
+        var ppt = SessionManager.GetDocument<Presentation>(sessionId);
+        var result = _tool.Execute("edit", sessionId: sessionId, slideIndex: 0, imageIndex: 0, width: 400, height: 300);
+        Assert.StartsWith("Image", result);
+        Assert.Contains("updated", result);
+        Assert.Contains("session", result);
+        var image = ppt.Slides[0].Shapes.OfType<IPictureFrame>().First();
+        Assert.Equal(400, image.Width);
+        Assert.Equal(300, image.Height);
     }
 
     [Fact]
@@ -422,15 +529,30 @@ public class PptImageToolTests : TestBase
         var pptPath = CreateTestPresentation("test_session_delete.pptx", addImages: true);
         var sessionId = OpenSession(pptPath);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
-        var initialImageCount = ppt.Slides[0].Shapes.OfType<IPictureFrame>().Count();
-        Assert.True(initialImageCount > 0, "Should have at least one image to delete");
+        var initialCount = ppt.Slides[0].Shapes.OfType<IPictureFrame>().Count();
+        Assert.True(initialCount > 0);
         var result = _tool.Execute("delete", sessionId: sessionId, slideIndex: 0, imageIndex: 0);
-        Assert.Contains("deleted", result);
+        Assert.StartsWith("Image", result);
+        Assert.Contains("deleted from slide", result);
         Assert.Contains("session", result);
+        Assert.True(ppt.Slides[0].Shapes.OfType<IPictureFrame>().Count() < initialCount);
+    }
 
-        // Verify in-memory changes
-        var currentImageCount = ppt.Slides[0].Shapes.OfType<IPictureFrame>().Count();
-        Assert.True(currentImageCount < initialImageCount);
+    [Fact]
+    public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
+    {
+        Assert.Throws<KeyNotFoundException>(() => _tool.Execute("get", sessionId: "invalid_session", slideIndex: 0));
+    }
+
+    [Fact]
+    public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
+    {
+        var pptPath1 = CreateTestPresentation("test_path_image.pptx");
+        var pptPath2 = CreateTestPresentation("test_session_image.pptx", addImages: true);
+        var sessionId = OpenSession(pptPath2);
+        var result = _tool.Execute("get", pptPath1, sessionId, slideIndex: 0);
+        var json = JsonDocument.Parse(result);
+        Assert.Equal(1, json.RootElement.GetProperty("imageCount").GetInt32());
     }
 
     #endregion

@@ -17,6 +17,11 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 public class PptChartTool
 {
     /// <summary>
+    ///     Identity accessor for session isolation.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document lifecycle management.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -25,11 +30,33 @@ public class PptChartTool
     ///     Initializes a new instance of the <see cref="PptChartTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
-    public PptChartTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation.</param>
+    public PptChartTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a PowerPoint chart operation (add, edit, delete, get_data, update_data).
+    /// </summary>
+    /// <param name="operation">The operation to perform: add, edit, delete, get_data, update_data.</param>
+    /// <param name="slideIndex">Slide index (0-based).</param>
+    /// <param name="path">Presentation file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="shapeIndex">Chart index (0-based, required for edit/delete/get_data/update_data).</param>
+    /// <param name="chartType">Chart type (Column, Bar, Line, Pie, etc., required for add, optional for edit).</param>
+    /// <param name="title">Chart title (optional).</param>
+    /// <param name="x">Chart X position in points (optional for add, default: 50).</param>
+    /// <param name="y">Chart Y position in points (optional for add, default: 50).</param>
+    /// <param name="width">Chart width in points (optional for add, default: 500).</param>
+    /// <param name="height">Chart height in points (optional for add, default: 400).</param>
+    /// <param name="data">Chart data object with categories and series (optional, for edit/update_data).</param>
+    /// <param name="clearExisting">Clear existing data before adding new (optional, for update_data, default: false).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "ppt_chart")]
     [Description(@"Manage PowerPoint charts. Supports 5 operations: add, edit, delete, get_data, update_data.
 
@@ -70,7 +97,7 @@ Note: shapeIndex refers to the chart index (0-based) among all charts on the sli
         [Description("Clear existing data before adding new (optional, for update_data, default: false)")]
         bool clearExisting = false)
     {
-        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {

@@ -9,18 +9,27 @@ namespace AsposeMcpServer.Tests.Core.Session;
 /// </summary>
 public class DocumentSessionManagerTests : WordTestBase
 {
-    private readonly SessionConfig _config;
-
-    public DocumentSessionManagerTests()
+    private readonly SessionConfig _config = new()
     {
-        _config = new SessionConfig
-        {
-            Enabled = true,
-            MaxSessions = 5,
-            MaxFileSizeMb = 10,
-            IdleTimeoutMinutes = 0
-        };
+        Enabled = true,
+        MaxSessions = 5,
+        MaxFileSizeMb = 10,
+        IdleTimeoutMinutes = 0
+    };
+
+    #region Config Tests
+
+    [Fact]
+    public void Config_ShouldBeAccessible()
+    {
+        using var manager = new DocumentSessionManager(_config);
+
+        Assert.Same(_config, manager.Config);
     }
+
+    #endregion
+
+    #region OpenDocument Tests
 
     [Fact]
     public void OpenDocument_ShouldReturnSessionId()
@@ -87,6 +96,10 @@ public class DocumentSessionManagerTests : WordTestBase
         Assert.Contains("Maximum session limit", ex.Message);
     }
 
+    #endregion
+
+    #region GetDocument and GetSession Tests
+
     [Fact]
     public void GetDocument_ShouldReturnDocument()
     {
@@ -130,6 +143,10 @@ public class DocumentSessionManagerTests : WordTestBase
             manager.GetSession("invalid_session"));
     }
 
+    #endregion
+
+    #region MarkDirty Tests
+
     [Fact]
     public void MarkDirty_ShouldSetDirtyFlag()
     {
@@ -157,6 +174,10 @@ public class DocumentSessionManagerTests : WordTestBase
             manager.Dispose();
         }
     }
+
+    #endregion
+
+    #region SaveDocument Tests
 
     [Fact]
     public void SaveDocument_ShouldSaveToOriginalPath()
@@ -209,6 +230,10 @@ public class DocumentSessionManagerTests : WordTestBase
             manager.SaveDocument(sessionId));
         Assert.Contains("readonly", ex.Message);
     }
+
+    #endregion
+
+    #region CloseDocument Tests
 
     [Fact]
     public void CloseDocument_ShouldRemoveSession()
@@ -268,6 +293,10 @@ public class DocumentSessionManagerTests : WordTestBase
             manager.CloseDocument("invalid_session"));
     }
 
+    #endregion
+
+    #region ListSessions Tests
+
     [Fact]
     public void ListSessions_ShouldReturnAllSessions()
     {
@@ -292,6 +321,10 @@ public class DocumentSessionManagerTests : WordTestBase
 
         Assert.Empty(sessions);
     }
+
+    #endregion
+
+    #region GetSessionStatus Tests
 
     [Fact]
     public void GetSessionStatus_ShouldReturnSessionInfo()
@@ -319,6 +352,10 @@ public class DocumentSessionManagerTests : WordTestBase
 
         Assert.Null(status);
     }
+
+    #endregion
+
+    #region Memory and Disposal Tests
 
     [Fact]
     public void GetTotalMemoryMb_ShouldReturnSum()
@@ -358,6 +395,10 @@ public class DocumentSessionManagerTests : WordTestBase
         Assert.Empty(sessions);
     }
 
+    #endregion
+
+    #region OnClientDisconnect Tests
+
     [Fact]
     public void OnClientDisconnect_WithNullClientId_ShouldNotThrow()
     {
@@ -388,11 +429,5 @@ public class DocumentSessionManagerTests : WordTestBase
         }
     }
 
-    [Fact]
-    public void Config_ShouldBeAccessible()
-    {
-        using var manager = new DocumentSessionManager(_config);
-
-        Assert.Same(_config, manager.Config);
-    }
+    #endregion
 }

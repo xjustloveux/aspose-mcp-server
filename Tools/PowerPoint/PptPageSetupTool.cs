@@ -24,6 +24,11 @@ public class PptPageSetupTool
     private const float MaxSizePoints = 5000f;
 
     /// <summary>
+    ///     Identity accessor for session isolation.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document session handling.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -32,11 +37,32 @@ public class PptPageSetupTool
     ///     Initializes a new instance of the <see cref="PptPageSetupTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory editing.</param>
-    public PptPageSetupTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation.</param>
+    public PptPageSetupTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a PowerPoint page setup operation (set_size, set_orientation, set_footer, set_slide_numbering).
+    /// </summary>
+    /// <param name="operation">The operation to perform: set_size, set_orientation, set_footer, set_slide_numbering.</param>
+    /// <param name="path">Presentation file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="preset">Preset: OnScreen16x9, OnScreen16x10, Letter, A4, Banner, Custom (optional, for set_size).</param>
+    /// <param name="width">Custom width in points when preset=Custom (1-5000, 1 inch = 72 points).</param>
+    /// <param name="height">Custom height in points when preset=Custom (1-5000, 1 inch = 72 points).</param>
+    /// <param name="orientation">Orientation: Portrait or Landscape (required for set_orientation).</param>
+    /// <param name="footerText">Footer text (optional, for set_footer).</param>
+    /// <param name="dateText">Date/time text (optional, for set_footer).</param>
+    /// <param name="showSlideNumber">Show slide number (optional, for set_footer/set_slide_numbering, default: true).</param>
+    /// <param name="firstNumber">First slide number (optional, for set_slide_numbering, default: 1).</param>
+    /// <param name="slideIndices">Slide indices (0-based, optional, for set_footer, if not provided applies to all slides).</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "ppt_page_setup")]
     [Description(
         @"Manage PowerPoint page setup. Supports 4 operations: set_size, set_orientation, set_footer, set_slide_numbering.
@@ -78,7 +104,7 @@ Usage examples:
         [Description("Slide indices (0-based, optional, for set_footer, if not provided applies to all slides)")]
         int[]? slideIndices = null)
     {
-        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {

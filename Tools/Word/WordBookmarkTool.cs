@@ -13,6 +13,11 @@ namespace AsposeMcpServer.Tools.Word;
 public class WordBookmarkTool
 {
     /// <summary>
+    ///     Identity accessor for session isolation
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document session operations
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -21,11 +26,29 @@ public class WordBookmarkTool
     ///     Initializes a new instance of the WordBookmarkTool class
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document operations</param>
-    public WordBookmarkTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation</param>
+    public WordBookmarkTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a Word bookmark operation (add, edit, delete, get, goto).
+    /// </summary>
+    /// <param name="operation">The operation to perform: add, edit, delete, get, goto.</param>
+    /// <param name="path">Word document file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="name">Bookmark name.</param>
+    /// <param name="text">Text content for bookmark.</param>
+    /// <param name="paragraphIndex">Paragraph index (0-based, -1 for beginning).</param>
+    /// <param name="newName">New bookmark name (for edit).</param>
+    /// <param name="newText">New text content (for edit).</param>
+    /// <param name="keepText">Keep text when deleting (default: true).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "word_bookmark")]
     [Description(@"Manage Word bookmarks. Supports 5 operations: add, edit, delete, get, goto.
 
@@ -56,7 +79,7 @@ Usage examples:
         [Description("Keep text when deleting (default: true)")]
         bool keepText = true)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {

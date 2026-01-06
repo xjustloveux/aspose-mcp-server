@@ -1,6 +1,27 @@
 namespace AsposeMcpServer.Core.Session;
 
 /// <summary>
+///     Session isolation mode for multi-tenant environments
+/// </summary>
+public enum SessionIsolationMode
+{
+    /// <summary>
+    ///     No isolation - all users can access all sessions (backward compatible with Stdio mode)
+    /// </summary>
+    None,
+
+    /// <summary>
+    ///     Tenant-level isolation - users within the same tenant can access each other's sessions
+    /// </summary>
+    Tenant,
+
+    /// <summary>
+    ///     User-level isolation - users can only access their own sessions
+    /// </summary>
+    User
+}
+
+/// <summary>
 ///     Configuration for document session management
 /// </summary>
 public class SessionConfig
@@ -40,6 +61,13 @@ public class SessionConfig
     ///     Default is 24 hours. Set via ASPOSE_SESSION_TEMP_RETENTION_HOURS or --session-temp-retention-hours:N
     /// </summary>
     public int TempRetentionHours { get; set; } = 24;
+
+    /// <summary>
+    ///     Session isolation mode for multi-tenant environments.
+    ///     Default is User (each user can only access their own sessions).
+    ///     Set via ASPOSE_SESSION_ISOLATION or --session-isolation:mode
+    /// </summary>
+    public SessionIsolationMode IsolationMode { get; set; } = SessionIsolationMode.User;
 
     /// <summary>
     ///     Loads configuration from environment variables and command line arguments.
@@ -84,6 +112,11 @@ public class SessionConfig
         if (!string.IsNullOrEmpty(onDisconnect) &&
             Enum.TryParse<DisconnectBehavior>(onDisconnect, true, out var behavior))
             OnDisconnect = behavior;
+
+        var isolation = Environment.GetEnvironmentVariable("ASPOSE_SESSION_ISOLATION");
+        if (!string.IsNullOrEmpty(isolation) &&
+            Enum.TryParse<SessionIsolationMode>(isolation, true, out var isolationMode))
+            IsolationMode = isolationMode;
     }
 
     /// <summary>
@@ -93,45 +126,38 @@ public class SessionConfig
     private void LoadFromCommandLine(string[] args)
     {
         foreach (var arg in args)
-            // --session-enabled
             if (arg.Equals("--session-enabled", StringComparison.OrdinalIgnoreCase))
                 Enabled = true;
             else if (arg.Equals("--session-disabled", StringComparison.OrdinalIgnoreCase))
                 Enabled = false;
-            // --session-max:N or --session-max=N
             else if (arg.StartsWith("--session-max:", StringComparison.OrdinalIgnoreCase) &&
                      int.TryParse(arg["--session-max:".Length..], out var max1))
                 MaxSessions = max1;
             else if (arg.StartsWith("--session-max=", StringComparison.OrdinalIgnoreCase) &&
                      int.TryParse(arg["--session-max=".Length..], out var max2))
                 MaxSessions = max2;
-            // --session-timeout:N or --session-timeout=N
             else if (arg.StartsWith("--session-timeout:", StringComparison.OrdinalIgnoreCase) &&
                      int.TryParse(arg["--session-timeout:".Length..], out var timeout1))
                 IdleTimeoutMinutes = timeout1;
             else if (arg.StartsWith("--session-timeout=", StringComparison.OrdinalIgnoreCase) &&
                      int.TryParse(arg["--session-timeout=".Length..], out var timeout2))
                 IdleTimeoutMinutes = timeout2;
-            // --session-max-file-size:N or --session-max-file-size=N
             else if (arg.StartsWith("--session-max-file-size:", StringComparison.OrdinalIgnoreCase) &&
                      int.TryParse(arg["--session-max-file-size:".Length..], out var size1))
                 MaxFileSizeMb = size1;
             else if (arg.StartsWith("--session-max-file-size=", StringComparison.OrdinalIgnoreCase) &&
                      int.TryParse(arg["--session-max-file-size=".Length..], out var size2))
                 MaxFileSizeMb = size2;
-            // --session-temp-dir:path or --session-temp-dir=path
             else if (arg.StartsWith("--session-temp-dir:", StringComparison.OrdinalIgnoreCase))
                 TempDirectory = arg["--session-temp-dir:".Length..];
             else if (arg.StartsWith("--session-temp-dir=", StringComparison.OrdinalIgnoreCase))
                 TempDirectory = arg["--session-temp-dir=".Length..];
-            // --session-temp-retention-hours:N or --session-temp-retention-hours=N
             else if (arg.StartsWith("--session-temp-retention-hours:", StringComparison.OrdinalIgnoreCase) &&
                      int.TryParse(arg["--session-temp-retention-hours:".Length..], out var retention1))
                 TempRetentionHours = retention1;
             else if (arg.StartsWith("--session-temp-retention-hours=", StringComparison.OrdinalIgnoreCase) &&
                      int.TryParse(arg["--session-temp-retention-hours=".Length..], out var retention2))
                 TempRetentionHours = retention2;
-            // --session-on-disconnect:behavior or --session-on-disconnect=behavior
             else if (arg.StartsWith("--session-on-disconnect:", StringComparison.OrdinalIgnoreCase) &&
                      Enum.TryParse<DisconnectBehavior>(arg["--session-on-disconnect:".Length..], true,
                          out var behavior1))
@@ -140,5 +166,13 @@ public class SessionConfig
                      Enum.TryParse<DisconnectBehavior>(arg["--session-on-disconnect=".Length..], true,
                          out var behavior2))
                 OnDisconnect = behavior2;
+            else if (arg.StartsWith("--session-isolation:", StringComparison.OrdinalIgnoreCase) &&
+                     Enum.TryParse<SessionIsolationMode>(arg["--session-isolation:".Length..], true,
+                         out var isolation1))
+                IsolationMode = isolation1;
+            else if (arg.StartsWith("--session-isolation=", StringComparison.OrdinalIgnoreCase) &&
+                     Enum.TryParse<SessionIsolationMode>(arg["--session-isolation=".Length..], true,
+                         out var isolation2))
+                IsolationMode = isolation2;
     }
 }

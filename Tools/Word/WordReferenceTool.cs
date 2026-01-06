@@ -14,6 +14,11 @@ namespace AsposeMcpServer.Tools.Word;
 public class WordReferenceTool
 {
     /// <summary>
+    ///     Identity accessor for session isolation
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document session operations
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -22,11 +27,42 @@ public class WordReferenceTool
     ///     Initializes a new instance of the WordReferenceTool class
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document operations</param>
-    public WordReferenceTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation</param>
+    public WordReferenceTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a Word reference operation (add_table_of_contents, update_table_of_contents, add_index,
+    ///     add_cross_reference).
+    /// </summary>
+    /// <param name="operation">
+    ///     The operation to perform: add_table_of_contents, update_table_of_contents, add_index,
+    ///     add_cross_reference.
+    /// </param>
+    /// <param name="path">Word document file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (optional, defaults to overwrite input).</param>
+    /// <param name="position">Insert position: start, end (for add_table_of_contents, default: start).</param>
+    /// <param name="title">Table of contents title (for add_table_of_contents).</param>
+    /// <param name="maxLevel">Maximum heading level to include (for add_table_of_contents, default: 3).</param>
+    /// <param name="hyperlinks">Enable clickable hyperlinks (for add_table_of_contents, default: true).</param>
+    /// <param name="pageNumbers">Show page numbers (for add_table_of_contents, default: true).</param>
+    /// <param name="rightAlignPageNumbers">Right-align page numbers (for add_table_of_contents, default: true).</param>
+    /// <param name="tocIndex">TOC field index (0-based, for update_table_of_contents).</param>
+    /// <param name="indexEntries">Array of index entries as JSON string (for add_index).</param>
+    /// <param name="insertIndexAtEnd">Insert INDEX field at end of document (for add_index, default: true).</param>
+    /// <param name="headingStyle">Heading style for index (for add_index, default: 'Heading 1').</param>
+    /// <param name="referenceType">Reference type: Heading, Bookmark, Figure, Table, Equation (for add_cross_reference).</param>
+    /// <param name="referenceText">Text to insert before reference (for add_cross_reference).</param>
+    /// <param name="targetName">Target name (heading text, bookmark name, etc.) (for add_cross_reference).</param>
+    /// <param name="insertAsHyperlink">Insert as hyperlink (for add_cross_reference, default: true).</param>
+    /// <param name="includeAboveBelow">Include 'above' or 'below' text (for add_cross_reference, default: false).</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "word_reference")]
     [Description(
         @"Manage references in Word documents. Supports 4 operations: add_table_of_contents, update_table_of_contents, add_index, add_cross_reference.
@@ -81,7 +117,7 @@ Notes:
         [Description("Include 'above' or 'below' text (for add_cross_reference, default: false)")]
         bool includeAboveBelow = false)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {

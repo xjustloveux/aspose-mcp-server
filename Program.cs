@@ -1,7 +1,9 @@
+using System.Net;
 using System.Text;
 using AsposeMcpServer.Core;
 using AsposeMcpServer.Core.Security;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Core.Tracking;
 using AsposeMcpServer.Core.Transport;
 
 Console.OutputEncoding = Encoding.UTF8;
@@ -26,6 +28,8 @@ catch (InvalidOperationException ex)
 var toolFilter = new ToolFilterService(config, sessionConfig);
 Console.Error.WriteLine($"[INFO] Aspose MCP Server - Enabled categories: {toolFilter.GetEnabledCategories()}");
 Console.Error.WriteLine($"[INFO] Transport mode: {transportConfig.Mode}");
+if (sessionConfig.Enabled)
+    Console.Error.WriteLine($"[INFO] Session isolation mode: {sessionConfig.IsolationMode}");
 await Console.Error.FlushAsync();
 
 LicenseManager.SetLicense(config);
@@ -66,10 +70,16 @@ IHost CreateStdioHost()
     builder.Services.AddSingleton(transportConfig);
     builder.Services.AddSingleton(sessionConfig);
     builder.Services.AddSingleton(authConfig);
+    builder.Services.AddSingleton(authConfig.ApiKey);
+    builder.Services.AddSingleton(authConfig.Jwt);
     builder.Services.AddSingleton(trackingConfig);
     builder.Services.AddSingleton<DocumentSessionManager>();
     builder.Services.AddSingleton<TempFileManager>();
     builder.Services.AddHostedService(sp => sp.GetRequiredService<TempFileManager>());
+
+    // Register session identity accessor for Stdio mode
+    // (reads from environment variables if available, otherwise anonymous)
+    builder.Services.AddSingleton<ISessionIdentityAccessor, StdioSessionIdentityAccessor>();
 
     builder.Services.AddMcpServer()
         .WithStdioServerTransport()
@@ -83,7 +93,15 @@ IHost CreateSseHost(TransportConfig transport)
 {
     var builder = WebApplication.CreateBuilder(args);
 
-    builder.WebHost.ConfigureKestrel(options => { options.ListenAnyIP(transport.Port); });
+    builder.WebHost.ConfigureKestrel(options =>
+    {
+        if (transport.Host == "localhost")
+            options.ListenLocalhost(transport.Port);
+        else if (transport.Host == "0.0.0.0" || transport.Host == "*")
+            options.ListenAnyIP(transport.Port);
+        else
+            options.Listen(IPAddress.Parse(transport.Host), transport.Port);
+    });
 
     builder.Logging.ClearProviders();
     builder.Logging.AddConsole(options => { options.LogToStandardErrorThreshold = LogLevel.Trace; });
@@ -92,10 +110,16 @@ IHost CreateSseHost(TransportConfig transport)
     builder.Services.AddSingleton(transportConfig);
     builder.Services.AddSingleton(sessionConfig);
     builder.Services.AddSingleton(authConfig);
+    builder.Services.AddSingleton(authConfig.ApiKey);
+    builder.Services.AddSingleton(authConfig.Jwt);
     builder.Services.AddSingleton(trackingConfig);
     builder.Services.AddSingleton<DocumentSessionManager>();
     builder.Services.AddSingleton<TempFileManager>();
     builder.Services.AddHostedService(sp => sp.GetRequiredService<TempFileManager>());
+
+    // Register session identity accessor for SSE mode (from HttpContext)
+    builder.Services.AddHttpContextAccessor();
+    builder.Services.AddSingleton<ISessionIdentityAccessor, HttpContextSessionIdentityAccessor>();
 
     builder.Services.AddMcpServer()
         .WithFilteredTools(config, sessionConfig);
@@ -124,6 +148,10 @@ IHost CreateSseHost(TransportConfig transport)
         app.UseMiddleware<TrackingMiddleware>();
     }
 
+    // Health check endpoints for container orchestration
+    app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
+    app.MapGet("/ready", () => Results.Ok(new { status = "ready" }));
+
     app.MapMcp("/mcp");
 
     return app;
@@ -134,7 +162,15 @@ IHost CreateWebSocketHost(TransportConfig transport)
 {
     var builder = WebApplication.CreateBuilder(args);
 
-    builder.WebHost.ConfigureKestrel(options => { options.ListenAnyIP(transport.Port); });
+    builder.WebHost.ConfigureKestrel(options =>
+    {
+        if (transport.Host == "localhost")
+            options.ListenLocalhost(transport.Port);
+        else if (transport.Host == "0.0.0.0" || transport.Host == "*")
+            options.ListenAnyIP(transport.Port);
+        else
+            options.Listen(IPAddress.Parse(transport.Host), transport.Port);
+    });
 
     builder.Logging.ClearProviders();
     builder.Logging.AddConsole(options => { options.LogToStandardErrorThreshold = LogLevel.Trace; });
@@ -143,10 +179,16 @@ IHost CreateWebSocketHost(TransportConfig transport)
     builder.Services.AddSingleton(transportConfig);
     builder.Services.AddSingleton(sessionConfig);
     builder.Services.AddSingleton(authConfig);
+    builder.Services.AddSingleton(authConfig.ApiKey);
+    builder.Services.AddSingleton(authConfig.Jwt);
     builder.Services.AddSingleton(trackingConfig);
     builder.Services.AddSingleton<DocumentSessionManager>();
     builder.Services.AddSingleton<TempFileManager>();
     builder.Services.AddHostedService(sp => sp.GetRequiredService<TempFileManager>());
+
+    // Register session identity accessor for WebSocket mode (from HttpContext)
+    builder.Services.AddHttpContextAccessor();
+    builder.Services.AddSingleton<ISessionIdentityAccessor, HttpContextSessionIdentityAccessor>();
 
     var app = builder.Build();
 
@@ -174,6 +216,10 @@ IHost CreateWebSocketHost(TransportConfig transport)
 
     app.UseWebSockets();
 
+    // Health check endpoints for container orchestration
+    app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
+    app.MapGet("/ready", () => Results.Ok(new { status = "ready" }));
+
     var executablePath = Environment.ProcessPath ?? "dotnet";
     var toolArgs = string.Join(" ", args.Where(a =>
         a.StartsWith("--word", StringComparison.OrdinalIgnoreCase) ||
@@ -182,7 +228,8 @@ IHost CreateWebSocketHost(TransportConfig transport)
         a.StartsWith("--ppt", StringComparison.OrdinalIgnoreCase) ||
         a.StartsWith("--pdf", StringComparison.OrdinalIgnoreCase) ||
         a.StartsWith("--all", StringComparison.OrdinalIgnoreCase) ||
-        a.StartsWith("--license", StringComparison.OrdinalIgnoreCase)));
+        a.StartsWith("--license", StringComparison.OrdinalIgnoreCase) ||
+        a.StartsWith("--session", StringComparison.OrdinalIgnoreCase)));
 
     var handler = new WebSocketConnectionHandler(executablePath, toolArgs, app.Services.GetService<ILoggerFactory>());
 
@@ -190,8 +237,12 @@ IHost CreateWebSocketHost(TransportConfig transport)
     {
         if (context.WebSockets.IsWebSocketRequest)
         {
+            // Extract authentication context set by auth middleware
+            var tenantId = context.Items["TenantId"]?.ToString();
+            var userId = context.Items["UserId"]?.ToString();
+
             var webSocket = await context.WebSockets.AcceptWebSocketAsync();
-            await handler.HandleConnectionAsync(webSocket, context.RequestAborted);
+            await handler.HandleConnectionAsync(webSocket, context.RequestAborted, tenantId, userId);
         }
         else
         {

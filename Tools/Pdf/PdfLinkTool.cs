@@ -14,6 +14,11 @@ namespace AsposeMcpServer.Tools.Pdf;
 public class PdfLinkTool
 {
     /// <summary>
+    ///     The session identity accessor for session isolation.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     The document session manager for managing in-memory document sessions.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -22,11 +27,30 @@ public class PdfLinkTool
     ///     Initializes a new instance of the <see cref="PdfLinkTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
-    public PdfLinkTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    public PdfLinkTool(DocumentSessionManager? sessionManager = null, ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a PDF link operation (add, delete, edit, get).
+    /// </summary>
+    /// <param name="operation">The operation to perform: add, delete, edit, get.</param>
+    /// <param name="path">PDF file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (optional, defaults to overwrite input).</param>
+    /// <param name="pageIndex">Page index (1-based, required for add, delete, edit).</param>
+    /// <param name="linkIndex">Link index (0-based, required for delete, edit).</param>
+    /// <param name="x">X position of link area in PDF coordinates (required for add).</param>
+    /// <param name="y">Y position of link area in PDF coordinates (required for add).</param>
+    /// <param name="width">Width of link area in PDF points (required for add).</param>
+    /// <param name="height">Height of link area in PDF points (required for add).</param>
+    /// <param name="url">URL to link to (for add, edit).</param>
+    /// <param name="targetPage">Target page number (1-based, for add, edit).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "pdf_link")]
     [Description(@"Manage links in PDF documents. Supports 4 operations: add, delete, edit, get.
 
@@ -93,7 +117,7 @@ Usage examples:
     private string AddLink(string? sessionId, string? path, string? outputPath, int pageIndex, double x, double y,
         double width, double height, string? url, int? targetPage)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var document = ctx.Document;
 
         if (pageIndex < 1 || pageIndex > document.Pages.Count)
@@ -137,7 +161,7 @@ Usage examples:
     /// <exception cref="ArgumentException">Thrown when the page or link index is invalid.</exception>
     private string DeleteLink(string? sessionId, string? path, string? outputPath, int pageIndex, int linkIndex)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var document = ctx.Document;
 
         if (pageIndex < 1 || pageIndex > document.Pages.Count)
@@ -170,7 +194,7 @@ Usage examples:
     private string EditLink(string? sessionId, string? path, string? outputPath, int pageIndex, int linkIndex,
         string? url, int? targetPage)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var document = ctx.Document;
 
         if (pageIndex < 1 || pageIndex > document.Pages.Count)
@@ -208,7 +232,7 @@ Usage examples:
     /// <exception cref="ArgumentException">Thrown when the page index is out of range.</exception>
     private string GetLinks(string? sessionId, string? path, int? pageIndex)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var document = ctx.Document;
         List<object> linkList = [];
 

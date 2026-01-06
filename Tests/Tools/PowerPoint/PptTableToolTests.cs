@@ -15,16 +15,7 @@ public class PptTableToolTests : TestBase
         _tool = new PptTableTool(SessionManager);
     }
 
-    private int FindTableShapeIndex(string pptPath, int slideIndex)
-    {
-        using var presentation = new Presentation(pptPath);
-        var slide = presentation.Slides[slideIndex];
-        var tableShapes = slide.Shapes.OfType<ITable>().ToList();
-        if (tableShapes.Count == 0) return -1;
-        return slide.Shapes.IndexOf(tableShapes[0]);
-    }
-
-    private string CreatePptPresentation(string fileName)
+    private string CreateTestPresentation(string fileName)
     {
         var filePath = CreateTestFilePath(fileName);
         using var presentation = new Presentation();
@@ -33,18 +24,56 @@ public class PptTableToolTests : TestBase
         return filePath;
     }
 
-    #region General Tests
+    private string CreatePresentationWithTable(string fileName, int rows = 2, int columns = 2)
+    {
+        var filePath = CreateTestFilePath(fileName);
+        using var presentation = new Presentation();
+        var slide = presentation.Slides[0];
+        var colWidths = Enumerable.Repeat(100.0, columns).ToArray();
+        var rowHeights = Enumerable.Repeat(30.0, rows).ToArray();
+        var table = slide.Shapes.AddTable(100, 100, colWidths, rowHeights);
+        for (var r = 0; r < rows; r++)
+        for (var c = 0; c < columns; c++)
+            table[c, r].TextFrame.Text = $"R{r}C{c}";
+        presentation.Save(filePath, SaveFormat.Pptx);
+        return filePath;
+    }
+
+    private int FindTableShapeIndex(string pptPath, int slideIndex)
+    {
+        using var presentation = new Presentation(pptPath);
+        var slide = presentation.Slides[slideIndex];
+        var tableShape = slide.Shapes.OfType<ITable>().FirstOrDefault();
+        return tableShape != null ? slide.Shapes.IndexOf(tableShape) : -1;
+    }
+
+    #region General
 
     [Fact]
     public void AddTable_ShouldAddTableToSlide()
     {
-        var pptPath = CreatePptPresentation("test_add_table.pptx");
+        var pptPath = CreateTestPresentation("test_add_table.pptx");
         var outputPath = CreateTestFilePath("test_add_table_output.pptx");
-        _tool.Execute("add", pptPath, slideIndex: 0, rows: 3, columns: 3, outputPath: outputPath);
+        var result = _tool.Execute("add", pptPath, slideIndex: 0, rows: 3, columns: 3, outputPath: outputPath);
+        Assert.StartsWith("Table (", result);
+        Assert.Contains("added to slide", result);
         using var presentation = new Presentation(outputPath);
-        var slide = presentation.Slides[0];
-        var tables = slide.Shapes.OfType<ITable>().ToList();
+        var tables = presentation.Slides[0].Shapes.OfType<ITable>().ToList();
         Assert.NotEmpty(tables);
+        Assert.Equal(3, tables[0].Rows.Count);
+        Assert.Equal(3, tables[0].Columns.Count);
+    }
+
+    [Fact]
+    public void AddTable_WithCustomPosition_ShouldPlaceTableAtPosition()
+    {
+        var pptPath = CreateTestPresentation("test_add_pos.pptx");
+        var outputPath = CreateTestFilePath("test_add_pos_output.pptx");
+        _tool.Execute("add", pptPath, slideIndex: 0, rows: 2, columns: 2, x: 150, y: 200, outputPath: outputPath);
+        using var presentation = new Presentation(outputPath);
+        var table = presentation.Slides[0].Shapes.OfType<ITable>().First();
+        Assert.Equal(150, table.X, 1);
+        Assert.Equal(200, table.Y, 1);
     }
 
     [SkippableFact]
@@ -52,382 +81,353 @@ public class PptTableToolTests : TestBase
     {
         SkipInEvaluationMode(AsposeLibraryType.Slides, "Evaluation mode truncates text content");
 
-        var pptPath = CreatePptPresentation("test_add_table_data.pptx");
-        var outputPath = CreateTestFilePath("test_add_table_data_output.pptx");
+        var pptPath = CreateTestPresentation("test_add_data.pptx");
+        var outputPath = CreateTestFilePath("test_add_data_output.pptx");
         var dataJson = JsonSerializer.Serialize(new[] { new[] { "A1", "B1" }, new[] { "A2", "B2" } });
         _tool.Execute("add", pptPath, slideIndex: 0, rows: 2, columns: 2, data: dataJson, outputPath: outputPath);
         using var presentation = new Presentation(outputPath);
-        var slide = presentation.Slides[0];
-        var tables = slide.Shapes.OfType<ITable>().ToList();
-        Assert.True(tables.Count > 0, "Table should be added");
-        var table = tables[0];
-        Assert.True(table[0, 0].TextFrame.Text.Contains("A1") || table[0, 0].TextFrame.Text.Contains("B1"),
-            $"Expected A1 or B1, got: {table[0, 0].TextFrame.Text}");
+        var table = presentation.Slides[0].Shapes.OfType<ITable>().First();
+        Assert.Contains("A1", table[0, 0].TextFrame.Text);
     }
 
     [Fact]
     public void EditTable_ShouldEditTableData()
     {
-        // Arrange - First add a table using the tool
-        var pptPath = CreatePptPresentation("test_edit_table.pptx");
-        var addOutputPath = CreateTestFilePath("test_edit_table_added.pptx");
-        _tool.Execute("add", pptPath, slideIndex: 0, rows: 2, columns: 2, outputPath: addOutputPath);
-
-        // Find the table shape index
-        var shapeIndex = FindTableShapeIndex(addOutputPath, 0);
-        if (shapeIndex < 0)
-        {
-            Assert.Fail("No table found after adding");
-            return;
-        }
-
-        // Now edit the table
+        var pptPath = CreatePresentationWithTable("test_edit_table.pptx");
+        var shapeIndex = FindTableShapeIndex(pptPath, 0);
         var outputPath = CreateTestFilePath("test_edit_table_output.pptx");
         var dataJson = JsonSerializer.Serialize(new[] { new[] { "New1", "New2" }, new[] { "New3", "New4" } });
-        _tool.Execute("edit", addOutputPath, slideIndex: 0, shapeIndex: shapeIndex, data: dataJson,
+        var result = _tool.Execute("edit", pptPath, slideIndex: 0, shapeIndex: shapeIndex, data: dataJson,
             outputPath: outputPath);
-        using var resultPresentation = new Presentation(outputPath);
-        var resultSlide = resultPresentation.Slides[0];
-        var tables = resultSlide.Shapes.OfType<ITable>().ToList();
-        Assert.True(tables.Count > 0, "Table should exist");
-    }
-
-    [SkippableFact]
-    public void GetTableContent_ShouldReturnTableContent()
-    {
-        SkipInEvaluationMode(AsposeLibraryType.Slides, "Evaluation mode truncates text content");
-
-        // Arrange - First add a table directly to avoid file read issues
-        var pptPath = CreateTestFilePath("test_get_table_content.pptx");
-        using (var presentation = new Presentation())
-        {
-            var slide = presentation.Slides[0];
-            // Add table with data
-            var table = slide.Shapes.AddTable(100, 100, [100, 100], [30, 30]);
-            table[0, 0].TextFrame.Text = "Cell1";
-            table[1, 0].TextFrame.Text = "Cell2";
-            table[0, 1].TextFrame.Text = "Cell3";
-            table[1, 1].TextFrame.Text = "Cell4";
-            presentation.Save(pptPath, SaveFormat.Pptx);
-        }
-
-        // Wait for file to be released
-        Thread.Sleep(100);
-
-        // Find the table shape index
-        var shapeIndex = FindTableShapeIndex(pptPath, 0);
-        if (shapeIndex < 0)
-        {
-            Assert.Fail("No table found in test file");
-            return;
-        }
-
-        var result = _tool.Execute("get_content", pptPath, slideIndex: 0, shapeIndex: shapeIndex);
-        Assert.NotNull(result);
-        Assert.NotEmpty(result);
-        Assert.Contains("Cell1", result);
-        Assert.Contains("Cell2", result);
-    }
-
-    [Fact]
-    public void InsertRow_ShouldInsertRow()
-    {
-        // Arrange - First add a table using the tool
-        var pptPath = CreatePptPresentation("test_insert_row.pptx");
-        var addOutputPath = CreateTestFilePath("test_insert_row_added.pptx");
-        _tool.Execute("add", pptPath, slideIndex: 0, rows: 2, columns: 2, outputPath: addOutputPath);
-
-        // Find the table shape index
-        var shapeIndex = FindTableShapeIndex(addOutputPath, 0);
-        if (shapeIndex < 0)
-        {
-            Assert.Fail("No table found after adding");
-            return;
-        }
-
-        var outputPath = CreateTestFilePath("test_insert_row_output.pptx");
-        var result = _tool.Execute("insert_row", addOutputPath, slideIndex: 0, shapeIndex: shapeIndex, rowIndex: 1,
-            outputPath: outputPath);
-        Assert.Contains("Row inserted", result);
-        Assert.Contains("3 rows", result);
-        using var resultPresentation = new Presentation(outputPath);
-        var resultSlide = resultPresentation.Slides[0];
-        var tables = resultSlide.Shapes.OfType<ITable>().ToList();
-        Assert.True(tables.Count > 0, "Table should exist");
-        Assert.Equal(3, tables[0].Rows.Count);
-    }
-
-    [Fact]
-    public void InsertColumn_ShouldInsertColumn()
-    {
-        // Arrange - First add a table using the tool
-        var pptPath = CreatePptPresentation("test_insert_column.pptx");
-        var addOutputPath = CreateTestFilePath("test_insert_column_added.pptx");
-        _tool.Execute("add", pptPath, slideIndex: 0, rows: 2, columns: 2, outputPath: addOutputPath);
-
-        // Find the table shape index
-        var shapeIndex = FindTableShapeIndex(addOutputPath, 0);
-        if (shapeIndex < 0)
-        {
-            Assert.Fail("No table found after adding");
-            return;
-        }
-
-        var outputPath = CreateTestFilePath("test_insert_column_output.pptx");
-        var result = _tool.Execute("insert_column", addOutputPath, slideIndex: 0, shapeIndex: shapeIndex,
-            columnIndex: 1, outputPath: outputPath);
-        Assert.Contains("Column inserted", result);
-        Assert.Contains("3 columns", result);
-        using var resultPresentation = new Presentation(outputPath);
-        var resultSlide = resultPresentation.Slides[0];
-        var tables = resultSlide.Shapes.OfType<ITable>().ToList();
-        Assert.True(tables.Count > 0, "Table should exist");
-        Assert.Equal(3, tables[0].Columns.Count);
-    }
-
-    [Fact]
-    public void DeleteRow_ShouldDeleteRow()
-    {
-        // Arrange - First add a table using the tool
-        var pptPath = CreatePptPresentation("test_delete_row.pptx");
-        var addOutputPath = CreateTestFilePath("test_delete_row_added.pptx");
-        _tool.Execute("add", pptPath, slideIndex: 0, rows: 3, columns: 2, outputPath: addOutputPath);
-
-        // Find the table shape index
-        var shapeIndex = FindTableShapeIndex(addOutputPath, 0);
-        if (shapeIndex < 0)
-        {
-            Assert.Fail("No table found after adding");
-            return;
-        }
-
-        var outputPath = CreateTestFilePath("test_delete_row_output.pptx");
-        _tool.Execute("delete_row", addOutputPath, slideIndex: 0, shapeIndex: shapeIndex, rowIndex: 1,
-            outputPath: outputPath);
-        using var resultPresentation = new Presentation(outputPath);
-        var resultSlide = resultPresentation.Slides[0];
-        var tables = resultSlide.Shapes.OfType<ITable>().ToList();
-        Assert.True(tables.Count > 0, "Table should exist");
-    }
-
-    [Fact]
-    public void DeleteColumn_ShouldDeleteColumn()
-    {
-        // Arrange - First add a table using the tool
-        var pptPath = CreatePptPresentation("test_delete_column.pptx");
-        var addOutputPath = CreateTestFilePath("test_delete_column_added.pptx");
-        _tool.Execute("add", pptPath, slideIndex: 0, rows: 2, columns: 3, outputPath: addOutputPath);
-
-        // Find the table shape index
-        var shapeIndex = FindTableShapeIndex(addOutputPath, 0);
-        if (shapeIndex < 0)
-        {
-            Assert.Fail("No table found after adding");
-            return;
-        }
-
-        var outputPath = CreateTestFilePath("test_delete_column_output.pptx");
-        _tool.Execute("delete_column", addOutputPath, slideIndex: 0, shapeIndex: shapeIndex, columnIndex: 1,
-            outputPath: outputPath);
-        using var resultPresentation = new Presentation(outputPath);
-        var resultSlide = resultPresentation.Slides[0];
-        var tables = resultSlide.Shapes.OfType<ITable>().ToList();
-        Assert.True(tables.Count > 0, "Table should exist");
-    }
-
-    [Fact]
-    public void EditCell_ShouldEditCellContent()
-    {
-        // Arrange - First add a table using the tool
-        var pptPath = CreatePptPresentation("test_edit_cell.pptx");
-        var addOutputPath = CreateTestFilePath("test_edit_cell_added.pptx");
-        _tool.Execute("add", pptPath, slideIndex: 0, rows: 2, columns: 2, outputPath: addOutputPath);
-
-        // Find the table shape index
-        var shapeIndex = FindTableShapeIndex(addOutputPath, 0);
-        if (shapeIndex < 0)
-        {
-            Assert.Fail("No table found after adding");
-            return;
-        }
-
-        var outputPath = CreateTestFilePath("test_edit_cell_output.pptx");
-        _tool.Execute("edit_cell", addOutputPath, slideIndex: 0, shapeIndex: shapeIndex, rowIndex: 0, columnIndex: 0,
-            text: "New Value", outputPath: outputPath);
-        using var resultPresentation = new Presentation(outputPath);
-        var resultSlide = resultPresentation.Slides[0];
-        var tables = resultSlide.Shapes.OfType<ITable>().ToList();
-        Assert.True(tables.Count > 0, "Table should exist");
-        // Note: Aspose.Slides table indexing is [rowIndex, columnIndex]
-        var cell = tables[0][0, 0];
-        var cellText = cell.TextFrame?.Text ?? "";
-
-        var isEvaluationMode = IsEvaluationMode();
-        if (isEvaluationMode)
-        {
-            var hasExpectedText = cellText.StartsWith("New Value") ||
-                                  cellText.StartsWith("New V") ||
-                                  cellText.IndexOf("New V", StringComparison.OrdinalIgnoreCase) >= 0;
-            Assert.True(hasExpectedText || cellText.Length > 0,
-                $"In evaluation mode, cell text may be truncated due to watermark. " +
-                $"Expected 'New Value' or 'New V', but got: '{cellText}'");
-        }
-        else
-        {
-            var hasExpectedText = cellText.StartsWith("New Value");
-            Assert.True(hasExpectedText,
-                $"Expected cell text to start with 'New Value', but got: '{cellText}'");
-        }
+        Assert.StartsWith("Table on slide", result);
+        Assert.Contains("updated", result);
+        using var presentation = new Presentation(outputPath);
+        var table = presentation.Slides[0].Shapes.OfType<ITable>().First();
+        Assert.NotNull(table);
     }
 
     [Fact]
     public void DeleteTable_ShouldDeleteTable()
     {
-        // Arrange - First add a table using the tool
-        var pptPath = CreatePptPresentation("test_delete_table.pptx");
-        var addOutputPath = CreateTestFilePath("test_delete_table_added.pptx");
-        _tool.Execute("add", pptPath, slideIndex: 0, rows: 2, columns: 2, outputPath: addOutputPath);
-
-        // Find the table shape index
-        var shapeIndex = FindTableShapeIndex(addOutputPath, 0);
-        if (shapeIndex < 0)
-        {
-            Assert.Fail("No table found after adding");
-            return;
-        }
-
+        var pptPath = CreatePresentationWithTable("test_delete_table.pptx");
+        var shapeIndex = FindTableShapeIndex(pptPath, 0);
         var outputPath = CreateTestFilePath("test_delete_table_output.pptx");
-        _tool.Execute("delete", addOutputPath, slideIndex: 0, shapeIndex: shapeIndex, outputPath: outputPath);
-        using var resultPresentation = new Presentation(outputPath);
-        var resultSlide = resultPresentation.Slides[0];
-        var tables = resultSlide.Shapes.OfType<ITable>().ToList();
+        var result = _tool.Execute("delete", pptPath, slideIndex: 0, shapeIndex: shapeIndex, outputPath: outputPath);
+        Assert.StartsWith("Table on slide", result);
+        Assert.Contains("deleted", result);
+        using var presentation = new Presentation(outputPath);
+        var tables = presentation.Slides[0].Shapes.OfType<ITable>().ToList();
         Assert.Empty(tables);
     }
 
-    [Fact]
-    public void AddTable_WithCustomPosition_ShouldPlaceTableAtPosition()
+    [SkippableFact]
+    public void GetContent_ShouldReturnTableContent()
     {
-        var pptPath = CreatePptPresentation("test_add_table_position.pptx");
-        var outputPath = CreateTestFilePath("test_add_table_position_output.pptx");
-        _tool.Execute("add", pptPath, slideIndex: 0, rows: 2, columns: 2, x: 150, y: 200, outputPath: outputPath);
+        SkipInEvaluationMode(AsposeLibraryType.Slides, "Evaluation mode truncates text content");
+
+        var pptPath = CreatePresentationWithTable("test_get_content.pptx");
+        var shapeIndex = FindTableShapeIndex(pptPath, 0);
+        var result = _tool.Execute("get_content", pptPath, slideIndex: 0, shapeIndex: shapeIndex);
+        Assert.Contains("R0C0", result);
+        Assert.Contains("R1C1", result);
+        Assert.Contains("\"rows\"", result);
+        Assert.Contains("\"columns\"", result);
+    }
+
+    [Fact]
+    public void InsertRow_ShouldInsertRow()
+    {
+        var pptPath = CreatePresentationWithTable("test_insert_row.pptx");
+        var shapeIndex = FindTableShapeIndex(pptPath, 0);
+        var outputPath = CreateTestFilePath("test_insert_row_output.pptx");
+        var result = _tool.Execute("insert_row", pptPath, slideIndex: 0, shapeIndex: shapeIndex, rowIndex: 1,
+            outputPath: outputPath);
+        Assert.StartsWith("Row inserted at index", result);
+        Assert.Contains("3 rows", result);
         using var presentation = new Presentation(outputPath);
-        var slide = presentation.Slides[0];
-        var tables = slide.Shapes.OfType<ITable>().ToList();
-        Assert.NotEmpty(tables);
-        Assert.Equal(150, tables[0].X, 1);
-        Assert.Equal(200, tables[0].Y, 1);
+        var table = presentation.Slides[0].Shapes.OfType<ITable>().First();
+        Assert.Equal(3, table.Rows.Count);
     }
 
     [Fact]
     public void InsertRow_AtEnd_ShouldAppendRow()
     {
-        var pptPath = CreatePptPresentation("test_insert_row_end.pptx");
-        var addOutputPath = CreateTestFilePath("test_insert_row_end_added.pptx");
-        _tool.Execute("add", pptPath, slideIndex: 0, rows: 2, columns: 2, outputPath: addOutputPath);
-
-        var shapeIndex = FindTableShapeIndex(addOutputPath, 0);
-        Assert.True(shapeIndex >= 0, "Table should be found");
-
+        var pptPath = CreatePresentationWithTable("test_insert_row_end.pptx");
+        var shapeIndex = FindTableShapeIndex(pptPath, 0);
         var outputPath = CreateTestFilePath("test_insert_row_end_output.pptx");
-        var result = _tool.Execute("insert_row", addOutputPath, slideIndex: 0, shapeIndex: shapeIndex, rowIndex: 2,
+        var result = _tool.Execute("insert_row", pptPath, slideIndex: 0, shapeIndex: shapeIndex, rowIndex: 2,
             outputPath: outputPath);
-        Assert.Contains("Row inserted at index 2", result);
-        using var resultPresentation = new Presentation(outputPath);
-        var tables = resultPresentation.Slides[0].Shapes.OfType<ITable>().ToList();
-        Assert.Equal(3, tables[0].Rows.Count);
+        Assert.StartsWith("Row inserted at index", result);
+        using var presentation = new Presentation(outputPath);
+        var table = presentation.Slides[0].Shapes.OfType<ITable>().First();
+        Assert.Equal(3, table.Rows.Count);
     }
 
     [Fact]
-    public void InsertRow_OutOfRange_ShouldThrow()
+    public void InsertColumn_ShouldInsertColumn()
     {
-        var pptPath = CreatePptPresentation("test_insert_row_oor.pptx");
-        var addOutputPath = CreateTestFilePath("test_insert_row_oor_added.pptx");
-        _tool.Execute("add", pptPath, slideIndex: 0, rows: 2, columns: 2, outputPath: addOutputPath);
-
-        var shapeIndex = FindTableShapeIndex(addOutputPath, 0);
-        Assert.True(shapeIndex >= 0, "Table should be found");
-        Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("insert_row", addOutputPath, slideIndex: 0, shapeIndex: shapeIndex, rowIndex: 99));
+        var pptPath = CreatePresentationWithTable("test_insert_column.pptx");
+        var shapeIndex = FindTableShapeIndex(pptPath, 0);
+        var outputPath = CreateTestFilePath("test_insert_column_output.pptx");
+        var result = _tool.Execute("insert_column", pptPath, slideIndex: 0, shapeIndex: shapeIndex, columnIndex: 1,
+            outputPath: outputPath);
+        Assert.StartsWith("Column inserted at index", result);
+        Assert.Contains("3 columns", result);
+        using var presentation = new Presentation(outputPath);
+        var table = presentation.Slides[0].Shapes.OfType<ITable>().First();
+        Assert.Equal(3, table.Columns.Count);
     }
 
     [Fact]
-    public void InsertColumn_OutOfRange_ShouldThrow()
+    public void DeleteRow_ShouldDeleteRow()
     {
-        var pptPath = CreatePptPresentation("test_insert_column_oor.pptx");
-        var addOutputPath = CreateTestFilePath("test_insert_column_oor_added.pptx");
-        _tool.Execute("add", pptPath, slideIndex: 0, rows: 2, columns: 2, outputPath: addOutputPath);
+        var pptPath = CreatePresentationWithTable("test_delete_row.pptx", 3);
+        var shapeIndex = FindTableShapeIndex(pptPath, 0);
+        var outputPath = CreateTestFilePath("test_delete_row_output.pptx");
+        var result = _tool.Execute("delete_row", pptPath, slideIndex: 0, shapeIndex: shapeIndex, rowIndex: 1,
+            outputPath: outputPath);
+        Assert.StartsWith("Row", result);
+        Assert.Contains("deleted", result);
+        using var presentation = new Presentation(outputPath);
+        var table = presentation.Slides[0].Shapes.OfType<ITable>().First();
+        Assert.Equal(2, table.Rows.Count);
+    }
 
-        var shapeIndex = FindTableShapeIndex(addOutputPath, 0);
-        Assert.True(shapeIndex >= 0, "Table should be found");
-        Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("insert_column", addOutputPath, slideIndex: 0, shapeIndex: shapeIndex, columnIndex: 99));
+    [Fact]
+    public void DeleteColumn_ShouldDeleteColumn()
+    {
+        var pptPath = CreatePresentationWithTable("test_delete_column.pptx", 2, 3);
+        var shapeIndex = FindTableShapeIndex(pptPath, 0);
+        var outputPath = CreateTestFilePath("test_delete_column_output.pptx");
+        var result = _tool.Execute("delete_column", pptPath, slideIndex: 0, shapeIndex: shapeIndex, columnIndex: 1,
+            outputPath: outputPath);
+        Assert.StartsWith("Column", result);
+        Assert.Contains("deleted", result);
+        using var presentation = new Presentation(outputPath);
+        var table = presentation.Slides[0].Shapes.OfType<ITable>().First();
+        Assert.Equal(2, table.Columns.Count);
+    }
+
+    [Fact]
+    public void EditCell_ShouldEditCellContent()
+    {
+        var pptPath = CreatePresentationWithTable("test_edit_cell.pptx");
+        var shapeIndex = FindTableShapeIndex(pptPath, 0);
+        var outputPath = CreateTestFilePath("test_edit_cell_output.pptx");
+        var result = _tool.Execute("edit_cell", pptPath, slideIndex: 0, shapeIndex: shapeIndex, rowIndex: 0,
+            columnIndex: 0, text: "NewValue", outputPath: outputPath);
+        Assert.StartsWith("Cell [", result);
+        Assert.Contains("updated", result);
+        using var presentation = new Presentation(outputPath);
+        var table = presentation.Slides[0].Shapes.OfType<ITable>().First();
+        var cellText = table[0, 0].TextFrame?.Text ?? "";
+
+        if (IsEvaluationMode())
+            Assert.True(cellText.Contains("NewValue") || cellText.Contains("NewVal") || cellText.Length > 0);
+        else
+            Assert.Contains("NewValue", cellText);
+    }
+
+    [Theory]
+    [InlineData("ADD")]
+    [InlineData("Add")]
+    [InlineData("add")]
+    public void Operation_ShouldBeCaseInsensitive_Add(string operation)
+    {
+        var pptPath = CreateTestPresentation($"test_case_add_{operation}.pptx");
+        var outputPath = CreateTestFilePath($"test_case_add_{operation}_output.pptx");
+        var result = _tool.Execute(operation, pptPath, slideIndex: 0, rows: 2, columns: 2, outputPath: outputPath);
+        Assert.StartsWith("Table (", result);
+        Assert.Contains("added to slide", result);
+    }
+
+    [Theory]
+    [InlineData("GET_CONTENT")]
+    [InlineData("Get_Content")]
+    [InlineData("get_content")]
+    public void Operation_ShouldBeCaseInsensitive_GetContent(string operation)
+    {
+        var pptPath = CreatePresentationWithTable($"test_case_get_{operation.Replace("_", "")}.pptx");
+        var shapeIndex = FindTableShapeIndex(pptPath, 0);
+        var result = _tool.Execute(operation, pptPath, slideIndex: 0, shapeIndex: shapeIndex);
+        Assert.Contains("\"rows\"", result);
+    }
+
+    [Theory]
+    [InlineData("DELETE")]
+    [InlineData("Delete")]
+    [InlineData("delete")]
+    public void Operation_ShouldBeCaseInsensitive_Delete(string operation)
+    {
+        var pptPath = CreatePresentationWithTable($"test_case_del_{operation}.pptx");
+        var shapeIndex = FindTableShapeIndex(pptPath, 0);
+        var outputPath = CreateTestFilePath($"test_case_del_{operation}_output.pptx");
+        var result = _tool.Execute(operation, pptPath, slideIndex: 0, shapeIndex: shapeIndex, outputPath: outputPath);
+        Assert.StartsWith("Table on slide", result);
+        Assert.Contains("deleted", result);
     }
 
     #endregion
 
-    #region Exception Tests
+    #region Exception
 
     [Fact]
-    public void ExecuteAsync_UnknownOperation_ShouldThrow()
+    public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
     {
-        var pptPath = CreatePptPresentation("test_unknown_op.pptx");
-        Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", pptPath, slideIndex: 0));
+        var pptPath = CreateTestPresentation("test_unknown_op.pptx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("unknown", pptPath, slideIndex: 0));
+        Assert.Contains("Unknown operation", ex.Message);
     }
 
     [Fact]
-    public void Add_MissingRowsAndColumns_ShouldThrow()
+    public void AddTable_WithoutRows_ShouldThrowArgumentException()
     {
-        var pptPath = CreatePptPresentation("test_missing_rows_columns.pptx");
-        Assert.Throws<ArgumentException>(() => _tool.Execute("add", pptPath, slideIndex: 0));
+        var pptPath = CreateTestPresentation("test_add_no_rows.pptx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("add", pptPath, slideIndex: 0, columns: 2));
+        Assert.Contains("rows is required", ex.Message);
     }
 
-    #endregion
-
-    #region Session ID Tests
-
-    [SkippableFact]
-    public void GetTableContent_WithSessionId_ShouldReturnContent()
+    [Fact]
+    public void AddTable_WithoutColumns_ShouldThrowArgumentException()
     {
-        SkipInEvaluationMode(AsposeLibraryType.Slides, "Evaluation mode truncates text content");
+        var pptPath = CreateTestPresentation("test_add_no_cols.pptx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("add", pptPath, slideIndex: 0, rows: 2));
+        Assert.Contains("columns is required", ex.Message);
+    }
 
-        var pptPath = CreateTestFilePath("test_session_get_table.pptx");
-        using (var presentation = new Presentation())
+    [Fact]
+    public void AddTable_WithInvalidRows_ShouldThrowArgumentException()
+    {
+        var pptPath = CreateTestPresentation("test_add_invalid_rows.pptx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("add", pptPath, slideIndex: 0, rows: 0, columns: 2));
+        Assert.Contains("rows must be between", ex.Message);
+    }
+
+    [Fact]
+    public void AddTable_WithInvalidSlideIndex_ShouldThrowArgumentException()
+    {
+        var pptPath = CreateTestPresentation("test_add_invalid_slide.pptx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("add", pptPath, slideIndex: 999, rows: 2, columns: 2));
+        Assert.Contains("slideIndex must be between", ex.Message);
+    }
+
+    [Fact]
+    public void EditTable_WithoutShapeIndex_ShouldThrowArgumentException()
+    {
+        var pptPath = CreatePresentationWithTable("test_edit_no_shape.pptx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("edit", pptPath, slideIndex: 0, data: "[[\"A\"]]"));
+        Assert.Contains("shapeIndex is required", ex.Message);
+    }
+
+    [Fact]
+    public void EditTable_WithNonTableShape_ShouldThrowArgumentException()
+    {
+        var pptPath = CreateTestFilePath("test_edit_non_table.pptx");
+        using (var pres = new Presentation())
         {
-            var slide = presentation.Slides[0];
-            var table = slide.Shapes.AddTable(100, 100, [100, 100], [30, 30]);
-            table[0, 0].TextFrame.Text = "SessionCell1";
-            table[1, 0].TextFrame.Text = "SessionCell2";
-            presentation.Save(pptPath, SaveFormat.Pptx);
+            pres.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
+            pres.Save(pptPath, SaveFormat.Pptx);
         }
 
-        var sessionId = OpenSession(pptPath);
-        // Find table index dynamically (evaluation mode may add watermark shapes)
-        var ppt = SessionManager.GetDocument<Presentation>(sessionId);
-        var tableShape = ppt.Slides[0].Shapes.OfType<ITable>().FirstOrDefault();
-        Assert.NotNull(tableShape);
-        var shapeIndex = ppt.Slides[0].Shapes.IndexOf(tableShape);
-
-        var result = _tool.Execute("get_content", sessionId: sessionId, slideIndex: 0, shapeIndex: shapeIndex);
-        Assert.NotNull(result);
-        Assert.Contains("SessionCell", result);
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("edit", pptPath, slideIndex: 0, shapeIndex: 0, data: "[[\"A\"]]"));
+        Assert.Contains("not a table", ex.Message);
     }
+
+    [Fact]
+    public void InsertRow_OutOfRange_ShouldThrowArgumentException()
+    {
+        var pptPath = CreatePresentationWithTable("test_insert_row_oor.pptx");
+        var shapeIndex = FindTableShapeIndex(pptPath, 0);
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("insert_row", pptPath, slideIndex: 0, shapeIndex: shapeIndex, rowIndex: 99));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public void InsertColumn_OutOfRange_ShouldThrowArgumentException()
+    {
+        var pptPath = CreatePresentationWithTable("test_insert_col_oor.pptx");
+        var shapeIndex = FindTableShapeIndex(pptPath, 0);
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("insert_column", pptPath, slideIndex: 0, shapeIndex: shapeIndex, columnIndex: 99));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public void EditCell_WithoutText_ShouldThrowArgumentException()
+    {
+        var pptPath = CreatePresentationWithTable("test_edit_cell_no_text.pptx");
+        var shapeIndex = FindTableShapeIndex(pptPath, 0);
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("edit_cell", pptPath, slideIndex: 0, shapeIndex: shapeIndex, rowIndex: 0, columnIndex: 0));
+        Assert.Contains("text is required", ex.Message);
+    }
+
+    [Fact]
+    public void EditCell_WithInvalidRowIndex_ShouldThrowArgumentException()
+    {
+        var pptPath = CreatePresentationWithTable("test_edit_cell_invalid_row.pptx");
+        var shapeIndex = FindTableShapeIndex(pptPath, 0);
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("edit_cell", pptPath, slideIndex: 0, shapeIndex: shapeIndex, rowIndex: 99, columnIndex: 0,
+                text: "Test"));
+        Assert.Contains("rowIndex", ex.Message);
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public void EditCell_WithInvalidColumnIndex_ShouldThrowArgumentException()
+    {
+        var pptPath = CreatePresentationWithTable("test_edit_cell_invalid_col.pptx");
+        var shapeIndex = FindTableShapeIndex(pptPath, 0);
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("edit_cell", pptPath, slideIndex: 0, shapeIndex: shapeIndex, rowIndex: 0, columnIndex: 99,
+                text: "Test"));
+        Assert.Contains("columnIndex", ex.Message);
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    #endregion
+
+    #region Session
 
     [Fact]
     public void AddTable_WithSessionId_ShouldAddInMemory()
     {
-        var pptPath = CreatePptPresentation("test_session_add_table.pptx");
+        var pptPath = CreateTestPresentation("test_session_add.pptx");
         var sessionId = OpenSession(pptPath);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
-        var slide = ppt.Slides[0];
-        var initialTableCount = slide.Shapes.OfType<ITable>().Count();
+        var initialTableCount = ppt.Slides[0].Shapes.OfType<ITable>().Count();
+
         var result = _tool.Execute("add", sessionId: sessionId, slideIndex: 0, rows: 2, columns: 2);
-        Assert.Contains("Table", result);
-        Assert.Contains("added", result);
+        Assert.StartsWith("Table (", result);
+        Assert.Contains("added to slide", result);
         Assert.Contains("session", result);
 
-        // Verify in-memory changes
-        var tablesAfter = slide.Shapes.OfType<ITable>().Count();
+        var tablesAfter = ppt.Slides[0].Shapes.OfType<ITable>().Count();
         Assert.True(tablesAfter > initialTableCount);
+    }
+
+    [SkippableFact]
+    public void GetContent_WithSessionId_ShouldReturnContent()
+    {
+        SkipInEvaluationMode(AsposeLibraryType.Slides, "Evaluation mode truncates text content");
+
+        var pptPath = CreatePresentationWithTable("test_session_get.pptx");
+        var sessionId = OpenSession(pptPath);
+        var ppt = SessionManager.GetDocument<Presentation>(sessionId);
+        var table = ppt.Slides[0].Shapes.OfType<ITable>().First();
+        var shapeIndex = ppt.Slides[0].Shapes.IndexOf(table);
+
+        var result = _tool.Execute("get_content", sessionId: sessionId, slideIndex: 0, shapeIndex: shapeIndex);
+        Assert.Contains("R0C0", result);
     }
 
     [SkippableFact]
@@ -435,52 +435,77 @@ public class PptTableToolTests : TestBase
     {
         SkipInEvaluationMode(AsposeLibraryType.Slides, "Evaluation mode truncates text content");
 
-        var pptPath = CreateTestFilePath("test_session_edit_cell.pptx");
-        using (var presentation = new Presentation())
-        {
-            var slideToSetup = presentation.Slides[0];
-            var tableToSetup =
-                slideToSetup.Shapes.AddTable(100, 100, [100, 100], [30, 30]);
-            tableToSetup[0, 0].TextFrame.Text = "Original";
-            presentation.Save(pptPath, SaveFormat.Pptx);
-        }
-
+        var pptPath = CreatePresentationWithTable("test_session_edit_cell.pptx");
         var sessionId = OpenSession(pptPath);
-        // Find table index dynamically (evaluation mode may add watermark shapes)
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
-        var table = ppt.Slides[0].Shapes.OfType<ITable>().FirstOrDefault();
-        Assert.NotNull(table);
+        var table = ppt.Slides[0].Shapes.OfType<ITable>().First();
         var shapeIndex = ppt.Slides[0].Shapes.IndexOf(table);
 
         var result = _tool.Execute("edit_cell", sessionId: sessionId, slideIndex: 0, shapeIndex: shapeIndex,
-            rowIndex: 0, columnIndex: 0, text: "Session Edited");
-        Assert.Contains("Cell", result);
+            rowIndex: 0, columnIndex: 0, text: "SessionEdit");
+        Assert.StartsWith("Cell [", result);
         Assert.Contains("updated", result);
         Assert.Contains("session", result);
-
-        // Verify in-memory changes
-        Assert.Contains("Session Edited", table[0, 0].TextFrame.Text);
+        Assert.Contains("SessionEdit", table[0, 0].TextFrame.Text);
     }
 
     [Fact]
     public void InsertRow_WithSessionId_ShouldInsertInMemory()
     {
-        var pptPath = CreateTestFilePath("test_session_insert_row.pptx");
-        using (var presentation = new Presentation())
-        {
-            var slide = presentation.Slides[0];
-            slide.Shapes.AddTable(100, 100, [100, 100], [30, 30]);
-            presentation.Save(pptPath, SaveFormat.Pptx);
-        }
-
+        var pptPath = CreatePresentationWithTable("test_session_insert_row.pptx");
         var sessionId = OpenSession(pptPath);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
-        var table = ppt.Slides[0].Shapes[0] as ITable;
-        var initialRowCount = table!.Rows.Count;
-        var result = _tool.Execute("insert_row", sessionId: sessionId, slideIndex: 0, shapeIndex: 0, rowIndex: 1);
-        Assert.Contains("Row inserted", result);
+        var table = ppt.Slides[0].Shapes.OfType<ITable>().First();
+        var shapeIndex = ppt.Slides[0].Shapes.IndexOf(table);
+        var initialRowCount = table.Rows.Count;
+
+        var result = _tool.Execute("insert_row", sessionId: sessionId, slideIndex: 0, shapeIndex: shapeIndex,
+            rowIndex: 1);
+        Assert.StartsWith("Row inserted at index", result);
         Assert.Contains("session", result);
         Assert.True(table.Rows.Count > initialRowCount);
+    }
+
+    [Fact]
+    public void DeleteTable_WithSessionId_ShouldDeleteInMemory()
+    {
+        var pptPath = CreatePresentationWithTable("test_session_delete.pptx");
+        var sessionId = OpenSession(pptPath);
+        var ppt = SessionManager.GetDocument<Presentation>(sessionId);
+        var table = ppt.Slides[0].Shapes.OfType<ITable>().First();
+        var shapeIndex = ppt.Slides[0].Shapes.IndexOf(table);
+
+        var result = _tool.Execute("delete", sessionId: sessionId, slideIndex: 0, shapeIndex: shapeIndex);
+        Assert.StartsWith("Table on slide", result);
+        Assert.Contains("deleted", result);
+        Assert.Contains("session", result);
+
+        var tablesAfter = ppt.Slides[0].Shapes.OfType<ITable>().Count();
+        Assert.Equal(0, tablesAfter);
+    }
+
+    [Fact]
+    public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
+    {
+        Assert.Throws<KeyNotFoundException>(() =>
+            _tool.Execute("add", sessionId: "invalid_session_id", slideIndex: 0, rows: 2, columns: 2));
+    }
+
+    [Fact]
+    public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
+    {
+        var pptPath1 = CreatePresentationWithTable("test_path_table.pptx");
+        var pptPath2 = CreateTestPresentation("test_session_table.pptx");
+
+        var sessionId = OpenSession(pptPath2);
+        var ppt = SessionManager.GetDocument<Presentation>(sessionId);
+        var initialCount = ppt.Slides[0].Shapes.OfType<ITable>().Count();
+
+        var result = _tool.Execute("add", pptPath1, sessionId, slideIndex: 0, rows: 2, columns: 2);
+        Assert.Contains("session", result);
+
+        var tablesAfter = ppt.Slides[0].Shapes.OfType<ITable>().Count();
+        Assert.True(tablesAfter > initialCount);
     }
 
     #endregion

@@ -2,13 +2,19 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 
-namespace AsposeMcpServer.Core.Security;
+namespace AsposeMcpServer.Core.Tracking;
 
 /// <summary>
 ///     Middleware for tracking tool invocations and outputting to various targets
 /// </summary>
 public class TrackingMiddleware
 {
+    /// <summary>
+    ///     Default HTTP client for webhook calls when no factory is provided.
+    ///     Static to avoid resource leaks and follow HttpClient best practices.
+    /// </summary>
+    private static readonly Lazy<HttpClient> DefaultHttpClient = new(() => new HttpClient());
+
     /// <summary>
     ///     Tracking configuration
     /// </summary>
@@ -50,10 +56,9 @@ public class TrackingMiddleware
         _next = next;
         _config = config;
         _logger = logger;
-        _httpClient = httpClientFactory?.CreateClient("Tracking") ?? new HttpClient
-        {
-            Timeout = TimeSpan.FromSeconds(config.WebhookTimeoutSeconds)
-        };
+        _httpClient = httpClientFactory?.CreateClient("Tracking") ?? DefaultHttpClient.Value;
+        // Note: We don't modify HttpClient.Timeout here to avoid affecting the shared static instance.
+        // Instead, we use CancellationTokenSource per request in SendWebhookAsync.
         _metrics = new TrackingMetrics();
     }
 
@@ -236,6 +241,7 @@ public class TrackingMiddleware
     {
         try
         {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(_config.WebhookTimeoutSeconds));
             using var request = new HttpRequestMessage(HttpMethod.Post, _config.WebhookUrl);
             request.Content = new StringContent(
                 JsonSerializer.Serialize(trackingEvent, new JsonSerializerOptions
@@ -248,11 +254,16 @@ public class TrackingMiddleware
             if (!string.IsNullOrEmpty(_config.WebhookAuthHeader))
                 request.Headers.TryAddWithoutValidation("Authorization", _config.WebhookAuthHeader);
 
-            await _httpClient.SendAsync(request);
+            await _httpClient.SendAsync(request, cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("Webhook request to {Url} timed out after {Timeout} seconds",
+                _config.WebhookUrl, _config.WebhookTimeoutSeconds);
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "Failed to send webhook");
+            _logger.LogWarning(ex, "Failed to send webhook to {Url}", _config.WebhookUrl);
         }
     }
 
@@ -336,34 +347,28 @@ public class TrackingMetrics
 
         lock (_lock)
         {
-            // Total requests
             sb.AppendLine("# HELP aspose_mcp_requests_total Total number of MCP requests");
             sb.AppendLine("# TYPE aspose_mcp_requests_total counter");
             sb.AppendLine($"aspose_mcp_requests_total {_totalRequests}");
 
-            // Successful requests
             sb.AppendLine("# HELP aspose_mcp_requests_successful_total Total number of successful MCP requests");
             sb.AppendLine("# TYPE aspose_mcp_requests_successful_total counter");
             sb.AppendLine($"aspose_mcp_requests_successful_total {_successfulRequests}");
 
-            // Failed requests
             sb.AppendLine("# HELP aspose_mcp_requests_failed_total Total number of failed MCP requests");
             sb.AppendLine("# TYPE aspose_mcp_requests_failed_total counter");
             sb.AppendLine($"aspose_mcp_requests_failed_total {_failedRequests}");
 
-            // Average duration
             var avgDuration = _totalRequests > 0 ? (double)_totalDurationMs / _totalRequests : 0;
             sb.AppendLine("# HELP aspose_mcp_request_duration_ms_avg Average request duration in milliseconds");
             sb.AppendLine("# TYPE aspose_mcp_request_duration_ms_avg gauge");
             sb.AppendLine($"aspose_mcp_request_duration_ms_avg {avgDuration:F2}");
 
-            // Requests by tool
             sb.AppendLine("# HELP aspose_mcp_requests_by_tool Total requests by tool");
             sb.AppendLine("# TYPE aspose_mcp_requests_by_tool counter");
             foreach (var (tool, count) in _requestsByTool)
-                sb.AppendLine($"aspose_mcp_requests_by_tool{{tool=\"{tool}\"}} {count}");
+                sb.AppendLine($"aspose_mcp_requests_by_tool{{tool=\"{SanitizeLabelValue(tool)}\"}} {count}");
 
-            // Memory usage
             var memoryMb = Process.GetCurrentProcess().WorkingSet64 / (1024.0 * 1024.0);
             sb.AppendLine("# HELP aspose_mcp_memory_mb Current memory usage in MB");
             sb.AppendLine("# TYPE aspose_mcp_memory_mb gauge");
@@ -371,6 +376,23 @@ public class TrackingMetrics
         }
 
         return sb.ToString();
+    }
+
+    /// <summary>
+    ///     Sanitizes a string for use as a Prometheus label value.
+    ///     Escapes backslashes, double quotes, and newlines.
+    /// </summary>
+    /// <param name="value">The label value to sanitize</param>
+    /// <returns>Sanitized label value safe for Prometheus format</returns>
+    private static string SanitizeLabelValue(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+            return value;
+
+        return value
+            .Replace("\\", "\\\\")
+            .Replace("\"", "\\\"")
+            .Replace("\n", "\\n");
     }
 }
 

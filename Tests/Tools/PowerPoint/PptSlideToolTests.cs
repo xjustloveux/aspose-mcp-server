@@ -14,189 +14,165 @@ public class PptSlideToolTests : TestBase
         _tool = new PptSlideTool(SessionManager);
     }
 
-    private string CreatePptPresentation(string fileName)
+    private string CreatePptPresentation(string fileName, int slideCount = 2)
     {
         var filePath = CreateTestFilePath(fileName);
         using var presentation = new Presentation();
+        for (var i = 1; i < slideCount; i++)
+            presentation.Slides.AddEmptySlide(presentation.LayoutSlides[0]);
+        presentation.Save(filePath, SaveFormat.Pptx);
+        return filePath;
+    }
+
+    private string CreatePptWithShape(string fileName)
+    {
+        var filePath = CreateTestFilePath(fileName);
+        using var presentation = new Presentation();
+        presentation.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
         presentation.Slides.AddEmptySlide(presentation.LayoutSlides[0]);
         presentation.Save(filePath, SaveFormat.Pptx);
         return filePath;
     }
 
-    #region General Tests
+    #region General
 
     [Fact]
-    public void AddSlide_ShouldAddNewSlide()
+    public void Add_ShouldAddNewSlide()
     {
-        var pptPath = CreatePptPresentation("test_add_slide.pptx");
-        var outputPath = CreateTestFilePath("test_add_slide_output.pptx");
-        _tool.Execute("add", pptPath, outputPath: outputPath);
+        var pptPath = CreatePptPresentation("test_add.pptx");
+        var outputPath = CreateTestFilePath("test_add_output.pptx");
+        var result = _tool.Execute("add", pptPath, outputPath: outputPath);
+        Assert.StartsWith("Slide added", result);
         using var presentation = new Presentation(outputPath);
-        Assert.True(presentation.Slides.Count >= 2);
-    }
-
-    [Fact]
-    public void DeleteSlide_ShouldDeleteSlide()
-    {
-        var pptPath = CreatePptPresentation("test_delete_slide.pptx");
-        using var presentation = new Presentation(pptPath);
-        var initialCount = presentation.Slides.Count;
-        presentation.Slides.AddEmptySlide(presentation.LayoutSlides[0]);
-        presentation.Save(pptPath, SaveFormat.Pptx);
-
-        var outputPath = CreateTestFilePath("test_delete_slide_output.pptx");
-        _tool.Execute("delete", pptPath, slideIndex: initialCount, outputPath: outputPath);
-        using var resultPresentation = new Presentation(outputPath);
-        Assert.Equal(initialCount, resultPresentation.Slides.Count);
-    }
-
-    [Fact]
-    public void CopySlide_ShouldCopySlide()
-    {
-        var pptPath = CreatePptPresentation("test_copy_slide.pptx");
-        var outputPath = CreateTestFilePath("test_copy_slide_output.pptx");
-        _tool.Execute("duplicate", pptPath, slideIndex: 0, outputPath: outputPath);
-        using var presentation = new Presentation(outputPath);
-        Assert.True(presentation.Slides.Count >= 2);
-    }
-
-    [Fact]
-    public void MoveSlide_ShouldMoveSlide()
-    {
-        var pptPath = CreatePptPresentation("test_move_slide.pptx");
-        using var presentation = new Presentation(pptPath);
-        presentation.Slides.AddEmptySlide(presentation.LayoutSlides[0]);
-        presentation.Save(pptPath, SaveFormat.Pptx);
-
-        var outputPath = CreateTestFilePath("test_move_slide_output.pptx");
-        _tool.Execute("move", pptPath, fromIndex: 1, toIndex: 0, outputPath: outputPath);
-        using var resultPresentation = new Presentation(outputPath);
-        Assert.True(resultPresentation.Slides.Count >= 2);
-    }
-
-    [Fact]
-    public void GetSlidesInfo_ShouldReturnSlidesInfo()
-    {
-        var pptPath = CreatePptPresentation("test_get_slides_info.pptx");
-        using var presentation = new Presentation(pptPath);
-        presentation.Slides.AddEmptySlide(presentation.LayoutSlides[0]);
-        presentation.Save(pptPath, SaveFormat.Pptx);
-        var result = _tool.Execute("get_info", pptPath);
-        Assert.NotNull(result);
-        Assert.NotEmpty(result);
-        Assert.Contains("Slide", result, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public void HideSlide_ShouldHideSlide()
-    {
-        var pptPath = CreatePptPresentation("test_hide_slide.pptx");
-        using var presentation = new Presentation(pptPath);
-        presentation.Slides.AddEmptySlide(presentation.LayoutSlides[0]);
-        presentation.Save(pptPath, SaveFormat.Pptx);
-
-        var outputPath = CreateTestFilePath("test_hide_slide_output.pptx");
-        _tool.Execute("hide", pptPath, slideIndex: 0, hidden: true, outputPath: outputPath);
-        using var resultPresentation = new Presentation(outputPath);
-        Assert.True(resultPresentation.Slides.Count >= 1);
-
-        var hiddenSlide = resultPresentation.Slides[0];
-        Assert.NotNull(hiddenSlide);
-
-        var isEvaluationMode = IsEvaluationMode();
-        if (!isEvaluationMode)
-            Assert.True(hiddenSlide.Hidden, "Slide should be hidden");
-        else
-            Assert.True(true, "In evaluation mode, slide hiding may not work perfectly, but operation completed");
-    }
-
-    [Fact]
-    public void ClearSlide_ShouldClearSlideContent()
-    {
-        var pptPath = CreatePptPresentation("test_clear_slide.pptx");
-        using var presentation = new Presentation(pptPath);
-        var slide = presentation.Slides[0];
-        slide.Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
-        presentation.Save(pptPath, SaveFormat.Pptx);
-
-        var outputPath = CreateTestFilePath("test_clear_slide_output.pptx");
-        _tool.Execute("clear", pptPath, slideIndex: 0, outputPath: outputPath);
-        using var resultPresentation = new Presentation(outputPath);
-        Assert.True(resultPresentation.Slides.Count >= 1);
-        // Verify slide was cleared - check that shapes count is reduced
-        var clearedSlide = resultPresentation.Slides[0];
-        // After clearing, slide should have fewer shapes (may not be 0 due to layout shapes)
-        Assert.NotNull(clearedSlide);
-    }
-
-    [Fact]
-    public void EditSlide_ShouldEditSlideProperties()
-    {
-        var pptPath = CreatePptPresentation("test_edit_slide.pptx");
-        var outputPath = CreateTestFilePath("test_edit_slide_output.pptx");
-        _tool.Execute("edit", pptPath, slideIndex: 0, outputPath: outputPath);
-        using var resultPresentation = new Presentation(outputPath);
-        Assert.True(resultPresentation.Slides.Count >= 1);
-        // Verify slide edit operation completed
-        var editedSlide = resultPresentation.Slides[0];
-        Assert.NotNull(editedSlide);
+        Assert.Equal(3, presentation.Slides.Count);
     }
 
     [Fact]
     public void Add_WithLayoutType_ShouldUseLayout()
     {
-        var pptPath = CreatePptPresentation("test_add_slide_layout.pptx");
-        var outputPath = CreateTestFilePath("test_add_slide_layout_output.pptx");
-        _tool.Execute("add", pptPath, layoutType: "Blank", outputPath: outputPath);
+        var pptPath = CreatePptPresentation("test_add_layout.pptx");
+        var outputPath = CreateTestFilePath("test_add_layout_output.pptx");
+        var result = _tool.Execute("add", pptPath, layoutType: "Title", outputPath: outputPath);
+        Assert.StartsWith("Slide added", result);
         using var presentation = new Presentation(outputPath);
-        Assert.True(presentation.Slides.Count >= 2, "New slide should be added");
+        Assert.Equal(3, presentation.Slides.Count);
+    }
+
+    [Fact]
+    public void Delete_ShouldDeleteSlide()
+    {
+        var pptPath = CreatePptPresentation("test_delete.pptx", 3);
+        var outputPath = CreateTestFilePath("test_delete_output.pptx");
+        var result = _tool.Execute("delete", pptPath, slideIndex: 1, outputPath: outputPath);
+        Assert.StartsWith("Slide 1 deleted", result);
+        using var presentation = new Presentation(outputPath);
+        Assert.Equal(2, presentation.Slides.Count);
+    }
+
+    [Fact]
+    public void GetInfo_ShouldReturnSlidesInfo()
+    {
+        var pptPath = CreatePptPresentation("test_get_info.pptx", 3);
+        var result = _tool.Execute("get_info", pptPath);
+        Assert.Contains("\"count\": 3", result);
+        Assert.Contains("\"layoutType\":", result);
+        Assert.Contains("\"layoutName\":", result);
+        Assert.Contains("\"availableLayouts\":", result);
+    }
+
+    [Fact]
+    public void Move_ShouldMoveSlide()
+    {
+        var pptPath = CreatePptPresentation("test_move.pptx", 3);
+        var outputPath = CreateTestFilePath("test_move_output.pptx");
+        var result = _tool.Execute("move", pptPath, fromIndex: 2, toIndex: 0, outputPath: outputPath);
+        Assert.StartsWith("Slide moved", result);
+        using var presentation = new Presentation(outputPath);
+        Assert.Equal(3, presentation.Slides.Count);
+    }
+
+    [Fact]
+    public void Duplicate_ShouldDuplicateSlide()
+    {
+        var pptPath = CreatePptPresentation("test_duplicate.pptx");
+        var outputPath = CreateTestFilePath("test_duplicate_output.pptx");
+        var result = _tool.Execute("duplicate", pptPath, slideIndex: 0, outputPath: outputPath);
+        Assert.StartsWith("Slide 0 duplicated", result);
+        using var presentation = new Presentation(outputPath);
+        Assert.Equal(3, presentation.Slides.Count);
     }
 
     [Fact]
     public void Duplicate_WithInsertAt_ShouldInsertAtPosition()
     {
-        var pptPath = CreatePptPresentation("test_duplicate_insert_at.pptx");
-        using (var ppt = new Presentation(pptPath))
-        {
-            // Add more slides to have something to insert between
-            ppt.Slides.AddEmptySlide(ppt.LayoutSlides[0]);
-            ppt.Slides.AddEmptySlide(ppt.LayoutSlides[0]);
-            ppt.Save(pptPath, SaveFormat.Pptx);
-        }
-
-        var outputPath = CreateTestFilePath("test_duplicate_insert_at_output.pptx");
-        _tool.Execute("duplicate", pptPath, slideIndex: 0, insertAt: 2, outputPath: outputPath);
+        var pptPath = CreatePptPresentation("test_duplicate_insert.pptx", 3);
+        var outputPath = CreateTestFilePath("test_duplicate_insert_output.pptx");
+        var result = _tool.Execute("duplicate", pptPath, slideIndex: 0, insertAt: 2, outputPath: outputPath);
+        Assert.StartsWith("Slide 0 duplicated", result);
         using var presentation = new Presentation(outputPath);
-        Assert.True(presentation.Slides.Count >= 4, "Slide should be duplicated and inserted at position");
+        Assert.Equal(4, presentation.Slides.Count);
     }
 
     [Fact]
-    public void Hide_WithMultipleSlides_ShouldHideMultiple()
+    public void Hide_ShouldHideSlide()
     {
-        var pptPath = CreatePptPresentation("test_hide_multiple.pptx");
-        using (var ppt = new Presentation(pptPath))
-        {
-            ppt.Slides.AddEmptySlide(ppt.LayoutSlides[0]);
-            ppt.Slides.AddEmptySlide(ppt.LayoutSlides[0]);
-            ppt.Save(pptPath, SaveFormat.Pptx);
-        }
-
-        var outputPath = CreateTestFilePath("test_hide_multiple_output.pptx");
-
-        // Hide first slide
-        _tool.Execute("hide", pptPath, slideIndex: 0, hidden: true, outputPath: outputPath);
-
-        // Hide second slide
-        _tool.Execute("hide", outputPath, slideIndex: 1, hidden: true, outputPath: outputPath);
+        var pptPath = CreatePptPresentation("test_hide.pptx");
+        var outputPath = CreateTestFilePath("test_hide_output.pptx");
+        var result = _tool.Execute("hide", pptPath, slideIndex: 0, hidden: true, outputPath: outputPath);
+        Assert.StartsWith("Set", result);
+        Assert.Contains("hidden=True", result);
+        Assert.True(File.Exists(outputPath));
         using var presentation = new Presentation(outputPath);
-        Assert.True(presentation.Slides.Count >= 3, "Should still have all slides");
+        if (!IsEvaluationMode())
+            Assert.True(presentation.Slides[0].Hidden);
+        else
+            Assert.True(presentation.Slides.Count > 0, "Fallback: presentation should have slides");
+    }
 
-        var isEvaluationMode = IsEvaluationMode();
-        if (!isEvaluationMode)
+    [Fact]
+    public void Hide_WithMultipleSlides_ShouldHideAll()
+    {
+        var pptPath = CreatePptPresentation("test_hide_multi.pptx", 3);
+        var outputPath = CreateTestFilePath("test_hide_multi_output.pptx");
+        var result = _tool.Execute("hide", pptPath, slideIndices: "[0,1]", hidden: true, outputPath: outputPath);
+        Assert.Contains("2 slide(s) hidden=True", result);
+        Assert.True(File.Exists(outputPath));
+        using var presentation = new Presentation(outputPath);
+        Assert.Equal(3, presentation.Slides.Count);
+        if (!IsEvaluationMode())
         {
-            var hiddenCount = presentation.Slides.Count(s => s.Hidden);
-            Assert.True(hiddenCount >= 2, $"At least 2 slides should be hidden, got {hiddenCount}");
+            Assert.True(presentation.Slides[0].Hidden);
+            Assert.True(presentation.Slides[1].Hidden);
+            Assert.False(presentation.Slides[2].Hidden);
         }
+        else
+        {
+            // Fallback: verify basic structure in evaluation mode
+            Assert.NotNull(presentation.Slides[0]);
+            Assert.NotNull(presentation.Slides[1]);
+            Assert.NotNull(presentation.Slides[2]);
+        }
+    }
+
+    [SkippableFact]
+    public void Clear_ShouldClearSlideContent()
+    {
+        SkipInEvaluationMode(AsposeLibraryType.Slides, "Clear verification may not work correctly in evaluation mode");
+        var pptPath = CreatePptWithShape("test_clear.pptx");
+        var outputPath = CreateTestFilePath("test_clear_output.pptx");
+        var result = _tool.Execute("clear", pptPath, slideIndex: 0, outputPath: outputPath);
+        Assert.StartsWith("Cleared all shapes", result);
+        using var presentation = new Presentation(outputPath);
+        Assert.Empty(presentation.Slides[0].Shapes);
+    }
+
+    [Fact]
+    public void Edit_ShouldEditSlide()
+    {
+        var pptPath = CreatePptPresentation("test_edit.pptx");
+        var outputPath = CreateTestFilePath("test_edit_output.pptx");
+        var result = _tool.Execute("edit", pptPath, slideIndex: 0, outputPath: outputPath);
+        Assert.StartsWith("Slide 0 updated", result);
     }
 
     [Fact]
@@ -204,111 +180,350 @@ public class PptSlideToolTests : TestBase
     {
         var pptPath = CreatePptPresentation("test_edit_layout.pptx");
         var outputPath = CreateTestFilePath("test_edit_layout_output.pptx");
-        _tool.Execute("edit", pptPath, slideIndex: 0, layoutIndex: 1, outputPath: outputPath);
-        using var resultPresentation = new Presentation(outputPath);
-        Assert.True(resultPresentation.Slides.Count >= 1);
-        // Verify edit operation completed
-        Assert.NotNull(resultPresentation.Slides[0]);
+        var result = _tool.Execute("edit", pptPath, slideIndex: 0, layoutIndex: 1, outputPath: outputPath);
+        Assert.StartsWith("Slide 0 updated", result);
+    }
+
+    [Theory]
+    [InlineData("ADD")]
+    [InlineData("Add")]
+    [InlineData("add")]
+    public void Operation_ShouldBeCaseInsensitive_Add(string operation)
+    {
+        var pptPath = CreatePptPresentation($"test_case_add_{operation}.pptx");
+        var outputPath = CreateTestFilePath($"test_case_add_{operation}_output.pptx");
+        var result = _tool.Execute(operation, pptPath, outputPath: outputPath);
+        Assert.StartsWith("Slide added", result);
+    }
+
+    [Theory]
+    [InlineData("DELETE")]
+    [InlineData("Delete")]
+    [InlineData("delete")]
+    public void Operation_ShouldBeCaseInsensitive_Delete(string operation)
+    {
+        var pptPath = CreatePptPresentation($"test_case_del_{operation}.pptx", 3);
+        var outputPath = CreateTestFilePath($"test_case_del_{operation}_output.pptx");
+        var result = _tool.Execute(operation, pptPath, slideIndex: 1, outputPath: outputPath);
+        Assert.StartsWith("Slide 1 deleted", result);
+    }
+
+    [Theory]
+    [InlineData("GET_INFO")]
+    [InlineData("Get_Info")]
+    [InlineData("get_info")]
+    public void Operation_ShouldBeCaseInsensitive_GetInfo(string operation)
+    {
+        var pptPath = CreatePptPresentation($"test_case_info_{operation.Replace("_", "")}.pptx");
+        var result = _tool.Execute(operation, pptPath);
+        Assert.Contains("\"count\":", result);
+    }
+
+    [Theory]
+    [InlineData("MOVE")]
+    [InlineData("Move")]
+    [InlineData("move")]
+    public void Operation_ShouldBeCaseInsensitive_Move(string operation)
+    {
+        var pptPath = CreatePptPresentation($"test_case_move_{operation}.pptx", 3);
+        var outputPath = CreateTestFilePath($"test_case_move_{operation}_output.pptx");
+        var result = _tool.Execute(operation, pptPath, fromIndex: 2, toIndex: 0, outputPath: outputPath);
+        Assert.StartsWith("Slide moved", result);
+    }
+
+    [Theory]
+    [InlineData("DUPLICATE")]
+    [InlineData("Duplicate")]
+    [InlineData("duplicate")]
+    public void Operation_ShouldBeCaseInsensitive_Duplicate(string operation)
+    {
+        var pptPath = CreatePptPresentation($"test_case_dup_{operation}.pptx");
+        var outputPath = CreateTestFilePath($"test_case_dup_{operation}_output.pptx");
+        var result = _tool.Execute(operation, pptPath, slideIndex: 0, outputPath: outputPath);
+        Assert.StartsWith("Slide 0 duplicated", result);
+    }
+
+    [Theory]
+    [InlineData("HIDE")]
+    [InlineData("Hide")]
+    [InlineData("hide")]
+    public void Operation_ShouldBeCaseInsensitive_Hide(string operation)
+    {
+        var pptPath = CreatePptPresentation($"test_case_hide_{operation}.pptx");
+        var outputPath = CreateTestFilePath($"test_case_hide_{operation}_output.pptx");
+        var result = _tool.Execute(operation, pptPath, hidden: true, outputPath: outputPath);
+        Assert.StartsWith("Set", result);
+        Assert.Contains("hidden=True", result);
+    }
+
+    [Theory]
+    [InlineData("CLEAR")]
+    [InlineData("Clear")]
+    [InlineData("clear")]
+    public void Operation_ShouldBeCaseInsensitive_Clear(string operation)
+    {
+        var pptPath = CreatePptWithShape($"test_case_clear_{operation}.pptx");
+        var outputPath = CreateTestFilePath($"test_case_clear_{operation}_output.pptx");
+        var result = _tool.Execute(operation, pptPath, slideIndex: 0, outputPath: outputPath);
+        Assert.StartsWith("Cleared", result);
+    }
+
+    [Theory]
+    [InlineData("EDIT")]
+    [InlineData("Edit")]
+    [InlineData("edit")]
+    public void Operation_ShouldBeCaseInsensitive_Edit(string operation)
+    {
+        var pptPath = CreatePptPresentation($"test_case_edit_{operation}.pptx");
+        var outputPath = CreateTestFilePath($"test_case_edit_{operation}_output.pptx");
+        var result = _tool.Execute(operation, pptPath, slideIndex: 0, outputPath: outputPath);
+        Assert.StartsWith("Slide 0 updated", result);
+    }
+
+    #endregion
+
+    #region Exception
+
+    [Fact]
+    public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
+    {
+        var pptPath = CreatePptPresentation("test_unknown_op.pptx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", pptPath));
+        Assert.Contains("Unknown operation", ex.Message);
     }
 
     [Fact]
-    public void DeleteSlide_LastSlide_ShouldThrowInvalidOperationException()
+    public void Delete_WithoutSlideIndex_ShouldThrowArgumentException()
     {
-        // Arrange - Create a presentation with only one slide
-        var pptPath = CreateTestFilePath("test_delete_last_slide.pptx");
+        var pptPath = CreatePptPresentation("test_delete_no_index.pptx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("delete", pptPath));
+        Assert.Contains("slideIndex is required", ex.Message);
+    }
+
+    [Fact]
+    public void Delete_WithInvalidIndex_ShouldThrowArgumentException()
+    {
+        var pptPath = CreatePptPresentation("test_delete_invalid.pptx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("delete", pptPath, slideIndex: 99));
+        Assert.Contains("slideIndex must be between", ex.Message);
+    }
+
+    [Fact]
+    public void Delete_LastSlide_ShouldThrowInvalidOperationException()
+    {
+        var pptPath = CreateTestFilePath("test_delete_last.pptx");
         using (var ppt = new Presentation())
         {
             ppt.Save(pptPath, SaveFormat.Pptx);
         }
 
-        Assert.Throws<InvalidOperationException>(() => _tool.Execute("delete", pptPath, slideIndex: 0));
+        var ex = Assert.Throws<InvalidOperationException>(() => _tool.Execute("delete", pptPath, slideIndex: 0));
+        Assert.Contains("Cannot delete the last slide", ex.Message);
     }
 
     [Fact]
-    public void GetSlidesInfo_ShouldReturnLayoutInfo()
+    public void Move_WithoutFromIndex_ShouldThrowArgumentException()
     {
-        var pptPath = CreatePptPresentation("test_get_layout_info.pptx");
-        var result = _tool.Execute("get_info", pptPath);
-        Assert.Contains("layoutType", result);
-        Assert.Contains("layoutName", result);
-        Assert.Contains("availableLayouts", result);
+        var pptPath = CreatePptPresentation("test_move_no_from.pptx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("move", pptPath, toIndex: 0));
+        Assert.Contains("fromIndex is required", ex.Message);
     }
 
     [Fact]
-    public void UnknownOperation_ShouldThrowArgumentException()
+    public void Move_WithoutToIndex_ShouldThrowArgumentException()
     {
-        var pptPath = CreatePptPresentation("test_unknown_op.pptx");
-        Assert.Throws<ArgumentException>(() => _tool.Execute("unknown_operation", pptPath));
+        var pptPath = CreatePptPresentation("test_move_no_to.pptx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("move", pptPath, fromIndex: 0));
+        Assert.Contains("toIndex is required", ex.Message);
     }
 
     [Fact]
-    public void DeleteSlide_InvalidIndex_ShouldThrowArgumentException()
+    public void Move_WithInvalidFromIndex_ShouldThrowArgumentException()
     {
-        var pptPath = CreatePptPresentation("test_delete_invalid_index.pptx");
-        Assert.Throws<ArgumentException>(() => _tool.Execute("delete", pptPath, slideIndex: 99));
+        var pptPath = CreatePptPresentation("test_move_invalid_from.pptx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("move", pptPath, fromIndex: 99, toIndex: 0));
+        Assert.Contains("fromIndex must be between", ex.Message);
+    }
+
+    [Fact]
+    public void Move_WithInvalidToIndex_ShouldThrowArgumentException()
+    {
+        var pptPath = CreatePptPresentation("test_move_invalid_to.pptx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("move", pptPath, fromIndex: 0, toIndex: 99));
+        Assert.Contains("toIndex must be between", ex.Message);
+    }
+
+    [Fact]
+    public void Duplicate_WithoutSlideIndex_ShouldThrowArgumentException()
+    {
+        var pptPath = CreatePptPresentation("test_dup_no_index.pptx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("duplicate", pptPath));
+        Assert.Contains("slideIndex is required", ex.Message);
+    }
+
+    [Fact]
+    public void Duplicate_WithInvalidSlideIndex_ShouldThrowArgumentException()
+    {
+        var pptPath = CreatePptPresentation("test_dup_invalid.pptx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("duplicate", pptPath, slideIndex: 99));
+        Assert.Contains("slideIndex must be between", ex.Message);
+    }
+
+    [Fact]
+    public void Duplicate_WithInvalidInsertAt_ShouldThrowArgumentException()
+    {
+        var pptPath = CreatePptPresentation("test_dup_invalid_insert.pptx");
+        var ex =
+            Assert.Throws<ArgumentException>(() => _tool.Execute("duplicate", pptPath, slideIndex: 0, insertAt: 99));
+        Assert.Contains("insertAt must be between", ex.Message);
+    }
+
+    [Fact]
+    public void Hide_WithInvalidSlideIndex_ShouldThrowArgumentException()
+    {
+        var pptPath = CreatePptPresentation("test_hide_invalid.pptx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("hide", pptPath, slideIndices: "[99]", hidden: true));
+        Assert.Contains("slide index 99 out of range", ex.Message);
+    }
+
+    [Fact]
+    public void Clear_WithoutSlideIndex_ShouldThrowArgumentException()
+    {
+        var pptPath = CreatePptPresentation("test_clear_no_index.pptx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("clear", pptPath));
+        Assert.Contains("slideIndex is required", ex.Message);
+    }
+
+    [Fact]
+    public void Clear_WithInvalidSlideIndex_ShouldThrowArgumentException()
+    {
+        var pptPath = CreatePptPresentation("test_clear_invalid.pptx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("clear", pptPath, slideIndex: 99));
+        Assert.Contains("Slide index", ex.Message);
+    }
+
+    [Fact]
+    public void Edit_WithoutSlideIndex_ShouldThrowArgumentException()
+    {
+        var pptPath = CreatePptPresentation("test_edit_no_index.pptx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("edit", pptPath));
+        Assert.Contains("slideIndex is required", ex.Message);
+    }
+
+    [Fact]
+    public void Edit_WithInvalidLayoutIndex_ShouldThrowArgumentException()
+    {
+        var pptPath = CreatePptPresentation("test_edit_invalid_layout.pptx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("edit", pptPath, slideIndex: 0, layoutIndex: 99));
+        Assert.Contains("layoutIndex must be between", ex.Message);
     }
 
     #endregion
 
-    #region Session ID Tests
+    #region Session
 
     [Fact]
-    public void AddSlide_WithSessionId_ShouldAddInMemory()
+    public void Add_WithSessionId_ShouldAddInMemory()
     {
-        var pptPath = CreatePptPresentation("test_session_add_slide.pptx");
+        var pptPath = CreatePptPresentation("test_session_add.pptx");
         var sessionId = OpenSession(pptPath);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         var initialCount = ppt.Slides.Count;
         var result = _tool.Execute("add", sessionId: sessionId);
-        Assert.Contains("Slide added", result);
-        Assert.True(ppt.Slides.Count > initialCount);
+        Assert.StartsWith("Slide added", result);
+        Assert.Contains("session", result);
+        Assert.Equal(initialCount + 1, ppt.Slides.Count);
     }
 
     [Fact]
-    public void DuplicateSlide_WithSessionId_ShouldDuplicateInMemory()
+    public void Delete_WithSessionId_ShouldDeleteInMemory()
     {
-        var pptPath = CreatePptPresentation("test_session_duplicate_slide.pptx");
+        var pptPath = CreatePptPresentation("test_session_delete.pptx", 3);
+        var sessionId = OpenSession(pptPath);
+        var ppt = SessionManager.GetDocument<Presentation>(sessionId);
+        var result = _tool.Execute("delete", sessionId: sessionId, slideIndex: 1);
+        Assert.StartsWith("Slide 1 deleted", result);
+        Assert.Equal(2, ppt.Slides.Count);
+    }
+
+    [Fact]
+    public void GetInfo_WithSessionId_ShouldReturnInfo()
+    {
+        var pptPath = CreatePptPresentation("test_session_info.pptx");
+        var sessionId = OpenSession(pptPath);
+        var result = _tool.Execute("get_info", sessionId: sessionId);
+        Assert.Contains("\"count\":", result);
+        Assert.Contains("\"layoutType\":", result);
+    }
+
+    [Fact]
+    public void Move_WithSessionId_ShouldMoveInMemory()
+    {
+        var pptPath = CreatePptPresentation("test_session_move.pptx", 3);
+        var sessionId = OpenSession(pptPath);
+        var result = _tool.Execute("move", sessionId: sessionId, fromIndex: 2, toIndex: 0);
+        Assert.StartsWith("Slide moved", result);
+    }
+
+    [Fact]
+    public void Duplicate_WithSessionId_ShouldDuplicateInMemory()
+    {
+        var pptPath = CreatePptPresentation("test_session_dup.pptx");
         var sessionId = OpenSession(pptPath);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         var initialCount = ppt.Slides.Count;
         var result = _tool.Execute("duplicate", sessionId: sessionId, slideIndex: 0);
-        Assert.Contains("duplicated", result);
-        Assert.True(ppt.Slides.Count > initialCount);
+        Assert.StartsWith("Slide 0 duplicated", result);
+        Assert.Equal(initialCount + 1, ppt.Slides.Count);
     }
 
     [Fact]
-    public void GetSlidesInfo_WithSessionId_ShouldReturnInfo()
+    public void Hide_WithSessionId_ShouldHideInMemory()
     {
-        var pptPath = CreatePptPresentation("test_session_get_info.pptx");
-        var sessionId = OpenSession(pptPath);
-        var result = _tool.Execute("get_info", sessionId: sessionId);
-        Assert.NotNull(result);
-        Assert.Contains("Slide", result, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public void HideSlide_WithSessionId_ShouldHideInMemory()
-    {
-        var pptPath = CreatePptPresentation("test_session_hide_slide.pptx");
+        var pptPath = CreatePptPresentation("test_session_hide.pptx");
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("hide", sessionId: sessionId, slideIndex: 0, hidden: true);
-        Assert.Contains("slide", result, StringComparison.OrdinalIgnoreCase);
+        Assert.StartsWith("Set", result);
+        Assert.Contains("hidden=True", result);
         Assert.Contains("session", result);
     }
 
     [Fact]
-    public void MoveSlide_WithSessionId_ShouldMoveInMemory()
+    public void Clear_WithSessionId_ShouldClearInMemory()
     {
-        var pptPath = CreatePptPresentation("test_session_move_slide.pptx");
-        using (var ppt = new Presentation(pptPath))
-        {
-            ppt.Slides.AddEmptySlide(ppt.LayoutSlides[0]);
-            ppt.Save(pptPath, SaveFormat.Pptx);
-        }
-
+        var pptPath = CreatePptWithShape("test_session_clear.pptx");
         var sessionId = OpenSession(pptPath);
-        var result = _tool.Execute("move", sessionId: sessionId, fromIndex: 1, toIndex: 0);
-        Assert.Contains("Slide moved", result);
+        var ppt = SessionManager.GetDocument<Presentation>(sessionId);
+        var result = _tool.Execute("clear", sessionId: sessionId, slideIndex: 0);
+        Assert.StartsWith("Cleared", result);
+        Assert.Empty(ppt.Slides[0].Shapes);
+    }
+
+    [Fact]
+    public void Edit_WithSessionId_ShouldEditInMemory()
+    {
+        var pptPath = CreatePptPresentation("test_session_edit.pptx");
+        var sessionId = OpenSession(pptPath);
+        var result = _tool.Execute("edit", sessionId: sessionId, slideIndex: 0);
+        Assert.StartsWith("Slide 0 updated", result);
+        Assert.Contains("session", result);
+    }
+
+    [Fact]
+    public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
+    {
+        Assert.Throws<KeyNotFoundException>(() => _tool.Execute("get_info", sessionId: "invalid_session"));
+    }
+
+    [Fact]
+    public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
+    {
+        var pptPath1 = CreatePptPresentation("test_path_ppt.pptx");
+        var pptPath2 = CreatePptPresentation("test_session_ppt.pptx", 5);
+        var sessionId = OpenSession(pptPath2);
+        var result = _tool.Execute("get_info", pptPath1, sessionId);
+        Assert.Contains("\"count\": 5", result);
     }
 
     #endregion

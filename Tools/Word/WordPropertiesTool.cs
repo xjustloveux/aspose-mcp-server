@@ -15,6 +15,11 @@ namespace AsposeMcpServer.Tools.Word;
 public class WordPropertiesTool
 {
     /// <summary>
+    ///     Identity accessor for session isolation
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document session operations
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -23,11 +28,32 @@ public class WordPropertiesTool
     ///     Initializes a new instance of the WordPropertiesTool class
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document operations</param>
-    public WordPropertiesTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation</param>
+    public WordPropertiesTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a Word properties operation (get, set).
+    /// </summary>
+    /// <param name="operation">The operation to perform: get, set.</param>
+    /// <param name="path">Word document file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (for set operation).</param>
+    /// <param name="title">Document title (for set).</param>
+    /// <param name="subject">Document subject (for set).</param>
+    /// <param name="author">Document author (for set).</param>
+    /// <param name="keywords">Keywords (for set).</param>
+    /// <param name="comments">Comments (for set).</param>
+    /// <param name="category">Document category (for set).</param>
+    /// <param name="company">Company name (for set).</param>
+    /// <param name="manager">Manager name (for set).</param>
+    /// <param name="customProperties">Custom properties as JSON string (for set).</param>
+    /// <returns>Document properties as JSON for get, or a success message for set operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when the operation is unknown.</exception>
     [McpServerTool(Name = "word_properties")]
     [Description(@"Get or set Word document properties (metadata). Supports 2 operations: get, set.
 
@@ -67,7 +93,7 @@ Notes:
             "Custom properties as JSON string (optional, for set operation). Supports string, number (integer/double), boolean, and datetime (ISO 8601 format).")]
         string? customProperties = null)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {

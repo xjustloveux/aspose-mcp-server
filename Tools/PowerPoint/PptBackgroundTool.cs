@@ -15,6 +15,11 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 public class PptBackgroundTool
 {
     /// <summary>
+    ///     Identity accessor for session isolation.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document lifecycle management.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -23,11 +28,27 @@ public class PptBackgroundTool
     ///     Initializes a new instance of the <see cref="PptBackgroundTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
-    public PptBackgroundTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation.</param>
+    public PptBackgroundTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a PowerPoint background operation (set, get).
+    /// </summary>
+    /// <param name="operation">The operation to perform: set, get.</param>
+    /// <param name="path">Presentation file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="slideIndex">Slide index (0-based, default: 0, ignored if applyToAll is true).</param>
+    /// <param name="color">Hex color like #FFAA00 or #80FFAA00 (with alpha).</param>
+    /// <param name="imagePath">Background image path.</param>
+    /// <param name="applyToAll">Apply background to all slides (default: false).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "ppt_background")]
     [Description(@"Manage PowerPoint backgrounds. Supports 2 operations: set, get.
 
@@ -52,7 +73,7 @@ Usage examples:
         [Description("Apply background to all slides (default: false)")]
         bool applyToAll = false)
     {
-        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {

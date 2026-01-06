@@ -15,6 +15,11 @@ namespace AsposeMcpServer.Tools.Word;
 public class WordStyleTool
 {
     /// <summary>
+    ///     Identity accessor for session isolation
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document session operations
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -23,11 +28,47 @@ public class WordStyleTool
     ///     Initializes a new instance of the WordStyleTool class
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document operations</param>
-    public WordStyleTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation</param>
+    public WordStyleTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a Word style operation (get_styles, create_style, apply_style, copy_styles).
+    /// </summary>
+    /// <param name="operation">The operation to perform: get_styles, create_style, apply_style, copy_styles.</param>
+    /// <param name="path">Word document file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="includeBuiltIn">Include built-in styles (for get_styles, default: false).</param>
+    /// <param name="styleName">Style name (for create_style, apply_style).</param>
+    /// <param name="styleType">Style type: paragraph, character, table, list (for create_style, default: paragraph).</param>
+    /// <param name="baseStyle">Base style to inherit from (for create_style).</param>
+    /// <param name="fontName">Font name (for create_style).</param>
+    /// <param name="fontNameAscii">Font name for ASCII characters (for create_style).</param>
+    /// <param name="fontNameFarEast">Font name for Far East characters (for create_style).</param>
+    /// <param name="fontSize">Font size in points (for create_style).</param>
+    /// <param name="bold">Bold text (for create_style).</param>
+    /// <param name="italic">Italic text (for create_style).</param>
+    /// <param name="underline">Underline text (for create_style).</param>
+    /// <param name="color">Text color hex (for create_style).</param>
+    /// <param name="alignment">Paragraph alignment: left, center, right, justify (for create_style).</param>
+    /// <param name="spaceBefore">Space before paragraph in points (for create_style).</param>
+    /// <param name="spaceAfter">Space after paragraph in points (for create_style).</param>
+    /// <param name="lineSpacing">Line spacing multiplier (for create_style).</param>
+    /// <param name="paragraphIndex">Paragraph index (0-based, for apply_style).</param>
+    /// <param name="paragraphIndices">Array of paragraph indices (for apply_style).</param>
+    /// <param name="sectionIndex">Section index (0-based, for apply_style, default: 0).</param>
+    /// <param name="tableIndex">Table index (0-based, for apply_style).</param>
+    /// <param name="applyToAllParagraphs">Apply to all paragraphs (for apply_style, default: false).</param>
+    /// <param name="sourceDocument">Source document path to copy styles from (for copy_styles).</param>
+    /// <param name="styleNames">Array of style names to copy (for copy_styles).</param>
+    /// <param name="overwriteExisting">Overwrite existing styles (for copy_styles, default: false).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get_styles.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "word_style")]
     [Description(
         @"Manage styles in Word documents. Supports 4 operations: get_styles, create_style, apply_style, copy_styles.
@@ -95,7 +136,7 @@ Usage examples:
         [Description("Overwrite existing styles (for copy_styles, default: false)")]
         bool overwriteExisting = false)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {
@@ -160,7 +201,6 @@ Usage examples:
             if (!string.IsNullOrEmpty(style.BaseStyleName))
                 styleInfo["basedOn"] = style.BaseStyleName;
 
-            // Font information
             if (font.NameAscii != font.NameFarEast)
             {
                 styleInfo["fontAscii"] = font.NameAscii;

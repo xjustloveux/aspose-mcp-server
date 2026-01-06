@@ -16,6 +16,11 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 public class PptSlideTool
 {
     /// <summary>
+    ///     Identity accessor for session isolation.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document session handling.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -24,11 +29,34 @@ public class PptSlideTool
     ///     Initializes a new instance of the <see cref="PptSlideTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory editing.</param>
-    public PptSlideTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation.</param>
+    public PptSlideTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a PowerPoint slide operation (add, delete, get_info, move, duplicate, hide, clear, edit).
+    /// </summary>
+    /// <param name="operation">The operation to perform: add, delete, get_info, move, duplicate, hide, clear, edit.</param>
+    /// <param name="path">Presentation file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (optional, defaults to input path).</param>
+    /// <param name="slideIndex">Slide index (0-based, required for most operations).</param>
+    /// <param name="layoutType">Slide layout type: Blank, Title, TitleOnly, TwoColumn, SectionHeader.</param>
+    /// <param name="fromIndex">Source slide index (0-based, required for move operation).</param>
+    /// <param name="toIndex">Target slide index (0-based, required for move operation).</param>
+    /// <param name="insertAt">Target index to insert clone (0-based, optional, for duplicate, default: append).</param>
+    /// <param name="slideIndices">
+    ///     Slide indices array as JSON (optional, for hide operation, if not provided affects all
+    ///     slides).
+    /// </param>
+    /// <param name="hidden">Hide slides (true) or show (false, required for hide operation).</param>
+    /// <param name="layoutIndex">Layout index (0-based, optional, for edit operation).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "ppt_slide")]
     [Description(
         @"Manage PowerPoint slides. Supports 8 operations: add, delete, get_info, move, duplicate, hide, clear, edit.
@@ -76,7 +104,7 @@ Usage examples:
         [Description("Layout index (0-based, optional, for edit operation)")]
         int? layoutIndex = null)
     {
-        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {

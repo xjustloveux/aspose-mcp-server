@@ -14,7 +14,7 @@ public class TempFileManager : IHostedService, IDisposable
 
     private readonly ILogger<TempFileManager>? _logger;
     private Timer? _cleanupTimer;
-    private bool _disposed;
+    private int _disposed;
 
     /// <summary>
     ///     Creates a new temp file manager
@@ -28,12 +28,15 @@ public class TempFileManager : IHostedService, IDisposable
     }
 
     /// <summary>
-    ///     Disposes the temp file manager
+    ///     Disposes the temp file manager.
+    ///     Thread-safe: uses Interlocked to prevent double-dispose.
     /// </summary>
     public void Dispose()
     {
-        if (_disposed) return;
-        _disposed = true;
+        // Atomically set _disposed to 1, return previous value
+        // If previous value was already 1, another thread already disposed
+        if (Interlocked.Exchange(ref _disposed, 1) == 1)
+            return;
         _cleanupTimer?.Dispose();
     }
 
@@ -53,12 +56,10 @@ public class TempFileManager : IHostedService, IDisposable
 
         _logger?.LogInformation("Starting temp file manager (retention: {Hours} hours)", _config.TempRetentionHours);
 
-        // Cleanup on startup
         var cleanupResult = CleanupExpiredFiles();
         _logger?.LogInformation("Startup cleanup completed: {Deleted} files deleted, {Errors} errors",
             cleanupResult.DeletedCount, cleanupResult.ErrorCount);
 
-        // Start periodic cleanup timer (every hour)
         _cleanupTimer = new Timer(
             PeriodicCleanup,
             null,
@@ -82,6 +83,22 @@ public class TempFileManager : IHostedService, IDisposable
     }
 
     /// <summary>
+    ///     Checks if the requestor can access a temp file based on isolation mode
+    /// </summary>
+    /// <param name="requestor">The identity of the requestor</param>
+    /// <param name="metadata">The temp file metadata containing owner info</param>
+    /// <returns>True if access is allowed</returns>
+    private bool CanAccessTempFile(SessionIdentity requestor, TempFileMetadata metadata)
+    {
+        var owner = new SessionIdentity
+        {
+            TenantId = metadata.OwnerTenantId,
+            UserId = metadata.OwnerUserId
+        };
+        return requestor.CanAccess(owner, _config.IsolationMode);
+    }
+
+    /// <summary>
     ///     Cleans up expired temporary files based on TempRetentionHours
     /// </summary>
     /// <returns>Cleanup result with statistics</returns>
@@ -98,7 +115,6 @@ public class TempFileManager : IHostedService, IDisposable
                 return result;
             }
 
-            // Find all metadata files
             var metadataFiles = Directory.GetFiles(_config.TempDirectory, $"{TempFilePrefix}*{MetadataExtension}");
 
             foreach (var metadataPath in metadataFiles)
@@ -109,7 +125,6 @@ public class TempFileManager : IHostedService, IDisposable
 
                     if (metadata == null)
                     {
-                        // Invalid metadata, delete both files
                         DeleteTempFileSet(metadataPath);
                         result.DeletedCount++;
                         continue;
@@ -129,7 +144,6 @@ public class TempFileManager : IHostedService, IDisposable
                     _logger?.LogWarning(ex, "Error processing temp file: {Path}", metadataPath);
                 }
 
-            // Also cleanup orphaned document files (no metadata)
             var orphanedFiles = Directory.GetFiles(_config.TempDirectory, $"{TempFilePrefix}*")
                 .Where(f => !f.EndsWith(MetadataExtension))
                 .Where(f => !File.Exists(f + MetadataExtension));
@@ -161,10 +175,20 @@ public class TempFileManager : IHostedService, IDisposable
     }
 
     /// <summary>
-    ///     Lists all recoverable temporary files
+    ///     Lists all recoverable temporary files (no authorization check - returns all)
     /// </summary>
     /// <returns>List of recoverable file information</returns>
     public IEnumerable<RecoverableFileInfo> ListRecoverableFiles()
+    {
+        return ListRecoverableFiles(SessionIdentity.GetAnonymous());
+    }
+
+    /// <summary>
+    ///     Lists recoverable temporary files visible to the requestor
+    /// </summary>
+    /// <param name="requestor">Requestor identity for filtering</param>
+    /// <returns>List of recoverable file information</returns>
+    public IEnumerable<RecoverableFileInfo> ListRecoverableFiles(SessionIdentity requestor)
     {
         var results = new List<RecoverableFileInfo>();
 
@@ -181,7 +205,13 @@ public class TempFileManager : IHostedService, IDisposable
                     var metadata = ReadMetadata(metadataPath);
                     if (metadata == null) continue;
 
-                    // Check if document file exists
+                    if (!CanAccessTempFile(requestor, metadata))
+                    {
+                        _logger?.LogDebug("Access denied: {Requestor} cannot access temp file {SessionId}",
+                            requestor, metadata.SessionId);
+                        continue;
+                    }
+
                     if (!File.Exists(metadata.TempPath)) continue;
 
                     var fileInfo = new FileInfo(metadata.TempPath);
@@ -196,7 +226,9 @@ public class TempFileManager : IHostedService, IDisposable
                         SavedAt = metadata.SavedAt,
                         ExpiresAt = expiresAt,
                         FileSizeBytes = fileInfo.Length,
-                        PromptOnReconnect = metadata.PromptOnReconnect
+                        PromptOnReconnect = metadata.PromptOnReconnect,
+                        OwnerTenantId = metadata.OwnerTenantId,
+                        OwnerUserId = metadata.OwnerUserId
                     });
                 }
                 catch (Exception ex)
@@ -213,7 +245,7 @@ public class TempFileManager : IHostedService, IDisposable
     }
 
     /// <summary>
-    ///     Recovers a temporary file to the specified path
+    ///     Recovers a temporary file to the specified path (no authorization check)
     /// </summary>
     /// <param name="sessionId">Session ID to recover</param>
     /// <param name="targetPath">Target path (null = original path)</param>
@@ -221,11 +253,24 @@ public class TempFileManager : IHostedService, IDisposable
     /// <returns>Recovery result</returns>
     public RecoverResult RecoverSession(string sessionId, string? targetPath = null, bool deleteAfterRecover = true)
     {
+        return RecoverSession(sessionId, SessionIdentity.GetAnonymous(), targetPath, deleteAfterRecover);
+    }
+
+    /// <summary>
+    ///     Recovers a temporary file to the specified path with authorization check
+    /// </summary>
+    /// <param name="sessionId">Session ID to recover</param>
+    /// <param name="requestor">Requestor identity for authorization</param>
+    /// <param name="targetPath">Target path (null = original path)</param>
+    /// <param name="deleteAfterRecover">Whether to delete temp file after recovery</param>
+    /// <returns>Recovery result</returns>
+    public RecoverResult RecoverSession(string sessionId, SessionIdentity requestor, string? targetPath = null,
+        bool deleteAfterRecover = true)
+    {
         var result = new RecoverResult { SessionId = sessionId };
 
         try
         {
-            // Find metadata file for this session
             var metadataFiles =
                 Directory.GetFiles(_config.TempDirectory, $"{TempFilePrefix}{sessionId}*{MetadataExtension}");
 
@@ -236,7 +281,6 @@ public class TempFileManager : IHostedService, IDisposable
                 return result;
             }
 
-            // Use the most recent one if multiple exist
             var metadataPath = metadataFiles
                 .Select(f => new { Path = f, Info = new FileInfo(f) })
                 .OrderByDescending(x => x.Info.LastWriteTimeUtc)
@@ -250,6 +294,16 @@ public class TempFileManager : IHostedService, IDisposable
                 return result;
             }
 
+            if (!CanAccessTempFile(requestor, metadata))
+            {
+                _logger?.LogWarning(
+                    "Access denied: {Requestor} attempted to recover temp file {SessionId}",
+                    requestor, sessionId);
+                result.Success = false;
+                result.ErrorMessage = $"No recoverable session found: {sessionId}";
+                return result;
+            }
+
             if (!File.Exists(metadata.TempPath))
             {
                 result.Success = false;
@@ -259,12 +313,10 @@ public class TempFileManager : IHostedService, IDisposable
 
             var destination = targetPath ?? metadata.OriginalPath;
 
-            // Ensure target directory exists
             var targetDir = Path.GetDirectoryName(destination);
             if (!string.IsNullOrEmpty(targetDir) && !Directory.Exists(targetDir))
                 Directory.CreateDirectory(targetDir);
 
-            // Copy temp file to destination
             File.Copy(metadata.TempPath, destination, true);
 
             result.Success = true;
@@ -273,7 +325,6 @@ public class TempFileManager : IHostedService, IDisposable
 
             _logger?.LogInformation("Recovered session {SessionId} to {Path}", sessionId, destination);
 
-            // Delete temp files if requested
             if (deleteAfterRecover)
             {
                 DeleteTempFileSet(metadataPath);
@@ -291,11 +342,22 @@ public class TempFileManager : IHostedService, IDisposable
     }
 
     /// <summary>
-    ///     Deletes a specific temporary session file
+    ///     Deletes a specific temporary session file (no authorization check)
     /// </summary>
     /// <param name="sessionId">Session ID to delete</param>
     /// <returns>True if deleted successfully</returns>
     public bool DeleteTempSession(string sessionId)
+    {
+        return DeleteTempSession(sessionId, SessionIdentity.GetAnonymous());
+    }
+
+    /// <summary>
+    ///     Deletes a specific temporary session file with authorization check
+    /// </summary>
+    /// <param name="sessionId">Session ID to delete</param>
+    /// <param name="requestor">Requestor identity for authorization</param>
+    /// <returns>True if deleted successfully</returns>
+    public bool DeleteTempSession(string sessionId, SessionIdentity requestor)
     {
         try
         {
@@ -305,10 +367,34 @@ public class TempFileManager : IHostedService, IDisposable
             if (metadataFiles.Length == 0)
                 return false;
 
-            foreach (var metadataPath in metadataFiles) DeleteTempFileSet(metadataPath);
+            var deleted = false;
+            foreach (var metadataPath in metadataFiles)
+            {
+                var metadata = ReadMetadata(metadataPath);
+                if (metadata == null)
+                {
+                    // Invalid metadata, allow cleanup
+                    DeleteTempFileSet(metadataPath);
+                    deleted = true;
+                    continue;
+                }
 
-            _logger?.LogInformation("Deleted temp session: {SessionId}", sessionId);
-            return true;
+                if (!CanAccessTempFile(requestor, metadata))
+                {
+                    _logger?.LogWarning(
+                        "Access denied: {Requestor} attempted to delete temp file {SessionId}",
+                        requestor, sessionId);
+                    continue;
+                }
+
+                DeleteTempFileSet(metadataPath);
+                deleted = true;
+            }
+
+            if (deleted)
+                _logger?.LogInformation("Deleted temp session: {SessionId}", sessionId);
+
+            return deleted;
         }
         catch (Exception ex)
         {
@@ -409,11 +495,9 @@ public class TempFileManager : IHostedService, IDisposable
         {
             var metadata = ReadMetadata(metadataPath);
 
-            // Delete document file
             if (metadata?.TempPath != null && File.Exists(metadata.TempPath))
                 File.Delete(metadata.TempPath);
 
-            // Delete metadata file
             if (File.Exists(metadataPath))
                 File.Delete(metadataPath);
         }
@@ -458,6 +542,16 @@ public class TempFileMetadata
     ///     Whether to prompt user on reconnect
     /// </summary>
     public bool PromptOnReconnect { get; set; }
+
+    /// <summary>
+    ///     Owner tenant ID for session isolation
+    /// </summary>
+    public string? OwnerTenantId { get; set; }
+
+    /// <summary>
+    ///     Owner user ID for session isolation
+    /// </summary>
+    public string? OwnerUserId { get; set; }
 }
 
 /// <summary>
@@ -504,6 +598,16 @@ public class RecoverableFileInfo
     ///     Whether to prompt user on reconnect
     /// </summary>
     public bool PromptOnReconnect { get; set; }
+
+    /// <summary>
+    ///     Owner tenant ID for session isolation
+    /// </summary>
+    public string? OwnerTenantId { get; set; }
+
+    /// <summary>
+    ///     Owner user ID for session isolation
+    /// </summary>
+    public string? OwnerUserId { get; set; }
 }
 
 /// <summary>

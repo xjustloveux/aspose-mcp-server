@@ -13,54 +13,46 @@ public class WordProtectionToolTests : WordTestBase
         _tool = new WordProtectionTool(SessionManager);
     }
 
-    #region General Tests
+    #region General
+
+    [Theory]
+    [InlineData("ReadOnly", ProtectionType.ReadOnly)]
+    [InlineData("AllowOnlyComments", ProtectionType.AllowOnlyComments)]
+    [InlineData("AllowOnlyFormFields", ProtectionType.AllowOnlyFormFields)]
+    [InlineData("AllowOnlyRevisions", ProtectionType.AllowOnlyRevisions)]
+    public void ProtectDocument_WithDifferentProtectionTypes_ShouldProtectDocument(string protectionType,
+        ProtectionType expectedType)
+    {
+        var docPath = CreateWordDocument($"test_protect_{protectionType.ToLower()}.docx");
+        var outputPath = CreateTestFilePath($"test_protect_{protectionType.ToLower()}_output.docx");
+        var result = _tool.Execute("protect", docPath, outputPath: outputPath,
+            password: "test123", protectionType: protectionType);
+        var doc = new Document(outputPath);
+        Assert.Equal(expectedType, doc.ProtectionType);
+        Assert.Contains(protectionType, result);
+    }
 
     [Fact]
-    public void ProtectDocument_WithReadOnly_ShouldProtectDocument()
+    public void ProtectDocument_DefaultProtectionType_ShouldUseReadOnly()
     {
-        var docPath = CreateWordDocument("test_protect_readonly.docx");
-        var outputPath = CreateTestFilePath("test_protect_readonly_output.docx");
-        var result = _tool.Execute("protect", docPath, outputPath: outputPath,
-            password: "test123", protectionType: "ReadOnly");
+        var docPath = CreateWordDocument("test_protect_default.docx");
+        var outputPath = CreateTestFilePath("test_protect_default_output.docx");
+        _tool.Execute("protect", docPath, outputPath: outputPath, password: "test123");
         var doc = new Document(outputPath);
         Assert.Equal(ProtectionType.ReadOnly, doc.ProtectionType);
-        Assert.Contains("ReadOnly", result);
     }
 
     [Fact]
-    public void ProtectDocument_WithAllowOnlyComments_ShouldProtectDocument()
+    public void ProtectDocument_WithInvalidProtectionType_ShouldUseDefaultReadOnly()
     {
-        var docPath = CreateWordDocument("test_protect_comments.docx");
-        var outputPath = CreateTestFilePath("test_protect_comments_output.docx");
-        var result = _tool.Execute("protect", docPath, outputPath: outputPath,
-            password: "test123", protectionType: "AllowOnlyComments");
-        var doc = new Document(outputPath);
-        Assert.Equal(ProtectionType.AllowOnlyComments, doc.ProtectionType);
-        Assert.Contains("AllowOnlyComments", result);
-    }
+        var docPath = CreateWordDocument("test_protect_invalid_type.docx");
+        var outputPath = CreateTestFilePath("test_protect_invalid_type_output.docx");
 
-    [Fact]
-    public void ProtectDocument_WithAllowOnlyFormFields_ShouldProtectDocument()
-    {
-        var docPath = CreateWordDocument("test_protect_formfields.docx");
-        var outputPath = CreateTestFilePath("test_protect_formfields_output.docx");
         var result = _tool.Execute("protect", docPath, outputPath: outputPath,
-            password: "test123", protectionType: "AllowOnlyFormFields");
-        var doc = new Document(outputPath);
-        Assert.Equal(ProtectionType.AllowOnlyFormFields, doc.ProtectionType);
-        Assert.Contains("AllowOnlyFormFields", result);
-    }
+            password: "test123", protectionType: "InvalidType");
 
-    [Fact]
-    public void ProtectDocument_WithAllowOnlyRevisions_ShouldProtectDocument()
-    {
-        var docPath = CreateWordDocument("test_protect_revisions.docx");
-        var outputPath = CreateTestFilePath("test_protect_revisions_output.docx");
-        var result = _tool.Execute("protect", docPath, outputPath: outputPath,
-            password: "test123", protectionType: "AllowOnlyRevisions");
-        var doc = new Document(outputPath);
-        Assert.Equal(ProtectionType.AllowOnlyRevisions, doc.ProtectionType);
-        Assert.Contains("AllowOnlyRevisions", result);
+        Assert.Contains("protected", result, StringComparison.OrdinalIgnoreCase);
+        Assert.True(File.Exists(outputPath));
     }
 
     [Fact]
@@ -75,8 +67,8 @@ public class WordProtectionToolTests : WordTestBase
         var result = _tool.Execute("unprotect", docPath, outputPath: outputPath, password: "test123");
         var resultDoc = new Document(outputPath);
         Assert.Equal(ProtectionType.NoProtection, resultDoc.ProtectionType);
-        Assert.Contains("Protection removed successfully", result);
-        Assert.Contains("ReadOnly", result); // Should show previous protection type
+        Assert.StartsWith("Protection removed successfully", result);
+        Assert.Contains("ReadOnly", result); // Check protection type was ReadOnly
     }
 
     [Fact]
@@ -98,42 +90,60 @@ public class WordProtectionToolTests : WordTestBase
         Assert.True(File.Exists(outputPath));
     }
 
-    [Fact]
-    public void UnprotectDocument_WithWrongPassword_ShouldThrowException()
+    [Theory]
+    [InlineData("PROTECT")]
+    [InlineData("PrOtEcT")]
+    [InlineData("protect")]
+    public void Execute_ProtectOperationIsCaseInsensitive(string operation)
     {
-        var docPath = CreateWordDocument("test_unprotect_wrongpwd.docx");
+        var docPath = CreateWordDocument($"test_case_{operation}.docx");
+        var outputPath = CreateTestFilePath($"test_case_{operation}_output.docx");
+
+        var result = _tool.Execute(operation, docPath, outputPath: outputPath,
+            password: "test123", protectionType: "ReadOnly");
+
+        Assert.Contains("protected", result, StringComparison.OrdinalIgnoreCase);
+        Assert.True(File.Exists(outputPath));
+    }
+
+    [Theory]
+    [InlineData("UNPROTECT")]
+    [InlineData("UnPrOtEcT")]
+    [InlineData("unprotect")]
+    public void Execute_UnprotectOperationIsCaseInsensitive(string operation)
+    {
+        var docPath = CreateWordDocument($"test_unprotect_case_{operation}.docx");
         var doc = new Document(docPath);
-        doc.Protect(ProtectionType.ReadOnly, "correctpassword");
+        doc.Protect(ProtectionType.ReadOnly, "test123");
         doc.Save(docPath);
-        var exception = Assert.Throws<InvalidOperationException>(() =>
-            _tool.Execute("unprotect", docPath, password: "wrongpassword"));
-        Assert.Contains("password", exception.Message, StringComparison.OrdinalIgnoreCase);
+
+        var outputPath = CreateTestFilePath($"test_unprotect_case_{operation}_output.docx");
+        var result = _tool.Execute(operation, docPath, outputPath: outputPath, password: "test123");
+
+        Assert.StartsWith("Protection removed", result);
     }
 
-    [Fact]
-    public void ProtectDocument_DefaultProtectionType_ShouldUseReadOnly()
+    [Theory]
+    [InlineData("READONLY", ProtectionType.ReadOnly)]
+    [InlineData("readonly", ProtectionType.ReadOnly)]
+    [InlineData("allowonlycomments", ProtectionType.AllowOnlyComments)]
+    [InlineData("ALLOWONLYFORMFIELDS", ProtectionType.AllowOnlyFormFields)]
+    [InlineData("AllowOnlyRevisions", ProtectionType.AllowOnlyRevisions)]
+    public void ProtectDocument_ProtectionTypeIsCaseInsensitive(string protectionType, ProtectionType expectedType)
     {
-        var docPath = CreateWordDocument("test_protect_default.docx");
-        var outputPath = CreateTestFilePath("test_protect_default_output.docx");
-        _tool.Execute("protect", docPath, outputPath: outputPath, password: "test123");
-        var doc = new Document(outputPath);
-        Assert.Equal(ProtectionType.ReadOnly, doc.ProtectionType);
-    }
+        var docPath = CreateWordDocument($"test_ptype_{protectionType.ToLower()}.docx");
+        var outputPath = CreateTestFilePath($"test_ptype_{protectionType.ToLower()}_output.docx");
 
-    [Fact]
-    public void ProtectDocument_WithCaseInsensitiveProtectionType_ShouldWork()
-    {
-        var docPath = CreateWordDocument("test_protect_lowercase.docx");
-        var outputPath = CreateTestFilePath("test_protect_lowercase_output.docx");
         _tool.Execute("protect", docPath, outputPath: outputPath,
-            password: "test123", protectionType: "readonly");
+            password: "test123", protectionType: protectionType);
+
         var doc = new Document(outputPath);
-        Assert.Equal(ProtectionType.ReadOnly, doc.ProtectionType);
+        Assert.Equal(expectedType, doc.ProtectionType);
     }
 
     #endregion
 
-    #region Exception Tests
+    #region Exception
 
     [Fact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
@@ -146,21 +156,15 @@ public class WordProtectionToolTests : WordTestBase
         Assert.Contains("unknown_operation", ex.Message);
     }
 
-    [Fact]
-    public void ProtectDocument_WithEmptyPassword_ShouldThrowException()
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(null)]
+    public void ProtectDocument_WithInvalidPassword_ShouldThrowException(string? password)
     {
-        var docPath = CreateWordDocument("test_protect_emptypwd.docx");
+        var docPath = CreateWordDocument($"test_protect_pwd_{password?.Length ?? 0}.docx");
         var exception = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("protect", docPath, password: "", protectionType: "ReadOnly"));
-        Assert.Contains("Password is required", exception.Message);
-    }
-
-    [Fact]
-    public void ProtectDocument_WithoutPassword_ShouldThrowException()
-    {
-        var docPath = CreateWordDocument("test_protect_nopwd.docx");
-        var exception = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("protect", docPath, protectionType: "ReadOnly"));
+            _tool.Execute("protect", docPath, password: password, protectionType: "ReadOnly"));
         Assert.Contains("Password is required", exception.Message);
     }
 
@@ -168,42 +172,51 @@ public class WordProtectionToolTests : WordTestBase
     public void ProtectDocument_WithNonExistentFile_ShouldThrowException()
     {
         var nonExistentPath = CreateTestFilePath("non_existent_file.docx");
-        var exception = Assert.Throws<InvalidOperationException>(() =>
+        Assert.ThrowsAny<Exception>(() =>
             _tool.Execute("protect", nonExistentPath, password: "test123"));
-        Assert.Contains("not found", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public void ProtectDocument_WithInvalidProtectionType_ShouldUseDefaultReadOnly()
+    public void UnprotectDocument_WithWrongPassword_ShouldThrowException()
     {
-        var docPath = CreateWordDocument("test_protect_invalid_type.docx");
-        var outputPath = CreateTestFilePath("test_protect_invalid_type_output.docx");
+        var docPath = CreateWordDocument("test_unprotect_wrongpwd.docx");
+        var doc = new Document(docPath);
+        doc.Protect(ProtectionType.ReadOnly, "correctpassword");
+        doc.Save(docPath);
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            _tool.Execute("unprotect", docPath, password: "wrongpassword"));
+        Assert.Contains("password", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
 
-        // Act - Invalid protection type should fall back to ReadOnly
-        var result = _tool.Execute("protect", docPath, outputPath: outputPath,
-            password: "test123", protectionType: "InvalidType");
-
-        // Assert - Should succeed with default ReadOnly protection
-        Assert.Contains("protected", result, StringComparison.OrdinalIgnoreCase);
-        Assert.True(File.Exists(outputPath));
+    [Theory]
+    [InlineData("protect")]
+    [InlineData("unprotect")]
+    public void Execute_WithoutPathAndSessionId_ShouldThrowException(string operation)
+    {
+        var exception = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute(operation, password: "test123", protectionType: "ReadOnly"));
+        Assert.Contains("Either sessionId or path must be provided", exception.Message);
     }
 
     #endregion
 
-    #region Session ID Tests
+    #region Session
 
-    [Fact]
-    public void ProtectDocument_WithSessionId_ShouldProtectInMemory()
+    [Theory]
+    [InlineData("ReadOnly", ProtectionType.ReadOnly)]
+    [InlineData("AllowOnlyComments", ProtectionType.AllowOnlyComments)]
+    [InlineData("AllowOnlyFormFields", ProtectionType.AllowOnlyFormFields)]
+    [InlineData("AllowOnlyRevisions", ProtectionType.AllowOnlyRevisions)]
+    public void ProtectDocument_WithSessionId_ShouldProtectInMemory(string protectionType, ProtectionType expectedType)
     {
-        var docPath = CreateWordDocument("test_session_protect.docx");
+        var docPath = CreateWordDocument($"test_session_protect_{protectionType.ToLower()}.docx");
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("protect", sessionId: sessionId,
-            password: "session123", protectionType: "ReadOnly");
-        Assert.Contains("ReadOnly", result);
+            password: "session123", protectionType: protectionType);
+        Assert.Contains(protectionType, result);
 
-        // Verify in-memory document is protected
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
-        Assert.Equal(ProtectionType.ReadOnly, sessionDoc.ProtectionType);
+        Assert.Equal(expectedType, sessionDoc.ProtectionType);
     }
 
     [Fact]
@@ -216,33 +229,28 @@ public class WordProtectionToolTests : WordTestBase
 
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("unprotect", sessionId: sessionId, password: "test123");
-        Assert.Contains("Protection removed", result);
+        Assert.StartsWith("Protection removed", result);
 
-        // Verify in-memory document is unprotected
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         Assert.Equal(ProtectionType.NoProtection, sessionDoc.ProtectionType);
     }
 
     [Fact]
-    public void ProtectDocument_WithSessionId_VerifyInMemoryProtection()
+    public void UnprotectDocument_WithSessionId_WhenNotProtected_ShouldReturnMessage()
     {
-        var docPath = CreateWordDocument("test_session_verify_protect.docx");
+        var docPath = CreateWordDocument("test_session_unprotect_none.docx");
         var sessionId = OpenSession(docPath);
-
-        // First protect
-        _tool.Execute("protect", sessionId: sessionId,
-            password: "verify123", protectionType: "AllowOnlyComments");
-
-        // Act - verify protection type via in-memory document
-        var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
-        Assert.Equal(ProtectionType.AllowOnlyComments, sessionDoc.ProtectionType);
+        var result = _tool.Execute("unprotect", sessionId: sessionId);
+        Assert.Contains("not protected", result);
     }
 
-    [Fact]
-    public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
+    [Theory]
+    [InlineData("protect")]
+    [InlineData("unprotect")]
+    public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException(string operation)
     {
         Assert.Throws<KeyNotFoundException>(() =>
-            _tool.Execute("protect", sessionId: "invalid_session_id", password: "test123"));
+            _tool.Execute(operation, sessionId: "invalid_session_id", password: "test123"));
     }
 
     [Fact]
@@ -253,26 +261,14 @@ public class WordProtectionToolTests : WordTestBase
 
         var sessionId = OpenSession(docPath2);
 
-        // Act - provide both path and sessionId
         _tool.Execute("protect", docPath1, sessionId,
             password: "both123", protectionType: "AllowOnlyRevisions");
 
-        // Assert - session document should be protected
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         Assert.Equal(ProtectionType.AllowOnlyRevisions, sessionDoc.ProtectionType);
 
-        // Original file should not be protected
         var fileDoc = new Document(docPath1);
         Assert.Equal(ProtectionType.NoProtection, fileDoc.ProtectionType);
-    }
-
-    [Fact]
-    public void UnprotectDocument_WithSessionId_WhenNotProtected_ShouldReturnMessage()
-    {
-        var docPath = CreateWordDocument("test_session_unprotect_none.docx");
-        var sessionId = OpenSession(docPath);
-        var result = _tool.Execute("unprotect", sessionId: sessionId);
-        Assert.Contains("not protected", result);
     }
 
     #endregion

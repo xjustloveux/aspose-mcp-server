@@ -17,6 +17,11 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 public class PptTableTool
 {
     /// <summary>
+    ///     Identity accessor for session isolation.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document session handling.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -25,11 +30,37 @@ public class PptTableTool
     ///     Initializes a new instance of the <see cref="PptTableTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory editing.</param>
-    public PptTableTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation.</param>
+    public PptTableTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a PowerPoint table operation (add, edit, delete, get_content, insert_row, insert_column, delete_row,
+    ///     delete_column, edit_cell).
+    /// </summary>
+    /// <param name="operation">
+    ///     The operation to perform: add, edit, delete, get_content, insert_row, insert_column,
+    ///     delete_row, delete_column, edit_cell.
+    /// </param>
+    /// <param name="path">Presentation file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (optional, defaults to input path).</param>
+    /// <param name="slideIndex">Slide index (0-based).</param>
+    /// <param name="shapeIndex">Shape index of the table (0-based, required for most operations).</param>
+    /// <param name="rows">Number of rows (required for add).</param>
+    /// <param name="columns">Number of columns (required for add).</param>
+    /// <param name="x">X position in points (optional for add, defaults to 50).</param>
+    /// <param name="y">Y position in points (optional for add, defaults to 50).</param>
+    /// <param name="data">2D array of cell data as JSON (optional, for add/edit).</param>
+    /// <param name="rowIndex">Row index (0-based, required for insert_row/delete_row/edit_cell).</param>
+    /// <param name="columnIndex">Column index (0-based, required for insert_column/delete_column/edit_cell).</param>
+    /// <param name="text">Cell text content (required for edit_cell).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "ppt_table")]
     [Description(
         @"Manage PowerPoint tables. Supports 9 operations: add, edit, delete, get_content, insert_row, insert_column, delete_row, delete_column, edit_cell.
@@ -83,7 +114,7 @@ Usage examples:
         [Description("Cell text content (required for edit_cell)")]
         string? text = null)
     {
-        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {

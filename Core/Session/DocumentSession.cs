@@ -11,9 +11,9 @@ public class DocumentSession : IDisposable
     private readonly SemaphoreSlim _lock = new(1, 1);
 
     /// <summary>
-    ///     Tracks whether this session has been disposed
+    ///     Tracks whether this session has been disposed (0 = not disposed, 1 = disposed)
     /// </summary>
-    private bool _disposed;
+    private int _disposed;
 
     /// <summary>
     ///     Creates a new document session
@@ -80,21 +80,44 @@ public class DocumentSession : IDisposable
     public string? ClientId { get; set; }
 
     /// <summary>
+    ///     Session owner identity for isolation
+    /// </summary>
+    public SessionIdentity Owner { get; init; } = SessionIdentity.GetAnonymous();
+
+    /// <summary>
     ///     Estimated memory usage in bytes
     /// </summary>
     public long EstimatedMemoryBytes { get; set; }
 
     /// <summary>
+    ///     Whether this session has been disposed
+    /// </summary>
+    public bool IsDisposed => Volatile.Read(ref _disposed) == 1;
+
+    /// <summary>
     ///     Disposes the session and releases all resources including the document.
+    ///     Thread-safe: uses Interlocked to prevent double-dispose.
     /// </summary>
     public void Dispose()
     {
-        if (_disposed) return;
-        _disposed = true;
+        // Atomically set _disposed to 1, return previous value
+        // If previous value was already 1, another thread already disposed
+        if (Interlocked.Exchange(ref _disposed, 1) == 1)
+            return;
 
         _lock.Dispose();
 
         if (Document is IDisposable disposable) disposable.Dispose();
+    }
+
+    /// <summary>
+    ///     Throws ObjectDisposedException if session is disposed
+    /// </summary>
+    /// <exception cref="ObjectDisposedException">Thrown when session is disposed</exception>
+    private void ThrowIfDisposed()
+    {
+        if (IsDisposed)
+            throw new ObjectDisposedException(nameof(DocumentSession), $"Session {SessionId} has been disposed");
     }
 
     /// <summary>
@@ -104,11 +127,22 @@ public class DocumentSession : IDisposable
     /// <param name="operation">The operation to execute on the document</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Result of the operation</returns>
+    /// <exception cref="ObjectDisposedException">Thrown when session is disposed</exception>
     public async Task<T> ExecuteAsync<T>(Func<object, T> operation, CancellationToken cancellationToken = default)
     {
-        await _lock.WaitAsync(cancellationToken);
+        ThrowIfDisposed();
         try
         {
+            await _lock.WaitAsync(cancellationToken);
+        }
+        catch (ObjectDisposedException)
+        {
+            throw new ObjectDisposedException(nameof(DocumentSession), $"Session {SessionId} has been disposed");
+        }
+
+        try
+        {
+            ThrowIfDisposed(); // Re-check after acquiring lock
             LastAccessedAt = DateTime.UtcNow;
             return operation(Document);
         }
@@ -125,11 +159,22 @@ public class DocumentSession : IDisposable
     /// <param name="operation">The async operation to execute on the document</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Result of the operation</returns>
+    /// <exception cref="ObjectDisposedException">Thrown when session is disposed</exception>
     public async Task<T> ExecuteAsync<T>(Func<object, Task<T>> operation, CancellationToken cancellationToken = default)
     {
-        await _lock.WaitAsync(cancellationToken);
+        ThrowIfDisposed();
         try
         {
+            await _lock.WaitAsync(cancellationToken);
+        }
+        catch (ObjectDisposedException)
+        {
+            throw new ObjectDisposedException(nameof(DocumentSession), $"Session {SessionId} has been disposed");
+        }
+
+        try
+        {
+            ThrowIfDisposed(); // Re-check after acquiring lock
             LastAccessedAt = DateTime.UtcNow;
             return await operation(Document);
         }
@@ -140,14 +185,65 @@ public class DocumentSession : IDisposable
     }
 
     /// <summary>
-    ///     Get the document as a specific type
+    ///     Get the document as a specific type (thread-safe)
     /// </summary>
     /// <typeparam name="T">Target document type</typeparam>
     /// <returns>Document cast to type T</returns>
     /// <exception cref="InvalidCastException">Thrown when document is not of type T</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when session is disposed</exception>
     public T GetDocument<T>() where T : class
     {
-        LastAccessedAt = DateTime.UtcNow;
-        return Document as T ?? throw new InvalidCastException($"Document is not of type {typeof(T).Name}");
+        ThrowIfDisposed();
+        try
+        {
+            _lock.Wait();
+        }
+        catch (ObjectDisposedException)
+        {
+            throw new ObjectDisposedException(nameof(DocumentSession), $"Session {SessionId} has been disposed");
+        }
+
+        try
+        {
+            ThrowIfDisposed(); // Re-check after acquiring lock
+            LastAccessedAt = DateTime.UtcNow;
+            return Document as T ?? throw new InvalidCastException($"Document is not of type {typeof(T).Name}");
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    /// <summary>
+    ///     Get the document as a specific type asynchronously (thread-safe)
+    /// </summary>
+    /// <typeparam name="T">Target document type</typeparam>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Document cast to type T</returns>
+    /// <exception cref="InvalidCastException">Thrown when document is not of type T</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when session is disposed</exception>
+    public async Task<T> GetDocumentAsync<T>(CancellationToken cancellationToken = default) where T : class
+    {
+        ThrowIfDisposed();
+        try
+        {
+            await _lock.WaitAsync(cancellationToken);
+        }
+        catch (ObjectDisposedException)
+        {
+            throw new ObjectDisposedException(nameof(DocumentSession), $"Session {SessionId} has been disposed");
+        }
+
+        try
+        {
+            ThrowIfDisposed(); // Re-check after acquiring lock
+            LastAccessedAt = DateTime.UtcNow;
+            return Document as T ?? throw new InvalidCastException($"Document is not of type {typeof(T).Name}");
+        }
+        finally
+        {
+            _lock.Release();
+        }
     }
 }

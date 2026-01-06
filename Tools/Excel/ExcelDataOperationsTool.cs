@@ -18,6 +18,11 @@ namespace AsposeMcpServer.Tools.Excel;
 public class ExcelDataOperationsTool
 {
     /// <summary>
+    ///     Session identity accessor for session isolation support.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Document session manager for in-memory editing support.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -26,11 +31,36 @@ public class ExcelDataOperationsTool
     ///     Initializes a new instance of the <see cref="ExcelDataOperationsTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
-    public ExcelDataOperationsTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    public ExcelDataOperationsTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes an Excel data operation (sort, find_replace, batch_write, get_content, get_statistics, or get_used_range).
+    /// </summary>
+    /// <param name="operation">
+    ///     The operation to perform: sort, find_replace, batch_write, get_content, get_statistics, or
+    ///     get_used_range.
+    /// </param>
+    /// <param name="path">Excel file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="sheetIndex">Sheet index (0-based).</param>
+    /// <param name="range">Cell range (e.g., 'A1:C10', required for sort, optional for get_content).</param>
+    /// <param name="sortColumn">Column index to sort by (0-based, relative to range start, required for sort).</param>
+    /// <param name="ascending">True for ascending, false for descending.</param>
+    /// <param name="hasHeader">Whether the range has a header row.</param>
+    /// <param name="findText">Text to find (required for find_replace).</param>
+    /// <param name="replaceText">Text to replace with (required for find_replace).</param>
+    /// <param name="matchCase">Match case.</param>
+    /// <param name="matchEntireCell">Match entire cell content.</param>
+    /// <param name="data">Data for batch_write as JSON array or object.</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "excel_data_operations")]
     [Description(
         @"Excel data operations. Supports 6 operations: sort, find_replace, batch_write, get_content, get_statistics, get_used_range.
@@ -72,7 +102,7 @@ Usage examples:
         [Description("Data for batch_write: [{cell:'A1',value:'val1'},...] or JSON object {A1:'val1',B1:'val2'}")]
         JsonNode? data = null)
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {

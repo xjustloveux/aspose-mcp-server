@@ -15,6 +15,11 @@ namespace AsposeMcpServer.Tools.Word;
 public class WordHyperlinkTool
 {
     /// <summary>
+    ///     Identity accessor for session isolation
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document session operations
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -23,11 +28,31 @@ public class WordHyperlinkTool
     ///     Initializes a new instance of the WordHyperlinkTool class
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document operations</param>
-    public WordHyperlinkTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation</param>
+    public WordHyperlinkTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a Word hyperlink operation (add, edit, delete, get).
+    /// </summary>
+    /// <param name="operation">The operation to perform: add, edit, delete, get.</param>
+    /// <param name="path">Word document file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="text">Display text for the hyperlink (for add).</param>
+    /// <param name="url">URL or target address (for add/edit).</param>
+    /// <param name="subAddress">Internal bookmark name for document navigation (for add/edit).</param>
+    /// <param name="paragraphIndex">Paragraph index to insert hyperlink after (0-based, for add).</param>
+    /// <param name="tooltip">Tooltip text (for add/edit).</param>
+    /// <param name="hyperlinkIndex">Hyperlink index (0-based, for edit/delete).</param>
+    /// <param name="displayText">New display text (for edit).</param>
+    /// <param name="keepText">Keep display text when deleting hyperlink (default: false).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "word_hyperlink")]
     [Description(@"Manage Word hyperlinks. Supports 4 operations: add, edit, delete, get.
 
@@ -70,7 +95,7 @@ Usage examples:
             "Keep display text when deleting hyperlink (unlink instead of remove, optional, default: false, for delete operation)")]
         bool keepText = false)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {
@@ -175,15 +200,11 @@ Usage examples:
             builder.MoveToDocumentEnd();
         }
 
-        // Insert hyperlink
         if (!string.IsNullOrEmpty(subAddress))
-            // Internal bookmark link
             builder.InsertHyperlink(text, subAddress, true);
         else
-            // External URL link
             builder.InsertHyperlink(text, url!, false);
 
-        // Set tooltip and subAddress if provided
         var fields = doc.Range.Fields;
         if (fields.Count > 0)
         {
@@ -255,7 +276,6 @@ Usage examples:
         var hyperlinkField = hyperlinkFields[hyperlinkIndex];
         List<string> changes = [];
 
-        // Update URL if provided
         if (!string.IsNullOrEmpty(url))
         {
             ValidateUrlFormat(url);
@@ -263,28 +283,24 @@ Usage examples:
             changes.Add($"URL: {url}");
         }
 
-        // Update subAddress if provided
         if (!string.IsNullOrEmpty(subAddress))
         {
             hyperlinkField.SubAddress = subAddress;
             changes.Add($"SubAddress: {subAddress}");
         }
 
-        // Update display text if provided
         if (!string.IsNullOrEmpty(displayText))
         {
             hyperlinkField.Result = displayText;
             changes.Add($"Display text: {displayText}");
         }
 
-        // Update tooltip if provided
         if (!string.IsNullOrEmpty(tooltip))
         {
             hyperlinkField.ScreenTip = tooltip;
             changes.Add($"Tooltip: {tooltip}");
         }
 
-        // Update the field
         hyperlinkField.Update();
 
         ctx.Save(outputPath);
@@ -324,17 +340,12 @@ Usage examples:
         }
 
         var hyperlinkField = hyperlinkFields[hyperlinkIndex];
-
-        // Get hyperlink info before deletion
         var displayTextValue = hyperlinkField.Result ?? "";
         var address = hyperlinkField.Address ?? "";
 
-        // Delete the hyperlink field
         if (keepText)
-            // Unlink: remove hyperlink but keep display text
             hyperlinkField.Unlink();
         else
-            // Remove: delete hyperlink and its content
             hyperlinkField.Remove();
 
         ctx.Save(outputPath);
@@ -388,7 +399,6 @@ Usage examples:
             return JsonSerializer.Serialize(new
                 { count = 0, hyperlinks = Array.Empty<object>(), message = "No hyperlinks found in document" });
 
-        // Build paragraph lookup for finding hyperlink positions
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
 
         List<object> hyperlinkList = [];
@@ -408,7 +418,6 @@ Usage examples:
                 subAddress = hyperlinkField.SubAddress ?? "";
                 tooltip = hyperlinkField.ScreenTip ?? "";
 
-                // Find paragraph index
                 var fieldStart = hyperlinkField.Start;
                 if (fieldStart?.ParentNode is Paragraph para)
                 {

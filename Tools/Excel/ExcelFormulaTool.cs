@@ -16,6 +16,11 @@ namespace AsposeMcpServer.Tools.Excel;
 public class ExcelFormulaTool
 {
     /// <summary>
+    ///     Session identity accessor for session isolation support.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Document session manager for in-memory editing support.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -24,11 +29,29 @@ public class ExcelFormulaTool
     ///     Initializes a new instance of the <see cref="ExcelFormulaTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
-    public ExcelFormulaTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    public ExcelFormulaTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes an Excel formula operation (add, get, get_result, calculate, set_array, get_array).
+    /// </summary>
+    /// <param name="operation">The operation to perform: add, get, get_result, calculate, set_array, get_array.</param>
+    /// <param name="path">Excel file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="sheetIndex">Sheet index (0-based, default: 0).</param>
+    /// <param name="cell">Cell reference (e.g., 'A1', required for add/get_result/get_array).</param>
+    /// <param name="range">Cell range (e.g., 'A1:C10', optional for get, required for set_array).</param>
+    /// <param name="formula">Formula (e.g., '=SUM(A1:A10)', required for add/set_array).</param>
+    /// <param name="calculateBeforeRead">Calculate formulas before reading (optional, for get_result, default: true).</param>
+    /// <param name="autoCalculate">Automatically calculate formulas after adding (optional, for add/set_array, default: true).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "excel_formula")]
     [Description(@"Manage Excel formulas. Supports 6 operations: add, get, get_result, calculate, set_array, get_array.
 
@@ -99,7 +122,7 @@ Usage examples:
         if (string.IsNullOrEmpty(formula))
             throw new ArgumentException("formula is required for add operation");
 
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var workbook = ctx.Document;
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
 
@@ -148,7 +171,7 @@ Usage examples:
     /// <exception cref="ArgumentException">Thrown when the range format is invalid.</exception>
     private string GetFormulas(string? path, string? sessionId, int sheetIndex, string? range)
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var worksheet = ExcelHelper.GetWorksheet(ctx.Document, sheetIndex);
         var cells = worksheet.Cells;
 
@@ -229,7 +252,7 @@ Usage examples:
         if (string.IsNullOrEmpty(cell))
             throw new ArgumentException("cell is required for get_result operation");
 
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var workbook = ctx.Document;
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
         var cellObj = worksheet.Cells[cell];
@@ -266,7 +289,7 @@ Usage examples:
     /// <returns>A message indicating the result of the operation.</returns>
     private string CalculateFormulas(string? path, string? sessionId, string? outputPath, int _)
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
         ctx.Document.CalculateFormula();
         ctx.Save(outputPath);
 
@@ -293,7 +316,7 @@ Usage examples:
         if (string.IsNullOrEmpty(formula))
             throw new ArgumentException("formula is required for set_array operation");
 
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var workbook = ctx.Document;
         var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
 
@@ -411,7 +434,7 @@ Usage examples:
         if (string.IsNullOrEmpty(cell))
             throw new ArgumentException("cell is required for get_array operation");
 
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var worksheet = ExcelHelper.GetWorksheet(ctx.Document, sheetIndex);
         var cellObj = worksheet.Cells[cell];
 

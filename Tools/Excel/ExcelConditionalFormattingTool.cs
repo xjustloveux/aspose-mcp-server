@@ -21,6 +21,11 @@ public class ExcelConditionalFormattingTool
     private static readonly Regex RangeRegex = new(@"^[A-Za-z]{1,3}\d+:[A-Za-z]{1,3}\d+$", RegexOptions.Compiled);
 
     /// <summary>
+    ///     Session identity accessor for session isolation support.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Document session manager for in-memory editing support.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -29,11 +34,31 @@ public class ExcelConditionalFormattingTool
     ///     Initializes a new instance of the <see cref="ExcelConditionalFormattingTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
-    public ExcelConditionalFormattingTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    public ExcelConditionalFormattingTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes an Excel conditional formatting operation (add, edit, delete, or get).
+    /// </summary>
+    /// <param name="operation">The operation to perform: add, edit, delete, or get.</param>
+    /// <param name="path">Excel file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="sheetIndex">Sheet index (0-based).</param>
+    /// <param name="range">Cell range (e.g., 'A1:A10', required for add).</param>
+    /// <param name="conditionalFormattingIndex">Conditional formatting index (0-based, required for edit/delete).</param>
+    /// <param name="conditionIndex">Condition index within the formatting rule (0-based, optional for edit).</param>
+    /// <param name="condition">Condition type: GreaterThan, LessThan, Between, Equal (required for add).</param>
+    /// <param name="value">Condition value / Formula1 (required for add).</param>
+    /// <param name="formula2">Second value for 'Between' condition (optional).</param>
+    /// <param name="backgroundColor">Background color for matching cells.</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "excel_conditional_formatting")]
     [Description(@"Manage Excel conditional formatting. Supports 4 operations: add, edit, delete, get.
 
@@ -71,7 +96,7 @@ Usage examples:
         [Description("Background color for matching cells (default: Yellow)")]
         string backgroundColor = "Yellow")
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {

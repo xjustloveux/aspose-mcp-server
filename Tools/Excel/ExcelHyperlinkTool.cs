@@ -14,6 +14,11 @@ namespace AsposeMcpServer.Tools.Excel;
 public class ExcelHyperlinkTool
 {
     /// <summary>
+    ///     Session identity accessor for session isolation support.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Document session manager for in-memory editing support.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -22,11 +27,28 @@ public class ExcelHyperlinkTool
     ///     Initializes a new instance of the <see cref="ExcelHyperlinkTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
-    public ExcelHyperlinkTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    public ExcelHyperlinkTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes an Excel hyperlink operation (add, edit, delete, get).
+    /// </summary>
+    /// <param name="operation">The operation to perform: add, edit, delete, get.</param>
+    /// <param name="path">Excel file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="sheetIndex">Sheet index (0-based, default: 0).</param>
+    /// <param name="cell">Cell reference in A1 notation (e.g., 'A1', 'B2'). Required for add, optional for edit/delete.</param>
+    /// <param name="url">URL or file path for the hyperlink (required for add, optional for edit).</param>
+    /// <param name="displayText">Display text for the hyperlink (optional for add/edit).</param>
+    /// <param name="hyperlinkIndex">Hyperlink index (0-based, alternative to cell for edit/delete).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "excel_hyperlink")]
     [Description(@"Manage Excel hyperlinks. Supports 4 operations: add, edit, delete, get.
 
@@ -55,7 +77,7 @@ Usage examples:
         [Description("Hyperlink index (0-based, alternative to cell for edit/delete)")]
         int? hyperlinkIndex = null)
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {

@@ -18,6 +18,11 @@ namespace AsposeMcpServer.Tools.Word;
 public class WordTableTool
 {
     /// <summary>
+    ///     Identity accessor for session isolation
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document session operations
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -26,11 +31,89 @@ public class WordTableTool
     ///     Initializes a new instance of the WordTableTool class
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document operations</param>
-    public WordTableTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation</param>
+    public WordTableTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a Word table operation (create, delete, get, insert_row, delete_row, insert_column, delete_column,
+    ///     merge_cells, split_cell, edit_cell_format, move_table, copy_table, get_structure, set_border, set_column_width,
+    ///     set_row_height).
+    /// </summary>
+    /// <param name="operation">
+    ///     The operation to perform: create, delete, get, insert_row, delete_row, insert_column,
+    ///     delete_column, merge_cells, split_cell, edit_cell_format, move_table, copy_table, get_structure, set_border,
+    ///     set_column_width, set_row_height.
+    /// </param>
+    /// <param name="path">Word document file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="tableIndex">Table index (0-based).</param>
+    /// <param name="sectionIndex">Section index (0-based).</param>
+    /// <param name="rows">Number of rows (for create).</param>
+    /// <param name="columns">Number of columns (for create).</param>
+    /// <param name="paragraphIndex">Paragraph index to insert after (-1 for end, for create).</param>
+    /// <param name="tableData">Table data as JSON 2D array (for create).</param>
+    /// <param name="tableWidth">Table width in points (for create).</param>
+    /// <param name="autoFit">Auto-fit table (for create, default: true).</param>
+    /// <param name="hasHeader">Header row with alternating colors (for create, default: true).</param>
+    /// <param name="headerBackgroundColor">Header background color hex (for create).</param>
+    /// <param name="cellBackgroundColor">Cell background color hex (for create).</param>
+    /// <param name="alternatingRowColor">Alternating row color hex (for create).</param>
+    /// <param name="rowColors">Row colors by index as JSON object (for create).</param>
+    /// <param name="cellColors">Cell colors as JSON array (for create).</param>
+    /// <param name="mergeCells">Cells to merge as JSON array (for create).</param>
+    /// <param name="fontName">Font name (for create).</param>
+    /// <param name="fontSize">Font size in points (for create).</param>
+    /// <param name="rowIndex">Row index (0-based, for insert_row/delete_row/set_row_height).</param>
+    /// <param name="columnIndex">Column index (0-based, for insert_column/delete_column/set_column_width).</param>
+    /// <param name="verticalAlignment">Vertical alignment (for create).</param>
+    /// <param name="rowData">Row data as JSON array (for insert_row).</param>
+    /// <param name="columnData">Column data as JSON array (for insert_column).</param>
+    /// <param name="insertBefore">Insert before target position (for insert_row/insert_column).</param>
+    /// <param name="startRow">Start row for merge (for merge_cells).</param>
+    /// <param name="endRow">End row for merge (for merge_cells).</param>
+    /// <param name="startCol">Start column for merge (for merge_cells).</param>
+    /// <param name="endCol">End column for merge (for merge_cells).</param>
+    /// <param name="splitRows">Number of rows to split into (for split_cell).</param>
+    /// <param name="splitCols">Number of columns to split into (for split_cell).</param>
+    /// <param name="applyToRow">Apply formatting to entire row (for edit_cell_format).</param>
+    /// <param name="applyToColumn">Apply formatting to entire column (for edit_cell_format).</param>
+    /// <param name="applyToTable">Apply formatting to entire table (for edit_cell_format).</param>
+    /// <param name="backgroundColor">Background color hex (for edit_cell_format).</param>
+    /// <param name="alignment">Text alignment (for edit_cell_format).</param>
+    /// <param name="verticalAlignmentFormat">Vertical alignment for cells (for edit_cell_format).</param>
+    /// <param name="paddingTop">Top padding in points (for edit_cell_format).</param>
+    /// <param name="paddingBottom">Bottom padding in points (for edit_cell_format).</param>
+    /// <param name="paddingLeft">Left padding in points (for edit_cell_format).</param>
+    /// <param name="paddingRight">Right padding in points (for edit_cell_format).</param>
+    /// <param name="fontNameAscii">Font name for ASCII (for edit_cell_format).</param>
+    /// <param name="fontNameFarEast">Font name for Far East (for edit_cell_format).</param>
+    /// <param name="cellFontSize">Font size for cells in points (for edit_cell_format).</param>
+    /// <param name="bold">Bold text (for edit_cell_format).</param>
+    /// <param name="italic">Italic text (for edit_cell_format).</param>
+    /// <param name="color">Text color hex (for edit_cell_format).</param>
+    /// <param name="targetParagraphIndex">Target paragraph index for move/copy.</param>
+    /// <param name="sourceSectionIndex">Source section index for copy.</param>
+    /// <param name="targetSectionIndex">Target section index for copy.</param>
+    /// <param name="includeContent">Include content in get_structure.</param>
+    /// <param name="includeCellFormatting">Include cell formatting in get_structure.</param>
+    /// <param name="borderTop">Enable top border (for set_border).</param>
+    /// <param name="borderBottom">Enable bottom border (for set_border).</param>
+    /// <param name="borderLeft">Enable left border (for set_border).</param>
+    /// <param name="borderRight">Enable right border (for set_border).</param>
+    /// <param name="lineStyle">Border line style (for set_border).</param>
+    /// <param name="lineWidth">Border line width in points (for set_border).</param>
+    /// <param name="lineColor">Border line color hex (for set_border).</param>
+    /// <param name="columnWidth">Column width in points (for set_column_width).</param>
+    /// <param name="rowHeight">Row height in points (for set_row_height).</param>
+    /// <param name="heightRule">Height rule (for set_row_height).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "word_table")]
     [Description(
         @"Manage tables in Word documents. Supports 16 operations: create, delete, get, insert_row, delete_row, insert_column, delete_column, merge_cells, split_cell, edit_cell_format, move_table, copy_table, get_structure, set_border, set_column_width, set_row_height.
@@ -180,7 +263,7 @@ Notes:
         [Description("Height rule: auto, atLeast, exactly (for set_row_height, default: atLeast)")]
         string heightRule = "atLeast")
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {

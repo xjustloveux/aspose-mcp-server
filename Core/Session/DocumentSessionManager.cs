@@ -23,14 +23,16 @@ public class DocumentSessionManager : IDisposable
     private readonly ILogger<DocumentSessionManager>? _logger;
 
     /// <summary>
-    ///     Thread-safe dictionary of active sessions
+    ///     Thread-safe dictionary of active sessions grouped by owner key
+    ///     Key: Owner storage key, Value: Dictionary of SessionId -> Session
     /// </summary>
-    private readonly ConcurrentDictionary<string, DocumentSession> _sessions = new();
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, DocumentSession>> _sessionsByOwner =
+        new();
 
     /// <summary>
-    ///     Tracks whether this manager has been disposed
+    ///     Tracks whether this manager has been disposed (0 = not disposed, 1 = disposed)
     /// </summary>
-    private bool _disposed;
+    private int _disposed;
 
     /// <summary>
     ///     Creates a new document session manager
@@ -57,17 +59,22 @@ public class DocumentSessionManager : IDisposable
 
     /// <summary>
     ///     Disposes the session manager and all active sessions.
+    ///     Thread-safe: uses Interlocked to prevent double-dispose.
     /// </summary>
     public void Dispose()
     {
-        if (_disposed) return;
-        _disposed = true;
+        // Atomically set _disposed to 1, return previous value
+        // If previous value was already 1, another thread already disposed
+        if (Interlocked.Exchange(ref _disposed, 1) == 1)
+            return;
 
         _cleanupTimer?.Dispose();
 
-        foreach (var session in _sessions.Values) session.Dispose();
+        foreach (var ownerSessions in _sessionsByOwner.Values)
+        foreach (var session in ownerSessions.Values)
+            session.Dispose();
 
-        _sessions.Clear();
+        _sessionsByOwner.Clear();
     }
 
     /// <summary>
@@ -80,8 +87,32 @@ public class DocumentSessionManager : IDisposable
     /// <exception cref="FileNotFoundException">Thrown when file not found</exception>
     public string OpenDocument(string path, string mode = "readwrite")
     {
-        if (_sessions.Count >= Config.MaxSessions)
-            throw new InvalidOperationException($"Maximum session limit ({Config.MaxSessions}) reached");
+        return OpenDocument(path, SessionIdentity.GetAnonymous(), mode);
+    }
+
+    /// <summary>
+    ///     Opens a document and creates a session with owner identity
+    /// </summary>
+    /// <param name="path">File path to open</param>
+    /// <param name="owner">Session owner identity</param>
+    /// <param name="mode">Access mode (readonly, readwrite)</param>
+    /// <returns>Session ID for the opened document</returns>
+    /// <exception cref="ArgumentException">Thrown when mode is invalid</exception>
+    /// <exception cref="InvalidOperationException">Thrown when maximum session limit reached or file too large</exception>
+    /// <exception cref="FileNotFoundException">Thrown when file not found</exception>
+    public string OpenDocument(string path, SessionIdentity owner, string mode = "readwrite")
+    {
+        var normalizedMode = mode.ToLowerInvariant();
+        if (normalizedMode != "readonly" && normalizedMode != "readwrite")
+            throw new ArgumentException($"Invalid mode: '{mode}'. Must be 'readonly' or 'readwrite'.", nameof(mode));
+
+        var ownerKey = owner.GetStorageKey(Config.IsolationMode);
+        var ownerSessions =
+            _sessionsByOwner.GetOrAdd(ownerKey, _ => new ConcurrentDictionary<string, DocumentSession>());
+
+        // Early check for session limit (not atomic, but avoids unnecessary work)
+        if (ownerSessions.Count >= Config.MaxSessions)
+            throw new InvalidOperationException($"Maximum session limit ({Config.MaxSessions}) reached for this user");
 
         var fileInfo = new FileInfo(path);
         if (!fileInfo.Exists) throw new FileNotFoundException($"File not found: {path}");
@@ -95,23 +126,32 @@ public class DocumentSessionManager : IDisposable
         var document = LoadDocument(path, type);
         var sessionId = GenerateSessionId();
 
-        var session = new DocumentSession(sessionId, path, type, document, mode)
+        var session = new DocumentSession(sessionId, path, type, document, normalizedMode)
         {
-            EstimatedMemoryBytes = fileInfo.Length * 2
+            EstimatedMemoryBytes = fileInfo.Length * 2,
+            Owner = owner
         };
 
-        if (!_sessions.TryAdd(sessionId, session))
+        if (!ownerSessions.TryAdd(sessionId, session))
         {
             session.Dispose();
             throw new InvalidOperationException("Failed to create session");
         }
 
-        _logger?.LogInformation("Opened session {SessionId} for {Path} ({Type})", sessionId, path, type);
+        // Atomic check after add: if we exceeded the limit due to race condition, rollback
+        if (ownerSessions.Count > Config.MaxSessions)
+        {
+            if (ownerSessions.TryRemove(sessionId, out _)) session.Dispose();
+            throw new InvalidOperationException($"Maximum session limit ({Config.MaxSessions}) reached for this user");
+        }
+
+        _logger?.LogInformation("Opened session {SessionId} for {Path} ({Type}) by {Owner}", sessionId, path, type,
+            owner);
         return sessionId;
     }
 
     /// <summary>
-    ///     Gets a document from an existing session
+    ///     Gets a document from an existing session (no authorization check)
     /// </summary>
     /// <typeparam name="T">Target document type</typeparam>
     /// <param name="sessionId">Session ID to get document from</param>
@@ -119,37 +159,120 @@ public class DocumentSessionManager : IDisposable
     /// <exception cref="KeyNotFoundException">Thrown when session not found</exception>
     public T GetDocument<T>(string sessionId) where T : class
     {
-        if (!_sessions.TryGetValue(sessionId, out var session))
+        return GetDocument<T>(sessionId, SessionIdentity.GetAnonymous());
+    }
+
+    /// <summary>
+    ///     Gets a document from an existing session with authorization check
+    /// </summary>
+    /// <typeparam name="T">Target document type</typeparam>
+    /// <param name="sessionId">Session ID to get document from</param>
+    /// <param name="requestor">Requestor identity for authorization</param>
+    /// <returns>Document cast to type T</returns>
+    /// <exception cref="KeyNotFoundException">Thrown when session not found or access denied</exception>
+    public T GetDocument<T>(string sessionId, SessionIdentity requestor) where T : class
+    {
+        var session = FindSessionWithAuth(sessionId, requestor);
+        if (session == null)
             throw new KeyNotFoundException($"Session not found: {sessionId}");
 
         return session.GetDocument<T>();
     }
 
     /// <summary>
-    ///     Gets a session by ID
+    ///     Gets a session by ID (no authorization check)
     /// </summary>
     /// <param name="sessionId">Session ID to retrieve</param>
     /// <returns>The document session</returns>
     /// <exception cref="KeyNotFoundException">Thrown when session not found</exception>
     public DocumentSession GetSession(string sessionId)
     {
-        if (!_sessions.TryGetValue(sessionId, out var session))
+        return GetSession(sessionId, SessionIdentity.GetAnonymous());
+    }
+
+    /// <summary>
+    ///     Gets a session by ID with authorization check
+    /// </summary>
+    /// <param name="sessionId">Session ID to retrieve</param>
+    /// <param name="requestor">Requestor identity for authorization</param>
+    /// <returns>The document session</returns>
+    /// <exception cref="KeyNotFoundException">Thrown when session not found or access denied</exception>
+    public DocumentSession GetSession(string sessionId, SessionIdentity requestor)
+    {
+        var session = FindSessionWithAuth(sessionId, requestor);
+        if (session == null)
             throw new KeyNotFoundException($"Session not found: {sessionId}");
 
         return session;
     }
 
     /// <summary>
-    ///     Marks a session as having unsaved changes
+    ///     Tries to get a session by ID with authorization check
+    /// </summary>
+    /// <param name="sessionId">Session ID to retrieve</param>
+    /// <param name="requestor">Requestor identity for authorization</param>
+    /// <returns>The document session or null if not found/access denied</returns>
+    public DocumentSession? TryGetSession(string sessionId, SessionIdentity requestor)
+    {
+        return FindSessionWithAuth(sessionId, requestor);
+    }
+
+    /// <summary>
+    ///     Finds a session by ID and checks authorization
+    /// </summary>
+    /// <param name="sessionId">Session ID to find</param>
+    /// <param name="requestor">Requestor identity for authorization</param>
+    /// <returns>Session if found, authorized, and not disposed; null otherwise</returns>
+    private DocumentSession? FindSessionWithAuth(string sessionId, SessionIdentity requestor)
+    {
+        foreach (var ownerSessions in _sessionsByOwner.Values)
+            if (ownerSessions.TryGetValue(sessionId, out var session))
+            {
+                // Check if session is disposed (safety check for race conditions)
+                if (session.IsDisposed)
+                {
+                    _logger?.LogWarning("Attempted to access disposed session {SessionId}", sessionId);
+                    // Try to clean up the orphaned entry
+                    ownerSessions.TryRemove(sessionId, out _);
+                    return null;
+                }
+
+                if (!requestor.CanAccess(session.Owner, Config.IsolationMode))
+                {
+                    _logger?.LogWarning(
+                        "Access denied: {Requestor} attempted to access session {SessionId} owned by {Owner}",
+                        requestor, sessionId, session.Owner);
+                    return null;
+                }
+
+                return session;
+            }
+
+        return null;
+    }
+
+    /// <summary>
+    ///     Marks a session as having unsaved changes (no authorization check)
     /// </summary>
     /// <param name="sessionId">Session ID to mark as dirty</param>
     public void MarkDirty(string sessionId)
     {
-        if (_sessions.TryGetValue(sessionId, out var session)) session.IsDirty = true;
+        MarkDirty(sessionId, SessionIdentity.GetAnonymous());
     }
 
     /// <summary>
-    ///     Saves the document in a session
+    ///     Marks a session as having unsaved changes with authorization check
+    /// </summary>
+    /// <param name="sessionId">Session ID to mark as dirty</param>
+    /// <param name="requestor">Requestor identity for authorization</param>
+    public void MarkDirty(string sessionId, SessionIdentity requestor)
+    {
+        var session = FindSessionWithAuth(sessionId, requestor);
+        if (session != null) session.IsDirty = true;
+    }
+
+    /// <summary>
+    ///     Saves the document in a session (no authorization check)
     /// </summary>
     /// <param name="sessionId">Session ID to save</param>
     /// <param name="outputPath">Optional output path (defaults to original path)</param>
@@ -157,7 +280,21 @@ public class DocumentSessionManager : IDisposable
     /// <exception cref="InvalidOperationException">Thrown when trying to save a readonly session</exception>
     public void SaveDocument(string sessionId, string? outputPath = null)
     {
-        if (!_sessions.TryGetValue(sessionId, out var session))
+        SaveDocument(sessionId, SessionIdentity.GetAnonymous(), outputPath);
+    }
+
+    /// <summary>
+    ///     Saves the document in a session with authorization check
+    /// </summary>
+    /// <param name="sessionId">Session ID to save</param>
+    /// <param name="requestor">Requestor identity for authorization</param>
+    /// <param name="outputPath">Optional output path (defaults to original path)</param>
+    /// <exception cref="KeyNotFoundException">Thrown when session not found or access denied</exception>
+    /// <exception cref="InvalidOperationException">Thrown when trying to save a readonly session</exception>
+    public void SaveDocument(string sessionId, SessionIdentity requestor, string? outputPath = null)
+    {
+        var session = FindSessionWithAuth(sessionId, requestor);
+        if (session == null)
             throw new KeyNotFoundException($"Session not found: {sessionId}");
 
         if (session.Mode == "readonly") throw new InvalidOperationException("Cannot save a readonly session");
@@ -170,29 +307,103 @@ public class DocumentSessionManager : IDisposable
     }
 
     /// <summary>
-    ///     Closes a session
+    ///     Closes a session (no authorization check)
     /// </summary>
     /// <param name="sessionId">Session ID to close</param>
     /// <param name="discard">If true, discard unsaved changes; otherwise auto-save</param>
     /// <exception cref="KeyNotFoundException">Thrown when session not found</exception>
     public void CloseDocument(string sessionId, bool discard = false)
     {
-        if (!_sessions.TryRemove(sessionId, out var session))
+        CloseDocument(sessionId, SessionIdentity.GetAnonymous(), discard);
+    }
+
+    /// <summary>
+    ///     Closes a session with authorization check
+    /// </summary>
+    /// <param name="sessionId">Session ID to close</param>
+    /// <param name="requestor">Requestor identity for authorization</param>
+    /// <param name="discard">If true, discard unsaved changes; otherwise auto-save</param>
+    /// <exception cref="KeyNotFoundException">Thrown when session not found or access denied</exception>
+    public void CloseDocument(string sessionId, SessionIdentity requestor, bool discard = false)
+    {
+        DocumentSession? session = null;
+        ConcurrentDictionary<string, DocumentSession>? ownerDict = null;
+        string? ownerKey = null;
+
+        foreach (var kvp in _sessionsByOwner)
+            if (kvp.Value.TryGetValue(sessionId, out var foundSession))
+            {
+                if (!requestor.CanAccess(foundSession.Owner, Config.IsolationMode))
+                {
+                    _logger?.LogWarning(
+                        "Access denied: {Requestor} attempted to close session {SessionId} owned by {Owner}",
+                        requestor, sessionId, foundSession.Owner);
+                    throw new KeyNotFoundException($"Session not found: {sessionId}");
+                }
+
+                if (kvp.Value.TryRemove(sessionId, out session))
+                {
+                    ownerDict = kvp.Value;
+                    ownerKey = kvp.Key;
+                }
+
+                break;
+            }
+
+        if (session == null)
             throw new KeyNotFoundException($"Session not found: {sessionId}");
 
-        if (!discard && session.IsDirty) SaveDocumentToFile(session.Document, session.Type, session.Path);
+        // Safely clean up empty owner dictionary using atomic operation
+        if (ownerDict != null && ownerKey != null && ownerDict.IsEmpty)
+            ((ICollection<KeyValuePair<string, ConcurrentDictionary<string, DocumentSession>>>)_sessionsByOwner)
+                .Remove(new KeyValuePair<string, ConcurrentDictionary<string, DocumentSession>>(ownerKey, ownerDict));
 
-        session.Dispose();
+        try
+        {
+            if (!discard && session.IsDirty)
+                SaveDocumentToFile(session.Document, session.Type, session.Path);
+        }
+        finally
+        {
+            // Always dispose session to prevent resource leaks, even if save fails
+            session.Dispose();
+        }
+
         _logger?.LogInformation("Closed session {SessionId} (discard={Discard})", sessionId, discard);
     }
 
     /// <summary>
-    ///     Lists all active sessions
+    ///     Lists all active sessions (no authorization check - returns all)
     /// </summary>
     /// <returns>Enumerable of session information</returns>
     public IEnumerable<SessionInfo> ListSessions()
     {
-        return _sessions.Values.Select(s => new SessionInfo
+        return ListSessions(SessionIdentity.GetAnonymous());
+    }
+
+    /// <summary>
+    ///     Lists active sessions visible to the requestor
+    /// </summary>
+    /// <param name="requestor">Requestor identity for filtering</param>
+    /// <returns>Enumerable of session information</returns>
+    public IEnumerable<SessionInfo> ListSessions(SessionIdentity requestor)
+    {
+        IEnumerable<DocumentSession> sessions;
+
+        // Anonymous or None mode: show all sessions
+        if (requestor.IsAnonymous || Config.IsolationMode == SessionIsolationMode.None)
+        {
+            sessions = _sessionsByOwner.Values.SelectMany(s => s.Values);
+        }
+        else
+        {
+            var ownerKey = requestor.GetStorageKey(Config.IsolationMode);
+            sessions = _sessionsByOwner.TryGetValue(ownerKey, out var ownerSessions)
+                ? ownerSessions.Values
+                : [];
+        }
+
+        return sessions.Select(s => new SessionInfo
         {
             SessionId = s.SessionId,
             DocumentType = s.Type.ToString().ToLower(),
@@ -206,13 +417,25 @@ public class DocumentSessionManager : IDisposable
     }
 
     /// <summary>
-    ///     Gets the status of a specific session
+    ///     Gets the status of a specific session (no authorization check)
     /// </summary>
     /// <param name="sessionId">Session ID to get status for</param>
     /// <returns>Session information or null if not found</returns>
     public SessionInfo? GetSessionStatus(string sessionId)
     {
-        if (!_sessions.TryGetValue(sessionId, out var session)) return null;
+        return GetSessionStatus(sessionId, SessionIdentity.GetAnonymous());
+    }
+
+    /// <summary>
+    ///     Gets the status of a specific session with authorization check
+    /// </summary>
+    /// <param name="sessionId">Session ID to get status for</param>
+    /// <param name="requestor">Requestor identity for authorization</param>
+    /// <returns>Session information or null if not found/access denied</returns>
+    public SessionInfo? GetSessionStatus(string sessionId, SessionIdentity requestor)
+    {
+        var session = FindSessionWithAuth(sessionId, requestor);
+        if (session == null) return null;
 
         return new SessionInfo
         {
@@ -233,7 +456,9 @@ public class DocumentSessionManager : IDisposable
     /// <returns>Total memory usage in megabytes</returns>
     public double GetTotalMemoryMb()
     {
-        return _sessions.Values.Sum(s => s.EstimatedMemoryBytes) / (1024.0 * 1024.0);
+        return _sessionsByOwner.Values
+            .SelectMany(s => s.Values)
+            .Sum(s => s.EstimatedMemoryBytes) / (1024.0 * 1024.0);
     }
 
     /// <summary>
@@ -241,9 +466,10 @@ public class DocumentSessionManager : IDisposable
     /// </summary>
     public void OnServerShutdown()
     {
-        _logger?.LogInformation("Server shutdown - handling {Count} open sessions", _sessions.Count);
+        var allSessions = _sessionsByOwner.Values.SelectMany(s => s.Values).ToList();
+        _logger?.LogInformation("Server shutdown - handling {Count} open sessions", allSessions.Count);
 
-        foreach (var session in _sessions.Values)
+        foreach (var session in allSessions)
             try
             {
                 HandleDisconnect(session);
@@ -253,7 +479,7 @@ public class DocumentSessionManager : IDisposable
                 _logger?.LogError(ex, "Error handling session {SessionId} on shutdown", session.SessionId);
             }
 
-        _sessions.Clear();
+        _sessionsByOwner.Clear();
     }
 
     /// <summary>
@@ -264,15 +490,21 @@ public class DocumentSessionManager : IDisposable
     {
         if (string.IsNullOrEmpty(clientId)) return;
 
-        var clientSessions = _sessions.Values.Where(s => s.ClientId == clientId).ToList();
+        var clientSessions = _sessionsByOwner.Values
+            .SelectMany(s => s.Values)
+            .Where(s => s.ClientId == clientId)
+            .ToList();
+
         _logger?.LogInformation("Client {ClientId} disconnected - handling {Count} sessions", clientId,
             clientSessions.Count);
 
         foreach (var session in clientSessions)
             try
             {
+                // First remove from storage, then handle disconnect (dispose)
+                // This prevents race conditions where disposed sessions are still accessible
+                RemoveSessionById(session.SessionId);
                 HandleDisconnect(session);
-                _sessions.TryRemove(session.SessionId, out _);
             }
             catch (Exception ex)
             {
@@ -281,40 +513,72 @@ public class DocumentSessionManager : IDisposable
     }
 
     /// <summary>
-    ///     Handles disconnect behavior for a session based on configuration
+    ///     Removes a session by ID from storage (no authorization check)
+    /// </summary>
+    /// <param name="sessionId">Session ID to remove</param>
+    private void RemoveSessionById(string sessionId)
+    {
+        foreach (var kvp in _sessionsByOwner)
+            if (kvp.Value.TryRemove(sessionId, out _))
+            {
+                // Safely clean up empty owner dictionary using atomic operation
+                // Only remove if the dictionary is still empty (handles race condition)
+                if (kvp.Value.IsEmpty)
+                    // Use TryUpdate pattern: only remove if value matches (empty dictionary)
+                    ((ICollection<KeyValuePair<string, ConcurrentDictionary<string, DocumentSession>>>)_sessionsByOwner)
+                        .Remove(new KeyValuePair<string, ConcurrentDictionary<string, DocumentSession>>(kvp.Key,
+                            kvp.Value));
+                return;
+            }
+    }
+
+    /// <summary>
+    ///     Handles disconnect behavior for a session based on configuration.
+    ///     Always disposes the session, even if save fails or session is not dirty.
     /// </summary>
     /// <param name="session">Session to handle disconnect for</param>
     private void HandleDisconnect(DocumentSession session)
     {
-        if (!session.IsDirty) return;
-
-        switch (Config.OnDisconnect)
+        try
         {
-            case DisconnectBehavior.AutoSave:
-                SaveDocumentToFile(session.Document, session.Type, session.Path);
-                _logger?.LogInformation("Auto-saved session {SessionId}", session.SessionId);
-                break;
+            if (!session.IsDirty)
+            {
+                _logger?.LogDebug("Session {SessionId} has no unsaved changes", session.SessionId);
+                return;
+            }
 
-            case DisconnectBehavior.SaveToTemp:
-                var tempPath = GetTempPath(session);
-                SaveDocumentToFile(session.Document, session.Type, tempPath);
-                SaveSessionMetadata(session, tempPath);
-                _logger?.LogInformation("Saved session {SessionId} to temp: {TempPath}", session.SessionId, tempPath);
-                break;
+            switch (Config.OnDisconnect)
+            {
+                case DisconnectBehavior.AutoSave:
+                    SaveDocumentToFile(session.Document, session.Type, session.Path);
+                    _logger?.LogInformation("Auto-saved session {SessionId}", session.SessionId);
+                    break;
 
-            case DisconnectBehavior.Discard:
-                _logger?.LogInformation("Discarded changes for session {SessionId}", session.SessionId);
-                break;
+                case DisconnectBehavior.SaveToTemp:
+                    var tempPath = GetTempPath(session);
+                    SaveDocumentToFile(session.Document, session.Type, tempPath);
+                    SaveSessionMetadata(session, tempPath);
+                    _logger?.LogInformation("Saved session {SessionId} to temp: {TempPath}", session.SessionId,
+                        tempPath);
+                    break;
 
-            case DisconnectBehavior.PromptOnReconnect:
-                var promptTempPath = GetTempPath(session);
-                SaveDocumentToFile(session.Document, session.Type, promptTempPath);
-                SaveSessionMetadata(session, promptTempPath, true);
-                _logger?.LogInformation("Saved session {SessionId} for prompt on reconnect", session.SessionId);
-                break;
+                case DisconnectBehavior.Discard:
+                    _logger?.LogInformation("Discarded changes for session {SessionId}", session.SessionId);
+                    break;
+
+                case DisconnectBehavior.PromptOnReconnect:
+                    var promptTempPath = GetTempPath(session);
+                    SaveDocumentToFile(session.Document, session.Type, promptTempPath);
+                    SaveSessionMetadata(session, promptTempPath, true);
+                    _logger?.LogInformation("Saved session {SessionId} for prompt on reconnect", session.SessionId);
+                    break;
+            }
         }
-
-        session.Dispose();
+        finally
+        {
+            // Always dispose session to prevent resource leaks
+            session.Dispose();
+        }
     }
 
     /// <summary>
@@ -326,7 +590,11 @@ public class DocumentSessionManager : IDisposable
         var timeout = TimeSpan.FromMinutes(Config.IdleTimeoutMinutes);
         var now = DateTime.UtcNow;
 
-        foreach (var session in _sessions.Values.ToList())
+        var allSessions = _sessionsByOwner.Values
+            .SelectMany(s => s.Values)
+            .ToList();
+
+        foreach (var session in allSessions)
             if (now - session.LastAccessedAt > timeout)
             {
                 _logger?.LogInformation("Session {SessionId} timed out after {Minutes} minutes of inactivity",
@@ -334,8 +602,10 @@ public class DocumentSessionManager : IDisposable
 
                 try
                 {
+                    // First remove from storage, then handle disconnect (dispose)
+                    // This prevents race conditions where disposed sessions are still accessible
+                    RemoveSessionById(session.SessionId);
                     HandleDisconnect(session);
-                    _sessions.TryRemove(session.SessionId, out _);
                 }
                 catch (Exception ex)
                 {
@@ -347,10 +617,12 @@ public class DocumentSessionManager : IDisposable
     /// <summary>
     ///     Generates a unique session ID
     /// </summary>
-    /// <returns>Generated session ID in format sess_XXXXXXXXXXXX</returns>
+    /// <returns>Generated session ID in format sess_XXXXXXXXXXXXXXXXXXXXXXXX (24 chars total)</returns>
     private static string GenerateSessionId()
     {
-        return $"sess_{Guid.NewGuid():N}"[..16];
+        // Use 19 hex chars from GUID for better uniqueness (76 bits of randomness)
+        // Format: sess_ (5) + 19 hex chars = 24 chars total
+        return $"sess_{Guid.NewGuid():N}"[..24];
     }
 
     /// <summary>
@@ -443,7 +715,9 @@ public class DocumentSessionManager : IDisposable
             TempPath = tempPath,
             DocumentType = session.Type.ToString(),
             SavedAt = DateTime.UtcNow,
-            PromptOnReconnect = promptOnReconnect
+            PromptOnReconnect = promptOnReconnect,
+            OwnerTenantId = session.Owner.TenantId,
+            OwnerUserId = session.Owner.UserId
         };
 
         var metadataPath = tempPath + ".meta.json";

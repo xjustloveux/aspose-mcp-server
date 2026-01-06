@@ -16,6 +16,11 @@ namespace AsposeMcpServer.Tools.Excel;
 public class ExcelViewSettingsTool
 {
     /// <summary>
+    ///     Session identity accessor for session isolation support.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Document session manager for in-memory editing support.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -24,11 +29,53 @@ public class ExcelViewSettingsTool
     ///     Initializes a new instance of the <see cref="ExcelViewSettingsTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
-    public ExcelViewSettingsTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    public ExcelViewSettingsTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes an Excel view settings operation (set_zoom, set_gridlines, set_headers, set_zero_values, set_column_width,
+    ///     set_row_height, set_background, set_tab_color, set_all, freeze_panes, split_window, auto_fit_column, auto_fit_row,
+    ///     show_formulas).
+    /// </summary>
+    /// <param name="operation">
+    ///     The operation to perform: set_zoom, set_gridlines, set_headers, set_zero_values,
+    ///     set_column_width, set_row_height, set_background, set_tab_color, set_all, freeze_panes, split_window,
+    ///     auto_fit_column, auto_fit_row, show_formulas.
+    /// </param>
+    /// <param name="path">Excel file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="sheetIndex">Sheet index (0-based, default: 0).</param>
+    /// <param name="zoom">Zoom percentage (10-400, required for set_zoom).</param>
+    /// <param name="visible">Visibility (required for set_gridlines/set_headers/set_zero_values/show_formulas).</param>
+    /// <param name="columnIndex">Column index (0-based, required for set_column_width/auto_fit_column).</param>
+    /// <param name="width">Column width in characters (required for set_column_width).</param>
+    /// <param name="rowIndex">Row index (0-based, required for set_row_height/auto_fit_row).</param>
+    /// <param name="height">Row height in points (required for set_row_height).</param>
+    /// <param name="imagePath">Background image file path (required for set_background).</param>
+    /// <param name="removeBackground">Remove background image (for set_background).</param>
+    /// <param name="color">Color in hex format (e.g., '#FF0000', required for set_tab_color).</param>
+    /// <param name="showGridlines">Show gridlines (for set_all).</param>
+    /// <param name="showRowColumnHeaders">Show row/column headers (for set_all).</param>
+    /// <param name="showZeroValues">Show zero values (for set_all).</param>
+    /// <param name="displayRightToLeft">Display right to left (for set_all).</param>
+    /// <param name="freezeRow">Row index to freeze at (0-based, for freeze_panes).</param>
+    /// <param name="freezeColumn">Column index to freeze at (0-based, for freeze_panes).</param>
+    /// <param name="unfreeze">Remove frozen panes (for freeze_panes).</param>
+    /// <param name="splitRow">Row position to split at in pixels (for split_window).</param>
+    /// <param name="splitColumn">Column position to split at in pixels (for split_window).</param>
+    /// <param name="removeSplit">Remove window split (for split_window).</param>
+    /// <param name="startRow">Start row index for auto fit range (0-based, for auto_fit_column).</param>
+    /// <param name="endRow">End row index for auto fit range (0-based, for auto_fit_column).</param>
+    /// <param name="startColumn">Start column index for auto fit range (0-based, for auto_fit_row).</param>
+    /// <param name="endColumn">End column index for auto fit range (0-based, for auto_fit_row).</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "excel_view_settings")]
     [Description(
         @"Manage Excel view settings. Supports 14 operations: set_zoom, set_gridlines, set_headers, set_zero_values, set_column_width, set_row_height, set_background, set_tab_color, set_all, freeze_panes, split_window, auto_fit_column, auto_fit_row, show_formulas.
@@ -102,7 +149,7 @@ Usage examples:
         [Description("End column index for auto fit range (0-based, for auto_fit_row)")]
         int? endColumn = null)
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {

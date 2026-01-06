@@ -2,7 +2,6 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.Versioning;
 using Aspose.Words;
-using Aspose.Words.Drawing;
 using AsposeMcpServer.Tests.Helpers;
 using AsposeMcpServer.Tools.Word;
 using Font = System.Drawing.Font;
@@ -30,118 +29,80 @@ public class WordWatermarkToolTests : WordTestBase
         return imagePath;
     }
 
-    #region General Tests
+    #region General
 
     [Fact]
-    public void AddWatermark_ShouldAddWatermark()
+    public void AddTextWatermark_ShouldAddWatermarkWithDefaultOptions()
     {
         var docPath = CreateWordDocument("test_add_watermark.docx");
         var outputPath = CreateTestFilePath("test_add_watermark_output.docx");
+
         var result = _tool.Execute("add", docPath, outputPath: outputPath,
             text: "CONFIDENTIAL", fontSize: 72, isSemitransparent: true);
-        Assert.True(File.Exists(outputPath), "Output document should be created");
-        Assert.NotNull(result);
-        Assert.Contains("Watermark", result, StringComparison.OrdinalIgnoreCase);
 
-        // Verify watermark was added by checking document has watermark shapes
+        Assert.True(File.Exists(outputPath));
+        Assert.StartsWith("Text watermark added to document", result);
+
         var doc = new Document(outputPath);
-        var shapes = doc.GetChildNodes(NodeType.Shape, true).Cast<Shape>().ToList();
-        // Watermarks are typically added as shapes in headers
-        var hasWatermarkShapes =
-            shapes.Count > 0 || doc.Sections[0].HeadersFooters[HeaderFooterType.HeaderPrimary] != null;
-        Assert.True(hasWatermarkShapes || doc.Watermark != null,
-            "Document should contain watermark (checking shapes or watermark property)");
+        Assert.NotEqual(WatermarkType.None, doc.Watermark.Type);
     }
 
     [Fact]
-    public void AddWatermark_WithFontFamily_ShouldApplyFontFamily()
+    public void AddTextWatermark_WithFontFamily_ShouldApplyFontFamily()
     {
         var docPath = CreateWordDocument("test_watermark_font.docx");
         var outputPath = CreateTestFilePath("test_watermark_font_output.docx");
+
         var result = _tool.Execute("add", docPath, outputPath: outputPath,
             text: "DRAFT", fontFamily: "Times New Roman", fontSize: 48);
-        Assert.True(File.Exists(outputPath), "Output document should be created");
-        Assert.NotNull(result);
-        Assert.Contains("Watermark", result, StringComparison.OrdinalIgnoreCase);
+
+        Assert.True(File.Exists(outputPath));
+        Assert.StartsWith("Text watermark added to document", result);
     }
 
-    [Fact]
-    public void AddWatermark_WithHorizontalLayout_ShouldApplyHorizontalLayout()
+    [Theory]
+    [InlineData("Horizontal")]
+    [InlineData("Diagonal")]
+    public void AddTextWatermark_WithLayout_ShouldApplyLayout(string layout)
     {
-        var docPath = CreateWordDocument("test_watermark_horizontal.docx");
-        var outputPath = CreateTestFilePath("test_watermark_horizontal_output.docx");
+        var docPath = CreateWordDocument($"test_watermark_{layout.ToLower()}.docx");
+        var outputPath = CreateTestFilePath($"test_watermark_{layout.ToLower()}_output.docx");
+
         var result = _tool.Execute("add", docPath, outputPath: outputPath,
-            text: "SAMPLE", layout: "Horizontal", fontSize: 60);
-        Assert.True(File.Exists(outputPath), "Output document should be created");
-        Assert.NotNull(result);
-        Assert.Contains("Watermark", result, StringComparison.OrdinalIgnoreCase);
+            text: "SAMPLE", layout: layout, fontSize: 60);
+
+        Assert.True(File.Exists(outputPath));
+        Assert.StartsWith("Text watermark added to document", result);
+
+        var doc = new Document(outputPath);
+        Assert.NotEqual(WatermarkType.None, doc.Watermark.Type);
     }
 
     [Fact]
-    public void AddWatermark_WithDiagonalLayout_ShouldApplyDiagonalLayout()
-    {
-        var docPath = CreateWordDocument("test_watermark_diagonal.docx");
-        var outputPath = CreateTestFilePath("test_watermark_diagonal_output.docx");
-        var result = _tool.Execute("add", docPath, outputPath: outputPath,
-            text: "DO NOT COPY", layout: "Diagonal", fontSize: 54, isSemitransparent: false);
-        Assert.True(File.Exists(outputPath), "Output document should be created");
-        Assert.NotNull(result);
-        Assert.Contains("Watermark", result, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public void AddWatermark_WithAllOptions_ShouldApplyAllOptions()
+    public void AddTextWatermark_WithAllOptions_ShouldApplyAllOptions()
     {
         var docPath = CreateWordDocument("test_watermark_all_options.docx");
         var outputPath = CreateTestFilePath("test_watermark_all_options_output.docx");
+
         var result = _tool.Execute("add", docPath, outputPath: outputPath,
             text: "CONFIDENTIAL", fontFamily: "Arial", fontSize: 80,
             isSemitransparent: true, layout: "Diagonal");
-        Assert.True(File.Exists(outputPath), "Output document should be created");
-        Assert.NotNull(result);
-        Assert.Contains("Watermark", result, StringComparison.OrdinalIgnoreCase);
 
-        // Verify watermark exists
-        var doc = new Document(outputPath);
-        Assert.NotNull(doc.Watermark);
-    }
-
-    [Fact]
-    public void RemoveWatermark_ShouldRemoveWatermark()
-    {
-        // Arrange - First add a watermark
-        var docPath = CreateWordDocument("test_remove_watermark.docx");
-        var watermarkedPath = CreateTestFilePath("test_remove_watermark_with.docx");
-        var outputPath = CreateTestFilePath("test_remove_watermark_output.docx");
-
-        // Add watermark first
-        _tool.Execute("add", docPath, outputPath: watermarkedPath, text: "TO BE REMOVED");
-
-        // Act - Remove watermark
-        var result = _tool.Execute("remove", watermarkedPath, outputPath: outputPath);
-        Assert.True(File.Exists(outputPath), "Output document should be created");
-        Assert.Contains("removed", result, StringComparison.OrdinalIgnoreCase);
+        Assert.True(File.Exists(outputPath));
+        Assert.StartsWith("Text watermark added to document", result);
 
         var doc = new Document(outputPath);
-        Assert.Equal(WatermarkType.None, doc.Watermark.Type);
+        Assert.Equal(WatermarkType.Text, doc.Watermark.Type);
     }
 
     [Fact]
-    public void RemoveWatermark_WithNoWatermark_ShouldReturnNotFoundMessage()
-    {
-        // Arrange - Document without watermark
-        var docPath = CreateWordDocument("test_remove_no_watermark.docx");
-        var outputPath = CreateTestFilePath("test_remove_no_watermark_output.docx");
-        var result = _tool.Execute("remove", docPath, outputPath: outputPath);
-        Assert.Contains("No watermark found", result);
-    }
-
-    [Fact]
-    public void AddWatermark_WithoutOutputPath_ShouldOverwriteInput()
+    public void AddTextWatermark_WithoutOutputPath_ShouldOverwriteInput()
     {
         var docPath = CreateWordDocument("test_watermark_overwrite.docx");
+
         var result = _tool.Execute("add", docPath, text: "OVERWRITE TEST");
-        Assert.Contains("Text watermark added", result);
+
+        Assert.StartsWith("Text watermark added to document", result);
         Assert.Contains(docPath, result);
 
         var doc = new Document(docPath);
@@ -154,9 +115,11 @@ public class WordWatermarkToolTests : WordTestBase
         var docPath = CreateWordDocument("test_add_image_watermark.docx");
         var imagePath = CreateTestImage("watermark_image.png");
         var outputPath = CreateTestFilePath("test_add_image_watermark_output.docx");
+
         var result = _tool.Execute("add_image", docPath, outputPath: outputPath, imagePath: imagePath);
-        Assert.True(File.Exists(outputPath), "Output document should be created");
-        Assert.Contains("Image watermark added", result);
+
+        Assert.True(File.Exists(outputPath));
+        Assert.StartsWith("Image watermark added to document", result);
         Assert.Contains("watermark_image.png", result);
 
         var doc = new Document(outputPath);
@@ -169,9 +132,11 @@ public class WordWatermarkToolTests : WordTestBase
         var docPath = CreateWordDocument("test_image_watermark_scale.docx");
         var imagePath = CreateTestImage("watermark_scale.png");
         var outputPath = CreateTestFilePath("test_image_watermark_scale_output.docx");
+
         var result = _tool.Execute("add_image", docPath, outputPath: outputPath,
             imagePath: imagePath, scale: 0.5);
-        Assert.True(File.Exists(outputPath), "Output document should be created");
+
+        Assert.True(File.Exists(outputPath));
         Assert.Contains("Scale: 0.5", result);
 
         var doc = new Document(outputPath);
@@ -184,9 +149,11 @@ public class WordWatermarkToolTests : WordTestBase
         var docPath = CreateWordDocument("test_image_watermark_no_washout.docx");
         var imagePath = CreateTestImage("watermark_no_washout.png");
         var outputPath = CreateTestFilePath("test_image_watermark_no_washout_output.docx");
+
         var result = _tool.Execute("add_image", docPath, outputPath: outputPath,
             imagePath: imagePath, isWashout: false);
-        Assert.True(File.Exists(outputPath), "Output document should be created");
+
+        Assert.True(File.Exists(outputPath));
         Assert.Contains("Washout: False", result);
 
         var doc = new Document(outputPath);
@@ -199,10 +166,12 @@ public class WordWatermarkToolTests : WordTestBase
         var docPath = CreateWordDocument("test_image_watermark_all.docx");
         var imagePath = CreateTestImage("watermark_all_options.png", 300, 150);
         var outputPath = CreateTestFilePath("test_image_watermark_all_output.docx");
+
         var result = _tool.Execute("add_image", docPath, outputPath: outputPath,
             imagePath: imagePath, scale: 0.75, isWashout: true);
-        Assert.True(File.Exists(outputPath), "Output document should be created");
-        Assert.Contains("Image watermark added", result);
+
+        Assert.True(File.Exists(outputPath));
+        Assert.StartsWith("Image watermark added to document", result);
         Assert.Contains("Scale: 0.75", result);
         Assert.Contains("Washout: True", result);
 
@@ -211,114 +180,234 @@ public class WordWatermarkToolTests : WordTestBase
     }
 
     [Fact]
-    public void AddImageWatermark_WithInvalidImagePath_ShouldThrowFileNotFoundException()
+    public void RemoveWatermark_ShouldRemoveTextWatermark()
     {
-        var docPath = CreateWordDocument("test_invalid_image.docx");
-        Assert.Throws<FileNotFoundException>(() =>
-            _tool.Execute("add_image", docPath, imagePath: "nonexistent_image.png"));
-    }
+        var docPath = CreateWordDocument("test_remove_watermark.docx");
+        var watermarkedPath = CreateTestFilePath("test_remove_watermark_with.docx");
+        var outputPath = CreateTestFilePath("test_remove_watermark_output.docx");
 
-    [Fact]
-    public void RemoveWatermark_AfterImageWatermark_ShouldRemoveImageWatermark()
-    {
-        // Arrange - First add an image watermark
-        var docPath = CreateWordDocument("test_remove_image_watermark.docx");
-        var imagePath = CreateTestImage("watermark_to_remove.png");
-        var watermarkedPath = CreateTestFilePath("test_remove_image_watermark_with.docx");
-        var outputPath = CreateTestFilePath("test_remove_image_watermark_output.docx");
+        _tool.Execute("add", docPath, outputPath: watermarkedPath, text: "TO BE REMOVED");
 
-        // Add image watermark first
-        _tool.Execute("add_image", docPath, outputPath: watermarkedPath, imagePath: imagePath);
-
-        // Verify watermark was added
-        var docWithWatermark = new Document(watermarkedPath);
-        Assert.Equal(WatermarkType.Image, docWithWatermark.Watermark.Type);
-
-        // Act - Remove watermark
         var result = _tool.Execute("remove", watermarkedPath, outputPath: outputPath);
+
+        Assert.True(File.Exists(outputPath));
         Assert.Contains("removed", result, StringComparison.OrdinalIgnoreCase);
 
         var doc = new Document(outputPath);
         Assert.Equal(WatermarkType.None, doc.Watermark.Type);
     }
 
+    [Fact]
+    public void RemoveWatermark_ShouldRemoveImageWatermark()
+    {
+        var docPath = CreateWordDocument("test_remove_image_watermark.docx");
+        var imagePath = CreateTestImage("watermark_to_remove.png");
+        var watermarkedPath = CreateTestFilePath("test_remove_image_watermark_with.docx");
+        var outputPath = CreateTestFilePath("test_remove_image_watermark_output.docx");
+
+        _tool.Execute("add_image", docPath, outputPath: watermarkedPath, imagePath: imagePath);
+
+        var docWithWatermark = new Document(watermarkedPath);
+        Assert.Equal(WatermarkType.Image, docWithWatermark.Watermark.Type);
+
+        var result = _tool.Execute("remove", watermarkedPath, outputPath: outputPath);
+
+        Assert.Contains("removed", result, StringComparison.OrdinalIgnoreCase);
+
+        var doc = new Document(outputPath);
+        Assert.Equal(WatermarkType.None, doc.Watermark.Type);
+    }
+
+    [Fact]
+    public void RemoveWatermark_WhenNoWatermarkExists_ShouldReturnNotFoundMessage()
+    {
+        var docPath = CreateWordDocument("test_remove_no_watermark.docx");
+        var outputPath = CreateTestFilePath("test_remove_no_watermark_output.docx");
+
+        var result = _tool.Execute("remove", docPath, outputPath: outputPath);
+
+        Assert.Contains("No watermark found", result);
+    }
+
+    [Theory]
+    [InlineData("ADD")]
+    [InlineData("AdD")]
+    [InlineData("add")]
+    public void Execute_OperationIsCaseInsensitive(string operation)
+    {
+        var docPath = CreateWordDocument($"test_{operation}_case.docx");
+        var outputPath = CreateTestFilePath($"test_{operation}_case_output.docx");
+
+        var result = _tool.Execute(operation, docPath, outputPath: outputPath, text: "TEST");
+
+        Assert.StartsWith("Text watermark added to document", result);
+        Assert.True(File.Exists(outputPath));
+    }
+
+    [Theory]
+    [InlineData("ADD_IMAGE")]
+    [InlineData("Add_Image")]
+    [InlineData("add_image")]
+    public void Execute_AddImageOperationIsCaseInsensitive(string operation)
+    {
+        var docPath = CreateWordDocument($"test_{operation.Replace("_", "")}_case.docx");
+        var imagePath = CreateTestImage($"watermark_{operation.Replace("_", "")}.png");
+        var outputPath = CreateTestFilePath($"test_{operation.Replace("_", "")}_case_output.docx");
+
+        var result = _tool.Execute(operation, docPath, outputPath: outputPath, imagePath: imagePath);
+
+        Assert.StartsWith("Image watermark added to document", result);
+        Assert.True(File.Exists(outputPath));
+    }
+
+    [Theory]
+    [InlineData("REMOVE")]
+    [InlineData("ReMoVe")]
+    [InlineData("remove")]
+    public void Execute_RemoveOperationIsCaseInsensitive(string operation)
+    {
+        var docPath = CreateWordDocument($"test_{operation}_remove_case.docx");
+        var tempPath = CreateTestFilePath($"test_{operation}_remove_case_temp.docx");
+        _tool.Execute("add", docPath, outputPath: tempPath, text: "TO REMOVE");
+
+        var outputPath = CreateTestFilePath($"test_{operation}_remove_case_output.docx");
+
+        var result = _tool.Execute(operation, tempPath, outputPath: outputPath);
+
+        Assert.Contains("removed", result, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("HORIZONTAL")]
+    [InlineData("DiAgOnAl")]
+    [InlineData("horizontal")]
+    public void AddTextWatermark_LayoutIsCaseInsensitive(string layout)
+    {
+        var docPath = CreateWordDocument($"test_layout_{layout.ToLower()}.docx");
+        var outputPath = CreateTestFilePath($"test_layout_{layout.ToLower()}_output.docx");
+
+        var result = _tool.Execute("add", docPath, outputPath: outputPath,
+            text: "LAYOUT TEST", layout: layout);
+
+        Assert.StartsWith("Text watermark added to document", result);
+        Assert.True(File.Exists(outputPath));
+    }
+
     #endregion
 
-    #region Exception Tests
+    #region Exception
 
-    [Fact]
-    public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
+    [Theory]
+    [InlineData("unknown_operation")]
+    [InlineData("invalid")]
+    [InlineData("")]
+    public void Execute_WithInvalidOperation_ShouldThrowArgumentException(string operation)
     {
-        var docPath = CreateWordDocument("test_unknown_op.docx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("unknown_operation", docPath, text: "TEST"));
+        var docPath = CreateWordDocument($"test_invalid_op_{operation.GetHashCode()}.docx");
 
-        Assert.Contains("Unknown operation", ex.Message);
-        Assert.Contains("unknown_operation", ex.Message);
-    }
-
-    [Fact]
-    public void AddWatermark_WithInvalidOperation_ShouldThrowArgumentException()
-    {
-        var docPath = CreateWordDocument("test_invalid_operation.docx");
         var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("invalid", docPath, text: "TEST"));
+            _tool.Execute(operation, docPath, text: "TEST"));
+
         Assert.Contains("Unknown operation", ex.Message);
     }
 
-    [Fact]
-    public void AddWatermark_WithoutText_ShouldThrowArgumentException()
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public void AddTextWatermark_WithNullOrEmptyText_ShouldThrowArgumentException(string? text)
     {
-        var docPath = CreateWordDocument("test_add_no_text.docx");
+        var docPath = CreateWordDocument($"test_invalid_text_{text?.GetHashCode() ?? 0}.docx");
+
         var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", docPath));
+            _tool.Execute("add", docPath, text: text));
 
         Assert.Contains("Text is required", ex.Message);
     }
 
     [Fact]
-    public void AddImageWatermark_WithoutImagePath_ShouldThrowArgumentException()
+    public void AddTextWatermark_WithWhitespaceOnlyText_ShouldThrowException()
     {
-        var docPath = CreateWordDocument("test_add_image_no_path.docx");
+        var docPath = CreateWordDocument("test_whitespace_text.docx");
+
+        Assert.ThrowsAny<ArgumentException>(() =>
+            _tool.Execute("add", docPath, text: "   "));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public void AddImageWatermark_WithInvalidImagePath_ShouldThrowArgumentException(string? imagePath)
+    {
+        var docPath = CreateWordDocument($"test_invalid_image_path_{imagePath?.GetHashCode() ?? 0}.docx");
+
         var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add_image", docPath));
+            _tool.Execute("add_image", docPath, imagePath: imagePath));
 
         Assert.Contains("imagePath is required", ex.Message);
     }
 
-    #endregion
+    [Fact]
+    public void AddImageWatermark_WithNonExistentFile_ShouldThrowFileNotFoundException()
+    {
+        var docPath = CreateWordDocument("test_nonexistent_image.docx");
 
-    #region Session ID Tests
+        Assert.Throws<FileNotFoundException>(() =>
+            _tool.Execute("add_image", docPath, imagePath: "nonexistent_image.png"));
+    }
 
     [Fact]
-    public void AddWatermark_WithSessionId_ShouldAddWatermarkInMemory()
+    public void AddImageWatermark_WithNonImageFile_ShouldThrowArgumentException()
+    {
+        var docPath = CreateWordDocument("test_non_image.docx");
+        var textFilePath = CreateTestFilePath("not_an_image.txt");
+        File.WriteAllText(textFilePath, "This is not an image");
+
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("add_image", docPath, imagePath: textFilePath));
+
+        Assert.Contains("decode", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Execute_WithNeitherPathNorSessionId_ShouldThrowArgumentException()
+    {
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("add", text: "TEST"));
+
+        Assert.Contains("path", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    #endregion
+
+    #region Session
+
+    [Fact]
+    public void AddTextWatermark_WithSessionId_ShouldAddWatermarkInMemory()
     {
         var docPath = CreateWordDocument("test_session_add_watermark.docx");
         var sessionId = OpenSession(docPath);
-        var result = _tool.Execute("add", sessionId: sessionId, text: "SESSION WATERMARK");
-        Assert.Contains("Watermark", result, StringComparison.OrdinalIgnoreCase);
 
-        // Verify in-memory document has watermark
+        var result = _tool.Execute("add", sessionId: sessionId, text: "SESSION WATERMARK");
+
+        Assert.StartsWith("Text watermark added to document", result);
+
         var doc = SessionManager.GetDocument<Document>(sessionId);
-        Assert.NotNull(doc.Watermark);
         Assert.NotEqual(WatermarkType.None, doc.Watermark.Type);
     }
 
     [Fact]
-    public void RemoveWatermark_WithSessionId_ShouldRemoveWatermarkInMemory()
+    public void AddTextWatermark_WithSessionId_AndLayoutOptions_ShouldWork()
     {
-        // Arrange - First add watermark to file
-        var docPath = CreateWordDocument("test_session_remove_watermark.docx");
-        var tempPath = CreateTestFilePath("test_session_remove_watermark_temp.docx");
-        _tool.Execute("add", docPath, outputPath: tempPath, text: "TO BE REMOVED");
+        var docPath = CreateWordDocument("test_session_horizontal.docx");
+        var sessionId = OpenSession(docPath);
 
-        var sessionId = OpenSession(tempPath);
-        var result = _tool.Execute("remove", sessionId: sessionId);
-        Assert.Contains("removed", result, StringComparison.OrdinalIgnoreCase);
+        var result = _tool.Execute("add", sessionId: sessionId, text: "HORIZONTAL SESSION",
+            layout: "Horizontal", fontSize: 60);
 
-        // Verify in-memory document has no watermark
+        Assert.StartsWith("Text watermark added to document", result);
+
         var doc = SessionManager.GetDocument<Document>(sessionId);
-        Assert.Equal(WatermarkType.None, doc.Watermark.Type);
+        Assert.NotEqual(WatermarkType.None, doc.Watermark.Type);
     }
 
     [Fact]
@@ -327,12 +416,41 @@ public class WordWatermarkToolTests : WordTestBase
         var docPath = CreateWordDocument("test_session_add_image_watermark.docx");
         var imagePath = CreateTestImage("session_watermark.png");
         var sessionId = OpenSession(docPath);
-        var result = _tool.Execute("add_image", sessionId: sessionId, imagePath: imagePath);
-        Assert.Contains("Image watermark added", result);
 
-        // Verify in-memory document has image watermark
+        var result = _tool.Execute("add_image", sessionId: sessionId, imagePath: imagePath);
+
+        Assert.StartsWith("Image watermark added to document", result);
+
         var doc = SessionManager.GetDocument<Document>(sessionId);
         Assert.Equal(WatermarkType.Image, doc.Watermark.Type);
+    }
+
+    [Fact]
+    public void RemoveWatermark_WithSessionId_ShouldRemoveWatermarkInMemory()
+    {
+        var docPath = CreateWordDocument("test_session_remove_watermark.docx");
+        var tempPath = CreateTestFilePath("test_session_remove_watermark_temp.docx");
+        _tool.Execute("add", docPath, outputPath: tempPath, text: "TO BE REMOVED");
+
+        var sessionId = OpenSession(tempPath);
+
+        var result = _tool.Execute("remove", sessionId: sessionId);
+
+        Assert.Contains("removed", result, StringComparison.OrdinalIgnoreCase);
+
+        var doc = SessionManager.GetDocument<Document>(sessionId);
+        Assert.Equal(WatermarkType.None, doc.Watermark.Type);
+    }
+
+    [Fact]
+    public void RemoveWatermark_WithSessionId_WhenNoWatermark_ShouldReturnMessage()
+    {
+        var docPath = CreateWordDocument("test_session_remove_none.docx");
+        var sessionId = OpenSession(docPath);
+
+        var result = _tool.Execute("remove", sessionId: sessionId);
+
+        Assert.Contains("No watermark found", result);
     }
 
     [Fact]
@@ -348,19 +466,15 @@ public class WordWatermarkToolTests : WordTestBase
         var docPath1 = CreateWordDocument("test_watermark_path.docx");
         var docPath2 = CreateWordDocument("test_watermark_session.docx");
 
-        // Add watermark to first file
         _tool.Execute("add", docPath1, text: "PATH WATERMARK");
 
         var sessionId = OpenSession(docPath2);
 
-        // Act - provide both path and sessionId, add watermark to session
         _tool.Execute("add", docPath1, sessionId, text: "SESSION WATERMARK");
 
-        // Assert - session document should have watermark, not the file path document
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         Assert.NotEqual(WatermarkType.None, sessionDoc.Watermark.Type);
 
-        // Reload docPath2 from disk - it should NOT have the watermark since we used session
         var diskDoc2 = new Document(docPath2);
         Assert.Equal(WatermarkType.None, diskDoc2.Watermark.Type);
     }

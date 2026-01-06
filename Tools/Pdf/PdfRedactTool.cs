@@ -17,6 +17,11 @@ namespace AsposeMcpServer.Tools.Pdf;
 public class PdfRedactTool
 {
     /// <summary>
+    ///     The session identity accessor for session isolation.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     The document session manager for managing in-memory document sessions.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -25,11 +30,31 @@ public class PdfRedactTool
     ///     Initializes a new instance of the <see cref="PdfRedactTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
-    public PdfRedactTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    public PdfRedactTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a PDF redaction operation (area redaction or text search redaction).
+    /// </summary>
+    /// <param name="path">PDF file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="pageIndex">Page index (1-based, optional for text search).</param>
+    /// <param name="x">X position of redaction area in PDF coordinates (required for area redaction).</param>
+    /// <param name="y">Y position of redaction area in PDF coordinates (required for area redaction).</param>
+    /// <param name="width">Width of redaction area in PDF points (required for area redaction).</param>
+    /// <param name="height">Height of redaction area in PDF points (required for area redaction).</param>
+    /// <param name="textToRedact">Text to search and redact (alternative to area redaction).</param>
+    /// <param name="caseSensitive">Whether text search is case sensitive (default: true).</param>
+    /// <param name="fillColor">Fill color (optional, default: black).</param>
+    /// <param name="overlayText">Text to display over the redacted area (optional).</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing.</exception>
     [McpServerTool(Name = "pdf_redact")]
     [Description(@"Redact (black out) text or area on PDF page. This permanently removes the underlying content.
 
@@ -67,7 +92,7 @@ Usage examples:
         [Description("Text to display over the redacted area (optional, e.g., '[REDACTED]')")]
         string? overlayText = null)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         if (!string.IsNullOrEmpty(textToRedact))
             return RedactByText(ctx, outputPath, textToRedact, pageIndex, caseSensitive, fillColor, overlayText);

@@ -19,6 +19,11 @@ namespace AsposeMcpServer.Tools.Word;
 public class WordTextTool
 {
     /// <summary>
+    ///     Identity accessor for session isolation
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document session operations
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -27,11 +32,66 @@ public class WordTextTool
     ///     Initializes a new instance of the WordTextTool class
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document operations</param>
-    public WordTextTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation</param>
+    public WordTextTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a Word text operation (add, delete, replace, search, format, insert_at_position, delete_range,
+    ///     add_with_style).
+    /// </summary>
+    /// <param name="operation">
+    ///     The operation to perform: add, delete, replace, search, format, insert_at_position,
+    ///     delete_range, add_with_style.
+    /// </param>
+    /// <param name="path">Word document file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (for write operations).</param>
+    /// <param name="text">Text content (for add, replace, insert_at_position, add_with_style).</param>
+    /// <param name="fontName">Font name.</param>
+    /// <param name="fontNameAscii">Font name for ASCII characters.</param>
+    /// <param name="fontNameFarEast">Font name for Far East characters.</param>
+    /// <param name="fontSize">Font size.</param>
+    /// <param name="bold">Bold text.</param>
+    /// <param name="italic">Italic text.</param>
+    /// <param name="underline">Underline style: none, single, double, dotted, dash.</param>
+    /// <param name="color">Text color hex or name.</param>
+    /// <param name="strikethrough">Strikethrough text.</param>
+    /// <param name="superscript">Superscript text.</param>
+    /// <param name="subscript">Subscript text.</param>
+    /// <param name="find">Text to find (for replace).</param>
+    /// <param name="replace">Replacement text (for replace).</param>
+    /// <param name="searchText">Text to search for (for search/delete).</param>
+    /// <param name="caseSensitive">Case sensitive search (for search/replace).</param>
+    /// <param name="useRegex">Use regular expression (for search/replace).</param>
+    /// <param name="replaceInFields">Replace text inside fields (for replace).</param>
+    /// <param name="maxResults">Maximum number of results to return (for search).</param>
+    /// <param name="contextLength">Number of characters to show for context (for search).</param>
+    /// <param name="paragraphIndex">Paragraph index (0-based).</param>
+    /// <param name="runIndex">Run index within paragraph (0-based).</param>
+    /// <param name="startParagraphIndex">Start paragraph index (for delete_range).</param>
+    /// <param name="startRunIndex">Start run index (for delete_range).</param>
+    /// <param name="endParagraphIndex">End paragraph index (for delete_range).</param>
+    /// <param name="endRunIndex">End run index (for delete_range).</param>
+    /// <param name="insertParagraphIndex">Paragraph index for insert_at_position.</param>
+    /// <param name="charIndex">Character index for insert_at_position.</param>
+    /// <param name="sectionIndex">Section index (0-based).</param>
+    /// <param name="insertBefore">Insert before position (for insert_at_position).</param>
+    /// <param name="startCharIndex">Start character index (for delete_range).</param>
+    /// <param name="endCharIndex">End character index (for delete_range).</param>
+    /// <param name="styleName">Style name (for add_with_style).</param>
+    /// <param name="alignment">Text alignment (for add_with_style).</param>
+    /// <param name="indentLevel">Indentation level (for add_with_style).</param>
+    /// <param name="leftIndent">Left indentation in points (for add_with_style).</param>
+    /// <param name="firstLineIndent">First line indentation in points (for add_with_style).</param>
+    /// <param name="paragraphIndexForAdd">Paragraph index to insert after (for add_with_style).</param>
+    /// <param name="tabStops">Custom tab stops as JSON array (for add_with_style).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for search operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "word_text")]
     [Description(
         @"Perform text operations in Word documents. Supports 8 operations: add, delete, replace, search, format, insert_at_position, delete_range, add_with_style.
@@ -217,7 +277,7 @@ Usage examples:
         if (string.IsNullOrEmpty(text))
             throw new ArgumentException("text is required for add operation");
 
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var doc = ctx.Document;
 
         doc.EnsureMinimum();
@@ -380,7 +440,7 @@ Usage examples:
     private string DeleteText(string? path, string? sessionId, string? outputPath,
         string? searchText, int? startParagraphIdx, int startRunIdx, int? endParagraphIdx, int? endRunIdx)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var doc = ctx.Document;
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
 
@@ -581,7 +641,7 @@ Usage examples:
         if (replace == null)
             throw new ArgumentException("replace is required for replace operation");
 
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var doc = ctx.Document;
 
         var options = new FindReplaceOptions();
@@ -621,7 +681,7 @@ Usage examples:
         if (string.IsNullOrEmpty(searchText))
             throw new ArgumentException("searchText is required for search operation");
 
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var doc = ctx.Document;
         var result = new StringBuilder();
         List<(string text, int paragraphIndex, string context)> matches = [];
@@ -747,7 +807,7 @@ Usage examples:
         if (!paragraphIndex.HasValue)
             throw new ArgumentException("paragraphIndex is required for format operation");
 
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var doc = ctx.Document;
 
         // Use section-based paragraph indexing to match GetRunFormat behavior
@@ -907,7 +967,7 @@ Usage examples:
         if (string.IsNullOrEmpty(text))
             throw new ArgumentException("text is required for insert_at_position operation");
 
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var doc = ctx.Document;
         var sectionIdx = sectionIndex ?? 0;
         if (sectionIdx < 0 || sectionIdx >= doc.Sections.Count)
@@ -979,7 +1039,7 @@ Usage examples:
     private string DeleteTextRange(string? path, string? sessionId, string? outputPath,
         int startParagraphIndex, int startCharIndex, int endParagraphIndex, int endCharIndex, int? sectionIndex)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var doc = ctx.Document;
         var sectionIdx = sectionIndex ?? 0;
         if (sectionIdx < 0 || sectionIdx >= doc.Sections.Count)
@@ -1098,7 +1158,7 @@ Usage examples:
         if (string.IsNullOrEmpty(text))
             throw new ArgumentException("text is required for add_with_style operation");
 
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var doc = ctx.Document;
         var builder = new DocumentBuilder(doc);
 

@@ -23,6 +23,31 @@ public class DocumentSessionTests : IDisposable
         return session;
     }
 
+    #region Helper Classes
+
+    /// <summary>
+    ///     Mock document for testing
+    /// </summary>
+    private class MockDocument : IDisposable
+    {
+        public int Value { get; } = 42;
+        public bool IsDisposed { get; private set; }
+        public int DisposeCount { get; private set; }
+
+        public void Dispose()
+        {
+            if (!IsDisposed)
+            {
+                IsDisposed = true;
+                DisposeCount++;
+            }
+        }
+    }
+
+    #endregion
+
+    #region Constructor Tests
+
     [Fact]
     public void Constructor_ShouldSetAllProperties()
     {
@@ -47,6 +72,10 @@ public class DocumentSessionTests : IDisposable
         Assert.True(session.LastAccessedAt >= beforeCreate);
         Assert.True(session.LastAccessedAt <= afterCreate);
     }
+
+    #endregion
+
+    #region Property Tests
 
     [Fact]
     public void IsDirty_DefaultShouldBeFalse()
@@ -102,6 +131,10 @@ public class DocumentSessionTests : IDisposable
         Assert.Equal(1024 * 1024, session.EstimatedMemoryBytes);
     }
 
+    #endregion
+
+    #region GetDocument Tests
+
     [Fact]
     public void GetDocument_ShouldReturnTypedDocument()
     {
@@ -133,6 +166,10 @@ public class DocumentSessionTests : IDisposable
         Assert.Throws<InvalidCastException>(() =>
             session.GetDocument<string>());
     }
+
+    #endregion
+
+    #region ExecuteAsync Tests
 
     [Fact]
     public async Task ExecuteAsync_ShouldExecuteOperation()
@@ -175,6 +212,10 @@ public class DocumentSessionTests : IDisposable
         Assert.Equal(84, result);
     }
 
+    #endregion
+
+    #region Dispose Tests
+
     [Fact]
     public void Dispose_ShouldDisposeDocument()
     {
@@ -199,22 +240,5 @@ public class DocumentSessionTests : IDisposable
         Assert.Equal(1, mockDocument.DisposeCount);
     }
 
-    /// <summary>
-    ///     Mock document for testing
-    /// </summary>
-    private class MockDocument : IDisposable
-    {
-        public int Value { get; } = 42;
-        public bool IsDisposed { get; private set; }
-        public int DisposeCount { get; private set; }
-
-        public void Dispose()
-        {
-            if (!IsDisposed)
-            {
-                IsDisposed = true;
-                DisposeCount++;
-            }
-        }
-    }
+    #endregion
 }

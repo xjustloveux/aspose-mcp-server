@@ -14,6 +14,11 @@ namespace AsposeMcpServer.Tools.Word;
 public class WordSectionTool
 {
     /// <summary>
+    ///     Identity accessor for session isolation
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document session operations
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -22,11 +27,27 @@ public class WordSectionTool
     ///     Initializes a new instance of the WordSectionTool class
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document operations</param>
-    public WordSectionTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation</param>
+    public WordSectionTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a Word section operation (insert, delete, get).
+    /// </summary>
+    /// <param name="operation">The operation to perform: insert, delete, get.</param>
+    /// <param name="path">Word document file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="sectionBreakType">Section break type: NextPage, Continuous, EvenPage, OddPage (for insert).</param>
+    /// <param name="insertAtParagraphIndex">Paragraph index to insert section break after (0-based, for insert).</param>
+    /// <param name="sectionIndex">Section index (0-based, for insert/delete/get).</param>
+    /// <param name="sectionIndices">Array of section indices to delete (0-based, for delete).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "word_section")]
     [Description(@"Manage Word document sections. Supports 3 operations: insert, delete, get.
 
@@ -57,7 +78,7 @@ Notes:
         [Description("Array of section indices to delete (0-based, overrides sectionIndex, for delete)")]
         int[]? sectionIndices = null)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {

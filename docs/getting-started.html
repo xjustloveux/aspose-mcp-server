@@ -229,6 +229,7 @@
             <li><code>ASPOSE_PORT</code> - 監聽埠號（預設：3000）</li>
             <li><code>ASPOSE_HOST</code> - 監聯位址（預設：localhost，容器用 0.0.0.0）</li>
             <li><code>ASPOSE_SESSION_ENABLED</code> - 啟用 Session 管理：<code>true</code> 或 <code>false</code></li>
+            <li><code>ASPOSE_SESSION_ISOLATION</code> - Session 隔離模式：<code>none</code>（無隔離）、<code>tenant</code>（租戶級）、<code>user</code>（用戶級，預設）</li>
         </ul>
 
         <div class="info-box">
@@ -262,9 +263,9 @@
 
         <h4>複製表格結構：</h4>
         <div class="code-block">
-            1. word_table(path="A.docx", operation="get_table_structure", tableIndex=0)
+            1. word_table(path="A.docx", operation="get_structure", tableIndex=0)
             2. 參考返回的結構資訊
-            3. word_table(path="B.docx", operation="add_table", ...) 創建相同結構
+            3. word_table(path="B.docx", operation="create", ...) 創建相同結構
         </div>
 
         <h4>複製樣式：</h4>

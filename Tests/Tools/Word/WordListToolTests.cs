@@ -15,7 +15,7 @@ public class WordListToolTests : WordTestBase
         _tool = new WordListTool(SessionManager);
     }
 
-    #region General Tests
+    #region General
 
     [Fact]
     public void AddList_ShouldAddBulletList()
@@ -26,7 +26,7 @@ public class WordListToolTests : WordTestBase
         _tool.Execute("add_list", docPath, outputPath: outputPath, items: items);
         var doc = new Document(outputPath);
         var paragraphs = GetParagraphs(doc);
-        Assert.True(paragraphs.Count >= 3, "Document should have list items");
+        Assert.True(paragraphs.Count >= 3);
         var docText = doc.GetText();
         Assert.Contains("Item 1", docText);
         Assert.Contains("Item 2", docText);
@@ -59,25 +59,21 @@ public class WordListToolTests : WordTestBase
     [SkippableFact]
     public void RestartNumbering_ShouldRestartListNumbering()
     {
-        // Skip in evaluation mode as list operations may be limited
         SkipInEvaluationMode(AsposeLibraryType.Words, "List operations may be limited in evaluation mode");
         var docPath = CreateWordDocument("test_restart_numbering.docx");
         var outputPath = CreateTestFilePath("test_restart_numbering_output.docx");
 
-        // First add a numbered list
         var items = new JsonArray { "Item 1", "Item 2", "Item 3", "Item 4" };
         _tool.Execute("add_list", docPath, outputPath: docPath, items: items, listType: "number");
 
-        // Act - restart numbering at the 3rd item (index 2)
         var result = _tool.Execute("restart_numbering", docPath, outputPath: outputPath,
             paragraphIndex: 2, startAt: 1);
-        Assert.Contains("restarted successfully", result);
+        Assert.StartsWith("List numbering restarted", result);
         Assert.Contains("Paragraphs affected:", result);
 
         var doc = new Document(outputPath);
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
 
-        // The 3rd and 4th items should now belong to a different list
         var list1 = paragraphs[0].ListFormat.List;
         var list2 = paragraphs[2].ListFormat.List;
         Assert.NotNull(list1);
@@ -94,17 +90,15 @@ public class WordListToolTests : WordTestBase
         var items = new JsonArray { "Item 1", "Item 2", "Item 3" };
         _tool.Execute("add_list", docPath, outputPath: docPath, items: items, listType: "number");
 
-        // Act - restart numbering at item 2 starting from 5
         var result = _tool.Execute("restart_numbering", docPath, outputPath: outputPath,
             paragraphIndex: 1, startAt: 5);
-        Assert.Contains("restarted successfully", result);
+        Assert.StartsWith("List numbering restarted", result);
         Assert.Contains("Start at: 5", result);
     }
 
     [Fact]
     public void ConvertToList_ShouldConvertParagraphsToBulletList()
     {
-        // Arrange - Create document with regular paragraphs
         var docPath = CreateTestFilePath("test_convert_to_list.docx");
         var outputPath = CreateTestFilePath("test_convert_to_list_output.docx");
 
@@ -116,13 +110,12 @@ public class WordListToolTests : WordTestBase
         doc.Save(docPath);
         var result = _tool.Execute("convert_to_list", docPath, outputPath: outputPath,
             startParagraphIndex: 0, endParagraphIndex: 2, listType: "bullet");
-        Assert.Contains("converted to list successfully", result);
+        Assert.StartsWith("Paragraphs converted to list", result);
         Assert.Contains("Converted: 3 paragraphs", result);
 
         var resultDoc = new Document(outputPath);
         var paragraphs = resultDoc.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
 
-        // All 3 paragraphs should now be list items
         for (var i = 0; i < 3; i++)
             Assert.True(paragraphs[i].ListFormat.IsListItem, $"Paragraph {i} should be a list item");
     }
@@ -140,7 +133,7 @@ public class WordListToolTests : WordTestBase
         doc.Save(docPath);
         var result = _tool.Execute("convert_to_list", docPath, outputPath: outputPath,
             startParagraphIndex: 0, endParagraphIndex: 1, listType: "number", numberFormat: "arabic");
-        Assert.Contains("converted to list successfully", result);
+        Assert.StartsWith("Paragraphs converted to list", result);
         Assert.Contains("List type: number", result);
 
         var resultDoc = new Document(outputPath);
@@ -153,7 +146,6 @@ public class WordListToolTests : WordTestBase
     [Fact]
     public void ConvertToList_ShouldSkipExistingListItems()
     {
-        // Arrange - Create document with mixed content
         var docPath = CreateTestFilePath("test_convert_skip_existing.docx");
         var outputPath = CreateTestFilePath("test_convert_skip_existing_output.docx");
 
@@ -161,7 +153,6 @@ public class WordListToolTests : WordTestBase
         var builder = new DocumentBuilder(doc);
         builder.Writeln("Regular paragraph 1");
 
-        // Add a list item
         var list = doc.Lists.Add(ListTemplate.BulletDefault);
         builder.ListFormat.List = list;
         builder.Writeln("Existing list item");
@@ -171,8 +162,8 @@ public class WordListToolTests : WordTestBase
         doc.Save(docPath);
         var result = _tool.Execute("convert_to_list", docPath, outputPath: outputPath,
             startParagraphIndex: 0, endParagraphIndex: 2);
-        Assert.Contains("converted to list successfully", result);
-        Assert.Contains("Skipped: 1 paragraphs", result); // The existing list item should be skipped
+        Assert.StartsWith("Paragraphs converted to list", result);
+        Assert.Contains("Skipped: 1 paragraphs", result);
     }
 
     [Fact]
@@ -181,11 +172,9 @@ public class WordListToolTests : WordTestBase
         var docPath = CreateWordDocument("test_continue_list.docx");
         var outputPath = CreateTestFilePath("test_continue_list_output.docx");
 
-        // First add a numbered list
         var items1 = new JsonArray { "Item 1", "Item 2" };
         _tool.Execute("add_list", docPath, outputPath: docPath, items: items1, listType: "number");
 
-        // Act - Add more items continuing the previous list
         var items2 = new JsonArray { "Item 3", "Item 4" };
         var result = _tool.Execute("add_list", docPath, outputPath: outputPath, items: items2, continuePrevious: true);
         Assert.Contains("continuing previous list", result);
@@ -195,7 +184,6 @@ public class WordListToolTests : WordTestBase
             .Where(p => p.ListFormat.IsListItem)
             .ToList();
 
-        // All items should belong to the same list
         var listId = paragraphs[0].ListFormat.List?.ListId;
         foreach (var para in paragraphs) Assert.Equal(listId, para.ListFormat.List?.ListId);
     }
@@ -207,7 +195,7 @@ public class WordListToolTests : WordTestBase
         var outputPath = CreateTestFilePath("test_add_item_output.docx");
         var result = _tool.Execute("add_item", docPath, outputPath: outputPath,
             text: "New list item", styleName: "List Paragraph");
-        Assert.Contains("added successfully", result);
+        Assert.StartsWith("List item added", result);
         var doc = new Document(outputPath);
         var text = doc.GetText();
         Assert.Contains("New list item", text);
@@ -216,7 +204,6 @@ public class WordListToolTests : WordTestBase
     [SkippableFact]
     public void DeleteItem_ShouldDeleteParagraph()
     {
-        // Skip in evaluation mode as list operations may be limited
         SkipInEvaluationMode(AsposeLibraryType.Words, "List operations may be limited in evaluation mode");
         var docPath = CreateTestFilePath("test_delete_item.docx");
         var doc = new Document();
@@ -230,7 +217,7 @@ public class WordListToolTests : WordTestBase
 
         var outputPath = CreateTestFilePath("test_delete_item_output.docx");
         var result = _tool.Execute("delete_item", docPath, outputPath: outputPath, paragraphIndex: 0);
-        Assert.Contains("deleted successfully", result);
+        Assert.StartsWith("List item #0 deleted", result);
         var resultDoc = new Document(outputPath);
         var paragraphCountAfter = resultDoc.GetChildNodes(NodeType.Paragraph, true).Count;
         Assert.True(paragraphCountAfter < paragraphCountBefore);
@@ -241,7 +228,6 @@ public class WordListToolTests : WordTestBase
     [SkippableFact]
     public void EditItem_ShouldUpdateParagraphText()
     {
-        // Skip in evaluation mode as list operations may be limited
         SkipInEvaluationMode(AsposeLibraryType.Words, "List operations may be limited in evaluation mode");
         var docPath = CreateTestFilePath("test_edit_item.docx");
         var doc = new Document();
@@ -252,7 +238,7 @@ public class WordListToolTests : WordTestBase
         var outputPath = CreateTestFilePath("test_edit_item_output.docx");
         var result = _tool.Execute("edit_item", docPath, outputPath: outputPath,
             paragraphIndex: 0, text: "Updated text");
-        Assert.Contains("edited successfully", result);
+        Assert.StartsWith("List item edited", result);
         var resultDoc = new Document(outputPath);
         var text = resultDoc.GetText();
         Assert.Contains("Updated text", text);
@@ -269,7 +255,7 @@ public class WordListToolTests : WordTestBase
         var outputPath = CreateTestFilePath("test_edit_item_level_output.docx");
         var result = _tool.Execute("edit_item", docPath, outputPath: outputPath,
             paragraphIndex: 0, text: "Modified item", level: 2);
-        Assert.Contains("edited successfully", result);
+        Assert.StartsWith("List item edited", result);
         Assert.Contains("Level: 2", result);
     }
 
@@ -283,14 +269,13 @@ public class WordListToolTests : WordTestBase
         var outputPath = CreateTestFilePath("test_set_format_output.docx");
         var result = _tool.Execute("set_format", docPath, outputPath: outputPath,
             paragraphIndex: 0, leftIndent: 72.0);
-        Assert.Contains("format set successfully", result);
+        Assert.StartsWith("List format set", result);
         Assert.Contains("Left indent: 72", result);
     }
 
     [SkippableFact]
     public void SetFormat_WithNumberStyle_ShouldChangeNumberStyle()
     {
-        // Skip in evaluation mode as list operations may be limited
         SkipInEvaluationMode(AsposeLibraryType.Words, "List operations may be limited in evaluation mode");
         var docPath = CreateWordDocument("test_set_format_style.docx");
         var items = new JsonArray { "Item 1", "Item 2" };
@@ -299,7 +284,7 @@ public class WordListToolTests : WordTestBase
         var outputPath = CreateTestFilePath("test_set_format_style_output.docx");
         var result = _tool.Execute("set_format", docPath, outputPath: outputPath,
             paragraphIndex: 0, numberStyle: "roman");
-        Assert.Contains("format set successfully", result);
+        Assert.StartsWith("List format set", result);
         Assert.Contains("Number style: roman", result);
     }
 
@@ -312,13 +297,187 @@ public class WordListToolTests : WordTestBase
         builder.Writeln("Regular paragraph");
         doc.Save(docPath);
         var result = _tool.Execute("get_format", docPath, paragraphIndex: 0);
-        Assert.Contains("\"isListItem\": false", result); // JSON format
+        Assert.Contains("\"isListItem\": false", result);
         Assert.Contains("not a list item", result);
+    }
+
+    [Theory]
+    [InlineData("ADD_LIST")]
+    [InlineData("Add_List")]
+    [InlineData("add_list")]
+    public void Operation_ShouldBeCaseInsensitive_AddList(string operation)
+    {
+        var docPath = CreateWordDocument($"test_case_{operation}.docx");
+        var outputPath = CreateTestFilePath($"test_case_{operation}_output.docx");
+        var items = new JsonArray { "Item 1" };
+        var result = _tool.Execute(operation, docPath, outputPath: outputPath, items: items);
+        Assert.StartsWith("List added", result);
+    }
+
+    [Theory]
+    [InlineData("GET_FORMAT")]
+    [InlineData("Get_Format")]
+    [InlineData("get_format")]
+    public void Operation_ShouldBeCaseInsensitive_GetFormat(string operation)
+    {
+        var docPath = CreateWordDocument($"test_case_{operation}.docx");
+        var items = new JsonArray { "Item 1" };
+        _tool.Execute("add_list", docPath, outputPath: docPath, items: items);
+        var result = _tool.Execute(operation, docPath, paragraphIndex: 0);
+        Assert.NotNull(result);
+        Assert.NotEmpty(result);
+    }
+
+    [Theory]
+    [InlineData("ADD_ITEM")]
+    [InlineData("Add_Item")]
+    [InlineData("add_item")]
+    public void Operation_ShouldBeCaseInsensitive_AddItem(string operation)
+    {
+        var docPath = CreateWordDocument($"test_case_item_{operation}.docx");
+        var outputPath = CreateTestFilePath($"test_case_item_{operation}_output.docx");
+        var result = _tool.Execute(operation, docPath, outputPath: outputPath,
+            text: "New item", styleName: "List Paragraph");
+        Assert.StartsWith("List item added", result);
+    }
+
+    [Theory]
+    [InlineData("DELETE_ITEM")]
+    [InlineData("Delete_Item")]
+    [InlineData("delete_item")]
+    public void Operation_ShouldBeCaseInsensitive_DeleteItem(string operation)
+    {
+        var docPath = CreateTestFilePath($"test_case_delete_{operation}.docx");
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        builder.Writeln("Paragraph to delete");
+        doc.Save(docPath);
+        var outputPath = CreateTestFilePath($"test_case_delete_{operation}_output.docx");
+        var result = _tool.Execute(operation, docPath, outputPath: outputPath, paragraphIndex: 0);
+        Assert.StartsWith("List item #0 deleted", result);
+    }
+
+    [Theory]
+    [InlineData("EDIT_ITEM")]
+    [InlineData("Edit_Item")]
+    [InlineData("edit_item")]
+    public void Operation_ShouldBeCaseInsensitive_EditItem(string operation)
+    {
+        var docPath = CreateTestFilePath($"test_case_edit_{operation}.docx");
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        builder.Writeln("Original");
+        doc.Save(docPath);
+        var outputPath = CreateTestFilePath($"test_case_edit_{operation}_output.docx");
+        var result = _tool.Execute(operation, docPath, outputPath: outputPath, paragraphIndex: 0, text: "New");
+        Assert.StartsWith("List item edited", result);
+    }
+
+    [Theory]
+    [InlineData("SET_FORMAT")]
+    [InlineData("Set_Format")]
+    [InlineData("set_format")]
+    public void Operation_ShouldBeCaseInsensitive_SetFormat(string operation)
+    {
+        var docPath = CreateWordDocument($"test_case_set_{operation}.docx");
+        var items = new JsonArray { "Item 1" };
+        _tool.Execute("add_list", docPath, outputPath: docPath, items: items);
+        var outputPath = CreateTestFilePath($"test_case_set_{operation}_output.docx");
+        var result = _tool.Execute(operation, docPath, outputPath: outputPath, paragraphIndex: 0, leftIndent: 36.0);
+        Assert.StartsWith("List format set", result);
+    }
+
+    [Theory]
+    [InlineData("RESTART_NUMBERING")]
+    [InlineData("Restart_Numbering")]
+    [InlineData("restart_numbering")]
+    public void Operation_ShouldBeCaseInsensitive_RestartNumbering(string operation)
+    {
+        var docPath = CreateWordDocument($"test_case_restart_{operation}.docx");
+        var items = new JsonArray { "Item 1", "Item 2" };
+        _tool.Execute("add_list", docPath, outputPath: docPath, items: items, listType: "number");
+        var outputPath = CreateTestFilePath($"test_case_restart_{operation}_output.docx");
+        var result = _tool.Execute(operation, docPath, outputPath: outputPath, paragraphIndex: 1, startAt: 1);
+        Assert.StartsWith("List numbering restarted", result);
+    }
+
+    [Theory]
+    [InlineData("CONVERT_TO_LIST")]
+    [InlineData("Convert_To_List")]
+    [InlineData("convert_to_list")]
+    public void Operation_ShouldBeCaseInsensitive_ConvertToList(string operation)
+    {
+        var docPath = CreateTestFilePath($"test_case_convert_{operation}.docx");
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        builder.Writeln("Paragraph");
+        doc.Save(docPath);
+        var outputPath = CreateTestFilePath($"test_case_convert_{operation}_output.docx");
+        var result = _tool.Execute(operation, docPath, outputPath: outputPath,
+            startParagraphIndex: 0, endParagraphIndex: 0);
+        Assert.StartsWith("Paragraphs converted to list", result);
+    }
+
+    [Theory]
+    [InlineData("BULLET")]
+    [InlineData("Bullet")]
+    [InlineData("bullet")]
+    public void ListType_ShouldBeCaseInsensitive_Bullet(string listType)
+    {
+        var docPath = CreateWordDocument($"test_listtype_{listType}.docx");
+        var outputPath = CreateTestFilePath($"test_listtype_{listType}_output.docx");
+        var items = new JsonArray { "Item 1" };
+        var result = _tool.Execute("add_list", docPath, outputPath: outputPath, items: items, listType: listType);
+        Assert.StartsWith("List added", result);
+    }
+
+    [Theory]
+    [InlineData("NUMBER")]
+    [InlineData("Number")]
+    [InlineData("number")]
+    public void ListType_ShouldBeCaseInsensitive_Number(string listType)
+    {
+        var docPath = CreateWordDocument($"test_listtype_num_{listType}.docx");
+        var outputPath = CreateTestFilePath($"test_listtype_num_{listType}_output.docx");
+        var items = new JsonArray { "Item 1" };
+        var result = _tool.Execute("add_list", docPath, outputPath: outputPath, items: items, listType: listType);
+        Assert.StartsWith("List added", result);
+        Assert.Contains("type: number", result.ToLower());
+    }
+
+    [Theory]
+    [InlineData("ROMAN")]
+    [InlineData("Roman")]
+    [InlineData("roman")]
+    public void NumberFormat_ShouldBeCaseInsensitive(string numberFormat)
+    {
+        var docPath = CreateWordDocument($"test_numformat_{numberFormat}.docx");
+        var outputPath = CreateTestFilePath($"test_numformat_{numberFormat}_output.docx");
+        var items = new JsonArray { "Item 1" };
+        var result = _tool.Execute("add_list", docPath, outputPath: outputPath, items: items,
+            listType: "number", numberFormat: numberFormat);
+        Assert.StartsWith("List added", result);
+        Assert.Contains("number format: roman", result.ToLower());
+    }
+
+    [Theory]
+    [InlineData("ARABIC")]
+    [InlineData("Arabic")]
+    [InlineData("arabic")]
+    public void NumberStyle_ShouldBeCaseInsensitive(string numberStyle)
+    {
+        var docPath = CreateWordDocument($"test_numstyle_{numberStyle}.docx");
+        var items = new JsonArray { "Item 1" };
+        _tool.Execute("add_list", docPath, outputPath: docPath, items: items, listType: "number");
+        var outputPath = CreateTestFilePath($"test_numstyle_{numberStyle}_output.docx");
+        var result = _tool.Execute("set_format", docPath, outputPath: outputPath,
+            paragraphIndex: 0, numberStyle: numberStyle);
+        Assert.StartsWith("List format set", result);
     }
 
     #endregion
 
-    #region Exception Tests
+    #region Exception
 
     [Fact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
@@ -376,9 +535,89 @@ public class WordListToolTests : WordTestBase
         Assert.Contains("out of range", ex.Message);
     }
 
+    [Fact]
+    public void AddItem_WithMissingText_ShouldThrowArgumentException()
+    {
+        var docPath = CreateWordDocument("test_add_item_no_text.docx");
+        var outputPath = CreateTestFilePath("test_add_item_no_text_output.docx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("add_item", docPath, outputPath: outputPath, text: null, styleName: "List Paragraph"));
+
+        Assert.Contains("text", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void AddItem_WithMissingStyleName_ShouldThrowArgumentException()
+    {
+        var docPath = CreateWordDocument("test_add_item_no_style.docx");
+        var outputPath = CreateTestFilePath("test_add_item_no_style_output.docx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("add_item", docPath, outputPath: outputPath, text: "Item", styleName: null));
+
+        Assert.Contains("styleName", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void SetFormat_WithMissingParagraphIndex_ShouldThrowArgumentException()
+    {
+        var docPath = CreateWordDocument("test_set_format_no_idx.docx");
+        var outputPath = CreateTestFilePath("test_set_format_no_idx_output.docx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("set_format", docPath, outputPath: outputPath, paragraphIndex: null));
+
+        Assert.Contains("paragraphIndex", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ConvertToList_WithMissingStartIndex_ShouldThrowArgumentException()
+    {
+        var docPath = CreateWordDocumentWithContent("test_convert_no_start.docx", "Paragraph");
+        var outputPath = CreateTestFilePath("test_convert_no_start_output.docx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("convert_to_list", docPath, outputPath: outputPath,
+                startParagraphIndex: null, endParagraphIndex: 0));
+
+        Assert.Contains("startParagraphIndex", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ConvertToList_WithMissingEndIndex_ShouldThrowArgumentException()
+    {
+        var docPath = CreateWordDocumentWithContent("test_convert_no_end.docx", "Paragraph");
+        var outputPath = CreateTestFilePath("test_convert_no_end_output.docx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("convert_to_list", docPath, outputPath: outputPath,
+                startParagraphIndex: 0, endParagraphIndex: null));
+
+        Assert.Contains("endParagraphIndex", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ConvertToList_WithStartGreaterThanEnd_ShouldThrowArgumentException()
+    {
+        var docPath = CreateWordDocumentWithContent("test_convert_invalid_range.docx", "Paragraph");
+        var outputPath = CreateTestFilePath("test_convert_invalid_range_output.docx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("convert_to_list", docPath, outputPath: outputPath,
+                startParagraphIndex: 5, endParagraphIndex: 2));
+
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public void RestartNumbering_WithNonListParagraph_ShouldThrowArgumentException()
+    {
+        var docPath = CreateWordDocumentWithContent("test_restart_nonlist.docx", "Regular paragraph");
+        var outputPath = CreateTestFilePath("test_restart_nonlist_output.docx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("restart_numbering", docPath, outputPath: outputPath, paragraphIndex: 0));
+
+        Assert.Contains("not a list item", ex.Message);
+    }
+
     #endregion
 
-    #region Session ID Tests
+    #region Session
 
     [Fact]
     public void GetFormat_WithSessionId_ShouldReturnListFormat()
@@ -400,9 +639,8 @@ public class WordListToolTests : WordTestBase
         var sessionId = OpenSession(docPath);
         var items = new JsonArray { "Session Item A", "Session Item B" };
         var result = _tool.Execute("add_list", sessionId: sessionId, items: items);
-        Assert.Contains("List added successfully", result);
+        Assert.StartsWith("List added", result);
 
-        // Verify in-memory document has the list
         var doc = SessionManager.GetDocument<Document>(sessionId);
         var text = doc.GetText();
         Assert.Contains("Session Item A", text);
@@ -423,7 +661,6 @@ public class WordListToolTests : WordTestBase
         var sessionId = OpenSession(docPath);
         _tool.Execute("edit_item", sessionId: sessionId, paragraphIndex: 0, text: "Updated session text");
 
-        // Assert - verify in-memory change
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         var text = sessionDoc.GetText();
         Assert.Contains("Updated session text", text);
@@ -445,7 +682,6 @@ public class WordListToolTests : WordTestBase
         var sessionId = OpenSession(docPath);
         _tool.Execute("delete_item", sessionId: sessionId, paragraphIndex: 0);
 
-        // Assert - verify in-memory deletion
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         var text = sessionDoc.GetText();
         Assert.DoesNotContain("Paragraph to delete", text);
@@ -476,12 +712,45 @@ public class WordListToolTests : WordTestBase
 
         var sessionId = OpenSession(docPath2);
 
-        // Act - provide both path and sessionId
         var result = _tool.Execute("get_format", docPath1, sessionId, paragraphIndex: 0);
 
-        // Assert - should use sessionId document (Session paragraph unique)
-        // The result shows paragraph info, but we can verify by content
         Assert.NotNull(result);
+    }
+
+    [Fact]
+    public void ConvertToList_WithSessionId_ShouldConvertInMemory()
+    {
+        var docPath = CreateTestFilePath("test_session_convert.docx");
+        var doc = new Document();
+        var builder = new DocumentBuilder(doc);
+        builder.Writeln("First paragraph");
+        builder.Writeln("Second paragraph");
+        doc.Save(docPath);
+
+        var sessionId = OpenSession(docPath);
+        var result = _tool.Execute("convert_to_list", sessionId: sessionId,
+            startParagraphIndex: 0, endParagraphIndex: 1);
+
+        Assert.StartsWith("Paragraphs converted to list", result);
+
+        var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
+        var paragraphs = sessionDoc.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
+        Assert.True(paragraphs[0].ListFormat.IsListItem);
+        Assert.True(paragraphs[1].ListFormat.IsListItem);
+    }
+
+    [Fact]
+    public void SetFormat_WithSessionId_ShouldSetFormatInMemory()
+    {
+        var docPath = CreateWordDocument("test_session_set_format.docx");
+        var items = new JsonArray { "Item 1" };
+        _tool.Execute("add_list", docPath, outputPath: docPath, items: items, listType: "number");
+
+        var sessionId = OpenSession(docPath);
+        var result = _tool.Execute("set_format", sessionId: sessionId, paragraphIndex: 0, leftIndent: 50.0);
+
+        Assert.StartsWith("List format set", result);
+        Assert.Contains("Left indent: 50", result);
     }
 
     #endregion

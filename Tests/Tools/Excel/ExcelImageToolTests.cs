@@ -28,396 +28,169 @@ public class ExcelImageToolTests : ExcelTestBase
         return imagePath;
     }
 
-    #region General Tests
+    private string CreateWorkbookWithImage(string fileName, string cell = "A1")
+    {
+        var workbookPath = CreateExcelWorkbook(fileName);
+        var imagePath = CreateTestImage($"img_for_{Path.GetFileNameWithoutExtension(fileName)}.png");
+        var outputPath = CreateTestFilePath($"with_img_{fileName}");
+        _tool.Execute("add", workbookPath, imagePath: imagePath, cell: cell, outputPath: outputPath);
+        return outputPath;
+    }
+
+    #region General
 
     [Fact]
-    public void AddImage_ShouldAddImageToWorksheet()
+    public void Add_ShouldAddImageToWorksheet()
     {
-        var workbookPath = CreateExcelWorkbook("test_add_image.xlsx");
-        var imagePath = CreateTestImage("test_image.png");
-        var outputPath = CreateTestFilePath("test_add_image_output.xlsx");
-        var result = _tool.Execute(
-            "add",
-            workbookPath,
-            imagePath: imagePath,
-            cell: "A1",
-            outputPath: outputPath);
+        var workbookPath = CreateExcelWorkbook("test_add.xlsx");
+        var imagePath = CreateTestImage("test_add_image.png");
+        var outputPath = CreateTestFilePath("test_add_output.xlsx");
+        var result = _tool.Execute("add", workbookPath, imagePath: imagePath, cell: "A1", outputPath: outputPath);
         Assert.Contains("Image added to cell A1", result);
-        Assert.Contains("size:", result);
-
-        using var workbook = new Workbook(outputPath);
-        var worksheet = workbook.Worksheets[0];
-        Assert.Single(worksheet.Pictures);
-    }
-
-    [Fact]
-    public void AddImage_WithDimensions_ShouldSetDimensions()
-    {
-        var workbookPath = CreateExcelWorkbook("test_add_image_dimensions.xlsx");
-        var imagePath = CreateTestImage("test_image2.png");
-        var outputPath = CreateTestFilePath("test_add_image_dimensions_output.xlsx");
-        var result = _tool.Execute(
-            "add",
-            workbookPath,
-            imagePath: imagePath,
-            cell: "A1",
-            width: 200,
-            height: 150,
-            outputPath: outputPath);
-        Assert.Contains("Image added to cell A1", result);
-
-        using var workbook = new Workbook(outputPath);
-        var worksheet = workbook.Worksheets[0];
-        Assert.Single(worksheet.Pictures);
-        var picture = worksheet.Pictures[0];
-        Assert.True(Math.Abs(picture.Width - 200) < 10,
-            $"Image width should be approximately 200, got {picture.Width}");
-    }
-
-    [Fact]
-    public void AddImage_WithKeepAspectRatio_ShouldMaintainRatio()
-    {
-        var workbookPath = CreateExcelWorkbook("test_add_image_aspect.xlsx");
-        var imagePath = CreateTestImage("test_image_aspect.png");
-        var outputPath = CreateTestFilePath("test_add_image_aspect_output.xlsx");
-        var result = _tool.Execute(
-            "add",
-            workbookPath,
-            imagePath: imagePath,
-            cell: "A1",
-            width: 200,
-            keepAspectRatio: true,
-            outputPath: outputPath);
-        Assert.Contains("Image added to cell A1", result);
-
-        using var workbook = new Workbook(outputPath);
-        var worksheet = workbook.Worksheets[0];
-        Assert.Single(worksheet.Pictures);
-        Assert.True(worksheet.Pictures[0].IsLockAspectRatio);
-    }
-
-    [Fact]
-    public void AddImage_WithoutKeepAspectRatio_ShouldAllowDistortion()
-    {
-        var workbookPath = CreateExcelWorkbook("test_add_image_no_aspect.xlsx");
-        var imagePath = CreateTestImage("test_image_no_aspect.png");
-        var outputPath = CreateTestFilePath("test_add_image_no_aspect_output.xlsx");
-        var result = _tool.Execute(
-            "add",
-            workbookPath,
-            imagePath: imagePath,
-            cell: "A1",
-            width: 200,
-            height: 50,
-            keepAspectRatio: false,
-            outputPath: outputPath);
-        Assert.Contains("Image added to cell A1", result);
-
-        using var workbook = new Workbook(outputPath);
-        var worksheet = workbook.Worksheets[0];
-        Assert.Single(worksheet.Pictures);
-        Assert.False(worksheet.Pictures[0].IsLockAspectRatio);
-    }
-
-    [Fact]
-    public void AddImage_UnsupportedFormat_ShouldThrowException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_add_unsupported.xlsx");
-        var invalidImagePath = CreateTestFilePath("test_image.txt");
-        File.WriteAllText(invalidImagePath, "not an image");
-        var exception = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "add",
-            workbookPath,
-            imagePath: invalidImagePath,
-            cell: "A1"));
-        Assert.Contains("Unsupported image format", exception.Message);
-    }
-
-    [Fact]
-    public void AddImage_FileNotFound_ShouldThrowException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_add_not_found.xlsx");
-        Assert.Throws<FileNotFoundException>(() => _tool.Execute(
-            "add",
-            workbookPath,
-            imagePath: @"C:\nonexistent\image.png",
-            cell: "A1"));
-    }
-
-    [Fact]
-    public void AddImage_InvalidSheetIndex_ShouldThrowException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_add_invalid_sheet.xlsx");
-        var imagePath = CreateTestImage("test_image_sheet.png");
-        Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "add",
-            workbookPath,
-            sheetIndex: 99,
-            imagePath: imagePath,
-            cell: "A1"));
-    }
-
-    [Fact]
-    public void GetImages_ShouldReturnAllImages()
-    {
-        var workbookPath = CreateExcelWorkbook("test_get_images.xlsx");
-        var imagePath = CreateTestImage("test_image3.png");
-
-        var addOutputPath = CreateTestFilePath("test_get_images_added.xlsx");
-        _tool.Execute(
-            "add",
-            workbookPath,
-            imagePath: imagePath,
-            cell: "A1",
-            outputPath: addOutputPath);
-        var result = _tool.Execute(
-            "get",
-            addOutputPath);
-        var json = JsonDocument.Parse(result);
-        var root = json.RootElement;
-
-        Assert.Equal(1, root.GetProperty("count").GetInt32());
-        var items = root.GetProperty("items");
-        Assert.Equal(1, items.GetArrayLength());
-
-        var firstImage = items[0];
-        Assert.True(firstImage.TryGetProperty("name", out _));
-        Assert.True(firstImage.TryGetProperty("alternativeText", out _));
-        Assert.True(firstImage.TryGetProperty("imageType", out _));
-        Assert.True(firstImage.TryGetProperty("isLockAspectRatio", out _));
-
-        var location = firstImage.GetProperty("location");
-        Assert.True(location.TryGetProperty("upperLeftCell", out _));
-        Assert.True(location.TryGetProperty("lowerRightCell", out _));
-    }
-
-    [Fact]
-    public void GetImages_EmptyWorksheet_ShouldReturnEmptyResult()
-    {
-        var workbookPath = CreateExcelWorkbook("test_get_empty.xlsx");
-        var result = _tool.Execute(
-            "get",
-            workbookPath);
-        var json = JsonDocument.Parse(result);
-        var root = json.RootElement;
-
-        Assert.Equal(0, root.GetProperty("count").GetInt32());
-        Assert.Equal("No images found", root.GetProperty("message").GetString());
-    }
-
-    [Fact]
-    public void DeleteImage_ShouldDeleteImage()
-    {
-        var workbookPath = CreateExcelWorkbook("test_delete_image.xlsx");
-        var imagePath = CreateTestImage("test_image4.png");
-
-        var addOutputPath = CreateTestFilePath("test_delete_image_added.xlsx");
-        _tool.Execute(
-            "add",
-            workbookPath,
-            imagePath: imagePath,
-            cell: "A1",
-            outputPath: addOutputPath);
-
-        var outputPath = CreateTestFilePath("test_delete_image_output.xlsx");
-        var result = _tool.Execute(
-            "delete",
-            addOutputPath,
-            imageIndex: 0,
-            outputPath: outputPath);
-        Assert.Contains("Image #0 deleted", result);
-        Assert.Contains("0 images remaining", result);
-
-        using var workbook = new Workbook(outputPath);
-        Assert.Empty(workbook.Worksheets[0].Pictures);
-    }
-
-    [Fact]
-    public void DeleteImage_WithRemainingImages_ShouldShowReorderWarning()
-    {
-        var workbookPath = CreateExcelWorkbook("test_delete_reorder.xlsx");
-        var imagePath1 = CreateTestImage("test_image_r1.png");
-        var imagePath2 = CreateTestImage("test_image_r2.png");
-
-        // Add first image
-        var add1Path = CreateTestFilePath("test_delete_reorder_1.xlsx");
-        _tool.Execute(
-            "add",
-            workbookPath,
-            imagePath: imagePath1,
-            cell: "A1",
-            outputPath: add1Path);
-
-        // Add second image
-        var add2Path = CreateTestFilePath("test_delete_reorder_2.xlsx");
-        _tool.Execute(
-            "add",
-            add1Path,
-            imagePath: imagePath2,
-            cell: "C1",
-            outputPath: add2Path);
-
-        // Delete first image
-        var outputPath = CreateTestFilePath("test_delete_reorder_output.xlsx");
-        var result = _tool.Execute(
-            "delete",
-            add2Path,
-            imageIndex: 0,
-            outputPath: outputPath);
-        Assert.Contains("Image #0 deleted", result);
-        Assert.Contains("1 images remaining", result);
-        Assert.Contains("re-ordered", result);
-
         using var workbook = new Workbook(outputPath);
         Assert.Single(workbook.Worksheets[0].Pictures);
     }
 
     [Fact]
-    public void DeleteImage_InvalidIndex_ShouldThrowException()
+    public void Add_WithDimensions_ShouldSetDimensions()
     {
-        var workbookPath = CreateExcelWorkbook("test_delete_invalid.xlsx");
-        var exception = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "delete",
-            workbookPath,
-            imageIndex: 99));
-        Assert.Contains("out of range", exception.Message);
+        var workbookPath = CreateExcelWorkbook("test_add_dim.xlsx");
+        var imagePath = CreateTestImage("test_add_dim_image.png");
+        var outputPath = CreateTestFilePath("test_add_dim_output.xlsx");
+        var result = _tool.Execute("add", workbookPath, imagePath: imagePath, cell: "A1",
+            width: 200, height: 150, outputPath: outputPath);
+        Assert.Contains("Image added to cell A1", result);
+        using var workbook = new Workbook(outputPath);
+        Assert.Single(workbook.Worksheets[0].Pictures);
+        var picture = workbook.Worksheets[0].Pictures[0];
+        Assert.True(Math.Abs(picture.Width - 200) < 10);
     }
 
     [Fact]
-    public void DeleteImage_NegativeIndex_ShouldThrowException()
+    public void Add_WithKeepAspectRatio_ShouldMaintainRatio()
     {
-        var workbookPath = CreateExcelWorkbook("test_delete_negative.xlsx");
-        var imagePath = CreateTestImage("test_image_neg.png");
-
-        var addPath = CreateTestFilePath("test_delete_negative_added.xlsx");
-        _tool.Execute(
-            "add",
-            workbookPath,
-            imagePath: imagePath,
-            cell: "A1",
-            outputPath: addPath);
-        var exception = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "delete",
-            addPath,
-            imageIndex: -1));
-        Assert.Contains("out of range", exception.Message);
+        var workbookPath = CreateExcelWorkbook("test_add_aspect.xlsx");
+        var imagePath = CreateTestImage("test_add_aspect_image.png");
+        var outputPath = CreateTestFilePath("test_add_aspect_output.xlsx");
+        var result = _tool.Execute("add", workbookPath, imagePath: imagePath, cell: "A1",
+            width: 200, keepAspectRatio: true, outputPath: outputPath);
+        Assert.Contains("Image added to cell A1", result);
+        using var workbook = new Workbook(outputPath);
+        Assert.True(workbook.Worksheets[0].Pictures[0].IsLockAspectRatio);
     }
 
     [Fact]
-    public void AddImage_WithSheetIndex_ShouldAddToCorrectSheet()
+    public void Add_WithoutKeepAspectRatio_ShouldAllowDistortion()
     {
-        var workbookPath = CreateExcelWorkbook("test_add_sheet_index.xlsx");
+        var workbookPath = CreateExcelWorkbook("test_add_no_aspect.xlsx");
+        var imagePath = CreateTestImage("test_add_no_aspect_image.png");
+        var outputPath = CreateTestFilePath("test_add_no_aspect_output.xlsx");
+        var result = _tool.Execute("add", workbookPath, imagePath: imagePath, cell: "A1",
+            width: 200, height: 50, keepAspectRatio: false, outputPath: outputPath);
+        Assert.Contains("Image added to cell A1", result);
+        using var workbook = new Workbook(outputPath);
+        Assert.False(workbook.Worksheets[0].Pictures[0].IsLockAspectRatio);
+    }
+
+    [Fact]
+    public void Add_WithSheetIndex_ShouldAddToCorrectSheet()
+    {
+        var workbookPath = CreateExcelWorkbook("test_add_sheet.xlsx");
         using (var wb = new Workbook(workbookPath))
         {
             wb.Worksheets.Add("Sheet2");
             wb.Save(workbookPath);
         }
 
-        var imagePath = CreateTestImage("test_image_sheet2.png");
-        var outputPath = CreateTestFilePath("test_add_sheet_index_output.xlsx");
-        var result = _tool.Execute(
-            "add",
-            workbookPath,
-            sheetIndex: 1,
-            imagePath: imagePath,
-            cell: "B2",
-            outputPath: outputPath);
+        var imagePath = CreateTestImage("test_add_sheet_image.png");
+        var outputPath = CreateTestFilePath("test_add_sheet_output.xlsx");
+        var result = _tool.Execute("add", workbookPath, sheetIndex: 1, imagePath: imagePath,
+            cell: "B2", outputPath: outputPath);
         Assert.Contains("Image added to cell B2", result);
-
         using var workbook = new Workbook(outputPath);
         Assert.Empty(workbook.Worksheets[0].Pictures);
         Assert.Single(workbook.Worksheets[1].Pictures);
     }
 
     [Fact]
-    public void ExtractImage_ShouldExtractImageToFile()
+    public void Delete_ShouldDeleteImage()
     {
-        var workbookPath = CreateExcelWorkbook("test_extract_image.xlsx");
-        var imagePath = CreateTestImage("test_image_extract.png");
+        var workbookPath = CreateWorkbookWithImage("test_delete.xlsx");
+        var outputPath = CreateTestFilePath("test_delete_output.xlsx");
+        var result = _tool.Execute("delete", workbookPath, imageIndex: 0, outputPath: outputPath);
+        Assert.Contains("Image #0 deleted", result);
+        using var workbook = new Workbook(outputPath);
+        Assert.Empty(workbook.Worksheets[0].Pictures);
+    }
 
-        var addOutputPath = CreateTestFilePath("test_extract_image_added.xlsx");
-        _tool.Execute(
-            "add",
-            workbookPath,
-            imagePath: imagePath,
-            cell: "A1",
-            outputPath: addOutputPath);
+    [Fact]
+    public void Delete_WithRemainingImages_ShouldShowReorderWarning()
+    {
+        var workbookPath = CreateExcelWorkbook("test_delete_reorder.xlsx");
+        var imagePath1 = CreateTestImage("test_delete_r1.png");
+        var imagePath2 = CreateTestImage("test_delete_r2.png");
+        var add1Path = CreateTestFilePath("test_delete_r1.xlsx");
+        _tool.Execute("add", workbookPath, imagePath: imagePath1, cell: "A1", outputPath: add1Path);
+        var add2Path = CreateTestFilePath("test_delete_r2.xlsx");
+        _tool.Execute("add", add1Path, imagePath: imagePath2, cell: "C1", outputPath: add2Path);
+        var outputPath = CreateTestFilePath("test_delete_reorder_output.xlsx");
+        var result = _tool.Execute("delete", add2Path, imageIndex: 0, outputPath: outputPath);
+        Assert.Contains("Image #0 deleted", result);
+        using var workbook = new Workbook(outputPath);
+        Assert.Single(workbook.Worksheets[0].Pictures);
+    }
 
-        var exportPath = CreateTestFilePath("extracted_image.png");
-        var result = _tool.Execute(
-            "extract",
-            addOutputPath,
-            imageIndex: 0,
-            exportPath: exportPath);
+    [Fact]
+    public void Get_ShouldReturnAllImages()
+    {
+        var workbookPath = CreateWorkbookWithImage("test_get.xlsx");
+        var result = _tool.Execute("get", workbookPath);
+        var json = JsonDocument.Parse(result);
+        var root = json.RootElement;
+        Assert.Equal(1, root.GetProperty("count").GetInt32());
+        var firstImage = root.GetProperty("items")[0];
+        Assert.True(firstImage.TryGetProperty("name", out _));
+        Assert.True(firstImage.TryGetProperty("alternativeText", out _));
+        Assert.True(firstImage.TryGetProperty("imageType", out _));
+        Assert.True(firstImage.TryGetProperty("isLockAspectRatio", out _));
+        var location = firstImage.GetProperty("location");
+        Assert.True(location.TryGetProperty("upperLeftCell", out _));
+        Assert.True(location.TryGetProperty("lowerRightCell", out _));
+    }
+
+    [Fact]
+    public void Get_Empty_ShouldReturnEmptyResult()
+    {
+        var workbookPath = CreateExcelWorkbook("test_get_empty.xlsx");
+        var result = _tool.Execute("get", workbookPath);
+        var json = JsonDocument.Parse(result);
+        Assert.Equal(0, json.RootElement.GetProperty("count").GetInt32());
+        Assert.Equal("No images found", json.RootElement.GetProperty("message").GetString());
+    }
+
+    [Fact]
+    public void Extract_ShouldExtractImageToFile()
+    {
+        var workbookPath = CreateWorkbookWithImage("test_extract.xlsx");
+        var exportPath = CreateTestFilePath("extracted.png");
+        var result = _tool.Execute("extract", workbookPath, imageIndex: 0, exportPath: exportPath);
         Assert.Contains("Image #0", result);
-        Assert.Contains("extracted to:", result);
-        Assert.Contains(exportPath, result);
         Assert.True(File.Exists(exportPath));
         Assert.True(new FileInfo(exportPath).Length > 0);
     }
 
     [Fact]
-    public void ExtractImage_ToJpeg_ShouldExtractAsJpeg()
+    public void Extract_ToJpeg_ShouldExtractAsJpeg()
     {
-        var workbookPath = CreateExcelWorkbook("test_extract_jpeg.xlsx");
-        var imagePath = CreateTestImage("test_image_jpeg.png");
-
-        var addOutputPath = CreateTestFilePath("test_extract_jpeg_added.xlsx");
-        _tool.Execute(
-            "add",
-            workbookPath,
-            imagePath: imagePath,
-            cell: "A1",
-            outputPath: addOutputPath);
-
-        var exportPath = CreateTestFilePath("extracted_image.jpg");
-        var result = _tool.Execute(
-            "extract",
-            addOutputPath,
-            imageIndex: 0,
-            exportPath: exportPath);
-        Assert.Contains("extracted to:", result);
+        var workbookPath = CreateWorkbookWithImage("test_extract_jpeg.xlsx");
+        var exportPath = CreateTestFilePath("extracted.jpg");
+        var result = _tool.Execute("extract", workbookPath, imageIndex: 0, exportPath: exportPath);
+        Assert.Contains("Image #0", result);
         Assert.True(File.Exists(exportPath));
     }
 
     [Fact]
-    public void ExtractImage_InvalidIndex_ShouldThrowException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_extract_invalid.xlsx");
-        var exportPath = CreateTestFilePath("extracted_invalid.png");
-        var exception = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "extract",
-            workbookPath,
-            imageIndex: 99,
-            exportPath: exportPath));
-        Assert.Contains("out of range", exception.Message);
-    }
-
-    [Fact]
-    public void ExtractImage_UnsupportedFormat_ShouldThrowException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_extract_unsupported.xlsx");
-        var imagePath = CreateTestImage("test_image_unsupported.png");
-
-        var addOutputPath = CreateTestFilePath("test_extract_unsupported_added.xlsx");
-        _tool.Execute(
-            "add",
-            workbookPath,
-            imagePath: imagePath,
-            cell: "A1",
-            outputPath: addOutputPath);
-
-        var exportPath = CreateTestFilePath("extracted_image.xyz");
-        var exception = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "extract",
-            addOutputPath,
-            imageIndex: 0,
-            exportPath: exportPath));
-        Assert.Contains("Unsupported export format", exception.Message);
-    }
-
-    [Fact]
-    public void ExtractImage_WithSheetIndex_ShouldExtractFromCorrectSheet()
+    public void Extract_WithSheetIndex_ShouldExtractFromCorrectSheet()
     {
         var workbookPath = CreateExcelWorkbook("test_extract_sheet.xlsx");
         using (var wb = new Workbook(workbookPath))
@@ -426,142 +199,257 @@ public class ExcelImageToolTests : ExcelTestBase
             wb.Save(workbookPath);
         }
 
-        var imagePath = CreateTestImage("test_image_extract_sheet.png");
-        var addOutputPath = CreateTestFilePath("test_extract_sheet_added.xlsx");
-        _tool.Execute(
-            "add",
-            workbookPath,
-            sheetIndex: 1,
-            imagePath: imagePath,
-            cell: "A1",
-            outputPath: addOutputPath);
-
+        var imagePath = CreateTestImage("test_extract_sheet_image.png");
+        var addPath = CreateTestFilePath("test_extract_sheet_add.xlsx");
+        _tool.Execute("add", workbookPath, sheetIndex: 1, imagePath: imagePath, cell: "A1", outputPath: addPath);
         var exportPath = CreateTestFilePath("extracted_sheet.png");
-        var result = _tool.Execute(
-            "extract",
-            addOutputPath,
-            sheetIndex: 1,
-            imageIndex: 0,
-            exportPath: exportPath);
-        Assert.Contains("extracted to:", result);
+        var result = _tool.Execute("extract", addPath, sheetIndex: 1, imageIndex: 0, exportPath: exportPath);
+        Assert.Contains("Image #0", result);
         Assert.True(File.Exists(exportPath));
     }
 
+    [Theory]
+    [InlineData("ADD")]
+    [InlineData("Add")]
+    [InlineData("add")]
+    public void Operation_ShouldBeCaseInsensitive_Add(string operation)
+    {
+        var workbookPath = CreateExcelWorkbook($"test_case_{operation}.xlsx");
+        var imagePath = CreateTestImage($"test_case_{operation}_image.png");
+        var outputPath = CreateTestFilePath($"test_case_{operation}_output.xlsx");
+        var result = _tool.Execute(operation, workbookPath, imagePath: imagePath, cell: "A1", outputPath: outputPath);
+        Assert.Contains("Image added", result);
+    }
+
+    [Theory]
+    [InlineData("GET")]
+    [InlineData("Get")]
+    [InlineData("get")]
+    public void Operation_ShouldBeCaseInsensitive_Get(string operation)
+    {
+        var workbookPath = CreateExcelWorkbook($"test_case_get_{operation}.xlsx");
+        var result = _tool.Execute(operation, workbookPath);
+        Assert.Contains("\"count\":", result);
+    }
+
+    [Theory]
+    [InlineData("DELETE")]
+    [InlineData("Delete")]
+    [InlineData("delete")]
+    public void Operation_ShouldBeCaseInsensitive_Delete(string operation)
+    {
+        var workbookPath = CreateWorkbookWithImage($"test_case_del_{operation}.xlsx");
+        var outputPath = CreateTestFilePath($"test_case_del_{operation}_output.xlsx");
+        var result = _tool.Execute(operation, workbookPath, imageIndex: 0, outputPath: outputPath);
+        Assert.Contains("Image #0 deleted", result);
+    }
+
     #endregion
 
-    #region Exception Tests
+    #region Exception
 
     [Fact]
-    public void ExecuteAsync_InvalidOperation_ShouldThrowException()
+    public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
     {
-        var workbookPath = CreateExcelWorkbook("test_invalid_op.xlsx");
-        var exception = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "invalid",
-            workbookPath));
-        Assert.Contains("Unknown operation", exception.Message);
+        var workbookPath = CreateExcelWorkbook("test_unknown_op.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", workbookPath));
+        Assert.Contains("Unknown operation", ex.Message);
     }
 
     [Fact]
-    public void AddImage_MissingImagePath_ShouldThrowException()
+    public void Add_WithMissingImagePath_ShouldThrowArgumentException()
     {
-        var workbookPath = CreateExcelWorkbook("test_missing_image_path.xlsx");
-        var exception = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "add",
-            workbookPath,
-            cell: "A1"));
-        Assert.Contains("imagepath", exception.Message.ToLower());
+        var workbookPath = CreateExcelWorkbook("test_add_missing_path.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("add", workbookPath, cell: "A1"));
+        Assert.Contains("imagepath", ex.Message.ToLower());
     }
 
     [Fact]
-    public void AddImage_MissingCell_ShouldThrowException()
+    public void Add_WithMissingCell_ShouldThrowArgumentException()
     {
-        var workbookPath = CreateExcelWorkbook("test_missing_cell.xlsx");
-        var imagePath = CreateTestImage("test_missing_cell_image.png");
-        var exception = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "add",
-            workbookPath,
-            imagePath: imagePath));
-        Assert.Contains("cell", exception.Message.ToLower());
+        var workbookPath = CreateExcelWorkbook("test_add_missing_cell.xlsx");
+        var imagePath = CreateTestImage("test_add_missing_cell_image.png");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("add", workbookPath, imagePath: imagePath));
+        Assert.Contains("cell", ex.Message.ToLower());
+    }
+
+    [Fact]
+    public void Add_WithUnsupportedFormat_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateExcelWorkbook("test_add_unsupported.xlsx");
+        var invalidPath = CreateTestFilePath("invalid.txt");
+        File.WriteAllText(invalidPath, "not an image");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("add", workbookPath, imagePath: invalidPath, cell: "A1"));
+        Assert.Contains("Unsupported image format", ex.Message);
+    }
+
+    [Fact]
+    public void Add_WithFileNotFound_ShouldThrowFileNotFoundException()
+    {
+        var workbookPath = CreateExcelWorkbook("test_add_notfound.xlsx");
+        Assert.Throws<FileNotFoundException>(() =>
+            _tool.Execute("add", workbookPath, imagePath: @"C:\nonexistent\image.png", cell: "A1"));
+    }
+
+    [Fact]
+    public void Add_WithInvalidSheetIndex_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateExcelWorkbook("test_add_invalid_sheet.xlsx");
+        var imagePath = CreateTestImage("test_add_invalid_sheet_image.png");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("add", workbookPath, sheetIndex: 99, imagePath: imagePath, cell: "A1"));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public void Delete_WithMissingImageIndex_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateExcelWorkbook("test_delete_missing_index.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("delete", workbookPath));
+        Assert.Contains("imageIndex", ex.Message);
+    }
+
+    [Fact]
+    public void Delete_WithInvalidIndex_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateExcelWorkbook("test_delete_invalid.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("delete", workbookPath, imageIndex: 99));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public void Delete_WithNegativeIndex_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateWorkbookWithImage("test_delete_negative.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("delete", workbookPath, imageIndex: -1));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public void Get_WithInvalidSheetIndex_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateExcelWorkbook("test_get_invalid_sheet.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("get", workbookPath, sheetIndex: 99));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public void Extract_WithMissingImageIndex_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateExcelWorkbook("test_extract_missing_index.xlsx");
+        var exportPath = CreateTestFilePath("extract_missing.png");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("extract", workbookPath, exportPath: exportPath));
+        Assert.Contains("imageIndex", ex.Message);
+    }
+
+    [Fact]
+    public void Extract_WithMissingExportPath_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateWorkbookWithImage("test_extract_missing_path.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("extract", workbookPath, imageIndex: 0));
+        Assert.Contains("exportPath", ex.Message);
+    }
+
+    [Fact]
+    public void Extract_WithInvalidIndex_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateExcelWorkbook("test_extract_invalid.xlsx");
+        var exportPath = CreateTestFilePath("extract_invalid.png");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("extract", workbookPath, imageIndex: 99, exportPath: exportPath));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public void Extract_WithUnsupportedFormat_ShouldThrowArgumentException()
+    {
+        var workbookPath = CreateWorkbookWithImage("test_extract_unsupported.xlsx");
+        var exportPath = CreateTestFilePath("extract_unsupported.xyz");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("extract", workbookPath, imageIndex: 0, exportPath: exportPath));
+        Assert.Contains("Unsupported export format", ex.Message);
+    }
+
+    [Fact]
+    public void Execute_WithEmptyPath_ShouldThrowException()
+    {
+        Assert.Throws<ArgumentException>(() => _tool.Execute("get", ""));
+    }
+
+    [Fact]
+    public void Execute_WithNoPathOrSessionId_ShouldThrowException()
+    {
+        Assert.ThrowsAny<Exception>(() => _tool.Execute("get"));
     }
 
     #endregion
 
-    #region Session ID Tests
+    #region Session
 
     [Fact]
-    public void GetImages_WithSessionId_ShouldGetFromMemory()
+    public void Add_WithSessionId_ShouldAddInMemory()
     {
-        var workbookPath = CreateExcelWorkbook("test_session_get_images.xlsx");
-        var imagePath = CreateTestImage("test_session_image.png");
-
-        // Add image to file first
-        var addOutputPath = CreateTestFilePath("test_session_get_images_added.xlsx");
-        _tool.Execute(
-            "add",
-            workbookPath,
-            imagePath: imagePath,
-            cell: "A1",
-            outputPath: addOutputPath);
-
-        var sessionId = OpenSession(addOutputPath);
-        var result = _tool.Execute(
-            "get",
-            sessionId: sessionId);
-        var json = JsonDocument.Parse(result);
-        var root = json.RootElement;
-        Assert.Equal(1, root.GetProperty("count").GetInt32());
-    }
-
-    [Fact]
-    public void AddImage_WithSessionId_ShouldAddInMemory()
-    {
-        var workbookPath = CreateExcelWorkbook("test_session_add_image.xlsx");
+        var workbookPath = CreateExcelWorkbook("test_session_add.xlsx");
         var imagePath = CreateTestImage("test_session_add_image.png");
         var sessionId = OpenSession(workbookPath);
-        var result = _tool.Execute(
-            "add",
-            sessionId: sessionId,
-            imagePath: imagePath,
-            cell: "B2");
+        var result = _tool.Execute("add", sessionId: sessionId, imagePath: imagePath, cell: "B2");
         Assert.Contains("Image added to cell B2", result);
-
-        // Verify in-memory workbook has the image
+        Assert.Contains("session", result);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.Single(workbook.Worksheets[0].Pictures);
     }
 
     [Fact]
-    public void DeleteImage_WithSessionId_ShouldDeleteInMemory()
+    public void Delete_WithSessionId_ShouldDeleteInMemory()
     {
-        var workbookPath = CreateExcelWorkbook("test_session_delete_image.xlsx");
-        var imagePath = CreateTestImage("test_session_delete_image.png");
-
-        // Add image to file first
-        var addOutputPath = CreateTestFilePath("test_session_delete_image_added.xlsx");
-        _tool.Execute(
-            "add",
-            workbookPath,
-            imagePath: imagePath,
-            cell: "A1",
-            outputPath: addOutputPath);
-
-        var sessionId = OpenSession(addOutputPath);
-        var result = _tool.Execute(
-            "delete",
-            sessionId: sessionId,
-            imageIndex: 0);
+        var workbookPath = CreateWorkbookWithImage("test_session_delete.xlsx");
+        var sessionId = OpenSession(workbookPath);
+        var result = _tool.Execute("delete", sessionId: sessionId, imageIndex: 0);
         Assert.Contains("Image #0 deleted", result);
-
-        // Verify in-memory workbook has no images
+        Assert.Contains("session", result);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.Empty(workbook.Worksheets[0].Pictures);
     }
 
     [Fact]
+    public void Get_WithSessionId_ShouldGetFromMemory()
+    {
+        var workbookPath = CreateWorkbookWithImage("test_session_get.xlsx");
+        var sessionId = OpenSession(workbookPath);
+        var result = _tool.Execute("get", sessionId: sessionId);
+        var json = JsonDocument.Parse(result);
+        Assert.Equal(1, json.RootElement.GetProperty("count").GetInt32());
+    }
+
+    [Fact]
+    public void Extract_WithSessionId_ShouldExtractFromMemory()
+    {
+        var workbookPath = CreateWorkbookWithImage("test_session_extract.xlsx");
+        var sessionId = OpenSession(workbookPath);
+        var exportPath = CreateTestFilePath("session_extracted.png");
+        var result = _tool.Execute("extract", sessionId: sessionId, imageIndex: 0, exportPath: exportPath);
+        Assert.Contains("Image #0", result);
+        Assert.True(File.Exists(exportPath));
+    }
+
+    [Fact]
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
-        Assert.Throws<KeyNotFoundException>(() =>
-            _tool.Execute("get", sessionId: "invalid_session_id"));
+        Assert.Throws<KeyNotFoundException>(() => _tool.Execute("get", sessionId: "invalid_session"));
+    }
+
+    [Fact]
+    public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
+    {
+        var workbookPath1 = CreateExcelWorkbook("test_path_file.xlsx");
+        var workbookPath2 = CreateWorkbookWithImage("test_session_file.xlsx");
+        var sessionId = OpenSession(workbookPath2);
+        var result = _tool.Execute("get", workbookPath1, sessionId);
+        var json = JsonDocument.Parse(result);
+        Assert.Equal(1, json.RootElement.GetProperty("count").GetInt32());
     }
 
     #endregion

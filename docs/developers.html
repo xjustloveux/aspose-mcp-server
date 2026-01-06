@@ -109,8 +109,9 @@
         │ └── Session/ 1 個工具
         ├── Core/ 🔧 MCP 伺服器核心
         │ ├── Helpers/ 通用輔助工具
-        │ ├── Security/ 認證與追蹤模組
+        │ ├── Security/ 認證模組
         │ ├── Session/ Session 管理模組
+        │ ├── Tracking/ 追蹤模組
         │ ├── Transport/ 傳輸層模組
         │ ├── ServerConfig.cs - 伺服器配置
         │ └── LicenseManager.cs - 授權管理
@@ -148,7 +149,7 @@ cd aspose-mcp-server">
 
     <h3>2. 編譯 Release 版本</h3>
     <div class="code-wrapper">
-        <div class="code-block" data-code="pwsh build.ps1 --configuration Release">pwsh build.ps1 --configuration Release</div>
+        <div class="code-block" data-code="pwsh deploy/build.ps1 --configuration Release">pwsh deploy/build.ps1 --configuration Release</div>
         <button class="copy-button" onclick="copyCode(this)" title="複製指令">
             <span>📋</span>
             <span>複製</span>
@@ -158,7 +159,7 @@ cd aspose-mcp-server">
     <h3>3. 發布版本</h3>
     <p>發布 Windows 版本：</p>
     <div class="code-wrapper">
-        <div class="code-block" data-code="pwsh publish.ps1 -Windows">pwsh publish.ps1 -Windows</div>
+        <div class="code-block" data-code="pwsh deploy/publish.ps1 -Windows">pwsh deploy/publish.ps1 -Windows</div>
         <button class="copy-button" onclick="copyCode(this)" title="複製指令">
             <span>📋</span>
             <span>複製</span>
@@ -167,7 +168,7 @@ cd aspose-mcp-server">
 
     <p>發布所有平台：</p>
     <div class="code-wrapper">
-        <div class="code-block" data-code="pwsh publish.ps1 -All">pwsh publish.ps1 -All</div>
+        <div class="code-block" data-code="pwsh deploy/publish.ps1 -All">pwsh deploy/publish.ps1 -All</div>
         <button class="copy-button" onclick="copyCode(this)" title="複製指令">
             <span>📋</span>
             <span>複製</span>
@@ -190,7 +191,7 @@ cd aspose-mcp-server">
     <h3>本地構建</h3>
     <p>發布 Windows 版本：</p>
     <div class="code-wrapper">
-        <div class="code-block" data-code="pwsh publish.ps1 -Windows">pwsh publish.ps1 -Windows</div>
+        <div class="code-block" data-code="pwsh deploy/publish.ps1 -Windows">pwsh deploy/publish.ps1 -Windows</div>
         <button class="copy-button" onclick="copyCode(this)" title="複製指令">
             <span>📋</span>
             <span>複製</span>
@@ -199,7 +200,7 @@ cd aspose-mcp-server">
 
     <p>發布 Linux 版本：</p>
     <div class="code-wrapper">
-        <div class="code-block" data-code="pwsh publish.ps1 -Linux">pwsh publish.ps1 -Linux</div>
+        <div class="code-block" data-code="pwsh deploy/publish.ps1 -Linux">pwsh deploy/publish.ps1 -Linux</div>
         <button class="copy-button" onclick="copyCode(this)" title="複製指令">
             <span>📋</span>
             <span>複製</span>
@@ -208,7 +209,7 @@ cd aspose-mcp-server">
 
     <p>發布 macOS 版本（Intel + ARM）：</p>
     <div class="code-wrapper">
-        <div class="code-block" data-code="pwsh publish.ps1 -MacOS">pwsh publish.ps1 -MacOS</div>
+        <div class="code-block" data-code="pwsh deploy/publish.ps1 -MacOS">pwsh deploy/publish.ps1 -MacOS</div>
         <button class="copy-button" onclick="copyCode(this)" title="複製指令">
             <span>📋</span>
             <span>複製</span>
@@ -217,7 +218,7 @@ cd aspose-mcp-server">
 
     <p>發布所有平台：</p>
     <div class="code-wrapper">
-        <div class="code-block" data-code="pwsh publish.ps1 -All">pwsh publish.ps1 -All</div>
+        <div class="code-block" data-code="pwsh deploy/publish.ps1 -All">pwsh deploy/publish.ps1 -All</div>
         <button class="copy-button" onclick="copyCode(this)" title="複製指令">
             <span>📋</span>
             <span>複製</span>
@@ -226,7 +227,7 @@ cd aspose-mcp-server">
 
     <p>清理後構建：</p>
     <div class="code-wrapper">
-        <div class="code-block" data-code="pwsh publish.ps1 -All -Clean">pwsh publish.ps1 -All -Clean</div>
+        <div class="code-block" data-code="pwsh deploy/publish.ps1 -All -Clean">pwsh deploy/publish.ps1 -All -Clean</div>
         <button class="copy-button" onclick="copyCode(this)" title="複製指令">
             <span>📋</span>
             <span>複製</span>
@@ -251,7 +252,7 @@ cd aspose-mcp-server">
     <h3>測試統計</h3>
     <ul style="margin-top: 15px; padding-left: 25px;">
         <li><strong>測試類</strong>: 100+ 個測試類（含 Core、Security、Session 測試）</li>
-        <li><strong>測試用例</strong>: 2,100+ 個測試用例</li>
+        <li><strong>測試用例</strong>: 4,200+ 個測試用例</li>
         <li><strong>測試框架</strong>: xUnit 2.9.2</li>
     </ul>
 
@@ -303,7 +304,7 @@ cd aspose-mcp-server">
 
     <h3>測試結構</h3>
     <ul style="margin-top: 15px; padding-left: 25px;">
-        <li><code>Tests/Core/</code> - 核心功能測試（Helpers、Security、Session）</li>
+        <li><code>Tests/Core/</code> - 核心功能測試（Helpers、Security、Session、Tracking）</li>
         <li><code>Tests/Tools/Word/</code> - Word 工具測試（24 個測試類）</li>
         <li><code>Tests/Tools/Excel/</code> - Excel 工具測試（25 個測試類）</li>
         <li><code>Tests/Tools/PowerPoint/</code> - PowerPoint 工具測試（21 個測試類）</li>
@@ -375,7 +376,10 @@ cd aspose-mcp-server">
     <p>通用輔助工具：SecurityHelper（安全驗證）、ColorHelper（顏色處理）、FontHelper（字型設定）、ValueHelper（值轉換）等。</p>
 
     <h3>Core/Security/</h3>
-    <p>認證與追蹤模組：API Key 認證、JWT 認證、Tracking 中間件，支援多種驗證模式。</p>
+    <p>認證模組：API Key 認證、JWT 認證中間件，支援多種驗證模式。</p>
+
+    <h3>Core/Tracking/</h3>
+    <p>追蹤模組：結構化日誌、Webhook 通知、Prometheus Metrics 中間件。</p>
 
     <h3>Core/Session/</h3>
     <p>Session 管理模組：DocumentSession（會話生命週期）、DocumentSessionManager（並發管理）、SessionConfig（配置）等。</p>

@@ -16,6 +16,11 @@ namespace AsposeMcpServer.Tools.Word;
 public class WordPageTool
 {
     /// <summary>
+    ///     Identity accessor for session isolation
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document session operations
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -24,11 +29,42 @@ public class WordPageTool
     ///     Initializes a new instance of the WordPageTool class
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document operations</param>
-    public WordPageTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation</param>
+    public WordPageTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a Word page operation (set_margins, set_orientation, set_size, set_page_number, set_page_setup,
+    ///     delete_page, insert_blank_page, add_page_break).
+    /// </summary>
+    /// <param name="operation">
+    ///     The operation to perform: set_margins, set_orientation, set_size, set_page_number,
+    ///     set_page_setup, delete_page, insert_blank_page, add_page_break.
+    /// </param>
+    /// <param name="path">Word document file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="top">Top margin in points (72 pts = 1 inch).</param>
+    /// <param name="bottom">Bottom margin in points.</param>
+    /// <param name="left">Left margin in points.</param>
+    /// <param name="right">Right margin in points.</param>
+    /// <param name="orientation">Page orientation: Portrait or Landscape.</param>
+    /// <param name="width">Page width in points (72 pts = 1 inch).</param>
+    /// <param name="height">Page height in points.</param>
+    /// <param name="paperSize">Predefined paper size: A4, Letter, Legal, A3, A5.</param>
+    /// <param name="pageNumberFormat">Page number format: arabic, roman, letter.</param>
+    /// <param name="startingPageNumber">Starting page number.</param>
+    /// <param name="sectionIndex">Section index (0-based).</param>
+    /// <param name="sectionIndices">Array of section indices.</param>
+    /// <param name="pageIndex">Page index to delete (0-based).</param>
+    /// <param name="insertAtPageIndex">Page index to insert blank page at (0-based).</param>
+    /// <param name="paragraphIndex">Paragraph index to insert page break after (0-based).</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "word_page")]
     [Description(
         @"Manage page settings in Word documents. Supports 8 operations: set_margins, set_orientation, set_size, set_page_number, set_page_setup, delete_page, insert_blank_page, add_page_break.
@@ -79,7 +115,7 @@ Usage examples:
         [Description("Paragraph index to insert page break after (0-based)")]
         int? paragraphIndex = null)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {

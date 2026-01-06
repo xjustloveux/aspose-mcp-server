@@ -30,6 +30,11 @@ public class ExcelPrintSettingsTool
     };
 
     /// <summary>
+    ///     Session identity accessor for session isolation support.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Document session manager for in-memory editing support.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -38,11 +43,40 @@ public class ExcelPrintSettingsTool
     ///     Initializes a new instance of the <see cref="ExcelPrintSettingsTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
-    public ExcelPrintSettingsTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    public ExcelPrintSettingsTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes an Excel print settings operation (set_print_area, set_print_titles, set_page_setup, set_all).
+    /// </summary>
+    /// <param name="operation">The operation to perform: set_print_area, set_print_titles, set_page_setup, set_all.</param>
+    /// <param name="path">Excel file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="sheetIndex">Sheet index (0-based, default: 0).</param>
+    /// <param name="range">Print area range (e.g., 'A1:D10').</param>
+    /// <param name="clearPrintArea">Clear print area (optional, for set_print_area, default: false).</param>
+    /// <param name="rows">Rows to repeat on each printed page (e.g., '1:1').</param>
+    /// <param name="columns">Columns to repeat on each printed page (e.g., 'A:A').</param>
+    /// <param name="clearTitles">Clear print titles (optional, for set_print_titles, default: false).</param>
+    /// <param name="orientation">Page orientation (optional, default: Portrait).</param>
+    /// <param name="paperSize">Paper size (e.g., 'A4', 'Letter').</param>
+    /// <param name="leftMargin">Left margin in inches.</param>
+    /// <param name="rightMargin">Right margin in inches.</param>
+    /// <param name="topMargin">Top margin in inches.</param>
+    /// <param name="bottomMargin">Bottom margin in inches.</param>
+    /// <param name="header">Header text for center section.</param>
+    /// <param name="footer">Footer text for center section.</param>
+    /// <param name="fitToPage">Enable fit to page mode.</param>
+    /// <param name="fitToPagesWide">Number of pages wide to fit content.</param>
+    /// <param name="fitToPagesTall">Number of pages tall to fit content.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "excel_print_settings")]
     [Description(
         @"Manage Excel print settings. Supports 4 operations: set_print_area, set_print_titles, set_page_setup, set_all.
@@ -108,7 +142,7 @@ Usage examples:
             "Number of pages tall to fit content (optional, default: 1 when fitToPage is true, use 0 for automatic)")]
         int? fitToPagesTall = null)
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {

@@ -16,6 +16,11 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 public class PptTextFormatTool
 {
     /// <summary>
+    ///     Identity accessor for session isolation.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document session handling.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -24,11 +29,28 @@ public class PptTextFormatTool
     ///     Initializes a new instance of the <see cref="PptTextFormatTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory editing.</param>
-    public PptTextFormatTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation.</param>
+    public PptTextFormatTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a PowerPoint text format operation (batch format text).
+    /// </summary>
+    /// <param name="path">Presentation file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (optional, defaults to input path).</param>
+    /// <param name="slideIndices">Slide indices to apply as JSON array (optional; default all).</param>
+    /// <param name="fontName">Font name (optional).</param>
+    /// <param name="fontSize">Font size (optional).</param>
+    /// <param name="bold">Bold (optional).</param>
+    /// <param name="italic">Italic (optional).</param>
+    /// <param name="color">Text color: Hex (#FF5500, #RGB) or named color (Red, Blue, DarkGreen) (optional).</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when slide index is out of range.</exception>
     [McpServerTool(Name = "ppt_text_format")]
     [Description(@"Batch format PowerPoint text. Formats font, size, bold, italic, color across slides.
 Applies to text in AutoShapes and Table cells.
@@ -55,7 +77,7 @@ Usage examples:
         [Description("Text color: Hex (#FF5500, #RGB) or named color (Red, Blue, DarkGreen) (optional)")]
         string? color = null)
     {
-        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var presentation = ctx.Document;
 
         int[] targets;

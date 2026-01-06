@@ -1,32 +1,32 @@
 namespace AsposeMcpServer.Core;
 
 /// <summary>
-///     Server configuration for enabling/disabling tool categories and license management
+///     Server configuration for enabling/disabling tool categories and license management.
 /// </summary>
 public class ServerConfig
 {
     /// <summary>
-    ///     Enable Word document tools
+    ///     Gets a value indicating whether Word document tools are enabled.
     /// </summary>
     public bool EnableWord { get; private set; } = true;
 
     /// <summary>
-    ///     Enable Excel spreadsheet tools
+    ///     Gets a value indicating whether Excel spreadsheet tools are enabled.
     /// </summary>
     public bool EnableExcel { get; private set; } = true;
 
     /// <summary>
-    ///     Enable PowerPoint presentation tools
+    ///     Gets a value indicating whether PowerPoint presentation tools are enabled.
     /// </summary>
     public bool EnablePowerPoint { get; private set; } = true;
 
     /// <summary>
-    ///     Enable PDF document tools
+    ///     Gets a value indicating whether PDF document tools are enabled.
     /// </summary>
     public bool EnablePdf { get; private set; } = true;
 
     /// <summary>
-    ///     License file path or filename. Can be absolute path, relative path, or just filename.
+    ///     Gets the license file path or filename. Can be absolute path, relative path, or just filename.
     ///     If not specified, will search for common license file names.
     /// </summary>
     public string? LicensePath { get; private set; }
@@ -35,43 +35,35 @@ public class ServerConfig
     ///     Loads configuration from environment variables and command line arguments.
     ///     Command line arguments take precedence over environment variables.
     /// </summary>
-    /// <param name="args">Command line arguments</param>
-    /// <returns>ServerConfig instance</returns>
+    /// <param name="args">Command line arguments.</param>
+    /// <returns>A new <see cref="ServerConfig" /> instance.</returns>
     public static ServerConfig LoadFromArgs(string[] args)
     {
         var config = new ServerConfig();
-
-        // Load from environment variables first (as defaults)
         config.LoadFromEnvironment();
-
-        // Command line arguments override environment variables
         config.LoadFromCommandLine(args);
-
         return config;
     }
 
     /// <summary>
-    ///     Loads configuration from environment variables
+    ///     Loads configuration from environment variables.
     /// </summary>
     private void LoadFromEnvironment()
     {
-        // License path
         var licensePath = Environment.GetEnvironmentVariable("ASPOSE_LICENSE_PATH");
         if (!string.IsNullOrEmpty(licensePath))
             LicensePath = licensePath;
 
-        // Tools (format: "all" or "word,excel,pdf,ppt")
         var tools = Environment.GetEnvironmentVariable("ASPOSE_TOOLS");
         if (!string.IsNullOrEmpty(tools)) ParseTools(tools);
     }
 
     /// <summary>
-    ///     Parses tool specification string and enables corresponding tools
+    ///     Parses tool specification string and enables corresponding tools.
     /// </summary>
-    /// <param name="tools">Comma-separated tool names or "all"</param>
+    /// <param name="tools">Comma-separated tool names or "all".</param>
     private void ParseTools(string tools)
     {
-        // Reset all tools first
         EnableWord = false;
         EnableExcel = false;
         EnablePowerPoint = false;
@@ -86,7 +78,7 @@ public class ServerConfig
                     EnableExcel = true;
                     EnablePowerPoint = true;
                     EnablePdf = true;
-                    return; // "all" includes everything, no need to continue
+                    return;
                 case "word":
                     EnableWord = true;
                     break;
@@ -104,14 +96,13 @@ public class ServerConfig
     }
 
     /// <summary>
-    ///     Loads configuration from command line arguments (overrides environment variables)
+    ///     Loads configuration from command line arguments (overrides environment variables).
     /// </summary>
-    /// <param name="args">Command line arguments</param>
+    /// <param name="args">Command line arguments.</param>
     private void LoadFromCommandLine(string[] args)
     {
         if (args.Length == 0) return;
 
-        // Check if any tool argument is specified
         var hasToolArg = args.Any(a =>
             a.Equals("--word", StringComparison.OrdinalIgnoreCase) ||
             a.Equals("--excel", StringComparison.OrdinalIgnoreCase) ||
@@ -120,7 +111,6 @@ public class ServerConfig
             a.Equals("--pdf", StringComparison.OrdinalIgnoreCase) ||
             a.Equals("--all", StringComparison.OrdinalIgnoreCase));
 
-        // Only reset tools if command line specifies tools (override env var)
         if (hasToolArg)
         {
             EnableWord = false;
@@ -164,9 +154,9 @@ public class ServerConfig
     }
 
     /// <summary>
-    ///     Gets a comma-separated string of enabled tool categories
+    ///     Gets a comma-separated string of enabled tool categories.
     /// </summary>
-    /// <returns>String listing enabled tools, or "None" if none are enabled</returns>
+    /// <returns>A string listing enabled tools, or "None" if none are enabled.</returns>
     public string GetEnabledToolsInfo()
     {
         List<string> enabled = [];
@@ -179,9 +169,9 @@ public class ServerConfig
     }
 
     /// <summary>
-    ///     Validates the configuration and throws an exception if invalid
+    ///     Validates the configuration and throws an exception if invalid.
     /// </summary>
-    /// <exception cref="InvalidOperationException">Thrown when configuration is invalid</exception>
+    /// <exception cref="InvalidOperationException">Thrown when no tool category is enabled.</exception>
     public void Validate()
     {
         if (!EnableWord && !EnableExcel && !EnablePowerPoint && !EnablePdf)

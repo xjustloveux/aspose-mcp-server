@@ -1,9 +1,9 @@
-using AsposeMcpServer.Core.Security;
+using AsposeMcpServer.Core.Tracking;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Moq;
 
-namespace AsposeMcpServer.Tests.Core.Security;
+namespace AsposeMcpServer.Tests.Core.Tracking;
 
 /// <summary>
 ///     Unit tests for TrackingMiddleware class
@@ -71,13 +71,14 @@ public class TrackingMiddlewareTests
         var config = new TrackingConfig { LogEnabled = false };
         var logger = Mock.Of<ILogger<TrackingMiddleware>>();
         var nextCalled = false;
-        RequestDelegate next = _ =>
+
+        Task Next(HttpContext _)
         {
             nextCalled = true;
             return Task.CompletedTask;
-        };
+        }
 
-        var middleware = new TrackingMiddleware(next, config, logger);
+        var middleware = new TrackingMiddleware(Next, config, logger);
         var context = new DefaultHttpContext();
 
         await middleware.InvokeAsync(context);
@@ -90,9 +91,13 @@ public class TrackingMiddlewareTests
     {
         var config = new TrackingConfig { LogEnabled = false };
         var logger = Mock.Of<ILogger<TrackingMiddleware>>();
-        RequestDelegate next = _ => Task.CompletedTask;
 
-        var middleware = new TrackingMiddleware(next, config, logger);
+        Task Next(HttpContext _)
+        {
+            return Task.CompletedTask;
+        }
+
+        var middleware = new TrackingMiddleware(Next, config, logger);
         var context = new DefaultHttpContext();
 
         await middleware.InvokeAsync(context);
@@ -111,13 +116,14 @@ public class TrackingMiddlewareTests
         };
         var logger = Mock.Of<ILogger<TrackingMiddleware>>();
         var nextCalled = false;
-        RequestDelegate next = _ =>
+
+        Task Next(HttpContext _)
         {
             nextCalled = true;
             return Task.CompletedTask;
-        };
+        }
 
-        var middleware = new TrackingMiddleware(next, config, logger);
+        var middleware = new TrackingMiddleware(Next, config, logger);
         var context = new DefaultHttpContext
         {
             Request = { Path = "/metrics" },
@@ -136,18 +142,18 @@ public class TrackingMiddlewareTests
     {
         var config = new TrackingConfig { LogEnabled = false };
         var logger = Mock.Of<ILogger<TrackingMiddleware>>();
-        RequestDelegate next = ctx =>
+
+        Task Next(HttpContext ctx)
         {
             ctx.Response.StatusCode = 500;
             return Task.CompletedTask;
-        };
+        }
 
-        var middleware = new TrackingMiddleware(next, config, logger);
+        var middleware = new TrackingMiddleware(Next, config, logger);
         var context = new DefaultHttpContext { Items = { ["ToolName"] = "test_tool" } };
 
         await middleware.InvokeAsync(context);
 
-        // Verify execution completed
         Assert.Equal(500, context.Response.StatusCode);
     }
 
@@ -156,9 +162,13 @@ public class TrackingMiddlewareTests
     {
         var config = new TrackingConfig { LogEnabled = false };
         var logger = Mock.Of<ILogger<TrackingMiddleware>>();
-        RequestDelegate next = _ => throw new InvalidOperationException("Test error");
 
-        var middleware = new TrackingMiddleware(next, config, logger);
+        Task Next(HttpContext _)
+        {
+            throw new InvalidOperationException("Test error");
+        }
+
+        var middleware = new TrackingMiddleware(Next, config, logger);
         var context = new DefaultHttpContext();
 
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
@@ -170,9 +180,13 @@ public class TrackingMiddlewareTests
     {
         var config = new TrackingConfig { LogEnabled = false };
         var logger = Mock.Of<ILogger<TrackingMiddleware>>();
-        RequestDelegate next = _ => Task.CompletedTask;
 
-        var middleware = new TrackingMiddleware(next, config, logger);
+        Task Next(HttpContext _)
+        {
+            return Task.CompletedTask;
+        }
+
+        var middleware = new TrackingMiddleware(Next, config, logger);
         var context = new DefaultHttpContext { Items = { ["ToolName"] = "pdf_text", ["ToolOperation"] = "get" } };
 
         await middleware.InvokeAsync(context);
@@ -186,9 +200,13 @@ public class TrackingMiddlewareTests
     {
         var config = new TrackingConfig { LogEnabled = false };
         var logger = Mock.Of<ILogger<TrackingMiddleware>>();
-        RequestDelegate next = _ => Task.CompletedTask;
 
-        var middleware = new TrackingMiddleware(next, config, logger);
+        Task Next(HttpContext _)
+        {
+            return Task.CompletedTask;
+        }
+
+        var middleware = new TrackingMiddleware(Next, config, logger);
         var context = new DefaultHttpContext { Request = { Path = "/sse/messages" } };
 
         await middleware.InvokeAsync(context);
@@ -202,9 +220,13 @@ public class TrackingMiddlewareTests
     {
         var config = new TrackingConfig { LogEnabled = false };
         var logger = Mock.Of<ILogger<TrackingMiddleware>>();
-        RequestDelegate next = _ => Task.CompletedTask;
 
-        var middleware = new TrackingMiddleware(next, config, logger);
+        Task Next(HttpContext _)
+        {
+            return Task.CompletedTask;
+        }
+
+        var middleware = new TrackingMiddleware(Next, config, logger);
         var context = new DefaultHttpContext { Request = { Path = "/ws" } };
 
         await middleware.InvokeAsync(context);
@@ -226,14 +248,17 @@ public class TrackingMiddlewareTests
             LogTargets = [LogTarget.Console]
         };
         var loggerMock = new Mock<ILogger<TrackingMiddleware>>();
-        RequestDelegate next = _ => Task.CompletedTask;
 
-        var middleware = new TrackingMiddleware(next, config, loggerMock.Object);
+        Task Next(HttpContext _)
+        {
+            return Task.CompletedTask;
+        }
+
+        var middleware = new TrackingMiddleware(Next, config, loggerMock.Object);
         var context = new DefaultHttpContext { Items = { ["ToolName"] = "test_tool" } };
 
         await middleware.InvokeAsync(context);
 
-        // Verify logging was called
         loggerMock.Verify(
             x => x.Log(
                 It.IsAny<LogLevel>(),
@@ -253,13 +278,14 @@ public class TrackingMiddlewareTests
             LogTargets = [LogTarget.Console]
         };
         var loggerMock = new Mock<ILogger<TrackingMiddleware>>();
-        RequestDelegate next = ctx =>
+
+        Task Next(HttpContext ctx)
         {
             ctx.Response.StatusCode = 500;
             return Task.CompletedTask;
-        };
+        }
 
-        var middleware = new TrackingMiddleware(next, config, loggerMock.Object);
+        var middleware = new TrackingMiddleware(Next, config, loggerMock.Object);
         var context = new DefaultHttpContext { Items = { ["ToolName"] = "test_tool" } };
 
         await middleware.InvokeAsync(context);

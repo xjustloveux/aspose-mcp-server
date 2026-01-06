@@ -17,6 +17,11 @@ namespace AsposeMcpServer.Tools.Excel;
 public class ExcelStyleTool
 {
     /// <summary>
+    ///     Session identity accessor for session isolation support.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Document session manager for in-memory editing support.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -25,11 +30,45 @@ public class ExcelStyleTool
     ///     Initializes a new instance of the <see cref="ExcelStyleTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
-    public ExcelStyleTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    public ExcelStyleTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes an Excel style operation (format, get_format, copy_sheet_format).
+    /// </summary>
+    /// <param name="operation">The operation to perform: format, get_format, copy_sheet_format.</param>
+    /// <param name="path">Excel file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="sheetIndex">Sheet index (0-based, default: 0).</param>
+    /// <param name="sourceSheetIndex">Source sheet index (0-based, required for copy_sheet_format).</param>
+    /// <param name="targetSheetIndex">Target sheet index (0-based, required for copy_sheet_format).</param>
+    /// <param name="range">Cell range (e.g., 'A1:C5', required for format).</param>
+    /// <param name="cell">Cell address or range (e.g., 'A1' or 'A1:C5', for get_format).</param>
+    /// <param name="fields">Comma-separated list of fields: font, color, alignment, border, number, value, all.</param>
+    /// <param name="ranges">Array of cell ranges for batch format (JSON array string).</param>
+    /// <param name="fontName">Font name.</param>
+    /// <param name="fontSize">Font size.</param>
+    /// <param name="bold">Bold.</param>
+    /// <param name="italic">Italic.</param>
+    /// <param name="fontColor">Font/text color (hex format like '#FF0000').</param>
+    /// <param name="backgroundColor">Background/foreground color for fill (hex format).</param>
+    /// <param name="patternType">Fill pattern type (Solid, Gray50, HorizontalStripe, etc.).</param>
+    /// <param name="patternColor">Pattern/background color for two-color patterns (hex format).</param>
+    /// <param name="numberFormat">Number format string (e.g., 'yyyy-mm-dd', '#,##0.00').</param>
+    /// <param name="borderStyle">Border style (None, Thin, Medium, Thick).</param>
+    /// <param name="borderColor">Border color (hex format).</param>
+    /// <param name="horizontalAlignment">Horizontal alignment (Left, Center, Right).</param>
+    /// <param name="verticalAlignment">Vertical alignment (Top, Center, Bottom).</param>
+    /// <param name="copyColumnWidths">Copy column widths (default: true).</param>
+    /// <param name="copyRowHeights">Copy row heights (default: true).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get_format operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "excel_style")]
     [Description(@"Manage Excel styles. Supports 3 operations: format, get_format, copy_sheet_format.
 
@@ -89,7 +128,7 @@ Usage examples:
         [Description("Copy row heights (default: true)")]
         bool copyRowHeights = true)
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {

@@ -25,6 +25,30 @@ public class PptAnimationToolTests : TestBase
         return filePath;
     }
 
+    private string CreatePresentationWithAnimation(string fileName, EffectType effectType = EffectType.Fade)
+    {
+        var filePath = CreateTestFilePath(fileName);
+        using var ppt = new Presentation();
+        var slide = ppt.Slides[0];
+        var shape = slide.Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
+        slide.Timeline.MainSequence.AddEffect(shape, effectType, EffectSubtype.None, EffectTriggerType.OnClick);
+        ppt.Save(filePath, SaveFormat.Pptx);
+        return filePath;
+    }
+
+    private string CreatePresentationWithMultipleAnimations(string fileName)
+    {
+        var filePath = CreateTestFilePath(fileName);
+        using var ppt = new Presentation();
+        var slide = ppt.Slides[0];
+        var shape = slide.Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 100);
+        var seq = slide.Timeline.MainSequence;
+        seq.AddEffect(shape, EffectType.Fade, EffectSubtype.None, EffectTriggerType.OnClick);
+        seq.AddEffect(shape, EffectType.Appear, EffectSubtype.None, EffectTriggerType.AfterPrevious);
+        ppt.Save(filePath, SaveFormat.Pptx);
+        return filePath;
+    }
+
     private int FindShapeIndex(string pptPath)
     {
         using var ppt = new Presentation(pptPath);
@@ -37,182 +61,155 @@ public class PptAnimationToolTests : TestBase
         return nonPlaceholderShapes.Count > 0 ? slide.Shapes.IndexOf(nonPlaceholderShapes[0]) : 0;
     }
 
-    #region General Tests
-
-    #region Add Animation Tests
+    #region General
 
     [Fact]
-    public void AddAnimation_ShouldAddAnimation()
+    public void Add_ShouldAddAnimation()
     {
-        var pptPath = CreateTestPresentation("test_add_animation.pptx");
+        var pptPath = CreateTestPresentation("test_add.pptx");
         var shapeIndex = FindShapeIndex(pptPath);
-        var outputPath = CreateTestFilePath("test_add_animation_output.pptx");
-
-        _tool.Execute("add", 0, pptPath, shapeIndex: shapeIndex, effectType: "Fade", outputPath: outputPath);
-
+        var outputPath = CreateTestFilePath("test_add_output.pptx");
+        var result = _tool.Execute("add", 0, pptPath, shapeIndex: shapeIndex, effectType: "Fade",
+            outputPath: outputPath);
+        Assert.StartsWith("Animation", result);
+        Assert.Contains("added", result); // Verify action was completed
         using var presentation = new Presentation(outputPath);
         Assert.True(presentation.Slides[0].Timeline.MainSequence.Count > 0);
     }
 
     [Fact]
-    public void AddAnimation_WithSubtype_ShouldApplySubtype()
+    public void Add_WithDefaultEffectType_ShouldUseFade()
     {
-        var pptPath = CreateTestPresentation("test_add_animation_subtype.pptx");
+        var pptPath = CreateTestPresentation("test_add_default.pptx");
         var shapeIndex = FindShapeIndex(pptPath);
-        var outputPath = CreateTestFilePath("test_add_animation_subtype_output.pptx");
-
-        _tool.Execute("add", 0, pptPath, shapeIndex: shapeIndex, effectType: "Fly", effectSubtype: "FromBottom",
-            outputPath: outputPath);
-
+        var outputPath = CreateTestFilePath("test_add_default_output.pptx");
+        _tool.Execute("add", 0, pptPath, shapeIndex: shapeIndex, outputPath: outputPath);
         using var presentation = new Presentation(outputPath);
         var sequence = presentation.Slides[0].Timeline.MainSequence;
-        Assert.True(sequence.Count > 0);
+        Assert.Equal(EffectType.Fade, sequence[0].Type);
+    }
+
+    [Fact]
+    public void Add_WithSubtype_ShouldApplySubtype()
+    {
+        var pptPath = CreateTestPresentation("test_add_subtype.pptx");
+        var shapeIndex = FindShapeIndex(pptPath);
+        var outputPath = CreateTestFilePath("test_add_subtype_output.pptx");
+        _tool.Execute("add", 0, pptPath, shapeIndex: shapeIndex, effectType: "Fly", effectSubtype: "FromBottom",
+            outputPath: outputPath);
+        using var presentation = new Presentation(outputPath);
+        var sequence = presentation.Slides[0].Timeline.MainSequence;
         Assert.Equal(EffectType.Fly, sequence[0].Type);
     }
 
     [Fact]
-    public void AddAnimation_WithTriggerType_ShouldApplyTrigger()
+    public void Add_WithTriggerType_ShouldApplyTrigger()
     {
-        var pptPath = CreateTestPresentation("test_add_animation_trigger.pptx");
+        var pptPath = CreateTestPresentation("test_add_trigger.pptx");
         var shapeIndex = FindShapeIndex(pptPath);
-        var outputPath = CreateTestFilePath("test_add_animation_trigger_output.pptx");
-
+        var outputPath = CreateTestFilePath("test_add_trigger_output.pptx");
         _tool.Execute("add", 0, pptPath, shapeIndex: shapeIndex, effectType: "Fade", triggerType: "AfterPrevious",
             outputPath: outputPath);
-
         using var presentation = new Presentation(outputPath);
         var sequence = presentation.Slides[0].Timeline.MainSequence;
-        Assert.True(sequence.Count > 0);
         Assert.Equal(EffectTriggerType.AfterPrevious, sequence[0].Timing.TriggerType);
     }
 
     [Fact]
-    public void AddAnimation_InvalidShapeIndex_ShouldThrow()
+    public void Edit_ShouldModifyAnimation()
     {
-        var pptPath = CreateTestPresentation("test_add_animation_invalid.pptx");
-        var outputPath = CreateTestFilePath("test_add_animation_invalid_output.pptx");
-
-        Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", 0, pptPath, shapeIndex: 999, effectType: "Fade", outputPath: outputPath));
-    }
-
-    #endregion
-
-    #region Edit Animation Tests
-
-    [Fact]
-    public void EditAnimation_ShouldModifyAnimation()
-    {
-        var pptPath = CreateTestPresentation("test_edit_animation.pptx");
+        var pptPath = CreatePresentationWithAnimation("test_edit.pptx");
         var shapeIndex = FindShapeIndex(pptPath);
-
-        using (var ppt = new Presentation(pptPath))
-        {
-            var shape = ppt.Slides[0].Shapes[shapeIndex];
-            ppt.Slides[0].Timeline.MainSequence.AddEffect(shape, EffectType.Fade, EffectSubtype.None,
-                EffectTriggerType.OnClick);
-            ppt.Save(pptPath, SaveFormat.Pptx);
-        }
-
-        var outputPath = CreateTestFilePath("test_edit_animation_output.pptx");
-
-        _tool.Execute("edit", 0, pptPath, shapeIndex: shapeIndex, effectType: "Fly", duration: 2.0f,
+        var outputPath = CreateTestFilePath("test_edit_output.pptx");
+        var result = _tool.Execute("edit", 0, pptPath, shapeIndex: shapeIndex, effectType: "Fly", duration: 2.0f,
             outputPath: outputPath);
-
+        Assert.StartsWith("Animation updated", result);
         Assert.True(File.Exists(outputPath));
     }
 
     [Fact]
-    public void EditAnimation_WithAnimationIndex_ShouldModifySpecificAnimation()
+    public void Edit_WithAnimationIndex_ShouldModifySpecificAnimation()
     {
-        var pptPath = CreateTestPresentation("test_edit_animation_index.pptx");
+        var pptPath = CreatePresentationWithMultipleAnimations("test_edit_index.pptx");
         var shapeIndex = FindShapeIndex(pptPath);
-
-        using (var ppt = new Presentation(pptPath))
-        {
-            var shape = ppt.Slides[0].Shapes[shapeIndex];
-            var seq = ppt.Slides[0].Timeline.MainSequence;
-            seq.AddEffect(shape, EffectType.Fade, EffectSubtype.None, EffectTriggerType.OnClick);
-            seq.AddEffect(shape, EffectType.Appear, EffectSubtype.None, EffectTriggerType.AfterPrevious);
-            ppt.Save(pptPath, SaveFormat.Pptx);
-        }
-
-        var outputPath = CreateTestFilePath("test_edit_animation_index_output.pptx");
-
+        var outputPath = CreateTestFilePath("test_edit_index_output.pptx");
         _tool.Execute("edit", 0, pptPath, shapeIndex: shapeIndex, animationIndex: 0, duration: 3.0f,
             outputPath: outputPath);
-
         using var presentation = new Presentation(outputPath);
         Assert.Equal(2, presentation.Slides[0].Timeline.MainSequence.Count);
     }
 
     [Fact]
-    public void EditAnimation_InvalidAnimationIndex_ShouldThrow()
+    public void Edit_WithDurationAndDelay_ShouldApplyTiming()
     {
-        var pptPath = CreateTestPresentation("test_edit_animation_invalid_index.pptx");
+        var pptPath = CreatePresentationWithAnimation("test_edit_timing.pptx");
         var shapeIndex = FindShapeIndex(pptPath);
-
-        using (var ppt = new Presentation(pptPath))
-        {
-            var shape = ppt.Slides[0].Shapes[shapeIndex];
-            ppt.Slides[0].Timeline.MainSequence.AddEffect(shape, EffectType.Fade, EffectSubtype.None,
-                EffectTriggerType.OnClick);
-            ppt.Save(pptPath, SaveFormat.Pptx);
-        }
-
-        var outputPath = CreateTestFilePath("test_edit_animation_invalid_index_output.pptx");
-
-        Assert.Throws<ArgumentException>(() => _tool.Execute("edit", 0, pptPath, shapeIndex: shapeIndex,
-            animationIndex: 999, effectType: "Fly", outputPath: outputPath));
+        var outputPath = CreateTestFilePath("test_edit_timing_output.pptx");
+        _tool.Execute("edit", 0, pptPath, shapeIndex: shapeIndex, animationIndex: 0, duration: 2.5f, delay: 1.0f,
+            outputPath: outputPath);
+        using var presentation = new Presentation(outputPath);
+        var effect = presentation.Slides[0].Timeline.MainSequence[0];
+        Assert.Equal(2.5f, effect.Timing.Duration, 1);
+        Assert.Equal(1.0f, effect.Timing.TriggerDelayTime, 1);
     }
 
-    #endregion
-
-    #region Get Animation Tests
+    [Fact]
+    public void Delete_ShouldDeleteAnimationForShape()
+    {
+        var pptPath = CreatePresentationWithAnimation("test_delete.pptx");
+        var shapeIndex = FindShapeIndex(pptPath);
+        var outputPath = CreateTestFilePath("test_delete_output.pptx");
+        var result = _tool.Execute("delete", 0, pptPath, shapeIndex: shapeIndex, outputPath: outputPath);
+        Assert.Contains("deleted", result, StringComparison.OrdinalIgnoreCase);
+        using var presentation = new Presentation(outputPath);
+        Assert.Equal(0, presentation.Slides[0].Timeline.MainSequence.Count);
+    }
 
     [Fact]
-    public void GetAnimations_EmptySlide_ShouldReturnEmptyList()
+    public void Delete_WithAnimationIndex_ShouldDeleteSpecificAnimation()
     {
-        var pptPath = CreateTestPresentation("test_get_no_animation.pptx");
+        var pptPath = CreatePresentationWithMultipleAnimations("test_delete_index.pptx");
+        var shapeIndex = FindShapeIndex(pptPath);
+        var outputPath = CreateTestFilePath("test_delete_index_output.pptx");
+        _tool.Execute("delete", 0, pptPath, shapeIndex: shapeIndex, animationIndex: 0, outputPath: outputPath);
+        using var presentation = new Presentation(outputPath);
+        Assert.Equal(1, presentation.Slides[0].Timeline.MainSequence.Count);
+    }
 
+    [Fact]
+    public void Delete_AllFromSlide_ShouldClearSequence()
+    {
+        var pptPath = CreatePresentationWithMultipleAnimations("test_delete_all.pptx");
+        var outputPath = CreateTestFilePath("test_delete_all_output.pptx");
+        _tool.Execute("delete", 0, pptPath, outputPath: outputPath);
+        using var presentation = new Presentation(outputPath);
+        Assert.Equal(0, presentation.Slides[0].Timeline.MainSequence.Count);
+    }
+
+    [Fact]
+    public void Get_EmptySlide_ShouldReturnEmptyList()
+    {
+        var pptPath = CreateTestPresentation("test_get_empty.pptx");
         var result = _tool.Execute("get", 0, pptPath);
-
         Assert.Contains("\"totalAnimationsOnSlide\": 0", result);
         Assert.Contains("\"animations\": []", result);
     }
 
     [Fact]
-    public void GetAnimations_WithAnimations_ShouldReturnAnimationList()
+    public void Get_WithAnimations_ShouldReturnAnimationList()
     {
-        var pptPath = CreateTestPresentation("test_get_animations.pptx");
-        var shapeIndex = FindShapeIndex(pptPath);
-
-        using (var ppt = new Presentation(pptPath))
-        {
-            var shape = ppt.Slides[0].Shapes[shapeIndex];
-            var sequence = ppt.Slides[0].Timeline.MainSequence;
-            sequence.AddEffect(shape, EffectType.Fade, EffectSubtype.None, EffectTriggerType.OnClick);
-            sequence.AddEffect(shape, EffectType.Fly, EffectSubtype.Bottom, EffectTriggerType.AfterPrevious);
-            ppt.Save(pptPath, SaveFormat.Pptx);
-        }
-
+        var pptPath = CreatePresentationWithMultipleAnimations("test_get.pptx");
         var result = _tool.Execute("get", 0, pptPath);
-
         Assert.Contains("\"totalAnimationsOnSlide\": 2", result);
         Assert.Contains("\"effectType\": \"Fade\"", result);
-        Assert.Contains("\"effectType\": \"Fly\"", result);
-        Assert.Contains("\"effectSubtype\": \"Bottom\"", result);
-        Assert.Contains("\"triggerType\": \"OnClick\"", result);
-        Assert.Contains("\"triggerType\": \"AfterPrevious\"", result);
+        Assert.Contains("\"effectType\": \"Appear\"", result);
     }
 
     [Fact]
-    public void GetAnimations_FilterByShapeIndex_ShouldReturnFilteredList()
+    public void Get_FilterByShapeIndex_ShouldReturnFilteredList()
     {
-        var pptPath = CreateTestPresentation("test_get_animation_filter.pptx");
+        var pptPath = CreateTestPresentation("test_get_filter.pptx");
         var shapeIndex = FindShapeIndex(pptPath);
-
-        // Add another shape and animations
         using (var ppt = new Presentation(pptPath))
         {
             var slide = ppt.Slides[0];
@@ -225,216 +222,227 @@ public class PptAnimationToolTests : TestBase
         }
 
         var result = _tool.Execute("get", 0, pptPath, shapeIndex: shapeIndex);
-
         Assert.Contains("\"totalAnimationsOnSlide\": 2", result);
         Assert.Contains("\"effectType\": \"Fade\"", result);
         Assert.DoesNotContain("\"effectType\": \"Zoom\"", result);
     }
 
     [Fact]
-    public void GetAnimations_WithDurationAndDelay_ShouldReturnTimingInfo()
+    public void Get_ShouldIncludeTimingInfo()
     {
-        var pptPath = CreateTestPresentation("test_get_animation_timing.pptx");
+        var pptPath = CreateTestPresentation("test_get_timing.pptx");
         var shapeIndex = FindShapeIndex(pptPath);
-
         using (var ppt = new Presentation(pptPath))
         {
             var shape = ppt.Slides[0].Shapes[shapeIndex];
-            var sequence = ppt.Slides[0].Timeline.MainSequence;
-            var effect = sequence.AddEffect(shape, EffectType.Fade, EffectSubtype.None, EffectTriggerType.OnClick);
+            var effect = ppt.Slides[0].Timeline.MainSequence
+                .AddEffect(shape, EffectType.Fade, EffectSubtype.None, EffectTriggerType.OnClick);
             effect.Timing.Duration = 2.5f;
             effect.Timing.TriggerDelayTime = 1.0f;
             ppt.Save(pptPath, SaveFormat.Pptx);
         }
 
         var result = _tool.Execute("get", 0, pptPath);
-
         Assert.Contains("\"duration\":", result);
         Assert.Contains("\"delay\":", result);
     }
 
-    [Fact]
-    public void GetAnimations_WithSessionId_ShouldReturnAnimations()
+    [Theory]
+    [InlineData("ADD")]
+    [InlineData("Add")]
+    [InlineData("add")]
+    public void Operation_ShouldBeCaseInsensitive_Add(string operation)
     {
-        var pptPath = CreateTestPresentation("test_get_animation_session.pptx");
+        var pptPath = CreateTestPresentation($"test_case_add_{operation}.pptx");
         var shapeIndex = FindShapeIndex(pptPath);
+        var outputPath = CreateTestFilePath($"test_case_add_{operation}_output.pptx");
+        var result = _tool.Execute(operation, 0, pptPath, shapeIndex: shapeIndex, effectType: "Fade",
+            outputPath: outputPath);
+        Assert.Contains("added", result); // Verify action was completed
+    }
 
-        using (var ppt = new Presentation(pptPath))
-        {
-            var shape = ppt.Slides[0].Shapes[shapeIndex];
-            ppt.Slides[0].Timeline.MainSequence.AddEffect(shape, EffectType.Appear, EffectSubtype.None,
-                EffectTriggerType.OnClick);
-            ppt.Save(pptPath, SaveFormat.Pptx);
-        }
+    [Theory]
+    [InlineData("EDIT")]
+    [InlineData("Edit")]
+    [InlineData("edit")]
+    public void Operation_ShouldBeCaseInsensitive_Edit(string operation)
+    {
+        var pptPath = CreatePresentationWithAnimation($"test_case_edit_{operation}.pptx");
+        var shapeIndex = FindShapeIndex(pptPath);
+        var outputPath = CreateTestFilePath($"test_case_edit_{operation}_output.pptx");
+        var result = _tool.Execute(operation, 0, pptPath, shapeIndex: shapeIndex, duration: 2.0f,
+            outputPath: outputPath);
+        Assert.StartsWith("Animation updated", result);
+    }
 
-        var sessionId = OpenSession(pptPath);
+    [Theory]
+    [InlineData("DELETE")]
+    [InlineData("Delete")]
+    [InlineData("delete")]
+    public void Operation_ShouldBeCaseInsensitive_Delete(string operation)
+    {
+        var pptPath = CreatePresentationWithAnimation($"test_case_delete_{operation}.pptx");
+        var outputPath = CreateTestFilePath($"test_case_delete_{operation}_output.pptx");
+        var result = _tool.Execute(operation, 0, pptPath, outputPath: outputPath);
+        Assert.Contains("deleted", result, StringComparison.OrdinalIgnoreCase);
+    }
 
-        var result = _tool.Execute("get", 0, sessionId: sessionId);
-
-        Assert.Contains("\"totalAnimationsOnSlide\": 1", result);
-        Assert.Contains("\"effectType\": \"Appear\"", result);
+    [Theory]
+    [InlineData("GET")]
+    [InlineData("Get")]
+    [InlineData("get")]
+    public void Operation_ShouldBeCaseInsensitive_Get(string operation)
+    {
+        var pptPath = CreateTestPresentation($"test_case_get_{operation}.pptx");
+        var result = _tool.Execute(operation, 0, pptPath);
+        Assert.Contains("totalAnimationsOnSlide", result);
     }
 
     #endregion
 
-    #region Delete Animation Tests
+    #region Exception
 
     [Fact]
-    public void DeleteAnimation_ShouldDeleteAnimation()
+    public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
     {
-        var pptPath = CreateTestPresentation("test_delete_animation.pptx");
-        var shapeIndex = FindShapeIndex(pptPath);
-
-        using (var ppt = new Presentation(pptPath))
-        {
-            var shape = ppt.Slides[0].Shapes[shapeIndex];
-            ppt.Slides[0].Timeline.MainSequence.AddEffect(shape, EffectType.Fade, EffectSubtype.None,
-                EffectTriggerType.OnClick);
-            ppt.Save(pptPath, SaveFormat.Pptx);
-        }
-
-        var outputPath = CreateTestFilePath("test_delete_animation_output.pptx");
-
-        _tool.Execute("delete", 0, pptPath, shapeIndex: shapeIndex, outputPath: outputPath);
-
-        using var presentation = new Presentation(outputPath);
-        Assert.Equal(0, presentation.Slides[0].Timeline.MainSequence.Count);
+        var pptPath = CreateTestPresentation("test_unknown_op.pptx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", 0, pptPath));
+        Assert.Contains("Unknown operation", ex.Message);
     }
 
     [Fact]
-    public void DeleteAnimation_WithAnimationIndex_ShouldDeleteSpecificAnimation()
+    public void Add_WithoutShapeIndex_ShouldThrowArgumentException()
     {
-        var pptPath = CreateTestPresentation("test_delete_animation_index.pptx");
-        var shapeIndex = FindShapeIndex(pptPath);
-
-        using (var ppt = new Presentation(pptPath))
-        {
-            var shape = ppt.Slides[0].Shapes[shapeIndex];
-            var sequence = ppt.Slides[0].Timeline.MainSequence;
-            sequence.AddEffect(shape, EffectType.Fade, EffectSubtype.None, EffectTriggerType.OnClick);
-            sequence.AddEffect(shape, EffectType.Appear, EffectSubtype.None, EffectTriggerType.AfterPrevious);
-            ppt.Save(pptPath, SaveFormat.Pptx);
-        }
-
-        var outputPath = CreateTestFilePath("test_delete_animation_index_output.pptx");
-
-        _tool.Execute("delete", 0, pptPath, shapeIndex: shapeIndex, animationIndex: 0, outputPath: outputPath);
-
-        using var presentation = new Presentation(outputPath);
-        Assert.Equal(1, presentation.Slides[0].Timeline.MainSequence.Count);
+        var pptPath = CreateTestPresentation("test_add_no_shape.pptx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("add", 0, pptPath, effectType: "Fade"));
+        Assert.Contains("shapeIndex is required", ex.Message);
     }
 
     [Fact]
-    public void DeleteAnimation_AllFromSlide_ShouldClearSequence()
+    public void Add_WithInvalidShapeIndex_ShouldThrowArgumentException()
     {
-        var pptPath = CreateTestPresentation("test_delete_all_animation.pptx");
+        var pptPath = CreateTestPresentation("test_add_invalid_shape.pptx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("add", 0, pptPath, shapeIndex: 999, effectType: "Fade"));
+        Assert.Contains("shape", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Edit_WithoutShapeIndex_ShouldThrowArgumentException()
+    {
+        var pptPath = CreatePresentationWithAnimation("test_edit_no_shape.pptx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("edit", 0, pptPath, effectType: "Fly"));
+        Assert.Contains("shapeIndex is required", ex.Message);
+    }
+
+    [Fact]
+    public void Edit_WithInvalidAnimationIndex_ShouldThrowArgumentException()
+    {
+        var pptPath = CreatePresentationWithAnimation("test_edit_invalid_anim.pptx");
         var shapeIndex = FindShapeIndex(pptPath);
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("edit", 0, pptPath, shapeIndex: shapeIndex, animationIndex: 999, effectType: "Fly"));
+        Assert.Contains("animationIndex", ex.Message);
+    }
 
-        using (var ppt = new Presentation(pptPath))
-        {
-            var shape = ppt.Slides[0].Shapes[shapeIndex];
-            var sequence = ppt.Slides[0].Timeline.MainSequence;
-            sequence.AddEffect(shape, EffectType.Fade, EffectSubtype.None, EffectTriggerType.OnClick);
-            sequence.AddEffect(shape, EffectType.Appear, EffectSubtype.None, EffectTriggerType.AfterPrevious);
-            ppt.Save(pptPath, SaveFormat.Pptx);
-        }
+    [Fact]
+    public void Delete_WithInvalidAnimationIndex_ShouldThrowArgumentException()
+    {
+        var pptPath = CreatePresentationWithAnimation("test_delete_invalid_anim.pptx");
+        var shapeIndex = FindShapeIndex(pptPath);
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("delete", 0, pptPath, shapeIndex: shapeIndex, animationIndex: 999));
+        Assert.Contains("animationIndex", ex.Message);
+    }
 
-        var outputPath = CreateTestFilePath("test_delete_all_animation_output.pptx");
-
-        _tool.Execute("delete", 0, pptPath, outputPath: outputPath);
-
-        using var presentation = new Presentation(outputPath);
-        Assert.Equal(0, presentation.Slides[0].Timeline.MainSequence.Count);
+    [Fact]
+    public void Execute_WithInvalidSlideIndex_ShouldThrowArgumentException()
+    {
+        var pptPath = CreateTestPresentation("test_invalid_slide.pptx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("get", 99, pptPath));
+        Assert.Contains("slide", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
 
-    #endregion
-
-    #region Exception Tests
+    #region Session
 
     [Fact]
-    public void Execute_UnknownOperation_ShouldThrowArgumentException()
+    public void Add_WithSessionId_ShouldAddInMemory()
     {
-        var pptPath = CreateTestPresentation("test_unknown_operation.pptx");
-
-        Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", 0, pptPath));
-    }
-
-    [Fact]
-    public void AddAnimation_WithDefaultEffectType_ShouldUseFade()
-    {
-        var pptPath = CreateTestPresentation("test_add_default_effect.pptx");
-        var shapeIndex = FindShapeIndex(pptPath);
-        var outputPath = CreateTestFilePath("test_add_default_effect_output.pptx");
-
-        // Act - effectType defaults to "Fade" when not provided
-        var result = _tool.Execute("add", 0, pptPath, shapeIndex: shapeIndex, outputPath: outputPath);
-        Assert.Contains("Animation", result);
-        Assert.Contains("added", result, StringComparison.OrdinalIgnoreCase);
-        using var presentation = new Presentation(outputPath);
-        var sequence = presentation.Slides[0].Timeline.MainSequence;
-        Assert.True(sequence.Count > 0);
-        Assert.Equal(EffectType.Fade, sequence[0].Type);
-    }
-
-    #endregion
-
-    #region Session ID Tests
-
-    [Fact]
-    public void AddAnimation_WithSessionId_ShouldVerifyInMemory()
-    {
-        var pptPath = CreateTestPresentation("test_session_verify_animation.pptx");
+        var pptPath = CreateTestPresentation("test_session_add.pptx");
         var shapeIndex = FindShapeIndex(pptPath);
         var sessionId = OpenSession(pptPath);
-        var result = _tool.Execute("add", 0, sessionId: sessionId, shapeIndex: shapeIndex, effectType: "Fade");
-        Assert.NotNull(result);
-        Assert.Contains("animation", result, StringComparison.OrdinalIgnoreCase);
-
-        // Verify animation was added in memory
-        var ppt = SessionManager.GetDocument<Presentation>(sessionId);
-        var slide = ppt.Slides[0];
-        var animationCount = slide.Timeline.MainSequence.Count;
-        Assert.True(animationCount > 0, "Animation should be added to the slide");
-    }
-
-    [Fact]
-    public void AddAnimation_WithSessionId_ShouldAddInMemory()
-    {
-        var pptPath = CreateTestPresentation("test_session_add_animation.pptx");
-        var shapeIndex = FindShapeIndex(pptPath);
-        var sessionId = OpenSession(pptPath);
-
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         var initialCount = ppt.Slides[0].Timeline.MainSequence.Count;
         var result = _tool.Execute("add", 0, sessionId: sessionId, shapeIndex: shapeIndex, effectType: "Fade");
-        Assert.Contains("Animation", result);
-        Assert.Contains("added", result);
+        Assert.StartsWith("Animation", result);
+        Assert.Contains("session", result); // Verify session was used
         Assert.True(ppt.Slides[0].Timeline.MainSequence.Count > initialCount);
     }
 
     [Fact]
-    public void DeleteAnimation_WithSessionId_ShouldDeleteInMemory()
+    public void Edit_WithSessionId_ShouldModifyInMemory()
     {
-        var pptPath = CreateTestPresentation("test_session_delete_animation.pptx");
+        var pptPath = CreatePresentationWithAnimation("test_session_edit.pptx");
         var shapeIndex = FindShapeIndex(pptPath);
-
-        // Add animation before opening session
-        using (var ppt = new Presentation(pptPath))
-        {
-            var shape = ppt.Slides[0].Shapes[shapeIndex];
-            ppt.Slides[0].Timeline.MainSequence.AddEffect(shape, EffectType.Fade, EffectSubtype.None,
-                EffectTriggerType.OnClick);
-            ppt.Save(pptPath, SaveFormat.Pptx);
-        }
-
         var sessionId = OpenSession(pptPath);
-        var pptSession = SessionManager.GetDocument<Presentation>(sessionId);
-        var initialCount = pptSession.Slides[0].Timeline.MainSequence.Count;
+        var result = _tool.Execute("edit", 0, sessionId: sessionId, shapeIndex: shapeIndex, animationIndex: 0,
+            duration: 3.0f);
+        Assert.StartsWith("Animation updated", result);
+        var ppt = SessionManager.GetDocument<Presentation>(sessionId);
+        Assert.Equal(3.0f, ppt.Slides[0].Timeline.MainSequence[0].Timing.Duration, 1);
+    }
+
+    [Fact]
+    public void Delete_WithSessionId_ShouldDeleteInMemory()
+    {
+        var pptPath = CreatePresentationWithAnimation("test_session_delete.pptx");
+        var sessionId = OpenSession(pptPath);
+        var ppt = SessionManager.GetDocument<Presentation>(sessionId);
+        var initialCount = ppt.Slides[0].Timeline.MainSequence.Count;
         var result = _tool.Execute("delete", 0, sessionId: sessionId);
         Assert.Contains("deleted", result, StringComparison.OrdinalIgnoreCase);
-        Assert.True(pptSession.Slides[0].Timeline.MainSequence.Count < initialCount);
+        Assert.True(ppt.Slides[0].Timeline.MainSequence.Count < initialCount);
+    }
+
+    [Fact]
+    public void Get_WithSessionId_ShouldReturnAnimations()
+    {
+        var pptPath = CreatePresentationWithAnimation("test_session_get.pptx", EffectType.Appear);
+        var sessionId = OpenSession(pptPath);
+        var result = _tool.Execute("get", 0, sessionId: sessionId);
+        Assert.Contains("\"totalAnimationsOnSlide\": 1", result);
+        Assert.Contains("\"effectType\": \"Appear\"", result);
+    }
+
+    [Fact]
+    public void Get_WithSessionId_AfterAdd_ShouldReflectChanges()
+    {
+        var pptPath = CreateTestPresentation("test_session_get_after_add.pptx");
+        var shapeIndex = FindShapeIndex(pptPath);
+        var sessionId = OpenSession(pptPath);
+        _tool.Execute("add", 0, sessionId: sessionId, shapeIndex: shapeIndex, effectType: "Zoom");
+        var result = _tool.Execute("get", 0, sessionId: sessionId);
+        Assert.Contains("\"totalAnimationsOnSlide\": 1", result);
+        Assert.Contains("\"effectType\": \"Zoom\"", result);
+    }
+
+    [Fact]
+    public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
+    {
+        Assert.Throws<KeyNotFoundException>(() => _tool.Execute("get", 0, sessionId: "invalid_session"));
+    }
+
+    [Fact]
+    public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
+    {
+        var pptPath1 = CreatePresentationWithAnimation("test_path_anim.pptx");
+        var pptPath2 = CreatePresentationWithAnimation("test_session_anim.pptx", EffectType.Zoom);
+        var sessionId = OpenSession(pptPath2);
+        var result = _tool.Execute("get", 0, pptPath1, sessionId);
+        Assert.Contains("\"effectType\": \"Zoom\"", result);
+        Assert.DoesNotContain("\"effectType\": \"Fade\"", result);
     }
 
     #endregion

@@ -94,14 +94,19 @@ public class ApiKeyConfig
 
     /// <summary>
     ///     Custom mode: Endpoint URL for custom verification
-    ///     Should return { "valid": bool, "tenantId": string }
+    ///     Should return JSON: { "valid": bool, "tenant_id": string }
     /// </summary>
     public string? CustomEndpoint { get; set; }
 
     /// <summary>
-    ///     Custom mode: Timeout in seconds for custom endpoint call
+    ///     Timeout in seconds for external endpoint calls (Introspection/Custom mode)
     /// </summary>
-    public int CustomTimeoutSeconds { get; set; } = 5;
+    public int ExternalTimeoutSeconds { get; set; } = 5;
+
+    /// <summary>
+    ///     Introspection mode: Field name for API key in request body (default: "key")
+    /// </summary>
+    public string IntrospectionKeyField { get; set; } = "key";
 }
 
 /// <summary>
@@ -145,6 +150,11 @@ public class JwtConfig
     public string TenantIdClaim { get; set; } = "tenant_id";
 
     /// <summary>
+    ///     Local mode: Claim name for user ID (default: "sub")
+    /// </summary>
+    public string UserIdClaim { get; set; } = "sub";
+
+    /// <summary>
     ///     Gateway mode: Header name containing tenant ID (set by gateway)
     /// </summary>
     public string TenantIdHeader { get; set; } = "X-Tenant-Id";
@@ -171,14 +181,14 @@ public class JwtConfig
 
     /// <summary>
     ///     Custom mode: Endpoint URL for custom verification
-    ///     Should return { "valid": bool, "tenantId": string, "userId": string }
+    ///     Should return JSON: { "valid": bool, "tenant_id": string, "user_id": string }
     /// </summary>
     public string? CustomEndpoint { get; set; }
 
     /// <summary>
-    ///     Custom mode: Timeout in seconds for custom endpoint call
+    ///     Timeout in seconds for external endpoint calls (Introspection/Custom mode)
     /// </summary>
-    public int CustomTimeoutSeconds { get; set; } = 5;
+    public int ExternalTimeoutSeconds { get; set; } = 5;
 }
 
 /// <summary>
@@ -195,16 +205,6 @@ public class AuthConfig
     ///     JWT authentication settings
     /// </summary>
     public JwtConfig Jwt { get; set; } = new();
-
-    /// <summary>
-    ///     Rate limit per minute (0 = unlimited)
-    /// </summary>
-    public int RateLimitPerMinute { get; set; }
-
-    /// <summary>
-    ///     Allowed CORS origins (empty = all allowed)
-    /// </summary>
-    public string[]? AllowedOrigins { get; set; }
 
     /// <summary>
     ///     Loads configuration from environment variables and command line arguments.
@@ -238,9 +238,15 @@ public class AuthConfig
             ApiKey.Keys = new Dictionary<string, string>();
             foreach (var pair in apiKeys.Split(',', StringSplitOptions.RemoveEmptyEntries))
             {
-                var parts = pair.Split(':');
-                if (parts.Length == 2)
-                    ApiKey.Keys[parts[0].Trim()] = parts[1].Trim();
+                // Split only on first ':' to allow ':' in API keys (e.g., base64 encoded keys)
+                var separatorIndex = pair.IndexOf(':');
+                if (separatorIndex > 0)
+                {
+                    var key = pair[..separatorIndex].Trim();
+                    var tenant = pair[(separatorIndex + 1)..].Trim();
+                    if (!string.IsNullOrEmpty(key) && !string.IsNullOrEmpty(tenant))
+                        ApiKey.Keys[key] = tenant;
+                }
             }
         }
 
@@ -258,9 +264,13 @@ public class AuthConfig
             Environment.GetEnvironmentVariable("ASPOSE_AUTH_APIKEY_INTROSPECTION_AUTH");
         ApiKey.CustomEndpoint = Environment.GetEnvironmentVariable("ASPOSE_AUTH_APIKEY_CUSTOM_URL");
 
-        if (int.TryParse(Environment.GetEnvironmentVariable("ASPOSE_AUTH_APIKEY_CUSTOM_TIMEOUT"),
+        var apiKeyIntrospectionField = Environment.GetEnvironmentVariable("ASPOSE_AUTH_APIKEY_INTROSPECTION_FIELD");
+        if (!string.IsNullOrEmpty(apiKeyIntrospectionField))
+            ApiKey.IntrospectionKeyField = apiKeyIntrospectionField;
+
+        if (int.TryParse(Environment.GetEnvironmentVariable("ASPOSE_AUTH_APIKEY_TIMEOUT"),
                 out var apiKeyTimeout))
-            ApiKey.CustomTimeoutSeconds = apiKeyTimeout;
+            ApiKey.ExternalTimeoutSeconds = apiKeyTimeout;
 
         if (bool.TryParse(Environment.GetEnvironmentVariable("ASPOSE_AUTH_JWT_ENABLED"), out var jwtEnabled))
             Jwt.Enabled = jwtEnabled;
@@ -278,6 +288,10 @@ public class AuthConfig
         if (!string.IsNullOrEmpty(jwtTenantClaim))
             Jwt.TenantIdClaim = jwtTenantClaim;
 
+        var jwtUserClaim = Environment.GetEnvironmentVariable("ASPOSE_AUTH_JWT_USER_CLAIM");
+        if (!string.IsNullOrEmpty(jwtUserClaim))
+            Jwt.UserIdClaim = jwtUserClaim;
+
         var jwtTenantHeader = Environment.GetEnvironmentVariable("ASPOSE_AUTH_JWT_TENANT_HEADER");
         if (!string.IsNullOrEmpty(jwtTenantHeader))
             Jwt.TenantIdHeader = jwtTenantHeader;
@@ -291,15 +305,8 @@ public class AuthConfig
         Jwt.ClientSecret = Environment.GetEnvironmentVariable("ASPOSE_AUTH_JWT_CLIENT_SECRET");
         Jwt.CustomEndpoint = Environment.GetEnvironmentVariable("ASPOSE_AUTH_JWT_CUSTOM_URL");
 
-        if (int.TryParse(Environment.GetEnvironmentVariable("ASPOSE_AUTH_JWT_CUSTOM_TIMEOUT"), out var jwtTimeout))
-            Jwt.CustomTimeoutSeconds = jwtTimeout;
-
-        if (int.TryParse(Environment.GetEnvironmentVariable("ASPOSE_RATE_LIMIT"), out var rateLimit))
-            RateLimitPerMinute = rateLimit;
-
-        var origins = Environment.GetEnvironmentVariable("ASPOSE_ALLOWED_ORIGINS");
-        if (!string.IsNullOrEmpty(origins))
-            AllowedOrigins = origins.Split(',', StringSplitOptions.RemoveEmptyEntries);
+        if (int.TryParse(Environment.GetEnvironmentVariable("ASPOSE_AUTH_JWT_TIMEOUT"), out var jwtTimeout))
+            Jwt.ExternalTimeoutSeconds = jwtTimeout;
     }
 
     /// <summary>
@@ -309,7 +316,6 @@ public class AuthConfig
     private void LoadFromCommandLine(string[] args)
     {
         foreach (var arg in args)
-            // API Key authentication
             if (arg.Equals("--auth-apikey-enabled", StringComparison.OrdinalIgnoreCase))
                 ApiKey.Enabled = true;
             else if (arg.Equals("--auth-apikey-disabled", StringComparison.OrdinalIgnoreCase))
@@ -336,13 +342,24 @@ public class AuthConfig
                 ApiKey.IntrospectionAuthHeader = arg["--auth-apikey-introspection-auth:".Length..];
             else if (arg.StartsWith("--auth-apikey-introspection-auth=", StringComparison.OrdinalIgnoreCase))
                 ApiKey.IntrospectionAuthHeader = arg["--auth-apikey-introspection-auth=".Length..];
-            else if (arg.StartsWith("--auth-apikey-custom-timeout:", StringComparison.OrdinalIgnoreCase) &&
-                     int.TryParse(arg["--auth-apikey-custom-timeout:".Length..], out var apiKeyTimeout1))
-                ApiKey.CustomTimeoutSeconds = apiKeyTimeout1;
-            else if (arg.StartsWith("--auth-apikey-custom-timeout=", StringComparison.OrdinalIgnoreCase) &&
-                     int.TryParse(arg["--auth-apikey-custom-timeout=".Length..], out var apiKeyTimeout2))
-                ApiKey.CustomTimeoutSeconds = apiKeyTimeout2;
-            // JWT authentication
+            else if (arg.StartsWith("--auth-apikey-introspection-url:", StringComparison.OrdinalIgnoreCase))
+                ApiKey.IntrospectionEndpoint = arg["--auth-apikey-introspection-url:".Length..];
+            else if (arg.StartsWith("--auth-apikey-introspection-url=", StringComparison.OrdinalIgnoreCase))
+                ApiKey.IntrospectionEndpoint = arg["--auth-apikey-introspection-url=".Length..];
+            else if (arg.StartsWith("--auth-apikey-custom-url:", StringComparison.OrdinalIgnoreCase))
+                ApiKey.CustomEndpoint = arg["--auth-apikey-custom-url:".Length..];
+            else if (arg.StartsWith("--auth-apikey-custom-url=", StringComparison.OrdinalIgnoreCase))
+                ApiKey.CustomEndpoint = arg["--auth-apikey-custom-url=".Length..];
+            else if (arg.StartsWith("--auth-apikey-introspection-field:", StringComparison.OrdinalIgnoreCase))
+                ApiKey.IntrospectionKeyField = arg["--auth-apikey-introspection-field:".Length..];
+            else if (arg.StartsWith("--auth-apikey-introspection-field=", StringComparison.OrdinalIgnoreCase))
+                ApiKey.IntrospectionKeyField = arg["--auth-apikey-introspection-field=".Length..];
+            else if (arg.StartsWith("--auth-apikey-timeout:", StringComparison.OrdinalIgnoreCase) &&
+                     int.TryParse(arg["--auth-apikey-timeout:".Length..], out var apiKeyTimeout1))
+                ApiKey.ExternalTimeoutSeconds = apiKeyTimeout1;
+            else if (arg.StartsWith("--auth-apikey-timeout=", StringComparison.OrdinalIgnoreCase) &&
+                     int.TryParse(arg["--auth-apikey-timeout=".Length..], out var apiKeyTimeout2))
+                ApiKey.ExternalTimeoutSeconds = apiKeyTimeout2;
             else if (arg.Equals("--auth-jwt-enabled", StringComparison.OrdinalIgnoreCase))
                 Jwt.Enabled = true;
             else if (arg.Equals("--auth-jwt-disabled", StringComparison.OrdinalIgnoreCase))
@@ -369,6 +386,10 @@ public class AuthConfig
                 Jwt.TenantIdClaim = arg["--auth-jwt-tenant-claim:".Length..];
             else if (arg.StartsWith("--auth-jwt-tenant-claim=", StringComparison.OrdinalIgnoreCase))
                 Jwt.TenantIdClaim = arg["--auth-jwt-tenant-claim=".Length..];
+            else if (arg.StartsWith("--auth-jwt-user-claim:", StringComparison.OrdinalIgnoreCase))
+                Jwt.UserIdClaim = arg["--auth-jwt-user-claim:".Length..];
+            else if (arg.StartsWith("--auth-jwt-user-claim=", StringComparison.OrdinalIgnoreCase))
+                Jwt.UserIdClaim = arg["--auth-jwt-user-claim=".Length..];
             else if (arg.StartsWith("--auth-jwt-tenant-header:", StringComparison.OrdinalIgnoreCase))
                 Jwt.TenantIdHeader = arg["--auth-jwt-tenant-header:".Length..];
             else if (arg.StartsWith("--auth-jwt-tenant-header=", StringComparison.OrdinalIgnoreCase))
@@ -377,37 +398,52 @@ public class AuthConfig
                 Jwt.UserIdHeader = arg["--auth-jwt-user-header:".Length..];
             else if (arg.StartsWith("--auth-jwt-user-header=", StringComparison.OrdinalIgnoreCase))
                 Jwt.UserIdHeader = arg["--auth-jwt-user-header=".Length..];
-            else if (arg.StartsWith("--auth-jwt-custom-timeout:", StringComparison.OrdinalIgnoreCase) &&
-                     int.TryParse(arg["--auth-jwt-custom-timeout:".Length..], out var jwtTimeout1))
-                Jwt.CustomTimeoutSeconds = jwtTimeout1;
-            else if (arg.StartsWith("--auth-jwt-custom-timeout=", StringComparison.OrdinalIgnoreCase) &&
-                     int.TryParse(arg["--auth-jwt-custom-timeout=".Length..], out var jwtTimeout2))
-                Jwt.CustomTimeoutSeconds = jwtTimeout2;
-            // Rate limiting
-            else if (arg.StartsWith("--rate-limit:", StringComparison.OrdinalIgnoreCase) &&
-                     int.TryParse(arg["--rate-limit:".Length..], out var rate1))
-                RateLimitPerMinute = rate1;
-            else if (arg.StartsWith("--rate-limit=", StringComparison.OrdinalIgnoreCase) &&
-                     int.TryParse(arg["--rate-limit=".Length..], out var rate2))
-                RateLimitPerMinute = rate2;
-            // CORS origins
-            else if (arg.StartsWith("--allowed-origins:", StringComparison.OrdinalIgnoreCase))
-                AllowedOrigins = arg["--allowed-origins:".Length..].Split(',', StringSplitOptions.RemoveEmptyEntries);
-            else if (arg.StartsWith("--allowed-origins=", StringComparison.OrdinalIgnoreCase))
-                AllowedOrigins = arg["--allowed-origins=".Length..].Split(',', StringSplitOptions.RemoveEmptyEntries);
+            else if (arg.StartsWith("--auth-jwt-public-key-path:", StringComparison.OrdinalIgnoreCase))
+                Jwt.PublicKeyPath = arg["--auth-jwt-public-key-path:".Length..];
+            else if (arg.StartsWith("--auth-jwt-public-key-path=", StringComparison.OrdinalIgnoreCase))
+                Jwt.PublicKeyPath = arg["--auth-jwt-public-key-path=".Length..];
+            else if (arg.StartsWith("--auth-jwt-introspection-url:", StringComparison.OrdinalIgnoreCase))
+                Jwt.IntrospectionEndpoint = arg["--auth-jwt-introspection-url:".Length..];
+            else if (arg.StartsWith("--auth-jwt-introspection-url=", StringComparison.OrdinalIgnoreCase))
+                Jwt.IntrospectionEndpoint = arg["--auth-jwt-introspection-url=".Length..];
+            else if (arg.StartsWith("--auth-jwt-client-id:", StringComparison.OrdinalIgnoreCase))
+                Jwt.ClientId = arg["--auth-jwt-client-id:".Length..];
+            else if (arg.StartsWith("--auth-jwt-client-id=", StringComparison.OrdinalIgnoreCase))
+                Jwt.ClientId = arg["--auth-jwt-client-id=".Length..];
+            else if (arg.StartsWith("--auth-jwt-client-secret:", StringComparison.OrdinalIgnoreCase))
+                Jwt.ClientSecret = arg["--auth-jwt-client-secret:".Length..];
+            else if (arg.StartsWith("--auth-jwt-client-secret=", StringComparison.OrdinalIgnoreCase))
+                Jwt.ClientSecret = arg["--auth-jwt-client-secret=".Length..];
+            else if (arg.StartsWith("--auth-jwt-custom-url:", StringComparison.OrdinalIgnoreCase))
+                Jwt.CustomEndpoint = arg["--auth-jwt-custom-url:".Length..];
+            else if (arg.StartsWith("--auth-jwt-custom-url=", StringComparison.OrdinalIgnoreCase))
+                Jwt.CustomEndpoint = arg["--auth-jwt-custom-url=".Length..];
+            else if (arg.StartsWith("--auth-jwt-timeout:", StringComparison.OrdinalIgnoreCase) &&
+                     int.TryParse(arg["--auth-jwt-timeout:".Length..], out var jwtTimeout1))
+                Jwt.ExternalTimeoutSeconds = jwtTimeout1;
+            else if (arg.StartsWith("--auth-jwt-timeout=", StringComparison.OrdinalIgnoreCase) &&
+                     int.TryParse(arg["--auth-jwt-timeout=".Length..], out var jwtTimeout2))
+                Jwt.ExternalTimeoutSeconds = jwtTimeout2;
     }
 
     /// <summary>
     ///     Parses API key string in format "key1:tenant1,key2:tenant2"
+    ///     Note: Only the first ':' is used as separator to allow ':' in API keys (e.g., base64 encoded keys)
     /// </summary>
     private void ParseApiKeys(string keysString)
     {
         ApiKey.Keys = new Dictionary<string, string>();
         foreach (var pair in keysString.Split(',', StringSplitOptions.RemoveEmptyEntries))
         {
-            var parts = pair.Split(':');
-            if (parts.Length == 2)
-                ApiKey.Keys[parts[0].Trim()] = parts[1].Trim();
+            // Split only on first ':' to allow ':' in API keys (e.g., base64 encoded keys)
+            var separatorIndex = pair.IndexOf(':');
+            if (separatorIndex > 0)
+            {
+                var key = pair[..separatorIndex].Trim();
+                var tenant = pair[(separatorIndex + 1)..].Trim();
+                if (!string.IsNullOrEmpty(key) && !string.IsNullOrEmpty(tenant))
+                    ApiKey.Keys[key] = tenant;
+            }
         }
     }
 }

@@ -15,6 +15,11 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 public class PptTextTool
 {
     /// <summary>
+    ///     Identity accessor for session isolation.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document session handling.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -23,11 +28,32 @@ public class PptTextTool
     ///     Initializes a new instance of the <see cref="PptTextTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory editing.</param>
-    public PptTextTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation.</param>
+    public PptTextTool(DocumentSessionManager? sessionManager = null, ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a PowerPoint text operation (add, edit, replace).
+    /// </summary>
+    /// <param name="operation">The operation to perform: add, edit, replace.</param>
+    /// <param name="path">Presentation file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (optional, defaults to input path).</param>
+    /// <param name="slideIndex">Slide index (0-based, required for add/edit).</param>
+    /// <param name="shapeIndex">Shape index (0-based, required for edit).</param>
+    /// <param name="text">Text content (required for add/edit).</param>
+    /// <param name="findText">Text to find (required for replace).</param>
+    /// <param name="replaceText">Text to replace with (required for replace).</param>
+    /// <param name="matchCase">Match case (optional, for replace, default: false).</param>
+    /// <param name="x">X position in points (optional, for add, default: 50).</param>
+    /// <param name="y">Y position in points (optional, for add, default: 50).</param>
+    /// <param name="width">Text box width in points (optional, for add, default: 400).</param>
+    /// <param name="height">Text box height in points (optional, for add, default: 100).</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "ppt_text")]
     [Description(@"Manage PowerPoint text. Supports 3 operations: add, edit, replace.
 Searches text in AutoShapes, GroupShapes (recursive), and Table cells.
@@ -71,7 +97,7 @@ Usage examples:
         [Description("Text box height in points (optional, for add, default: 100)")]
         float height = 100)
     {
-        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {

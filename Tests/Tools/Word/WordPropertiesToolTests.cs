@@ -15,7 +15,7 @@ public class WordPropertiesToolTests : WordTestBase
         _tool = new WordPropertiesTool(SessionManager);
     }
 
-    #region General Tests
+    #region General
 
     [Fact]
     public void GetProperties_ShouldReturnJsonFormat()
@@ -25,15 +25,70 @@ public class WordPropertiesToolTests : WordTestBase
         Assert.NotNull(result);
         Assert.NotEmpty(result);
 
-        // Verify it's valid JSON
         var json = JsonNode.Parse(result);
         Assert.NotNull(json);
 
-        // Verify structure
         Assert.NotNull(json["builtInProperties"]);
         Assert.NotNull(json["statistics"]);
         Assert.NotNull(json["statistics"]?["wordCount"]);
         Assert.NotNull(json["statistics"]?["pageCount"]);
+    }
+
+    [Fact]
+    public void GetProperties_ShouldIncludeAllStatistics()
+    {
+        var docPath =
+            CreateWordDocumentWithContent("test_get_statistics.docx", "Hello World. This is a test document.");
+        var result = _tool.Execute("get", docPath);
+        var json = JsonNode.Parse(result);
+        Assert.NotNull(json);
+
+        var stats = json["statistics"];
+        Assert.NotNull(stats);
+        Assert.NotNull(stats["wordCount"]);
+        Assert.NotNull(stats["characterCount"]);
+        Assert.NotNull(stats["pageCount"]);
+        Assert.NotNull(stats["paragraphCount"]);
+        Assert.NotNull(stats["lineCount"]);
+
+        Assert.True(stats["wordCount"]?.GetValue<int>() > 0);
+    }
+
+    [Fact]
+    public void GetProperties_EmptyDocument_ShouldReturnValidJson()
+    {
+        var docPath = CreateWordDocument("test_empty_doc.docx");
+        var result = _tool.Execute("get", docPath);
+
+        var json = JsonNode.Parse(result);
+        Assert.NotNull(json);
+        Assert.NotNull(json["builtInProperties"]);
+        Assert.NotNull(json["statistics"]);
+    }
+
+    [Fact]
+    public void GetProperties_WithCustomProperties_ShouldReturnInJson()
+    {
+        var docPath = CreateWordDocument("test_get_custom_types.docx");
+        var doc = new Document(docPath);
+        doc.CustomDocumentProperties.Add("StringProp", "Hello");
+        doc.CustomDocumentProperties.Add("IntProp", 123);
+        doc.CustomDocumentProperties.Add("BoolProp", true);
+        doc.Save(docPath);
+        var result = _tool.Execute("get", docPath);
+
+        var json = JsonNode.Parse(result);
+        Assert.NotNull(json);
+        Assert.NotNull(json["customProperties"]);
+
+        var customPropsJson = json["customProperties"]!;
+        Assert.NotNull(customPropsJson["StringProp"]);
+        Assert.NotNull(customPropsJson["IntProp"]);
+        Assert.NotNull(customPropsJson["BoolProp"]);
+
+        Assert.Equal("String", customPropsJson["StringProp"]?["type"]?.GetValue<string>());
+        Assert.Equal("Number", customPropsJson["IntProp"]?["type"]?.GetValue<string>());
+        Assert.Equal("Boolean", customPropsJson["BoolProp"]?["type"]?.GetValue<string>());
     }
 
     [Fact]
@@ -68,6 +123,35 @@ public class WordPropertiesToolTests : WordTestBase
         Assert.Equal("Test Category", props.Category);
         Assert.Equal("Test Company", props.Company);
         Assert.Equal("Test Manager", props.Manager);
+    }
+
+    [Fact]
+    public void SetProperties_PartialProperties_ShouldOnlyUpdateProvided()
+    {
+        var docPath = CreateWordDocument("test_partial_props.docx");
+        var doc = new Document(docPath);
+        doc.BuiltInDocumentProperties.Title = "Original Title";
+        doc.BuiltInDocumentProperties.Author = "Original Author";
+        doc.Save(docPath);
+
+        var outputPath = CreateTestFilePath("test_partial_props_output.docx");
+        _tool.Execute("set", docPath, outputPath: outputPath, title: "New Title");
+
+        var resultDoc = new Document(outputPath);
+        Assert.Equal("New Title", resultDoc.BuiltInDocumentProperties.Title);
+        Assert.Equal("Original Author", resultDoc.BuiltInDocumentProperties.Author);
+    }
+
+    [Fact]
+    public void SetProperties_WithNoProperties_ShouldSucceedWithNoChanges()
+    {
+        var docPath = CreateWordDocument("test_no_properties.docx");
+        var outputPath = CreateTestFilePath("test_no_properties_output.docx");
+
+        var result = _tool.Execute("set", docPath, outputPath: outputPath);
+
+        Assert.Contains("properties", result, StringComparison.OrdinalIgnoreCase);
+        Assert.True(File.Exists(outputPath));
     }
 
     [Fact]
@@ -145,9 +229,23 @@ public class WordPropertiesToolTests : WordTestBase
     }
 
     [Fact]
+    public void SetProperties_WithCustomDateTimeProperty_ShouldAddAsDateTime()
+    {
+        var docPath = CreateWordDocument("test_custom_datetime.docx");
+        var outputPath = CreateTestFilePath("test_custom_datetime_output.docx");
+        var customProps = new JsonObject
+        {
+            ["DueDate"] = "2025-12-31T23:59:59"
+        };
+        _tool.Execute("set", docPath, outputPath: outputPath, customProperties: customProps.ToJsonString());
+        var doc = new Document(outputPath);
+        var dueDateProp = doc.CustomDocumentProperties["DueDate"];
+        Assert.NotNull(dueDateProp);
+    }
+
+    [Fact]
     public void SetProperties_WithExistingCustomProperty_ShouldUpdate()
     {
-        // Arrange - First create a document with a custom property
         var docPath = CreateWordDocument("test_update_custom.docx");
         var doc = new Document(docPath);
         doc.CustomDocumentProperties.Add("Status", "Draft");
@@ -164,57 +262,61 @@ public class WordPropertiesToolTests : WordTestBase
     }
 
     [Fact]
-    public void GetProperties_WithCustomProperties_ShouldReturnInJson()
+    public void SetProperties_WithEmptyCustomPropertiesJson_ShouldSucceed()
     {
-        // Arrange - Create a document with custom properties of different types
-        var docPath = CreateWordDocument("test_get_custom_types.docx");
-        var doc = new Document(docPath);
-        doc.CustomDocumentProperties.Add("StringProp", "Hello");
-        doc.CustomDocumentProperties.Add("IntProp", 123);
-        doc.CustomDocumentProperties.Add("BoolProp", true);
-        doc.Save(docPath);
-        var result = _tool.Execute("get", docPath);
-
-        // Assert - Verify JSON structure
-        var json = JsonNode.Parse(result);
-        Assert.NotNull(json);
-        Assert.NotNull(json["customProperties"]);
-
-        var customPropsJson = json["customProperties"]!;
-        Assert.NotNull(customPropsJson["StringProp"]);
-        Assert.NotNull(customPropsJson["IntProp"]);
-        Assert.NotNull(customPropsJson["BoolProp"]);
-
-        // Verify type info is included
-        Assert.Equal("String", customPropsJson["StringProp"]?["type"]?.GetValue<string>());
-        Assert.Equal("Number", customPropsJson["IntProp"]?["type"]?.GetValue<string>());
-        Assert.Equal("Boolean", customPropsJson["BoolProp"]?["type"]?.GetValue<string>());
+        var docPath = CreateWordDocument("test_empty_custom.docx");
+        var outputPath = CreateTestFilePath("test_empty_custom_output.docx");
+        var result = _tool.Execute("set", docPath, outputPath: outputPath,
+            customProperties: "{}");
+        Assert.StartsWith("Document properties updated", result);
+        Assert.True(File.Exists(outputPath));
     }
 
     [Fact]
-    public void GetProperties_ShouldIncludeAllStatistics()
+    public void SetProperties_WithNullCustomProperty_ShouldAddEmptyString()
     {
-        var docPath =
-            CreateWordDocumentWithContent("test_get_statistics.docx", "Hello World. This is a test document.");
-        var result = _tool.Execute("get", docPath);
-        var json = JsonNode.Parse(result);
-        Assert.NotNull(json);
+        var docPath = CreateWordDocument("test_null_custom.docx");
+        var outputPath = CreateTestFilePath("test_null_custom_output.docx");
+        var customProps = new JsonObject
+        {
+            ["NullProp"] = null
+        };
+        _tool.Execute("set", docPath, outputPath: outputPath, customProperties: customProps.ToJsonString());
+        var doc = new Document(outputPath);
+        var nullProp = doc.CustomDocumentProperties["NullProp"];
+        Assert.NotNull(nullProp);
+        Assert.Equal(string.Empty, nullProp.Value?.ToString());
+    }
 
-        var stats = json["statistics"];
-        Assert.NotNull(stats);
-        Assert.NotNull(stats["wordCount"]);
-        Assert.NotNull(stats["characterCount"]);
-        Assert.NotNull(stats["pageCount"]);
-        Assert.NotNull(stats["paragraphCount"]);
-        Assert.NotNull(stats["lineCount"]);
+    [Theory]
+    [InlineData("GET")]
+    [InlineData("GeT")]
+    [InlineData("get")]
+    public void Execute_GetOperationIsCaseInsensitive(string operation)
+    {
+        var docPath = CreateWordDocument($"test_case_{operation}.docx");
+        var result = _tool.Execute(operation, docPath);
+        Assert.Contains("builtInProperties", result);
+    }
 
-        // Word count should be > 0 for non-empty document
-        Assert.True(stats["wordCount"]?.GetValue<int>() > 0);
+    [Theory]
+    [InlineData("SET")]
+    [InlineData("SeT")]
+    [InlineData("set")]
+    public void Execute_SetOperationIsCaseInsensitive(string operation)
+    {
+        var docPath = CreateWordDocument($"test_set_case_{operation}.docx");
+        var outputPath = CreateTestFilePath($"test_set_case_{operation}_output.docx");
+        var result = _tool.Execute(operation, docPath, outputPath: outputPath,
+            title: "Case Test Title");
+        Assert.StartsWith("Document properties updated", result);
+        var doc = new Document(outputPath);
+        Assert.Equal("Case Test Title", doc.BuiltInDocumentProperties.Title);
     }
 
     #endregion
 
-    #region Exception Tests
+    #region Exception
 
     [Fact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
@@ -236,23 +338,9 @@ public class WordPropertiesToolTests : WordTestBase
             _tool.Execute("set", docPath, outputPath: outputPath, customProperties: "not valid json"));
     }
 
-    [Fact]
-    public void SetProperties_WithNoProperties_ShouldSucceedWithNoChanges()
-    {
-        var docPath = CreateWordDocument("test_no_properties.docx");
-        var outputPath = CreateTestFilePath("test_no_properties_output.docx");
-
-        // Act - No properties provided, should still succeed
-        var result = _tool.Execute("set", docPath, outputPath: outputPath);
-
-        // Assert - Should succeed without any changes
-        Assert.Contains("properties", result, StringComparison.OrdinalIgnoreCase);
-        Assert.True(File.Exists(outputPath));
-    }
-
     #endregion
 
-    #region Session ID Tests
+    #region Session
 
     [Fact]
     public void GetProperties_WithSessionId_ShouldReturnProperties()
@@ -267,6 +355,19 @@ public class WordPropertiesToolTests : WordTestBase
     }
 
     [Fact]
+    public void GetProperties_WithSessionId_VerifyInMemoryChangesReflected()
+    {
+        var docPath = CreateWordDocument("test_session_verify.docx");
+        var sessionId = OpenSession(docPath);
+
+        _tool.Execute("set", sessionId: sessionId, title: "Modified Title");
+
+        var result = _tool.Execute("get", sessionId: sessionId);
+
+        Assert.Contains("Modified Title", result);
+    }
+
+    [Fact]
     public void SetProperties_WithSessionId_ShouldSetPropertiesInMemory()
     {
         var docPath = CreateWordDocument("test_session_set_props.docx");
@@ -274,7 +375,6 @@ public class WordPropertiesToolTests : WordTestBase
         _tool.Execute("set", sessionId: sessionId,
             title: "In-Memory Title", author: "In-Memory Author");
 
-        // Assert - verify in-memory change
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         Assert.Equal("In-Memory Title", sessionDoc.BuiltInDocumentProperties.Title);
         Assert.Equal("In-Memory Author", sessionDoc.BuiltInDocumentProperties.Author);
@@ -291,7 +391,6 @@ public class WordPropertiesToolTests : WordTestBase
         };
         _tool.Execute("set", sessionId: sessionId, customProperties: customProps.ToJsonString());
 
-        // Assert - verify in-memory change
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         Assert.Equal("SessionValue", sessionDoc.CustomDocumentProperties["SessionProp"]?.Value?.ToString());
     }
@@ -316,28 +415,10 @@ public class WordPropertiesToolTests : WordTestBase
 
         var sessionId = OpenSession(docPath2);
 
-        // Act - provide both path and sessionId
         var result = _tool.Execute("get", docPath1, sessionId);
 
-        // Assert - should use sessionId, returning Session Title not Path Title
         Assert.Contains("Session Title", result);
         Assert.DoesNotContain("Path Title", result);
-    }
-
-    [Fact]
-    public void GetProperties_WithSessionId_VerifyInMemoryChangesReflected()
-    {
-        var docPath = CreateWordDocument("test_session_verify.docx");
-        var sessionId = OpenSession(docPath);
-
-        // Modify properties in session
-        _tool.Execute("set", sessionId: sessionId, title: "Modified Title");
-
-        // Act - get properties from session
-        var result = _tool.Execute("get", sessionId: sessionId);
-
-        // Assert - should reflect the in-memory change
-        Assert.Contains("Modified Title", result);
     }
 
     #endregion

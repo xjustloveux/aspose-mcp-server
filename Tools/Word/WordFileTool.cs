@@ -4,16 +4,73 @@ using Aspose.Words;
 using Aspose.Words.Reporting;
 using Aspose.Words.Settings;
 using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Session;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Word;
 
 /// <summary>
-///     Tool for Word file operations (create, create_from_template, convert, merge, split)
+///     Tool for Word file operations (create, create_from_template, convert, merge, split).
 /// </summary>
 [McpServerToolType]
 public class WordFileTool
 {
+    /// <summary>
+    ///     The session identity accessor for session isolation.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
+    ///     The document session manager for managing in-memory document sessions.
+    /// </summary>
+    private readonly DocumentSessionManager? _sessionManager;
+
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="WordFileTool" /> class.
+    /// </summary>
+    /// <param name="sessionManager">Optional session manager for in-memory document operations.</param>
+    /// <param name="identityAccessor">Optional identity accessor for session isolation.</param>
+    public WordFileTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
+    {
+        _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
+    }
+
+    /// <summary>
+    ///     Executes a Word file operation (create, create_from_template, convert, merge, or split).
+    /// </summary>
+    /// <param name="operation">The operation to perform: create, create_from_template, convert, merge, or split.</param>
+    /// <param name="sessionId">Session ID to read document from session (for convert, split, create_from_template).</param>
+    /// <param name="path">Input file path (for convert, split).</param>
+    /// <param name="outputPath">Output file path (for create, create_from_template, convert, merge).</param>
+    /// <param name="templatePath">Template file path (for create_from_template).</param>
+    /// <param name="dataJson">JSON data for template rendering (for create_from_template).</param>
+    /// <param name="format">Output format: pdf, html, docx, txt, rtf, odt, epub, xps (for convert).</param>
+    /// <param name="inputPaths">Array of input file paths to merge (for merge).</param>
+    /// <param name="importFormatMode">
+    ///     Format mode when merging: KeepSourceFormatting, UseDestinationStyles,
+    ///     KeepDifferentStyles.
+    /// </param>
+    /// <param name="unlinkHeadersFooters">Unlink headers/footers after merge.</param>
+    /// <param name="outputDir">Output directory for split files (for split).</param>
+    /// <param name="splitBy">Split by: section, page.</param>
+    /// <param name="content">Initial content (for create).</param>
+    /// <param name="skipInitialContent">Create blank document (for create).</param>
+    /// <param name="marginTop">Top margin in points.</param>
+    /// <param name="marginBottom">Bottom margin in points.</param>
+    /// <param name="marginLeft">Left margin in points.</param>
+    /// <param name="marginRight">Right margin in points.</param>
+    /// <param name="compatibilityMode">Word compatibility mode.</param>
+    /// <param name="paperSize">Predefined paper size.</param>
+    /// <param name="pageWidth">Page width in points (overrides paperSize).</param>
+    /// <param name="pageHeight">Page height in points (overrides paperSize).</param>
+    /// <param name="headerDistance">Header distance from page top in points.</param>
+    /// <param name="footerDistance">Footer distance from page bottom in points.</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when the operation is unknown or required parameters are missing.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when session management is not enabled but sessionId is provided.</exception>
+    /// <exception cref="FileNotFoundException">Thrown when the template file is not found.</exception>
     [McpServerTool(Name = "word_file")]
     [Description(
         @"Perform file operations on Word documents. Supports 5 operations: create, create_from_template, convert, merge, split.
@@ -21,9 +78,12 @@ public class WordFileTool
 Usage examples:
 - Create document: word_file(operation='create', outputPath='new.docx')
 - Create from template: word_file(operation='create_from_template', templatePath='template.docx', outputPath='output.docx', dataJson='{""Name"":""John""}')
+- Create from session template: word_file(operation='create_from_template', sessionId='sess_xxx', outputPath='output.docx', dataJson='{""Name"":""John""}')
 - Convert format: word_file(operation='convert', path='doc.docx', outputPath='doc.pdf', format='pdf')
+- Convert from session: word_file(operation='convert', sessionId='sess_xxx', outputPath='doc.pdf', format='pdf')
 - Merge documents: word_file(operation='merge', inputPaths=['doc1.docx','doc2.docx'], outputPath='merged.docx')
 - Split document: word_file(operation='split', path='doc.docx', outputDir='output/', splitBy='page')
+- Split from session: word_file(operation='split', sessionId='sess_xxx', outputDir='output/', splitBy='page')
 
 Template syntax (LINQ Reporting Engine, use 'ds' as data source prefix):
 - Simple value: <<[ds.Name]>>
@@ -32,6 +92,8 @@ Template syntax (LINQ Reporting Engine, use 'ds' as data source prefix):
     public string Execute(
         [Description("Operation: create, create_from_template, convert, merge, split")]
         string operation,
+        [Description("Session ID to read document from session (for convert, split, create_from_template)")]
+        string? sessionId = null,
         [Description("Input file path (for convert, split)")]
         string? path = null,
         [Description("Output file path (for create, create_from_template, convert, merge)")]
@@ -82,17 +144,32 @@ Template syntax (LINQ Reporting Engine, use 'ds' as data source prefix):
         {
             "create" => CreateDocument(outputPath, content, skipInitialContent, marginTop, marginBottom, marginLeft,
                 marginRight, compatibilityMode, paperSize, pageWidth, pageHeight, headerDistance, footerDistance),
-            "create_from_template" => CreateFromTemplate(templatePath, outputPath, dataJson),
-            "convert" => ConvertDocument(path, outputPath, format),
+            "create_from_template" => CreateFromTemplate(templatePath, sessionId, outputPath, dataJson),
+            "convert" => ConvertDocument(path, sessionId, outputPath, format),
             "merge" => MergeDocuments(inputPaths, outputPath, importFormatMode, unlinkHeadersFooters),
-            "split" => SplitDocument(path, outputDir, splitBy),
+            "split" => SplitDocument(path, sessionId, outputDir, splitBy),
             _ => throw new ArgumentException($"Unknown operation: {operation}")
         };
     }
 
     /// <summary>
-    ///     Creates a new Word document with specified settings
+    ///     Creates a new Word document with specified settings.
     /// </summary>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="content">Initial content for the document.</param>
+    /// <param name="skipInitialContent">Whether to create a blank document.</param>
+    /// <param name="marginTop">Top margin in points.</param>
+    /// <param name="marginBottom">Bottom margin in points.</param>
+    /// <param name="marginLeft">Left margin in points.</param>
+    /// <param name="marginRight">Right margin in points.</param>
+    /// <param name="compatibilityMode">Word compatibility mode.</param>
+    /// <param name="paperSize">Predefined paper size.</param>
+    /// <param name="pageWidth">Custom page width in points.</param>
+    /// <param name="pageHeight">Custom page height in points.</param>
+    /// <param name="headerDistance">Header distance from page top.</param>
+    /// <param name="footerDistance">Footer distance from page bottom.</param>
+    /// <returns>A message indicating the document was created successfully.</returns>
+    /// <exception cref="ArgumentException">Thrown when outputPath is not provided.</exception>
     private static string CreateDocument(string? outputPath, string? content, bool skipInitialContent, double marginTop,
         double marginBottom, double marginLeft, double marginRight, string compatibilityMode, string paperSize,
         double? pageWidth, double? pageHeight, double headerDistance, double footerDistance)
@@ -183,29 +260,58 @@ Template syntax (LINQ Reporting Engine, use 'ds' as data source prefix):
     }
 
     /// <summary>
-    ///     Creates a document from a template using LINQ Reporting Engine
+    ///     Creates a document from a template using LINQ Reporting Engine.
     /// </summary>
-    private static string CreateFromTemplate(string? templatePath, string? outputPath, string? dataJson)
+    /// <param name="templatePath">The template file path.</param>
+    /// <param name="sessionId">The session ID for reading template from session.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="dataJson">The JSON data for template rendering.</param>
+    /// <returns>A message indicating the document was created successfully.</returns>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when neither templatePath nor sessionId is provided, outputPath is not provided, or dataJson is not
+    ///     provided.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">Thrown when session management is not enabled or document cloning fails.</exception>
+    /// <exception cref="FileNotFoundException">Thrown when the template file is not found.</exception>
+    private string CreateFromTemplate(string? templatePath, string? sessionId, string? outputPath, string? dataJson)
     {
-        if (string.IsNullOrEmpty(templatePath))
-            throw new ArgumentException("templatePath is required for create_from_template operation");
+        if (string.IsNullOrEmpty(templatePath) && string.IsNullOrEmpty(sessionId))
+            throw new ArgumentException(
+                "Either templatePath or sessionId is required for create_from_template operation");
         if (string.IsNullOrEmpty(outputPath))
             throw new ArgumentException("outputPath is required for create_from_template operation");
 
-        SecurityHelper.ValidateFilePath(templatePath, "templatePath", true);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
         var outputDir = Path.GetDirectoryName(outputPath);
         if (!string.IsNullOrEmpty(outputDir))
             Directory.CreateDirectory(outputDir);
 
-        if (!File.Exists(templatePath))
-            throw new FileNotFoundException($"Template file not found: {templatePath}");
-
         if (string.IsNullOrEmpty(dataJson))
             throw new ArgumentException("dataJson parameter is required for create_from_template");
 
-        var doc = new Document(templatePath);
+        Document doc;
+        string templateSource;
+
+        if (!string.IsNullOrEmpty(sessionId))
+        {
+            if (_sessionManager == null)
+                throw new InvalidOperationException("Session management is not enabled");
+
+            var identity = _identityAccessor?.GetCurrentIdentity() ?? SessionIdentity.GetAnonymous();
+            var sessionDoc = _sessionManager.GetDocument<Document>(sessionId, identity);
+            doc = sessionDoc.Clone() ?? throw new InvalidOperationException("Failed to clone document from session");
+            templateSource = $"session {sessionId}";
+        }
+        else
+        {
+            SecurityHelper.ValidateFilePath(templatePath!, "templatePath", true);
+            if (!File.Exists(templatePath))
+                throw new FileNotFoundException($"Template file not found: {templatePath}");
+            doc = new Document(templatePath);
+            templateSource = Path.GetFileName(templatePath);
+        }
+
         var engine = new ReportingEngine
         {
             Options = ReportBuildOptions.AllowMissingMembers | ReportBuildOptions.RemoveEmptyParagraphs
@@ -222,20 +328,28 @@ Template syntax (LINQ Reporting Engine, use 'ds' as data source prefix):
         engine.BuildReport(doc, dataSource, "ds");
 
         doc.Save(outputPath);
-        return $"Document created from template using LINQ Reporting Engine: {outputPath}";
+        return $"Document created from template ({templateSource}) using LINQ Reporting Engine: {outputPath}";
     }
 
     /// <summary>
-    ///     Converts a Word document to another format
+    ///     Converts a Word document to another format.
     /// </summary>
-    private static string ConvertDocument(string? path, string? outputPath, string? format)
+    /// <param name="path">The input file path.</param>
+    /// <param name="sessionId">The session ID for reading document from session.</param>
+    /// <param name="outputPath">The output file path.</param>
+    /// <param name="format">The target format (pdf, html, docx, txt, rtf, odt, epub, xps).</param>
+    /// <returns>A message indicating the conversion was successful.</returns>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when neither path nor sessionId is provided, outputPath is not provided, or format is unsupported.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">Thrown when session management is not enabled.</exception>
+    private string ConvertDocument(string? path, string? sessionId, string? outputPath, string? format)
     {
-        if (string.IsNullOrEmpty(path))
-            throw new ArgumentException("path is required for convert operation");
+        if (string.IsNullOrEmpty(path) && string.IsNullOrEmpty(sessionId))
+            throw new ArgumentException("Either path or sessionId is required for convert operation");
         if (string.IsNullOrEmpty(outputPath))
             throw new ArgumentException("outputPath is required for convert operation");
 
-        SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
         SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
 
         var outputDir = Path.GetDirectoryName(outputPath);
@@ -262,7 +376,24 @@ Template syntax (LINQ Reporting Engine, use 'ds' as data source prefix):
             };
         }
 
-        var doc = new Document(path);
+        Document doc;
+        string sourceDescription;
+
+        if (!string.IsNullOrEmpty(sessionId))
+        {
+            if (_sessionManager == null)
+                throw new InvalidOperationException("Session management is not enabled");
+
+            var identity = _identityAccessor?.GetCurrentIdentity() ?? SessionIdentity.GetAnonymous();
+            doc = _sessionManager.GetDocument<Document>(sessionId, identity);
+            sourceDescription = $"session {sessionId}";
+        }
+        else
+        {
+            SecurityHelper.ValidateFilePath(path!, allowAbsolutePaths: true);
+            doc = new Document(path);
+            sourceDescription = path!;
+        }
 
         var saveFormat = formatLower switch
         {
@@ -279,12 +410,18 @@ Template syntax (LINQ Reporting Engine, use 'ds' as data source prefix):
         };
 
         doc.Save(outputPath, saveFormat);
-        return $"Document converted from {path} to {outputPath} ({formatLower})";
+        return $"Document converted from {sourceDescription} to {outputPath} ({formatLower})";
     }
 
     /// <summary>
-    ///     Merges multiple Word documents into one
+    ///     Merges multiple Word documents into one.
     /// </summary>
+    /// <param name="inputPaths">Array of input file paths to merge.</param>
+    /// <param name="outputPath">The output file path for the merged document.</param>
+    /// <param name="importFormatModeStr">Format mode: KeepSourceFormatting, UseDestinationStyles, KeepDifferentStyles.</param>
+    /// <param name="unlinkHeadersFooters">Whether to unlink headers/footers after merge.</param>
+    /// <returns>A message indicating the merge was successful with document count.</returns>
+    /// <exception cref="ArgumentException">Thrown when inputPaths is empty or outputPath is not provided.</exception>
     private static string MergeDocuments(string[]? inputPaths, string? outputPath, string importFormatModeStr,
         bool unlinkHeadersFooters)
     {
@@ -326,22 +463,45 @@ Template syntax (LINQ Reporting Engine, use 'ds' as data source prefix):
     }
 
     /// <summary>
-    ///     Splits a Word document by sections or pages
+    ///     Splits a Word document by sections or pages.
     /// </summary>
-    private static string SplitDocument(string? path, string? outputDir, string splitBy)
+    /// <param name="path">The input file path.</param>
+    /// <param name="sessionId">The session ID for reading document from session.</param>
+    /// <param name="outputDir">The output directory for split files.</param>
+    /// <param name="splitBy">Split method: section or page.</param>
+    /// <returns>A message indicating the split was successful with file count.</returns>
+    /// <exception cref="ArgumentException">
+    ///     Thrown when neither path nor sessionId is provided, or outputDir is not provided.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">Thrown when session management is not enabled.</exception>
+    private string SplitDocument(string? path, string? sessionId, string? outputDir, string splitBy)
     {
-        if (string.IsNullOrEmpty(path))
-            throw new ArgumentException("path is required for split operation");
+        if (string.IsNullOrEmpty(path) && string.IsNullOrEmpty(sessionId))
+            throw new ArgumentException("Either path or sessionId is required for split operation");
         if (string.IsNullOrEmpty(outputDir))
             throw new ArgumentException("outputDir is required for split operation");
 
-        SecurityHelper.ValidateFilePath(path, allowAbsolutePaths: true);
         SecurityHelper.ValidateFilePath(outputDir, "outputDir", true);
-
         Directory.CreateDirectory(outputDir);
 
-        var doc = new Document(path);
-        var fileBaseName = SecurityHelper.SanitizeFileName(Path.GetFileNameWithoutExtension(path));
+        Document doc;
+        string fileBaseName;
+
+        if (!string.IsNullOrEmpty(sessionId))
+        {
+            if (_sessionManager == null)
+                throw new InvalidOperationException("Session management is not enabled");
+
+            var identity = _identityAccessor?.GetCurrentIdentity() ?? SessionIdentity.GetAnonymous();
+            doc = _sessionManager.GetDocument<Document>(sessionId, identity);
+            fileBaseName = $"session_{sessionId}";
+        }
+        else
+        {
+            SecurityHelper.ValidateFilePath(path!, allowAbsolutePaths: true);
+            doc = new Document(path);
+            fileBaseName = SecurityHelper.SanitizeFileName(Path.GetFileNameWithoutExtension(path!));
+        }
 
         if (splitBy.ToLower() == "section")
         {

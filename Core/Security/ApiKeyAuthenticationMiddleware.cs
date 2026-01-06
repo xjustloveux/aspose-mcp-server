@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace AsposeMcpServer.Core.Security;
 
@@ -28,7 +29,7 @@ public class ApiKeyAuthResult
 /// <summary>
 ///     Middleware for API Key authentication supporting multiple verification modes
 /// </summary>
-public class ApiKeyAuthenticationMiddleware
+public class ApiKeyAuthenticationMiddleware : IDisposable
 {
     /// <summary>
     ///     API key authentication configuration
@@ -51,6 +52,16 @@ public class ApiKeyAuthenticationMiddleware
     private readonly RequestDelegate _next;
 
     /// <summary>
+    ///     Indicates whether we own the HTTP client and should dispose it
+    /// </summary>
+    private readonly bool _ownsHttpClient;
+
+    /// <summary>
+    ///     Tracks whether this middleware has been disposed (0 = not disposed, 1 = disposed)
+    /// </summary>
+    private int _disposed;
+
+    /// <summary>
     ///     Creates a new API key authentication middleware instance
     /// </summary>
     /// <param name="next">Next middleware delegate</param>
@@ -66,10 +77,35 @@ public class ApiKeyAuthenticationMiddleware
         _next = next;
         _config = config;
         _logger = logger;
-        _httpClient = httpClientFactory?.CreateClient("ApiKeyAuth") ?? new HttpClient
+        if (httpClientFactory != null)
         {
-            Timeout = TimeSpan.FromSeconds(config.CustomTimeoutSeconds)
-        };
+            _httpClient = httpClientFactory.CreateClient("ApiKeyAuth");
+            _ownsHttpClient = false;
+        }
+        else
+        {
+            _httpClient = new HttpClient
+            {
+                Timeout = TimeSpan.FromSeconds(config.ExternalTimeoutSeconds)
+            };
+            _ownsHttpClient = true;
+        }
+    }
+
+    /// <summary>
+    ///     Releases resources used by this middleware.
+    ///     Thread-safe: uses Interlocked to prevent double-dispose.
+    /// </summary>
+    public void Dispose()
+    {
+        // Atomically set _disposed to 1, return previous value
+        // If previous value was already 1, another thread already disposed
+        if (Interlocked.Exchange(ref _disposed, 1) == 1)
+            return;
+
+        if (_ownsHttpClient)
+            _httpClient.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     /// <summary>
@@ -227,13 +263,14 @@ public class ApiKeyAuthenticationMiddleware
             using var request = new HttpRequestMessage(HttpMethod.Post, _config.IntrospectionEndpoint);
             request.Content = new FormUrlEncodedContent(new Dictionary<string, string>
             {
-                ["key"] = apiKey
+                [_config.IntrospectionKeyField] = apiKey
             });
 
             if (!string.IsNullOrEmpty(_config.IntrospectionAuthHeader))
                 request.Headers.Authorization = AuthenticationHeaderValue.Parse(_config.IntrospectionAuthHeader);
 
-            var response = await _httpClient.SendAsync(request);
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(_config.ExternalTimeoutSeconds));
+            var response = await _httpClient.SendAsync(request, cts.Token);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -245,7 +282,7 @@ public class ApiKeyAuthenticationMiddleware
                 };
             }
 
-            var content = await response.Content.ReadAsStringAsync();
+            var content = await response.Content.ReadAsStringAsync(cts.Token);
             var result = JsonSerializer.Deserialize<IntrospectionResponse>(content, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
@@ -303,7 +340,8 @@ public class ApiKeyAuthenticationMiddleware
                 Encoding.UTF8,
                 "application/json");
 
-            var response = await _httpClient.SendAsync(request);
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(_config.ExternalTimeoutSeconds));
+            var response = await _httpClient.SendAsync(request, cts.Token);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -315,7 +353,7 @@ public class ApiKeyAuthenticationMiddleware
                 };
             }
 
-            var content = await response.Content.ReadAsStringAsync();
+            var content = await response.Content.ReadAsStringAsync(cts.Token);
             var result = JsonSerializer.Deserialize<CustomValidationResponse>(content, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
@@ -354,7 +392,8 @@ public class ApiKeyAuthenticationMiddleware
     private class IntrospectionResponse
     {
         public bool Active { get; init; }
-        public string? TenantId { get; init; }
+
+        [JsonPropertyName("tenant_id")] public string? TenantId { get; init; }
     }
 
     /// <summary>
@@ -363,7 +402,9 @@ public class ApiKeyAuthenticationMiddleware
     private class CustomValidationResponse
     {
         public bool Valid { get; init; }
-        public string? TenantId { get; init; }
+
+        [JsonPropertyName("tenant_id")] public string? TenantId { get; init; }
+
         public string? Error { get; init; }
     }
 }

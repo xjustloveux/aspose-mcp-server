@@ -43,6 +43,11 @@ public class ExcelPropertiesTool
     private const string OperationGetSheetInfo = "get_sheet_info";
 
     /// <summary>
+    ///     Session identity accessor for session isolation support.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Document session manager for in-memory editing support.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -51,11 +56,42 @@ public class ExcelPropertiesTool
     ///     Initializes a new instance of the <see cref="ExcelPropertiesTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
-    public ExcelPropertiesTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional session identity accessor for session isolation.</param>
+    public ExcelPropertiesTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes an Excel properties operation (get_workbook_properties, set_workbook_properties, get_sheet_properties,
+    ///     edit_sheet_properties, get_sheet_info).
+    /// </summary>
+    /// <param name="operation">
+    ///     The operation to perform: get_workbook_properties, set_workbook_properties,
+    ///     get_sheet_properties, edit_sheet_properties, get_sheet_info.
+    /// </param>
+    /// <param name="path">Excel file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="sheetIndex">Sheet index (0-based, default: 0, required for sheet operations).</param>
+    /// <param name="title">Title (optional, for set_workbook_properties).</param>
+    /// <param name="subject">Subject (optional, for set_workbook_properties).</param>
+    /// <param name="author">Author (optional, for set_workbook_properties).</param>
+    /// <param name="keywords">Keywords (optional, for set_workbook_properties).</param>
+    /// <param name="comments">Comments (optional, for set_workbook_properties).</param>
+    /// <param name="category">Category (optional, for set_workbook_properties).</param>
+    /// <param name="company">Company (optional, for set_workbook_properties).</param>
+    /// <param name="manager">Manager (optional, for set_workbook_properties).</param>
+    /// <param name="customProperties">Custom properties as JSON object (optional, for set_workbook_properties).</param>
+    /// <param name="name">Sheet name (optional, for edit_sheet_properties).</param>
+    /// <param name="isVisible">Sheet visibility (optional, for edit_sheet_properties).</param>
+    /// <param name="tabColor">Tab color hex (e.g., #FF0000, optional, for edit_sheet_properties).</param>
+    /// <param name="isSelected">Set as selected sheet (optional, for edit_sheet_properties).</param>
+    /// <param name="targetSheetIndex">Sheet index for get_sheet_info (optional, if not provided returns all sheets).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "excel_properties")]
     [Description(
         @"Manage Excel properties. Supports 5 operations: get_workbook_properties, set_workbook_properties, get_sheet_properties, edit_sheet_properties, get_sheet_info.
@@ -111,7 +147,7 @@ Usage examples:
         [Description("Sheet index for get_sheet_info (optional, if not provided returns all sheets)")]
         int? targetSheetIndex = null)
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {

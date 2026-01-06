@@ -14,6 +14,11 @@ namespace AsposeMcpServer.Tools.Word;
 public class WordFieldTool
 {
     /// <summary>
+    ///     Identity accessor for session isolation
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document session operations
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -22,11 +27,48 @@ public class WordFieldTool
     ///     Initializes a new instance of the WordFieldTool class
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document operations</param>
-    public WordFieldTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation</param>
+    public WordFieldTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a Word field operation (insert_field, edit_field, delete_field, update_field, update_all, get_fields,
+    ///     get_field_detail, add_form_field, edit_form_field, delete_form_field, get_form_fields).
+    /// </summary>
+    /// <param name="operation">
+    ///     The operation to perform: insert_field, edit_field, delete_field, update_field, update_all,
+    ///     get_fields, get_field_detail, add_form_field, edit_form_field, delete_form_field, get_form_fields.
+    /// </param>
+    /// <param name="path">Word document file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="fieldType">Field type: DATE, TIME, PAGE, NUMPAGES, AUTHOR, etc. (for insert_field).</param>
+    /// <param name="fieldArgument">Field argument (for insert_field).</param>
+    /// <param name="paragraphIndex">Paragraph index (0-based, -1 for document end, for insert_field).</param>
+    /// <param name="insertAtStart">Insert at start of paragraph (for insert_field, default: false).</param>
+    /// <param name="fieldIndex">Field index (0-based, for edit_field/delete_field/update_field/get_field_detail).</param>
+    /// <param name="fieldCode">New field code (for edit_field).</param>
+    /// <param name="lockField">Lock the field (for edit_field).</param>
+    /// <param name="unlockField">Unlock the field (for edit_field).</param>
+    /// <param name="updateField">Update field after editing (for edit_field, default: true).</param>
+    /// <param name="keepResult">Keep field result text after deletion (for delete_field, default: false).</param>
+    /// <param name="updateAll">Update all fields (for update_field, default: false if fieldIndex provided).</param>
+    /// <param name="includeCode">Include field code in results (for get_fields, default: true).</param>
+    /// <param name="includeResult">Include field result in results (for get_fields, default: true).</param>
+    /// <param name="formFieldType">Form field type: TextInput, CheckBox, DropDown (for add_form_field).</param>
+    /// <param name="fieldName">Field name (for form field operations).</param>
+    /// <param name="defaultValue">Default value (for add_form_field/edit_form_field).</param>
+    /// <param name="options">Options for dropdown (for add_form_field with DropDown type).</param>
+    /// <param name="checkedValue">Checked state (for CheckBox type).</param>
+    /// <param name="value">New value (for TextInput type, for edit_form_field).</param>
+    /// <param name="selectedIndex">Selected option index (for DropDown type, for edit_form_field).</param>
+    /// <param name="fieldNames">Array of form field names to delete (for delete_form_field).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "word_field")]
     [Description(
         @"Manage fields and form fields in Word documents. Supports 11 operations: insert_field, edit_field, delete_field, update_field, update_all, get_fields, get_field_detail, add_form_field, edit_form_field, delete_form_field, get_form_fields.
@@ -92,7 +134,7 @@ Usage examples:
         [Description("Array of form field names to delete (for delete_form_field)")]
         string[]? fieldNames = null)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         var op = operation.ToLower();
         if (op == "update_all")

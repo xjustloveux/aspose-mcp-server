@@ -17,6 +17,11 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 public class PptSmartArtTool
 {
     /// <summary>
+    ///     Identity accessor for session isolation.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document session handling.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -25,11 +30,40 @@ public class PptSmartArtTool
     ///     Initializes a new instance of the <see cref="PptSmartArtTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory editing.</param>
-    public PptSmartArtTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation.</param>
+    public PptSmartArtTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a PowerPoint SmartArt operation (add, manage_nodes).
+    /// </summary>
+    /// <param name="operation">The operation to perform: add, manage_nodes.</param>
+    /// <param name="path">Presentation file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (optional, defaults to input path).</param>
+    /// <param name="slideIndex">Slide index (0-based, required for all operations).</param>
+    /// <param name="shapeIndex">Shape index (0-based, required for manage_nodes).</param>
+    /// <param name="layout">
+    ///     SmartArt layout type: BasicProcess, BasicCycle, BasicPyramid, BasicRadial, Hierarchy,
+    ///     OrganizationChart, etc.
+    /// </param>
+    /// <param name="x">X position (optional, for add operation, defaults to 100).</param>
+    /// <param name="y">Y position (optional, for add operation, defaults to 100).</param>
+    /// <param name="width">Width (optional, for add operation, defaults to 400).</param>
+    /// <param name="height">Height (optional, for add operation, defaults to 300).</param>
+    /// <param name="action">Node action: add, edit, delete (required for manage_nodes operation).</param>
+    /// <param name="targetPath">
+    ///     Array of indices to target node as JSON (e.g., '[0]' for first node, '[0,1]' for second child
+    ///     of first node).
+    /// </param>
+    /// <param name="text">Node text content (required for add/edit operations in manage_nodes).</param>
+    /// <param name="position">Insert position for new node (0-based, optional for add action, defaults to append at end).</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "ppt_smart_art")]
     [Description(@"Manage PowerPoint SmartArt. Supports 2 operations: add, manage_nodes.
 
@@ -72,7 +106,7 @@ Usage examples:
         [Description("Insert position for new node (0-based, optional for add action, defaults to append at end)")]
         int? position = null)
     {
-        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {

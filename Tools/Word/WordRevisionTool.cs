@@ -20,6 +20,11 @@ public class WordRevisionTool
     private const int MaxRevisionTextLength = 100;
 
     /// <summary>
+    ///     Identity accessor for session isolation
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document session operations
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -28,11 +33,30 @@ public class WordRevisionTool
     ///     Initializes a new instance of the WordRevisionTool class
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document operations</param>
-    public WordRevisionTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation</param>
+    public WordRevisionTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a Word revision operation (get_revisions, accept_all, reject_all, manage, compare).
+    /// </summary>
+    /// <param name="operation">The operation to perform: get_revisions, accept_all, reject_all, manage, compare.</param>
+    /// <param name="path">Word document file path (required if no sessionId for most operations).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (optional for most operations, required for compare).</param>
+    /// <param name="revisionIndex">Revision index (0-based, required for manage operation).</param>
+    /// <param name="action">Action for manage operation: accept, reject (default: accept).</param>
+    /// <param name="originalPath">Original document file path (required for compare).</param>
+    /// <param name="revisedPath">Revised document file path (required for compare).</param>
+    /// <param name="authorName">Author name for revisions (for compare, default: 'Comparison').</param>
+    /// <param name="ignoreFormatting">Ignore formatting changes in comparison (for compare, default: false).</param>
+    /// <param name="ignoreComments">Ignore comments in comparison (for compare, default: false).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get_revisions.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "word_revision")]
     [Description(
         @"Manage revisions in Word documents. Supports 5 operations: get_revisions, accept_all, reject_all, manage, compare.
@@ -92,7 +116,7 @@ Notes:
     /// <returns>A JSON string containing revision information.</returns>
     private string GetRevisions(string? path, string? sessionId)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var doc = ctx.Document;
 
         var revisions = doc.Revisions.ToList();
@@ -145,7 +169,7 @@ Notes:
     /// <returns>A message indicating the result of the operation.</returns>
     private string AcceptAllRevisions(string? path, string? sessionId, string? outputPath)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var doc = ctx.Document;
 
         var count = doc.Revisions.Count;
@@ -167,7 +191,7 @@ Notes:
     /// <returns>A message indicating the result of the operation.</returns>
     private string RejectAllRevisions(string? path, string? sessionId, string? outputPath)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var doc = ctx.Document;
 
         var count = doc.Revisions.Count;
@@ -196,7 +220,7 @@ Notes:
         if (!revisionIndex.HasValue)
             throw new ArgumentException("revisionIndex is required for manage operation");
 
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
         var doc = ctx.Document;
 
         var revisionsCount = doc.Revisions.Count;

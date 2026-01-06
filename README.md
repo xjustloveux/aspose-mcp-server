@@ -29,7 +29,7 @@
 - **WebSocket 模式** - 雙向通訊，適用於即時互動
 
 ### 進階功能
-- **Session 管理** - 在記憶體中編輯文件，支援 open/save/close 操作
+- **Session 管理** - 在記憶體中編輯文件，支援 open/save/close 操作，支援多租戶隔離
 - **認證機制** - 可選的 API Key 和 JWT 認證（4 種驗證模式）
 - **追蹤系統** - 結構化日誌、Webhook 通知、Prometheus Metrics
 
@@ -196,6 +196,9 @@ Aspose MCP Server 支援三種傳輸模式，可透過命令列參數或環境�
 ```bash
 # 預設使用 Stdio 模式
 AsposeMcpServer.exe --word
+
+# 或明確指定 Stdio 模式
+AsposeMcpServer.exe --stdio --word
 ```
 
 ### SSE 模式
@@ -222,6 +225,9 @@ AsposeMcpServer.exe --word
 # 命令列參數
 AsposeMcpServer.exe --ws --port 3000 --word
 
+# 或使用 --websocket 別名
+AsposeMcpServer.exe --websocket --port 3000 --word
+
 # 或使用環境變數
 set ASPOSE_TRANSPORT=ws
 set ASPOSE_PORT=3000
@@ -235,11 +241,13 @@ AsposeMcpServer.exe --word
 | 變數 | 說明 | 預設值 |
 |------|------|--------|
 | `ASPOSE_TRANSPORT` | 傳輸模式 (stdio/sse/ws) | stdio |
-| `ASPOSE_PORT` | 監聽埠號 | 3000 |
-| `ASPOSE_HOST` | 監聽位址 | localhost |
+| `ASPOSE_PORT` | 監聽埠號（1-65535，無效值重設為 3000） | 3000 |
+| `ASPOSE_HOST` | 監聽位址（`localhost`、`0.0.0.0`、`*` 或特定 IP，無效值重設為 localhost） | localhost |
 | `ASPOSE_TOOLS` | 啟用的工具 (all 或 word,excel,pdf,ppt) | all |
 
-> **注意**: Docker/Kubernetes 部署時需設定 `ASPOSE_HOST=0.0.0.0` 以便容器外部可以訪問。
+> **注意**:
+> - Docker/Kubernetes 部署時需設定 `ASPOSE_HOST=0.0.0.0` 以便容器外部可以訪問
+> - `localhost` 僅允許本機連接，`0.0.0.0` 或 `*` 允許所有介面連接
 
 ## 📂 Session 管理
 
@@ -262,7 +270,7 @@ word_text(operation="add", sessionId="my-session", text="新增內容")
 document_session(operation="save", sessionId="my-session")
 
 # 另存為新檔案
-document_session(operation="save_as", sessionId="my-session", outputPath="new-document.docx")
+document_session(operation="save", sessionId="my-session", outputPath="new-document.docx")
 
 # 關閉 Session（不儲存）
 document_session(operation="close", sessionId="my-session")
@@ -318,6 +326,12 @@ document_session(operation="recover", sessionId="sess_abc123", outputPath="recov
 | `ASPOSE_SESSION_TEMP_DIR` | 臨時目錄 | 系統臨時目錄 |
 | `ASPOSE_SESSION_TEMP_RETENTION_HOURS` | 暫存檔保留時間（小時） | 24 |
 | `ASPOSE_SESSION_ON_DISCONNECT` | 斷線行為 (SaveToTemp/Discard/KeepInMemory) | SaveToTemp |
+| `ASPOSE_SESSION_ISOLATION` | 隔離模式 (none/tenant/user) | user |
+
+**隔離模式說明：**
+- `none` - 無隔離，所有用戶可存取所有 session（Stdio 模式向後兼容）
+- `tenant` - 租戶級隔離，同租戶內的用戶可相互存取 session
+- `user` - 用戶級隔離，用戶只能存取自己的 session（預設）
 
 **命令行參數：**
 
@@ -331,6 +345,7 @@ document_session(operation="recover", sessionId="sess_abc123", outputPath="recov
 | `--session-temp-dir:path` | 臨時目錄 |
 | `--session-temp-retention-hours:N` | 暫存檔保留時間（小時） |
 | `--session-on-disconnect:behavior` | 斷線行為 |
+| `--session-isolation:mode` | 隔離模式 (none/tenant/user) |
 
 ## 🔐 認證機制
 
@@ -361,12 +376,16 @@ set ASPOSE_AUTH_APIKEY_MODE=introspection
 set ASPOSE_AUTH_APIKEY_INTROSPECTION_URL=https://auth.example.com/validate
 ```
 
+端點需回傳 JSON：`{"active": true, "tenant_id": "..."}`
+
 **Custom 模式**（自訂驗證邏輯）：
 ```bash
 set ASPOSE_AUTH_APIKEY_ENABLED=true
 set ASPOSE_AUTH_APIKEY_MODE=custom
 set ASPOSE_AUTH_APIKEY_CUSTOM_URL=https://auth.example.com/custom
 ```
+
+端點需回傳 JSON：`{"valid": true, "tenant_id": "..."}`
 
 ### JWT 認證
 
@@ -390,6 +409,37 @@ set ASPOSE_AUTH_JWT_PUBLIC_KEY_PATH=/path/to/public.pem
 
 **Gateway/Introspection/Custom 模式**：與 API Key 類似配置
 
+JWT Introspection 端點需回傳 JSON：`{"active": true, "tenant_id": "...", "sub": "..."}`
+
+JWT Custom 端點需回傳 JSON：`{"valid": true, "tenant_id": "...", "user_id": "..."}`
+
+### 外部端點請求格式
+
+MCP Server 發送到外部驗證端點的請求格式：
+
+| 模式 | Content-Type | 請求格式 |
+|------|-------------|---------|
+| API Key Introspection | `application/x-www-form-urlencoded` | `{IntrospectionKeyField}=<apiKey>` |
+| API Key Custom | `application/json` | `{"apiKey": "..."}` |
+| JWT Introspection (RFC 7662) | `application/x-www-form-urlencoded` | `token=<token>&token_type_hint=access_token` |
+| JWT Custom | `application/json` | `{"token": "..."}`|
+
+### 同時啟用多種認證
+
+若同時啟用 API Key 和 JWT 認證，請求必須**依序通過兩者驗證**才算成功：
+
+```
+請求 → API Key 驗證 → JWT 驗證 → 處理請求
+         ↓ 失敗          ↓ 失敗
+        401             401
+```
+
+**適用情境**：
+- API Key 識別應用程式/服務，JWT 識別使用者
+- 多租戶環境中的雙重身份驗證
+
+**注意**：大多數情況只需啟用其中一種認證方式即可。
+
 ### 認證配置
 
 **環境變數：**
@@ -402,18 +452,19 @@ set ASPOSE_AUTH_JWT_PUBLIC_KEY_PATH=/path/to/public.pem
 | `ASPOSE_AUTH_APIKEY_HEADER` | API Key 標頭名稱 | X-API-Key |
 | `ASPOSE_AUTH_APIKEY_TENANT_HEADER` | 租戶 ID 標頭名稱 (Gateway 模式) | X-Tenant-Id |
 | `ASPOSE_AUTH_APIKEY_INTROSPECTION_AUTH` | Introspection 認證標頭值 | - |
-| `ASPOSE_AUTH_APIKEY_CUSTOM_TIMEOUT` | Custom 端點逾時（秒） | 5 |
+| `ASPOSE_AUTH_APIKEY_TIMEOUT` | 外部驗證逾時（秒，Introspection/Custom） | 5 |
 | `ASPOSE_AUTH_JWT_ENABLED` | 啟用 JWT 認證 | false |
 | `ASPOSE_AUTH_JWT_MODE` | 模式 (local/gateway/introspection/custom) | local |
 | `ASPOSE_AUTH_JWT_SECRET` | HMAC 密鑰 | - |
 | `ASPOSE_AUTH_JWT_ISSUER` | 預期發行者 | - |
 | `ASPOSE_AUTH_JWT_AUDIENCE` | 預期受眾 | - |
 | `ASPOSE_AUTH_JWT_TENANT_CLAIM` | 租戶 ID Claim 名稱 | tenant_id |
+| `ASPOSE_AUTH_JWT_USER_CLAIM` | 使用者 ID Claim 名稱 | sub |
 | `ASPOSE_AUTH_JWT_TENANT_HEADER` | 租戶 ID 標頭名稱 (Gateway 模式) | X-Tenant-Id |
 | `ASPOSE_AUTH_JWT_USER_HEADER` | 使用者 ID 標頭名稱 (Gateway 模式) | X-User-Id |
-| `ASPOSE_AUTH_JWT_CUSTOM_TIMEOUT` | Custom 端點逾時（秒） | 5 |
-| `ASPOSE_RATE_LIMIT` | 每分鐘請求限制 | 0 (無限制) |
-| `ASPOSE_ALLOWED_ORIGINS` | CORS 允許的來源 | - |
+| `ASPOSE_AUTH_JWT_CLIENT_ID` | OIDC 客戶端 ID (Introspection 模式) | - |
+| `ASPOSE_AUTH_JWT_CLIENT_SECRET` | OIDC 客戶端密鑰 (Introspection 模式) | - |
+| `ASPOSE_AUTH_JWT_TIMEOUT` | 外部驗證逾時（秒，Introspection/Custom） | 5 |
 
 **命令行參數：**
 
@@ -422,23 +473,30 @@ set ASPOSE_AUTH_JWT_PUBLIC_KEY_PATH=/path/to/public.pem
 | `--auth-apikey-enabled` | 啟用 API Key 認證 |
 | `--auth-apikey-disabled` | 停用 API Key 認證 |
 | `--auth-apikey-mode:mode` | API Key 驗證模式 |
-| `--auth-apikey-keys:key1:tenant1,key2:tenant2` | API Key 列表 |
+| `--auth-apikey-keys:key1:tenant1,key2:tenant2` | API Key 列表（tenant 可包含冒號） |
 | `--auth-apikey-header:name` | API Key 標頭名稱 |
 | `--auth-apikey-tenant-header:name` | 租戶 ID 標頭名稱 |
+| `--auth-apikey-introspection-url:url` | Introspection 端點 URL |
 | `--auth-apikey-introspection-auth:value` | Introspection 認證標頭值 |
-| `--auth-apikey-custom-timeout:N` | Custom 端點逾時（秒） |
+| `--auth-apikey-introspection-field:name` | Introspection 請求欄位名稱（預設：key） |
+| `--auth-apikey-custom-url:url` | Custom 驗證端點 URL |
+| `--auth-apikey-timeout:N` | 外部驗證逾時（秒，Introspection/Custom） |
 | `--auth-jwt-enabled` | 啟用 JWT 認證 |
 | `--auth-jwt-disabled` | 停用 JWT 認證 |
 | `--auth-jwt-mode:mode` | JWT 驗證模式 |
 | `--auth-jwt-secret:value` | HMAC 密鑰 |
+| `--auth-jwt-public-key-path:path` | RSA/ECDSA 公鑰文件路徑 |
 | `--auth-jwt-issuer:value` | 預期發行者 |
 | `--auth-jwt-audience:value` | 預期受眾 |
 | `--auth-jwt-tenant-claim:name` | 租戶 ID Claim 名稱 |
+| `--auth-jwt-user-claim:name` | 使用者 ID Claim 名稱 |
 | `--auth-jwt-tenant-header:name` | 租戶 ID 標頭名稱 |
 | `--auth-jwt-user-header:name` | 使用者 ID 標頭名稱 |
-| `--auth-jwt-custom-timeout:N` | Custom 端點逾時（秒） |
-| `--rate-limit:N` | 每分鐘請求限制 |
-| `--allowed-origins:origin1,origin2` | CORS 允許的來源 |
+| `--auth-jwt-introspection-url:url` | OAuth Introspection 端點 URL |
+| `--auth-jwt-client-id:value` | OAuth Client ID（Introspection 模式） |
+| `--auth-jwt-client-secret:value` | OAuth Client Secret（Introspection 模式） |
+| `--auth-jwt-custom-url:url` | Custom 驗證端點 URL |
+| `--auth-jwt-timeout:N` | 外部驗證逾時（秒，Introspection/Custom） |
 
 ## 📡 追蹤系統
 
@@ -502,7 +560,8 @@ set ASPOSE_METRICS_PATH=/metrics
 | `ASPOSE_LOG_TARGETS` | 日誌目標 (Console,EventLog) | Console |
 | `ASPOSE_WEBHOOK_ENABLED` | 啟用 Webhook | false |
 | `ASPOSE_WEBHOOK_URL` | Webhook URL | - |
-| `ASPOSE_WEBHOOK_TIMEOUT` | Webhook 超時（秒） | 5 |
+| `ASPOSE_WEBHOOK_AUTH_HEADER` | Webhook 認證標頭值 | - |
+| `ASPOSE_WEBHOOK_TIMEOUT` | Webhook 超時（1-300 秒，無效值重設為 5） | 5 |
 | `ASPOSE_METRICS_ENABLED` | 啟用 Metrics | false |
 | `ASPOSE_METRICS_PATH` | Metrics 路徑 | /metrics |
 
@@ -516,7 +575,8 @@ set ASPOSE_METRICS_PATH=/metrics
 | `--webhook-enabled` | 啟用 Webhook |
 | `--webhook-disabled` | 停用 Webhook |
 | `--webhook-url:url` | Webhook URL（設定後自動啟用） |
-| `--webhook-timeout:N` | Webhook 超時（秒） |
+| `--webhook-auth-header:header` | Webhook 認證標頭 |
+| `--webhook-timeout:N` | Webhook 超時（1-300 秒，無效值重設為 5） |
 | `--metrics-enabled` | 啟用 Metrics |
 | `--metrics-disabled` | 停用 Metrics |
 | `--metrics-path:path` | Metrics 路徑 |
@@ -529,39 +589,33 @@ Aspose MCP Server 支援多種部署方式：
 
 ```bash
 # 建置映像
-docker build -t aspose-mcp-server .
+docker build -f deploy/Dockerfile -t aspose-mcp-server .
 
 # 執行容器
 docker run -d -p 3000:3000 \
-  -v ./license:/app/license:ro \
-  -v ./documents:/app/documents \
+  -e ASPOSE_TRANSPORT=sse \
+  -e ASPOSE_HOST=0.0.0.0 \
+  -e ASPOSE_TOOLS=all \
   aspose-mcp-server
 ```
 
 使用 Docker Compose：
 ```bash
-docker-compose up -d
+docker-compose -f deploy/docker-compose.yml up -d
 ```
 
 ### Kubernetes 部署
 
 ```bash
-# 建立 License Secret
-kubectl create namespace aspose-mcp
+# 建立 License Secret（可選）
 kubectl create secret generic aspose-license \
-  --from-file=Aspose.Total.lic=/path/to/license \
-  -n aspose-mcp
+  --from-file=Aspose.Total.lic=/path/to/license
 
-# 使用 Kustomize 部署
-kubectl apply -k deploy/kubernetes/
+# 部署應用程式
+kubectl apply -f deploy/deployment.yaml
 ```
 
-包含的資源：
-- Deployment（健康檢查、資源限制、安全上下文）
-- Service（ClusterIP + Headless）
-- Ingress（nginx、TLS、WebSocket/SSE 支援）
-- HPA（自動擴展）
-- ConfigMap 和 Secret
+提供的範本包含 Deployment 配置，可根據需求自行添加 Service、Ingress 等資源。
 
 ### IIS 部署
 
@@ -569,15 +623,17 @@ kubectl apply -k deploy/kubernetes/
 # 發布應用程式
 dotnet publish -c Release -o ./publish
 
-# 以系統管理員身分執行安裝腳本
-.\deploy\iis\install.ps1 -SiteName "AsposeMcpServer" -Port 3000 -PublishPath "./publish"
+# 複製 web.config 到發布目錄
+copy deploy/web.config ./publish/
+
+# 在 IIS 中建立網站，指向 publish 目錄
 ```
 
 前置需求：
 - Windows Server 2019/2022
 - IIS 10.0+
 - .NET 8.0 Hosting Bundle
-- WebSocket 功能已啟用
+- WebSocket 功能已啟用（如使用 WebSocket 傳輸模式）
 
 ### Health Check 端點
 
@@ -626,8 +682,9 @@ aspose-mcp-server/
 │   └── Session/           1 個工具 (DocumentSessionTool)
 ├── Core/                  🔧 MCP 伺服器核心
 │   ├── Helpers/           通用輔助工具（Security、Color、Font、Value、Version）
-│   ├── Security/          認證與追蹤模組（API Key、JWT、Tracking）
+│   ├── Security/          認證模組（API Key、JWT）
 │   ├── Session/           Session 管理模組
+│   ├── Tracking/          追蹤模組（日誌、Webhook、Metrics）
 │   ├── Transport/         傳輸層模組（TransportConfig、WebSocketConnectionHandler）
 │   ├── ShapeDetailProviders/ PowerPoint 形狀詳細資訊提供者
 │   ├── ServerConfig.cs    伺服器配置（工具、授權）
@@ -637,6 +694,7 @@ aspose-mcp-server/
 │   │   ├── Helpers/       Helper 測試
 │   │   ├── Security/      認證測試
 │   │   ├── Session/       Session 測試
+│   │   ├── Tracking/      追蹤測試
 │   │   └── Transport/     傳輸層測試
 │   ├── Tools/             工具測試
 │   │   ├── Word/          24 個測試類
@@ -646,7 +704,10 @@ aspose-mcp-server/
 │   │   ├── Conversion/    2 個測試類
 │   │   └── Session/       Session 工具測試
 │   └── Helpers/           測試基礎設施
-├── deploy/                🚢 部署配置
+├── deploy/                🚢 部署與構建配置
+│   ├── build.ps1          構建腳本
+│   ├── publish.ps1        發布腳本 (Windows)
+│   ├── publish.sh         發布腳本 (Linux/macOS)
 │   ├── Dockerfile         Docker 映像
 │   ├── docker-compose.yml Docker Compose
 │   ├── deployment.yaml    Kubernetes 部署
@@ -707,7 +768,7 @@ pwsh deploy/publish.ps1 -All -Clean
 
 **測試統計：**
 - **測試類**: 100+ 個測試類（含 Session、Security、Helpers 測試）
-- **測試用例**: 2,100+ 個測試用例
+- **測試用例**: 4,200+ 個測試用例
 - **測試框架**: xUnit 2.9.2
 
 **運行測試：**
@@ -751,7 +812,7 @@ pwsh test.ps1 -Verbose -Coverage -Filter "FullyQualifiedName~Word"
 - `-SkipLicense` - 跳過授權載入，強制使用評估模式
 
 **測試結構：**
-- `Tests/Core/` - 核心功能測試（Helpers、Security、Session）
+- `Tests/Core/` - 核心功能測試（Helpers、Security、Session、Tracking）
 - `Tests/Tools/Word/` - Word 工具測試（24 個測試類）
 - `Tests/Tools/Excel/` - Excel 工具測試（25 個測試類）
 - `Tests/Tools/PowerPoint/` - PowerPoint 工具測試（21 個測試類）
@@ -813,7 +874,7 @@ pwsh code-quality.ps1 -CleanupCode -InspectCode
 **內容編輯 (6)**
 - `word_text` - 添加、刪除、替換、搜尋、格式化文字（8個操作：add, delete, replace, search, format, insert_at_position, delete_range, add_with_style）
 - `word_paragraph` - 插入、刪除、編輯段落格式（7個操作：insert, delete, edit, get, get_format, copy_format, merge）
-- `word_table` - 添加、編輯、刪除表格，插入/刪除行列，合併/拆分單元格（17個操作：add_table, edit_table_format, delete_table, get_tables, insert_row, delete_row, insert_column, delete_column, merge_cells, split_cell, edit_cell_format, move_table, copy_table, get_table_structure, set_table_border, set_column_width, set_row_height）
+- `word_table` - 創建、刪除、獲取表格，插入/刪除行列，合併/拆分單元格（16個操作：create, delete, get, insert_row, delete_row, insert_column, delete_column, merge_cells, split_cell, edit_cell_format, move_table, copy_table, get_structure, set_border, set_column_width, set_row_height）
 - `word_image` - 添加、編輯、刪除、替換圖片，提取圖片（6個操作：add, edit, delete, get, replace, extract）
 - `word_shape` - 添加線條、文字框、圖表、形狀管理，支援邊框樣式：solid, dash, dot, dashDot, dashDotDot, roundDot（9個操作：add_line, add_textbox, get_textboxes, edit_textbox_content, set_textbox_border, add_chart, add, get, delete）
 - `word_list` - 添加、編輯、刪除清單項目，重新編號、轉換為清單（8個操作：add_list, add_item, delete_item, edit_item, set_format, get_format, restart_numbering, convert_to_list）
@@ -866,19 +927,19 @@ pwsh code-quality.ps1 -CleanupCode -InspectCode
 - `excel_formula` - 添加、獲取公式，獲取公式結果，計算公式，設定/獲取陣列公式（6個操作：add, get, get_result, calculate, set_array, get_array）
 - `excel_pivot_table` - 添加、編輯、刪除、獲取資料透視表，添加/刪除欄位，重新整理（7個操作：add, edit, delete, get, add_field, delete_field, refresh）
 - `excel_data_validation` - 添加、編輯、刪除、獲取資料驗證，設定輸入/錯誤訊息（5個操作：add, edit, delete, get, set_messages）
-- `excel_image` - 添加、刪除、獲取圖片（3個操作：add, delete, get）
+- `excel_image` - 添加、刪除、獲取、提取圖片（4個操作：add, delete, get, extract）
 - `excel_hyperlink` - 添加、編輯、刪除、獲取超連結（4個操作：add, edit, delete, get）
 - `excel_comment` - 添加、編輯、刪除、獲取批註（4個操作：add, edit, delete, get）
 - `excel_named_range` - 添加、刪除、獲取命名範圍（3個操作：add, delete, get）
 
 **保護與設定 (4)**
 - `excel_protect` - 保護、解除保護工作簿/工作表，獲取保護資訊，設定單元格鎖定（4個操作：protect, unprotect, get, set_cell_locked）
-- `excel_filter` - 應用、移除自動篩選，獲取篩選狀態（3個操作：apply, remove, get_status）
+- `excel_filter` - 應用、移除自動篩選，篩選資料，獲取篩選狀態（4個操作：apply, remove, filter, get_status）
 - `excel_freeze_panes` - 凍結、解凍窗格，獲取凍結狀態（3個操作：freeze, unfreeze, get）
 - `excel_merge_cells` - 合併、取消合併單元格，獲取合併單元格資訊（3個操作：merge, unmerge, get）
 
 **外觀與視圖 (3)**
-- `excel_view_settings` - 設定工作表視圖（縮放、網格線、標題、零值、背景、標籤顏色、視窗分割）（10個操作：set_zoom, set_gridlines, set_headers, set_zero_values, set_column_width, set_row_height, set_background, set_tab_color, set_all, split_window）
+- `excel_view_settings` - 設定工作表視圖（縮放、網格線、標題、零值、背景、標籤顏色、凍結窗格、視窗分割、自動調整欄寬列高、顯示公式）（14個操作：set_zoom, set_gridlines, set_headers, set_zero_values, set_column_width, set_row_height, set_background, set_tab_color, set_all, freeze_panes, split_window, auto_fit_column, auto_fit_row, show_formulas）
 - `excel_print_settings` - 設定列印區域、標題行、頁面設定（4個操作：set_print_area, set_print_titles, set_page_setup, set_all）
 - `excel_group` - 分組/取消分組行/列（4個操作：group_rows, ungroup_rows, group_columns, ungroup_columns）
 
@@ -924,7 +985,7 @@ pwsh code-quality.ps1 -CleanupCode -InspectCode
 ### PDF 檔案處理 (15 個工具)
 
 **檔案操作 (1)**
-- `pdf_file` - 創建、合併、拆分、壓縮、加密PDF（5個操作：create, merge, split, compress, encrypt）
+- `pdf_file` - 創建、合併、拆分、壓縮、加密、線性化PDF（6個操作：create, merge, split, compress, encrypt, linearize）
 
 **內容添加 (5)**
 - `pdf_text` - 添加、編輯文字，提取文字（3個操作：add, edit, extract）
@@ -992,9 +1053,9 @@ pwsh code-quality.ps1 -CleanupCode -InspectCode
 
 **複製表格結構：**
 ```
-1. word_table(path="A.docx", operation="get_table_structure", tableIndex=0)
+1. word_table(path="A.docx", operation="get_structure", tableIndex=0)
 2. 參考返回的結構資訊
-3. word_table(path="B.docx", operation="add_table", ...) 創建相同結構
+3. word_table(path="B.docx", operation="create", ...) 創建相同結構
 ```
 
 **複製樣式：**
@@ -1073,8 +1134,8 @@ System.TypeInitializationException: The type initializer for 'Gdip' threw an exc
 3. **自動搜尋**（預設）：在可執行檔案同一目錄搜尋常見授權檔案名稱
 
 **授權搜尋順序：**
-1. `Aspose.Total.lic`
-2. `Aspose.Words.lic`、`Aspose.Cells.lic`、`Aspose.Slides.lic`、`Aspose.Pdf.lic`（根據啟用的工具）
+1. `Aspose.Words.lic`、`Aspose.Cells.lic`、`Aspose.Slides.lic`、`Aspose.Pdf.lic`（根據啟用的工具）
+2. `Aspose.Total.lic`（最後 fallback）
 
 **試用模式：**
 如果找不到授權檔案，系統會以試用模式運行（生成的文檔會有試用版標記）。建議配置有效授權以移除標記。
@@ -1177,7 +1238,7 @@ A: 可以。工具使用 MCP SDK 的 `[McpServerToolType]` 屬性自動發現：
 - **總工具數：** 88 個（Word 24、Excel 25、PowerPoint 21、PDF 15、轉換 2、Session 1）
 - **程式碼行數：** ~40,000+ 行
 - **測試類數：** 100+ 個測試類
-- **測試用例數：** 2,100+ 個測試用例
+- **測試用例數：** 4,200+ 個測試用例
 - **測試框架：** xUnit 2.9.2
 - **CI/CD：** GitHub Actions 自動測試與多平台構建
 - **支援格式：** Word、Excel、PowerPoint、PDF 及其相互轉換

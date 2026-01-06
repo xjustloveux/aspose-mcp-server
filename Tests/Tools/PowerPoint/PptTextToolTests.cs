@@ -14,16 +14,17 @@ public class PptTextToolTests : TestBase
         _tool = new PptTextTool(SessionManager);
     }
 
-    private string CreateTestPresentation(string fileName)
+    private string CreateTestPresentation(string fileName, int slideCount = 2)
     {
         var filePath = CreateTestFilePath(fileName);
         using var presentation = new Presentation();
-        presentation.Slides.AddEmptySlide(presentation.LayoutSlides[0]);
+        for (var i = 1; i < slideCount; i++)
+            presentation.Slides.AddEmptySlide(presentation.LayoutSlides[0]);
         presentation.Save(filePath, SaveFormat.Pptx);
         return filePath;
     }
 
-    #region General Tests
+    #region General
 
     [SkippableFact]
     public void AddText_ShouldAddTextToSlide()
@@ -36,9 +37,22 @@ public class PptTextToolTests : TestBase
         using var presentation = new Presentation(outputPath);
         var slide = presentation.Slides[0];
         var textFrames = slide.Shapes.OfType<IAutoShape>().Where(s => s.TextFrame != null).ToList();
-        Assert.True(textFrames.Count > 0, "Slide should contain text");
-        Assert.True(textFrames.Any(tf => tf.TextFrame.Text.Contains("Test Text")),
-            "Text content should be 'Test Text'");
+        Assert.NotEmpty(textFrames);
+        Assert.Contains(textFrames, tf => tf.TextFrame.Text.Contains("Test Text"));
+    }
+
+    [Fact]
+    public void AddText_WithCustomDimensions_ShouldCreateTextBoxWithDimensions()
+    {
+        var pptPath = CreateTestPresentation("test_add_dims.pptx");
+        var outputPath = CreateTestFilePath("test_add_dims_output.pptx");
+        _tool.Execute("add", pptPath, slideIndex: 0, text: "Custom Size Text", x: 150, y: 200, width: 300, height: 80,
+            outputPath: outputPath);
+        using var presentation = new Presentation(outputPath);
+        var slide = presentation.Slides[0];
+        var textShapes = slide.Shapes.OfType<IAutoShape>().Where(s => s.TextFrame != null).ToList();
+        var matchingShape = textShapes.FirstOrDefault(s => Math.Abs(s.X - 150) < 1 && Math.Abs(s.Y - 200) < 1);
+        Assert.NotNull(matchingShape);
     }
 
     [Fact]
@@ -53,8 +67,6 @@ public class PptTextToolTests : TestBase
             ppt.Save(pptPath, SaveFormat.Pptx);
         }
 
-        // Find the correct shapeIndex for the added AutoShape (excluding placeholders)
-        // The added shape should be the last non-placeholder AutoShape with text
         var correctShapeIndex = -1;
         using (var ppt = new Presentation(pptPath))
         {
@@ -70,36 +82,29 @@ public class PptTextToolTests : TestBase
             }
         }
 
-        Assert.True(correctShapeIndex >= 0, "Should find at least one non-placeholder AutoShape with text");
+        Assert.True(correctShapeIndex >= 0);
 
         var outputPath = CreateTestFilePath("test_edit_text_output.pptx");
         _tool.Execute("edit", pptPath, slideIndex: 0, shapeIndex: correctShapeIndex, text: "Updated Text",
             outputPath: outputPath);
 
-        // Assert - Check the shape at the same index
         using var presentation = new Presentation(outputPath);
         var slide = presentation.Slides[0];
-
-        Assert.True(correctShapeIndex < slide.Shapes.Count, $"Shape index {correctShapeIndex} should be valid");
+        Assert.True(correctShapeIndex < slide.Shapes.Count);
         var editedShape = slide.Shapes[correctShapeIndex] as IAutoShape;
         Assert.NotNull(editedShape);
         Assert.NotNull(editedShape.TextFrame);
         var actualText = editedShape.TextFrame.Text ?? "";
 
-        var isEvaluationMode = IsEvaluationMode();
-        if (isEvaluationMode)
+        if (IsEvaluationMode())
         {
             var hasUpdatedText = actualText.Contains("Updated", StringComparison.OrdinalIgnoreCase) ||
                                  actualText.Contains("Updat", StringComparison.OrdinalIgnoreCase);
-            Assert.True(hasUpdatedText || actualText.Length > 0,
-                $"In evaluation mode, text may be truncated due to watermark. " +
-                $"Expected 'Updated' or 'Updat', but got: '{actualText.Substring(0, Math.Min(50, actualText.Length))}...'");
+            Assert.True(hasUpdatedText || actualText.Length > 0);
         }
         else
         {
-            var hasUpdatedText = actualText.Contains("Updated", StringComparison.OrdinalIgnoreCase);
-            Assert.True(hasUpdatedText,
-                $"Text should contain 'Updated', but got: '{actualText.Substring(0, Math.Min(50, actualText.Length))}...'");
+            Assert.Contains("Updated", actualText, StringComparison.OrdinalIgnoreCase);
         }
     }
 
@@ -122,15 +127,13 @@ public class PptTextToolTests : TestBase
         using var presentation = new Presentation(outputPath);
         var slide = presentation.Slides[0];
         var textFrames = slide.Shapes.OfType<IAutoShape>().Where(s => s.TextFrame != null).ToList();
-        var hasNewText =
-            textFrames.Any(tf => tf.TextFrame.Text.Contains("New Text", StringComparison.OrdinalIgnoreCase));
-        Assert.True(hasNewText, "Text should be replaced to 'New Text'");
+        Assert.Contains(textFrames, tf => tf.TextFrame.Text.Contains("New Text", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
     public void Replace_WithMatchCase_ShouldMatchCase()
     {
-        var pptPath = CreateTestPresentation("test_replace_match_case.pptx");
+        var pptPath = CreateTestPresentation("test_replace_case.pptx");
         using (var ppt = new Presentation(pptPath))
         {
             var pptSlide = ppt.Slides[0];
@@ -139,7 +142,7 @@ public class PptTextToolTests : TestBase
             ppt.Save(pptPath, SaveFormat.Pptx);
         }
 
-        var outputPath = CreateTestFilePath("test_replace_match_case_output.pptx");
+        var outputPath = CreateTestFilePath("test_replace_case_output.pptx");
         _tool.Execute("replace", pptPath, findText: "Test", replaceText: "Case", matchCase: true,
             outputPath: outputPath);
         using var presentation = new Presentation(outputPath);
@@ -147,18 +150,13 @@ public class PptTextToolTests : TestBase
         var textFrames = slide.Shapes.OfType<IAutoShape>().Where(s => s.TextFrame != null).ToList();
         var text = string.Join(" ", textFrames.Select(tf => tf.TextFrame.Text));
 
-        var isEvaluationMode = IsEvaluationMode();
-        if (isEvaluationMode)
+        if (IsEvaluationMode())
         {
-            // In evaluation mode, the watermark may interfere with assertions
-            // Just verify the output file was created and operation completed
-            Assert.True(File.Exists(outputPath), "Output file should be created");
+            Assert.True(File.Exists(outputPath));
             return;
         }
 
-        // When matchCase is true, only "Test" should be replaced, not "test" or "TEXT"
         Assert.Contains("Case", text, StringComparison.Ordinal);
-        // "TEXT" should remain unchanged (different case)
         Assert.Contains("TEXT", text, StringComparison.Ordinal);
     }
 
@@ -215,21 +213,148 @@ public class PptTextToolTests : TestBase
     }
 
     [Fact]
-    public void AddText_WithCustomDimensions_ShouldCreateTextBoxWithDimensions()
+    public void ReplaceText_WithNoMatch_ShouldReturnZeroOccurrences()
     {
-        var pptPath = CreateTestPresentation("test_add_text_dims.pptx");
-        var outputPath = CreateTestFilePath("test_add_text_dims_output.pptx");
-        _tool.Execute("add", pptPath, slideIndex: 0, text: "Custom Size Text", x: 150, y: 200, width: 300, height: 80,
+        var pptPath = CreateTestPresentation("test_replace_no_match.pptx");
+        using (var ppt = new Presentation(pptPath))
+        {
+            var pptSlide = ppt.Slides[0];
+            var pptShape = pptSlide.Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 50);
+            pptShape.TextFrame.Text = "Some Text";
+            ppt.Save(pptPath, SaveFormat.Pptx);
+        }
+
+        var outputPath = CreateTestFilePath("test_replace_no_match_output.pptx");
+        var result = _tool.Execute("replace", pptPath, findText: "NotFound", replaceText: "New",
             outputPath: outputPath);
-        using var presentation = new Presentation(outputPath);
-        var slide = presentation.Slides[0];
-        var textShapes = slide.Shapes.OfType<IAutoShape>().Where(s => s.TextFrame != null).ToList();
-        var matchingShape = textShapes.FirstOrDefault(s => Math.Abs(s.X - 150) < 1 && Math.Abs(s.Y - 200) < 1);
-        Assert.NotNull(matchingShape);
+        Assert.Contains("0 occurrences", result);
+    }
+
+    [Theory]
+    [InlineData("ADD")]
+    [InlineData("Add")]
+    [InlineData("add")]
+    public void Operation_ShouldBeCaseInsensitive_Add(string operation)
+    {
+        var pptPath = CreateTestPresentation($"test_case_add_{operation}.pptx");
+        var outputPath = CreateTestFilePath($"test_case_add_{operation}_output.pptx");
+        var result = _tool.Execute(operation, pptPath, slideIndex: 0, text: "Test", x: 100, y: 100,
+            outputPath: outputPath);
+        Assert.StartsWith("Text added to slide", result);
+    }
+
+    [Theory]
+    [InlineData("EDIT")]
+    [InlineData("Edit")]
+    [InlineData("edit")]
+    public void Operation_ShouldBeCaseInsensitive_Edit(string operation)
+    {
+        var pptPath = CreateTestPresentation($"test_case_edit_{operation}.pptx");
+        using (var ppt = new Presentation(pptPath))
+        {
+            var shape = ppt.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 50);
+            shape.TextFrame.Text = "Original";
+            ppt.Save(pptPath, SaveFormat.Pptx);
+        }
+
+        var shapeIndex = 0;
+        using (var ppt = new Presentation(pptPath))
+        {
+            for (var i = ppt.Slides[0].Shapes.Count - 1; i >= 0; i--)
+                if (ppt.Slides[0].Shapes[i] is IAutoShape { Placeholder: null })
+                {
+                    shapeIndex = i;
+                    break;
+                }
+        }
+
+        var outputPath = CreateTestFilePath($"test_case_edit_{operation}_output.pptx");
+        var result = _tool.Execute(operation, pptPath, slideIndex: 0, shapeIndex: shapeIndex, text: "New",
+            outputPath: outputPath);
+        Assert.StartsWith("Text updated on slide", result);
+    }
+
+    [Theory]
+    [InlineData("REPLACE")]
+    [InlineData("Replace")]
+    [InlineData("replace")]
+    public void Operation_ShouldBeCaseInsensitive_Replace(string operation)
+    {
+        var pptPath = CreateTestPresentation($"test_case_replace_{operation}.pptx");
+        using (var ppt = new Presentation(pptPath))
+        {
+            var shape = ppt.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 50);
+            shape.TextFrame.Text = "Old";
+            ppt.Save(pptPath, SaveFormat.Pptx);
+        }
+
+        var outputPath = CreateTestFilePath($"test_case_replace_{operation}_output.pptx");
+        var result = _tool.Execute(operation, pptPath, findText: "Old", replaceText: "New", outputPath: outputPath);
+        Assert.StartsWith("Replaced", result);
+    }
+
+    #endregion
+
+    #region Exception
+
+    [Fact]
+    public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
+    {
+        var pptPath = CreateTestPresentation("test_unknown_op.pptx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("unknown", pptPath));
+        Assert.Contains("Unknown operation", ex.Message);
     }
 
     [Fact]
-    public void EditText_NonAutoShape_ShouldThrow()
+    public void AddText_WithoutSlideIndex_ShouldThrowArgumentException()
+    {
+        var pptPath = CreateTestPresentation("test_add_no_slide.pptx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("add", pptPath, text: "Test"));
+        Assert.Contains("slideIndex is required", ex.Message);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(null)]
+    public void AddText_WithEmptyOrNullText_ShouldThrowArgumentException(string? text)
+    {
+        var pptPath = CreateTestPresentation("test_add_no_text.pptx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("add", pptPath, slideIndex: 0, text: text));
+        Assert.Contains("text is required", ex.Message);
+    }
+
+    [Fact]
+    public void AddText_WithInvalidSlideIndex_ShouldThrowArgumentException()
+    {
+        var pptPath = CreateTestPresentation("test_add_invalid_slide.pptx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("add", pptPath, slideIndex: 999, text: "Test"));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public void EditText_WithoutShapeIndex_ShouldThrowArgumentException()
+    {
+        var pptPath = CreateTestPresentation("test_edit_no_shape.pptx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("edit", pptPath, slideIndex: 0, text: "Test"));
+        Assert.Contains("shapeIndex is required", ex.Message);
+    }
+
+    [Fact]
+    public void EditText_WithInvalidShapeIndex_ShouldThrowArgumentException()
+    {
+        var pptPath = CreateTestPresentation("test_edit_invalid_shape.pptx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("edit", pptPath, slideIndex: 0, shapeIndex: 999, text: "Test"));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public void EditText_NonAutoShape_ShouldThrowException()
     {
         var pptPath = CreateTestFilePath("test_edit_non_autoshape.pptx");
         using (var ppt = new Presentation())
@@ -239,61 +364,58 @@ public class PptTextToolTests : TestBase
             ppt.Save(pptPath, SaveFormat.Pptx);
         }
 
-        // May throw ArgumentException (when file loads successfully but shape is not AutoShape)
-        // or other exceptions (when file cannot be loaded properly in evaluation mode)
         Assert.ThrowsAny<Exception>(() =>
             _tool.Execute("edit", pptPath, slideIndex: 0, shapeIndex: 0, text: "Test"));
     }
 
-    #endregion
-
-    #region Exception Tests
-
-    [Fact]
-    public void ExecuteAsync_UnknownOperation_ShouldThrow()
+    [Theory]
+    [InlineData("")]
+    [InlineData(null)]
+    public void ReplaceText_WithEmptyOrNullFindText_ShouldThrowArgumentException(string? findText)
     {
-        var pptPath = CreateTestPresentation("test_unknown_op.pptx");
-        Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", pptPath));
+        var pptPath = CreateTestPresentation("test_replace_no_find.pptx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("replace", pptPath, findText: findText, replaceText: "New"));
+        Assert.Contains("findText is required", ex.Message);
     }
 
     [Fact]
-    public void Add_MissingText_ShouldThrow()
+    public void ReplaceText_WithNullReplaceText_ShouldThrowArgumentException()
     {
-        var pptPath = CreateTestPresentation("test_missing_text.pptx");
-        Assert.Throws<ArgumentException>(() => _tool.Execute("add", pptPath, slideIndex: 0));
+        var pptPath = CreateTestPresentation("test_replace_no_replace.pptx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("replace", pptPath, findText: "Old", replaceText: null));
+        Assert.Contains("replaceText is required", ex.Message);
     }
 
     #endregion
 
-    #region Session ID Tests
+    #region Session
 
     [SkippableFact]
     public void AddText_WithSessionId_ShouldAddInMemory()
     {
         SkipInEvaluationMode(AsposeLibraryType.Slides, "Evaluation mode truncates text content");
 
-        var pptPath = CreateTestPresentation("test_session_add_text.pptx");
+        var pptPath = CreateTestPresentation("test_session_add.pptx");
         var sessionId = OpenSession(pptPath);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         var slide = ppt.Slides[0];
         var initialShapeCount = slide.Shapes.Count;
-        var result = _tool.Execute("add", sessionId: sessionId, slideIndex: 0, text: "Session Text",
-            x: 100, y: 100);
-        Assert.Contains("Text added", result);
-        Assert.Contains("session", result);
+
+        var result = _tool.Execute("add", sessionId: sessionId, slideIndex: 0, text: "Session Text", x: 100, y: 100);
+        Assert.StartsWith("Text added to slide", result);
         Assert.True(slide.Shapes.Count > initialShapeCount);
         var textFrames = slide.Shapes.OfType<IAutoShape>().Where(s => s.TextFrame != null).ToList();
-        Assert.True(textFrames.Any(tf => tf.TextFrame.Text.Contains("Session Text")),
-            "Text content should be 'Session Text'");
+        Assert.Contains(textFrames, tf => tf.TextFrame.Text.Contains("Session Text"));
     }
 
     [SkippableFact]
     public void EditText_WithSessionId_ShouldEditInMemory()
     {
-        SkipInEvaluationMode(AsposeLibraryType.Slides,
-            "Evaluation mode adds watermarks that interfere with text assertions");
+        SkipInEvaluationMode(AsposeLibraryType.Slides, "Evaluation mode adds watermarks");
 
-        var pptPath = CreateTestFilePath("test_session_edit_text.pptx");
+        var pptPath = CreateTestFilePath("test_session_edit.pptx");
         using (var presentation = new Presentation())
         {
             var slide = presentation.Slides[0];
@@ -303,8 +425,6 @@ public class PptTextToolTests : TestBase
         }
 
         var sessionId = OpenSession(pptPath);
-
-        // Find the shape index
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         var shapeIndex = 0;
         for (var i = 0; i < ppt.Slides[0].Shapes.Count; i++)
@@ -316,9 +436,8 @@ public class PptTextToolTests : TestBase
 
         var result = _tool.Execute("edit", sessionId: sessionId, slideIndex: 0, shapeIndex: shapeIndex,
             text: "Session Edited Text");
-        Assert.Contains("Text updated on slide 0", result);
+        Assert.StartsWith("Text updated on slide", result);
 
-        // Verify in-memory changes
         var editedShape = ppt.Slides[0].Shapes[shapeIndex] as IAutoShape;
         Assert.NotNull(editedShape);
         Assert.Contains("Session Edited", editedShape.TextFrame.Text);
@@ -329,7 +448,7 @@ public class PptTextToolTests : TestBase
     {
         SkipInEvaluationMode(AsposeLibraryType.Slides, "Evaluation mode truncates text content");
 
-        var pptPath = CreateTestFilePath("test_session_replace_text.pptx");
+        var pptPath = CreateTestFilePath("test_session_replace.pptx");
         using (var presentation = new Presentation())
         {
             var slide = presentation.Slides[0];
@@ -341,11 +460,47 @@ public class PptTextToolTests : TestBase
         var sessionId = OpenSession(pptPath);
         var result = _tool.Execute("replace", sessionId: sessionId, findText: "Old", replaceText: "New");
         Assert.Contains("1 occurrences", result);
-        Assert.Contains("session", result);
 
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         var autoShapes = ppt.Slides[0].Shapes.OfType<IAutoShape>().Where(s => s.TextFrame != null).ToList();
         Assert.Contains(autoShapes, s => s.TextFrame.Text.Contains("New Session Value"));
+    }
+
+    [Fact]
+    public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
+    {
+        Assert.Throws<KeyNotFoundException>(() =>
+            _tool.Execute("add", sessionId: "invalid_session_id", slideIndex: 0, text: "Test", x: 100, y: 100));
+    }
+
+    [SkippableFact]
+    public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
+    {
+        SkipInEvaluationMode(AsposeLibraryType.Slides, "Evaluation mode truncates text content");
+
+        var pptPath1 = CreateTestFilePath("test_path_text.pptx");
+        using (var pres1 = new Presentation())
+        {
+            var shape1 = pres1.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 50);
+            shape1.TextFrame.Text = "PathText";
+            pres1.Save(pptPath1, SaveFormat.Pptx);
+        }
+
+        var pptPath2 = CreateTestFilePath("test_session_text.pptx");
+        using (var pres2 = new Presentation())
+        {
+            var shape2 = pres2.Slides[0].Shapes.AddAutoShape(ShapeType.Rectangle, 100, 100, 200, 50);
+            shape2.TextFrame.Text = "SessionText";
+            pres2.Save(pptPath2, SaveFormat.Pptx);
+        }
+
+        var sessionId = OpenSession(pptPath2);
+        var result = _tool.Execute("replace", pptPath1, sessionId, findText: "SessionText", replaceText: "Modified");
+        Assert.Contains("1 occurrences", result);
+
+        var ppt = SessionManager.GetDocument<Presentation>(sessionId);
+        var autoShapes = ppt.Slides[0].Shapes.OfType<IAutoShape>().Where(s => s.TextFrame != null).ToList();
+        Assert.Contains(autoShapes, s => s.TextFrame.Text.Contains("Modified"));
     }
 
     #endregion

@@ -1,9 +1,33 @@
-using AsposeMcpServer.Core.Security;
+using AsposeMcpServer.Core.Tracking;
 
-namespace AsposeMcpServer.Tests.Core.Security;
+namespace AsposeMcpServer.Tests.Core.Tracking;
 
+/// <summary>
+///     Unit tests for TrackingMetrics class
+/// </summary>
 public class TrackingMetricsTests
 {
+    #region Edge Cases
+
+    [Fact]
+    public void GetPrometheusMetrics_ToolWithSpecialChars_ShouldBeSanitized()
+    {
+        var metrics = new TrackingMetrics();
+        metrics.RecordRequest(new TrackingEvent { Tool = "tool\"with\"quotes", Success = true });
+        metrics.RecordRequest(new TrackingEvent { Tool = "tool\\with\\backslash", Success = true });
+        metrics.RecordRequest(new TrackingEvent { Tool = "tool\nwith\nnewline", Success = true });
+
+        var output = metrics.GetPrometheusMetrics();
+
+        Assert.Contains("tool=\"tool\\\"with\\\"quotes\"", output);
+        Assert.Contains("tool=\"tool\\\\with\\\\backslash\"", output);
+        Assert.Contains("tool=\"tool\\nwith\\nnewline\"", output);
+    }
+
+    #endregion
+
+    #region RecordRequest Tests
+
     [Fact]
     public void RecordRequest_ShouldIncrementTotalRequests()
     {
@@ -87,6 +111,10 @@ public class TrackingMetricsTests
         Assert.DoesNotContain("aspose_mcp_requests_by_tool{tool=\"\"}", output);
     }
 
+    #endregion
+
+    #region GetPrometheusMetrics Tests
+
     [Fact]
     public void GetPrometheusMetrics_ZeroRequests_ShouldReturnZeroAverage()
     {
@@ -101,7 +129,6 @@ public class TrackingMetricsTests
         var metrics = new TrackingMetrics();
         List<Task> tasks = [];
 
-        // Act - Record from multiple threads
         for (var i = 0; i < 100; i++)
         {
             var index = i; // Capture loop variable to avoid closure issue
@@ -118,4 +145,6 @@ public class TrackingMetricsTests
         var output = metrics.GetPrometheusMetrics();
         Assert.Contains("aspose_mcp_requests_total 100", output);
     }
+
+    #endregion
 }

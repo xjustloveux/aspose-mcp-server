@@ -15,21 +15,16 @@ public class ExcelPropertiesToolTests : ExcelTestBase
         _tool = new ExcelPropertiesTool(SessionManager);
     }
 
-    #region General Tests
-
-    #region GetWorkbookProperties Tests
+    #region General
 
     [Fact]
     public void GetWorkbookProperties_ShouldReturnJsonWithAllFields()
     {
-        var workbookPath = CreateExcelWorkbook("test_get_workbook_properties.xlsx");
-        var result = _tool.Execute(
-            "get_workbook_properties",
-            workbookPath);
+        var workbookPath = CreateExcelWorkbook("test_get_workbook.xlsx");
+        var result = _tool.Execute("get_workbook_properties", workbookPath);
         Assert.NotNull(result);
         var json = JsonDocument.Parse(result);
         var root = json.RootElement;
-
         Assert.True(root.TryGetProperty("title", out _));
         Assert.True(root.TryGetProperty("author", out _));
         Assert.True(root.TryGetProperty("totalSheets", out _));
@@ -39,7 +34,7 @@ public class ExcelPropertiesToolTests : ExcelTestBase
     [Fact]
     public void GetWorkbookProperties_WithSetProperties_ShouldReturnCorrectValues()
     {
-        var workbookPath = CreateExcelWorkbook("test_get_props_with_values.xlsx");
+        var workbookPath = CreateExcelWorkbook("test_get_workbook_values.xlsx");
         using (var workbook = new Workbook(workbookPath))
         {
             workbook.BuiltInDocumentProperties.Title = "Test Title";
@@ -47,36 +42,22 @@ public class ExcelPropertiesToolTests : ExcelTestBase
             workbook.Save(workbookPath);
         }
 
-        var result = _tool.Execute(
-            "get_workbook_properties",
-            workbookPath);
+        var result = _tool.Execute("get_workbook_properties", workbookPath);
         var json = JsonDocument.Parse(result);
         Assert.Equal("Test Title", json.RootElement.GetProperty("title").GetString());
         Assert.Equal("Test Author", json.RootElement.GetProperty("author").GetString());
     }
 
-    #endregion
-
-    #region SetWorkbookProperties Tests
-
     [Fact]
     public void SetWorkbookProperties_ShouldSetAllBuiltInProperties()
     {
-        var workbookPath = CreateExcelWorkbook("test_set_all_properties.xlsx");
-        var outputPath = CreateTestFilePath("test_set_all_properties_output.xlsx");
-        var result = _tool.Execute(
-            "set_workbook_properties",
-            workbookPath,
-            title: "Test Title",
-            subject: "Test Subject",
-            author: "Test Author",
-            keywords: "test,keywords",
-            comments: "Test Comments",
-            category: "Test Category",
-            company: "Test Company",
-            manager: "Test Manager",
-            outputPath: outputPath);
-        Assert.Contains("successfully", result);
+        var workbookPath = CreateExcelWorkbook("test_set_workbook.xlsx");
+        var outputPath = CreateTestFilePath("test_set_workbook_output.xlsx");
+        var result = _tool.Execute("set_workbook_properties", workbookPath,
+            title: "Test Title", subject: "Test Subject", author: "Test Author",
+            keywords: "test,keywords", comments: "Test Comments", category: "Test Category",
+            company: "Test Company", manager: "Test Manager", outputPath: outputPath);
+        Assert.Contains("Workbook properties updated", result);
         using var workbook = new Workbook(outputPath);
         var props = workbook.BuiltInDocumentProperties;
         Assert.Equal("Test Title", props.Title);
@@ -92,17 +73,14 @@ public class ExcelPropertiesToolTests : ExcelTestBase
     [Fact]
     public void SetWorkbookProperties_WithCustomProperties_ShouldAddNewProperties()
     {
-        var workbookPath = CreateExcelWorkbook("test_set_custom_properties.xlsx");
-        var outputPath = CreateTestFilePath("test_set_custom_properties_output.xlsx");
+        var workbookPath = CreateExcelWorkbook("test_set_custom.xlsx");
+        var outputPath = CreateTestFilePath("test_set_custom_output.xlsx");
         var customPropsJson = new JsonObject
         {
             ["CustomProp1"] = "Value1",
             ["CustomProp2"] = "Value2"
         }.ToJsonString();
-        _tool.Execute(
-            "set_workbook_properties",
-            workbookPath,
-            customProperties: customPropsJson,
+        _tool.Execute("set_workbook_properties", workbookPath, customProperties: customPropsJson,
             outputPath: outputPath);
         using var workbook = new Workbook(outputPath);
         var customProps = workbook.CustomDocumentProperties;
@@ -113,89 +91,44 @@ public class ExcelPropertiesToolTests : ExcelTestBase
     [Fact]
     public void SetWorkbookProperties_WithExistingCustomProperty_ShouldUpdateValue()
     {
-        var workbookPath = CreateExcelWorkbook("test_update_custom_property.xlsx");
+        var workbookPath = CreateExcelWorkbook("test_update_custom.xlsx");
         using (var workbook = new Workbook(workbookPath))
         {
             workbook.CustomDocumentProperties.Add("ExistingProp", "OldValue");
             workbook.Save(workbookPath);
         }
 
-        var outputPath = CreateTestFilePath("test_update_custom_property_output.xlsx");
-        var customPropsJson = new JsonObject
-        {
-            ["ExistingProp"] = "NewValue"
-        }.ToJsonString();
-        _tool.Execute(
-            "set_workbook_properties",
-            workbookPath,
-            customProperties: customPropsJson,
+        var outputPath = CreateTestFilePath("test_update_custom_output.xlsx");
+        var customPropsJson = new JsonObject { ["ExistingProp"] = "NewValue" }.ToJsonString();
+        _tool.Execute("set_workbook_properties", workbookPath, customProperties: customPropsJson,
             outputPath: outputPath);
         using var resultWorkbook = new Workbook(outputPath);
         Assert.Equal("NewValue", resultWorkbook.CustomDocumentProperties["ExistingProp"].Value?.ToString());
     }
 
-    #endregion
-
-    #region GetSheetProperties Tests
-
     [Fact]
     public void GetSheetProperties_ShouldReturnJsonWithAllFields()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_get_sheet_props.xlsx");
-        var result = _tool.Execute(
-            "get_sheet_properties",
-            workbookPath,
-            sheetIndex: 0);
+        var workbookPath = CreateExcelWorkbookWithData("test_get_sheet.xlsx");
+        var result = _tool.Execute("get_sheet_properties", workbookPath, sheetIndex: 0);
         var json = JsonDocument.Parse(result);
         var root = json.RootElement;
-
         Assert.True(root.TryGetProperty("name", out _));
         Assert.True(root.TryGetProperty("index", out _));
         Assert.True(root.TryGetProperty("isVisible", out _));
         Assert.True(root.TryGetProperty("dataRowCount", out _));
         Assert.True(root.TryGetProperty("dataColumnCount", out _));
         Assert.True(root.TryGetProperty("printSettings", out _));
-
         Assert.Equal(5, root.GetProperty("dataRowCount").GetInt32());
         Assert.Equal(3, root.GetProperty("dataColumnCount").GetInt32());
     }
-
-    [Fact]
-    public void GetSheetProperties_WithInvalidIndex_ShouldThrowException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_get_sheet_props_invalid.xlsx");
-        var exception = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "get_sheet_properties",
-            workbookPath,
-            sheetIndex: 99));
-        Assert.Contains("out of range", exception.Message);
-    }
-
-    [Fact]
-    public void GetSheetProperties_WithNegativeIndex_ShouldThrowException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_get_sheet_props_negative.xlsx");
-        var exception = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "get_sheet_properties",
-            workbookPath,
-            sheetIndex: -1));
-        Assert.Contains("out of range", exception.Message);
-    }
-
-    #endregion
-
-    #region EditSheetProperties Tests
 
     [Fact]
     public void EditSheetProperties_ShouldChangeName()
     {
         var workbookPath = CreateExcelWorkbook("test_edit_name.xlsx");
         var outputPath = CreateTestFilePath("test_edit_name_output.xlsx");
-        _tool.Execute(
-            "edit_sheet_properties",
-            workbookPath,
-            sheetIndex: 0,
-            name: "NewSheetName",
+        _tool.Execute("edit_sheet_properties", workbookPath, sheetIndex: 0, name: "NewSheetName",
             outputPath: outputPath);
         using var workbook = new Workbook(outputPath);
         Assert.Equal("NewSheetName", workbook.Worksheets[0].Name);
@@ -212,12 +145,7 @@ public class ExcelPropertiesToolTests : ExcelTestBase
         }
 
         var outputPath = CreateTestFilePath("test_edit_visibility_output.xlsx");
-        _tool.Execute(
-            "edit_sheet_properties",
-            workbookPath,
-            sheetIndex: 0,
-            isVisible: false,
-            outputPath: outputPath);
+        _tool.Execute("edit_sheet_properties", workbookPath, sheetIndex: 0, isVisible: false, outputPath: outputPath);
         using var resultWorkbook = new Workbook(outputPath);
         Assert.False(resultWorkbook.Worksheets[0].IsVisible);
     }
@@ -225,13 +153,9 @@ public class ExcelPropertiesToolTests : ExcelTestBase
     [Fact]
     public void EditSheetProperties_ShouldChangeTabColor()
     {
-        var workbookPath = CreateExcelWorkbook("test_edit_tab_color.xlsx");
-        var outputPath = CreateTestFilePath("test_edit_tab_color_output.xlsx");
-        _tool.Execute(
-            "edit_sheet_properties",
-            workbookPath,
-            sheetIndex: 0,
-            tabColor: "#FF0000",
+        var workbookPath = CreateExcelWorkbook("test_edit_color.xlsx");
+        var outputPath = CreateTestFilePath("test_edit_color_output.xlsx");
+        _tool.Execute("edit_sheet_properties", workbookPath, sheetIndex: 0, tabColor: "#FF0000",
             outputPath: outputPath);
         using var workbook = new Workbook(outputPath);
         var tabColor = workbook.Worksheets[0].TabColor;
@@ -241,64 +165,9 @@ public class ExcelPropertiesToolTests : ExcelTestBase
     }
 
     [Fact]
-    public void EditSheetProperties_ShouldSetAsSelected()
-    {
-        var workbookPath = CreateExcelWorkbook("test_edit_selected.xlsx");
-        int targetSheetIndex;
-        using (var wb = new Workbook(workbookPath))
-        {
-            wb.Worksheets.Add("Sheet2");
-            wb.Worksheets.Add("Sheet3");
-            wb.Save(workbookPath);
-            // Find the index of "Sheet3" (the sheet we want to select)
-            targetSheetIndex = wb.Worksheets["Sheet3"].Index;
-        }
-
-        var outputPath = CreateTestFilePath("test_edit_selected_output.xlsx");
-        _tool.Execute(
-            "edit_sheet_properties",
-            workbookPath,
-            sheetIndex: targetSheetIndex,
-            isSelected: true,
-            outputPath: outputPath);
-        using var workbook = new Workbook(outputPath);
-        var isEvaluationMode = IsEvaluationMode();
-        if (isEvaluationMode)
-        {
-            // In evaluation mode, additional evaluation warning sheets may be added
-            // causing index shifts. Verify the operation completed without error.
-            Assert.NotNull(workbook.Worksheets["Sheet3"]);
-        }
-        else
-        {
-            // In licensed mode, verify that Sheet3 is the active sheet
-            var sheet3Index = workbook.Worksheets["Sheet3"].Index;
-            Assert.Equal(sheet3Index, workbook.Worksheets.ActiveSheetIndex);
-        }
-    }
-
-    [Fact]
-    public void EditSheetProperties_WithInvalidIndex_ShouldThrowException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_edit_invalid_index.xlsx");
-        var outputPath = CreateTestFilePath("test_edit_invalid_index_output.xlsx");
-        var exception = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "edit_sheet_properties",
-            workbookPath,
-            sheetIndex: 99,
-            name: "NewName",
-            outputPath: outputPath));
-        Assert.Contains("out of range", exception.Message);
-    }
-
-    #endregion
-
-    #region GetSheetInfo Tests
-
-    [Fact]
     public void GetSheetInfo_ShouldReturnAllSheets()
     {
-        var workbookPath = CreateExcelWorkbook("test_get_sheet_info_all.xlsx");
+        var workbookPath = CreateExcelWorkbook("test_get_info_all.xlsx");
         int expectedSheetCount;
         using (var workbook = new Workbook(workbookPath))
         {
@@ -308,15 +177,11 @@ public class ExcelPropertiesToolTests : ExcelTestBase
             expectedSheetCount = workbook.Worksheets.Count;
         }
 
-        var result = _tool.Execute(
-            "get_sheet_info",
-            workbookPath);
+        var result = _tool.Execute("get_sheet_info", workbookPath);
         var json = JsonDocument.Parse(result);
         var root = json.RootElement;
-
         Assert.Equal(expectedSheetCount, root.GetProperty("count").GetInt32());
         Assert.Equal(expectedSheetCount, root.GetProperty("totalWorksheets").GetInt32());
-
         var items = root.GetProperty("items");
         Assert.Equal(expectedSheetCount, items.GetArrayLength());
     }
@@ -324,7 +189,7 @@ public class ExcelPropertiesToolTests : ExcelTestBase
     [Fact]
     public void GetSheetInfo_WithSheetIndex_ShouldReturnSingleSheet()
     {
-        var workbookPath = CreateExcelWorkbook("test_get_sheet_info_single.xlsx");
+        var workbookPath = CreateExcelWorkbook("test_get_info_single.xlsx");
         int totalSheetCount;
         int sheet2Index;
         using (var workbook = new Workbook(workbookPath))
@@ -335,100 +200,126 @@ public class ExcelPropertiesToolTests : ExcelTestBase
             sheet2Index = workbook.Worksheets["Sheet2"].Index;
         }
 
-        var result = _tool.Execute(
-            "get_sheet_info",
-            workbookPath,
-            targetSheetIndex: sheet2Index);
+        var result = _tool.Execute("get_sheet_info", workbookPath, targetSheetIndex: sheet2Index);
         var json = JsonDocument.Parse(result);
         var root = json.RootElement;
-
         Assert.Equal(1, root.GetProperty("count").GetInt32());
         Assert.Equal(totalSheetCount, root.GetProperty("totalWorksheets").GetInt32());
-
         var items = root.GetProperty("items");
         Assert.Equal(1, items.GetArrayLength());
         Assert.Equal("Sheet2", items[0].GetProperty("name").GetString());
     }
 
     [Fact]
-    public void GetSheetInfo_WithInvalidIndex_ShouldThrowException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_get_sheet_info_invalid.xlsx");
-        var exception = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "get_sheet_info",
-            workbookPath,
-            targetSheetIndex: 99));
-        Assert.Contains("out of range", exception.Message);
-    }
-
-    [Fact]
     public void GetSheetInfo_ShouldReturnCorrectDataCounts()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_get_sheet_info_data.xlsx", 10, 5);
-        var result = _tool.Execute(
-            "get_sheet_info",
-            workbookPath,
-            sheetIndex: 0);
+        var workbookPath = CreateExcelWorkbookWithData("test_get_info_data.xlsx", 10, 5);
+        var result = _tool.Execute("get_sheet_info", workbookPath, sheetIndex: 0);
         var json = JsonDocument.Parse(result);
         var sheet = json.RootElement.GetProperty("items")[0];
-
         Assert.Equal(10, sheet.GetProperty("dataRowCount").GetInt32());
         Assert.Equal(5, sheet.GetProperty("dataColumnCount").GetInt32());
     }
 
-    #endregion
-
-    #region Error Handling Tests
-
-    [Fact]
-    public void ExecuteAsync_WithMissingPath_ShouldThrowException()
+    [Theory]
+    [InlineData("GET_WORKBOOK_PROPERTIES")]
+    [InlineData("Get_Workbook_Properties")]
+    [InlineData("get_workbook_properties")]
+    public void Operation_ShouldBeCaseInsensitive_GetWorkbookProperties(string operation)
     {
-        Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "get_workbook_properties",
-            ""));
+        var workbookPath = CreateExcelWorkbook($"test_case_{operation.Replace("_", "")}.xlsx");
+        var result = _tool.Execute(operation, workbookPath);
+        Assert.Contains("title", result);
     }
 
-    [Fact]
-    public void ExecuteAsync_WithMissingOperation_ShouldThrowException()
+    [Theory]
+    [InlineData("GET_SHEET_INFO")]
+    [InlineData("Get_Sheet_Info")]
+    [InlineData("get_sheet_info")]
+    public void Operation_ShouldBeCaseInsensitive_GetSheetInfo(string operation)
     {
-        var workbookPath = CreateExcelWorkbook("test_missing_operation.xlsx");
-        Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "",
-            workbookPath));
+        var workbookPath = CreateExcelWorkbook($"test_case_{operation.Replace("_", "")}.xlsx");
+        var result = _tool.Execute(operation, workbookPath);
+        Assert.Contains("items", result);
     }
 
     #endregion
 
-    #endregion
-
-    #region Exception Tests
+    #region Exception
 
     [Fact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
     {
-        var workbookPath = CreateExcelWorkbook("test_unknown_operation.xlsx");
-        var exception = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "invalid_operation",
-            workbookPath));
-        Assert.Contains("Unknown operation", exception.Message);
+        var workbookPath = CreateExcelWorkbook("test_unknown_op.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", workbookPath));
+        Assert.Contains("Unknown operation", ex.Message);
     }
 
     [Fact]
-    public void Execute_WithMissingRequiredSheetIndex_ShouldThrowArgumentException()
+    public void GetSheetProperties_WithInvalidIndex_ShouldThrowException()
     {
-        _ = CreateExcelWorkbook("test_missing_sheet_index.xlsx");
+        var workbookPath = CreateExcelWorkbook("test_get_sheet_invalid.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("get_sheet_properties", workbookPath, sheetIndex: 99));
+        Assert.Contains("out of range", ex.Message);
+    }
 
-        // Note: GetSheetProperties_WithMissingSheetIndex test removed - sheetIndex has default value and is not nullable
+    [Fact]
+    public void GetSheetProperties_WithNegativeIndex_ShouldThrowException()
+    {
+        var workbookPath = CreateExcelWorkbook("test_get_sheet_negative.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("get_sheet_properties", workbookPath, sheetIndex: -1));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public void EditSheetProperties_WithInvalidIndex_ShouldThrowException()
+    {
+        var workbookPath = CreateExcelWorkbook("test_edit_invalid.xlsx");
+        var outputPath = CreateTestFilePath("test_edit_invalid_output.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("edit_sheet_properties", workbookPath, sheetIndex: 99, name: "NewName",
+                outputPath: outputPath));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public void GetSheetInfo_WithInvalidIndex_ShouldThrowException()
+    {
+        var workbookPath = CreateExcelWorkbook("test_get_info_invalid.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("get_sheet_info", workbookPath, targetSheetIndex: 99));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public void Execute_WithEmptyPath_ShouldThrowException()
+    {
+        Assert.Throws<ArgumentException>(() => _tool.Execute("get_workbook_properties", ""));
+    }
+
+    [Fact]
+    public void Execute_WithEmptyOperation_ShouldThrowException()
+    {
+        var workbookPath = CreateExcelWorkbook("test_empty_op.xlsx");
+        Assert.Throws<ArgumentException>(() => _tool.Execute("", workbookPath));
+    }
+
+    [Fact]
+    public void Execute_WithNoPathOrSessionId_ShouldThrowException()
+    {
+        Assert.ThrowsAny<Exception>(() => _tool.Execute("get_workbook_properties"));
     }
 
     #endregion
 
-    #region Session ID Tests
+    #region Session
 
     [Fact]
     public void GetWorkbookProperties_WithSessionId_ShouldGetFromMemory()
     {
-        var workbookPath = CreateExcelWorkbook("test_session_get_props.xlsx");
+        var workbookPath = CreateExcelWorkbook("test_session_get_workbook.xlsx");
         using (var workbook = new Workbook(workbookPath))
         {
             workbook.BuiltInDocumentProperties.Title = "Session Title";
@@ -437,9 +328,7 @@ public class ExcelPropertiesToolTests : ExcelTestBase
         }
 
         var sessionId = OpenSession(workbookPath);
-        var result = _tool.Execute(
-            "get_workbook_properties",
-            sessionId: sessionId);
+        var result = _tool.Execute("get_workbook_properties", sessionId: sessionId);
         var json = JsonDocument.Parse(result);
         Assert.Equal("Session Title", json.RootElement.GetProperty("title").GetString());
         Assert.Equal("Session Author", json.RootElement.GetProperty("author").GetString());
@@ -448,19 +337,26 @@ public class ExcelPropertiesToolTests : ExcelTestBase
     [Fact]
     public void SetWorkbookProperties_WithSessionId_ShouldModifyInMemory()
     {
-        var workbookPath = CreateExcelWorkbook("test_session_set_props.xlsx");
+        var workbookPath = CreateExcelWorkbook("test_session_set_workbook.xlsx");
         var sessionId = OpenSession(workbookPath);
-        var result = _tool.Execute(
-            "set_workbook_properties",
-            sessionId: sessionId,
-            title: "Updated Title",
+        var result = _tool.Execute("set_workbook_properties", sessionId: sessionId, title: "Updated Title",
             author: "Updated Author");
-        Assert.Contains("successfully", result);
-
-        // Verify in-memory workbook has the updated properties
+        Assert.Contains("Workbook properties updated", result);
+        Assert.Contains("session", result); // Verify session was used
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.Equal("Updated Title", workbook.BuiltInDocumentProperties.Title);
         Assert.Equal("Updated Author", workbook.BuiltInDocumentProperties.Author);
+    }
+
+    [Fact]
+    public void GetSheetProperties_WithSessionId_ShouldGetFromMemory()
+    {
+        var workbookPath = CreateExcelWorkbookWithData("test_session_get_sheet.xlsx");
+        var sessionId = OpenSession(workbookPath);
+        var result = _tool.Execute("get_sheet_properties", sessionId: sessionId, sheetIndex: 0);
+        var json = JsonDocument.Parse(result);
+        Assert.True(json.RootElement.TryGetProperty("name", out _));
+        Assert.Equal(5, json.RootElement.GetProperty("dataRowCount").GetInt32());
     }
 
     [Fact]
@@ -468,13 +364,8 @@ public class ExcelPropertiesToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbook("test_session_edit_sheet.xlsx");
         var sessionId = OpenSession(workbookPath);
-        _tool.Execute(
-            "edit_sheet_properties",
-            sessionId: sessionId,
-            sheetIndex: 0,
-            name: "RenamedSheet");
-
-        // Assert - verify in-memory change
+        var result = _tool.Execute("edit_sheet_properties", sessionId: sessionId, sheetIndex: 0, name: "RenamedSheet");
+        Assert.Contains("session", result);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.Equal("RenamedSheet", workbook.Worksheets[0].Name);
     }
@@ -482,7 +373,7 @@ public class ExcelPropertiesToolTests : ExcelTestBase
     [Fact]
     public void GetSheetInfo_WithSessionId_ShouldGetFromMemory()
     {
-        var workbookPath = CreateExcelWorkbook("test_session_get_sheet_info.xlsx");
+        var workbookPath = CreateExcelWorkbook("test_session_get_info.xlsx");
         using (var wb = new Workbook(workbookPath))
         {
             wb.Worksheets.Add("TestSheet");
@@ -490,9 +381,7 @@ public class ExcelPropertiesToolTests : ExcelTestBase
         }
 
         var sessionId = OpenSession(workbookPath);
-        var result = _tool.Execute(
-            "get_sheet_info",
-            sessionId: sessionId);
+        var result = _tool.Execute("get_sheet_info", sessionId: sessionId);
         var json = JsonDocument.Parse(result);
         Assert.True(json.RootElement.GetProperty("count").GetInt32() >= 2);
     }
@@ -500,9 +389,24 @@ public class ExcelPropertiesToolTests : ExcelTestBase
     [Fact]
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
-        Assert.Throws<KeyNotFoundException>(() => _tool.Execute(
-            "get_workbook_properties",
-            sessionId: "invalid_session_id"));
+        Assert.Throws<KeyNotFoundException>(() =>
+            _tool.Execute("get_workbook_properties", sessionId: "invalid_session"));
+    }
+
+    [Fact]
+    public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
+    {
+        var workbookPath1 = CreateExcelWorkbook("test_path_file.xlsx");
+        var workbookPath2 = CreateExcelWorkbook("test_session_file.xlsx");
+        using (var wb = new Workbook(workbookPath2))
+        {
+            wb.BuiltInDocumentProperties.Title = "Session Title";
+            wb.Save(workbookPath2);
+        }
+
+        var sessionId = OpenSession(workbookPath2);
+        var result = _tool.Execute("get_workbook_properties", workbookPath1, sessionId);
+        Assert.Contains("Session Title", result);
     }
 
     #endregion

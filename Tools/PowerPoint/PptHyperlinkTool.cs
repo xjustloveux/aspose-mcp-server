@@ -14,6 +14,11 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 public class PptHyperlinkTool
 {
     /// <summary>
+    ///     Identity accessor for session isolation.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document lifecycle management.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -22,11 +27,34 @@ public class PptHyperlinkTool
     ///     Initializes a new instance of the <see cref="PptHyperlinkTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
-    public PptHyperlinkTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation.</param>
+    public PptHyperlinkTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a PowerPoint hyperlink operation (add, edit, delete, get).
+    /// </summary>
+    /// <param name="operation">The operation to perform: add, edit, delete, get.</param>
+    /// <param name="path">Presentation file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="slideIndex">Slide index (0-based).</param>
+    /// <param name="shapeIndex">Shape index (0-based, required for edit/delete, optional for add).</param>
+    /// <param name="text">Display text (required for add).</param>
+    /// <param name="linkText">Specific text to apply hyperlink to (optional, for add).</param>
+    /// <param name="url">Hyperlink URL (required for add, optional for edit).</param>
+    /// <param name="slideTargetIndex">Target slide index for internal link (0-based, optional, for add/edit).</param>
+    /// <param name="removeHyperlink">Remove hyperlink (optional, for edit).</param>
+    /// <param name="x">X position (optional, for add, default: 50).</param>
+    /// <param name="y">Y position (optional, for add, default: 50).</param>
+    /// <param name="width">Width (optional, for add, default: 300).</param>
+    /// <param name="height">Height (optional, for add, default: 50).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "ppt_hyperlink")]
     [Description(@"Manage PowerPoint hyperlinks. Supports 4 operations: add, edit, delete, get.
 
@@ -69,7 +97,7 @@ Usage examples:
         [Description("Height (optional, for add, default: 50)")]
         float height = 50)
     {
-        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {

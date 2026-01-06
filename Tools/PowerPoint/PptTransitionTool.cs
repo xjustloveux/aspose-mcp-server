@@ -16,6 +16,11 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 public class PptTransitionTool
 {
     /// <summary>
+    ///     Identity accessor for session isolation.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document session handling.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -24,11 +29,32 @@ public class PptTransitionTool
     ///     Initializes a new instance of the <see cref="PptTransitionTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory editing.</param>
-    public PptTransitionTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation.</param>
+    public PptTransitionTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a PowerPoint transition operation (set, get, delete).
+    /// </summary>
+    /// <param name="operation">The operation to perform: set, get, delete.</param>
+    /// <param name="path">Presentation file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (optional, for set/delete operations, defaults to input path).</param>
+    /// <param name="slideIndex">Slide index (0-based).</param>
+    /// <param name="transitionType">
+    ///     Transition type: all TransitionType enum values supported (Fade, Push, Wipe, Split,
+    ///     Random, Circle, Plus, Diamond, etc., required for set).
+    /// </param>
+    /// <param name="advanceAfterSeconds">
+    ///     Seconds before auto-advancing to next slide (optional, for set, default: no
+    ///     auto-advance).
+    /// </param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "ppt_transition")]
     [Description(@"Manage PowerPoint transitions. Supports 3 operations: set, get, delete.
 
@@ -57,7 +83,7 @@ Usage examples:
         [Description("Seconds before auto-advancing to next slide (optional, for set, default: no auto-advance)")]
         double? advanceAfterSeconds = null)
     {
-        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {

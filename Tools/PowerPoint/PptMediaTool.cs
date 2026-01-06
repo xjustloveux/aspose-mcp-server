@@ -30,6 +30,11 @@ public class PptMediaTool
     private static readonly string SupportedVolumes = string.Join(", ", VolumeMap.Keys);
 
     /// <summary>
+    ///     Identity accessor for session isolation.
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document lifecycle management.
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -38,11 +43,35 @@ public class PptMediaTool
     ///     Initializes a new instance of the <see cref="PptMediaTool" /> class.
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document editing.</param>
-    public PptMediaTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation.</param>
+    public PptMediaTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a PowerPoint media operation (add_audio, delete_audio, add_video, delete_video, set_playback).
+    /// </summary>
+    /// <param name="operation">The operation to perform: add_audio, delete_audio, add_video, delete_video, set_playback.</param>
+    /// <param name="path">Presentation file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="slideIndex">Slide index (0-based, required for all operations).</param>
+    /// <param name="shapeIndex">Shape index (0-based, required for delete/set_playback).</param>
+    /// <param name="audioPath">Audio file path to embed (required for add_audio).</param>
+    /// <param name="videoPath">Video file path to embed (required for add_video).</param>
+    /// <param name="x">X position in points from top-left corner (optional, default: 50).</param>
+    /// <param name="y">Y position in points from top-left corner (optional, default: 50).</param>
+    /// <param name="width">Width in points (optional, default: 80 for audio, 320 for video).</param>
+    /// <param name="height">Height in points (optional, default: 80 for audio, 240 for video).</param>
+    /// <param name="playMode">Playback mode: auto|onclick (optional, default: auto).</param>
+    /// <param name="loop">Loop playback (optional, default: false).</param>
+    /// <param name="rewind">Rewind video after play (optional, default: false).</param>
+    /// <param name="volume">Volume level: mute|low|medium|loud (optional, default: medium).</param>
+    /// <returns>A message indicating the result of the operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "ppt_media")]
     [Description(
         @"Manage PowerPoint media. Supports 5 operations: add_audio, delete_audio, add_video, delete_video, set_playback.
@@ -90,7 +119,7 @@ Usage examples:
         [Description("Volume level: mute|low|medium|loud (optional, default: medium)")]
         string volume = "medium")
     {
-        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {

@@ -19,6 +19,11 @@ namespace AsposeMcpServer.Tools.Word;
 public class WordParagraphTool
 {
     /// <summary>
+    ///     Identity accessor for session isolation
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document session operations
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -27,11 +32,53 @@ public class WordParagraphTool
     ///     Initializes a new instance of the WordParagraphTool class
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document operations</param>
-    public WordParagraphTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation</param>
+    public WordParagraphTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a Word paragraph operation (insert, delete, edit, get, get_format, copy_format, merge).
+    /// </summary>
+    /// <param name="operation">The operation to perform: insert, delete, edit, get, get_format, copy_format, merge.</param>
+    /// <param name="path">Word document file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="paragraphIndex">Paragraph index (0-based, -1 for last paragraph).</param>
+    /// <param name="text">Text content for the paragraph.</param>
+    /// <param name="styleName">Style name to apply (e.g., 'Heading 1', 'Normal').</param>
+    /// <param name="alignment">Text alignment: left, center, right, justify.</param>
+    /// <param name="sectionIndex">Section index (0-based).</param>
+    /// <param name="includeEmpty">Include empty paragraphs (default: true).</param>
+    /// <param name="styleFilter">Filter by style name.</param>
+    /// <param name="includeCommentParagraphs">Include paragraphs inside nested structures (default: true).</param>
+    /// <param name="includeTextboxParagraphs">Include paragraphs inside TextBox/Shape objects (default: true).</param>
+    /// <param name="includeRunDetails">Include detailed run-level formatting (default: true).</param>
+    /// <param name="fontName">Font name.</param>
+    /// <param name="fontNameAscii">Font name for ASCII characters.</param>
+    /// <param name="fontNameFarEast">Font name for Far East characters.</param>
+    /// <param name="fontSize">Font size in points.</param>
+    /// <param name="bold">Bold text.</param>
+    /// <param name="italic">Italic text.</param>
+    /// <param name="underline">Underline text.</param>
+    /// <param name="color">Text color hex.</param>
+    /// <param name="indentLeft">Left indent in points.</param>
+    /// <param name="indentRight">Right indent in points.</param>
+    /// <param name="firstLineIndent">First line indent in points.</param>
+    /// <param name="spaceBefore">Space before paragraph in points.</param>
+    /// <param name="spaceAfter">Space after paragraph in points.</param>
+    /// <param name="lineSpacing">Line spacing multiplier.</param>
+    /// <param name="lineSpacingRule">Line spacing rule: single, oneAndHalf, double, atLeast, exactly, multiple.</param>
+    /// <param name="tabStops">Custom tab stops array.</param>
+    /// <param name="sourceParagraphIndex">Source paragraph index (for copy_format).</param>
+    /// <param name="targetParagraphIndex">Target paragraph index (for copy_format).</param>
+    /// <param name="startParagraphIndex">Start paragraph index (for merge).</param>
+    /// <param name="endParagraphIndex">End paragraph index (for merge).</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "word_paragraph")]
     [Description(
         @"Manage paragraphs in Word documents. Supports 7 operations: insert, delete, edit, get, get_format, copy_format, merge.
@@ -115,7 +162,7 @@ Important notes for 'get' operation:
         [Description("End paragraph index (for merge)")]
         int? endParagraphIndex = null)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {

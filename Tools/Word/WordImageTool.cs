@@ -18,6 +18,11 @@ namespace AsposeMcpServer.Tools.Word;
 public class WordImageTool
 {
     /// <summary>
+    ///     Identity accessor for session isolation
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document session operations
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -26,11 +31,45 @@ public class WordImageTool
     ///     Initializes a new instance of the WordImageTool class
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document operations</param>
-    public WordImageTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation</param>
+    public WordImageTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a Word image operation (add, edit, delete, get, replace, extract).
+    /// </summary>
+    /// <param name="operation">The operation to perform: add, edit, delete, get, replace, extract.</param>
+    /// <param name="path">Word document file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="outputPath">Output file path (file mode only).</param>
+    /// <param name="outputDir">Output directory (for extract).</param>
+    /// <param name="imagePath">Image file path (for add/replace).</param>
+    /// <param name="imageIndex">Image index (0-based, for edit/delete/replace).</param>
+    /// <param name="sectionIndex">Section index (0-based, use -1 for all sections).</param>
+    /// <param name="width">Image width in points.</param>
+    /// <param name="height">Image height in points.</param>
+    /// <param name="alignment">Horizontal alignment: left, center, right.</param>
+    /// <param name="textWrapping">Text wrapping: inline, square, tight, through, topAndBottom, none.</param>
+    /// <param name="caption">Image caption text (for add).</param>
+    /// <param name="captionPosition">Caption position: above, below (for add).</param>
+    /// <param name="aspectRatioLocked">Lock aspect ratio (for edit).</param>
+    /// <param name="horizontalAlignment">Horizontal alignment for floating images (for edit).</param>
+    /// <param name="verticalAlignment">Vertical alignment for floating images (for edit).</param>
+    /// <param name="alternativeText">Alternative text for accessibility.</param>
+    /// <param name="title">Image title.</param>
+    /// <param name="linkUrl">Hyperlink URL for the image.</param>
+    /// <param name="newImagePath">New image file path for replace operation.</param>
+    /// <param name="preserveSize">Preserve original image size for replace operation.</param>
+    /// <param name="smartFit">Smart fit to avoid distortion for replace operation.</param>
+    /// <param name="preservePosition">Preserve original image position for replace operation.</param>
+    /// <param name="prefix">Filename prefix for extracted images.</param>
+    /// <param name="extractImageIndex">Specific image index to extract.</param>
+    /// <returns>A message indicating the result of the operation, or JSON data for get operations.</returns>
+    /// <exception cref="ArgumentException">Thrown when required parameters are missing or the operation is unknown.</exception>
     [McpServerTool(Name = "word_image")]
     [Description(@"Manage Word document images. Supports 6 operations: add, edit, delete, get, replace, extract.
 
@@ -106,7 +145,7 @@ Usage examples:
             "Specific image index to extract (0-based, optional, for extract operation). If not provided, extracts all images.")]
         int? extractImageIndex = null)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {
@@ -150,21 +189,17 @@ Usage examples:
         var builder = new DocumentBuilder(doc);
         builder.MoveToDocumentEnd();
 
-        // Add caption above if specified (using professional Caption style with SEQ field)
         if (!string.IsNullOrEmpty(caption) && captionPosition == "above")
             InsertCaption(builder, caption, alignment);
 
-        // Insert image
         Shape shape;
         if (textWrapping == "inline")
         {
             // For inline images, alignment is controlled by paragraph alignment
-            // Set paragraph alignment before inserting image
             var paraAlignment = GetAlignment(alignment);
             builder.ParagraphFormat.Alignment = paraAlignment;
             shape = builder.InsertImage(imagePath);
 
-            // Set size if specified
             if (width.HasValue)
                 shape.Width = width.Value;
 
@@ -179,23 +214,20 @@ Usage examples:
                 currentPara.ParagraphFormat.Alignment = paraAlignment;
             }
 
-            // Keep paragraph alignment for inline images
             builder.ParagraphFormat.Alignment = paraAlignment;
         }
         else
         {
-            // For floating images, use shape positioning
+            // For floating images, use shape positioning with relative alignment
             shape = builder.InsertImage(imagePath);
             shape.WrapType = GetWrapType(textWrapping);
 
-            // Set size if specified
             if (width.HasValue)
                 shape.Width = width.Value;
 
             if (height.HasValue)
                 shape.Height = height.Value;
 
-            // Set alignment for floating images (relative to Column/Paragraph for better text flow)
             shape.RelativeHorizontalPosition = RelativeHorizontalPosition.Column;
             shape.RelativeVerticalPosition = RelativeVerticalPosition.Paragraph;
             if (alignment == "center")
@@ -206,21 +238,14 @@ Usage examples:
                 shape.HorizontalAlignment = HorizontalAlignment.Left;
         }
 
-        // Set hyperlink if provided
         if (!string.IsNullOrEmpty(linkUrl))
             shape.HRef = linkUrl;
 
-        // Set alternative text if provided
         if (!string.IsNullOrEmpty(alternativeText))
             shape.AlternativeText = alternativeText;
 
-        // Set title if provided
         if (!string.IsNullOrEmpty(title))
             shape.Title = title;
-
-        // Reset paragraph alignment only after caption (if any) is added
-
-        // Add caption below if specified (using professional Caption style with SEQ field)
         if (!string.IsNullOrEmpty(caption) && captionPosition == "below")
         {
             builder.Writeln(); // New line after image
@@ -304,13 +329,11 @@ Usage examples:
         if (aspectRatioLocked.HasValue)
             shape.AspectRatioLocked = aspectRatioLocked.Value;
 
-        // Apply alignment (for inline images)
         var alignmentValue = alignment ?? "left";
         if (!string.IsNullOrEmpty(alignmentValue))
             if (shape.ParentNode is Paragraph parentPara)
                 parentPara.ParagraphFormat.Alignment = GetAlignment(alignmentValue);
 
-        // Apply text wrapping
         var textWrappingValue = textWrapping ?? "inline";
         if (!string.IsNullOrEmpty(textWrappingValue))
         {
@@ -318,7 +341,6 @@ Usage examples:
 
             if (textWrappingValue != "inline")
             {
-                // Use Column/Paragraph positioning for better text flow
                 shape.RelativeHorizontalPosition = RelativeHorizontalPosition.Column;
                 shape.RelativeVerticalPosition = RelativeVerticalPosition.Paragraph;
 
@@ -331,7 +353,6 @@ Usage examples:
         }
         else if (shape.WrapType != WrapType.Inline)
         {
-            // Use Column/Paragraph positioning for better text flow
             shape.RelativeHorizontalPosition = RelativeHorizontalPosition.Column;
             shape.RelativeVerticalPosition = RelativeVerticalPosition.Paragraph;
 
@@ -342,17 +363,14 @@ Usage examples:
             if (!string.IsNullOrEmpty(vAlign)) shape.VerticalAlignment = GetVerticalAlignment(vAlign);
         }
 
-        // Apply alternative text
         if (!string.IsNullOrEmpty(alternativeText))
             shape.AlternativeText = alternativeText;
 
-        // Apply title
         if (!string.IsNullOrEmpty(title))
             shape.Title = title;
 
-        // Apply hyperlink
+        // HRef property doesn't accept null, use empty string to clear
         if (linkUrl != null)
-            // Note: HRef property doesn't accept null, use empty string to clear
             shape.HRef = linkUrl;
 
         ctx.Save(outputPath);

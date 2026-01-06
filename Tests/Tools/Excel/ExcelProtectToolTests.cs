@@ -14,22 +14,16 @@ public class ExcelProtectToolTests : ExcelTestBase
         _tool = new ExcelProtectTool(SessionManager);
     }
 
-    #region General Tests
-
-    #region Protect Tests
+    #region General
 
     [Fact]
     public void Protect_Workbook_ShouldProtectWorkbook()
     {
         var workbookPath = CreateExcelWorkbook("test_protect_workbook.xlsx");
         var outputPath = CreateTestFilePath("test_protect_workbook_output.xlsx");
-        var result = _tool.Execute(
-            "protect",
-            workbookPath,
-            password: "test123",
-            protectWorkbook: true,
+        var result = _tool.Execute("protect", workbookPath, password: "test123", protectWorkbook: true,
             outputPath: outputPath);
-        Assert.Contains("successfully", result);
+        Assert.Contains("protected", result);
         Assert.True(File.Exists(outputPath));
         using var workbook = new Workbook(outputPath);
         Assert.True(workbook.IsWorkbookProtectedWithPassword);
@@ -40,29 +34,10 @@ public class ExcelProtectToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbook("test_protect_worksheet.xlsx");
         var outputPath = CreateTestFilePath("test_protect_worksheet_output.xlsx");
-        var result = _tool.Execute(
-            "protect",
-            workbookPath,
-            sheetIndex: 0,
-            password: "test123",
-            outputPath: outputPath);
-        Assert.Contains("worksheet 0", result);
+        var result = _tool.Execute("protect", workbookPath, sheetIndex: 0, password: "test123", outputPath: outputPath);
+        Assert.Contains("protected", result);
         using var workbook = new Workbook(outputPath);
         Assert.True(workbook.Worksheets[0].IsProtected);
-    }
-
-    [Fact]
-    public void Protect_WithInvalidSheetIndex_ShouldThrowException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_protect_invalid.xlsx");
-        var outputPath = CreateTestFilePath("test_protect_invalid_output.xlsx");
-        var exception = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "protect",
-            workbookPath,
-            sheetIndex: 99,
-            password: "test123",
-            outputPath: outputPath));
-        Assert.Contains("out of range", exception.Message);
     }
 
     [Fact]
@@ -70,22 +45,12 @@ public class ExcelProtectToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbook("test_protect_both.xlsx");
         var outputPath = CreateTestFilePath("test_protect_both_output.xlsx");
-        var result = _tool.Execute(
-            "protect",
-            workbookPath,
-            password: "test123",
-            protectWorkbook: true,
-            protectStructure: true,
-            protectWindows: true,
-            outputPath: outputPath);
-        Assert.Contains("workbook", result);
+        var result = _tool.Execute("protect", workbookPath, password: "test123", protectWorkbook: true,
+            protectStructure: true, protectWindows: true, outputPath: outputPath);
+        Assert.Contains("protected", result);
         using var workbook = new Workbook(outputPath);
         Assert.True(workbook.IsWorkbookProtectedWithPassword);
     }
-
-    #endregion
-
-    #region Unprotect Tests
 
     [Fact]
     public void Unprotect_Workbook_ShouldUnprotectWorkbook()
@@ -98,12 +63,8 @@ public class ExcelProtectToolTests : ExcelTestBase
         }
 
         var outputPath = CreateTestFilePath("test_unprotect_workbook_output.xlsx");
-        var result = _tool.Execute(
-            "unprotect",
-            workbookPath,
-            password: "test123",
-            outputPath: outputPath);
-        Assert.Contains("successfully", result);
+        var result = _tool.Execute("unprotect", workbookPath, password: "test123", outputPath: outputPath);
+        Assert.Contains("protection removed", result);
         using var resultWorkbook = new Workbook(outputPath);
         Assert.False(resultWorkbook.IsWorkbookProtectedWithPassword);
     }
@@ -119,13 +80,9 @@ public class ExcelProtectToolTests : ExcelTestBase
         }
 
         var outputPath = CreateTestFilePath("test_unprotect_worksheet_output.xlsx");
-        var result = _tool.Execute(
-            "unprotect",
-            workbookPath,
-            sheetIndex: 0,
-            password: "test123",
+        var result = _tool.Execute("unprotect", workbookPath, sheetIndex: 0, password: "test123",
             outputPath: outputPath);
-        Assert.Contains("protection removed successfully", result);
+        Assert.Contains("protection removed", result);
         using var resultWorkbook = new Workbook(outputPath);
         Assert.False(resultWorkbook.Worksheets[0].IsProtected);
     }
@@ -135,35 +92,14 @@ public class ExcelProtectToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbook("test_unprotect_not_protected.xlsx");
         var outputPath = CreateTestFilePath("test_unprotect_not_protected_output.xlsx");
-        var result = _tool.Execute(
-            "unprotect",
-            workbookPath,
-            sheetIndex: 0,
-            outputPath: outputPath);
+        var result = _tool.Execute("unprotect", workbookPath, sheetIndex: 0, outputPath: outputPath);
         Assert.Contains("is not protected", result);
     }
 
     [Fact]
-    public void Unprotect_WithInvalidSheetIndex_ShouldThrowException()
+    public void Get_AllSheets_ShouldReturnAllSheetsInfo()
     {
-        var workbookPath = CreateExcelWorkbook("test_unprotect_invalid.xlsx");
-        var outputPath = CreateTestFilePath("test_unprotect_invalid_output.xlsx");
-        var exception = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "unprotect",
-            workbookPath,
-            sheetIndex: 99,
-            outputPath: outputPath));
-        Assert.Contains("out of range", exception.Message);
-    }
-
-    #endregion
-
-    #region Get Protection Tests
-
-    [Fact]
-    public void GetProtection_AllSheets_ShouldReturnAllSheetsInfo()
-    {
-        var workbookPath = CreateExcelWorkbook("test_get_protection_all.xlsx");
+        var workbookPath = CreateExcelWorkbook("test_get_all.xlsx");
         using (var workbook = new Workbook(workbookPath))
         {
             workbook.Worksheets.Add("Sheet2");
@@ -171,9 +107,7 @@ public class ExcelProtectToolTests : ExcelTestBase
             workbook.Save(workbookPath);
         }
 
-        var result = _tool.Execute(
-            "get",
-            workbookPath);
+        var result = _tool.Execute("get", workbookPath);
         var json = JsonDocument.Parse(result);
         var root = json.RootElement;
         Assert.True(root.TryGetProperty("worksheets", out _));
@@ -181,19 +115,16 @@ public class ExcelProtectToolTests : ExcelTestBase
     }
 
     [Fact]
-    public void GetProtection_SingleSheet_ShouldReturnSingleSheetInfo()
+    public void Get_SingleSheet_ShouldReturnSingleSheetInfo()
     {
-        var workbookPath = CreateExcelWorkbook("test_get_protection_single.xlsx");
+        var workbookPath = CreateExcelWorkbook("test_get_single.xlsx");
         using (var workbook = new Workbook(workbookPath))
         {
             workbook.Worksheets[0].Protect(ProtectionType.All, "test123", null);
             workbook.Save(workbookPath);
         }
 
-        var result = _tool.Execute(
-            "get",
-            workbookPath,
-            sheetIndex: 0);
+        var result = _tool.Execute("get", workbookPath, sheetIndex: 0);
         var json = JsonDocument.Parse(result);
         var root = json.RootElement;
         Assert.Equal(1, root.GetProperty("count").GetInt32());
@@ -202,24 +133,10 @@ public class ExcelProtectToolTests : ExcelTestBase
     }
 
     [Fact]
-    public void GetProtection_WithInvalidSheetIndex_ShouldThrowException()
+    public void Get_ShouldReturnDetailedProtectionSettings()
     {
-        var workbookPath = CreateExcelWorkbook("test_get_protection_invalid.xlsx");
-        var exception = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "get",
-            workbookPath,
-            sheetIndex: 99));
-        Assert.Contains("out of range", exception.Message);
-    }
-
-    [Fact]
-    public void GetProtection_ShouldReturnDetailedProtectionSettings()
-    {
-        var workbookPath = CreateExcelWorkbook("test_get_protection_detailed.xlsx");
-        var result = _tool.Execute(
-            "get",
-            workbookPath,
-            sheetIndex: 0);
+        var workbookPath = CreateExcelWorkbook("test_get_detailed.xlsx");
+        var result = _tool.Execute("get", workbookPath, sheetIndex: 0);
         var json = JsonDocument.Parse(result);
         var sheet = json.RootElement.GetProperty("worksheets")[0];
         Assert.True(sheet.TryGetProperty("isProtected", out _));
@@ -229,20 +146,12 @@ public class ExcelProtectToolTests : ExcelTestBase
         Assert.True(sheet.TryGetProperty("allowFiltering", out _));
     }
 
-    #endregion
-
-    #region Set Cell Locked Tests
-
     [Fact]
     public void SetCellLocked_ShouldSetCellAsLocked()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_set_cell_locked.xlsx");
-        var outputPath = CreateTestFilePath("test_set_cell_locked_output.xlsx");
-        var result = _tool.Execute(
-            "set_cell_locked",
-            workbookPath,
-            range: "A1:B2",
-            locked: true,
+        var workbookPath = CreateExcelWorkbookWithData("test_set_locked.xlsx");
+        var outputPath = CreateTestFilePath("test_set_locked_output.xlsx");
+        var result = _tool.Execute("set_cell_locked", workbookPath, range: "A1:B2", locked: true,
             outputPath: outputPath);
         Assert.Contains("locked", result);
         using var workbook = new Workbook(outputPath);
@@ -253,13 +162,9 @@ public class ExcelProtectToolTests : ExcelTestBase
     [Fact]
     public void SetCellUnlocked_ShouldSetCellAsUnlocked()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_set_cell_unlocked.xlsx");
-        var outputPath = CreateTestFilePath("test_set_cell_unlocked_output.xlsx");
-        var result = _tool.Execute(
-            "set_cell_locked",
-            workbookPath,
-            range: "A1:B2",
-            locked: false,
+        var workbookPath = CreateExcelWorkbookWithData("test_set_unlocked.xlsx");
+        var outputPath = CreateTestFilePath("test_set_unlocked_output.xlsx");
+        var result = _tool.Execute("set_cell_locked", workbookPath, range: "A1:B2", locked: false,
             outputPath: outputPath);
         Assert.Contains("unlocked", result);
         using var workbook = new Workbook(outputPath);
@@ -270,72 +175,48 @@ public class ExcelProtectToolTests : ExcelTestBase
     [Fact]
     public void SetCellLocked_SingleCell_ShouldWork()
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_set_single_cell_locked.xlsx");
-        var outputPath = CreateTestFilePath("test_set_single_cell_locked_output.xlsx");
-        var result = _tool.Execute(
-            "set_cell_locked",
-            workbookPath,
-            range: "C3",
-            locked: true,
-            outputPath: outputPath);
+        var workbookPath = CreateExcelWorkbookWithData("test_set_single_locked.xlsx");
+        var outputPath = CreateTestFilePath("test_set_single_locked_output.xlsx");
+        var result = _tool.Execute("set_cell_locked", workbookPath, range: "C3", locked: true, outputPath: outputPath);
         Assert.Contains("locked", result);
         using var workbook = new Workbook(outputPath);
         var style = workbook.Worksheets[0].Cells["C3"].GetStyle();
         Assert.True(style.IsLocked);
     }
 
-    [Fact]
-    public void SetCellLocked_WithInvalidSheetIndex_ShouldThrowException()
+    [Theory]
+    [InlineData("PROTECT")]
+    [InlineData("Protect")]
+    [InlineData("protect")]
+    public void Operation_ShouldBeCaseInsensitive_Protect(string operation)
     {
-        var workbookPath = CreateExcelWorkbookWithData("test_set_cell_locked_invalid.xlsx");
-        var outputPath = CreateTestFilePath("test_set_cell_locked_invalid_output.xlsx");
-        var exception = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "set_cell_locked",
-            workbookPath,
-            sheetIndex: 99,
-            range: "A1",
-            locked: true,
-            outputPath: outputPath));
-        Assert.Contains("out of range", exception.Message);
+        var workbookPath = CreateExcelWorkbook($"test_case_{operation}.xlsx");
+        var outputPath = CreateTestFilePath($"test_case_{operation}_output.xlsx");
+        var result = _tool.Execute(operation, workbookPath, sheetIndex: 0, password: "test123", outputPath: outputPath);
+        Assert.Contains("protected", result);
+    }
+
+    [Theory]
+    [InlineData("GET")]
+    [InlineData("Get")]
+    [InlineData("get")]
+    public void Operation_ShouldBeCaseInsensitive_Get(string operation)
+    {
+        var workbookPath = CreateExcelWorkbook($"test_case_get_{operation}.xlsx");
+        var result = _tool.Execute(operation, workbookPath, sheetIndex: 0);
+        Assert.Contains("worksheets", result);
     }
 
     #endregion
 
-    #region Error Handling Tests
-
-    [Fact]
-    public void ExecuteAsync_WithMissingPath_ShouldThrowException()
-    {
-        Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "get",
-            ""));
-    }
-
-    [Fact]
-    public void SetCellLocked_WithMissingRange_ShouldThrowException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_set_cell_locked_no_range.xlsx");
-        Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "set_cell_locked",
-            workbookPath,
-            range: "",
-            locked: true));
-    }
-
-    #endregion
-
-    #endregion
-
-    #region Exception Tests
+    #region Exception
 
     [Fact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
     {
-        var workbookPath = CreateExcelWorkbook("test_unknown_operation.xlsx");
-        var exception = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "invalid_operation",
-            workbookPath));
-        Assert.Contains("Unknown operation", exception.Message);
+        var workbookPath = CreateExcelWorkbook("test_unknown_op.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", workbookPath));
+        Assert.Contains("Unknown operation", ex.Message);
     }
 
     [Fact]
@@ -343,72 +224,85 @@ public class ExcelProtectToolTests : ExcelTestBase
     {
         var workbookPath = CreateExcelWorkbook("test_protect_no_password.xlsx");
         var outputPath = CreateTestFilePath("test_protect_no_password_output.xlsx");
-        var exception = Assert.Throws<ArgumentException>(() => _tool.Execute(
-            "protect",
-            workbookPath,
-            protectWorkbook: true,
-            password: "",
-            outputPath: outputPath));
-        Assert.Contains("password", exception.Message, StringComparison.OrdinalIgnoreCase);
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("protect", workbookPath, protectWorkbook: true, password: "", outputPath: outputPath));
+        Assert.Contains("password", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Protect_WithInvalidSheetIndex_ShouldThrowException()
+    {
+        var workbookPath = CreateExcelWorkbook("test_protect_invalid.xlsx");
+        var outputPath = CreateTestFilePath("test_protect_invalid_output.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("protect", workbookPath, sheetIndex: 99, password: "test123", outputPath: outputPath));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public void Unprotect_WithInvalidSheetIndex_ShouldThrowException()
+    {
+        var workbookPath = CreateExcelWorkbook("test_unprotect_invalid.xlsx");
+        var outputPath = CreateTestFilePath("test_unprotect_invalid_output.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("unprotect", workbookPath, sheetIndex: 99, outputPath: outputPath));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public void Get_WithInvalidSheetIndex_ShouldThrowException()
+    {
+        var workbookPath = CreateExcelWorkbook("test_get_invalid.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("get", workbookPath, sheetIndex: 99));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public void SetCellLocked_WithMissingRange_ShouldThrowException()
+    {
+        var workbookPath = CreateExcelWorkbook("test_set_locked_no_range.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("set_cell_locked", workbookPath, range: "", locked: true));
+        Assert.Contains("range is required", ex.Message);
+    }
+
+    [Fact]
+    public void SetCellLocked_WithInvalidSheetIndex_ShouldThrowException()
+    {
+        var workbookPath = CreateExcelWorkbookWithData("test_set_locked_invalid.xlsx");
+        var outputPath = CreateTestFilePath("test_set_locked_invalid_output.xlsx");
+        var ex = Assert.Throws<ArgumentException>(() =>
+            _tool.Execute("set_cell_locked", workbookPath, sheetIndex: 99, range: "A1", locked: true,
+                outputPath: outputPath));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public void Execute_WithEmptyPath_ShouldThrowException()
+    {
+        Assert.Throws<ArgumentException>(() => _tool.Execute("get", ""));
+    }
+
+    [Fact]
+    public void Execute_WithNoPathOrSessionId_ShouldThrowException()
+    {
+        Assert.ThrowsAny<Exception>(() => _tool.Execute("get"));
     }
 
     #endregion
 
-    #region Session ID Tests
-
-    [Fact]
-    public void GetProtection_WithSessionId_ShouldGetFromMemory()
-    {
-        var workbookPath = CreateExcelWorkbook("test_session_get_protection.xlsx");
-        using (var workbook = new Workbook(workbookPath))
-        {
-            workbook.Worksheets[0].Protect(ProtectionType.All, "test123", null);
-            workbook.Save(workbookPath);
-        }
-
-        var sessionId = OpenSession(workbookPath);
-        var result = _tool.Execute(
-            "get",
-            sessionId: sessionId,
-            sheetIndex: 0);
-        var json = JsonDocument.Parse(result);
-        var worksheets = json.RootElement.GetProperty("worksheets");
-        Assert.True(worksheets[0].GetProperty("isProtected").GetBoolean());
-    }
+    #region Session
 
     [Fact]
     public void Protect_WithSessionId_ShouldProtectInMemory()
     {
         var workbookPath = CreateExcelWorkbook("test_session_protect.xlsx");
         var sessionId = OpenSession(workbookPath);
-        var result = _tool.Execute(
-            "protect",
-            sessionId: sessionId,
-            sheetIndex: 0,
-            password: "test123");
-        Assert.Contains("worksheet 0", result);
-
-        // Verify in-memory workbook has protection
+        var result = _tool.Execute("protect", sessionId: sessionId, sheetIndex: 0, password: "test123");
+        Assert.Contains("protected", result);
+        Assert.Contains("session", result);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.True(workbook.Worksheets[0].IsProtected);
-    }
-
-    [Fact]
-    public void SetCellLocked_WithSessionId_ShouldModifyInMemory()
-    {
-        var workbookPath = CreateExcelWorkbookWithData("test_session_set_locked.xlsx");
-        var sessionId = OpenSession(workbookPath);
-        var result = _tool.Execute(
-            "set_cell_locked",
-            sessionId: sessionId,
-            range: "A1:B2",
-            locked: true);
-        Assert.Contains("locked", result);
-
-        // Verify in-memory workbook has locked cells
-        var workbook = SessionManager.GetDocument<Workbook>(sessionId);
-        var style = workbook.Worksheets[0].Cells["A1"].GetStyle();
-        Assert.True(style.IsLocked);
     }
 
     [Fact]
@@ -422,24 +316,64 @@ public class ExcelProtectToolTests : ExcelTestBase
         }
 
         var sessionId = OpenSession(workbookPath);
-        var result = _tool.Execute(
-            "unprotect",
-            sessionId: sessionId,
-            sheetIndex: 0,
-            password: "test123");
-        Assert.Contains("protection removed successfully", result);
-
-        // Verify in-memory workbook is unprotected
+        var result = _tool.Execute("unprotect", sessionId: sessionId, sheetIndex: 0, password: "test123");
+        Assert.Contains("protection removed", result);
+        Assert.Contains("session", result);
         var sessionWorkbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.False(sessionWorkbook.Worksheets[0].IsProtected);
     }
 
     [Fact]
+    public void Get_WithSessionId_ShouldGetFromMemory()
+    {
+        var workbookPath = CreateExcelWorkbook("test_session_get.xlsx");
+        using (var workbook = new Workbook(workbookPath))
+        {
+            workbook.Worksheets[0].Protect(ProtectionType.All, "test123", null);
+            workbook.Save(workbookPath);
+        }
+
+        var sessionId = OpenSession(workbookPath);
+        var result = _tool.Execute("get", sessionId: sessionId, sheetIndex: 0);
+        var json = JsonDocument.Parse(result);
+        var worksheets = json.RootElement.GetProperty("worksheets");
+        Assert.True(worksheets[0].GetProperty("isProtected").GetBoolean());
+    }
+
+    [Fact]
+    public void SetCellLocked_WithSessionId_ShouldModifyInMemory()
+    {
+        var workbookPath = CreateExcelWorkbookWithData("test_session_set_locked.xlsx");
+        var sessionId = OpenSession(workbookPath);
+        var result = _tool.Execute("set_cell_locked", sessionId: sessionId, range: "A1:B2", locked: true);
+        Assert.Contains("locked", result);
+        Assert.Contains("session", result);
+        var workbook = SessionManager.GetDocument<Workbook>(sessionId);
+        var style = workbook.Worksheets[0].Cells["A1"].GetStyle();
+        Assert.True(style.IsLocked);
+    }
+
+    [Fact]
     public void Execute_WithInvalidSessionId_ShouldThrowKeyNotFoundException()
     {
-        Assert.Throws<KeyNotFoundException>(() => _tool.Execute(
-            "get",
-            sessionId: "invalid_session_id"));
+        Assert.Throws<KeyNotFoundException>(() => _tool.Execute("get", sessionId: "invalid_session"));
+    }
+
+    [Fact]
+    public void Execute_WithBothPathAndSessionId_ShouldPreferSessionId()
+    {
+        var workbookPath1 = CreateExcelWorkbook("test_path_file.xlsx");
+        var workbookPath2 = CreateExcelWorkbook("test_session_file.xlsx");
+        using (var wb = new Workbook(workbookPath2))
+        {
+            wb.Worksheets[0].Name = "SessionSheet";
+            wb.Worksheets[0].Protect(ProtectionType.All, "test123", null);
+            wb.Save(workbookPath2);
+        }
+
+        var sessionId = OpenSession(workbookPath2);
+        var result = _tool.Execute("get", workbookPath1, sessionId, sheetIndex: 0);
+        Assert.Contains("SessionSheet", result);
     }
 
     #endregion

@@ -15,6 +15,11 @@ namespace AsposeMcpServer.Tools.Word;
 public class WordContentTool
 {
     /// <summary>
+    ///     Identity accessor for session isolation
+    /// </summary>
+    private readonly ISessionIdentityAccessor? _identityAccessor;
+
+    /// <summary>
     ///     Session manager for document session operations
     /// </summary>
     private readonly DocumentSessionManager? _sessionManager;
@@ -23,11 +28,28 @@ public class WordContentTool
     ///     Initializes a new instance of the WordContentTool class
     /// </summary>
     /// <param name="sessionManager">Optional session manager for in-memory document operations</param>
-    public WordContentTool(DocumentSessionManager? sessionManager = null)
+    /// <param name="identityAccessor">Optional identity accessor for session isolation</param>
+    public WordContentTool(DocumentSessionManager? sessionManager = null,
+        ISessionIdentityAccessor? identityAccessor = null)
     {
         _sessionManager = sessionManager;
+        _identityAccessor = identityAccessor;
     }
 
+    /// <summary>
+    ///     Executes a Word content operation (get_content, get_content_detailed, get_statistics, get_document_info).
+    /// </summary>
+    /// <param name="operation">The operation to perform: get_content, get_content_detailed, get_statistics, get_document_info.</param>
+    /// <param name="path">Word document file path (required if no sessionId).</param>
+    /// <param name="sessionId">Session ID for in-memory editing.</param>
+    /// <param name="includeHeaders">Include headers in content (for get_content_detailed, default: false).</param>
+    /// <param name="includeFooters">Include footers in content (for get_content_detailed, default: false).</param>
+    /// <param name="includeFootnotes">Include footnotes in statistics (for get_statistics, default: true).</param>
+    /// <param name="includeTabStops">Include tab stops in document info (for get_document_info, default: false).</param>
+    /// <param name="maxChars">Maximum characters to return (for get_content/get_content_detailed).</param>
+    /// <param name="offset">Character offset to start reading from (for get_content/get_content_detailed, default: 0).</param>
+    /// <returns>Document content, detailed content, statistics, or document info as string or JSON.</returns>
+    /// <exception cref="ArgumentException">Thrown when the operation is unknown.</exception>
     [McpServerTool(Name = "word_content")]
     [Description(
         @"Get Word document content, statistics, and document information. Supports 4 operations: get_content, get_content_detailed, get_statistics, get_document_info.
@@ -58,7 +80,7 @@ Usage examples:
         [Description("Character offset to start reading from (for get_content/get_content_detailed, default: 0)")]
         int offset = 0)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path);
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
         return operation.ToLower() switch
         {

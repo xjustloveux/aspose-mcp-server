@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.IdentityModel.Tokens;
 
 namespace AsposeMcpServer.Core.Security;
@@ -36,12 +37,17 @@ public class JwtAuthResult
 /// <summary>
 ///     Middleware for JWT authentication supporting multiple verification modes
 /// </summary>
-public class JwtAuthenticationMiddleware
+public class JwtAuthenticationMiddleware : IDisposable
 {
     /// <summary>
     ///     JWT authentication configuration
     /// </summary>
     private readonly JwtConfig _config;
+
+    /// <summary>
+    ///     Cryptographic key instance (RSA or ECDsa) that needs to be disposed
+    /// </summary>
+    private readonly IDisposable? _cryptoKey;
 
     /// <summary>
     ///     HTTP client for external validation calls
@@ -59,9 +65,19 @@ public class JwtAuthenticationMiddleware
     private readonly RequestDelegate _next;
 
     /// <summary>
+    ///     Indicates whether we own the HTTP client and should dispose it
+    /// </summary>
+    private readonly bool _ownsHttpClient;
+
+    /// <summary>
     ///     Token validation parameters for local mode
     /// </summary>
     private readonly TokenValidationParameters? _validationParameters;
+
+    /// <summary>
+    ///     Tracks whether this middleware has been disposed (0 = not disposed, 1 = disposed)
+    /// </summary>
+    private int _disposed;
 
     /// <summary>
     ///     Creates a new JWT authentication middleware instance
@@ -79,21 +95,49 @@ public class JwtAuthenticationMiddleware
         _next = next;
         _config = config;
         _logger = logger;
-        _httpClient = httpClientFactory?.CreateClient("JwtAuth") ?? new HttpClient
+        if (httpClientFactory != null)
         {
-            Timeout = TimeSpan.FromSeconds(config.CustomTimeoutSeconds)
-        };
+            _httpClient = httpClientFactory.CreateClient("JwtAuth");
+            _ownsHttpClient = false;
+        }
+        else
+        {
+            _httpClient = new HttpClient
+            {
+                Timeout = TimeSpan.FromSeconds(config.ExternalTimeoutSeconds)
+            };
+            _ownsHttpClient = true;
+        }
 
-        if (config.Mode == JwtMode.Local) _validationParameters = BuildValidationParameters();
+        if (config.Mode == JwtMode.Local)
+            (_validationParameters, _cryptoKey) = BuildValidationParameters();
+    }
+
+    /// <summary>
+    ///     Releases resources used by this middleware.
+    ///     Thread-safe: uses Interlocked to prevent double-dispose.
+    /// </summary>
+    public void Dispose()
+    {
+        // Atomically set _disposed to 1, return previous value
+        // If previous value was already 1, another thread already disposed
+        if (Interlocked.Exchange(ref _disposed, 1) == 1)
+            return;
+
+        _cryptoKey?.Dispose();
+        if (_ownsHttpClient)
+            _httpClient.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     /// <summary>
     ///     Builds token validation parameters from configuration
     /// </summary>
-    /// <returns>Token validation parameters or null if configuration is invalid</returns>
-    private TokenValidationParameters? BuildValidationParameters()
+    /// <returns>Token validation parameters and disposable crypto key (if any)</returns>
+    private (TokenValidationParameters?, IDisposable?) BuildValidationParameters()
     {
         SecurityKey? signingKey = null;
+        IDisposable? cryptoKey = null;
 
         if (!string.IsNullOrEmpty(_config.Secret))
         {
@@ -107,22 +151,24 @@ public class JwtAuthenticationMiddleware
                 var rsa = RSA.Create();
                 rsa.ImportFromPem(keyText);
                 signingKey = new RsaSecurityKey(rsa);
+                cryptoKey = rsa;
             }
             else if (keyText.Contains("EC PUBLIC KEY"))
             {
                 var ecdsa = ECDsa.Create();
                 ecdsa.ImportFromPem(keyText);
                 signingKey = new ECDsaSecurityKey(ecdsa);
+                cryptoKey = ecdsa;
             }
         }
 
         if (signingKey == null)
         {
             _logger.LogWarning("JWT Local mode: No valid signing key configured");
-            return null;
+            return (null, null);
         }
 
-        return new TokenValidationParameters
+        return (new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = signingKey,
@@ -132,7 +178,7 @@ public class JwtAuthenticationMiddleware
             ValidAudience = _config.Audience,
             ValidateLifetime = true,
             ClockSkew = TimeSpan.FromMinutes(5)
-        };
+        }, cryptoKey);
     }
 
     /// <summary>
@@ -232,7 +278,7 @@ public class JwtAuthenticationMiddleware
             var principal = handler.ValidateToken(token, _validationParameters, out _);
 
             var tenantId = principal.FindFirst(_config.TenantIdClaim)?.Value;
-            var userId = principal.FindFirst("sub")?.Value ?? principal.FindFirst("user_id")?.Value;
+            var userId = principal.FindFirst(_config.UserIdClaim)?.Value;
 
             _logger.LogDebug("JWT validated for tenant: {TenantId}, user: {UserId}", tenantId, userId);
 
@@ -333,7 +379,8 @@ public class JwtAuthenticationMiddleware
                 ["token_type_hint"] = "access_token"
             });
 
-            var response = await _httpClient.SendAsync(request);
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(_config.ExternalTimeoutSeconds));
+            var response = await _httpClient.SendAsync(request, cts.Token);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -345,7 +392,7 @@ public class JwtAuthenticationMiddleware
                 };
             }
 
-            var content = await response.Content.ReadAsStringAsync();
+            var content = await response.Content.ReadAsStringAsync(cts.Token);
             var result = JsonSerializer.Deserialize<IntrospectionResponse>(content, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
@@ -401,7 +448,8 @@ public class JwtAuthenticationMiddleware
                 Encoding.UTF8,
                 "application/json");
 
-            var response = await _httpClient.SendAsync(request);
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(_config.ExternalTimeoutSeconds));
+            var response = await _httpClient.SendAsync(request, cts.Token);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -413,7 +461,7 @@ public class JwtAuthenticationMiddleware
                 };
             }
 
-            var content = await response.Content.ReadAsStringAsync();
+            var content = await response.Content.ReadAsStringAsync(cts.Token);
             var result = JsonSerializer.Deserialize<CustomValidationResponse>(content, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
@@ -448,14 +496,16 @@ public class JwtAuthenticationMiddleware
     }
 
     /// <summary>
-    ///     Response from OAuth 2.0 introspection endpoint
+    ///     Response from OAuth 2.0 introspection endpoint (RFC 7662)
     /// </summary>
     private class IntrospectionResponse
     {
         public bool Active { get; init; }
         public string? Sub { get; init; }
-        public string? ClientId { get; init; }
-        public string? TenantId { get; init; }
+
+        [JsonPropertyName("client_id")] public string? ClientId { get; init; }
+
+        [JsonPropertyName("tenant_id")] public string? TenantId { get; init; }
     }
 
     /// <summary>
@@ -464,8 +514,11 @@ public class JwtAuthenticationMiddleware
     private class CustomValidationResponse
     {
         public bool Valid { get; init; }
-        public string? TenantId { get; init; }
-        public string? UserId { get; init; }
+
+        [JsonPropertyName("tenant_id")] public string? TenantId { get; init; }
+
+        [JsonPropertyName("user_id")] public string? UserId { get; init; }
+
         public string? Error { get; init; }
     }
 }
