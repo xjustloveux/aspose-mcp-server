@@ -1,8 +1,10 @@
 using System.ComponentModel;
 using System.Text.Json;
 using Aspose.Slides;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Helpers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.PowerPoint.Properties;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.PowerPoint;
@@ -15,9 +17,9 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 public class PptPropertiesTool
 {
     /// <summary>
-    ///     JSON serializer options for consistent output formatting.
+    ///     Handler registry for properties operations.
     /// </summary>
-    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
+    private readonly HandlerRegistry<Presentation> _handlerRegistry;
 
     /// <summary>
     ///     Identity accessor for session isolation.
@@ -39,6 +41,7 @@ public class PptPropertiesTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = PptPropertiesHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -100,13 +103,35 @@ Usage examples:
             "Custom properties as key-value pairs. Supports: string, int, double, bool, DateTime (ISO format).")]
         Dictionary<string, object>? customProperties = null)
     {
-        return operation.ToLower() switch
+        if (operation.Equals("get", StringComparison.OrdinalIgnoreCase) && string.IsNullOrEmpty(sessionId))
+            return GetPropertiesEfficient(path);
+
+        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
+
+        var parameters = BuildParameters(title, subject, author, keywords, comments,
+            category, company, manager, customProperties);
+
+        var handler = _handlerRegistry.GetHandler(operation);
+
+        var operationContext = new OperationContext<Presentation>
         {
-            "get" => GetProperties(path, sessionId),
-            "set" => SetProperties(path, sessionId, outputPath, title, subject, author, keywords, comments, category,
-                company, manager, customProperties),
-            _ => throw new ArgumentException($"Unknown operation: {operation}")
+            Document = ctx.Document,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = path,
+            OutputPath = outputPath
         };
+
+        var result = handler.Execute(operationContext, parameters);
+
+        if (operation.Equals("get", StringComparison.OrdinalIgnoreCase))
+            return result;
+
+        if (operationContext.IsModified)
+            ctx.Save(outputPath);
+
+        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
@@ -114,177 +139,65 @@ Usage examples:
     ///     This method reads properties without loading the entire presentation.
     /// </summary>
     /// <param name="path">The presentation file path.</param>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
     /// <returns>A JSON string containing the document properties.</returns>
-    /// <exception cref="ArgumentException">Thrown when neither sessionId nor path is provided.</exception>
-    private string GetProperties(string? path, string? sessionId)
+    /// <exception cref="ArgumentException">Thrown when path is not provided.</exception>
+    private static string GetPropertiesEfficient(string? path)
     {
-        if (!string.IsNullOrEmpty(sessionId))
+        if (string.IsNullOrEmpty(path))
+            throw new ArgumentException("Either sessionId or path must be provided");
+
+        SecurityHelper.ValidateFilePath(path, "path", true);
+
+        var info = PresentationFactory.Instance.GetPresentationInfo(path);
+        var props = info.ReadDocumentProperties();
+
+        var result = new
         {
-            using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
-            var props = ctx.Document.DocumentProperties;
+            title = props.Title,
+            subject = props.Subject,
+            author = props.Author,
+            keywords = props.Keywords,
+            comments = props.Comments,
+            category = props.Category,
+            company = props.Company,
+            manager = props.Manager,
+            createdTime = props.CreatedTime,
+            lastSavedTime = props.LastSavedTime,
+            revisionNumber = props.RevisionNumber
+        };
 
-            var result = new
-            {
-                title = props.Title,
-                subject = props.Subject,
-                author = props.Author,
-                keywords = props.Keywords,
-                comments = props.Comments,
-                category = props.Category,
-                company = props.Company,
-                manager = props.Manager,
-                createdTime = props.CreatedTime,
-                lastSavedTime = props.LastSavedTime,
-                revisionNumber = props.RevisionNumber
-            };
-
-            return JsonSerializer.Serialize(result, JsonOptions);
-        }
-        else
+        return JsonSerializer.Serialize(result, new JsonSerializerOptions
         {
-            if (string.IsNullOrEmpty(path))
-                throw new ArgumentException("Either sessionId or path must be provided");
-
-            SecurityHelper.ValidateFilePath(path, "path", true);
-
-            var info = PresentationFactory.Instance.GetPresentationInfo(path);
-            var props = info.ReadDocumentProperties();
-
-            var result = new
-            {
-                title = props.Title,
-                subject = props.Subject,
-                author = props.Author,
-                keywords = props.Keywords,
-                comments = props.Comments,
-                category = props.Category,
-                company = props.Company,
-                manager = props.Manager,
-                createdTime = props.CreatedTime,
-                lastSavedTime = props.LastSavedTime,
-                revisionNumber = props.RevisionNumber
-            };
-
-            return JsonSerializer.Serialize(result, JsonOptions);
-        }
+            WriteIndented = true
+        });
     }
 
     /// <summary>
-    ///     Sets presentation properties.
+    ///     Builds OperationParameters from method parameters.
     /// </summary>
-    /// <param name="path">The presentation file path.</param>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="title">The document title.</param>
-    /// <param name="subject">The document subject.</param>
-    /// <param name="author">The document author.</param>
-    /// <param name="keywords">The document keywords.</param>
-    /// <param name="comments">The document comments.</param>
-    /// <param name="category">The document category.</param>
-    /// <param name="company">The document company.</param>
-    /// <param name="manager">The document manager.</param>
-    /// <param name="customProperties">The custom properties as key-value pairs.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    private string SetProperties(string? path, string? sessionId, string? outputPath, string? title, string? subject,
-        string? author, string? keywords, string? comments, string? category, string? company, string? manager,
+    private static OperationParameters BuildParameters(
+        string? title,
+        string? subject,
+        string? author,
+        string? keywords,
+        string? comments,
+        string? category,
+        string? company,
+        string? manager,
         Dictionary<string, object>? customProperties)
     {
-        using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
+        var parameters = new OperationParameters();
 
-        var props = ctx.Document.DocumentProperties;
-        List<string> changes = [];
+        if (title != null) parameters.Set("title", title);
+        if (subject != null) parameters.Set("subject", subject);
+        if (author != null) parameters.Set("author", author);
+        if (keywords != null) parameters.Set("keywords", keywords);
+        if (comments != null) parameters.Set("comments", comments);
+        if (category != null) parameters.Set("category", category);
+        if (company != null) parameters.Set("company", company);
+        if (manager != null) parameters.Set("manager", manager);
+        if (customProperties != null) parameters.Set("customProperties", customProperties);
 
-        if (!string.IsNullOrEmpty(title))
-        {
-            props.Title = title;
-            changes.Add("Title");
-        }
-
-        if (!string.IsNullOrEmpty(subject))
-        {
-            props.Subject = subject;
-            changes.Add("Subject");
-        }
-
-        if (!string.IsNullOrEmpty(author))
-        {
-            props.Author = author;
-            changes.Add("Author");
-        }
-
-        if (!string.IsNullOrEmpty(keywords))
-        {
-            props.Keywords = keywords;
-            changes.Add("Keywords");
-        }
-
-        if (!string.IsNullOrEmpty(comments))
-        {
-            props.Comments = comments;
-            changes.Add("Comments");
-        }
-
-        if (!string.IsNullOrEmpty(category))
-        {
-            props.Category = category;
-            changes.Add("Category");
-        }
-
-        if (!string.IsNullOrEmpty(company))
-        {
-            props.Company = company;
-            changes.Add("Company");
-        }
-
-        if (!string.IsNullOrEmpty(manager))
-        {
-            props.Manager = manager;
-            changes.Add("Manager");
-        }
-
-        if (customProperties != null)
-        {
-            foreach (var kvp in customProperties)
-                props[kvp.Key] = ConvertToPropertyValue(kvp.Value);
-            changes.Add("CustomProperties");
-        }
-
-        ctx.Save(outputPath);
-
-        var result = $"Document properties updated: {string.Join(", ", changes)}.\n";
-        result += ctx.GetOutputMessage(outputPath);
-        return result;
-    }
-
-    /// <summary>
-    ///     Converts a dictionary value to proper property value type.
-    /// </summary>
-    /// <param name="value">The value to convert.</param>
-    /// <returns>The converted property value.</returns>
-    private static object ConvertToPropertyValue(object value)
-    {
-        if (value is JsonElement element)
-            return element.ValueKind switch
-            {
-                JsonValueKind.String => TryParseDateTime(element.GetString()!, out var dt) ? dt : element.GetString()!,
-                JsonValueKind.Number => element.TryGetInt32(out var intVal) ? intVal : element.GetDouble(),
-                JsonValueKind.True => true,
-                JsonValueKind.False => false,
-                _ => element.ToString()
-            };
-
-        return value;
-    }
-
-    /// <summary>
-    ///     Attempts to parse a string as a DateTime value.
-    /// </summary>
-    /// <param name="value">The string value to parse.</param>
-    /// <param name="result">When successful, contains the parsed DateTime value.</param>
-    /// <returns>True if parsing succeeded; otherwise, false.</returns>
-    private static bool TryParseDateTime(string value, out DateTime result)
-    {
-        return DateTime.TryParse(value, out result);
+        return parameters;
     }
 }

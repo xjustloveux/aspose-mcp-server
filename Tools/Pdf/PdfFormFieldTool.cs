@@ -1,8 +1,8 @@
 using System.ComponentModel;
-using System.Text.Json;
 using Aspose.Pdf;
-using Aspose.Pdf.Forms;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.Pdf.FormField;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Pdf;
@@ -13,6 +13,11 @@ namespace AsposeMcpServer.Tools.Pdf;
 [McpServerToolType]
 public class PdfFormFieldTool
 {
+    /// <summary>
+    ///     Handler registry for form field operations.
+    /// </summary>
+    private readonly HandlerRegistry<Document> _handlerRegistry;
+
     /// <summary>
     ///     The session identity accessor for session isolation.
     /// </summary>
@@ -33,6 +38,7 @@ public class PdfFormFieldTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = PdfFormFieldHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -100,197 +106,81 @@ Usage examples:
         [Description("Maximum number of fields to return (for get, default: 100)")]
         int limit = 100)
     {
-        return operation.ToLower() switch
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
+
+        var parameters = BuildParameters(operation, pageIndex, fieldType, fieldName, x, y, width, height,
+            defaultValue, value, checkedValue, limit);
+
+        var handler = _handlerRegistry.GetHandler(operation);
+
+        var operationContext = new OperationContext<Document>
         {
-            "add" => AddFormField(sessionId, path, outputPath, pageIndex, fieldType, fieldName, x, y, width, height,
-                defaultValue),
-            "delete" => DeleteFormField(sessionId, path, outputPath, fieldName),
-            "edit" => EditFormField(sessionId, path, outputPath, fieldName, value, checkedValue),
-            "get" => GetFormFields(sessionId, path, limit),
-            _ => throw new ArgumentException($"Unknown operation: {operation}")
+            Document = ctx.Document,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = path,
+            OutputPath = outputPath
         };
+
+        var result = handler.Execute(operationContext, parameters);
+
+        if (operation.ToLowerInvariant() == "get")
+            return result;
+
+        if (operationContext.IsModified)
+            ctx.Save(outputPath);
+
+        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Adds a new form field to the PDF document.
+    ///     Builds OperationParameters from method parameters.
     /// </summary>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
-    /// <param name="path">The PDF file path.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="pageIndex">The 1-based page index.</param>
-    /// <param name="fieldType">The type of form field (TextBox, CheckBox, RadioButton).</param>
-    /// <param name="fieldName">The name of the form field.</param>
-    /// <param name="x">The X position in PDF coordinates.</param>
-    /// <param name="y">The Y position in PDF coordinates.</param>
-    /// <param name="width">The width of the field.</param>
-    /// <param name="height">The height of the field.</param>
-    /// <param name="defaultValue">Optional default value for the field.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when required parameters are missing or invalid.</exception>
-    private string AddFormField(string? sessionId, string? path, string? outputPath, int? pageIndex, string? fieldType,
-        string? fieldName, double? x, double? y, double? width, double? height, string? defaultValue)
+    private static OperationParameters BuildParameters(
+        string operation,
+        int? pageIndex,
+        string? fieldType,
+        string? fieldName,
+        double? x,
+        double? y,
+        double? width,
+        double? height,
+        string? defaultValue,
+        string? value,
+        bool? checkedValue,
+        int limit)
     {
-        if (!pageIndex.HasValue)
-            throw new ArgumentException("pageIndex is required for add operation");
-        if (string.IsNullOrEmpty(fieldType))
-            throw new ArgumentException("fieldType is required for add operation");
-        if (string.IsNullOrEmpty(fieldName))
-            throw new ArgumentException("fieldName is required for add operation");
-        if (!x.HasValue)
-            throw new ArgumentException("x is required for add operation");
-        if (!y.HasValue)
-            throw new ArgumentException("y is required for add operation");
-        if (!width.HasValue)
-            throw new ArgumentException("width is required for add operation");
-        if (!height.HasValue)
-            throw new ArgumentException("height is required for add operation");
+        var parameters = new OperationParameters();
 
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
-        var document = ctx.Document;
-
-        if (pageIndex.Value < 1 || pageIndex.Value > document.Pages.Count)
-            throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
-
-        if (document.Form.Cast<Field>().Any(f => f.PartialName == fieldName))
-            throw new ArgumentException($"Form field '{fieldName}' already exists");
-
-        var page = document.Pages[pageIndex.Value];
-        var rect = new Rectangle(x.Value, y.Value, x.Value + width.Value, y.Value + height.Value);
-        Field field;
-
-        switch (fieldType.ToLower())
+        switch (operation.ToLowerInvariant())
         {
-            case "textbox":
-            case "textfield":
-                field = new TextBoxField(page, rect) { PartialName = fieldName };
-                if (!string.IsNullOrEmpty(defaultValue))
-                    ((TextBoxField)field).Value = defaultValue;
+            case "add":
+                if (pageIndex.HasValue) parameters.Set("pageIndex", pageIndex.Value);
+                if (fieldType != null) parameters.Set("fieldType", fieldType);
+                if (fieldName != null) parameters.Set("fieldName", fieldName);
+                if (x.HasValue) parameters.Set("x", x.Value);
+                if (y.HasValue) parameters.Set("y", y.Value);
+                if (width.HasValue) parameters.Set("width", width.Value);
+                if (height.HasValue) parameters.Set("height", height.Value);
+                if (defaultValue != null) parameters.Set("defaultValue", defaultValue);
                 break;
-            case "checkbox":
-                field = new CheckboxField(page, rect) { PartialName = fieldName };
+
+            case "delete":
+                if (fieldName != null) parameters.Set("fieldName", fieldName);
                 break;
-            case "radiobutton":
-                field = new RadioButtonField(page) { PartialName = fieldName };
-                var optionName = !string.IsNullOrEmpty(defaultValue) ? defaultValue : "Option1";
-                var radioOption = new RadioButtonOptionField(page, rect) { OptionName = optionName };
-                ((RadioButtonField)field).Add(radioOption);
+
+            case "edit":
+                if (fieldName != null) parameters.Set("fieldName", fieldName);
+                if (value != null) parameters.Set("value", value);
+                if (checkedValue.HasValue) parameters.Set("checkedValue", checkedValue.Value);
                 break;
-            default:
-                throw new ArgumentException($"Unknown field type: {fieldType}");
+
+            case "get":
+                parameters.Set("limit", limit);
+                break;
         }
 
-        document.Form.Add(field);
-        ctx.Save(outputPath);
-        return $"Added {fieldType} field '{fieldName}'. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Deletes a form field from the PDF document.
-    /// </summary>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
-    /// <param name="path">The PDF file path.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="fieldName">The name of the form field to delete.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when the field is not found.</exception>
-    private string DeleteFormField(string? sessionId, string? path, string? outputPath, string? fieldName)
-    {
-        if (string.IsNullOrEmpty(fieldName))
-            throw new ArgumentException("fieldName is required for delete operation");
-
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
-        var document = ctx.Document;
-
-        if (document.Form.Cast<Field>().All(f => f.PartialName != fieldName))
-            throw new ArgumentException($"Form field '{fieldName}' not found");
-
-        document.Form.Delete(fieldName);
-        ctx.Save(outputPath);
-        return $"Deleted form field '{fieldName}'. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Edits the value of an existing form field.
-    /// </summary>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
-    /// <param name="path">The PDF file path.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="fieldName">The name of the form field to edit.</param>
-    /// <param name="value">The new value for text or radio button fields.</param>
-    /// <param name="checkedValue">The checked state for checkbox fields.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when the field is not found.</exception>
-    private string EditFormField(string? sessionId, string? path, string? outputPath, string? fieldName, string? value,
-        bool? checkedValue)
-    {
-        if (string.IsNullOrEmpty(fieldName))
-            throw new ArgumentException("fieldName is required for edit operation");
-
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
-        var document = ctx.Document;
-        var field = document.Form.Cast<Field>().FirstOrDefault(f => f.PartialName == fieldName);
-        if (field == null)
-            throw new ArgumentException($"Form field '{fieldName}' not found");
-
-        if (field is TextBoxField textBox && !string.IsNullOrEmpty(value))
-            textBox.Value = value;
-        else if (field is CheckboxField checkBox && checkedValue.HasValue)
-            checkBox.Checked = checkedValue.Value;
-        else if (field is RadioButtonField radioButton && !string.IsNullOrEmpty(value))
-            radioButton.Value = value;
-
-        ctx.Save(outputPath);
-        return $"Edited form field '{fieldName}'. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Retrieves all form fields from the PDF document.
-    /// </summary>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
-    /// <param name="path">The PDF file path.</param>
-    /// <param name="limit">Maximum number of fields to return.</param>
-    /// <returns>A JSON string containing form field information.</returns>
-    private string GetFormFields(string? sessionId, string? path, int limit)
-    {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
-        var document = ctx.Document;
-
-        if (document.Form.Count == 0)
-        {
-            var emptyResult = new
-            {
-                count = 0,
-                items = Array.Empty<object>(),
-                message = "No form fields found"
-            };
-            return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
-        }
-
-        List<object> fieldList = [];
-        foreach (var field in document.Form.Cast<Field>().Take(limit))
-        {
-            var fieldInfo = new Dictionary<string, object?>
-            {
-                ["name"] = field.PartialName,
-                ["type"] = field.GetType().Name
-            };
-            if (field is TextBoxField textBox)
-                fieldInfo["value"] = textBox.Value;
-            else if (field is CheckboxField checkBox)
-                fieldInfo["checked"] = checkBox.Checked;
-            else if (field is RadioButtonField radioButton)
-                fieldInfo["selected"] = radioButton.Selected;
-            fieldList.Add(fieldInfo);
-        }
-
-        var totalCount = document.Form.Count;
-        var result = new
-        {
-            count = fieldList.Count,
-            totalCount,
-            truncated = totalCount > limit,
-            items = fieldList
-        };
-        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        return parameters;
     }
 }

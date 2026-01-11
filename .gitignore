@@ -116,3 +116,6 @@ $RECYCLE.BIN/
 Tests/TestResults/
 .claude/
 .backup/
+
+# Coverage reports
+coverage-reports/

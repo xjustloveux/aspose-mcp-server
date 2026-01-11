@@ -72,14 +72,13 @@ public class TrackingConfig
         var config = new TrackingConfig();
         config.LoadFromEnvironment();
         config.LoadFromCommandLine(args);
-        config.Validate();
         return config;
     }
 
     /// <summary>
     ///     Validates the configuration values
     /// </summary>
-    private void Validate()
+    public void Validate()
     {
         if (WebhookTimeoutSeconds is < 1 or > 300)
         {
@@ -228,9 +227,9 @@ public class TrackingEvent
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
 
     /// <summary>
-    ///     Tenant identifier (from authentication)
+    ///     Group identifier (from authentication)
     /// </summary>
-    public string? TenantId { get; set; }
+    public string? GroupId { get; set; }
 
     /// <summary>
     ///     User identifier (from JWT authentication)

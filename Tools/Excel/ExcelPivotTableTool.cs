@@ -1,11 +1,9 @@
 using System.ComponentModel;
-using System.Text.Json;
 using Aspose.Cells;
-using Aspose.Cells.Pivot;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.Excel.PivotTable;
 using ModelContextProtocol.Server;
-using Range = Aspose.Cells.Range;
 
 namespace AsposeMcpServer.Tools.Excel;
 
@@ -17,6 +15,11 @@ namespace AsposeMcpServer.Tools.Excel;
 [McpServerToolType]
 public class ExcelPivotTableTool
 {
+    /// <summary>
+    ///     Handler registry for pivot table operations.
+    /// </summary>
+    private readonly HandlerRegistry<Workbook> _handlerRegistry;
+
     /// <summary>
     ///     Session identity accessor for session isolation support.
     /// </summary>
@@ -37,6 +40,7 @@ public class ExcelPivotTableTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = ExcelPivotTableHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -141,746 +145,97 @@ Usage examples:
     {
         using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
-        return operation.ToLower() switch
+        var parameters = BuildParameters(operation, sheetIndex, sourceRange, destCell, pivotTableIndex, name,
+            style, showRowGrand, showColumnGrand, autoFitColumns, refreshData, fieldName, fieldType ?? area, function);
+
+        var handler = _handlerRegistry.GetHandler(operation);
+
+        var operationContext = new OperationContext<Workbook>
         {
-            "add" => AddPivotTable(ctx, outputPath, sheetIndex, sourceRange, destCell, name),
-            "edit" => EditPivotTable(ctx, outputPath, sheetIndex, pivotTableIndex, name, style, showRowGrand,
-                showColumnGrand, autoFitColumns, refreshData),
-            "delete" => DeletePivotTable(ctx, outputPath, sheetIndex, pivotTableIndex),
-            "get" => GetPivotTables(ctx, sheetIndex),
-            "add_field" => AddField(ctx, outputPath, sheetIndex, pivotTableIndex, fieldName, fieldType ?? area,
-                function),
-            "delete_field" => DeleteField(ctx, outputPath, sheetIndex, pivotTableIndex, fieldName, fieldType ?? area),
-            "refresh" => RefreshPivotTable(ctx, outputPath, sheetIndex, pivotTableIndex),
-            _ => throw new ArgumentException($"Unknown operation: {operation}")
-        };
-    }
-
-    /// <summary>
-    ///     Adds a new pivot table to the worksheet.
-    /// </summary>
-    /// <param name="ctx">The document context containing the workbook.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <param name="sourceRange">The source data range.</param>
-    /// <param name="destCell">The destination cell for the pivot table.</param>
-    /// <param name="name">The name for the pivot table.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when sourceRange or destCell is not provided.</exception>
-    private static string AddPivotTable(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex,
-        string? sourceRange, string? destCell, string? name)
-    {
-        if (string.IsNullOrEmpty(sourceRange))
-            throw new ArgumentException("sourceRange is required for add operation");
-        if (string.IsNullOrEmpty(destCell))
-            throw new ArgumentException("destCell is required for add operation");
-
-        var pivotName = name ?? "PivotTable1";
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-
-        var pivotTables = worksheet.PivotTables;
-        var pivotIndex = pivotTables.Add($"={worksheet.Name}!{sourceRange}", destCell, pivotName);
-        var pivotTable = pivotTables[pivotIndex];
-
-        pivotTable.AddFieldToArea(PivotFieldType.Row, 0);
-        pivotTable.AddFieldToArea(PivotFieldType.Data, 1);
-
-        pivotTable.CalculateData();
-
-        ctx.Save(outputPath);
-        return $"Pivot table '{pivotName}' added to worksheet. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Edits an existing pivot table (name, style, layout, refresh data).
-    /// </summary>
-    /// <param name="ctx">The document context containing the workbook.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <param name="pivotTableIndex">The pivot table index.</param>
-    /// <param name="name">The new name for the pivot table.</param>
-    /// <param name="style">The style to apply to the pivot table.</param>
-    /// <param name="showRowGrand">Whether to show row grand totals.</param>
-    /// <param name="showColumnGrand">Whether to show column grand totals.</param>
-    /// <param name="autoFitColumns">Whether to auto-fit column widths.</param>
-    /// <param name="refreshData">Whether to refresh the pivot table data.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when pivotTableIndex is not provided or out of range.</exception>
-    private static string EditPivotTable(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex,
-        int? pivotTableIndex, string? name, string? style, bool? showRowGrand, bool? showColumnGrand,
-        bool autoFitColumns, bool refreshData)
-    {
-        if (!pivotTableIndex.HasValue)
-            throw new ArgumentException("pivotTableIndex is required for edit operation");
-
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var pivotTables = worksheet.PivotTables;
-
-        if (pivotTableIndex.Value < 0 || pivotTableIndex.Value >= pivotTables.Count)
-            throw new ArgumentException(
-                $"Pivot table index {pivotTableIndex.Value} is out of range (worksheet has {pivotTables.Count} pivot tables)");
-
-        var pivotTable = pivotTables[pivotTableIndex.Value];
-        List<string> changes = [];
-
-        if (!string.IsNullOrEmpty(name))
-        {
-            pivotTable.Name = name;
-            changes.Add($"name={name}");
-        }
-
-        if (!string.IsNullOrEmpty(style))
-        {
-            var styleType = ParsePivotTableStyle(style);
-            pivotTable.PivotTableStyleType = styleType;
-            changes.Add($"style={style}");
-        }
-
-        if (showRowGrand.HasValue)
-        {
-            pivotTable.RowGrand = showRowGrand.Value;
-            changes.Add($"showRowGrand={showRowGrand.Value}");
-        }
-
-        if (showColumnGrand.HasValue)
-        {
-            pivotTable.ColumnGrand = showColumnGrand.Value;
-            changes.Add($"showColumnGrand={showColumnGrand.Value}");
-        }
-
-        if (refreshData)
-        {
-            pivotTable.CalculateData();
-            changes.Add("refreshed");
-        }
-
-        if (autoFitColumns)
-        {
-            worksheet.AutoFitColumns();
-            changes.Add("autoFitColumns");
-        }
-
-        ctx.Save(outputPath);
-
-        var changesStr = changes.Count > 0 ? string.Join(", ", changes) : "no changes";
-        return $"Pivot table #{pivotTableIndex.Value} edited ({changesStr}). {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Parses a style name string to PivotTableStyleType enum.
-    /// </summary>
-    /// <param name="style">The style name string to parse.</param>
-    /// <returns>The corresponding PivotTableStyleType value.</returns>
-    /// <exception cref="ArgumentException">Thrown when the style name is invalid.</exception>
-    private static PivotTableStyleType ParsePivotTableStyle(string style)
-    {
-        if (string.Equals(style, "None", StringComparison.OrdinalIgnoreCase))
-            return PivotTableStyleType.None;
-
-        if (Enum.TryParse<PivotTableStyleType>($"PivotTableStyle{style}", true, out var result))
-            return result;
-
-        if (Enum.TryParse(style, true, out result))
-            return result;
-
-        throw new ArgumentException(
-            $"Invalid style: '{style}'. Valid formats: 'Light1'-'Light28', 'Medium1'-'Medium28', 'Dark1'-'Dark28', or 'None'");
-    }
-
-    /// <summary>
-    ///     Deletes a pivot table from the worksheet.
-    /// </summary>
-    /// <param name="ctx">The document context containing the workbook.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <param name="pivotTableIndex">The pivot table index to delete.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when pivotTableIndex is not provided or out of range.</exception>
-    private static string DeletePivotTable(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex,
-        int? pivotTableIndex)
-    {
-        if (!pivotTableIndex.HasValue)
-            throw new ArgumentException("pivotTableIndex is required for delete operation");
-
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var pivotTables = worksheet.PivotTables;
-
-        if (pivotTableIndex.Value < 0 || pivotTableIndex.Value >= pivotTables.Count)
-            throw new ArgumentException(
-                $"Pivot table index {pivotTableIndex.Value} is out of range (worksheet has {pivotTables.Count} pivot tables)");
-
-        var pivotTable = pivotTables[pivotTableIndex.Value];
-        var pivotTableName = pivotTable.Name ?? $"PivotTable {pivotTableIndex.Value}";
-
-        pivotTables.RemoveAt(pivotTableIndex.Value);
-        ctx.Save(outputPath);
-
-        return $"Pivot table #{pivotTableIndex.Value} ({pivotTableName}) deleted. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Gets information about all pivot tables in the worksheet.
-    /// </summary>
-    /// <param name="ctx">The document context containing the workbook.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <returns>A JSON string containing the pivot table information.</returns>
-    private static string GetPivotTables(DocumentContext<Workbook> ctx, int sheetIndex)
-    {
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var pivotTables = worksheet.PivotTables;
-
-        if (pivotTables.Count == 0)
-        {
-            var emptyResult = new
-            {
-                count = 0,
-                worksheetName = worksheet.Name,
-                items = Array.Empty<object>(),
-                message = "No pivot tables found"
-            };
-            return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
-        }
-
-        List<object> pivotTableList = [];
-        for (var i = 0; i < pivotTables.Count; i++)
-        {
-            var pivotTable = pivotTables[i];
-
-            string dataSourceInfo;
-            if (pivotTable.DataSource is Array { Length: > 0 } dataSourceArray)
-            {
-                List<string> sourceParts = [];
-                foreach (var item in dataSourceArray)
-                    if (item != null)
-                        sourceParts.Add(item.ToString() ?? "");
-                dataSourceInfo = string.Join(", ", sourceParts);
-            }
-            else if (pivotTable.DataSource != null)
-            {
-                dataSourceInfo = pivotTable.DataSource.ToString() ?? "Unknown";
-            }
-            else
-            {
-                dataSourceInfo = "Unknown";
-            }
-
-            object locationInfo;
-            var dataBodyRange = pivotTable.DataBodyRange;
-            if (dataBodyRange.StartRow >= 0)
-            {
-                var startCell = CellsHelper.CellIndexToName(dataBodyRange.StartRow, dataBodyRange.StartColumn);
-                var endCell = CellsHelper.CellIndexToName(dataBodyRange.EndRow, dataBodyRange.EndColumn);
-                locationInfo = new
-                {
-                    range = $"{startCell}:{endCell}",
-                    startRow = dataBodyRange.StartRow,
-                    endRow = dataBodyRange.EndRow,
-                    startColumn = dataBodyRange.StartColumn,
-                    endColumn = dataBodyRange.EndColumn
-                };
-            }
-            else
-            {
-                locationInfo = new
-                {
-                    range = "Not calculated",
-                    startRow = -1,
-                    endRow = -1,
-                    startColumn = -1,
-                    endColumn = -1
-                };
-            }
-
-            List<object> rowFieldsList = [];
-            if (pivotTable.RowFields is { Count: > 0 } rowFields)
-                foreach (PivotField field in rowFields)
-                    rowFieldsList.Add(new
-                    {
-                        name = field.Name ?? $"Field {field.Position}",
-                        position = field.Position
-                    });
-
-            List<object> columnFieldsList = [];
-            if (pivotTable.ColumnFields is { Count: > 0 } columnFields)
-                foreach (PivotField field in columnFields)
-                    columnFieldsList.Add(new
-                    {
-                        name = field.Name ?? $"Field {field.Position}",
-                        position = field.Position
-                    });
-
-            List<object> dataFieldsList = [];
-            if (pivotTable.DataFields is { Count: > 0 } dataFields)
-                foreach (PivotField field in dataFields)
-                    dataFieldsList.Add(new
-                    {
-                        name = field.Name ?? $"Field {field.Position}",
-                        position = field.Position,
-                        function = field.Function.ToString()
-                    });
-
-            pivotTableList.Add(new
-            {
-                index = i,
-                name = pivotTable.Name ?? "(no name)",
-                dataSource = dataSourceInfo,
-                location = locationInfo,
-                rowFields = rowFieldsList,
-                columnFields = columnFieldsList,
-                dataFields = dataFieldsList
-            });
-        }
-
-        var result = new
-        {
-            count = pivotTables.Count,
-            worksheetName = worksheet.Name,
-            items = pivotTableList
+            Document = ctx.Document,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = path,
+            OutputPath = outputPath
         };
 
-        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        var result = handler.Execute(operationContext, parameters);
+
+        if (operation.ToLowerInvariant() == "get")
+            return result;
+
+        if (operationContext.IsModified)
+            ctx.Save(outputPath);
+
+        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Adds a field to the pivot table.
+    ///     Builds OperationParameters from method parameters.
     /// </summary>
-    /// <param name="ctx">The document context containing the workbook.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <param name="pivotTableIndex">The pivot table index.</param>
-    /// <param name="fieldName">The name of the field to add.</param>
-    /// <param name="fieldType">The type of field (Row, Column, Data, Page).</param>
-    /// <param name="function">The aggregation function for data fields.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when required parameters are missing or field is not found.</exception>
-    private static string AddField(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex,
-        int? pivotTableIndex, string? fieldName, string? fieldType, string function)
+    private static OperationParameters BuildParameters(
+        string operation,
+        int sheetIndex,
+        string? sourceRange,
+        string? destCell,
+        int? pivotTableIndex,
+        string? name,
+        string? style,
+        bool? showRowGrand,
+        bool? showColumnGrand,
+        bool autoFitColumns,
+        bool refreshData,
+        string? fieldName,
+        string? fieldType,
+        string function)
     {
-        if (!pivotTableIndex.HasValue)
-            throw new ArgumentException("pivotTableIndex is required for add_field operation");
-        if (string.IsNullOrEmpty(fieldName))
-            throw new ArgumentException("fieldName is required for add_field operation");
-        if (string.IsNullOrEmpty(fieldType))
-            throw new ArgumentException("fieldType (or area) parameter is required for add_field operation");
+        var parameters = new OperationParameters();
+        parameters.Set("sheetIndex", sheetIndex);
 
-        try
+        switch (operation.ToLowerInvariant())
         {
-            var workbook = ctx.Document;
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-            var pivotTables = worksheet.PivotTables;
+            case "add":
+                if (sourceRange != null) parameters.Set("sourceRange", sourceRange);
+                if (destCell != null) parameters.Set("destCell", destCell);
+                if (name != null) parameters.Set("name", name);
+                break;
 
-            if (pivotTableIndex.Value < 0 || pivotTableIndex.Value >= pivotTables.Count)
-                throw new ArgumentException(
-                    $"Pivot table index {pivotTableIndex.Value} is out of range (worksheet has {pivotTables.Count} pivot tables)");
+            case "edit":
+                if (pivotTableIndex.HasValue) parameters.Set("pivotTableIndex", pivotTableIndex.Value);
+                if (name != null) parameters.Set("name", name);
+                if (style != null) parameters.Set("style", style);
+                if (showRowGrand.HasValue) parameters.Set("showRowGrand", showRowGrand.Value);
+                if (showColumnGrand.HasValue) parameters.Set("showColumnGrand", showColumnGrand.Value);
+                parameters.Set("autoFitColumns", autoFitColumns);
+                parameters.Set("refreshData", refreshData);
+                break;
 
-            var pivotTable = pivotTables[pivotTableIndex.Value];
+            case "delete":
+                if (pivotTableIndex.HasValue) parameters.Set("pivotTableIndex", pivotTableIndex.Value);
+                break;
 
-            string? sourceRangeStr = null;
-            var dataSource = pivotTable.DataSource;
+            case "get":
+                break;
 
-            if (dataSource is Array { Length: > 0 } dataSourceArray)
-                sourceRangeStr = dataSourceArray.GetValue(0)?.ToString();
-            else if (dataSource != null) sourceRangeStr = dataSource.ToString();
+            case "add_field":
+                if (pivotTableIndex.HasValue) parameters.Set("pivotTableIndex", pivotTableIndex.Value);
+                if (fieldName != null) parameters.Set("fieldName", fieldName);
+                if (fieldType != null) parameters.Set("fieldType", fieldType);
+                parameters.Set("function", function);
+                break;
 
-            if (string.IsNullOrEmpty(sourceRangeStr)) sourceRangeStr = pivotTable.DataSource?.ToString();
+            case "delete_field":
+                if (pivotTableIndex.HasValue) parameters.Set("pivotTableIndex", pivotTableIndex.Value);
+                if (fieldName != null) parameters.Set("fieldName", fieldName);
+                if (fieldType != null) parameters.Set("fieldType", fieldType);
+                break;
 
-            if (string.IsNullOrEmpty(sourceRangeStr))
-                throw new ArgumentException(
-                    $"Pivot table data source is not available. Pivot table index: {pivotTableIndex.Value}, Worksheet: '{worksheet.Name}'");
-
-            var sourceSheet = workbook.Worksheets[sheetIndex];
-            var cleanSourceRange = sourceRangeStr.Replace("=", "").Trim();
-            var sourceParts = cleanSourceRange.Split(['!'], StringSplitOptions.RemoveEmptyEntries);
-            var rangeStr = sourceParts.Length > 1 ? sourceParts[1].Trim() : sourceParts[0].Trim();
-
-            if (string.IsNullOrEmpty(rangeStr))
-                throw new ArgumentException(
-                    $"Invalid data source format: '{sourceRangeStr}'. Unable to parse range from data source. Pivot table index: {pivotTableIndex.Value}, Worksheet: '{worksheet.Name}'");
-
-            Range sourceRangeObj;
-            try
-            {
-                sourceRangeObj = sourceSheet.Cells.CreateRange(rangeStr);
-            }
-            catch (Exception rangeEx)
-            {
-                throw new ArgumentException(
-                    $"Failed to parse pivot table data source range '{rangeStr}' from source '{sourceRangeStr}': {rangeEx.Message}");
-            }
-
-            var fieldIndex = -1;
-            var headerRowIndex = sourceRangeObj.FirstRow;
-
-            for (var col = sourceRangeObj.FirstColumn;
-                 col < sourceRangeObj.FirstColumn + sourceRangeObj.ColumnCount;
-                 col++)
-            {
-                var headerCell = sourceSheet.Cells[headerRowIndex, col];
-                var cellValue = headerCell.Value?.ToString()?.Trim();
-                if (cellValue == fieldName || cellValue == fieldName.Trim())
-                {
-                    fieldIndex = col - sourceRangeObj.FirstColumn;
-                    break;
-                }
-            }
-
-            if (fieldIndex < 0)
-                for (var row = sourceRangeObj.FirstRow;
-                     row < sourceRangeObj.FirstRow + sourceRangeObj.RowCount;
-                     row++)
-                {
-                    for (var col = sourceRangeObj.FirstColumn;
-                         col < sourceRangeObj.FirstColumn + sourceRangeObj.ColumnCount;
-                         col++)
-                    {
-                        var cell = sourceSheet.Cells[row, col];
-                        var cellValue = cell.Value?.ToString()?.Trim();
-                        if (cellValue == fieldName || cellValue == fieldName.Trim())
-                        {
-                            fieldIndex = col - sourceRangeObj.FirstColumn;
-                            break;
-                        }
-                    }
-
-                    if (fieldIndex >= 0) break;
-                }
-
-            if (fieldIndex < 0)
-            {
-                List<string> availableFields = [];
-                for (var col = sourceRangeObj.FirstColumn;
-                     col < sourceRangeObj.FirstColumn + sourceRangeObj.ColumnCount;
-                     col++)
-                {
-                    var headerCell = sourceSheet.Cells[headerRowIndex, col];
-                    var cellValue = headerCell.Value?.ToString()?.Trim();
-                    if (!string.IsNullOrEmpty(cellValue))
-                        availableFields.Add(cellValue);
-                }
-
-                var availableFieldsStr = availableFields.Count > 0
-                    ? $" Available fields in header row: {string.Join(", ", availableFields)}"
-                    : " No field names found in header row.";
-
-                throw new ArgumentException(
-                    $"Field '{fieldName}' not found in pivot table source data.{availableFieldsStr} Please check that the field name matches exactly (case-sensitive).");
-            }
-
-            try
-            {
-                switch (fieldType.ToLower())
-                {
-                    case "row":
-                        pivotTable.AddFieldToArea(PivotFieldType.Row, fieldIndex);
-                        break;
-                    case "column":
-                        pivotTable.AddFieldToArea(PivotFieldType.Column, fieldIndex);
-                        break;
-                    case "data":
-                        pivotTable.AddFieldToArea(PivotFieldType.Data, fieldIndex);
-                        if (pivotTable.DataFields.Count > 0)
-                        {
-                            var dataField = pivotTable.DataFields[^1];
-                            var functionType = function switch
-                            {
-                                "Count" => ConsolidationFunction.Count,
-                                "Average" => ConsolidationFunction.Average,
-                                "Max" => ConsolidationFunction.Max,
-                                "Min" => ConsolidationFunction.Min,
-                                _ => ConsolidationFunction.Sum
-                            };
-                            dataField.Function = functionType;
-                        }
-
-                        break;
-                    case "page":
-                        pivotTable.AddFieldToArea(PivotFieldType.Page, fieldIndex);
-                        break;
-                    default:
-                        throw new ArgumentException(
-                            $"Invalid fieldType: {fieldType}. Valid values are: Row, Column, Data, Page");
-                }
-
-                try
-                {
-                    pivotTable.CalculateData();
-                }
-                catch (Exception calcEx)
-                {
-                    Console.Error.WriteLine($"[WARN] CalculateData warning: {calcEx.Message}");
-                }
-
-                try
-                {
-                    ctx.Save(outputPath);
-                }
-                catch (Exception saveEx)
-                {
-                    throw new ArgumentException(
-                        $"Failed to save workbook after adding field '{fieldName}': {saveEx.Message}");
-                }
-
-                return
-                    $"Field '{fieldName}' added as {fieldType} field to pivot table #{pivotTableIndex.Value}. {ctx.GetOutputMessage(outputPath)}";
-            }
-            catch (Exception ex)
-            {
-                if (ex.Message.Contains("already exists") || ex.Message.Contains("duplicate"))
-                    try
-                    {
-                        ctx.Save(outputPath);
-                        return
-                            $"Field '{fieldName}' may already exist in {fieldType} area of pivot table #{pivotTableIndex.Value}. {ctx.GetOutputMessage(outputPath)}";
-                    }
-                    catch (Exception saveEx)
-                    {
-                        throw new ArgumentException(
-                            $"Failed to add field '{fieldName}' to pivot table and save workbook: {ex.Message}. Save error: {saveEx.Message}");
-                    }
-
-                throw new ArgumentException(
-                    $"Failed to add field '{fieldName}' to pivot table: {ex.Message}. Field index: {fieldIndex}, Field type: {fieldType}");
-            }
-        }
-        catch (Exception outerEx)
-        {
-            throw new ArgumentException(
-                $"Failed to add field '{fieldName}' to pivot table: {outerEx.Message}");
-        }
-    }
-
-    /// <summary>
-    ///     Removes a field from the pivot table.
-    /// </summary>
-    /// <param name="ctx">The document context containing the workbook.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <param name="pivotTableIndex">The pivot table index.</param>
-    /// <param name="fieldName">The name of the field to remove.</param>
-    /// <param name="fieldType">The type of field (Row, Column, Data, Page).</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when required parameters are missing or field is not found.</exception>
-    private static string DeleteField(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex,
-        int? pivotTableIndex, string? fieldName, string? fieldType)
-    {
-        if (!pivotTableIndex.HasValue)
-            throw new ArgumentException("pivotTableIndex is required for delete_field operation");
-        if (string.IsNullOrEmpty(fieldName))
-            throw new ArgumentException("fieldName is required for delete_field operation");
-        if (string.IsNullOrEmpty(fieldType))
-            throw new ArgumentException("fieldType is required for delete_field operation");
-
-        try
-        {
-            var workbook = ctx.Document;
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-            var pivotTables = worksheet.PivotTables;
-
-            if (pivotTableIndex.Value < 0 || pivotTableIndex.Value >= pivotTables.Count)
-                throw new ArgumentException(
-                    $"Pivot table index {pivotTableIndex.Value} is out of range (worksheet has {pivotTables.Count} pivot tables)");
-
-            var pivotTable = pivotTables[pivotTableIndex.Value];
-
-            string? sourceRangeStr = null;
-            var dataSource = pivotTable.DataSource;
-
-            if (dataSource is Array { Length: > 0 } dataSourceArray)
-                sourceRangeStr = dataSourceArray.GetValue(0)?.ToString();
-            else if (dataSource != null) sourceRangeStr = dataSource.ToString();
-
-            if (string.IsNullOrEmpty(sourceRangeStr)) sourceRangeStr = pivotTable.DataSource?.ToString();
-
-            if (string.IsNullOrEmpty(sourceRangeStr))
-                throw new ArgumentException(
-                    $"Pivot table data source is not available. Pivot table index: {pivotTableIndex.Value}, Worksheet: '{worksheet.Name}'");
-
-            var sourceSheet = workbook.Worksheets[sheetIndex];
-            var cleanSourceRange = sourceRangeStr.Replace("=", "").Trim();
-            var sourceParts = cleanSourceRange.Split(['!'], StringSplitOptions.RemoveEmptyEntries);
-            var rangeStr = sourceParts.Length > 1 ? sourceParts[1].Trim() : sourceParts[0].Trim();
-
-            if (string.IsNullOrEmpty(rangeStr))
-                throw new ArgumentException(
-                    $"Invalid data source format: '{sourceRangeStr}'. Unable to parse range from data source. Pivot table index: {pivotTableIndex.Value}, Worksheet: '{worksheet.Name}'");
-
-            Range sourceRangeObj;
-            try
-            {
-                sourceRangeObj = sourceSheet.Cells.CreateRange(rangeStr);
-            }
-            catch (Exception rangeEx)
-            {
-                throw new ArgumentException(
-                    $"Failed to parse pivot table data source range '{rangeStr}' from source '{sourceRangeStr}': {rangeEx.Message}");
-            }
-
-            var fieldIndex = -1;
-            var headerRowIndex = sourceRangeObj.FirstRow;
-
-            for (var col = sourceRangeObj.FirstColumn;
-                 col < sourceRangeObj.FirstColumn + sourceRangeObj.ColumnCount;
-                 col++)
-            {
-                var headerCell = sourceSheet.Cells[headerRowIndex, col];
-                var cellValue = headerCell.Value?.ToString()?.Trim();
-                if (cellValue == fieldName || cellValue == fieldName.Trim())
-                {
-                    fieldIndex = col - sourceRangeObj.FirstColumn;
-                    break;
-                }
-            }
-
-            if (fieldIndex < 0)
-                for (var row = sourceRangeObj.FirstRow;
-                     row < sourceRangeObj.FirstRow + sourceRangeObj.RowCount;
-                     row++)
-                {
-                    for (var col = sourceRangeObj.FirstColumn;
-                         col < sourceRangeObj.FirstColumn + sourceRangeObj.ColumnCount;
-                         col++)
-                    {
-                        var cell = sourceSheet.Cells[row, col];
-                        var cellValue = cell.Value?.ToString()?.Trim();
-                        if (cellValue == fieldName || cellValue == fieldName.Trim())
-                        {
-                            fieldIndex = col - sourceRangeObj.FirstColumn;
-                            break;
-                        }
-                    }
-
-                    if (fieldIndex >= 0) break;
-                }
-
-            if (fieldIndex < 0)
-            {
-                List<string> availableFields = [];
-                for (var col = sourceRangeObj.FirstColumn;
-                     col < sourceRangeObj.FirstColumn + sourceRangeObj.ColumnCount;
-                     col++)
-                {
-                    var headerCell = sourceSheet.Cells[headerRowIndex, col];
-                    var cellValue = headerCell.Value?.ToString()?.Trim();
-                    if (!string.IsNullOrEmpty(cellValue))
-                        availableFields.Add(cellValue);
-                }
-
-                var availableFieldsStr = availableFields.Count > 0
-                    ? $" Available fields in header row: {string.Join(", ", availableFields)}"
-                    : " No field names found in header row.";
-
-                throw new ArgumentException(
-                    $"Field '{fieldName}' not found in pivot table source data.{availableFieldsStr} Please check that the field name matches exactly (case-sensitive).");
-            }
-
-            var fieldTypeEnum = fieldType.ToLower() switch
-            {
-                "row" => PivotFieldType.Row,
-                "column" => PivotFieldType.Column,
-                "data" => PivotFieldType.Data,
-                "page" => PivotFieldType.Page,
-                _ => throw new ArgumentException($"Invalid fieldType: {fieldType}")
-            };
-
-            try
-            {
-                pivotTable.RemoveField(fieldTypeEnum, fieldIndex);
-
-                try
-                {
-                    pivotTable.CalculateData();
-                }
-                catch (Exception calcEx)
-                {
-                    Console.Error.WriteLine($"[WARN] CalculateData warning: {calcEx.Message}");
-                }
-
-                try
-                {
-                    ctx.Save(outputPath);
-                }
-                catch (Exception saveEx)
-                {
-                    throw new ArgumentException(
-                        $"Failed to save workbook after removing field '{fieldName}': {saveEx.Message}");
-                }
-
-                return
-                    $"Field '{fieldName}' removed from {fieldType} area of pivot table #{pivotTableIndex.Value}. {ctx.GetOutputMessage(outputPath)}";
-            }
-            catch (Exception ex)
-            {
-                if (ex.Message.Contains("not found") || ex.Message.Contains("does not exist"))
-                    try
-                    {
-                        ctx.Save(outputPath);
-                        return
-                            $"Field '{fieldName}' may already be removed from {fieldType} area of pivot table #{pivotTableIndex.Value}. {ctx.GetOutputMessage(outputPath)}";
-                    }
-                    catch (Exception saveEx)
-                    {
-                        throw new ArgumentException(
-                            $"Failed to remove field '{fieldName}' from pivot table and save workbook: {ex.Message}. Save error: {saveEx.Message}");
-                    }
-
-                throw new ArgumentException(
-                    $"Failed to remove field '{fieldName}' from pivot table: {ex.Message}. Field index: {fieldIndex}, Field type: {fieldType}");
-            }
-        }
-        catch (Exception outerEx)
-        {
-            throw new ArgumentException(
-                $"Failed to remove field '{fieldName}' from pivot table: {outerEx.Message}");
-        }
-    }
-
-    /// <summary>
-    ///     Refreshes pivot table data (one or all tables).
-    /// </summary>
-    /// <param name="ctx">The document context containing the workbook.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <param name="pivotTableIndex">The pivot table index, or null to refresh all pivot tables.</param>
-    /// <returns>A message indicating the number of pivot tables refreshed.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when no pivot tables are found.</exception>
-    /// <exception cref="ArgumentException">Thrown when pivotTableIndex is out of range.</exception>
-    private static string RefreshPivotTable(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex,
-        int? pivotTableIndex)
-    {
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var pivotTables = worksheet.PivotTables;
-
-        if (pivotTables.Count == 0)
-            throw new InvalidOperationException($"No pivot tables found in worksheet '{worksheet.Name}'");
-
-        var refreshedCount = 0;
-
-        if (pivotTableIndex.HasValue)
-        {
-            if (pivotTableIndex.Value < 0 || pivotTableIndex.Value >= pivotTables.Count)
-                throw new ArgumentException(
-                    $"Pivot table index {pivotTableIndex.Value} is out of range (worksheet has {pivotTables.Count} pivot tables)");
-
-            pivotTables[pivotTableIndex.Value].CalculateData();
-            refreshedCount = 1;
-        }
-        else
-        {
-            foreach (var pivotTable in pivotTables)
-            {
-                pivotTable.CalculateData();
-                refreshedCount++;
-            }
+            case "refresh":
+                if (pivotTableIndex.HasValue) parameters.Set("pivotTableIndex", pivotTableIndex.Value);
+                break;
         }
 
-        ctx.Save(outputPath);
-
-        return
-            $"Refreshed {refreshedCount} pivot table(s) in worksheet '{worksheet.Name}'. {ctx.GetOutputMessage(outputPath)}";
+        return parameters;
     }
 }

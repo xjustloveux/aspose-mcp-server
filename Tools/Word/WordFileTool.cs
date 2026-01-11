@@ -1,10 +1,8 @@
 using System.ComponentModel;
-using System.Text;
 using Aspose.Words;
-using Aspose.Words.Reporting;
-using Aspose.Words.Settings;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.Word.File;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Word;
@@ -15,6 +13,11 @@ namespace AsposeMcpServer.Tools.Word;
 [McpServerToolType]
 public class WordFileTool
 {
+    /// <summary>
+    ///     Handler registry for file operations
+    /// </summary>
+    private readonly HandlerRegistry<Document> _handlerRegistry;
+
     /// <summary>
     ///     The session identity accessor for session isolation.
     /// </summary>
@@ -35,6 +38,7 @@ public class WordFileTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = WordFileHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -140,394 +144,105 @@ Template syntax (LINQ Reporting Engine, use 'ds' as data source prefix):
         [Description("Footer distance from page bottom in points (default: 35.4)")]
         double footerDistance = 35.4)
     {
-        return operation.ToLower() switch
+        var parameters = BuildParameters(operation, sessionId, path, outputPath, templatePath, dataJson, format,
+            inputPaths, importFormatMode, unlinkHeadersFooters, outputDir, splitBy, content, skipInitialContent,
+            marginTop, marginBottom, marginLeft, marginRight, compatibilityMode, paperSize, pageWidth, pageHeight,
+            headerDistance, footerDistance);
+
+        var handler = _handlerRegistry.GetHandler(operation);
+
+        // File operations don't use DocumentContext - create a minimal OperationContext
+        var operationContext = new OperationContext<Document>
         {
-            "create" => CreateDocument(outputPath, content, skipInitialContent, marginTop, marginBottom, marginLeft,
-                marginRight, compatibilityMode, paperSize, pageWidth, pageHeight, headerDistance, footerDistance),
-            "create_from_template" => CreateFromTemplate(templatePath, sessionId, outputPath, dataJson),
-            "convert" => ConvertDocument(path, sessionId, outputPath, format),
-            "merge" => MergeDocuments(inputPaths, outputPath, importFormatMode, unlinkHeadersFooters),
-            "split" => SplitDocument(path, sessionId, outputDir, splitBy),
-            _ => throw new ArgumentException($"Unknown operation: {operation}")
+            Document = null!,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = path,
+            OutputPath = outputPath
         };
+
+        return handler.Execute(operationContext, parameters);
     }
 
     /// <summary>
-    ///     Creates a new Word document with specified settings.
+    ///     Builds OperationParameters from method parameters.
     /// </summary>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="content">Initial content for the document.</param>
-    /// <param name="skipInitialContent">Whether to create a blank document.</param>
-    /// <param name="marginTop">Top margin in points.</param>
-    /// <param name="marginBottom">Bottom margin in points.</param>
-    /// <param name="marginLeft">Left margin in points.</param>
-    /// <param name="marginRight">Right margin in points.</param>
-    /// <param name="compatibilityMode">Word compatibility mode.</param>
-    /// <param name="paperSize">Predefined paper size.</param>
-    /// <param name="pageWidth">Custom page width in points.</param>
-    /// <param name="pageHeight">Custom page height in points.</param>
-    /// <param name="headerDistance">Header distance from page top.</param>
-    /// <param name="footerDistance">Footer distance from page bottom.</param>
-    /// <returns>A message indicating the document was created successfully.</returns>
-    /// <exception cref="ArgumentException">Thrown when outputPath is not provided.</exception>
-    private static string CreateDocument(string? outputPath, string? content, bool skipInitialContent, double marginTop,
-        double marginBottom, double marginLeft, double marginRight, string compatibilityMode, string paperSize,
-        double? pageWidth, double? pageHeight, double headerDistance, double footerDistance)
+    private static OperationParameters BuildParameters(
+        string operation,
+        string? sessionId,
+        string? path,
+        string? outputPath,
+        string? templatePath,
+        string? dataJson,
+        string? format,
+        string[]? inputPaths,
+        string importFormatMode,
+        bool unlinkHeadersFooters,
+        string? outputDir,
+        string splitBy,
+        string? content,
+        bool skipInitialContent,
+        double marginTop,
+        double marginBottom,
+        double marginLeft,
+        double marginRight,
+        string compatibilityMode,
+        string paperSize,
+        double? pageWidth,
+        double? pageHeight,
+        double headerDistance,
+        double footerDistance)
     {
-        if (string.IsNullOrEmpty(outputPath))
-            throw new ArgumentException("outputPath is required for create operation");
+        var parameters = new OperationParameters();
 
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
-
-        var outputDir = Path.GetDirectoryName(outputPath);
-        if (!string.IsNullOrEmpty(outputDir))
-            Directory.CreateDirectory(outputDir);
-
-        var doc = new Document();
-
-        var wordVersion = compatibilityMode switch
+        switch (operation.ToLower())
         {
-            "Word2019" => MsWordVersion.Word2019,
-            "Word2016" => MsWordVersion.Word2016,
-            "Word2013" => MsWordVersion.Word2013,
-            "Word2010" => MsWordVersion.Word2010,
-            "Word2007" => MsWordVersion.Word2007,
-            _ => MsWordVersion.Word2019
-        };
-        doc.CompatibilityOptions.OptimizeFor(wordVersion);
+            case "create":
+                if (outputPath != null) parameters.Set("outputPath", outputPath);
+                if (content != null) parameters.Set("content", content);
+                parameters.Set("skipInitialContent", skipInitialContent);
+                parameters.Set("marginTop", marginTop);
+                parameters.Set("marginBottom", marginBottom);
+                parameters.Set("marginLeft", marginLeft);
+                parameters.Set("marginRight", marginRight);
+                parameters.Set("compatibilityMode", compatibilityMode);
+                parameters.Set("paperSize", paperSize);
+                if (pageWidth.HasValue) parameters.Set("pageWidth", pageWidth.Value);
+                if (pageHeight.HasValue) parameters.Set("pageHeight", pageHeight.Value);
+                parameters.Set("headerDistance", headerDistance);
+                parameters.Set("footerDistance", footerDistance);
+                break;
 
-        var section = doc.FirstSection;
-        if (section != null)
-        {
-            var pageSetup = section.PageSetup;
+            case "create_from_template":
+                if (templatePath != null) parameters.Set("templatePath", templatePath);
+                if (sessionId != null) parameters.Set("sessionId", sessionId);
+                if (outputPath != null) parameters.Set("outputPath", outputPath);
+                if (dataJson != null) parameters.Set("dataJson", dataJson);
+                break;
 
-            if (!string.IsNullOrEmpty(paperSize) && pageWidth == null && pageHeight == null)
-            {
-                pageSetup.PaperSize = paperSize.ToUpper() switch
-                {
-                    "A4" => PaperSize.A4,
-                    "LETTER" => PaperSize.Letter,
-                    "A3" => PaperSize.A3,
-                    "LEGAL" => PaperSize.Legal,
-                    _ => PaperSize.A4
-                };
-            }
-            else if (pageWidth != null || pageHeight != null)
-            {
-                pageSetup.PaperSize = PaperSize.Custom;
-                pageSetup.PageWidth = pageWidth ?? 595.3;
-                pageSetup.PageHeight = pageHeight ?? 841.9;
-            }
-            else
-            {
-                pageSetup.PaperSize = PaperSize.A4;
-            }
+            case "convert":
+                if (path != null) parameters.Set("path", path);
+                if (sessionId != null) parameters.Set("sessionId", sessionId);
+                if (outputPath != null) parameters.Set("outputPath", outputPath);
+                if (format != null) parameters.Set("format", format);
+                break;
 
-            pageSetup.TopMargin = marginTop;
-            pageSetup.BottomMargin = marginBottom;
-            pageSetup.LeftMargin = marginLeft;
-            pageSetup.RightMargin = marginRight;
-            pageSetup.HeaderDistance = headerDistance;
-            pageSetup.FooterDistance = footerDistance;
+            case "merge":
+                if (inputPaths != null) parameters.Set("inputPaths", inputPaths);
+                if (outputPath != null) parameters.Set("outputPath", outputPath);
+                parameters.Set("importFormatMode", importFormatMode);
+                parameters.Set("unlinkHeadersFooters", unlinkHeadersFooters);
+                break;
+
+            case "split":
+                if (path != null) parameters.Set("path", path);
+                if (sessionId != null) parameters.Set("sessionId", sessionId);
+                if (outputDir != null) parameters.Set("outputDir", outputDir);
+                parameters.Set("splitBy", splitBy);
+                break;
         }
 
-        var builder = new DocumentBuilder(doc);
-
-        if (skipInitialContent)
-        {
-            if (doc.FirstSection is { Body: not null })
-            {
-                doc.FirstSection.Body.RemoveAllChildren();
-                var firstPara = new Paragraph(doc)
-                {
-                    ParagraphFormat =
-                    {
-                        SpaceBefore = 0,
-                        SpaceAfter = 0,
-                        LineSpacing = 12
-                    }
-                };
-                doc.FirstSection.Body.AppendChild(firstPara);
-            }
-        }
-        else if (!string.IsNullOrEmpty(content))
-        {
-            builder.Write(content);
-        }
-
-        doc.Save(outputPath);
-        return $"Word document created successfully at: {outputPath}";
-    }
-
-    /// <summary>
-    ///     Creates a document from a template using LINQ Reporting Engine.
-    /// </summary>
-    /// <param name="templatePath">The template file path.</param>
-    /// <param name="sessionId">The session ID for reading template from session.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="dataJson">The JSON data for template rendering.</param>
-    /// <returns>A message indicating the document was created successfully.</returns>
-    /// <exception cref="ArgumentException">
-    ///     Thrown when neither templatePath nor sessionId is provided, outputPath is not provided, or dataJson is not
-    ///     provided.
-    /// </exception>
-    /// <exception cref="InvalidOperationException">Thrown when session management is not enabled or document cloning fails.</exception>
-    /// <exception cref="FileNotFoundException">Thrown when the template file is not found.</exception>
-    private string CreateFromTemplate(string? templatePath, string? sessionId, string? outputPath, string? dataJson)
-    {
-        if (string.IsNullOrEmpty(templatePath) && string.IsNullOrEmpty(sessionId))
-            throw new ArgumentException(
-                "Either templatePath or sessionId is required for create_from_template operation");
-        if (string.IsNullOrEmpty(outputPath))
-            throw new ArgumentException("outputPath is required for create_from_template operation");
-
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
-
-        var outputDir = Path.GetDirectoryName(outputPath);
-        if (!string.IsNullOrEmpty(outputDir))
-            Directory.CreateDirectory(outputDir);
-
-        if (string.IsNullOrEmpty(dataJson))
-            throw new ArgumentException("dataJson parameter is required for create_from_template");
-
-        Document doc;
-        string templateSource;
-
-        if (!string.IsNullOrEmpty(sessionId))
-        {
-            if (_sessionManager == null)
-                throw new InvalidOperationException("Session management is not enabled");
-
-            var identity = _identityAccessor?.GetCurrentIdentity() ?? SessionIdentity.GetAnonymous();
-            var sessionDoc = _sessionManager.GetDocument<Document>(sessionId, identity);
-            doc = sessionDoc.Clone() ?? throw new InvalidOperationException("Failed to clone document from session");
-            templateSource = $"session {sessionId}";
-        }
-        else
-        {
-            SecurityHelper.ValidateFilePath(templatePath!, "templatePath", true);
-            if (!File.Exists(templatePath))
-                throw new FileNotFoundException($"Template file not found: {templatePath}");
-            doc = new Document(templatePath);
-            templateSource = Path.GetFileName(templatePath);
-        }
-
-        var engine = new ReportingEngine
-        {
-            Options = ReportBuildOptions.AllowMissingMembers | ReportBuildOptions.RemoveEmptyParagraphs
-        };
-
-        using var jsonStream = new MemoryStream(Encoding.UTF8.GetBytes(dataJson));
-        var loadOptions = new JsonDataLoadOptions
-        {
-            ExactDateTimeParseFormats = ["yyyy-MM-dd", "yyyy-MM-ddTHH:mm:ss"],
-            SimpleValueParseMode = JsonSimpleValueParseMode.Strict
-        };
-        var dataSource = new JsonDataSource(jsonStream, loadOptions);
-
-        engine.BuildReport(doc, dataSource, "ds");
-
-        doc.Save(outputPath);
-        return $"Document created from template ({templateSource}) using LINQ Reporting Engine: {outputPath}";
-    }
-
-    /// <summary>
-    ///     Converts a Word document to another format.
-    /// </summary>
-    /// <param name="path">The input file path.</param>
-    /// <param name="sessionId">The session ID for reading document from session.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="format">The target format (pdf, html, docx, txt, rtf, odt, epub, xps).</param>
-    /// <returns>A message indicating the conversion was successful.</returns>
-    /// <exception cref="ArgumentException">
-    ///     Thrown when neither path nor sessionId is provided, outputPath is not provided, or format is unsupported.
-    /// </exception>
-    /// <exception cref="InvalidOperationException">Thrown when session management is not enabled.</exception>
-    private string ConvertDocument(string? path, string? sessionId, string? outputPath, string? format)
-    {
-        if (string.IsNullOrEmpty(path) && string.IsNullOrEmpty(sessionId))
-            throw new ArgumentException("Either path or sessionId is required for convert operation");
-        if (string.IsNullOrEmpty(outputPath))
-            throw new ArgumentException("outputPath is required for convert operation");
-
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
-
-        var outputDir = Path.GetDirectoryName(outputPath);
-        if (!string.IsNullOrEmpty(outputDir))
-            Directory.CreateDirectory(outputDir);
-
-        var formatLower = format?.ToLower();
-        if (string.IsNullOrEmpty(formatLower))
-        {
-            var extension = Path.GetExtension(outputPath).TrimStart('.').ToLower();
-            formatLower = extension switch
-            {
-                "pdf" => "pdf",
-                "html" or "htm" => "html",
-                "docx" => "docx",
-                "doc" => "doc",
-                "txt" => "txt",
-                "rtf" => "rtf",
-                "odt" => "odt",
-                "epub" => "epub",
-                "xps" => "xps",
-                _ => throw new ArgumentException(
-                    $"Cannot infer format from extension '.{extension}'. Please specify format parameter.")
-            };
-        }
-
-        Document doc;
-        string sourceDescription;
-
-        if (!string.IsNullOrEmpty(sessionId))
-        {
-            if (_sessionManager == null)
-                throw new InvalidOperationException("Session management is not enabled");
-
-            var identity = _identityAccessor?.GetCurrentIdentity() ?? SessionIdentity.GetAnonymous();
-            doc = _sessionManager.GetDocument<Document>(sessionId, identity);
-            sourceDescription = $"session {sessionId}";
-        }
-        else
-        {
-            SecurityHelper.ValidateFilePath(path!, allowAbsolutePaths: true);
-            doc = new Document(path);
-            sourceDescription = path!;
-        }
-
-        var saveFormat = formatLower switch
-        {
-            "pdf" => SaveFormat.Pdf,
-            "html" => SaveFormat.Html,
-            "docx" => SaveFormat.Docx,
-            "doc" => SaveFormat.Doc,
-            "txt" => SaveFormat.Text,
-            "rtf" => SaveFormat.Rtf,
-            "odt" => SaveFormat.Odt,
-            "epub" => SaveFormat.Epub,
-            "xps" => SaveFormat.Xps,
-            _ => throw new ArgumentException($"Unsupported format: {format}")
-        };
-
-        doc.Save(outputPath, saveFormat);
-        return $"Document converted from {sourceDescription} to {outputPath} ({formatLower})";
-    }
-
-    /// <summary>
-    ///     Merges multiple Word documents into one.
-    /// </summary>
-    /// <param name="inputPaths">Array of input file paths to merge.</param>
-    /// <param name="outputPath">The output file path for the merged document.</param>
-    /// <param name="importFormatModeStr">Format mode: KeepSourceFormatting, UseDestinationStyles, KeepDifferentStyles.</param>
-    /// <param name="unlinkHeadersFooters">Whether to unlink headers/footers after merge.</param>
-    /// <returns>A message indicating the merge was successful with document count.</returns>
-    /// <exception cref="ArgumentException">Thrown when inputPaths is empty or outputPath is not provided.</exception>
-    private static string MergeDocuments(string[]? inputPaths, string? outputPath, string importFormatModeStr,
-        bool unlinkHeadersFooters)
-    {
-        if (inputPaths == null || inputPaths.Length == 0)
-            throw new ArgumentException("inputPaths is required for merge operation");
-        if (string.IsNullOrEmpty(outputPath))
-            throw new ArgumentException("outputPath is required for merge operation");
-
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
-
-        var outputDir = Path.GetDirectoryName(outputPath);
-        if (!string.IsNullOrEmpty(outputDir))
-            Directory.CreateDirectory(outputDir);
-
-        foreach (var inputPath in inputPaths)
-            SecurityHelper.ValidateFilePath(inputPath, "inputPaths", true);
-
-        var importFormatMode = importFormatModeStr switch
-        {
-            "UseDestinationStyles" => ImportFormatMode.UseDestinationStyles,
-            "KeepDifferentStyles" => ImportFormatMode.KeepDifferentStyles,
-            _ => ImportFormatMode.KeepSourceFormatting
-        };
-
-        var mergedDoc = new Document(inputPaths[0]);
-
-        for (var i = 1; i < inputPaths.Length; i++)
-        {
-            var doc = new Document(inputPaths[i]);
-            mergedDoc.AppendDocument(doc, importFormatMode);
-        }
-
-        if (unlinkHeadersFooters)
-            foreach (var section in mergedDoc.Sections.Cast<Section>())
-                section.HeadersFooters.LinkToPrevious(false);
-
-        mergedDoc.Save(outputPath);
-        return $"Merged {inputPaths.Length} documents into: {outputPath} (format mode: {importFormatModeStr})";
-    }
-
-    /// <summary>
-    ///     Splits a Word document by sections or pages.
-    /// </summary>
-    /// <param name="path">The input file path.</param>
-    /// <param name="sessionId">The session ID for reading document from session.</param>
-    /// <param name="outputDir">The output directory for split files.</param>
-    /// <param name="splitBy">Split method: section or page.</param>
-    /// <returns>A message indicating the split was successful with file count.</returns>
-    /// <exception cref="ArgumentException">
-    ///     Thrown when neither path nor sessionId is provided, or outputDir is not provided.
-    /// </exception>
-    /// <exception cref="InvalidOperationException">Thrown when session management is not enabled.</exception>
-    private string SplitDocument(string? path, string? sessionId, string? outputDir, string splitBy)
-    {
-        if (string.IsNullOrEmpty(path) && string.IsNullOrEmpty(sessionId))
-            throw new ArgumentException("Either path or sessionId is required for split operation");
-        if (string.IsNullOrEmpty(outputDir))
-            throw new ArgumentException("outputDir is required for split operation");
-
-        SecurityHelper.ValidateFilePath(outputDir, "outputDir", true);
-        Directory.CreateDirectory(outputDir);
-
-        Document doc;
-        string fileBaseName;
-
-        if (!string.IsNullOrEmpty(sessionId))
-        {
-            if (_sessionManager == null)
-                throw new InvalidOperationException("Session management is not enabled");
-
-            var identity = _identityAccessor?.GetCurrentIdentity() ?? SessionIdentity.GetAnonymous();
-            doc = _sessionManager.GetDocument<Document>(sessionId, identity);
-            fileBaseName = $"session_{sessionId}";
-        }
-        else
-        {
-            SecurityHelper.ValidateFilePath(path!, allowAbsolutePaths: true);
-            doc = new Document(path);
-            fileBaseName = SecurityHelper.SanitizeFileName(Path.GetFileNameWithoutExtension(path!));
-        }
-
-        if (splitBy.ToLower() == "section")
-        {
-            for (var i = 0; i < doc.Sections.Count; i++)
-            {
-                var sectionDoc = new Document();
-                sectionDoc.RemoveAllChildren();
-                sectionDoc.AppendChild(sectionDoc.ImportNode(doc.Sections[i], true));
-
-                var output = Path.Combine(outputDir, $"{fileBaseName}_section_{i + 1}.docx");
-                sectionDoc.Save(output);
-            }
-
-            return $"Document split into {doc.Sections.Count} sections in: {outputDir}";
-        }
-
-        doc.UpdatePageLayout();
-
-        var pageCount = doc.PageCount;
-        for (var i = 0; i < pageCount; i++)
-        {
-            var pageDoc = doc.ExtractPages(i, 1);
-            var output = Path.Combine(outputDir, $"{fileBaseName}_page_{i + 1}.docx");
-            pageDoc.Save(output);
-        }
-
-        return $"Document split into {pageCount} pages in: {outputDir}";
+        return parameters;
     }
 }

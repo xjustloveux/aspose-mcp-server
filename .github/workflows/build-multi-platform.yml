@@ -357,6 +357,7 @@ jobs:
           image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.create-release.outputs.release_tag }}
           format: 'sarif'
           output: 'trivy-results.sarif'
+          trivyignores: '.trivyignore'
         continue-on-error: true
 
       - name: Upload Trivy scan results to GitHub Security tab

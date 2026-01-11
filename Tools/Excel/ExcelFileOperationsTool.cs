@@ -1,18 +1,23 @@
 using System.ComponentModel;
 using Aspose.Cells;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.Excel.FileOperations;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
 
 /// <summary>
 ///     Unified tool for Excel file operations (create, convert, merge workbooks, split workbook).
-///     Merges: ExcelCreateTool, ExcelConvertTool, ExcelMergeWorkbooksTool, ExcelSplitWorkbookTool.
 /// </summary>
 [McpServerToolType]
 public class ExcelFileOperationsTool
 {
+    /// <summary>
+    ///     Handler registry for file operations.
+    /// </summary>
+    private readonly HandlerRegistry<Workbook> _handlerRegistry;
+
     /// <summary>
     ///     The session identity accessor for session isolation.
     /// </summary>
@@ -33,6 +38,7 @@ public class ExcelFileOperationsTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = ExcelFileOperationsHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -52,7 +58,6 @@ public class ExcelFileOperationsTool
     /// <param name="outputFileNamePattern">Output file name pattern with {index} and {name} placeholders.</param>
     /// <returns>A message indicating the result of the operation.</returns>
     /// <exception cref="ArgumentException">Thrown when the operation is unknown or required parameters are missing.</exception>
-    /// <exception cref="InvalidOperationException">Thrown when session management is not enabled but sessionId is provided.</exception>
     [McpServerTool(Name = "excel_file_operations")]
     [Description(@"Excel file operations. Supports 4 operations: create, convert, merge, split.
 
@@ -95,248 +100,75 @@ Usage examples:
             "Output file name pattern, use {index} for sheet index, {name} for sheet name (optional, for split, default: 'sheet_{name}.xlsx')")]
         string outputFileNamePattern = "sheet_{name}.xlsx")
     {
-        return operation.ToLower() switch
+        var parameters = BuildParameters(operation, sessionId, path, outputPath, inputPath, outputDirectory,
+            sheetName, format, inputPaths, mergeSheets, sheetIndices, outputFileNamePattern);
+
+        var handler = _handlerRegistry.GetHandler(operation);
+
+        var operationContext = new OperationContext<Workbook>
         {
-            "create" => CreateWorkbook(path, outputPath, sheetName),
-            "convert" => ConvertWorkbook(inputPath, sessionId, outputPath, format),
-            "merge" => MergeWorkbooks(path, outputPath, inputPaths, mergeSheets),
-            "split" => SplitWorkbook(inputPath, path, sessionId, outputDirectory, sheetIndices, outputFileNamePattern),
-            _ => throw new ArgumentException($"Unknown operation: {operation}")
-        };
-    }
-
-    /// <summary>
-    ///     Creates a new Excel workbook.
-    /// </summary>
-    /// <param name="path">The file path for the new workbook.</param>
-    /// <param name="outputPath">Alternative output file path.</param>
-    /// <param name="sheetName">Optional name for the initial worksheet.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when neither path nor outputPath is provided.</exception>
-    private static string CreateWorkbook(string? path, string? outputPath, string? sheetName)
-    {
-        var targetPath = path ?? outputPath ?? throw new ArgumentException("path or outputPath is required");
-        SecurityHelper.ValidateFilePath(targetPath, allowAbsolutePaths: true);
-
-        using var workbook = new Workbook();
-
-        if (!string.IsNullOrEmpty(sheetName))
-            workbook.Worksheets[0].Name = sheetName;
-
-        workbook.Save(targetPath);
-        return $"Excel workbook created successfully. Output: {targetPath}";
-    }
-
-    /// <summary>
-    ///     Converts an Excel workbook to a different format.
-    /// </summary>
-    /// <param name="inputPath">The source workbook file path.</param>
-    /// <param name="sessionId">Session ID to read workbook from session.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="format">The target format (pdf, html, csv, xlsx, xls, ods, txt, tsv).</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">
-    ///     Thrown when neither inputPath nor sessionId is provided, outputPath is not provided, or when the format is
-    ///     unsupported.
-    /// </exception>
-    private string ConvertWorkbook(string? inputPath, string? sessionId, string? outputPath, string? format)
-    {
-        if (string.IsNullOrEmpty(inputPath) && string.IsNullOrEmpty(sessionId))
-            throw new ArgumentException("Either inputPath or sessionId is required for convert operation");
-        if (string.IsNullOrEmpty(outputPath))
-            throw new ArgumentException("outputPath is required for convert operation");
-        if (string.IsNullOrEmpty(format))
-            throw new ArgumentException("format is required for convert operation");
-
-        Workbook workbook;
-        string sourceDescription;
-
-        if (!string.IsNullOrEmpty(sessionId))
-        {
-            if (_sessionManager == null)
-                throw new InvalidOperationException("Session management is not enabled");
-
-            var identity = _identityAccessor?.GetCurrentIdentity() ?? SessionIdentity.GetAnonymous();
-            workbook = _sessionManager.GetDocument<Workbook>(sessionId, identity);
-            sourceDescription = $"session {sessionId}";
-        }
-        else
-        {
-            workbook = new Workbook(inputPath);
-            sourceDescription = inputPath!;
-        }
-
-        var saveFormat = format.ToLower() switch
-        {
-            "pdf" => SaveFormat.Pdf,
-            "html" => SaveFormat.Html,
-            "csv" => SaveFormat.Csv,
-            "xlsx" => SaveFormat.Xlsx,
-            "xls" => SaveFormat.Excel97To2003,
-            "ods" => SaveFormat.Ods,
-            "txt" => SaveFormat.TabDelimited,
-            "tsv" => SaveFormat.TabDelimited,
-            _ => throw new ArgumentException($"Unsupported format: {format}")
+            Document = null!,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = inputPath ?? path,
+            OutputPath = outputPath ?? path
         };
 
-        workbook.Save(outputPath, saveFormat);
-        return $"Workbook from {sourceDescription} converted to {format} format. Output: {outputPath}";
+        return handler.Execute(operationContext, parameters);
     }
 
     /// <summary>
-    ///     Merges multiple Excel workbooks into one.
+    ///     Builds OperationParameters from method parameters.
     /// </summary>
-    /// <param name="path">The output file path.</param>
-    /// <param name="outputPath">Alternative output file path.</param>
-    /// <param name="inputPaths">Array of input workbook file paths to merge.</param>
-    /// <param name="mergeSheets">Whether to merge data from sheets with the same name by appending rows.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">
-    ///     Thrown when neither path nor outputPath is provided, or when no valid input paths
-    ///     are provided.
-    /// </exception>
-    private static string MergeWorkbooks(string? path, string? outputPath, string[]? inputPaths, bool mergeSheets)
-    {
-        var targetPath = path ?? outputPath ?? throw new ArgumentException("path or outputPath is required");
-
-        if (inputPaths == null || inputPaths.Length == 0)
-            throw new ArgumentException("At least one input path is required");
-
-        var validPaths = inputPaths.Where(p => !string.IsNullOrEmpty(p)).ToList();
-        if (validPaths.Count == 0)
-            throw new ArgumentException("No valid input paths provided");
-
-        foreach (var inputPath in validPaths)
-            SecurityHelper.ValidateFilePath(inputPath, "inputPaths", true);
-
-        SecurityHelper.ValidateFilePath(targetPath, "outputPath", true);
-
-        using var targetWorkbook = new Workbook(validPaths[0]);
-
-        for (var i = 1; i < validPaths.Count; i++)
-        {
-            using var sourceWorkbook = new Workbook(validPaths[i]);
-
-            if (mergeSheets)
-                foreach (var sourceSheet in sourceWorkbook.Worksheets)
-                {
-                    var existingSheet = targetWorkbook.Worksheets[sourceSheet.Name];
-                    if (existingSheet != null)
-                    {
-                        var lastRow = existingSheet.Cells.MaxDataRow + 1;
-                        var sourceMaxRow = sourceSheet.Cells.MaxDataRow;
-                        var sourceMaxCol = sourceSheet.Cells.MaxDataColumn;
-
-                        if (sourceMaxRow >= 0 && sourceMaxCol >= 0)
-                        {
-                            var sourceRange =
-                                sourceSheet.Cells.CreateRange(0, 0, sourceMaxRow + 1, sourceMaxCol + 1);
-                            var destRange =
-                                existingSheet.Cells.CreateRange(lastRow, 0, sourceMaxRow + 1, sourceMaxCol + 1);
-                            destRange.Copy(sourceRange, new PasteOptions { PasteType = PasteType.All });
-                        }
-                    }
-                    else
-                    {
-                        targetWorkbook.Worksheets.Add(sourceSheet.Name);
-                        var newSheet = targetWorkbook.Worksheets[^1];
-                        var sourceMaxRow = sourceSheet.Cells.MaxDataRow;
-                        var sourceMaxCol = sourceSheet.Cells.MaxDataColumn;
-
-                        if (sourceMaxRow >= 0 && sourceMaxCol >= 0)
-                        {
-                            var sourceRange =
-                                sourceSheet.Cells.CreateRange(0, 0, sourceMaxRow + 1, sourceMaxCol + 1);
-                            var destRange = newSheet.Cells.CreateRange(0, 0, sourceMaxRow + 1, sourceMaxCol + 1);
-                            destRange.Copy(sourceRange, new PasteOptions { PasteType = PasteType.All });
-                        }
-                    }
-                }
-            else
-                targetWorkbook.Combine(sourceWorkbook);
-        }
-
-        targetWorkbook.Save(targetPath);
-        return $"Merged {validPaths.Count} workbooks successfully. Output: {targetPath}";
-    }
-
-    /// <summary>
-    ///     Splits an Excel workbook into separate files, one per worksheet.
-    /// </summary>
-    /// <param name="inputPath">The source workbook file path.</param>
-    /// <param name="path">Alternative source file path.</param>
-    /// <param name="sessionId">Session ID to read workbook from session.</param>
-    /// <param name="outputDirectory">The directory to save split files.</param>
-    /// <param name="sheetIndices">Optional array of specific sheet indices to split.</param>
-    /// <param name="fileNamePattern">The output file name pattern with {index} and {name} placeholders.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">
-    ///     Thrown when neither inputPath, path, nor sessionId is provided, or when outputDirectory is not
-    ///     provided.
-    /// </exception>
-    private string SplitWorkbook(string? inputPath, string? path, string? sessionId, string? outputDirectory,
+    private static OperationParameters BuildParameters(
+        string operation,
+        string? sessionId,
+        string? path,
+        string? outputPath,
+        string? inputPath,
+        string? outputDirectory,
+        string? sheetName,
+        string? format,
+        string[]? inputPaths,
+        bool mergeSheets,
         int[]? sheetIndices,
-        string fileNamePattern)
+        string outputFileNamePattern)
     {
-        var sourcePath = inputPath ?? path;
-        if (string.IsNullOrEmpty(sourcePath) && string.IsNullOrEmpty(sessionId))
-            throw new ArgumentException("Either inputPath, path, or sessionId is required");
-        if (string.IsNullOrEmpty(outputDirectory))
-            throw new ArgumentException("outputDirectory is required for split operation");
+        var parameters = new OperationParameters();
 
-        if (!Directory.Exists(outputDirectory))
-            Directory.CreateDirectory(outputDirectory);
-
-        Workbook sourceWorkbook;
-
-        if (!string.IsNullOrEmpty(sessionId))
+        switch (operation.ToLowerInvariant())
         {
-            if (_sessionManager == null)
-                throw new InvalidOperationException("Session management is not enabled");
+            case "create":
+                if (path != null) parameters.Set("path", path);
+                if (outputPath != null) parameters.Set("outputPath", outputPath);
+                if (sheetName != null) parameters.Set("sheetName", sheetName);
+                break;
 
-            var identity = _identityAccessor?.GetCurrentIdentity() ?? SessionIdentity.GetAnonymous();
-            sourceWorkbook = _sessionManager.GetDocument<Workbook>(sessionId, identity);
-        }
-        else
-        {
-            sourceWorkbook = new Workbook(sourcePath);
-        }
+            case "convert":
+                if (inputPath != null) parameters.Set("inputPath", inputPath);
+                if (sessionId != null) parameters.Set("sessionId", sessionId);
+                if (outputPath != null) parameters.Set("outputPath", outputPath);
+                if (format != null) parameters.Set("format", format);
+                break;
 
-        var indicesToSplit = sheetIndices is { Length: > 0 }
-            ? sheetIndices.Distinct().ToList()
-            : Enumerable.Range(0, sourceWorkbook.Worksheets.Count).ToList();
+            case "merge":
+                if (path != null) parameters.Set("path", path);
+                if (outputPath != null) parameters.Set("outputPath", outputPath);
+                if (inputPaths != null) parameters.Set("inputPaths", inputPaths);
+                parameters.Set("mergeSheets", mergeSheets);
+                break;
 
-        List<string> splitFiles = [];
-
-        foreach (var sheetIndex in indicesToSplit)
-        {
-            if (sheetIndex < 0 || sheetIndex >= sourceWorkbook.Worksheets.Count)
-                continue;
-
-            var worksheet = sourceWorkbook.Worksheets[sheetIndex];
-            var fileName = fileNamePattern
-                .Replace("{index}", sheetIndex.ToString())
-                .Replace("{name}", worksheet.Name);
-            var outputFilePath = Path.Combine(outputDirectory, fileName);
-
-            using var newWorkbook = new Workbook();
-            newWorkbook.Worksheets.RemoveAt(0);
-            newWorkbook.Worksheets.Add(worksheet.Name);
-            var newSheet = newWorkbook.Worksheets[0];
-            var maxRow = worksheet.Cells.MaxDataRow;
-            var maxCol = worksheet.Cells.MaxDataColumn;
-
-            if (maxRow >= 0 && maxCol >= 0)
-            {
-                var sourceRange = worksheet.Cells.CreateRange(0, 0, maxRow + 1, maxCol + 1);
-                var destRange = newSheet.Cells.CreateRange(0, 0, maxRow + 1, maxCol + 1);
-                destRange.Copy(sourceRange, new PasteOptions { PasteType = PasteType.All });
-            }
-
-            newWorkbook.Save(outputFilePath);
-            splitFiles.Add(outputFilePath);
+            case "split":
+                if (inputPath != null) parameters.Set("inputPath", inputPath);
+                if (path != null) parameters.Set("path", path);
+                if (sessionId != null) parameters.Set("sessionId", sessionId);
+                if (outputDirectory != null) parameters.Set("outputDirectory", outputDirectory);
+                if (sheetIndices != null) parameters.Set("sheetIndices", sheetIndices);
+                parameters.Set("outputFileNamePattern", outputFileNamePattern);
+                break;
         }
 
-        return $"Split workbook into {splitFiles.Count} files. Output: {outputDirectory}";
+        return parameters;
     }
 }

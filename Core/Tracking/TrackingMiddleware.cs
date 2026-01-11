@@ -133,7 +133,7 @@ public class TrackingMiddleware
         return new TrackingEvent
         {
             Timestamp = DateTime.UtcNow,
-            TenantId = context.Items["TenantId"]?.ToString(),
+            GroupId = context.Items["GroupId"]?.ToString(),
             UserId = context.Items["UserId"]?.ToString(),
             Tool = tool,
             Operation = operation,

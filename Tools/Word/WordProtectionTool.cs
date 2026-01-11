@@ -1,6 +1,8 @@
 using System.ComponentModel;
 using Aspose.Words;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.Word.Protection;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Word;
@@ -12,6 +14,11 @@ namespace AsposeMcpServer.Tools.Word;
 [McpServerToolType]
 public class WordProtectionTool
 {
+    /// <summary>
+    ///     Handler registry for protection operations
+    /// </summary>
+    private readonly HandlerRegistry<Document> _handlerRegistry;
+
     /// <summary>
     ///     Identity accessor for session isolation
     /// </summary>
@@ -32,6 +39,7 @@ public class WordProtectionTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = WordProtectionHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -78,101 +86,55 @@ Notes:
             "Protection type: 'ReadOnly', 'AllowOnlyComments', 'AllowOnlyFormFields', 'AllowOnlyRevisions' (required for protect operation)")]
         string protectionType = "ReadOnly")
     {
-        return operation.ToLower() switch
+        var parameters = BuildParameters(operation, password, protectionType);
+
+        var handler = _handlerRegistry.GetHandler(operation);
+
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor, password);
+
+        var effectiveOutputPath = outputPath ?? path;
+
+        var operationContext = new OperationContext<Document>
         {
-            "protect" => Protect(path, sessionId, outputPath, password, protectionType),
-            "unprotect" => Unprotect(path, sessionId, outputPath, password),
-            _ => throw new ArgumentException($"Unknown operation: {operation}")
+            Document = ctx.Document,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = path,
+            OutputPath = effectiveOutputPath
         };
+
+        var result = handler.Execute(operationContext, parameters);
+
+        var shouldSave = operationContext.IsModified || (outputPath != null && outputPath != path);
+        if (shouldSave)
+            ctx.Save(effectiveOutputPath);
+
+        return ctx.IsSession ? result : $"{result}\n{ctx.GetOutputMessage(effectiveOutputPath)}";
     }
 
     /// <summary>
-    ///     Protects the document with specified protection type and password.
+    ///     Builds OperationParameters from method parameters.
     /// </summary>
-    /// <param name="path">The document file path.</param>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="password">The protection password.</param>
-    /// <param name="protectionType">The protection type string.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when password is null or empty.</exception>
-    private string Protect(string? path, string? sessionId, string? outputPath, string? password, string protectionType)
+    private static OperationParameters BuildParameters(
+        string operation,
+        string? password,
+        string protectionType)
     {
-        if (string.IsNullOrWhiteSpace(password))
-            throw new ArgumentException(
-                "Password is required for protect operation. Please provide a non-empty password.");
+        var parameters = new OperationParameters();
 
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor, password);
-        var doc = ctx.Document;
-        var protectionTypeEnum = GetProtectionType(protectionType);
-
-        doc.Protect(protectionTypeEnum, password);
-        ctx.Save(outputPath);
-
-        return ctx.IsSession
-            ? $"Document protected with {protectionTypeEnum}. {ctx.GetOutputMessage()}"
-            : $"Document protected with {protectionTypeEnum}: {outputPath ?? path}";
-    }
-
-    /// <summary>
-    ///     Converts a protection type string to ProtectionType enum using Enum.TryParse.
-    /// </summary>
-    /// <param name="protectionTypeStr">The protection type string to parse.</param>
-    /// <returns>The parsed ProtectionType enum value, or ReadOnly if parsing fails.</returns>
-    private static ProtectionType GetProtectionType(string protectionTypeStr)
-    {
-        if (Enum.TryParse<ProtectionType>(protectionTypeStr, true, out var result))
-            return result;
-
-        return ProtectionType.ReadOnly;
-    }
-
-    /// <summary>
-    ///     Removes protection from the document.
-    /// </summary>
-    /// <param name="path">The document file path.</param>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="password">The optional password for the protected document.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when unprotection fails.</exception>
-    private string Unprotect(string? path, string? sessionId, string? outputPath, string? password)
-    {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor, password);
-        var doc = ctx.Document;
-        var previousProtectionType = doc.ProtectionType;
-
-        if (previousProtectionType == ProtectionType.NoProtection)
+        switch (operation.ToLower())
         {
-            if (!ctx.IsSession && outputPath != null &&
-                !string.Equals(path, outputPath, StringComparison.OrdinalIgnoreCase))
-            {
-                ctx.Save(outputPath);
-                return $"Document is not protected, saved to: {outputPath}";
-            }
+            case "protect":
+                if (password != null) parameters.Set("password", password);
+                parameters.Set("protectionType", protectionType);
+                break;
 
-            return "Document is not protected, no need to unprotect";
+            case "unprotect":
+                if (password != null) parameters.Set("password", password);
+                break;
         }
 
-        try
-        {
-            doc.Unprotect(password);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException(
-                $"Failed to unprotect document: The password may be incorrect or the document has additional restrictions. Details: {ex.Message}",
-                ex);
-        }
-
-        if (doc.ProtectionType != ProtectionType.NoProtection)
-            throw new InvalidOperationException(
-                "Failed to unprotect document: The password may be incorrect. Please verify the password and try again.");
-
-        ctx.Save(outputPath);
-
-        return ctx.IsSession
-            ? $"Protection removed successfully (was: {previousProtectionType}). {ctx.GetOutputMessage()}"
-            : $"Protection removed successfully (was: {previousProtectionType})\nOutput: {outputPath ?? path}";
+        return parameters;
     }
 }

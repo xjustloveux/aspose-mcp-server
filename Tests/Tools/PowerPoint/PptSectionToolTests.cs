@@ -5,7 +5,12 @@ using AsposeMcpServer.Tools.PowerPoint;
 
 namespace AsposeMcpServer.Tests.Tools.PowerPoint;
 
-public class PptSectionToolTests : TestBase
+/// <summary>
+///     Integration tests for PptSectionTool.
+///     Focuses on session management, file I/O, and operation routing.
+///     Detailed parameter validation and business logic tests are in Handler tests.
+/// </summary>
+public class PptSectionToolTests : PptTestBase
 {
     private readonly PptSectionTool _tool;
 
@@ -14,33 +19,22 @@ public class PptSectionToolTests : TestBase
         _tool = new PptSectionTool(SessionManager);
     }
 
-    private string CreateTestPresentation(string fileName, int slideCount = 3)
-    {
-        var filePath = CreateTestFilePath(fileName);
-        using var presentation = new Presentation();
-        for (var i = 1; i < slideCount; i++)
-            presentation.Slides.AddEmptySlide(presentation.LayoutSlides[0]);
-        presentation.Save(filePath, SaveFormat.Pptx);
-        return filePath;
-    }
-
     private string CreatePresentationWithSection(string fileName, string sectionName = "Test Section")
     {
         var filePath = CreateTestFilePath(fileName);
         using var presentation = new Presentation();
-        presentation.Slides.AddEmptySlide(presentation.LayoutSlides[0]);
         presentation.Slides.AddEmptySlide(presentation.LayoutSlides[0]);
         presentation.Sections.AddSection(sectionName, presentation.Slides[0]);
         presentation.Save(filePath, SaveFormat.Pptx);
         return filePath;
     }
 
-    #region General
+    #region File I/O Smoke Tests
 
     [Fact]
     public void Add_ShouldAddSection()
     {
-        var pptPath = CreateTestPresentation("test_add.pptx");
+        var pptPath = CreatePresentation("test_add.pptx");
         var outputPath = CreateTestFilePath("test_add_output.pptx");
         var result = _tool.Execute("add", pptPath, name: "Section 1", slideIndex: 0, outputPath: outputPath);
         Assert.StartsWith("Section 'Section 1' added", result);
@@ -50,32 +44,12 @@ public class PptSectionToolTests : TestBase
     }
 
     [Fact]
-    public void Add_AtMiddleSlide_ShouldAddSectionAtCorrectPosition()
-    {
-        var pptPath = CreateTestPresentation("test_add_middle.pptx", 5);
-        var outputPath = CreateTestFilePath("test_add_middle_output.pptx");
-        var result = _tool.Execute("add", pptPath, name: "Middle Section", slideIndex: 2, outputPath: outputPath);
-        Assert.StartsWith("Section 'Middle Section' added", result);
-    }
-
-    [Fact]
     public void Get_ShouldReturnAllSections()
     {
         var pptPath = CreatePresentationWithSection("test_get.pptx");
         var result = _tool.Execute("get", pptPath);
         Assert.Contains("Test Section", result);
-        Assert.Contains("startSlideIndex", result);
-        Assert.Contains("slideCount", result);
         Assert.Contains("\"count\": 1", result);
-    }
-
-    [Fact]
-    public void Get_WhenNoSections_ShouldReturnEmptyResult()
-    {
-        var pptPath = CreateTestPresentation("test_get_empty.pptx");
-        var result = _tool.Execute("get", pptPath);
-        Assert.Contains("\"count\": 0", result);
-        Assert.Contains("No sections found", result);
     }
 
     [Fact]
@@ -93,157 +67,40 @@ public class PptSectionToolTests : TestBase
     public void Delete_WithKeepSlidesTrue_ShouldDeleteSectionKeepSlides()
     {
         var pptPath = CreatePresentationWithSection("test_delete_keep.pptx");
-        int slidesBefore;
-        using (var ppt = new Presentation(pptPath))
-        {
-            slidesBefore = ppt.Slides.Count;
-        }
-
         var outputPath = CreateTestFilePath("test_delete_keep_output.pptx");
         var result = _tool.Execute("delete", pptPath, sectionIndex: 0, keepSlides: true, outputPath: outputPath);
         Assert.StartsWith("Section 0 removed", result);
         using var presentation = new Presentation(outputPath);
         Assert.Empty(presentation.Sections);
-        Assert.Equal(slidesBefore, presentation.Slides.Count);
     }
 
-    [Fact]
-    public void Delete_WithKeepSlidesFalse_ShouldDeleteSectionAndSlides()
-    {
-        var pptPath = CreatePresentationWithSection("test_delete_slides.pptx");
-        var outputPath = CreateTestFilePath("test_delete_slides_output.pptx");
-        var result = _tool.Execute("delete", pptPath, sectionIndex: 0, keepSlides: false, outputPath: outputPath);
-        Assert.StartsWith("Section 0 removed", result);
-        using var presentation = new Presentation(outputPath);
-        Assert.Empty(presentation.Sections);
-    }
+    #endregion
+
+    #region Operation Routing
 
     [Theory]
     [InlineData("ADD")]
     [InlineData("Add")]
     [InlineData("add")]
-    public void Operation_ShouldBeCaseInsensitive_Add(string operation)
+    public void Operation_ShouldBeCaseInsensitive(string operation)
     {
-        var pptPath = CreateTestPresentation($"test_case_add_{operation}.pptx");
+        var pptPath = CreatePresentation($"test_case_add_{operation}.pptx");
         var outputPath = CreateTestFilePath($"test_case_add_{operation}_output.pptx");
         var result = _tool.Execute(operation, pptPath, name: "Section", slideIndex: 0, outputPath: outputPath);
         Assert.StartsWith("Section 'Section' added", result);
     }
 
-    [Theory]
-    [InlineData("GET")]
-    [InlineData("Get")]
-    [InlineData("get")]
-    public void Operation_ShouldBeCaseInsensitive_Get(string operation)
-    {
-        var pptPath = CreatePresentationWithSection($"test_case_get_{operation}.pptx");
-        var result = _tool.Execute(operation, pptPath);
-        Assert.Contains("\"count\"", result);
-    }
-
-    [Theory]
-    [InlineData("RENAME")]
-    [InlineData("Rename")]
-    [InlineData("rename")]
-    public void Operation_ShouldBeCaseInsensitive_Rename(string operation)
-    {
-        var pptPath = CreatePresentationWithSection($"test_case_rename_{operation}.pptx");
-        var outputPath = CreateTestFilePath($"test_case_rename_{operation}_output.pptx");
-        var result = _tool.Execute(operation, pptPath, sectionIndex: 0, newName: "Renamed", outputPath: outputPath);
-        Assert.StartsWith("Section 0 renamed to", result);
-    }
-
-    [Theory]
-    [InlineData("DELETE")]
-    [InlineData("Delete")]
-    [InlineData("delete")]
-    public void Operation_ShouldBeCaseInsensitive_Delete(string operation)
-    {
-        var pptPath = CreatePresentationWithSection($"test_case_del_{operation}.pptx");
-        var outputPath = CreateTestFilePath($"test_case_del_{operation}_output.pptx");
-        var result = _tool.Execute(operation, pptPath, sectionIndex: 0, outputPath: outputPath);
-        Assert.StartsWith("Section 0 removed", result);
-    }
-
-    #endregion
-
-    #region Exception
-
     [Fact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
     {
-        var pptPath = CreateTestPresentation("test_unknown_op.pptx");
+        var pptPath = CreatePresentation("test_unknown_op.pptx");
         var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("unknown", pptPath));
         Assert.Contains("Unknown operation", ex.Message);
     }
 
-    [Fact]
-    public void Add_WithoutName_ShouldThrowArgumentException()
-    {
-        var pptPath = CreateTestPresentation("test_add_no_name.pptx");
-        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("add", pptPath, slideIndex: 0));
-        Assert.Contains("name is required", ex.Message);
-    }
-
-    [Fact]
-    public void Add_WithoutSlideIndex_ShouldThrowArgumentException()
-    {
-        var pptPath = CreateTestPresentation("test_add_no_slide.pptx");
-        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("add", pptPath, name: "Section"));
-        Assert.Contains("slideIndex is required", ex.Message);
-    }
-
-    [Fact]
-    public void Add_WithInvalidSlideIndex_ShouldThrowArgumentException()
-    {
-        var pptPath = CreateTestPresentation("test_add_invalid_slide.pptx");
-        Assert.Throws<ArgumentException>(() => _tool.Execute("add", pptPath, name: "Section", slideIndex: 99));
-    }
-
-    [Fact]
-    public void Rename_WithoutSectionIndex_ShouldThrowArgumentException()
-    {
-        var pptPath = CreatePresentationWithSection("test_rename_no_index.pptx");
-        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("rename", pptPath, newName: "New Name"));
-        Assert.Contains("sectionIndex is required", ex.Message);
-    }
-
-    [Fact]
-    public void Rename_WithoutNewName_ShouldThrowArgumentException()
-    {
-        var pptPath = CreatePresentationWithSection("test_rename_no_name.pptx");
-        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("rename", pptPath, sectionIndex: 0));
-        Assert.Contains("newName is required", ex.Message);
-    }
-
-    [Fact]
-    public void Rename_WithInvalidIndex_ShouldThrowArgumentException()
-    {
-        var pptPath = CreatePresentationWithSection("test_rename_invalid.pptx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("rename", pptPath, sectionIndex: 99, newName: "New Name"));
-        Assert.Contains("section", ex.Message, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public void Delete_WithoutSectionIndex_ShouldThrowArgumentException()
-    {
-        var pptPath = CreatePresentationWithSection("test_delete_no_index.pptx");
-        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("delete", pptPath));
-        Assert.Contains("sectionIndex is required", ex.Message);
-    }
-
-    [Fact]
-    public void Delete_WithInvalidIndex_ShouldThrowArgumentException()
-    {
-        var pptPath = CreateTestPresentation("test_delete_invalid.pptx");
-        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("delete", pptPath, sectionIndex: 99));
-        Assert.Contains("section", ex.Message, StringComparison.OrdinalIgnoreCase);
-    }
-
     #endregion
 
-    #region Session
+    #region Session Management
 
     [Fact]
     public void Get_WithSessionId_ShouldReturnSectionsFromMemory()
@@ -258,7 +115,7 @@ public class PptSectionToolTests : TestBase
     [Fact]
     public void Add_WithSessionId_ShouldAddInMemory()
     {
-        var pptPath = CreateTestPresentation("test_session_add.pptx");
+        var pptPath = CreatePresentation("test_session_add.pptx");
         var sessionId = OpenSession(pptPath);
         var ppt = SessionManager.GetDocument<Presentation>(sessionId);
         var initialCount = ppt.Sections.Count;

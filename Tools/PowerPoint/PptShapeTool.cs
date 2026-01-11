@@ -1,10 +1,8 @@
 using System.ComponentModel;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using Aspose.Slides;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
-using AsposeMcpServer.Core.ShapeDetailProviders;
+using AsposeMcpServer.Handlers.PowerPoint.Shape;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.PowerPoint;
@@ -18,13 +16,9 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 public class PptShapeTool
 {
     /// <summary>
-    ///     JSON serializer options for consistent output formatting with support for floating point literals.
+    ///     Handler registry for shape operations.
     /// </summary>
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals
-    };
+    private readonly HandlerRegistry<Presentation> _handlerRegistry;
 
     /// <summary>
     ///     Identity accessor for session isolation.
@@ -46,6 +40,7 @@ public class PptShapeTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = PptShapeHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -161,654 +156,145 @@ Usage examples:
     {
         using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
-        return operation.ToLower() switch
+        var handlerOperation = MapOperationToHandler(operation);
+        var parameters = BuildParameters(operation, slideIndex, shapeIndex, shapeIndices, x, y, width, height,
+            rotation, text, fillColor, lineColor, lineWidth, clearFill, clearLine, fromSlide, toSlide, toIndex,
+            align, alignToSlide, flipHorizontal, flipVertical);
+
+        var handler = _handlerRegistry.GetHandler(handlerOperation);
+
+        var operationContext = new OperationContext<Presentation>
         {
-            "get" => GetShapes(ctx, slideIndex),
-            "get_details" => GetShapeDetails(ctx, slideIndex, shapeIndex),
-            "delete" => DeleteShape(ctx, outputPath, slideIndex, shapeIndex),
-            "edit" => EditShape(ctx, outputPath, slideIndex, shapeIndex, x, y, width, height, rotation, flipHorizontal,
-                flipVertical, text),
-            "set_format" => SetFormat(ctx, outputPath, slideIndex, shapeIndex, fillColor, lineColor, lineWidth),
-            "clear_format" => ClearFormat(ctx, outputPath, slideIndex, shapeIndex, clearFill, clearLine),
-            "group" => GroupShapes(ctx, outputPath, slideIndex, shapeIndices),
-            "ungroup" => UngroupShapes(ctx, outputPath, slideIndex, shapeIndex),
-            "copy" => CopyShape(ctx, outputPath, fromSlide, toSlide, shapeIndex),
-            "reorder" => ReorderShape(ctx, outputPath, slideIndex, shapeIndex, toIndex),
-            "align" => AlignShapes(ctx, outputPath, slideIndex, shapeIndices, align, alignToSlide),
-            "flip" => FlipShape(ctx, outputPath, slideIndex, shapeIndex, flipHorizontal, flipVertical),
-            _ => throw new ArgumentException($"Unknown operation: {operation}")
+            Document = ctx.Document,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = path,
+            OutputPath = outputPath
+        };
+
+        var result = handler.Execute(operationContext, parameters);
+
+        var op = operation.ToLowerInvariant();
+        if (op == "get" || op == "get_details")
+            return result;
+
+        if (operationContext.IsModified)
+            ctx.Save(outputPath);
+
+        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+    }
+
+    /// <summary>
+    ///     Maps Tool operation name to Handler operation name.
+    /// </summary>
+    private static string MapOperationToHandler(string operation)
+    {
+        return operation.ToLowerInvariant() switch
+        {
+            "get" => "get_shapes",
+            "get_details" => "get_shape_details",
+            _ => operation
         };
     }
 
     /// <summary>
-    ///     Gets all shapes from a slide.
+    ///     Builds OperationParameters from method parameters.
     /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="slideIndex">The zero-based index of the slide.</param>
-    /// <returns>A JSON string containing shape information including types, positions, and sizes.</returns>
-    /// <exception cref="ArgumentException">Thrown when slideIndex is not provided.</exception>
-    private static string GetShapes(DocumentContext<Presentation> ctx, int? slideIndex)
-    {
-        if (!slideIndex.HasValue)
-            throw new ArgumentException("slideIndex is required for get operation");
-
-        var presentation = ctx.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex.Value);
-
-        List<object> shapesList = [];
-        var userShapeCounter = 0;
-        for (var i = 0; i < slide.Shapes.Count; i++)
-        {
-            var s = slide.Shapes[i];
-            var isPlaceholder = s.Placeholder != null;
-            var (typeName, _) = ShapeDetailProviderFactory.GetShapeDetails(s, presentation);
-
-            var text = (s as IAutoShape)?.TextFrame?.Text;
-
-            shapesList.Add(new
-            {
-                index = i,
-                userShapeIndex = isPlaceholder ? (int?)-1 : userShapeCounter,
-                type = typeName,
-                isPlaceholder,
-                position = new { x = s.X, y = s.Y },
-                size = new { width = s.Width, height = s.Height },
-                text = string.IsNullOrWhiteSpace(text) ? null : text
-            });
-
-            if (!isPlaceholder) userShapeCounter++;
-        }
-
-        var result = new
-        {
-            slideIndex,
-            totalCount = slide.Shapes.Count,
-            userShapeCount = userShapeCounter,
-            shapes = shapesList
-        };
-
-        return JsonSerializer.Serialize(result, JsonOptions);
-    }
-
-    /// <summary>
-    ///     Gets detailed information about a specific shape.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="slideIndex">The zero-based index of the slide.</param>
-    /// <param name="shapeIndex">The zero-based index of the shape.</param>
-    /// <returns>
-    ///     A JSON string containing detailed shape information including position, size, rotation, fill, line, and
-    ///     type-specific properties.
-    /// </returns>
-    /// <exception cref="ArgumentException">Thrown when slideIndex or shapeIndex is not provided.</exception>
-    private static string GetShapeDetails(DocumentContext<Presentation> ctx, int? slideIndex, int? shapeIndex)
-    {
-        if (!slideIndex.HasValue)
-            throw new ArgumentException("slideIndex is required for get_details operation");
-        if (!shapeIndex.HasValue)
-            throw new ArgumentException("shapeIndex is required for get_details operation");
-
-        var presentation = ctx.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex.Value);
-        var shape = PowerPointHelper.GetShape(slide, shapeIndex.Value);
-
-        var frame = shape.Frame;
-        var (typeName, typeSpecificProperties) = ShapeDetailProviderFactory.GetShapeDetails(shape, presentation);
-
-        string? fillColorHex = null;
-        if (shape.FillFormat.FillType == FillType.Solid)
-        {
-            var color = shape.FillFormat.SolidFillColor.Color;
-            fillColorHex = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
-        }
-
-        string? lineColorHex = null;
-        if (shape.LineFormat.FillFormat.FillType == FillType.Solid)
-        {
-            var color = shape.LineFormat.FillFormat.SolidFillColor.Color;
-            lineColorHex = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
-        }
-
-        var result = new
-        {
-            slideIndex,
-            shapeIndex,
-            type = typeName,
-            isPlaceholder = shape.Placeholder != null,
-            position = new { x = shape.X, y = shape.Y },
-            size = new { width = shape.Width, height = shape.Height },
-            rotation = shape.Rotation,
-            flipH = frame.FlipH.ToString(),
-            flipV = frame.FlipV.ToString(),
-            fill = new
-            {
-                type = shape.FillFormat.FillType.ToString(),
-                color = fillColorHex
-            },
-            line = new
-            {
-                width = shape.LineFormat.Width,
-                color = lineColorHex
-            },
-            properties = typeSpecificProperties
-        };
-
-        return JsonSerializer.Serialize(result, JsonOptions);
-    }
-
-    /// <summary>
-    ///     Deletes a shape from a slide.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="slideIndex">The zero-based index of the slide.</param>
-    /// <param name="shapeIndex">The zero-based index of the shape to delete.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when slideIndex or shapeIndex is not provided or out of range.</exception>
-    private static string DeleteShape(DocumentContext<Presentation> ctx, string? outputPath, int? slideIndex,
-        int? shapeIndex)
-    {
-        if (!slideIndex.HasValue)
-            throw new ArgumentException("slideIndex is required for delete operation");
-        if (!shapeIndex.HasValue)
-            throw new ArgumentException("shapeIndex is required for delete operation");
-
-        var presentation = ctx.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex.Value);
-        PowerPointHelper.ValidateCollectionIndex(shapeIndex.Value, slide.Shapes.Count, "shapeIndex");
-
-        slide.Shapes.RemoveAt(shapeIndex.Value);
-
-        ctx.Save(outputPath);
-        var remaining = slide.Shapes.Count;
-
-        var result = $"Shape {shapeIndex} deleted from slide {slideIndex} ({remaining} remaining).\n";
-        result += ctx.GetOutputMessage(outputPath);
-        return result;
-    }
-
-    /// <summary>
-    ///     Edits shape properties.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="slideIndex">The zero-based index of the slide.</param>
-    /// <param name="shapeIndex">The zero-based index of the shape.</param>
-    /// <param name="x">The X position in points (optional).</param>
-    /// <param name="y">The Y position in points (optional).</param>
-    /// <param name="width">The width in points (optional).</param>
-    /// <param name="height">The height in points (optional).</param>
-    /// <param name="rotation">The rotation in degrees (optional).</param>
-    /// <param name="flipHorizontal">True to flip horizontally (optional).</param>
-    /// <param name="flipVertical">True to flip vertically (optional).</param>
-    /// <param name="text">The text content for AutoShape (optional).</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when slideIndex or shapeIndex is not provided.</exception>
-    private static string EditShape(DocumentContext<Presentation> ctx, string? outputPath, int? slideIndex,
+    private static OperationParameters BuildParameters(
+        string operation,
+        int? slideIndex,
         int? shapeIndex,
-        float? x, float? y, float? width, float? height, float? rotation, bool? flipHorizontal, bool? flipVertical,
-        string? text)
+        int[]? shapeIndices,
+        float? x,
+        float? y,
+        float? width,
+        float? height,
+        float? rotation,
+        string? text,
+        string? fillColor,
+        string? lineColor,
+        float? lineWidth,
+        bool clearFill,
+        bool clearLine,
+        int? fromSlide,
+        int? toSlide,
+        int? toIndex,
+        string? align,
+        bool alignToSlide,
+        bool? flipHorizontal,
+        bool? flipVertical)
     {
-        if (!slideIndex.HasValue)
-            throw new ArgumentException("slideIndex is required for edit operation");
-        if (!shapeIndex.HasValue)
-            throw new ArgumentException("shapeIndex is required for edit operation");
+        var parameters = new OperationParameters();
 
-        var presentation = ctx.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex.Value);
-        var shape = PowerPointHelper.GetShape(slide, shapeIndex.Value);
-
-        List<string> changes = [];
-
-        if (x.HasValue)
+        switch (operation.ToLowerInvariant())
         {
-            shape.X = x.Value;
-            changes.Add($"X={x.Value}");
+            case "get":
+            case "get_details":
+                if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
+                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
+                break;
+
+            case "delete":
+            case "ungroup":
+                if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
+                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
+                break;
+
+            case "edit":
+                if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
+                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
+                if (x.HasValue) parameters.Set("x", x.Value);
+                if (y.HasValue) parameters.Set("y", y.Value);
+                if (width.HasValue) parameters.Set("width", width.Value);
+                if (height.HasValue) parameters.Set("height", height.Value);
+                if (rotation.HasValue) parameters.Set("rotation", rotation.Value);
+                if (text != null) parameters.Set("text", text);
+                break;
+
+            case "set_format":
+                if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
+                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
+                if (fillColor != null) parameters.Set("fillColor", fillColor);
+                if (lineColor != null) parameters.Set("lineColor", lineColor);
+                if (lineWidth.HasValue) parameters.Set("lineWidth", lineWidth.Value);
+                break;
+
+            case "clear_format":
+                if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
+                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
+                parameters.Set("clearFill", clearFill);
+                parameters.Set("clearLine", clearLine);
+                break;
+
+            case "group":
+            case "align":
+                if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
+                if (shapeIndices != null) parameters.Set("shapeIndices", shapeIndices);
+                if (align != null) parameters.Set("align", align);
+                parameters.Set("alignToSlide", alignToSlide);
+                break;
+
+            case "copy":
+                if (fromSlide.HasValue) parameters.Set("fromSlide", fromSlide.Value);
+                if (toSlide.HasValue) parameters.Set("toSlide", toSlide.Value);
+                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
+                break;
+
+            case "reorder":
+                if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
+                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
+                if (toIndex.HasValue) parameters.Set("toIndex", toIndex.Value);
+                break;
+
+            case "flip":
+                if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
+                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
+                if (flipHorizontal.HasValue) parameters.Set("flipHorizontal", flipHorizontal.Value);
+                if (flipVertical.HasValue) parameters.Set("flipVertical", flipVertical.Value);
+                break;
         }
 
-        if (y.HasValue)
-        {
-            shape.Y = y.Value;
-            changes.Add($"Y={y.Value}");
-        }
-
-        if (width.HasValue)
-        {
-            shape.Width = width.Value;
-            changes.Add($"Width={width.Value}");
-        }
-
-        if (height.HasValue)
-        {
-            shape.Height = height.Value;
-            changes.Add($"Height={height.Value}");
-        }
-
-        if (rotation.HasValue)
-        {
-            shape.Rotation = rotation.Value;
-            changes.Add($"Rotation={rotation.Value}");
-        }
-
-        if (flipHorizontal.HasValue || flipVertical.HasValue)
-        {
-            var currentFrame = shape.Frame;
-            var newFlipH = flipHorizontal.HasValue
-                ? flipHorizontal.Value ? NullableBool.True : NullableBool.False
-                : currentFrame.FlipH;
-            var newFlipV = flipVertical.HasValue
-                ? flipVertical.Value ? NullableBool.True : NullableBool.False
-                : currentFrame.FlipV;
-
-            shape.Frame = new ShapeFrame(
-                shape.X, shape.Y, shape.Width, shape.Height,
-                newFlipH, newFlipV, shape.Rotation);
-
-            if (flipHorizontal.HasValue) changes.Add($"FlipH={flipHorizontal.Value}");
-            if (flipVertical.HasValue) changes.Add($"FlipV={flipVertical.Value}");
-        }
-
-        if (text != null && shape is IAutoShape { TextFrame: not null } autoShape)
-        {
-            autoShape.TextFrame.Text = text;
-            changes.Add("Text updated");
-        }
-
-        ctx.Save(outputPath);
-
-        var result = $"Shape {shapeIndex} on slide {slideIndex} edited ({string.Join(", ", changes)}).\n";
-        result += ctx.GetOutputMessage(outputPath);
-        return result;
-    }
-
-    /// <summary>
-    ///     Sets shape fill and line format.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="slideIndex">The zero-based index of the slide.</param>
-    /// <param name="shapeIndex">The zero-based index of the shape.</param>
-    /// <param name="fillColor">The fill color in hex format (e.g., #FF0000).</param>
-    /// <param name="lineColor">The line color in hex format.</param>
-    /// <param name="lineWidth">The line width in points.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when slideIndex or shapeIndex is not provided.</exception>
-    private static string SetFormat(DocumentContext<Presentation> ctx, string? outputPath, int? slideIndex,
-        int? shapeIndex,
-        string? fillColor, string? lineColor, float? lineWidth)
-    {
-        if (!slideIndex.HasValue)
-            throw new ArgumentException("slideIndex is required for set_format operation");
-        if (!shapeIndex.HasValue)
-            throw new ArgumentException("shapeIndex is required for set_format operation");
-
-        var presentation = ctx.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex.Value);
-        var shape = PowerPointHelper.GetShape(slide, shapeIndex.Value);
-
-        List<string> changes = [];
-
-        if (!string.IsNullOrWhiteSpace(fillColor))
-        {
-            var color = ColorHelper.ParseColor(fillColor);
-            shape.FillFormat.FillType = FillType.Solid;
-            shape.FillFormat.SolidFillColor.Color = color;
-            changes.Add($"Fill={fillColor}");
-        }
-
-        if (!string.IsNullOrWhiteSpace(lineColor))
-        {
-            var color = ColorHelper.ParseColor(lineColor);
-            shape.LineFormat.FillFormat.FillType = FillType.Solid;
-            shape.LineFormat.FillFormat.SolidFillColor.Color = color;
-            changes.Add($"LineColor={lineColor}");
-        }
-
-        if (lineWidth.HasValue)
-        {
-            shape.LineFormat.Width = lineWidth.Value;
-            changes.Add($"LineWidth={lineWidth.Value}");
-        }
-
-        ctx.Save(outputPath);
-
-        var result = $"Shape {shapeIndex} format updated ({string.Join(", ", changes)}).\n";
-        result += ctx.GetOutputMessage(outputPath);
-        return result;
-    }
-
-    /// <summary>
-    ///     Clears shape fill and/or line format.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="slideIndex">The zero-based index of the slide.</param>
-    /// <param name="shapeIndex">The zero-based index of the shape.</param>
-    /// <param name="clearFill">True to clear the fill format.</param>
-    /// <param name="clearLine">True to clear the line format.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">
-    ///     Thrown when slideIndex or shapeIndex is not provided, or neither clearFill nor
-    ///     clearLine is true.
-    /// </exception>
-    private static string ClearFormat(DocumentContext<Presentation> ctx, string? outputPath, int? slideIndex,
-        int? shapeIndex,
-        bool clearFill, bool clearLine)
-    {
-        if (!slideIndex.HasValue)
-            throw new ArgumentException("slideIndex is required for clear_format operation");
-        if (!shapeIndex.HasValue)
-            throw new ArgumentException("shapeIndex is required for clear_format operation");
-        if (!clearFill && !clearLine)
-            throw new ArgumentException("At least one of clearFill or clearLine must be true");
-
-        var presentation = ctx.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex.Value);
-        var shape = PowerPointHelper.GetShape(slide, shapeIndex.Value);
-
-        List<string> changes = [];
-
-        if (clearFill)
-        {
-            shape.FillFormat.FillType = FillType.NoFill;
-            changes.Add("Fill cleared");
-        }
-
-        if (clearLine)
-        {
-            shape.LineFormat.FillFormat.FillType = FillType.NoFill;
-            changes.Add("Line cleared");
-        }
-
-        ctx.Save(outputPath);
-
-        var result = $"Shape {shapeIndex} format cleared ({string.Join(", ", changes)}).\n";
-        result += ctx.GetOutputMessage(outputPath);
-        return result;
-    }
-
-    /// <summary>
-    ///     Groups multiple shapes together.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="slideIndex">The zero-based index of the slide.</param>
-    /// <param name="shapeIndices">Array of shape indices to group.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when slideIndex is not provided or less than 2 shapes are specified.</exception>
-    private static string GroupShapes(DocumentContext<Presentation> ctx, string? outputPath, int? slideIndex,
-        int[]? shapeIndices)
-    {
-        if (!slideIndex.HasValue)
-            throw new ArgumentException("slideIndex is required for group operation");
-        if (shapeIndices == null || shapeIndices.Length < 2)
-            throw new ArgumentException("At least 2 shapes are required for grouping");
-
-        var presentation = ctx.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex.Value);
-
-        var sortedIndices = shapeIndices.OrderByDescending(s => s).ToList();
-
-        List<(IShape shape, int originalIndex)> shapesToGroup = [];
-        foreach (var idx in sortedIndices)
-        {
-            PowerPointHelper.ValidateCollectionIndex(idx, slide.Shapes.Count, "shapeIndex");
-            shapesToGroup.Add((slide.Shapes[idx], idx));
-        }
-
-        var minX = shapesToGroup.Min(s => s.shape.X);
-        var minY = shapesToGroup.Min(s => s.shape.Y);
-        var maxX = shapesToGroup.Max(s => s.shape.X + s.shape.Width);
-        var maxY = shapesToGroup.Max(s => s.shape.Y + s.shape.Height);
-
-        var groupShape = slide.Shapes.AddGroupShape();
-        groupShape.X = minX;
-        groupShape.Y = minY;
-        groupShape.Width = maxX - minX;
-        groupShape.Height = maxY - minY;
-
-        foreach (var (shape, originalIndex) in shapesToGroup)
-        {
-            var clonedShape = groupShape.Shapes.AddClone(shape);
-            clonedShape.X = shape.X - minX;
-            clonedShape.Y = shape.Y - minY;
-            slide.Shapes.RemoveAt(originalIndex);
-        }
-
-        ctx.Save(outputPath);
-
-        var result = $"Grouped {shapeIndices.Length} shapes on slide {slideIndex}.\n";
-        result += ctx.GetOutputMessage(outputPath);
-        return result;
-    }
-
-    /// <summary>
-    ///     Ungroups a group shape.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="slideIndex">The zero-based index of the slide.</param>
-    /// <param name="shapeIndex">The zero-based index of the group shape to ungroup.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when slideIndex or shapeIndex is not provided, or the shape is not a group.</exception>
-    private static string UngroupShapes(DocumentContext<Presentation> ctx, string? outputPath, int? slideIndex,
-        int? shapeIndex)
-    {
-        if (!slideIndex.HasValue)
-            throw new ArgumentException("slideIndex is required for ungroup operation");
-        if (!shapeIndex.HasValue)
-            throw new ArgumentException("shapeIndex is required for ungroup operation");
-
-        var presentation = ctx.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex.Value);
-        var shape = PowerPointHelper.GetShape(slide, shapeIndex.Value);
-
-        if (shape is not IGroupShape groupShape)
-            throw new ArgumentException($"Shape at index {shapeIndex} is not a group");
-
-        var groupIndex = slide.Shapes.IndexOf(groupShape);
-        var shapesInGroup = groupShape.Shapes.ToList();
-
-        var insertIndex = groupIndex;
-        foreach (var s in shapesInGroup)
-        {
-            slide.Shapes.InsertClone(insertIndex, s);
-            insertIndex++;
-        }
-
-        slide.Shapes.Remove(groupShape);
-
-        ctx.Save(outputPath);
-
-        var result = $"Ungrouped {shapesInGroup.Count} shapes on slide {slideIndex}.\n";
-        result += ctx.GetOutputMessage(outputPath);
-        return result;
-    }
-
-    /// <summary>
-    ///     Copies a shape to another slide.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="fromSlide">The source slide index (0-based).</param>
-    /// <param name="toSlide">The target slide index (0-based).</param>
-    /// <param name="shapeIndex">The zero-based index of the shape to copy.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when fromSlide, toSlide, or shapeIndex is not provided or out of range.</exception>
-    private static string CopyShape(DocumentContext<Presentation> ctx, string? outputPath, int? fromSlide, int? toSlide,
-        int? shapeIndex)
-    {
-        if (!fromSlide.HasValue)
-            throw new ArgumentException("fromSlide is required for copy operation");
-        if (!toSlide.HasValue)
-            throw new ArgumentException("toSlide is required for copy operation");
-        if (!shapeIndex.HasValue)
-            throw new ArgumentException("shapeIndex is required for copy operation");
-
-        var presentation = ctx.Document;
-
-        PowerPointHelper.ValidateCollectionIndex(fromSlide.Value, presentation.Slides.Count, "fromSlide");
-        PowerPointHelper.ValidateCollectionIndex(toSlide.Value, presentation.Slides.Count, "toSlide");
-
-        var sourceSlide = presentation.Slides[fromSlide.Value];
-        PowerPointHelper.ValidateCollectionIndex(shapeIndex.Value, sourceSlide.Shapes.Count, "shapeIndex");
-
-        var targetSlide = presentation.Slides[toSlide.Value];
-        targetSlide.Shapes.AddClone(sourceSlide.Shapes[shapeIndex.Value]);
-
-        ctx.Save(outputPath);
-
-        var result = $"Shape {shapeIndex} copied from slide {fromSlide} to slide {toSlide}.\n";
-        result += ctx.GetOutputMessage(outputPath);
-        return result;
-    }
-
-    /// <summary>
-    ///     Reorders a shape's Z-order position.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="slideIndex">The zero-based index of the slide.</param>
-    /// <param name="shapeIndex">The current zero-based index of the shape.</param>
-    /// <param name="toIndex">The target Z-order index (0-based).</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when slideIndex, shapeIndex, or toIndex is not provided or out of range.</exception>
-    private static string ReorderShape(DocumentContext<Presentation> ctx, string? outputPath, int? slideIndex,
-        int? shapeIndex, int? toIndex)
-    {
-        if (!slideIndex.HasValue)
-            throw new ArgumentException("slideIndex is required for reorder operation");
-        if (!shapeIndex.HasValue)
-            throw new ArgumentException("shapeIndex is required for reorder operation");
-        if (!toIndex.HasValue)
-            throw new ArgumentException("toIndex is required for reorder operation");
-
-        var presentation = ctx.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex.Value);
-
-        PowerPointHelper.ValidateCollectionIndex(shapeIndex.Value, slide.Shapes.Count, "shapeIndex");
-        PowerPointHelper.ValidateCollectionIndex(toIndex.Value, slide.Shapes.Count, "toIndex");
-
-        var shape = slide.Shapes[shapeIndex.Value];
-        slide.Shapes.Reorder(toIndex.Value, shape);
-
-        ctx.Save(outputPath);
-
-        var result = $"Shape Z-order changed: {shapeIndex} -> {toIndex}.\n";
-        result += ctx.GetOutputMessage(outputPath);
-        return result;
-    }
-
-    /// <summary>
-    ///     Aligns multiple shapes.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="slideIndex">The zero-based index of the slide.</param>
-    /// <param name="shapeIndices">Array of shape indices to align.</param>
-    /// <param name="align">The alignment type: left, center, right, top, middle, or bottom.</param>
-    /// <param name="alignToSlide">True to align to slide bounds, false to align to shape bounds.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">
-    ///     Thrown when slideIndex or align is not provided, less than 2 shapes are specified,
-    ///     or align value is invalid.
-    /// </exception>
-    private static string AlignShapes(DocumentContext<Presentation> ctx, string? outputPath, int? slideIndex,
-        int[]? shapeIndices, string? align, bool alignToSlide)
-    {
-        if (!slideIndex.HasValue)
-            throw new ArgumentException("slideIndex is required for align operation");
-        if (string.IsNullOrEmpty(align))
-            throw new ArgumentException("align is required for align operation");
-        if (shapeIndices == null || shapeIndices.Length < 2)
-            throw new ArgumentException("At least 2 shapes are required for alignment");
-
-        var presentation = ctx.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex.Value);
-
-        foreach (var idx in shapeIndices)
-            PowerPointHelper.ValidateCollectionIndex(idx, slide.Shapes.Count, "shapeIndex");
-
-        var shapes = shapeIndices.Select(idx => slide.Shapes[idx]).ToArray();
-
-        var refBox = alignToSlide
-            ? new { X = 0f, Y = 0f, W = presentation.SlideSize.Size.Width, H = presentation.SlideSize.Size.Height }
-            : new
-            {
-                X = shapes.Min(s => s.X),
-                Y = shapes.Min(s => s.Y),
-                W = shapes.Max(s => s.X + s.Width) - shapes.Min(s => s.X),
-                H = shapes.Max(s => s.Y + s.Height) - shapes.Min(s => s.Y)
-            };
-
-        foreach (var s in shapes)
-            switch (align.ToLower())
-            {
-                case "left": s.X = refBox.X; break;
-                case "center": s.X = refBox.X + (refBox.W - s.Width) / 2f; break;
-                case "right": s.X = refBox.X + refBox.W - s.Width; break;
-                case "top": s.Y = refBox.Y; break;
-                case "middle": s.Y = refBox.Y + (refBox.H - s.Height) / 2f; break;
-                case "bottom": s.Y = refBox.Y + refBox.H - s.Height; break;
-                default:
-                    throw new ArgumentException("align must be: left|center|right|top|middle|bottom");
-            }
-
-        ctx.Save(outputPath);
-
-        var result = $"Aligned {shapeIndices.Length} shapes: {align}.\n";
-        result += ctx.GetOutputMessage(outputPath);
-        return result;
-    }
-
-    /// <summary>
-    ///     Flips a shape horizontally or vertically.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="slideIndex">The zero-based index of the slide.</param>
-    /// <param name="shapeIndex">The zero-based index of the shape.</param>
-    /// <param name="flipHorizontal">True to flip horizontally (optional).</param>
-    /// <param name="flipVertical">True to flip vertically (optional).</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">
-    ///     Thrown when slideIndex or shapeIndex is not provided, or neither flip option is
-    ///     specified.
-    /// </exception>
-    private static string FlipShape(DocumentContext<Presentation> ctx, string? outputPath, int? slideIndex,
-        int? shapeIndex, bool? flipHorizontal, bool? flipVertical)
-    {
-        if (!slideIndex.HasValue)
-            throw new ArgumentException("slideIndex is required for flip operation");
-        if (!shapeIndex.HasValue)
-            throw new ArgumentException("shapeIndex is required for flip operation");
-        if (!flipHorizontal.HasValue && !flipVertical.HasValue)
-            throw new ArgumentException("At least one of flipHorizontal or flipVertical must be provided");
-
-        var presentation = ctx.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex.Value);
-        var shape = PowerPointHelper.GetShape(slide, shapeIndex.Value);
-
-        var currentFrame = shape.Frame;
-        var newFlipH = flipHorizontal.HasValue
-            ? flipHorizontal.Value ? NullableBool.True : NullableBool.False
-            : currentFrame.FlipH;
-        var newFlipV = flipVertical.HasValue
-            ? flipVertical.Value ? NullableBool.True : NullableBool.False
-            : currentFrame.FlipV;
-
-        shape.Frame = new ShapeFrame(
-            currentFrame.X, currentFrame.Y, currentFrame.Width, currentFrame.Height,
-            newFlipH, newFlipV, currentFrame.Rotation);
-
-        ctx.Save(outputPath);
-
-        List<string> flipDesc = [];
-        if (flipHorizontal.HasValue) flipDesc.Add($"H={flipHorizontal.Value}");
-        if (flipVertical.HasValue) flipDesc.Add($"V={flipVertical.Value}");
-
-        var result = $"Shape {shapeIndex} flipped ({string.Join(", ", flipDesc)}).\n";
-        result += ctx.GetOutputMessage(outputPath);
-        return result;
+        return parameters;
     }
 }

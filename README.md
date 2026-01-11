@@ -326,12 +326,11 @@ document_session(operation="recover", sessionId="sess_abc123", outputPath="recov
 | `ASPOSE_SESSION_TEMP_DIR` | 臨時目錄 | 系統臨時目錄 |
 | `ASPOSE_SESSION_TEMP_RETENTION_HOURS` | 暫存檔保留時間（小時） | 24 |
 | `ASPOSE_SESSION_ON_DISCONNECT` | 斷線行為 (SaveToTemp/Discard/KeepInMemory) | SaveToTemp |
-| `ASPOSE_SESSION_ISOLATION` | 隔離模式 (none/tenant/user) | user |
+| `ASPOSE_SESSION_ISOLATION` | 隔離模式 (none/group) | group |
 
 **隔離模式說明：**
 - `none` - 無隔離，所有用戶可存取所有 session（Stdio 模式向後兼容）
-- `tenant` - 租戶級隔離，同租戶內的用戶可相互存取 session
-- `user` - 用戶級隔離，用戶只能存取自己的 session（預設）
+- `group` - 群組級隔離，同群組內的用戶可相互存取 session（預設）。群組識別符來源可透過 `ASPOSE_AUTH_JWT_GROUP_CLAIM` 配置（預設為 tenant_id）
 
 **命令行參數：**
 
@@ -345,11 +344,13 @@ document_session(operation="recover", sessionId="sess_abc123", outputPath="recov
 | `--session-temp-dir:path` | 臨時目錄 |
 | `--session-temp-retention-hours:N` | 暫存檔保留時間（小時） |
 | `--session-on-disconnect:behavior` | 斷線行為 |
-| `--session-isolation:mode` | 隔離模式 (none/tenant/user) |
+| `--session-isolation:mode` | 隔離模式 (none/group) |
 
 ## 🔐 認證機制
 
 啟用 SSE 或 WebSocket 模式時，可配置認證機制保護 API：
+
+> **雙重認證模式**：當 API Key 和 JWT 同時啟用時，請求必須**同時通過兩者驗證**（串聯模式）。API Key 驗證先執行，失敗則直接返回 401；通過後再執行 JWT 驗證。若只需其中一種認證通過，請僅啟用其一。
 
 ### API Key 認證
 
@@ -359,14 +360,14 @@ document_session(operation="recover", sessionId="sess_abc123", outputPath="recov
 ```bash
 set ASPOSE_AUTH_APIKEY_ENABLED=true
 set ASPOSE_AUTH_APIKEY_MODE=local
-set ASPOSE_AUTH_APIKEY_KEYS=key1:tenant1,key2:tenant2
+set ASPOSE_AUTH_APIKEY_KEYS=key1:group1,key2:group2
 ```
 
 **Gateway 模式**（信任 API Gateway 傳遞的標頭）：
 ```bash
 set ASPOSE_AUTH_APIKEY_ENABLED=true
 set ASPOSE_AUTH_APIKEY_MODE=gateway
-# 從 X-API-Key 和 X-Tenant-Id 標頭讀取
+# 從 X-API-Key 和 X-Group-Id 標頭讀取
 ```
 
 **Introspection 模式**（呼叫外部端點驗證）：
@@ -376,7 +377,7 @@ set ASPOSE_AUTH_APIKEY_MODE=introspection
 set ASPOSE_AUTH_APIKEY_INTROSPECTION_URL=https://auth.example.com/validate
 ```
 
-端點需回傳 JSON：`{"active": true, "tenant_id": "..."}`
+端點需回傳 JSON：`{"active": true, "group_id": "..."}`
 
 **Custom 模式**（自訂驗證邏輯）：
 ```bash
@@ -385,7 +386,7 @@ set ASPOSE_AUTH_APIKEY_MODE=custom
 set ASPOSE_AUTH_APIKEY_CUSTOM_URL=https://auth.example.com/custom
 ```
 
-端點需回傳 JSON：`{"valid": true, "tenant_id": "..."}`
+端點需回傳 JSON：`{"valid": true, "group_id": "..."}`
 
 ### JWT 認證
 
@@ -409,9 +410,9 @@ set ASPOSE_AUTH_JWT_PUBLIC_KEY_PATH=/path/to/public.pem
 
 **Gateway/Introspection/Custom 模式**：與 API Key 類似配置
 
-JWT Introspection 端點需回傳 JSON：`{"active": true, "tenant_id": "...", "sub": "..."}`
+JWT Introspection 端點需回傳 JSON：`{"active": true, "group_id": "...", "sub": "..."}`
 
-JWT Custom 端點需回傳 JSON：`{"valid": true, "tenant_id": "...", "user_id": "..."}`
+JWT Custom 端點需回傳 JSON：`{"valid": true, "group_id": "...", "user_id": "..."}`
 
 ### 外部端點請求格式
 
@@ -448,23 +449,29 @@ MCP Server 發送到外部驗證端點的請求格式：
 |------|------|--------|
 | `ASPOSE_AUTH_APIKEY_ENABLED` | 啟用 API Key 認證 | false |
 | `ASPOSE_AUTH_APIKEY_MODE` | 模式 (local/gateway/introspection/custom) | local |
-| `ASPOSE_AUTH_APIKEY_KEYS` | API Key 列表 (key:tenant,...) | - |
+| `ASPOSE_AUTH_APIKEY_KEYS` | API Key 列表 (key:group,...) | - |
 | `ASPOSE_AUTH_APIKEY_HEADER` | API Key 標頭名稱 | X-API-Key |
-| `ASPOSE_AUTH_APIKEY_TENANT_HEADER` | 租戶 ID 標頭名稱 (Gateway 模式) | X-Tenant-Id |
+| `ASPOSE_AUTH_APIKEY_GROUP_HEADER` | 群組 ID 標頭名稱 (Gateway 模式) | X-Group-Id |
 | `ASPOSE_AUTH_APIKEY_INTROSPECTION_AUTH` | Introspection 認證標頭值 | - |
 | `ASPOSE_AUTH_APIKEY_TIMEOUT` | 外部驗證逾時（秒，Introspection/Custom） | 5 |
+| `ASPOSE_AUTH_APIKEY_CACHE_ENABLED` | 啟用驗證結果快取 | true |
+| `ASPOSE_AUTH_APIKEY_CACHE_TTL` | 快取存活時間（秒） | 300 |
+| `ASPOSE_AUTH_APIKEY_CACHE_MAX_SIZE` | 快取最大項目數 | 10000 |
 | `ASPOSE_AUTH_JWT_ENABLED` | 啟用 JWT 認證 | false |
 | `ASPOSE_AUTH_JWT_MODE` | 模式 (local/gateway/introspection/custom) | local |
 | `ASPOSE_AUTH_JWT_SECRET` | HMAC 密鑰 | - |
 | `ASPOSE_AUTH_JWT_ISSUER` | 預期發行者 | - |
 | `ASPOSE_AUTH_JWT_AUDIENCE` | 預期受眾 | - |
-| `ASPOSE_AUTH_JWT_TENANT_CLAIM` | 租戶 ID Claim 名稱 | tenant_id |
+| `ASPOSE_AUTH_JWT_GROUP_CLAIM` | 群組 ID Claim 名稱 (如 tenant_id, team_id, org_id) | tenant_id |
 | `ASPOSE_AUTH_JWT_USER_CLAIM` | 使用者 ID Claim 名稱 | sub |
-| `ASPOSE_AUTH_JWT_TENANT_HEADER` | 租戶 ID 標頭名稱 (Gateway 模式) | X-Tenant-Id |
+| `ASPOSE_AUTH_JWT_GROUP_HEADER` | 群組 ID 標頭名稱 (Gateway 模式) | X-Group-Id |
 | `ASPOSE_AUTH_JWT_USER_HEADER` | 使用者 ID 標頭名稱 (Gateway 模式) | X-User-Id |
 | `ASPOSE_AUTH_JWT_CLIENT_ID` | OIDC 客戶端 ID (Introspection 模式) | - |
 | `ASPOSE_AUTH_JWT_CLIENT_SECRET` | OIDC 客戶端密鑰 (Introspection 模式) | - |
 | `ASPOSE_AUTH_JWT_TIMEOUT` | 外部驗證逾時（秒，Introspection/Custom） | 5 |
+| `ASPOSE_AUTH_JWT_CACHE_ENABLED` | 啟用驗證結果快取 | true |
+| `ASPOSE_AUTH_JWT_CACHE_TTL` | 快取存活時間（秒） | 300 |
+| `ASPOSE_AUTH_JWT_CACHE_MAX_SIZE` | 快取最大項目數 | 10000 |
 
 **命令行參數：**
 
@@ -473,14 +480,17 @@ MCP Server 發送到外部驗證端點的請求格式：
 | `--auth-apikey-enabled` | 啟用 API Key 認證 |
 | `--auth-apikey-disabled` | 停用 API Key 認證 |
 | `--auth-apikey-mode:mode` | API Key 驗證模式 |
-| `--auth-apikey-keys:key1:tenant1,key2:tenant2` | API Key 列表（tenant 可包含冒號） |
+| `--auth-apikey-keys:key1:group1,key2:group2` | API Key 列表（group 可包含冒號） |
 | `--auth-apikey-header:name` | API Key 標頭名稱 |
-| `--auth-apikey-tenant-header:name` | 租戶 ID 標頭名稱 |
+| `--auth-apikey-group-header:name` | 群組 ID 標頭名稱 |
 | `--auth-apikey-introspection-url:url` | Introspection 端點 URL |
 | `--auth-apikey-introspection-auth:value` | Introspection 認證標頭值 |
 | `--auth-apikey-introspection-field:name` | Introspection 請求欄位名稱（預設：key） |
 | `--auth-apikey-custom-url:url` | Custom 驗證端點 URL |
 | `--auth-apikey-timeout:N` | 外部驗證逾時（秒，Introspection/Custom） |
+| `--auth-apikey-cache-enabled` | 啟用驗證結果快取 |
+| `--auth-apikey-cache-ttl:N` | 快取存活時間（秒） |
+| `--auth-apikey-cache-max-size:N` | 快取最大項目數 |
 | `--auth-jwt-enabled` | 啟用 JWT 認證 |
 | `--auth-jwt-disabled` | 停用 JWT 認證 |
 | `--auth-jwt-mode:mode` | JWT 驗證模式 |
@@ -488,15 +498,18 @@ MCP Server 發送到外部驗證端點的請求格式：
 | `--auth-jwt-public-key-path:path` | RSA/ECDSA 公鑰文件路徑 |
 | `--auth-jwt-issuer:value` | 預期發行者 |
 | `--auth-jwt-audience:value` | 預期受眾 |
-| `--auth-jwt-tenant-claim:name` | 租戶 ID Claim 名稱 |
+| `--auth-jwt-group-claim:name` | 群組 ID Claim 名稱 (如 tenant_id, team_id, org_id) |
 | `--auth-jwt-user-claim:name` | 使用者 ID Claim 名稱 |
-| `--auth-jwt-tenant-header:name` | 租戶 ID 標頭名稱 |
+| `--auth-jwt-group-header:name` | 群組 ID 標頭名稱 |
 | `--auth-jwt-user-header:name` | 使用者 ID 標頭名稱 |
 | `--auth-jwt-introspection-url:url` | OAuth Introspection 端點 URL |
 | `--auth-jwt-client-id:value` | OAuth Client ID（Introspection 模式） |
 | `--auth-jwt-client-secret:value` | OAuth Client Secret（Introspection 模式） |
 | `--auth-jwt-custom-url:url` | Custom 驗證端點 URL |
 | `--auth-jwt-timeout:N` | 外部驗證逾時（秒，Introspection/Custom） |
+| `--auth-jwt-cache-enabled` | 啟用驗證結果快取 |
+| `--auth-jwt-cache-ttl:N` | 快取存活時間（秒） |
+| `--auth-jwt-cache-max-size:N` | 快取最大項目數 |
 
 ## 📡 追蹤系統
 
@@ -528,7 +541,7 @@ Webhook 載荷格式：
 ```json
 {
   "timestamp": "2025-01-01T12:00:00Z",
-  "tenantId": "tenant1",
+  "groupId": "group1",
   "tool": "word_text",
   "operation": "add",
   "durationMs": 150,
@@ -673,13 +686,18 @@ SSE/WebSocket 模式下提供以下端點：
 ### 倉庫結構
 ```
 aspose-mcp-server/
-├── Tools/                 📁 工具原始碼
+├── Tools/                 📁 工具原始碼（MCP Tool 入口點）
 │   ├── Word/              24 個工具
 │   ├── Excel/             25 個工具
 │   ├── PowerPoint/        21 個工具
 │   ├── PDF/               15 個工具
 │   ├── Conversion/        2 個工具
 │   └── Session/           1 個工具 (DocumentSessionTool)
+├── Handlers/              📁 操作處理器（業務邏輯實作）
+│   ├── Word/              Word 處理器（Bookmark, Comment, Content, Field 等）
+│   ├── Excel/             Excel 處理器（Cell, Chart, DataOperations 等）
+│   ├── PowerPoint/        PowerPoint 處理器（Animation, Media, Shape 等）
+│   └── Pdf/               PDF 處理器（Annotation, Bookmark, FormField 等）
 ├── Core/                  🔧 MCP 伺服器核心
 │   ├── Helpers/           通用輔助工具（Security、Color、Font、Value、Version）
 │   ├── Security/          認證模組（API Key、JWT）
@@ -691,11 +709,17 @@ aspose-mcp-server/
 │   └── LicenseManager.cs  授權管理
 ├── Tests/                 🧪 單元測試
 │   ├── Core/              核心功能測試
+│   │   ├── Handlers/      Handler 架構測試
 │   │   ├── Helpers/       Helper 測試
 │   │   ├── Security/      認證測試
 │   │   ├── Session/       Session 測試
 │   │   ├── Tracking/      追蹤測試
 │   │   └── Transport/     傳輸層測試
+│   ├── Handlers/          Handler 測試（408 個測試類）
+│   │   ├── Word/          Word Handler 測試
+│   │   ├── Excel/         Excel Handler 測試
+│   │   ├── PowerPoint/    PowerPoint Handler 測試
+│   │   └── Pdf/           PDF Handler 測試
 │   ├── Tools/             工具測試
 │   │   ├── Word/          24 個測試類
 │   │   ├── Excel/         25 個測試類
@@ -812,13 +836,18 @@ pwsh test.ps1 -Verbose -Coverage -Filter "FullyQualifiedName~Word"
 - `-SkipLicense` - 跳過授權載入，強制使用評估模式
 
 **測試結構：**
-- `Tests/Core/` - 核心功能測試（Helpers、Security、Session、Tracking）
+- `Tests/Core/` - 核心功能測試（Handlers、Helpers、Security、Session、Tracking）
+- `Tests/Handlers/` - Handler 測試（408 個測試類）
+  - `Word/` - Word Handler 測試
+  - `Excel/` - Excel Handler 測試
+  - `PowerPoint/` - PowerPoint Handler 測試
+  - `Pdf/` - PDF Handler 測試
 - `Tests/Tools/Word/` - Word 工具測試（24 個測試類）
 - `Tests/Tools/Excel/` - Excel 工具測試（25 個測試類）
 - `Tests/Tools/PowerPoint/` - PowerPoint 工具測試（21 個測試類）
 - `Tests/Tools/Pdf/` - PDF 工具測試（15 個測試類）
 - `Tests/Tools/Conversion/` - 轉換工具測試（2 個測試類）
-- `Tests/Helpers/` - 測試基礎設施（TestBase、WordTestBase、ExcelTestBase、PdfTestBase）
+- `Tests/Helpers/` - 測試基礎設施（TestBase、WordTestBase、ExcelTestBase、PdfTestBase、HandlerTestBase）
 
 **CI/CD 集成：**
 - 測試已集成到 GitHub Actions 工作流中

@@ -1,7 +1,8 @@
 using System.ComponentModel;
-using System.Text.Json;
 using Aspose.Words;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.Word.Bookmark;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Word;
@@ -12,6 +13,11 @@ namespace AsposeMcpServer.Tools.Word;
 [McpServerToolType]
 public class WordBookmarkTool
 {
+    /// <summary>
+    ///     Handler registry for bookmark operations
+    /// </summary>
+    private readonly HandlerRegistry<Document> _handlerRegistry;
+
     /// <summary>
     ///     Identity accessor for session isolation
     /// </summary>
@@ -32,6 +38,7 @@ public class WordBookmarkTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = WordBookmarkHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -79,301 +86,72 @@ Usage examples:
         [Description("Keep text when deleting (default: true)")]
         bool keepText = true)
     {
+        var parameters = BuildParameters(operation, name, text, paragraphIndex, newName, newText, keepText);
+
+        var handler = _handlerRegistry.GetHandler(operation);
+
         using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
-        return operation.ToLower() switch
+        var effectiveOutputPath = outputPath ?? path;
+
+        var operationContext = new OperationContext<Document>
         {
-            "add" => AddBookmark(ctx, outputPath, name, text, paragraphIndex),
-            "edit" => EditBookmark(ctx, outputPath, name, newName, newText ?? text),
-            "delete" => DeleteBookmark(ctx, outputPath, name, keepText),
-            "get" => GetBookmarks(ctx),
-            "goto" => GotoBookmark(ctx, name),
-            _ => throw new ArgumentException($"Unknown operation: {operation}")
-        };
-    }
-
-    /// <summary>
-    ///     Adds a bookmark to the document at the specified location.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="name">The bookmark name.</param>
-    /// <param name="text">The text content for the bookmark.</param>
-    /// <param name="paragraphIndex">The paragraph index (0-based, -1 for beginning).</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when the bookmark name is empty or paragraph index is invalid.</exception>
-    /// <exception cref="InvalidOperationException">
-    ///     Thrown when a bookmark with the same name already exists or paragraph
-    ///     cannot be found.
-    /// </exception>
-    private static string AddBookmark(DocumentContext<Document> ctx, string? outputPath, string? name, string? text,
-        int? paragraphIndex)
-    {
-        if (string.IsNullOrEmpty(name))
-            throw new ArgumentException("Bookmark name is required for add operation");
-
-        var doc = ctx.Document;
-        var builder = new DocumentBuilder(doc);
-
-        // Check if bookmark already exists
-        var existingBookmark = doc.Range.Bookmarks
-            .FirstOrDefault(b => b.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
-        if (existingBookmark != null)
-            throw new InvalidOperationException(
-                $"Bookmark '{existingBookmark.Name}' already exists (bookmark names are case-insensitive)");
-
-        // Determine insertion position
-        if (paragraphIndex.HasValue)
-        {
-            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
-
-            if (paragraphs.Count == 0)
-            {
-                builder.MoveToDocumentEnd();
-            }
-            else if (paragraphIndex.Value == -1)
-            {
-                if (paragraphs[0] is Paragraph firstPara)
-                    builder.MoveTo(firstPara);
-            }
-            else if (paragraphIndex.Value >= 0 && paragraphIndex.Value < paragraphs.Count)
-            {
-                if (paragraphs[paragraphIndex.Value] is Paragraph targetPara)
-                    builder.MoveTo(targetPara);
-                else
-                    throw new InvalidOperationException($"Unable to find paragraph at index {paragraphIndex.Value}");
-            }
-            else
-            {
-                throw new ArgumentException(
-                    $"Paragraph index {paragraphIndex.Value} is out of range (document has {paragraphs.Count} paragraphs)");
-            }
-        }
-        else
-        {
-            builder.MoveToDocumentEnd();
-        }
-
-        builder.StartBookmark(name);
-        if (!string.IsNullOrEmpty(text)) builder.Write(text);
-        builder.EndBookmark(name);
-
-        ctx.Save(outputPath);
-
-        var result = "Bookmark added successfully\n";
-        result += $"Bookmark name: {name}\n";
-        if (!string.IsNullOrEmpty(text)) result += $"Bookmark text: {text}\n";
-        if (paragraphIndex.HasValue)
-            result += paragraphIndex.Value == -1
-                ? "Insert position: beginning of document\n"
-                : $"Insert position: after paragraph #{paragraphIndex.Value}\n";
-        else
-            result += "Insert position: end of document\n";
-
-        result += ctx.GetOutputMessage(outputPath);
-        return result;
-    }
-
-    /// <summary>
-    ///     Edits an existing bookmark's name or text content.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="name">The current bookmark name.</param>
-    /// <param name="newName">The new bookmark name (optional).</param>
-    /// <param name="newText">The new text content (optional).</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">
-    ///     Thrown when the bookmark name is empty, bookmark not found, or new name already
-    ///     exists.
-    /// </exception>
-    private static string EditBookmark(DocumentContext<Document> ctx, string? outputPath, string? name, string? newName,
-        string? newText)
-    {
-        if (string.IsNullOrEmpty(name))
-            throw new ArgumentException("Bookmark name is required for edit operation");
-        if (string.IsNullOrEmpty(newText) && string.IsNullOrEmpty(newName))
-            throw new ArgumentException("newName or newText is required for edit operation");
-
-        var doc = ctx.Document;
-        var bookmarks = doc.Range.Bookmarks;
-
-        var bookmark = bookmarks[name];
-        if (bookmark == null)
-        {
-            var availableBookmarks = bookmarks.Select(b => b.Name).Take(10).ToList();
-            var availableInfo = availableBookmarks.Count > 0
-                ? $"\nAvailable bookmarks: {string.Join(", ", availableBookmarks)}{(bookmarks.Count > 10 ? "..." : "")}"
-                : "\nDocument has no bookmarks";
-            throw new ArgumentException(
-                $"Bookmark '{name}' not found{availableInfo}. Use get operation to view all available bookmarks");
-        }
-
-        var oldName = bookmark.Name;
-        var oldText = bookmark.Text;
-        List<string> changes = [];
-
-        if (!string.IsNullOrEmpty(newName) && !newName.Equals(name, StringComparison.OrdinalIgnoreCase))
-        {
-            var existingWithNewName = bookmarks
-                .FirstOrDefault(b => b.Name.Equals(newName, StringComparison.OrdinalIgnoreCase));
-            if (existingWithNewName != null)
-                throw new ArgumentException(
-                    $"Bookmark name '{existingWithNewName.Name}' already exists (bookmark names are case-insensitive)");
-
-            bookmark.Name = newName;
-            changes.Add($"Bookmark name: {oldName} -> {newName}");
-        }
-
-        if (!string.IsNullOrEmpty(newText))
-        {
-            bookmark.Text = newText;
-            changes.Add("Bookmark content updated");
-        }
-
-        if (changes.Count == 0)
-            return "No changes made. Please provide newName or newText parameter.";
-
-        ctx.Save(outputPath);
-
-        var result = $"Bookmark '{name}' edited successfully\n";
-        result += $"Original name: {oldName}\n";
-        result += $"Original content: {oldText}\n";
-        if (!string.IsNullOrEmpty(newName)) result += $"New name: {newName}\n";
-        if (!string.IsNullOrEmpty(newText)) result += $"New content: {newText}\n";
-        result += $"Changes: {string.Join(", ", changes)}\n";
-        result += ctx.GetOutputMessage(outputPath);
-
-        return result;
-    }
-
-    /// <summary>
-    ///     Deletes a bookmark from the document, optionally keeping its text content.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="name">The bookmark name to delete.</param>
-    /// <param name="keepText">Whether to keep the bookmark's text content.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when the bookmark name is empty or bookmark not found.</exception>
-    private static string DeleteBookmark(DocumentContext<Document> ctx, string? outputPath, string? name, bool keepText)
-    {
-        if (string.IsNullOrEmpty(name))
-            throw new ArgumentException("Bookmark name is required for delete operation");
-
-        var doc = ctx.Document;
-
-        var bookmark = doc.Range.Bookmarks[name];
-        if (bookmark == null)
-            throw new ArgumentException(
-                $"Bookmark '{name}' not found. Use get operation to view available bookmarks");
-
-        var bookmarkText = bookmark.Text;
-
-        if (keepText)
-        {
-            bookmark.Remove();
-        }
-        else
-        {
-            bookmark.BookmarkStart?.Remove();
-            bookmark.BookmarkEnd?.Remove();
-        }
-
-        ctx.Save(outputPath);
-
-        var remainingCount = doc.Range.Bookmarks.Count;
-
-        var result = $"Bookmark '{name}' deleted successfully\n";
-        result += $"Bookmark text: {bookmarkText}\n";
-        result += $"Keep text: {(keepText ? "Yes" : "No")}\n";
-        result += $"Remaining bookmarks in document: {remainingCount}\n";
-        result += ctx.GetOutputMessage(outputPath);
-
-        return result;
-    }
-
-    /// <summary>
-    ///     Gets all bookmarks from the document as JSON.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <returns>A JSON string containing all bookmarks information.</returns>
-    private static string GetBookmarks(DocumentContext<Document> ctx)
-    {
-        var doc = ctx.Document;
-        var bookmarks = doc.Range.Bookmarks;
-
-        if (bookmarks.Count == 0)
-            return JsonSerializer.Serialize(new
-                { count = 0, bookmarks = Array.Empty<object>(), message = "No bookmarks found in document" });
-
-        List<object> bookmarkList = [];
-        var index = 0;
-        foreach (var bookmark in bookmarks)
-        {
-            bookmarkList.Add(new
-            {
-                index,
-                name = bookmark.Name,
-                text = bookmark.Text,
-                length = bookmark.Text.Length
-            });
-            index++;
-        }
-
-        var result = new
-        {
-            count = bookmarks.Count,
-            bookmarks = bookmarkList
+            Document = ctx.Document,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = path,
+            OutputPath = effectiveOutputPath
         };
 
-        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        var result = handler.Execute(operationContext, parameters);
+
+        if (operationContext.IsModified)
+            ctx.Save(effectiveOutputPath);
+
+        return ctx.IsSession ? result :
+            operationContext.IsModified ? $"{result}\n{ctx.GetOutputMessage(effectiveOutputPath)}" : result;
     }
 
     /// <summary>
-    ///     Gets location information for a specific bookmark.
+    ///     Builds OperationParameters from method parameters.
     /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="name">The bookmark name.</param>
-    /// <returns>A message containing the bookmark's location information.</returns>
-    /// <exception cref="ArgumentException">Thrown when the bookmark name is empty or bookmark not found.</exception>
-    private static string GotoBookmark(DocumentContext<Document> ctx, string? name)
+    private static OperationParameters BuildParameters(
+        string operation,
+        string? name,
+        string? text,
+        int? paragraphIndex,
+        string? newName,
+        string? newText,
+        bool keepText)
     {
-        if (string.IsNullOrEmpty(name))
-            throw new ArgumentException("Bookmark name is required for goto operation");
+        var parameters = new OperationParameters();
 
-        var doc = ctx.Document;
-
-        var bookmark = doc.Range.Bookmarks[name];
-        if (bookmark == null)
-            throw new ArgumentException(
-                $"Bookmark '{name}' not found. Use get operation to view available bookmarks");
-
-        var bookmarkText = bookmark.Text;
-        var bookmarkRange = bookmark.BookmarkStart?.ParentNode as Paragraph;
-
-        var paragraphIndex = -1;
-        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
-        for (var i = 0; i < paragraphs.Count; i++)
-            if (paragraphs[i] == bookmarkRange)
-            {
-                paragraphIndex = i;
+        switch (operation.ToLower())
+        {
+            case "add":
+                if (name != null) parameters.Set("name", name);
+                if (text != null) parameters.Set("text", text);
+                if (paragraphIndex.HasValue) parameters.Set("paragraphIndex", paragraphIndex.Value);
                 break;
-            }
 
-        var result = "Bookmark location information\n";
-        result += $"Bookmark name: {name}\n";
-        result += $"Bookmark text: {bookmarkText}\n";
-        if (paragraphIndex >= 0) result += $"Paragraph index: {paragraphIndex}\n";
-        result += $"Bookmark range length: {bookmarkText.Length} characters\n";
+            case "edit":
+                if (name != null) parameters.Set("name", name);
+                if (newName != null) parameters.Set("newName", newName);
+                if (newText != null) parameters.Set("newText", newText);
+                else if (text != null) parameters.Set("newText", text);
+                break;
 
-        if (bookmarkRange != null)
-        {
-            var paraText = bookmarkRange.GetText().Trim();
-            if (paraText.Length > 100) paraText = paraText[..100] + "...";
-            result += $"Paragraph content: {paraText}\n";
+            case "delete":
+                if (name != null) parameters.Set("name", name);
+                parameters.Set("keepText", keepText);
+                break;
+
+            case "goto":
+                if (name != null) parameters.Set("name", name);
+                break;
         }
 
-        return result;
+        return parameters;
     }
 }

@@ -1,10 +1,8 @@
 using System.ComponentModel;
-using System.Text;
-using System.Text.Json;
 using Aspose.Pdf;
-using Aspose.Pdf.Text;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.Pdf.Info;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Pdf;
@@ -15,6 +13,11 @@ namespace AsposeMcpServer.Tools.Pdf;
 [McpServerToolType]
 public class PdfInfoTool
 {
+    /// <summary>
+    ///     Handler registry for info operations.
+    /// </summary>
+    private readonly HandlerRegistry<Document> _handlerRegistry;
+
     /// <summary>
     ///     The session identity accessor for session isolation.
     /// </summary>
@@ -34,6 +37,7 @@ public class PdfInfoTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = PdfInfoHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -68,137 +72,36 @@ Usage examples:
         [Description("Maximum pages to extract (for get_content without pageIndex, default: 100)")]
         int maxPages = 100)
     {
-        return operation.ToLower() switch
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
+
+        var parameters = BuildParameters(pageIndex, maxPages);
+
+        var handler = _handlerRegistry.GetHandler(operation);
+
+        var operationContext = new OperationContext<Document>
         {
-            "get_content" => GetContent(sessionId, path, pageIndex, maxPages),
-            "get_statistics" => GetStatistics(sessionId, path),
-            _ => throw new ArgumentException($"Unknown operation: {operation}")
+            Document = ctx.Document,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = path
         };
+
+        return handler.Execute(operationContext, parameters);
     }
 
     /// <summary>
-    ///     Extracts text content from the PDF document.
+    ///     Builds OperationParameters from method parameters.
     /// </summary>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
-    /// <param name="path">The PDF file path.</param>
-    /// <param name="pageIndex">Optional 1-based page index to extract content from a specific page.</param>
-    /// <param name="maxPages">Maximum number of pages to extract when extracting all pages.</param>
-    /// <returns>A JSON string containing the extracted text content.</returns>
-    /// <exception cref="ArgumentException">Thrown when the page index is out of range.</exception>
-    private string GetContent(string? sessionId, string? path, int? pageIndex, int maxPages)
+    private static OperationParameters BuildParameters(int? pageIndex, int maxPages)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
-        var document = ctx.Document;
+        var parameters = new OperationParameters();
 
         if (pageIndex.HasValue)
-        {
-            if (pageIndex.Value < 1 || pageIndex.Value > document.Pages.Count)
-                throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
+            parameters.Set("pageIndex", pageIndex.Value);
 
-            var textAbsorber = new TextAbsorber();
-            document.Pages[pageIndex.Value].Accept(textAbsorber);
-            var result = new
-            {
-                pageIndex = pageIndex.Value,
-                totalPages = document.Pages.Count,
-                content = textAbsorber.Text
-            };
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
-        }
-        else
-        {
-            var pagesToExtract = Math.Min(maxPages, document.Pages.Count);
-            var truncated = document.Pages.Count > maxPages;
-            var contentBuilder = new StringBuilder();
+        parameters.Set("maxPages", maxPages);
 
-            for (var i = 1; i <= pagesToExtract; i++)
-            {
-                var textAbsorber = new TextAbsorber();
-                document.Pages[i].Accept(textAbsorber);
-                contentBuilder.AppendLine(textAbsorber.Text);
-            }
-
-            var result = new
-            {
-                totalPages = document.Pages.Count,
-                extractedPages = pagesToExtract,
-                truncated,
-                content = contentBuilder.ToString()
-            };
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
-        }
-    }
-
-    /// <summary>
-    ///     Retrieves statistics about the PDF document.
-    /// </summary>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
-    /// <param name="path">The PDF file path.</param>
-    /// <returns>A JSON string containing document statistics.</returns>
-    /// <exception cref="ArgumentException">Thrown when path is required but not provided.</exception>
-    private string GetStatistics(string? sessionId, string? path)
-    {
-        if (!string.IsNullOrEmpty(sessionId))
-        {
-            using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
-            var document = ctx.Document;
-
-            var totalAnnotations = 0;
-            var totalParagraphs = 0;
-            for (var i = 1; i <= document.Pages.Count; i++)
-            {
-                var page = document.Pages[i];
-                totalAnnotations += page.Annotations.Count;
-                totalParagraphs += page.Paragraphs.Count;
-            }
-
-            var result = new
-            {
-                totalPages = document.Pages.Count,
-                isEncrypted = document.IsEncrypted,
-                isLinearized = document.IsLinearized,
-                bookmarks = document.Outlines.Count,
-                formFields = document.Form?.Count ?? 0,
-                totalAnnotations,
-                totalParagraphs,
-                note = "File size info not available in session mode"
-            };
-
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
-        }
-        else
-        {
-            if (string.IsNullOrEmpty(path))
-                throw new ArgumentException("path is required for get_statistics operation");
-
-            SecurityHelper.ValidateFilePath(path, "path", true);
-
-            using var document = new Document(path);
-            var fileInfo = new FileInfo(path);
-
-            var totalAnnotations = 0;
-            var totalParagraphs = 0;
-            for (var i = 1; i <= document.Pages.Count; i++)
-            {
-                var page = document.Pages[i];
-                totalAnnotations += page.Annotations.Count;
-                totalParagraphs += page.Paragraphs.Count;
-            }
-
-            var result = new
-            {
-                fileSizeBytes = fileInfo.Length,
-                fileSizeKb = Math.Round(fileInfo.Length / 1024.0, 2),
-                totalPages = document.Pages.Count,
-                isEncrypted = document.IsEncrypted,
-                isLinearized = document.IsLinearized,
-                bookmarks = document.Outlines.Count,
-                formFields = document.Form?.Count ?? 0,
-                totalAnnotations,
-                totalParagraphs
-            };
-
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
-        }
+        return parameters;
     }
 }

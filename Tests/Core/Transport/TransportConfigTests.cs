@@ -92,25 +92,28 @@ public class TransportConfigTests
     }
 
     [Fact]
-    public void LoadFromArgs_WithPortOutOfRange_ShouldResetToDefault()
+    public void Validate_WithPortOutOfRange_ShouldResetToDefault()
     {
         var config = TransportConfig.LoadFromArgs(["--port:70000"]);
+        config.Validate();
 
         Assert.Equal(3000, config.Port);
     }
 
     [Fact]
-    public void LoadFromArgs_WithNegativePort_ShouldResetToDefault()
+    public void Validate_WithNegativePort_ShouldResetToDefault()
     {
         var config = TransportConfig.LoadFromArgs(["--port:-1"]);
+        config.Validate();
 
         Assert.Equal(3000, config.Port);
     }
 
     [Fact]
-    public void LoadFromArgs_WithZeroPort_ShouldResetToDefault()
+    public void Validate_WithZeroPort_ShouldResetToDefault()
     {
         var config = TransportConfig.LoadFromArgs(["--port:0"]);
+        config.Validate();
 
         Assert.Equal(3000, config.Port);
     }
@@ -144,17 +147,19 @@ public class TransportConfigTests
     }
 
     [Fact]
-    public void LoadFromArgs_WithInvalidHost_ShouldResetToDefault()
+    public void Validate_WithInvalidHost_ShouldResetToDefault()
     {
         var config = TransportConfig.LoadFromArgs(["--host:invalid-host"]);
+        config.Validate();
 
         Assert.Equal("localhost", config.Host);
     }
 
     [Fact]
-    public void LoadFromArgs_WithEmptyHost_ShouldResetToDefault()
+    public void Validate_WithEmptyHost_ShouldResetToDefault()
     {
         var config = TransportConfig.LoadFromArgs(["--host:"]);
+        config.Validate();
 
         Assert.Equal("localhost", config.Host);
     }

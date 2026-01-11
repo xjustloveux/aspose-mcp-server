@@ -1,9 +1,8 @@
 using System.ComponentModel;
-using System.Drawing;
-using System.Text.Json;
 using Aspose.Slides;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.PowerPoint.Background;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.PowerPoint;
@@ -14,6 +13,11 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 [McpServerToolType]
 public class PptBackgroundTool
 {
+    /// <summary>
+    ///     Handler registry for background operations.
+    /// </summary>
+    private readonly HandlerRegistry<Presentation> _handlerRegistry;
+
     /// <summary>
     ///     Identity accessor for session isolation.
     /// </summary>
@@ -34,6 +38,7 @@ public class PptBackgroundTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = PptBackgroundHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -75,125 +80,56 @@ Usage examples:
     {
         using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
-        return operation.ToLower() switch
+        var parameters = BuildParameters(operation, slideIndex, color, imagePath, applyToAll);
+
+        var handler = _handlerRegistry.GetHandler(operation);
+
+        var operationContext = new OperationContext<Presentation>
         {
-            "set" => SetBackground(ctx, outputPath, slideIndex, color, imagePath, applyToAll),
-            "get" => GetBackground(ctx, slideIndex),
-            _ => throw new ArgumentException($"Unknown operation: {operation}")
-        };
-    }
-
-    /// <summary>
-    ///     Sets slide background with color or image.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="slideIndex">The slide index (0-based).</param>
-    /// <param name="colorHex">The hex color string.</param>
-    /// <param name="imagePath">The background image path.</param>
-    /// <param name="applyToAll">Whether to apply to all slides.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when neither color nor imagePath is provided.</exception>
-    private static string SetBackground(DocumentContext<Presentation> ctx, string? outputPath, int slideIndex,
-        string? colorHex, string? imagePath, bool applyToAll)
-    {
-        if (string.IsNullOrWhiteSpace(colorHex) && string.IsNullOrWhiteSpace(imagePath))
-            throw new ArgumentException("Please provide at least one of color or imagePath");
-
-        var presentation = ctx.Document;
-
-        IPPImage? img = null;
-        if (!string.IsNullOrWhiteSpace(imagePath))
-            img = presentation.Images.AddImage(File.ReadAllBytes(imagePath));
-
-        Color? color = null;
-        if (!string.IsNullOrWhiteSpace(colorHex))
-            color = ColorHelper.ParseColor(colorHex);
-
-        var slidesToUpdate = applyToAll
-            ? presentation.Slides.ToList()
-            : [PowerPointHelper.GetSlide(presentation, slideIndex)];
-
-        foreach (var slide in slidesToUpdate)
-            ApplyBackground(slide, color, img);
-
-        ctx.Save(outputPath);
-
-        var message = applyToAll
-            ? $"Background applied to all {slidesToUpdate.Count} slides"
-            : $"Background updated for slide {slideIndex}";
-        var result = $"{message}.\n";
-        result += ctx.GetOutputMessage(outputPath);
-        return result;
-    }
-
-    /// <summary>
-    ///     Applies background color or image to a slide.
-    /// </summary>
-    /// <param name="slide">The slide to apply background to.</param>
-    /// <param name="color">The background color.</param>
-    /// <param name="image">The background image.</param>
-    private static void ApplyBackground(ISlide slide, Color? color, IPPImage? image)
-    {
-        slide.Background.Type = BackgroundType.OwnBackground;
-        var fillFormat = slide.Background.FillFormat;
-
-        if (image != null)
-        {
-            fillFormat.FillType = FillType.Picture;
-            fillFormat.PictureFillFormat.PictureFillMode = PictureFillMode.Stretch;
-            fillFormat.PictureFillFormat.Picture.Image = image;
-        }
-        else if (color.HasValue)
-        {
-            fillFormat.FillType = FillType.Solid;
-            fillFormat.SolidFillColor.Color = color.Value;
-        }
-    }
-
-    /// <summary>
-    ///     Gets background information for a slide.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="slideIndex">The slide index (0-based).</param>
-    /// <returns>A JSON string containing background information.</returns>
-    private static string GetBackground(DocumentContext<Presentation> ctx, int slideIndex)
-    {
-        var presentation = ctx.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-        var background = slide.Background;
-        var fillFormat = background?.FillFormat;
-
-        string? colorHex = null;
-        double? opacity = null;
-
-        if (fillFormat?.FillType == FillType.Solid)
-            try
-            {
-                var solidColor = fillFormat.SolidFillColor.Color;
-                if (!solidColor.IsEmpty)
-                {
-                    colorHex = solidColor.A < 255
-                        ? $"#{solidColor.A:X2}{solidColor.R:X2}{solidColor.G:X2}{solidColor.B:X2}"
-                        : $"#{solidColor.R:X2}{solidColor.G:X2}{solidColor.B:X2}";
-                    opacity = Math.Round(solidColor.A / 255.0, 2);
-                }
-            }
-            catch
-            {
-                // Theme colors may throw exceptions, return null for color
-            }
-
-        var result = new
-        {
-            slideIndex,
-            hasBackground = background != null,
-            fillType = fillFormat?.FillType.ToString(),
-            color = colorHex,
-            opacity,
-            isPictureFill = fillFormat?.FillType == FillType.Picture
+            Document = ctx.Document,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = path,
+            OutputPath = outputPath
         };
 
-        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        var result = handler.Execute(operationContext, parameters);
+
+        if (operation.ToLowerInvariant() == "get")
+            return result;
+
+        if (operationContext.IsModified)
+            ctx.Save(outputPath);
+
+        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+    }
+
+    /// <summary>
+    ///     Builds OperationParameters from method parameters.
+    /// </summary>
+    private static OperationParameters BuildParameters(
+        string operation,
+        int slideIndex,
+        string? color,
+        string? imagePath,
+        bool applyToAll)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("slideIndex", slideIndex);
+
+        switch (operation.ToLowerInvariant())
+        {
+            case "set":
+                if (color != null) parameters.Set("color", color);
+                if (imagePath != null) parameters.Set("imagePath", imagePath);
+                parameters.Set("applyToAll", applyToAll);
+                break;
+
+            case "get":
+                break;
+        }
+
+        return parameters;
     }
 }

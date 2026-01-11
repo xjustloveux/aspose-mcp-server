@@ -52,7 +52,7 @@ spec:
             # - name: ASPOSE_SESSION_ON_DISCONNECT
             #   value: "SaveToTemp"         # Disconnect behavior: SaveToTemp, Discard, KeepInMemory
             # - name: ASPOSE_SESSION_ISOLATION
-            #   value: "user"               # Isolation mode: none (no isolation), tenant (tenant-level), user (user-level, default)
+            #   value: "group"              # Isolation mode: none (no isolation), group (group-level, default)
 
             # === API Key Authentication (Optional) ===
             # - name: ASPOSE_AUTH_APIKEY_ENABLED
@@ -60,11 +60,17 @@ spec:
             # - name: ASPOSE_AUTH_APIKEY_MODE
             #   value: "local"            # local, gateway, introspection, custom
             # - name: ASPOSE_AUTH_APIKEY_KEYS
-            #   value: "key1:tenant1,key2:tenant2"
+            #   value: "key1:group1,key2:group2"
             # - name: ASPOSE_AUTH_APIKEY_HEADER
             #   value: "X-API-Key"
-            # - name: ASPOSE_AUTH_APIKEY_TENANT_HEADER
-            #   value: "X-Tenant-Id"
+            # - name: ASPOSE_AUTH_APIKEY_GROUP_HEADER
+            #   value: "X-Group-Id"
+            # - name: ASPOSE_AUTH_APIKEY_CACHE_ENABLED
+            #   value: "true"                # Cache auth results (default: true)
+            # - name: ASPOSE_AUTH_APIKEY_CACHE_TTL
+            #   value: "300"                 # Cache TTL in seconds (default: 300)
+            # - name: ASPOSE_AUTH_APIKEY_CACHE_MAX_SIZE
+            #   value: "10000"               # Max cache entries (default: 10000)
             # - name: ASPOSE_AUTH_APIKEY_INTROSPECTION_URL
             #   value: "https://auth.example.com/introspect"
             # - name: ASPOSE_AUTH_APIKEY_INTROSPECTION_AUTH
@@ -87,14 +93,20 @@ spec:
             #   value: "your-issuer"
             # - name: ASPOSE_AUTH_JWT_AUDIENCE
             #   value: "your-audience"
-            # - name: ASPOSE_AUTH_JWT_TENANT_CLAIM
-            #   value: "tenant_id"
+            # - name: ASPOSE_AUTH_JWT_GROUP_CLAIM
+            #   value: "tenant_id"           # Claim for group ID (e.g., tenant_id, team_id, org_id)
             # - name: ASPOSE_AUTH_JWT_USER_CLAIM
             #   value: "sub"
-            # - name: ASPOSE_AUTH_JWT_TENANT_HEADER
-            #   value: "X-Tenant-Id"
+            # - name: ASPOSE_AUTH_JWT_GROUP_HEADER
+            #   value: "X-Group-Id"
             # - name: ASPOSE_AUTH_JWT_USER_HEADER
             #   value: "X-User-Id"
+            # - name: ASPOSE_AUTH_JWT_CACHE_ENABLED
+            #   value: "true"                # Cache auth results (default: true)
+            # - name: ASPOSE_AUTH_JWT_CACHE_TTL
+            #   value: "300"                 # Cache TTL in seconds (default: 300)
+            # - name: ASPOSE_AUTH_JWT_CACHE_MAX_SIZE
+            #   value: "10000"               # Max cache entries (default: 10000)
             # - name: ASPOSE_AUTH_JWT_INTROSPECTION_URL
             #   value: "https://auth.example.com/introspect"
             # - name: ASPOSE_AUTH_JWT_CLIENT_ID

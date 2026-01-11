@@ -4,6 +4,11 @@ using AsposeMcpServer.Tools.Excel;
 
 namespace AsposeMcpServer.Tests.Tools.Excel;
 
+/// <summary>
+///     Integration tests for ExcelSheetTool.
+///     Focuses on session management, file I/O, and operation routing.
+///     Detailed parameter validation and business logic tests are in Handler tests.
+/// </summary>
 public class ExcelSheetToolTests : ExcelTestBase
 {
     private readonly ExcelSheetTool _tool;
@@ -13,10 +18,10 @@ public class ExcelSheetToolTests : ExcelTestBase
         _tool = new ExcelSheetTool(SessionManager);
     }
 
-    #region General
+    #region File I/O Smoke Tests
 
     [Fact]
-    public void Add_ShouldCreateNewSheet()
+    public void Add_ShouldCreateNewSheetAndPersistToFile()
     {
         var workbookPath = CreateExcelWorkbook("test_add.xlsx");
         var outputPath = CreateTestFilePath("test_add_output.xlsx");
@@ -27,22 +32,7 @@ public class ExcelSheetToolTests : ExcelTestBase
     }
 
     [Fact]
-    public void Add_WithInsertAt_ShouldInsertAtPosition()
-    {
-        var workbookPath = CreateExcelWorkbook("test_add_insert.xlsx");
-        var workbook = new Workbook(workbookPath);
-        workbook.Worksheets.Add("Sheet2");
-        workbook.Save(workbookPath);
-
-        var outputPath = CreateTestFilePath("test_add_insert_output.xlsx");
-        _tool.Execute("add", workbookPath, sheetName: "InsertedSheet", insertAt: 0, outputPath: outputPath);
-        var resultWorkbook = new Workbook(outputPath);
-        var sheetFound = resultWorkbook.Worksheets.Any(ws => ws.Name == "InsertedSheet");
-        Assert.True(sheetFound);
-    }
-
-    [Fact]
-    public void Delete_ShouldDeleteSheet()
+    public void Delete_ShouldDeleteSheetAndPersistToFile()
     {
         var workbookPath = CreateExcelWorkbook("test_delete.xlsx");
         var workbook = new Workbook(workbookPath);
@@ -58,40 +48,23 @@ public class ExcelSheetToolTests : ExcelTestBase
             var resultWorkbook = new Workbook(outputPath);
             Assert.DoesNotContain("SheetToDelete", resultWorkbook.Worksheets.Select(s => s.Name));
         }
-        else
-        {
-            // Fallback: verify basic structure in evaluation mode
-            var resultWorkbook = new Workbook(outputPath);
-            Assert.True(resultWorkbook.Worksheets.Count > 0);
-        }
     }
 
     [Fact]
-    public void Get_ShouldReturnAllSheets()
+    public void Get_ShouldReturnAllSheetsFromFile()
     {
         var workbookPath = CreateExcelWorkbook("test_get.xlsx");
         var workbook = new Workbook(workbookPath);
         workbook.Worksheets.Add("Sheet2");
-        workbook.Worksheets.Add("Sheet3");
         workbook.Save(workbookPath);
 
         var result = _tool.Execute("get", workbookPath);
         Assert.Contains("count", result);
         Assert.Contains("items", result);
-        Assert.Contains("Sheet", result);
     }
 
     [Fact]
-    public void Get_EmptyWorkbook_ShouldReturnValidJson()
-    {
-        var workbookPath = CreateExcelWorkbook("test_get_minimal.xlsx");
-        var result = _tool.Execute("get", workbookPath);
-        Assert.Contains("count", result);
-        Assert.Contains("items", result);
-    }
-
-    [Fact]
-    public void Rename_ShouldRenameSheet()
+    public void Rename_ShouldRenameSheetAndPersistToFile()
     {
         var workbookPath = CreateExcelWorkbook("test_rename.xlsx");
         var workbook = new Workbook(workbookPath);
@@ -104,9 +77,11 @@ public class ExcelSheetToolTests : ExcelTestBase
         Assert.NotNull(resultWorkbook.Worksheets["NewName"]);
     }
 
-    [Fact]
-    public void Move_ShouldMoveSheet()
+    [SkippableFact]
+    public void Move_ShouldMoveSheetAndPersistToFile()
     {
+        SkipInEvaluationMode(AsposeLibraryType.Cells,
+            "Evaluation mode inserts watermark sheet affecting move position");
         var workbookPath = CreateExcelWorkbook("test_move.xlsx");
         var workbook = new Workbook(workbookPath);
         var originalFirstSheetName = workbook.Worksheets[0].Name;
@@ -117,14 +92,12 @@ public class ExcelSheetToolTests : ExcelTestBase
         _tool.Execute("move", workbookPath, sheetIndex: 1, insertAt: 0, outputPath: outputPath);
         Assert.True(File.Exists(outputPath));
         var resultWorkbook = new Workbook(outputPath);
-        var sheetFound = resultWorkbook.Worksheets.Any(ws => ws.Name == "SheetToMove");
-        Assert.True(sheetFound, "SheetToMove should exist after move");
         Assert.Equal("SheetToMove", resultWorkbook.Worksheets[0].Name);
         Assert.Equal(originalFirstSheetName, resultWorkbook.Worksheets[1].Name);
     }
 
     [Fact]
-    public void Copy_ShouldCopySheet()
+    public void Copy_ShouldCopySheetAndPersistToFile()
     {
         var workbookPath = CreateExcelWorkbook("test_copy.xlsx");
         var workbook = new Workbook(workbookPath);
@@ -135,29 +108,10 @@ public class ExcelSheetToolTests : ExcelTestBase
         _tool.Execute("copy", workbookPath, sheetIndex: 0, outputPath: outputPath);
         var resultWorkbook = new Workbook(outputPath);
         Assert.True(resultWorkbook.Worksheets.Count >= 2);
-        var hasCopiedContent = resultWorkbook.Worksheets
-            .Any(ws => ws.Cells[0, 0].Value?.ToString() == "TestData");
-        Assert.True(hasCopiedContent);
     }
 
     [Fact]
-    public void Copy_ToExternalFile_ShouldCopySuccessfully()
-    {
-        var workbookPath = CreateExcelWorkbook("test_copy_external.xlsx");
-        var workbook = new Workbook(workbookPath);
-        workbook.Worksheets[0].Cells[0, 0].Value = "TestData";
-        workbook.Save(workbookPath);
-
-        var copyToPath = CreateTestFilePath("test_copy_external_target.xlsx");
-        var result = _tool.Execute("copy", workbookPath, sheetIndex: 0, copyToPath: copyToPath);
-        Assert.True(File.Exists(copyToPath));
-        Assert.Contains("external file", result);
-        var targetWorkbook = new Workbook(copyToPath);
-        Assert.Equal("TestData", targetWorkbook.Worksheets[0].Cells[0, 0].Value?.ToString());
-    }
-
-    [Fact]
-    public void Hide_ShouldHideSheet()
+    public void Hide_ShouldHideSheetAndPersistToFile()
     {
         var workbookPath = CreateExcelWorkbook("test_hide.xlsx");
         var workbook = new Workbook(workbookPath);
@@ -170,28 +124,15 @@ public class ExcelSheetToolTests : ExcelTestBase
         Assert.True(File.Exists(outputPath));
     }
 
-    [SkippableFact]
-    public void Hide_Toggle_ShouldShowHiddenSheet()
-    {
-        SkipInEvaluationMode(AsposeLibraryType.Cells, "Toggle visibility with additional sheet exceeds limit");
-        var workbookPath = CreateExcelWorkbook("test_toggle.xlsx");
-        var workbook = new Workbook(workbookPath);
-        workbook.Worksheets.Add("HiddenSheet");
-        workbook.Worksheets["HiddenSheet"].IsVisible = false;
-        workbook.Save(workbookPath);
+    #endregion
 
-        var outputPath = CreateTestFilePath("test_toggle_output.xlsx");
-        var result = _tool.Execute("hide", workbookPath, sheetIndex: 1, outputPath: outputPath);
-        Assert.Contains("shown", result);
-        var resultWorkbook = new Workbook(outputPath);
-        Assert.True(resultWorkbook.Worksheets["HiddenSheet"].IsVisible);
-    }
+    #region Operation Routing
 
     [Theory]
     [InlineData("ADD")]
     [InlineData("Add")]
     [InlineData("add")]
-    public void Operation_ShouldBeCaseInsensitive_Add(string operation)
+    public void Operation_ShouldBeCaseInsensitive(string operation)
     {
         var workbookPath = CreateExcelWorkbook($"test_case_{operation}.xlsx");
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.xlsx");
@@ -200,21 +141,6 @@ public class ExcelSheetToolTests : ExcelTestBase
         var sheetFound = workbook.Worksheets.Any(ws => ws.Name == $"Sheet_{operation}");
         Assert.True(sheetFound);
     }
-
-    [Theory]
-    [InlineData("GET")]
-    [InlineData("Get")]
-    [InlineData("get")]
-    public void Operation_ShouldBeCaseInsensitive_Get(string operation)
-    {
-        var workbookPath = CreateExcelWorkbook($"test_case_get_{operation}.xlsx");
-        var result = _tool.Execute(operation, workbookPath);
-        Assert.Contains("count", result);
-    }
-
-    #endregion
-
-    #region Exception
 
     [Fact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
@@ -225,84 +151,6 @@ public class ExcelSheetToolTests : ExcelTestBase
     }
 
     [Fact]
-    public void Add_WithInvalidName_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_add_invalid.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", workbookPath, sheetName: "Invalid/Name"));
-        Assert.Contains("invalid character", ex.Message, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public void Add_WithNameTooLong_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_add_long.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", workbookPath, sheetName: new string('A', 32)));
-        Assert.Contains("31 characters", ex.Message);
-    }
-
-    [Fact]
-    public void Add_WithDuplicateName_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_add_dup.xlsx");
-        var workbook = new Workbook(workbookPath);
-        workbook.Worksheets[0].Name = "ExistingSheet";
-        workbook.Save(workbookPath);
-
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", workbookPath, sheetName: "ExistingSheet"));
-        Assert.Contains("already exists", ex.Message);
-    }
-
-    [SkippableFact]
-    public void Delete_LastSheet_ShouldThrowInvalidOperationException()
-    {
-        SkipInEvaluationMode(AsposeLibraryType.Cells, "Evaluation warning sheet interferes with last sheet deletion");
-        var workbookPath = CreateExcelWorkbook("test_delete_last.xlsx");
-        Assert.Throws<InvalidOperationException>(() =>
-            _tool.Execute("delete", workbookPath, sheetIndex: 0));
-    }
-
-    [Fact]
-    public void Delete_WithInvalidIndex_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_delete_invalid.xlsx");
-        Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("delete", workbookPath, sheetIndex: 999));
-    }
-
-    [Fact]
-    public void Rename_WithDuplicateName_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_rename_dup.xlsx");
-        var workbook = new Workbook(workbookPath);
-        workbook.Worksheets.Add("Sheet2");
-        workbook.Save(workbookPath);
-
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("rename", workbookPath, sheetIndex: 0, newName: "Sheet2"));
-        Assert.Contains("already exists", ex.Message);
-    }
-
-    [Fact]
-    public void Move_ToSamePosition_ShouldReturnNoMoveNeeded()
-    {
-        var workbookPath = CreateExcelWorkbook("test_move_same.xlsx");
-        var result = _tool.Execute("move", workbookPath, sheetIndex: 0, insertAt: 0);
-        Assert.Contains("no move needed", result);
-    }
-
-    [Fact]
-    public void Move_WithoutTargetIndex_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_move_no_target.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("move", workbookPath, sheetIndex: 0));
-        Assert.Contains("targetIndex", ex.Message);
-    }
-
-    [Fact]
     public void Execute_WithNoPathOrSessionId_ShouldThrowException()
     {
         Assert.ThrowsAny<Exception>(() => _tool.Execute("get"));
@@ -310,7 +158,7 @@ public class ExcelSheetToolTests : ExcelTestBase
 
     #endregion
 
-    #region Session
+    #region Session Management
 
     [Fact]
     public void Add_WithSessionId_ShouldAddInMemory()

@@ -13,19 +13,21 @@ public class SessionIdentity
     private static readonly SessionIdentity AnonymousInstance = new();
 
     /// <summary>
-    ///     The tenant ID (organization/company identifier)
+    ///     The group identifier for session isolation.
+    ///     This value is determined by the GROUP_IDENTIFIER_CLAIM configuration
+    ///     (e.g., tenant_id, team_id, sub, or any custom claim).
     /// </summary>
-    public string? TenantId { get; init; }
+    public string? GroupId { get; init; }
 
     /// <summary>
-    ///     The user ID within the tenant
+    ///     The user ID for audit and logging purposes
     /// </summary>
     public string? UserId { get; init; }
 
     /// <summary>
-    ///     Whether this identity is anonymous (no tenant or user info)
+    ///     Whether this identity is anonymous (no group or user info)
     /// </summary>
-    public bool IsAnonymous => string.IsNullOrEmpty(TenantId) && string.IsNullOrEmpty(UserId);
+    public bool IsAnonymous => string.IsNullOrEmpty(GroupId) && string.IsNullOrEmpty(UserId);
 
     /// <summary>
     ///     Gets a static anonymous identity instance
@@ -47,16 +49,7 @@ public class SessionIdentity
         if (isolationMode == SessionIsolationMode.None)
             return true;
 
-        if (IsAnonymous)
-            return true;
-
-        if (sessionOwner.IsAnonymous)
-            return true;
-
-        if (isolationMode == SessionIsolationMode.Tenant)
-            return TenantId == sessionOwner.TenantId;
-
-        return TenantId == sessionOwner.TenantId && UserId == sessionOwner.UserId;
+        return GroupId == sessionOwner.GroupId;
     }
 
     /// <summary>
@@ -70,14 +63,8 @@ public class SessionIdentity
         if (IsAnonymous || isolationMode == SessionIsolationMode.None)
             return "__anonymous__";
 
-        // Encode IDs to prevent injection attacks from special characters like ":"
-        var encodedTenantId = EncodeId(TenantId);
-
-        if (isolationMode == SessionIsolationMode.Tenant)
-            return $"tenant:{encodedTenantId}";
-
-        var encodedUserId = EncodeId(UserId);
-        return $"user:{encodedTenantId}:{encodedUserId}";
+        var encodedGroupId = EncodeId(GroupId);
+        return $"group:{encodedGroupId}";
     }
 
     /// <summary>
@@ -95,28 +82,32 @@ public class SessionIdentity
     /// <summary>
     ///     Returns a string representation of this identity
     /// </summary>
+    /// <returns>A human-readable string representation</returns>
     public override string ToString()
     {
         if (IsAnonymous)
             return "Anonymous";
-        return $"Tenant={TenantId ?? "(null)"}, User={UserId ?? "(null)"}";
+        return $"Group={GroupId ?? "(null)"}, User={UserId ?? "(null)"}";
     }
 
     /// <summary>
     ///     Determines whether the specified object is equal to the current identity
     /// </summary>
+    /// <param name="obj">The object to compare with the current identity</param>
+    /// <returns>True if the specified object is equal to the current identity</returns>
     public override bool Equals(object? obj)
     {
         if (obj is not SessionIdentity other)
             return false;
-        return TenantId == other.TenantId && UserId == other.UserId;
+        return GroupId == other.GroupId && UserId == other.UserId;
     }
 
     /// <summary>
     ///     Returns a hash code for this identity
     /// </summary>
+    /// <returns>A hash code for the current identity</returns>
     public override int GetHashCode()
     {
-        return HashCode.Combine(TenantId, UserId);
+        return HashCode.Combine(GroupId, UserId);
     }
 }

@@ -5,6 +5,11 @@ using AsposeMcpServer.Tools.Pdf;
 
 namespace AsposeMcpServer.Tests.Tools.Pdf;
 
+/// <summary>
+///     Integration tests for PdfBookmarkTool.
+///     Focuses on session management, file I/O, and operation routing.
+///     Detailed parameter validation and business logic tests are in Handler tests.
+/// </summary>
 public class PdfBookmarkToolTests : PdfTestBase
 {
     private readonly PdfBookmarkTool _tool;
@@ -40,7 +45,7 @@ public class PdfBookmarkToolTests : PdfTestBase
         return filePath;
     }
 
-    #region General
+    #region File I/O Smoke Tests
 
     [Fact]
     public void Add_ShouldAddBookmark()
@@ -62,15 +67,6 @@ public class PdfBookmarkToolTests : PdfTestBase
         var result = _tool.Execute("get", pdfPath);
         Assert.Contains("\"count\": 1", result);
         Assert.Contains("Test Bookmark", result);
-    }
-
-    [Fact]
-    public void Get_WithNoBookmarks_ShouldReturnEmptyResult()
-    {
-        var pdfPath = CreateTestPdf("test_get_empty.pdf");
-        var result = _tool.Execute("get", pdfPath);
-        Assert.Contains("\"count\": 0", result);
-        Assert.Contains("No bookmarks found", result);
     }
 
     [Fact]
@@ -96,22 +92,15 @@ public class PdfBookmarkToolTests : PdfTestBase
         Assert.Equal("Updated Title", document.Outlines[1].Title);
     }
 
-    [Fact]
-    public void Edit_PageIndex_ShouldEditPageIndex()
-    {
-        var pdfPath = CreatePdfWithBookmark("test_edit_page.pdf");
-        var outputPath = CreateTestFilePath("test_edit_page_output.pdf");
-        var result = _tool.Execute("edit", pdfPath, outputPath: outputPath,
-            bookmarkIndex: 1, pageIndex: 2);
-        Assert.StartsWith("Edited bookmark", result);
-        Assert.True(File.Exists(outputPath));
-    }
+    #endregion
+
+    #region Operation Routing
 
     [Theory]
     [InlineData("ADD")]
     [InlineData("Add")]
     [InlineData("add")]
-    public void Operation_ShouldBeCaseInsensitive_Add(string operation)
+    public void Operation_ShouldBeCaseInsensitive(string operation)
     {
         var pdfPath = CreateTestPdf($"test_case_{operation}.pdf");
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.pdf");
@@ -119,21 +108,6 @@ public class PdfBookmarkToolTests : PdfTestBase
             title: "Bookmark", pageIndex: 1);
         Assert.StartsWith("Added bookmark", result);
     }
-
-    [Theory]
-    [InlineData("GET")]
-    [InlineData("Get")]
-    [InlineData("get")]
-    public void Operation_ShouldBeCaseInsensitive_Get(string operation)
-    {
-        var pdfPath = CreateTestPdf($"test_case_get_{operation}.pdf");
-        var result = _tool.Execute(operation, pdfPath);
-        Assert.Contains("count", result);
-    }
-
-    #endregion
-
-    #region Exception
 
     [Fact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
@@ -143,87 +117,9 @@ public class PdfBookmarkToolTests : PdfTestBase
         Assert.Contains("Unknown operation", ex.Message);
     }
 
-    [Fact]
-    public void Add_WithMissingTitle_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreateTestPdf("test_add_no_title.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", pdfPath, pageIndex: 1));
-        Assert.Contains("title is required", ex.Message);
-    }
-
-    [Fact]
-    public void Add_WithMissingPageIndex_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreateTestPdf("test_add_no_page.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", pdfPath, title: "Test"));
-        Assert.Contains("pageIndex is required", ex.Message);
-    }
-
-    [Fact]
-    public void Add_WithInvalidPageIndex_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreateTestPdf("test_add_invalid_page.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", pdfPath, title: "Test", pageIndex: 99));
-        Assert.Contains("pageIndex must be between", ex.Message);
-    }
-
-    [Fact]
-    public void Delete_WithMissingBookmarkIndex_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreatePdfWithBookmark("test_delete_no_index.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("delete", pdfPath));
-        Assert.Contains("bookmarkIndex is required", ex.Message);
-    }
-
-    [Fact]
-    public void Delete_WithInvalidBookmarkIndex_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreateTestPdf("test_delete_invalid.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("delete", pdfPath, bookmarkIndex: 99));
-        Assert.Contains("bookmarkIndex must be between", ex.Message);
-    }
-
-    [Fact]
-    public void Edit_WithMissingBookmarkIndex_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreatePdfWithBookmark("test_edit_no_index.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("edit", pdfPath, title: "New Title"));
-        Assert.Contains("bookmarkIndex is required", ex.Message);
-    }
-
-    [Fact]
-    public void Edit_WithInvalidBookmarkIndex_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreateTestPdf("test_edit_invalid_index.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("edit", pdfPath, bookmarkIndex: 99, title: "Test"));
-        Assert.Contains("bookmarkIndex must be between", ex.Message);
-    }
-
-    [Fact]
-    public void Edit_WithInvalidPageIndex_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreatePdfWithBookmark("test_edit_invalid_page.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("edit", pdfPath, bookmarkIndex: 1, pageIndex: 99));
-        Assert.Contains("pageIndex must be between", ex.Message);
-    }
-
-    [Fact]
-    public void Execute_WithNoPathOrSessionId_ShouldThrowException()
-    {
-        Assert.ThrowsAny<Exception>(() => _tool.Execute("get"));
-    }
-
     #endregion
 
-    #region Session
+    #region Session Management
 
     [Fact]
     public void Get_WithSessionId_ShouldGetFromSession()
@@ -246,23 +142,10 @@ public class PdfBookmarkToolTests : PdfTestBase
     }
 
     [Fact]
-    public void Add_WithSessionId_ShouldModifyInMemory()
-    {
-        var pdfPath = CreateTestPdf("test_session_memory.pdf");
-        var sessionId = OpenSession(pdfPath);
-        _tool.Execute("add", sessionId: sessionId, title: "In-Memory Bookmark", pageIndex: 1);
-        var document = SessionManager.GetDocument<Document>(sessionId);
-        Assert.NotNull(document);
-        Assert.True(document.Outlines.Count > 0);
-    }
-
-    [Fact]
     public void Delete_WithSessionId_ShouldDeleteFromSession()
     {
         var pdfPath = CreatePdfWithBookmark("test_session_delete.pdf", "To Delete");
         var sessionId = OpenSession(pdfPath);
-        var docBefore = SessionManager.GetDocument<Document>(sessionId);
-        Assert.True(docBefore.Outlines.Count > 0);
         var result = _tool.Execute("delete", sessionId: sessionId, bookmarkIndex: 1);
         Assert.StartsWith("Deleted bookmark", result);
         Assert.Contains("session", result);

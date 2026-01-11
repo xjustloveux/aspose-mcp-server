@@ -1,7 +1,8 @@
 using System.ComponentModel;
-using System.Text.Json;
 using Aspose.Pdf;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.Pdf.Page;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Pdf;
@@ -12,6 +13,11 @@ namespace AsposeMcpServer.Tools.Pdf;
 [McpServerToolType]
 public class PdfPageTool
 {
+    /// <summary>
+    ///     Handler registry for page operations.
+    /// </summary>
+    private readonly HandlerRegistry<Document> _handlerRegistry;
+
     /// <summary>
     ///     The session identity accessor for session isolation.
     /// </summary>
@@ -31,6 +37,7 @@ public class PdfPageTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = PdfPageHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -87,201 +94,75 @@ Usage examples:
         [Description("Array of page indices to rotate (1-based, for rotate, optional)")]
         int[]? pageIndices = null)
     {
-        return operation.ToLower() switch
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
+
+        var parameters = BuildParameters(operation, count, insertAt, width, height, pageIndex, rotation, pageIndices);
+
+        var handler = _handlerRegistry.GetHandler(operation);
+
+        var operationContext = new OperationContext<Document>
         {
-            "add" => AddPage(sessionId, path, outputPath, count, insertAt, width, height),
-            "delete" => DeletePage(sessionId, path, outputPath, pageIndex),
-            "rotate" => RotatePage(sessionId, path, outputPath, rotation, pageIndex, pageIndices),
-            "get_details" => GetPageDetails(sessionId, path, pageIndex),
-            "get_info" => GetPageInfo(sessionId, path),
-            _ => throw new ArgumentException($"Unknown operation: {operation}")
+            Document = ctx.Document,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = path,
+            OutputPath = outputPath
         };
+
+        var result = handler.Execute(operationContext, parameters);
+
+        if (operation.ToLowerInvariant() is "get_details" or "get_info")
+            return result;
+
+        if (operationContext.IsModified)
+            ctx.Save(outputPath);
+
+        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Adds one or more pages to the PDF document.
+    ///     Builds OperationParameters from method parameters.
     /// </summary>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
-    /// <param name="path">The PDF file path.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="count">Number of pages to add.</param>
-    /// <param name="insertAt">Optional 1-based position to insert pages at.</param>
-    /// <param name="width">Optional page width in points.</param>
-    /// <param name="height">Optional page height in points.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    private string AddPage(string? sessionId, string? path, string? outputPath, int count, int? insertAt, double? width,
-        double? height)
-    {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
-        var document = ctx.Document;
-
-        if (insertAt is >= 1 && insertAt.Value <= document.Pages.Count)
-            for (var i = 0; i < count; i++)
-            {
-                var page = document.Pages.Insert(insertAt.Value + i);
-                if (width.HasValue && height.HasValue)
-                    page.SetPageSize(width.Value, height.Value);
-                else
-                    page.SetPageSize(PageSize.A4.Width, PageSize.A4.Height);
-            }
-        else
-            for (var i = 0; i < count; i++)
-            {
-                var page = document.Pages.Add();
-                if (width.HasValue && height.HasValue)
-                    page.SetPageSize(width.Value, height.Value);
-                else
-                    page.SetPageSize(PageSize.A4.Width, PageSize.A4.Height);
-            }
-
-        ctx.Save(outputPath);
-
-        return $"Added {count} page(s). {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Deletes a page from the PDF document.
-    /// </summary>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
-    /// <param name="path">The PDF file path.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="pageIndex">The 1-based page index to delete.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when the page index is invalid.</exception>
-    private string DeletePage(string? sessionId, string? path, string? outputPath, int pageIndex)
-    {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
-        var document = ctx.Document;
-
-        if (pageIndex < 1 || pageIndex > document.Pages.Count)
-            throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
-
-        document.Pages.Delete(pageIndex);
-
-        ctx.Save(outputPath);
-
-        return $"Deleted page {pageIndex} (remaining: {document.Pages.Count}). {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Rotates one or more pages in the PDF document.
-    /// </summary>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
-    /// <param name="path">The PDF file path.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="rotation">Rotation angle in degrees (0, 90, 180, 270).</param>
-    /// <param name="pageIndex">Optional 1-based page index to rotate a single page.</param>
-    /// <param name="pageIndices">Optional array of 1-based page indices to rotate multiple pages.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when the rotation value is invalid.</exception>
-    private string RotatePage(string? sessionId, string? path, string? outputPath, int rotation, int? pageIndex,
+    private static OperationParameters BuildParameters(
+        string operation,
+        int count,
+        int? insertAt,
+        double? width,
+        double? height,
+        int pageIndex,
+        int rotation,
         int[]? pageIndices)
     {
-        if (rotation != 0 && rotation != 90 && rotation != 180 && rotation != 270)
-            throw new ArgumentException("rotation must be 0, 90, 180, or 270");
+        var parameters = new OperationParameters();
 
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
-        var document = ctx.Document;
-
-        var rotationEnum = rotation switch
+        switch (operation.ToLowerInvariant())
         {
-            90 => Rotation.on90,
-            180 => Rotation.on180,
-            270 => Rotation.on270,
-            _ => Rotation.None
-        };
+            case "add":
+                parameters.Set("count", count);
+                if (insertAt.HasValue) parameters.Set("insertAt", insertAt.Value);
+                if (width.HasValue) parameters.Set("width", width.Value);
+                if (height.HasValue) parameters.Set("height", height.Value);
+                break;
 
-        List<int> pagesToRotate;
-        if (pageIndices is { Length: > 0 })
-            pagesToRotate = pageIndices.ToList();
-        else if (pageIndex is > 0)
-            pagesToRotate = [pageIndex.Value];
-        else
-            pagesToRotate = Enumerable.Range(1, document.Pages.Count).ToList();
+            case "delete":
+                parameters.Set("pageIndex", pageIndex);
+                break;
 
-        foreach (var pageNum in pagesToRotate)
-            if (pageNum >= 1 && pageNum <= document.Pages.Count)
-                document.Pages[pageNum].Rotate = rotationEnum;
+            case "rotate":
+                parameters.Set("pageIndex", pageIndex);
+                parameters.Set("rotation", rotation);
+                if (pageIndices != null) parameters.Set("pageIndices", pageIndices);
+                break;
 
-        ctx.Save(outputPath);
+            case "get_details":
+                parameters.Set("pageIndex", pageIndex);
+                break;
 
-        return $"Rotated {pagesToRotate.Count} page(s) by {rotation} degrees. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Retrieves detailed information about a specific page.
-    /// </summary>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
-    /// <param name="path">The PDF file path.</param>
-    /// <param name="pageIndex">The 1-based page index.</param>
-    /// <returns>A JSON string containing detailed page information.</returns>
-    /// <exception cref="ArgumentException">Thrown when the page index is invalid.</exception>
-    private string GetPageDetails(string? sessionId, string? path, int pageIndex)
-    {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
-        var document = ctx.Document;
-
-        if (pageIndex < 1 || pageIndex > document.Pages.Count)
-            throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
-
-        var page = document.Pages[pageIndex];
-        var result = new
-        {
-            pageIndex,
-            width = page.Rect.Width,
-            height = page.Rect.Height,
-            rotation = page.Rotate.ToString(),
-            mediaBox = new
-            {
-                llx = page.MediaBox.LLX,
-                lly = page.MediaBox.LLY,
-                urx = page.MediaBox.URX,
-                ury = page.MediaBox.URY
-            },
-            cropBox = new
-            {
-                llx = page.CropBox.LLX,
-                lly = page.CropBox.LLY,
-                urx = page.CropBox.URX,
-                ury = page.CropBox.URY
-            },
-            annotations = page.Annotations.Count,
-            paragraphs = page.Paragraphs.Count,
-            images = page.Resources?.Images?.Count ?? 0
-        };
-
-        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
-    }
-
-    /// <summary>
-    ///     Retrieves basic information about all pages in the PDF document.
-    /// </summary>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
-    /// <param name="path">The PDF file path.</param>
-    /// <returns>A JSON string containing page information for all pages.</returns>
-    private string GetPageInfo(string? sessionId, string? path)
-    {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
-        var document = ctx.Document;
-        List<object> pageList = [];
-
-        for (var i = 1; i <= document.Pages.Count; i++)
-        {
-            var page = document.Pages[i];
-            pageList.Add(new
-            {
-                pageIndex = i,
-                width = page.Rect.Width,
-                height = page.Rect.Height,
-                rotation = page.Rotate.ToString()
-            });
+            case "get_info":
+                break;
         }
 
-        var result = new
-        {
-            count = document.Pages.Count,
-            items = pageList
-        };
-        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        return parameters;
     }
 }

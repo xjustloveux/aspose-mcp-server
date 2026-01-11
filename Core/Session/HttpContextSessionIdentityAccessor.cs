@@ -26,9 +26,9 @@ public class HttpContextSessionIdentityAccessor : ISessionIdentityAccessor
         if (context == null)
             return SessionIdentity.GetAnonymous();
 
-        var tenantId = context.Items["TenantId"]?.ToString();
+        var groupId = context.Items["GroupId"]?.ToString();
         var userId = context.Items["UserId"]?.ToString();
 
-        return new SessionIdentity { TenantId = tenantId, UserId = userId };
+        return new SessionIdentity { GroupId = groupId, UserId = userId };
     }
 }

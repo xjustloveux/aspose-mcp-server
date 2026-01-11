@@ -1,8 +1,8 @@
 using System.ComponentModel;
-using System.Text.Json;
 using Aspose.Cells;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.Excel.Sheet;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -14,9 +14,9 @@ namespace AsposeMcpServer.Tools.Excel;
 public class ExcelSheetTool
 {
     /// <summary>
-    ///     Characters that are not allowed in Excel sheet names.
+    ///     Handler registry for sheet operations.
     /// </summary>
-    private static readonly char[] InvalidSheetNameChars = ['\\', '/', '?', '*', '[', ']', ':'];
+    private readonly HandlerRegistry<Workbook> _handlerRegistry;
 
     /// <summary>
     ///     Session identity accessor for session isolation support.
@@ -38,6 +38,7 @@ public class ExcelSheetTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = ExcelSheetHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -91,311 +92,77 @@ Usage examples:
     {
         using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
-        return operation.ToLowerInvariant() switch
+        var parameters = BuildParameters(operation, sheetIndex, sheetName, newName, insertAt, targetIndex, copyToPath);
+
+        var handler = _handlerRegistry.GetHandler(operation);
+
+        var operationContext = new OperationContext<Workbook>
         {
-            "add" => AddSheet(ctx, outputPath, sheetName, insertAt),
-            "delete" => DeleteSheet(ctx, outputPath, sheetIndex),
-            "get" => GetSheets(ctx),
-            "rename" => RenameSheet(ctx, outputPath, sheetIndex, newName),
-            "move" => MoveSheet(ctx, outputPath, sheetIndex, targetIndex, insertAt),
-            "copy" => CopySheet(ctx, outputPath, sheetIndex, targetIndex, copyToPath),
-            "hide" => HideSheet(ctx, outputPath, sheetIndex),
-            _ => throw new ArgumentException($"Unknown operation: {operation}")
-        };
-    }
-
-    /// <summary>
-    ///     Validates that the sheet name meets Excel requirements.
-    /// </summary>
-    /// <param name="name">The sheet name to validate.</param>
-    /// <param name="paramName">The parameter name for error messages.</param>
-    /// <exception cref="ArgumentException">
-    ///     Thrown when the sheet name is empty, exceeds 31 characters, or contains invalid
-    ///     characters.
-    /// </exception>
-    private static void ValidateSheetName(string name, string paramName)
-    {
-        if (string.IsNullOrWhiteSpace(name))
-            throw new ArgumentException($"{paramName} cannot be empty");
-
-        if (name.Length > 31)
-            throw new ArgumentException(
-                $"{paramName} '{name}' (length: {name.Length}) exceeds Excel's limit of 31 characters");
-
-        var invalidCharIndex = name.IndexOfAny(InvalidSheetNameChars);
-        if (invalidCharIndex >= 0)
-            throw new ArgumentException(
-                $"{paramName} contains invalid character '{name[invalidCharIndex]}'. Sheet names cannot contain: \\ / ? * [ ] :");
-    }
-
-    /// <summary>
-    ///     Adds a new worksheet to the workbook.
-    /// </summary>
-    /// <param name="ctx">The document context containing the workbook.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetName">The name of the new worksheet.</param>
-    /// <param name="insertAt">The position to insert the worksheet at.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">
-    ///     Thrown when sheetName is empty, invalid, already exists, or insertAt is out of
-    ///     range.
-    /// </exception>
-    private static string AddSheet(DocumentContext<Workbook> ctx, string? outputPath, string? sheetName, int? insertAt)
-    {
-        if (string.IsNullOrEmpty(sheetName))
-            throw new ArgumentException("sheetName is required for add operation");
-
-        sheetName = sheetName.Trim();
-        ValidateSheetName(sheetName, "sheetName");
-
-        var workbook = ctx.Document;
-
-        var duplicate =
-            workbook.Worksheets.Any(ws => string.Equals(ws.Name, sheetName, StringComparison.OrdinalIgnoreCase));
-        if (duplicate)
-            throw new ArgumentException($"Worksheet name '{sheetName}' already exists in the workbook");
-
-        Worksheet newSheet;
-        if (insertAt.HasValue)
-        {
-            if (insertAt.Value < 0 || insertAt.Value > workbook.Worksheets.Count)
-                throw new ArgumentException($"insertAt must be between 0 and {workbook.Worksheets.Count}");
-
-            if (insertAt.Value == workbook.Worksheets.Count)
-            {
-                var addedIndex = workbook.Worksheets.Add();
-                newSheet = workbook.Worksheets[addedIndex];
-            }
-            else
-            {
-                workbook.Worksheets.Insert(insertAt.Value, SheetType.Worksheet);
-                newSheet = workbook.Worksheets[insertAt.Value];
-            }
-        }
-        else
-        {
-            var addedIndex = workbook.Worksheets.Add();
-            newSheet = workbook.Worksheets[addedIndex];
-        }
-
-        newSheet.Name = sheetName;
-
-        ctx.Save(outputPath);
-        return $"Worksheet '{sheetName}' added. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Deletes a worksheet from the workbook.
-    /// </summary>
-    /// <param name="ctx">The document context containing the workbook.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The index of the worksheet to delete.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when the sheet index is out of range.</exception>
-    /// <exception cref="InvalidOperationException">Thrown when attempting to delete the last worksheet.</exception>
-    private static string DeleteSheet(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex)
-    {
-        var workbook = ctx.Document;
-        ExcelHelper.ValidateSheetIndex(sheetIndex, workbook);
-
-        if (workbook.Worksheets.Count <= 1)
-            throw new InvalidOperationException("Cannot delete the last worksheet");
-
-        var sheetName = workbook.Worksheets[sheetIndex].Name;
-        workbook.Worksheets.RemoveAt(sheetIndex);
-
-        ctx.Save(outputPath);
-        return $"Worksheet '{sheetName}' (index {sheetIndex}) deleted. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Gets information about all worksheets in the workbook.
-    /// </summary>
-    /// <param name="ctx">The document context containing the workbook.</param>
-    /// <returns>A JSON string containing information about all worksheets.</returns>
-    private static string GetSheets(DocumentContext<Workbook> ctx)
-    {
-        var workbook = ctx.Document;
-
-        if (workbook.Worksheets.Count == 0)
-        {
-            var emptyResult = new
-            {
-                count = 0,
-                workbookName = ctx.SourcePath != null ? Path.GetFileName(ctx.SourcePath) : "session",
-                items = Array.Empty<object>(),
-                message = "No worksheets found"
-            };
-            return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
-        }
-
-        List<object> sheetList = [];
-        for (var i = 0; i < workbook.Worksheets.Count; i++)
-        {
-            var worksheet = workbook.Worksheets[i];
-            sheetList.Add(new
-            {
-                index = i,
-                name = worksheet.Name,
-                visibility = worksheet.IsVisible ? "Visible" : "Hidden"
-            });
-        }
-
-        var result = new
-        {
-            count = workbook.Worksheets.Count,
-            workbookName = ctx.SourcePath != null ? Path.GetFileName(ctx.SourcePath) : "session",
-            items = sheetList
+            Document = ctx.Document,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = path,
+            OutputPath = outputPath
         };
 
-        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        var result = handler.Execute(operationContext, parameters);
+
+        if (operation.ToLowerInvariant() == "get")
+            return result;
+
+        if (operationContext.IsModified)
+            ctx.Save(outputPath);
+
+        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Renames a worksheet.
+    ///     Builds OperationParameters from method parameters.
     /// </summary>
-    /// <param name="ctx">The document context containing the workbook.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The index of the worksheet to rename.</param>
-    /// <param name="newName">The new name for the worksheet.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when newName is empty, invalid, or already exists.</exception>
-    private static string RenameSheet(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex,
-        string? newName)
-    {
-        if (string.IsNullOrEmpty(newName))
-            throw new ArgumentException("newName is required for rename operation");
-
-        newName = newName.Trim();
-        ValidateSheetName(newName, "newName");
-
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var oldName = worksheet.Name;
-
-        var duplicate = workbook.Worksheets.Any(ws =>
-            ws != worksheet && string.Equals(ws.Name, newName, StringComparison.OrdinalIgnoreCase));
-        if (duplicate)
-            throw new ArgumentException($"Worksheet name '{newName}' already exists in the workbook");
-
-        worksheet.Name = newName;
-
-        ctx.Save(outputPath);
-        return $"Worksheet '{oldName}' renamed to '{newName}'. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Moves a worksheet to a different position.
-    /// </summary>
-    /// <param name="ctx">The document context containing the workbook.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The index of the worksheet to move.</param>
-    /// <param name="targetIndex">The target position index.</param>
-    /// <param name="insertAt">Alternative target position index.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">
-    ///     Thrown when neither targetIndex nor insertAt is provided, or when indices are out
-    ///     of range.
-    /// </exception>
-    private static string MoveSheet(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex, int? targetIndex,
-        int? insertAt)
-    {
-        if (!targetIndex.HasValue && !insertAt.HasValue)
-            throw new ArgumentException("Either targetIndex or insertAt is required for move operation");
-
-        var finalTargetIndex = targetIndex ?? insertAt!.Value;
-
-        var workbook = ctx.Document;
-
-        if (sheetIndex < 0 || sheetIndex >= workbook.Worksheets.Count)
-            throw new ArgumentException(
-                $"Worksheet index {sheetIndex} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
-
-        if (finalTargetIndex < 0 || finalTargetIndex >= workbook.Worksheets.Count)
-            throw new ArgumentException(
-                $"Target index {finalTargetIndex} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
-
-        if (sheetIndex == finalTargetIndex)
-            return $"Worksheet is already at position {sheetIndex}, no move needed. {ctx.GetOutputMessage(outputPath)}";
-
-        var sheetName = workbook.Worksheets[sheetIndex].Name;
-        var worksheet = workbook.Worksheets[sheetIndex];
-
-        worksheet.MoveTo(finalTargetIndex);
-
-        ctx.Save(outputPath);
-        return
-            $"Worksheet '{sheetName}' moved from position {sheetIndex} to {finalTargetIndex}. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Copies a worksheet within the same workbook or to another file.
-    /// </summary>
-    /// <param name="ctx">The document context containing the workbook.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The index of the worksheet to copy.</param>
-    /// <param name="targetIndex">The target position index for the copied worksheet.</param>
-    /// <param name="copyToPath">The path to copy the worksheet to an external file.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when sheetIndex or targetIndex is out of range.</exception>
-    private static string CopySheet(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex, int? targetIndex,
+    private static OperationParameters BuildParameters(
+        string operation,
+        int sheetIndex,
+        string? sheetName,
+        string? newName,
+        int? insertAt,
+        int? targetIndex,
         string? copyToPath)
     {
-        if (!string.IsNullOrEmpty(copyToPath))
-            SecurityHelper.ValidateFilePath(copyToPath, "copyToPath", true);
+        var parameters = new OperationParameters();
+        parameters.Set("sheetIndex", sheetIndex);
 
-        var workbook = ctx.Document;
-
-        if (sheetIndex < 0 || sheetIndex >= workbook.Worksheets.Count)
-            throw new ArgumentException(
-                $"Worksheet index {sheetIndex} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
-
-        var sourceSheet = workbook.Worksheets[sheetIndex];
-        var sheetName = sourceSheet.Name;
-
-        if (!string.IsNullOrEmpty(copyToPath))
+        switch (operation.ToLowerInvariant())
         {
-            using var targetWorkbook = new Workbook();
-            targetWorkbook.Worksheets[0].Copy(sourceSheet);
-            targetWorkbook.Worksheets[0].Name = sheetName;
-            targetWorkbook.Save(copyToPath);
-            return $"Worksheet '{sheetName}' copied to external file. Output: {copyToPath}";
+            case "add":
+                if (sheetName != null) parameters.Set("sheetName", sheetName);
+                if (insertAt.HasValue) parameters.Set("insertAt", insertAt.Value);
+                break;
+
+            case "delete":
+                break;
+
+            case "get":
+                break;
+
+            case "rename":
+                if (newName != null) parameters.Set("newName", newName);
+                break;
+
+            case "move":
+                if (targetIndex.HasValue) parameters.Set("targetIndex", targetIndex.Value);
+                if (insertAt.HasValue) parameters.Set("insertAt", insertAt.Value);
+                break;
+
+            case "copy":
+                if (targetIndex.HasValue) parameters.Set("targetIndex", targetIndex.Value);
+                if (copyToPath != null) parameters.Set("copyToPath", copyToPath);
+                break;
+
+            case "hide":
+                break;
         }
 
-        targetIndex ??= workbook.Worksheets.Count;
-
-        if (targetIndex.Value < 0 || targetIndex.Value > workbook.Worksheets.Count)
-            throw new ArgumentException(
-                $"Target index {targetIndex.Value} is out of range (workbook has {workbook.Worksheets.Count} worksheets)");
-
-        _ = workbook.Worksheets.AddCopy(sheetIndex);
-
-        ctx.Save(outputPath);
-        return $"Worksheet '{sheetName}' copied to position {targetIndex.Value}. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Toggles the visibility of a worksheet.
-    /// </summary>
-    /// <param name="ctx">The document context containing the workbook.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The index of the worksheet to hide or show.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    private static string HideSheet(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex)
-    {
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var sheetName = worksheet.Name;
-
-        if (worksheet.IsVisible)
-        {
-            worksheet.IsVisible = false;
-            ctx.Save(outputPath);
-            return $"Worksheet '{sheetName}' hidden. {ctx.GetOutputMessage(outputPath)}";
-        }
-
-        worksheet.IsVisible = true;
-        ctx.Save(outputPath);
-        return $"Worksheet '{sheetName}' shown. {ctx.GetOutputMessage(outputPath)}";
+        return parameters;
     }
 }

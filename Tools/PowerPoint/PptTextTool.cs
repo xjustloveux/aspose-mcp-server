@@ -1,19 +1,23 @@
 using System.ComponentModel;
-using System.Text;
 using Aspose.Slides;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.PowerPoint.Text;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.PowerPoint;
 
 /// <summary>
 ///     Unified tool for managing PowerPoint text (add, edit, replace)
-///     Merges: PptAddTextTool, PptEditTextTool, PptReplaceTextTool
 /// </summary>
 [McpServerToolType]
 public class PptTextTool
 {
+    /// <summary>
+    ///     Handler registry for text operations.
+    /// </summary>
+    private readonly HandlerRegistry<Presentation> _handlerRegistry;
+
     /// <summary>
     ///     Identity accessor for session isolation.
     /// </summary>
@@ -33,6 +37,7 @@ public class PptTextTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = PptTextHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -99,237 +104,71 @@ Usage examples:
     {
         using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
-        return operation.ToLower() switch
+        var parameters = BuildParameters(operation, slideIndex, shapeIndex, text, findText, replaceText,
+            matchCase, x, y, width, height);
+
+        var handler = _handlerRegistry.GetHandler(operation);
+
+        var operationContext = new OperationContext<Presentation>
         {
-            "add" => AddText(ctx, outputPath, slideIndex, text, x, y, width, height),
-            "edit" => EditText(ctx, outputPath, slideIndex, shapeIndex, text),
-            "replace" => ReplaceText(ctx, outputPath, findText, replaceText, matchCase),
-            _ => throw new ArgumentException($"Unknown operation: {operation}")
+            Document = ctx.Document,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = path,
+            OutputPath = outputPath
         };
+
+        var result = handler.Execute(operationContext, parameters);
+
+        if (operationContext.IsModified)
+            ctx.Save(outputPath);
+
+        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Adds a text box to a slide.
+    ///     Builds OperationParameters from method parameters.
     /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="slideIndex">The zero-based index of the slide.</param>
-    /// <param name="text">The text content to add.</param>
-    /// <param name="x">The X position in points.</param>
-    /// <param name="y">The Y position in points.</param>
-    /// <param name="width">The text box width in points.</param>
-    /// <param name="height">The text box height in points.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when slideIndex or text is not provided.</exception>
-    private static string AddText(DocumentContext<Presentation> ctx, string? outputPath, int? slideIndex,
-        string? text, float x, float y, float width, float height)
+    private static OperationParameters BuildParameters(
+        string operation,
+        int? slideIndex,
+        int? shapeIndex,
+        string? text,
+        string? findText,
+        string? replaceText,
+        bool matchCase,
+        float x,
+        float y,
+        float width,
+        float height)
     {
-        if (!slideIndex.HasValue)
-            throw new ArgumentException("slideIndex is required for add operation");
-        if (string.IsNullOrEmpty(text))
-            throw new ArgumentException("text is required for add operation");
+        var parameters = new OperationParameters();
 
-        var presentation = ctx.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex.Value);
-
-        var textBox = slide.Shapes.AddAutoShape(ShapeType.Rectangle, x, y, width, height);
-        textBox.TextFrame.Text = text;
-        textBox.FillFormat.FillType = FillType.NoFill;
-        textBox.LineFormat.FillFormat.FillType = FillType.NoFill;
-
-        ctx.Save(outputPath);
-
-        return $"Text added to slide {slideIndex.Value}. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Edits text in a shape on a slide.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="slideIndex">The zero-based index of the slide.</param>
-    /// <param name="shapeIndex">The zero-based index of the shape.</param>
-    /// <param name="text">The new text content.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">
-    ///     Thrown when slideIndex, shapeIndex, or text is not provided, or shape is not an
-    ///     AutoShape.
-    /// </exception>
-    private static string EditText(DocumentContext<Presentation> ctx, string? outputPath, int? slideIndex,
-        int? shapeIndex, string? text)
-    {
-        if (!slideIndex.HasValue)
-            throw new ArgumentException("slideIndex is required for edit operation");
-        if (!shapeIndex.HasValue)
-            throw new ArgumentException("shapeIndex is required for edit operation");
-        if (string.IsNullOrEmpty(text))
-            throw new ArgumentException("text is required for edit operation");
-
-        var presentation = ctx.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex.Value);
-        var shape = PowerPointHelper.GetShape(slide, shapeIndex.Value);
-
-        if (shape is not IAutoShape autoShape)
-            throw new ArgumentException(
-                $"Shape at index {shapeIndex.Value} (Type: {shape.GetType().Name}) is not an AutoShape and cannot contain text");
-
-        if (autoShape.TextFrame == null)
-            autoShape.AddTextFrame("");
-
-        if (autoShape.TextFrame != null)
+        switch (operation.ToLowerInvariant())
         {
-            autoShape.TextFrame.Paragraphs.Clear();
-            var paragraph = new Paragraph();
-            paragraph.Portions.Add(new Portion(text));
-            autoShape.TextFrame.Paragraphs.Add(paragraph);
-        }
-
-        ctx.Save(outputPath);
-        return
-            $"Text updated on slide {slideIndex.Value}, shape {shapeIndex.Value}. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Replaces text in the presentation across all shapes including GroupShapes and Tables.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="findText">The text to find.</param>
-    /// <param name="replaceText">The text to replace with.</param>
-    /// <param name="matchCase">True to match case, false for case-insensitive matching.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when findText or replaceText is not provided.</exception>
-    private static string ReplaceText(DocumentContext<Presentation> ctx, string? outputPath, string? findText,
-        string? replaceText, bool matchCase)
-    {
-        if (string.IsNullOrEmpty(findText))
-            throw new ArgumentException("findText is required for replace operation");
-        if (replaceText == null)
-            throw new ArgumentException("replaceText is required for replace operation");
-
-        var presentation = ctx.Document;
-        var comparison = matchCase ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
-        var replacements = 0;
-
-        foreach (var slide in presentation.Slides)
-            replacements += ProcessShapesForReplace(slide.Shapes, findText, replaceText, comparison);
-
-        ctx.Save(outputPath);
-        return
-            $"Replaced '{findText}' with '{replaceText}' ({replacements} occurrences). {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Recursively processes shapes for text replacement, including GroupShapes and Tables.
-    /// </summary>
-    /// <param name="shapes">The shape collection to process.</param>
-    /// <param name="findText">The text to find.</param>
-    /// <param name="replaceText">The text to replace with.</param>
-    /// <param name="comparison">The string comparison type.</param>
-    /// <returns>The number of replacements made.</returns>
-    private static int ProcessShapesForReplace(IShapeCollection shapes, string findText, string replaceText,
-        StringComparison comparison)
-    {
-        var replacements = 0;
-
-        foreach (var shape in shapes)
-            switch (shape)
-            {
-                case IAutoShape { TextFrame: not null } autoShape:
-                    replacements += ReplaceInTextFrame(autoShape.TextFrame, findText, replaceText, comparison);
-                    break;
-                case IGroupShape groupShape:
-                    replacements += ProcessShapesForReplace(groupShape.Shapes, findText, replaceText, comparison);
-                    break;
-                case ITable table:
-                    replacements += ReplaceInTable(table, findText, replaceText, comparison);
-                    break;
-            }
-
-        return replacements;
-    }
-
-    /// <summary>
-    ///     Replaces text in a TextFrame while preserving formatting at the Portion level.
-    /// </summary>
-    /// <param name="textFrame">The text frame to process.</param>
-    /// <param name="findText">The text to find.</param>
-    /// <param name="replaceText">The text to replace with.</param>
-    /// <param name="comparison">The string comparison type.</param>
-    /// <returns>The number of replacements made (0 or 1).</returns>
-    private static int ReplaceInTextFrame(ITextFrame textFrame, string findText, string replaceText,
-        StringComparison comparison)
-    {
-        var originalText = textFrame.Text;
-        if (string.IsNullOrEmpty(originalText)) return 0;
-
-        if (originalText.IndexOf(findText, comparison) < 0) return 0;
-
-        foreach (var para in textFrame.Paragraphs)
-        foreach (var portion in para.Portions)
-        {
-            var portionText = portion.Text;
-            if (string.IsNullOrEmpty(portionText)) continue;
-
-            var newText = ReplaceAll(portionText, findText, replaceText, comparison);
-            if (newText != portionText)
-                portion.Text = newText;
-        }
-
-        return 1;
-    }
-
-    /// <summary>
-    ///     Replaces text in all cells of a table.
-    /// </summary>
-    /// <param name="table">The table to process.</param>
-    /// <param name="findText">The text to find.</param>
-    /// <param name="replaceText">The text to replace with.</param>
-    /// <param name="comparison">The string comparison type.</param>
-    /// <returns>The number of replacements made.</returns>
-    private static int ReplaceInTable(ITable table, string findText, string replaceText, StringComparison comparison)
-    {
-        var replacements = 0;
-
-        for (var row = 0; row < table.Rows.Count; row++)
-        for (var col = 0; col < table.Columns.Count; col++)
-        {
-            var cell = table[col, row];
-            if (cell.TextFrame != null)
-                replacements += ReplaceInTextFrame(cell.TextFrame, findText, replaceText, comparison);
-        }
-
-        return replacements;
-    }
-
-    /// <summary>
-    ///     Replaces all occurrences of a string in source with replacement string.
-    /// </summary>
-    /// <param name="source">The source string to search in.</param>
-    /// <param name="find">The text to find.</param>
-    /// <param name="replace">The text to replace with.</param>
-    /// <param name="comparison">The string comparison type.</param>
-    /// <returns>The string with all occurrences replaced.</returns>
-    private static string ReplaceAll(string source, string find, string replace, StringComparison comparison)
-    {
-        if (string.IsNullOrEmpty(source) || string.IsNullOrEmpty(find)) return source;
-
-        var sb = new StringBuilder();
-        var idx = 0;
-        while (true)
-        {
-            var next = source.IndexOf(find, idx, comparison);
-            if (next < 0)
-            {
-                sb.Append(source, idx, source.Length - idx);
+            case "add":
+                if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
+                if (text != null) parameters.Set("text", text);
+                parameters.Set("x", x);
+                parameters.Set("y", y);
+                parameters.Set("width", width);
+                parameters.Set("height", height);
                 break;
-            }
 
-            sb.Append(source, idx, next - idx);
-            sb.Append(replace);
-            idx = next + find.Length;
+            case "edit":
+                if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
+                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
+                if (text != null) parameters.Set("text", text);
+                break;
+
+            case "replace":
+                if (findText != null) parameters.Set("findText", findText);
+                if (replaceText != null) parameters.Set("replaceText", replaceText);
+                parameters.Set("matchCase", matchCase);
+                break;
         }
 
-        return sb.ToString();
+        return parameters;
     }
 }

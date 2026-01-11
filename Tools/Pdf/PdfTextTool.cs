@@ -1,10 +1,8 @@
 using System.ComponentModel;
-using System.Text.Json;
-using System.Text.RegularExpressions;
 using Aspose.Pdf;
-using Aspose.Pdf.Text;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.Pdf.Text;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Pdf;
@@ -15,6 +13,11 @@ namespace AsposeMcpServer.Tools.Pdf;
 [McpServerToolType]
 public class PdfTextTool
 {
+    /// <summary>
+    ///     Handler registry for text operations.
+    /// </summary>
+    private readonly HandlerRegistry<Document> _handlerRegistry;
+
     /// <summary>
     ///     The session identity accessor for session isolation.
     /// </summary>
@@ -34,6 +37,7 @@ public class PdfTextTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = PdfTextHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -100,175 +104,74 @@ Usage examples:
     {
         using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
-        return operation.ToLower() switch
+        var parameters = BuildParameters(operation, pageIndex, text, x, y, fontName, fontSize,
+            oldText, newText, replaceAll, includeFontInfo, extractionMode);
+
+        var handler = _handlerRegistry.GetHandler(operation);
+
+        var operationContext = new OperationContext<Document>
         {
-            "add" => AddText(ctx, outputPath, pageIndex, text, x, y, fontName, fontSize),
-            "edit" => EditText(ctx, outputPath, pageIndex, oldText, newText, replaceAll),
-            "extract" => ExtractText(ctx, pageIndex, includeFontInfo, extractionMode),
-            _ => throw new ArgumentException($"Unknown operation: {operation}")
-        };
-    }
-
-    /// <summary>
-    ///     Adds text to the specified page of the PDF document.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="pageIndex">The 1-based page index.</param>
-    /// <param name="text">The text to add.</param>
-    /// <param name="x">The X position in PDF coordinates.</param>
-    /// <param name="y">The Y position in PDF coordinates.</param>
-    /// <param name="fontName">The font name to use.</param>
-    /// <param name="fontSize">The font size in points.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when text is empty or page index is invalid.</exception>
-    private static string AddText(DocumentContext<Document> ctx, string? outputPath, int pageIndex, string? text,
-        double x, double y, string fontName, double fontSize)
-    {
-        if (string.IsNullOrEmpty(text))
-            throw new ArgumentException("text is required for add operation");
-
-        var document = ctx.Document;
-        if (pageIndex < 1 || pageIndex > document.Pages.Count)
-            throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
-
-        var page = document.Pages[pageIndex];
-        var textFragment = new TextFragment(text)
-        {
-            Position = new Position(x, y)
+            Document = ctx.Document,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = path,
+            OutputPath = outputPath
         };
 
-        FontHelper.Pdf.ApplyFontSettings(textFragment.TextState, fontName, fontSize);
+        var result = handler.Execute(operationContext, parameters);
 
-        var textBuilder = new TextBuilder(page);
-        textBuilder.AppendText(textFragment);
+        if (operation.ToLowerInvariant() == "extract")
+            return result;
 
-        ctx.Save(outputPath);
-        return $"Added text to page {pageIndex}. {ctx.GetOutputMessage(outputPath)}";
+        if (operationContext.IsModified)
+            ctx.Save(outputPath);
+
+        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Edits (replaces) text on the specified page of the PDF document.
+    ///     Builds OperationParameters from method parameters.
     /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="pageIndex">The 1-based page index.</param>
-    /// <param name="oldText">The text to find and replace.</param>
-    /// <param name="newText">The replacement text.</param>
-    /// <param name="replaceAll">Whether to replace all occurrences.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when text is not found or page index is invalid.</exception>
-    private static string EditText(DocumentContext<Document> ctx, string? outputPath, int pageIndex, string? oldText,
-        string? newText, bool replaceAll)
-    {
-        if (string.IsNullOrEmpty(oldText))
-            throw new ArgumentException("oldText is required for edit operation");
-        if (string.IsNullOrEmpty(newText))
-            throw new ArgumentException("newText is required for edit operation");
-
-        var document = ctx.Document;
-        if (pageIndex < 1 || pageIndex > document.Pages.Count)
-            throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
-
-        var page = document.Pages[pageIndex];
-
-        var textFragmentAbsorber = new TextFragmentAbsorber(oldText);
-        page.Accept(textFragmentAbsorber);
-
-        var fragments = textFragmentAbsorber.TextFragments;
-        var normalizedOldText = Regex.Replace(oldText, @"\s+", " ").Trim();
-
-        if (fragments.Count == 0 && normalizedOldText != oldText)
-        {
-            textFragmentAbsorber = new TextFragmentAbsorber(normalizedOldText);
-            page.Accept(textFragmentAbsorber);
-            fragments = textFragmentAbsorber.TextFragments;
-        }
-
-        if (fragments.Count == 0)
-        {
-            var textAbsorber = new TextAbsorber();
-            page.Accept(textAbsorber);
-            var pageText = textAbsorber.Text ?? "";
-            var preview = pageText.Length > 200 ? pageText[..200] + "..." : pageText;
-            throw new ArgumentException(
-                $"Text '{oldText}' not found on page {pageIndex}. Page text preview: {preview}");
-        }
-
-        var finalReplaceCount = replaceAll ? fragments.Count : 1;
-        var replacedCount = 0;
-
-        foreach (var fragment in fragments)
-        {
-            if (replacedCount >= finalReplaceCount)
-                break;
-            fragment.Text = newText;
-            replacedCount++;
-        }
-
-        ctx.Save(outputPath);
-        return
-            $"Replaced {replacedCount} occurrence(s) of '{oldText}' on page {pageIndex}. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Extracts text from the specified page of the PDF document.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="pageIndex">The 1-based page index.</param>
-    /// <param name="includeFontInfo">Whether to include font information in the output.</param>
-    /// <param name="extractionMode">The text extraction mode (pure or raw).</param>
-    /// <returns>A JSON string containing the extracted text.</returns>
-    /// <exception cref="ArgumentException">Thrown when the page index is invalid.</exception>
-    private static string ExtractText(DocumentContext<Document> ctx, int pageIndex, bool includeFontInfo,
+    private static OperationParameters BuildParameters(
+        string operation,
+        int pageIndex,
+        string? text,
+        double x,
+        double y,
+        string fontName,
+        double fontSize,
+        string? oldText,
+        string? newText,
+        bool replaceAll,
+        bool includeFontInfo,
         string extractionMode)
     {
-        var document = ctx.Document;
-        if (pageIndex < 1 || pageIndex > document.Pages.Count)
-            throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
+        var parameters = new OperationParameters();
+        parameters.Set("pageIndex", pageIndex);
 
-        var page = document.Pages[pageIndex];
-
-        var textAbsorber = new TextAbsorber();
-        if (extractionMode.ToLower() == "raw")
-            textAbsorber.ExtractionOptions = new TextExtractionOptions(TextExtractionOptions.TextFormattingMode.Raw);
-
-        page.Accept(textAbsorber);
-
-        if (includeFontInfo)
+        switch (operation.ToLowerInvariant())
         {
-            var textFragmentAbsorber = new TextFragmentAbsorber();
-            page.Accept(textFragmentAbsorber);
-            List<object> fragments = [];
+            case "add":
+                if (text != null) parameters.Set("text", text);
+                parameters.Set("x", x);
+                parameters.Set("y", y);
+                parameters.Set("fontName", fontName);
+                parameters.Set("fontSize", fontSize);
+                break;
 
-            foreach (var fragment in textFragmentAbsorber.TextFragments)
-                fragments.Add(new
-                {
-                    text = fragment.Text,
-                    fontName = fragment.TextState.Font.FontName,
-                    fontSize = fragment.TextState.FontSize
-                });
+            case "edit":
+                if (oldText != null) parameters.Set("oldText", oldText);
+                if (newText != null) parameters.Set("newText", newText);
+                parameters.Set("replaceAll", replaceAll);
+                break;
 
-            var result = new
-            {
-                pageIndex,
-                totalPages = document.Pages.Count,
-                fragmentCount = fragments.Count,
-                fragments
-            };
-
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            case "extract":
+                parameters.Set("includeFontInfo", includeFontInfo);
+                parameters.Set("extractionMode", extractionMode);
+                break;
         }
-        else
-        {
-            var result = new
-            {
-                pageIndex,
-                totalPages = document.Pages.Count,
-                text = textAbsorber.Text
-            };
 
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
-        }
+        return parameters;
     }
 }

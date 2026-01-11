@@ -4,6 +4,11 @@ using AsposeMcpServer.Tools.Word;
 
 namespace AsposeMcpServer.Tests.Tools.Word;
 
+/// <summary>
+///     Integration tests for WordFormatTool.
+///     Focuses on session management, file I/O, and operation routing.
+///     Detailed parameter validation and business logic tests are in Handler tests.
+/// </summary>
 public class WordFormatToolTests : WordTestBase
 {
     private readonly WordFormatTool _tool;
@@ -13,37 +18,18 @@ public class WordFormatToolTests : WordTestBase
         _tool = new WordFormatTool(SessionManager);
     }
 
-    #region General
+    #region File I/O Smoke Tests
 
     [Fact]
-    public void GetRunFormat_ShouldReturnFormatInfo()
+    public void GetRunFormat_ShouldReturnFormatInfoFromFile()
     {
         var docPath = CreateWordDocumentWithContent("test_get_run_format.docx", "Test text");
         var result = _tool.Execute("get_run_format", docPath, paragraphIndex: 0, runIndex: 0);
-        Assert.NotNull(result);
-        Assert.NotEmpty(result);
         Assert.Contains("Font", result, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public void GetRunFormat_WithIncludeInherited_ShouldReturnInheritedFormat()
-    {
-        var docPath = CreateWordDocumentWithContent("test_get_run_format_inherited.docx", "Test text");
-        var result = _tool.Execute("get_run_format", docPath, paragraphIndex: 0, runIndex: 0, includeInherited: true);
-        Assert.Contains("inherited", result, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public void GetRunFormat_WithoutRunIndex_ShouldReturnAllRuns()
-    {
-        var docPath = CreateWordDocumentWithContent("test_get_all_runs.docx", "Test text");
-        var result = _tool.Execute("get_run_format", docPath, paragraphIndex: 0);
-        Assert.Contains("runs", result, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("count", result, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public void SetRunFormat_ShouldApplyFormatting()
+    public void SetRunFormat_ShouldApplyFormattingAndPersistToFile()
     {
         var docPath = CreateWordDocumentWithContent("test_set_run_format.docx", "Format this");
         var outputPath = CreateTestFilePath("test_set_run_format_output.docx");
@@ -59,75 +45,15 @@ public class WordFormatToolTests : WordTestBase
     }
 
     [Fact]
-    public void SetRunFormat_WithItalicAndUnderline_ShouldApply()
-    {
-        var docPath = CreateWordDocumentWithContent("test_set_run_italic.docx", "Format this");
-        var outputPath = CreateTestFilePath("test_set_run_italic_output.docx");
-        _tool.Execute("set_run_format", docPath, outputPath: outputPath,
-            paragraphIndex: 0, runIndex: 0, italic: true, underline: true);
-        var doc = new Document(outputPath);
-        var runs = doc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
-        if (runs.Count > 0)
-        {
-            Assert.True(runs[0].Font.Italic);
-            Assert.Equal(Underline.Single, runs[0].Font.Underline);
-        }
-    }
-
-    [Fact]
-    public void SetRunFormat_WithAutoColor_ShouldResetColor()
-    {
-        var docPath = CreateWordDocumentWithContent("test_set_run_auto_color.docx", "Format this");
-        var outputPath = CreateTestFilePath("test_set_run_auto_color_output.docx");
-        var result = _tool.Execute("set_run_format", docPath, outputPath: outputPath,
-            paragraphIndex: 0, runIndex: 0, color: "auto");
-        Assert.StartsWith("Run format updated", result);
-    }
-
-    [Fact]
-    public void SetRunFormat_WithFontName_ShouldApplyFont()
-    {
-        var docPath = CreateWordDocumentWithContent("test_set_run_font.docx", "Format this");
-        var outputPath = CreateTestFilePath("test_set_run_font_output.docx");
-        _tool.Execute("set_run_format", docPath, outputPath: outputPath,
-            paragraphIndex: 0, runIndex: 0, fontName: "Arial", fontSize: 12);
-        var doc = new Document(outputPath);
-        var runs = doc.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
-        if (runs.Count > 0)
-            Assert.Equal("Arial", runs[0].Font.Name);
-    }
-
-    [Fact]
-    public void SetRunFormat_WithoutRunIndex_ShouldApplyToAllRuns()
-    {
-        var docPath = CreateWordDocumentWithContent("test_set_all_runs.docx", "Format this");
-        var outputPath = CreateTestFilePath("test_set_all_runs_output.docx");
-        var result = _tool.Execute("set_run_format", docPath, outputPath: outputPath,
-            paragraphIndex: 0, bold: true);
-        Assert.StartsWith("Run format updated", result);
-    }
-
-    [Fact]
-    public void GetTabStops_ShouldReturnTabStops()
+    public void GetTabStops_ShouldReturnTabStopsFromFile()
     {
         var docPath = CreateWordDocumentWithContent("test_get_tab_stops.docx", "Test");
         var result = _tool.Execute("get_tab_stops", docPath, paragraphIndex: 0);
-        Assert.NotNull(result);
-        Assert.NotEmpty(result);
         Assert.Contains("tabStops", result);
     }
 
     [Fact]
-    public void GetTabStops_WithAllParagraphs_ShouldReturnAllTabStops()
-    {
-        var docPath = CreateWordDocumentWithContent("test_get_tabs_all.docx", "Test");
-        var result = _tool.Execute("get_tab_stops", docPath, paragraphIndex: 0, allParagraphs: true);
-        Assert.Contains("allParagraphs", result);
-        Assert.Contains("true", result);
-    }
-
-    [Fact]
-    public void SetParagraphBorder_ShouldSetBorder()
+    public void SetParagraphBorder_ShouldSetBorderAndPersistToFile()
     {
         var docPath = CreateWordDocumentWithContent("test_set_border.docx", "Test paragraph");
         var outputPath = CreateTestFilePath("test_set_border_output.docx");
@@ -135,35 +61,21 @@ public class WordFormatToolTests : WordTestBase
             paragraphIndex: 0, borderPosition: "all", lineStyle: "single", lineWidth: 1.0);
         Assert.True(File.Exists(outputPath));
         var doc = new Document(outputPath);
-        var paragraphs = GetParagraphs(doc);
-        Assert.True(paragraphs.Count > 0);
+        Assert.True(GetParagraphs(doc).Count > 0);
     }
 
     [Fact]
-    public void AddTabStop_ShouldAddTabStop()
+    public void AddTabStop_ShouldAddTabStopAndPersistToFile()
     {
         var docPath = CreateWordDocumentWithContent("test_add_tab_stop.docx", "Test text with tab");
         var outputPath = CreateTestFilePath("test_add_tab_stop_output.docx");
         _tool.Execute("add_tab_stop", docPath, outputPath: outputPath,
             paragraphIndex: 0, tabPosition: 72.0, tabAlignment: "left", tabLeader: "none");
         Assert.True(File.Exists(outputPath));
-        var doc = new Document(outputPath);
-        var paragraphs = GetParagraphs(doc);
-        Assert.True(paragraphs.Count > 0);
-        if (!IsEvaluationMode())
-        {
-            var tabStops = paragraphs[0].ParagraphFormat.TabStops;
-            Assert.True(tabStops.Count > 0);
-        }
-        else
-        {
-            // Fallback: verify basic structure in evaluation mode
-            Assert.NotNull(paragraphs[0].ParagraphFormat);
-        }
     }
 
     [Fact]
-    public void ClearTabStops_ShouldClearTabStops()
+    public void ClearTabStops_ShouldClearTabStopsAndPersistToFile()
     {
         var docPath = CreateWordDocumentWithContent("test_clear_tab_stops.docx", "Test text");
         var doc = new Document(docPath);
@@ -176,146 +88,25 @@ public class WordFormatToolTests : WordTestBase
 
         var outputPath = CreateTestFilePath("test_clear_tab_stops_output.docx");
         _tool.Execute("clear_tab_stops", docPath, outputPath: outputPath, paragraphIndex: 0);
-        Assert.True(File.Exists(outputPath));
         var resultDoc = new Document(outputPath);
         var resultParagraphs = GetParagraphs(resultDoc);
-        Assert.True(resultParagraphs.Count > 0);
-        var tabStops = resultParagraphs[0].ParagraphFormat.TabStops;
-        Assert.Equal(0, tabStops.Count);
+        Assert.Equal(0, resultParagraphs[0].ParagraphFormat.TabStops.Count);
     }
+
+    #endregion
+
+    #region Operation Routing
 
     [Theory]
     [InlineData("GET_RUN_FORMAT")]
     [InlineData("Get_Run_Format")]
     [InlineData("get_run_format")]
-    public void Operation_ShouldBeCaseInsensitive_GetRunFormat(string operation)
+    public void Operation_ShouldBeCaseInsensitive(string operation)
     {
         var docPath = CreateWordDocumentWithContent($"test_case_{operation.Replace("_", "")}.docx", "Test");
         var result = _tool.Execute(operation, docPath, paragraphIndex: 0, runIndex: 0);
         Assert.Contains("Font", result, StringComparison.OrdinalIgnoreCase);
     }
-
-    [Theory]
-    [InlineData("SET_RUN_FORMAT")]
-    [InlineData("Set_Run_Format")]
-    [InlineData("set_run_format")]
-    public void Operation_ShouldBeCaseInsensitive_SetRunFormat(string operation)
-    {
-        var docPath = CreateWordDocumentWithContent($"test_case_set_{operation.Replace("_", "")}.docx", "Test");
-        var outputPath = CreateTestFilePath($"test_case_set_{operation.Replace("_", "")}_output.docx");
-        var result = _tool.Execute(operation, docPath, outputPath: outputPath, paragraphIndex: 0, bold: true);
-        Assert.StartsWith("Run format updated", result);
-    }
-
-    [Theory]
-    [InlineData("GET_TAB_STOPS")]
-    [InlineData("Get_Tab_Stops")]
-    [InlineData("get_tab_stops")]
-    public void Operation_ShouldBeCaseInsensitive_GetTabStops(string operation)
-    {
-        var docPath = CreateWordDocumentWithContent($"test_case_tabs_{operation.Replace("_", "")}.docx", "Test");
-        var result = _tool.Execute(operation, docPath, paragraphIndex: 0);
-        Assert.Contains("tabStops", result);
-    }
-
-    [Theory]
-    [InlineData("left")]
-    [InlineData("center")]
-    [InlineData("right")]
-    [InlineData("decimal")]
-    [InlineData("bar")]
-    public void AddTabStop_WithDifferentAlignments_ShouldWork(string alignment)
-    {
-        var docPath = CreateWordDocumentWithContent($"test_tab_align_{alignment}.docx", "Test");
-        var outputPath = CreateTestFilePath($"test_tab_align_{alignment}_output.docx");
-        var result = _tool.Execute("add_tab_stop", docPath, outputPath: outputPath,
-            paragraphIndex: 0, tabPosition: 72.0, tabAlignment: alignment);
-        Assert.StartsWith("Tab stop added", result);
-        Assert.Contains(alignment, result);
-    }
-
-    [Theory]
-    [InlineData("none")]
-    [InlineData("dots")]
-    [InlineData("dashes")]
-    [InlineData("line")]
-    [InlineData("heavy")]
-    [InlineData("middledot")]
-    public void AddTabStop_WithDifferentLeaders_ShouldWork(string leader)
-    {
-        var docPath = CreateWordDocumentWithContent($"test_tab_leader_{leader}.docx", "Test");
-        var outputPath = CreateTestFilePath($"test_tab_leader_{leader}_output.docx");
-        var result = _tool.Execute("add_tab_stop", docPath, outputPath: outputPath,
-            paragraphIndex: 0, tabPosition: 72.0, tabLeader: leader);
-        Assert.StartsWith("Tab stop added", result);
-        Assert.Contains(leader, result);
-    }
-
-    [Theory]
-    [InlineData("all")]
-    [InlineData("box")]
-    [InlineData("top-bottom")]
-    [InlineData("left-right")]
-    [InlineData("none")]
-    public void SetParagraphBorder_WithDifferentPositions_ShouldWork(string position)
-    {
-        var docPath = CreateWordDocumentWithContent($"test_border_pos_{position.Replace("-", "")}.docx", "Test");
-        var outputPath = CreateTestFilePath($"test_border_pos_{position.Replace("-", "")}_output.docx");
-        var result = _tool.Execute("set_paragraph_border", docPath, outputPath: outputPath,
-            paragraphIndex: 0, borderPosition: position);
-        Assert.Contains("border", result, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Theory]
-    [InlineData("none")]
-    [InlineData("single")]
-    [InlineData("double")]
-    [InlineData("dotted")]
-    [InlineData("dashed")]
-    [InlineData("thick")]
-    public void SetParagraphBorder_WithDifferentLineStyles_ShouldWork(string style)
-    {
-        var docPath = CreateWordDocumentWithContent($"test_border_style_{style}.docx", "Test");
-        var outputPath = CreateTestFilePath($"test_border_style_{style}_output.docx");
-        var result = _tool.Execute("set_paragraph_border", docPath, outputPath: outputPath,
-            paragraphIndex: 0, borderPosition: "all", lineStyle: style);
-        Assert.Contains("border", result, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public void SetParagraphBorder_WithIndividualFlags_ShouldWork()
-    {
-        var docPath = CreateWordDocumentWithContent("test_border_flags.docx", "Test");
-        var outputPath = CreateTestFilePath("test_border_flags_output.docx");
-        var result = _tool.Execute("set_paragraph_border", docPath, outputPath: outputPath,
-            paragraphIndex: 0, borderTop: true, borderBottom: true);
-        Assert.Contains("Top", result);
-        Assert.Contains("Bottom", result);
-    }
-
-    [Fact]
-    public void SetParagraphBorder_WithColorAndWidth_ShouldWork()
-    {
-        var docPath = CreateWordDocumentWithContent("test_border_color.docx", "Test");
-        var outputPath = CreateTestFilePath("test_border_color_output.docx");
-        var result = _tool.Execute("set_paragraph_border", docPath, outputPath: outputPath,
-            paragraphIndex: 0, borderPosition: "all", lineWidth: 2.0, lineColor: "FF0000");
-        Assert.Contains("border", result, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public void SetRunFormat_WithLastParagraph_ShouldWork()
-    {
-        var docPath = CreateWordDocumentWithContent("test_last_para.docx", "Test");
-        var outputPath = CreateTestFilePath("test_last_para_output.docx");
-        var result = _tool.Execute("set_run_format", docPath, outputPath: outputPath,
-            paragraphIndex: -1, bold: true);
-        Assert.StartsWith("Run format updated", result);
-    }
-
-    #endregion
-
-    #region Exception
 
     [Fact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
@@ -327,89 +118,14 @@ public class WordFormatToolTests : WordTestBase
     }
 
     [Fact]
-    public void GetRunFormat_WithInvalidParagraphIndex_ShouldThrowArgumentException()
+    public void Execute_WithNoPathOrSessionId_ShouldThrowException()
     {
-        var docPath = CreateWordDocumentWithContent("test_invalid_para.docx", "Test text");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("get_run_format", docPath, paragraphIndex: 999, runIndex: 0));
-        Assert.Contains("must be between", ex.Message);
-    }
-
-    [Fact]
-    public void GetRunFormat_WithInvalidRunIndex_ShouldThrowArgumentException()
-    {
-        var docPath = CreateWordDocumentWithContent("test_invalid_run.docx", "Test text");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("get_run_format", docPath, paragraphIndex: 0, runIndex: 999));
-        Assert.Contains("out of range", ex.Message);
-    }
-
-    [Fact]
-    public void SetRunFormat_WithInvalidParagraphIndex_ShouldThrowArgumentException()
-    {
-        var docPath = CreateWordDocumentWithContent("test_set_invalid_para.docx", "Test text");
-        var outputPath = CreateTestFilePath("test_set_invalid_para_output.docx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("set_run_format", docPath, outputPath: outputPath,
-                paragraphIndex: 999, runIndex: 0, bold: true));
-        Assert.Contains("must be between", ex.Message);
-    }
-
-    [Fact]
-    public void SetParagraphBorder_WithInvalidParagraphIndex_ShouldThrowArgumentException()
-    {
-        var docPath = CreateWordDocumentWithContent("test_border_invalid_para.docx", "Test");
-        var outputPath = CreateTestFilePath("test_border_invalid_para_output.docx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("set_paragraph_border", docPath, outputPath: outputPath,
-                paragraphIndex: 999, borderPosition: "all"));
-        Assert.Contains("must be between", ex.Message);
-    }
-
-    [Fact]
-    public void AddTabStop_WithInvalidParagraphIndex_ShouldThrowArgumentException()
-    {
-        var docPath = CreateWordDocumentWithContent("test_tab_invalid_para.docx", "Test");
-        var outputPath = CreateTestFilePath("test_tab_invalid_para_output.docx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add_tab_stop", docPath, outputPath: outputPath,
-                paragraphIndex: 999, tabPosition: 72.0));
-        Assert.Contains("must be between", ex.Message);
-    }
-
-    [Fact]
-    public void ClearTabStops_WithInvalidParagraphIndex_ShouldThrowArgumentException()
-    {
-        var docPath = CreateWordDocumentWithContent("test_clear_invalid_para.docx", "Test");
-        var outputPath = CreateTestFilePath("test_clear_invalid_para_output.docx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("clear_tab_stops", docPath, outputPath: outputPath, paragraphIndex: 999));
-        Assert.Contains("must be between", ex.Message);
-    }
-
-    [Fact]
-    public void GetTabStops_WithInvalidParagraphIndex_ShouldThrowArgumentException()
-    {
-        var docPath = CreateWordDocumentWithContent("test_get_tabs_invalid_para.docx", "Test");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("get_tab_stops", docPath, paragraphIndex: 999));
-        Assert.Contains("out of range", ex.Message);
-    }
-
-    [Fact]
-    public void SetParagraphBorder_WithInvalidBorderPosition_ShouldThrowArgumentException()
-    {
-        var docPath = CreateWordDocumentWithContent("test_border_invalid_pos.docx", "Test");
-        var outputPath = CreateTestFilePath("test_border_invalid_pos_output.docx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("set_paragraph_border", docPath, outputPath: outputPath,
-                paragraphIndex: 0, borderPosition: "invalid_position"));
-        Assert.Contains("Invalid borderPosition", ex.Message);
+        Assert.ThrowsAny<Exception>(() => _tool.Execute("get_run_format", paragraphIndex: 0, runIndex: 0));
     }
 
     #endregion
 
-    #region Session
+    #region Session Management
 
     [Fact]
     public void GetRunFormat_WithSessionId_ShouldReturnFormatInfo()
@@ -417,7 +133,6 @@ public class WordFormatToolTests : WordTestBase
         var docPath = CreateWordDocumentWithContent("test_session_get_format.docx", "Session text");
         var sessionId = OpenSession(docPath);
         var result = _tool.Execute("get_run_format", sessionId: sessionId, paragraphIndex: 0, runIndex: 0);
-        Assert.NotNull(result);
         Assert.Contains("Font", result, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -448,16 +163,6 @@ public class WordFormatToolTests : WordTestBase
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         var paragraphs = GetParagraphs(sessionDoc);
         Assert.True(paragraphs.Count > 0);
-        if (!IsEvaluationMode())
-        {
-            var tabStops = paragraphs[0].ParagraphFormat.TabStops;
-            Assert.True(tabStops.Count > 0);
-        }
-        else
-        {
-            // Fallback: verify basic structure in evaluation mode
-            Assert.NotNull(paragraphs[0].ParagraphFormat);
-        }
     }
 
     [Fact]
@@ -468,9 +173,6 @@ public class WordFormatToolTests : WordTestBase
         var result = _tool.Execute("set_paragraph_border", sessionId: sessionId,
             paragraphIndex: 0, borderPosition: "all", lineStyle: "single", lineWidth: 1.5);
         Assert.Contains("border", result, StringComparison.OrdinalIgnoreCase);
-        var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
-        var paragraphs = GetParagraphs(sessionDoc);
-        Assert.True(paragraphs.Count > 0);
     }
 
     [Fact]
@@ -489,8 +191,7 @@ public class WordFormatToolTests : WordTestBase
         _tool.Execute("clear_tab_stops", sessionId: sessionId, paragraphIndex: 0);
         var sessionDoc = SessionManager.GetDocument<Document>(sessionId);
         var sessionParagraphs = GetParagraphs(sessionDoc);
-        var tabStops = sessionParagraphs[0].ParagraphFormat.TabStops;
-        Assert.Equal(0, tabStops.Count);
+        Assert.Equal(0, sessionParagraphs[0].ParagraphFormat.TabStops.Count);
     }
 
     [Fact]
@@ -516,7 +217,6 @@ public class WordFormatToolTests : WordTestBase
         var docPath2 = CreateWordDocumentWithContent("test_session_format.docx", "SessionContent");
         var sessionId = OpenSession(docPath2);
         var result = _tool.Execute("get_run_format", docPath1, sessionId, paragraphIndex: 0, runIndex: 0);
-        Assert.NotNull(result);
         Assert.Contains("Font", result, StringComparison.OrdinalIgnoreCase);
     }
 

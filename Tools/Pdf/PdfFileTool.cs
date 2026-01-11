@@ -1,8 +1,8 @@
 using System.ComponentModel;
 using Aspose.Pdf;
-using Aspose.Pdf.Optimization;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.Pdf.FileOperations;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Pdf;
@@ -13,6 +13,11 @@ namespace AsposeMcpServer.Tools.Pdf;
 [McpServerToolType]
 public class PdfFileTool
 {
+    /// <summary>
+    ///     Handler registry for file operations.
+    /// </summary>
+    private readonly HandlerRegistry<Document> _handlerRegistry;
+
     /// <summary>
     ///     The session identity accessor for session isolation.
     /// </summary>
@@ -32,6 +37,7 @@ public class PdfFileTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = PdfFileHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -101,238 +107,137 @@ Usage examples:
         [Description("Owner password for permissions control (required for encrypt)")]
         string? ownerPassword = null)
     {
-        return operation.ToLower() switch
+        var lowerOperation = operation.ToLowerInvariant();
+
+        if (lowerOperation is "create" or "merge")
+            return ExecuteWithoutContext(lowerOperation, outputPath, inputPaths);
+
+        return ExecuteWithContext(lowerOperation, path, sessionId, outputPath, outputDir, pagesPerFile, startPage,
+            endPage, compressImages, compressFonts, removeUnusedObjects, userPassword, ownerPassword);
+    }
+
+    /// <summary>
+    ///     Executes operations that don't require an existing document context.
+    /// </summary>
+    private string ExecuteWithoutContext(string operation, string? outputPath, string[]? inputPaths)
+    {
+        var parameters = new OperationParameters();
+
+        switch (operation)
         {
-            "create" => CreateDocument(outputPath),
-            "merge" => MergeDocuments(outputPath, inputPaths),
-            "split" => SplitDocument(sessionId, path, outputDir, pagesPerFile, startPage, endPage),
-            "compress" => CompressDocument(sessionId, path, outputPath, compressImages, compressFonts,
-                removeUnusedObjects),
-            "encrypt" => EncryptDocument(sessionId, path, outputPath, userPassword, ownerPassword),
-            "linearize" => LinearizeDocument(sessionId, path, outputPath),
-            _ => throw new ArgumentException($"Unknown operation: {operation}")
+            case "create":
+                if (outputPath != null) parameters.Set("outputPath", outputPath);
+                break;
+
+            case "merge":
+                if (outputPath != null) parameters.Set("outputPath", outputPath);
+                if (inputPaths != null) parameters.Set("inputPaths", inputPaths);
+                break;
+        }
+
+        var handler = _handlerRegistry.GetHandler(operation);
+
+        var operationContext = new OperationContext<Document>
+        {
+            Document = null!,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            OutputPath = outputPath
         };
+
+        return handler.Execute(operationContext, parameters);
     }
 
     /// <summary>
-    ///     Creates a new empty PDF document with one blank page.
+    ///     Executes operations that require an existing document context.
     /// </summary>
-    /// <param name="outputPath">The output file path.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when outputPath is not provided.</exception>
-    private static string CreateDocument(string? outputPath)
+    private string ExecuteWithContext(string operation, string? path, string? sessionId, string? outputPath,
+        string? outputDir, int pagesPerFile, int? startPage, int? endPage, bool compressImages, bool compressFonts,
+        bool removeUnusedObjects, string? userPassword, string? ownerPassword)
     {
-        if (string.IsNullOrEmpty(outputPath))
-            throw new ArgumentException("outputPath is required for create operation");
-
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
-
-        using var document = new Document();
-        document.Pages.Add();
-        document.Save(outputPath);
-        return $"PDF document created. Output: {outputPath}";
-    }
-
-    /// <summary>
-    ///     Merges multiple PDF documents into a single document.
-    /// </summary>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="inputPaths">Array of input PDF file paths to merge.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when required parameters are missing.</exception>
-    private static string MergeDocuments(string? outputPath, string[]? inputPaths)
-    {
-        if (string.IsNullOrEmpty(outputPath))
-            throw new ArgumentException("outputPath is required for merge operation");
-        if (inputPaths == null || inputPaths.Length == 0)
-            throw new ArgumentException("inputPaths is required for merge operation");
-
-        SecurityHelper.ValidateArraySize(inputPaths, "inputPaths");
-
-        var validPaths = inputPaths.Where(p => !string.IsNullOrEmpty(p)).ToList();
-        if (validPaths.Count == 0)
-            throw new ArgumentException("At least one input path is required");
-
-        foreach (var inputPath in validPaths)
-            SecurityHelper.ValidateFilePath(inputPath, "inputPaths", true);
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
-
-        using var mergedDocument = new Document(validPaths[0]);
-        for (var i = 1; i < validPaths.Count; i++)
-        {
-            using var doc = new Document(validPaths[i]);
-            mergedDocument.Pages.Add(doc.Pages);
-        }
-
-        mergedDocument.Save(outputPath);
-        return $"Merged {validPaths.Count} PDF documents. Output: {outputPath}";
-    }
-
-    /// <summary>
-    ///     Splits a PDF document into multiple files.
-    /// </summary>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
-    /// <param name="path">The PDF file path.</param>
-    /// <param name="outputDir">The output directory for split files.</param>
-    /// <param name="pagesPerFile">Number of pages per output file.</param>
-    /// <param name="startPage">Optional start page for extraction.</param>
-    /// <param name="endPage">Optional end page for extraction.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when required parameters are missing or invalid.</exception>
-    private string SplitDocument(string? sessionId, string? path, string? outputDir, int pagesPerFile, int? startPage,
-        int? endPage)
-    {
-        if (string.IsNullOrEmpty(outputDir))
-            throw new ArgumentException("outputDir is required for split operation");
-
-        SecurityHelper.ValidateFilePath(outputDir, "outputDir", true);
-
-        if (pagesPerFile < 1 || pagesPerFile > 1000)
-            throw new ArgumentException("pagesPerFile must be between 1 and 1000");
-
-        Directory.CreateDirectory(outputDir);
-
         using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
-        var document = ctx.Document;
-        var totalPages = document.Pages.Count;
-        var fileBaseName = ctx.IsSession
-            ? "document"
-            : SecurityHelper.SanitizeFileName(Path.GetFileNameWithoutExtension(path!));
-        var fileCount = 0;
 
-        var actualStartPage = startPage ?? 1;
-        var actualEndPage = endPage ?? totalPages;
+        var parameters = BuildParameters(operation, outputDir, pagesPerFile, startPage, endPage,
+            compressImages, compressFonts, removeUnusedObjects, userPassword, ownerPassword,
+            ctx.IsSession ? null : path);
 
-        if (actualStartPage < 1 || actualStartPage > totalPages)
-            throw new ArgumentException($"startPage must be between 1 and {totalPages}");
-        if (actualEndPage < actualStartPage || actualEndPage > totalPages)
-            throw new ArgumentException($"endPage must be between {actualStartPage} and {totalPages}");
+        var handler = _handlerRegistry.GetHandler(operation);
 
-        if (startPage.HasValue || endPage.HasValue)
+        var operationContext = new OperationContext<Document>
         {
-            using var newDocument = new Document();
-            for (var pageNum = actualStartPage; pageNum <= actualEndPage; pageNum++)
-                newDocument.Pages.Add(document.Pages[pageNum]);
+            Document = ctx.Document,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = path,
+            OutputPath = outputPath
+        };
 
-            var safeFileName =
-                SecurityHelper.SanitizeFileName($"{fileBaseName}_pages_{actualStartPage}-{actualEndPage}.pdf");
-            var splitOutputPath = Path.Combine(outputDir, safeFileName);
-            newDocument.Save(splitOutputPath);
+        var result = handler.Execute(operationContext, parameters);
+
+        if (operationContext.IsModified)
+            ctx.Save(outputPath);
+
+        if (operation == "compress" && !ctx.IsSession && path != null && outputPath != null)
+        {
+            var originalSize = new FileInfo(path).Length;
+            var compressedSize = new FileInfo(outputPath).Length;
+            var reduction = (double)(originalSize - compressedSize) / originalSize * 100;
             return
-                $"PDF extracted pages {actualStartPage}-{actualEndPage} ({actualEndPage - actualStartPage + 1} pages). Output: {splitOutputPath}";
+                $"PDF compressed ({reduction:F2}% reduction, {originalSize} -> {compressedSize} bytes). {ctx.GetOutputMessage(outputPath)}";
         }
 
-        for (var i = 0; i < totalPages; i += pagesPerFile)
+        if (operation == "linearize" && !ctx.IsSession && path != null && outputPath != null)
         {
-            using var newDocument = new Document();
-            for (var j = 0; j < pagesPerFile && i + j < totalPages; j++)
-                newDocument.Pages.Add(document.Pages[i + j + 1]);
-
-            var safeFileName = SecurityHelper.SanitizeFileName($"{fileBaseName}_part_{++fileCount}.pdf");
-            var splitOutputPath = Path.Combine(outputDir, safeFileName);
-            newDocument.Save(splitOutputPath);
+            var originalSize = new FileInfo(path).Length;
+            var optimizedSize = new FileInfo(outputPath).Length;
+            return
+                $"PDF linearized for fast web view. Original: {originalSize} bytes, Optimized: {optimizedSize} bytes. {ctx.GetOutputMessage(outputPath)}";
         }
 
-        return $"PDF split into {fileCount} files. Output: {outputDir}";
+        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Compresses a PDF document by optimizing images, fonts, and removing unused objects.
+    ///     Builds OperationParameters from method parameters.
     /// </summary>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
-    /// <param name="path">The PDF file path.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="compressImages">Whether to compress images.</param>
-    /// <param name="compressFonts">Whether to subset fonts.</param>
-    /// <param name="removeUnusedObjects">Whether to remove unused objects.</param>
-    /// <returns>A message indicating the result and compression statistics.</returns>
-    /// <exception cref="ArgumentException">Thrown when required parameters are missing.</exception>
-    private string CompressDocument(string? sessionId, string? path, string? outputPath, bool compressImages,
-        bool compressFonts, bool removeUnusedObjects)
+    private static OperationParameters BuildParameters(
+        string operation,
+        string? outputDir,
+        int pagesPerFile,
+        int? startPage,
+        int? endPage,
+        bool compressImages,
+        bool compressFonts,
+        bool removeUnusedObjects,
+        string? userPassword,
+        string? ownerPassword,
+        string? fileBaseName)
     {
-        if (string.IsNullOrEmpty(outputPath) && string.IsNullOrEmpty(sessionId))
-            throw new ArgumentException("outputPath is required for compress operation in file mode");
+        var parameters = new OperationParameters();
 
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
-        var document = ctx.Document;
-        var optimizationOptions = new OptimizationOptions();
-
-        if (compressImages)
+        switch (operation)
         {
-            optimizationOptions.ImageCompressionOptions.CompressImages = true;
-            optimizationOptions.ImageCompressionOptions.ImageQuality = 75;
+            case "split":
+                if (outputDir != null) parameters.Set("outputDir", outputDir);
+                parameters.Set("pagesPerFile", pagesPerFile);
+                if (startPage.HasValue) parameters.Set("startPage", startPage.Value);
+                if (endPage.HasValue) parameters.Set("endPage", endPage.Value);
+                if (fileBaseName != null) parameters.Set("fileBaseName", fileBaseName);
+                break;
+
+            case "compress":
+                parameters.Set("compressImages", compressImages);
+                parameters.Set("compressFonts", compressFonts);
+                parameters.Set("removeUnusedObjects", removeUnusedObjects);
+                break;
+
+            case "encrypt":
+                if (userPassword != null) parameters.Set("userPassword", userPassword);
+                if (ownerPassword != null) parameters.Set("ownerPassword", ownerPassword);
+                break;
         }
 
-        if (compressFonts)
-            optimizationOptions.SubsetFonts = true;
-
-        if (removeUnusedObjects)
-        {
-            optimizationOptions.LinkDuplcateStreams = true;
-            optimizationOptions.RemoveUnusedObjects = true;
-            optimizationOptions.AllowReusePageContent = true;
-        }
-
-        document.OptimizeResources(optimizationOptions);
-
-        ctx.Save(outputPath);
-
-        if (ctx.IsSession) return $"PDF compressed. {ctx.GetOutputMessage(outputPath)}";
-
-        var originalSize = new FileInfo(path!).Length;
-        var compressedSize = new FileInfo(outputPath!).Length;
-        var reduction = (double)(originalSize - compressedSize) / originalSize * 100;
-
-        return
-            $"PDF compressed ({reduction:F2}% reduction, {originalSize} -> {compressedSize} bytes). {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Encrypts a PDF document with user and owner passwords.
-    /// </summary>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
-    /// <param name="path">The PDF file path.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="userPassword">The user password for opening the document.</param>
-    /// <param name="ownerPassword">The owner password for full access.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when passwords are not provided.</exception>
-    private string EncryptDocument(string? sessionId, string? path, string? outputPath, string? userPassword,
-        string? ownerPassword)
-    {
-        if (string.IsNullOrEmpty(userPassword))
-            throw new ArgumentException("userPassword is required for encrypt operation");
-        if (string.IsNullOrEmpty(ownerPassword))
-            throw new ArgumentException("ownerPassword is required for encrypt operation");
-
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
-        var document = ctx.Document;
-        document.Encrypt(userPassword, ownerPassword, Permissions.PrintDocument | Permissions.ModifyContent,
-            CryptoAlgorithm.AESx256);
-        ctx.Save(outputPath);
-        return $"PDF encrypted with password. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Linearizes a PDF document for fast web viewing.
-    /// </summary>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
-    /// <param name="path">The PDF file path.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <returns>A message indicating the result and file size information.</returns>
-    private string LinearizeDocument(string? sessionId, string? path, string? outputPath)
-    {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
-        var document = ctx.Document;
-        document.Optimize();
-        ctx.Save(outputPath);
-
-        if (ctx.IsSession) return $"PDF linearized for fast web view. {ctx.GetOutputMessage(outputPath)}";
-
-        var originalSize = new FileInfo(path!).Length;
-        var optimizedSize = new FileInfo(outputPath!).Length;
-
-        return
-            $"PDF linearized for fast web view. Original: {originalSize} bytes, Optimized: {optimizedSize} bytes. {ctx.GetOutputMessage(outputPath)}";
+        return parameters;
     }
 }

@@ -1,8 +1,8 @@
 using System.ComponentModel;
-using System.Text.Json.Nodes;
 using Aspose.Words;
-using Aspose.Words.Fields;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.Word.Reference;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Word;
@@ -13,6 +13,11 @@ namespace AsposeMcpServer.Tools.Word;
 [McpServerToolType]
 public class WordReferenceTool
 {
+    /// <summary>
+    ///     Handler registry for reference operations
+    /// </summary>
+    private readonly HandlerRegistry<Document> _handlerRegistry;
+
     /// <summary>
     ///     Identity accessor for session isolation
     /// </summary>
@@ -33,6 +38,7 @@ public class WordReferenceTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = WordReferenceHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -117,252 +123,87 @@ Notes:
         [Description("Include 'above' or 'below' text (for add_cross_reference, default: false)")]
         bool includeAboveBelow = false)
     {
+        var parameters = BuildParameters(operation, position, title, maxLevel, hyperlinks, pageNumbers,
+            rightAlignPageNumbers, tocIndex, indexEntries, insertIndexAtEnd, headingStyle, referenceType,
+            referenceText, targetName, insertAsHyperlink, includeAboveBelow);
+
+        var handler = _handlerRegistry.GetHandler(operation);
+
         using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
-        return operation.ToLower() switch
+        var effectiveOutputPath = outputPath ?? path;
+
+        var operationContext = new OperationContext<Document>
         {
-            "add_table_of_contents" => AddTableOfContents(ctx, outputPath, position, title, maxLevel, hyperlinks,
-                pageNumbers, rightAlignPageNumbers),
-            "update_table_of_contents" => UpdateTableOfContents(ctx, outputPath, tocIndex),
-            "add_index" => AddIndex(ctx, outputPath, indexEntries, insertIndexAtEnd, headingStyle),
-            "add_cross_reference" => AddCrossReference(ctx, outputPath, referenceType, referenceText, targetName,
-                insertAsHyperlink, includeAboveBelow),
-            _ => throw new ArgumentException($"Unknown operation: {operation}")
+            Document = ctx.Document,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = path,
+            OutputPath = effectiveOutputPath
         };
+
+        var result = handler.Execute(operationContext, parameters);
+
+        if (operationContext.IsModified)
+            ctx.Save(effectiveOutputPath);
+
+        return ctx.IsSession ? result : $"{result}\n{ctx.GetOutputMessage(effectiveOutputPath)}";
     }
 
     /// <summary>
-    ///     Adds a table of contents to the document.
+    ///     Builds OperationParameters from method parameters.
     /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="position">The insert position: start or end.</param>
-    /// <param name="title">The title for the table of contents.</param>
-    /// <param name="maxLevel">The maximum heading level to include.</param>
-    /// <param name="hyperlinks">Whether to enable clickable hyperlinks.</param>
-    /// <param name="pageNumbers">Whether to show page numbers.</param>
-    /// <param name="rightAlignPageNumbers">Whether to right-align page numbers.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    private static string AddTableOfContents(
-        DocumentContext<Document> ctx,
-        string? outputPath,
+    private static OperationParameters BuildParameters(
+        string operation,
         string position,
         string title,
         int maxLevel,
         bool hyperlinks,
         bool pageNumbers,
-        bool rightAlignPageNumbers)
-    {
-        var doc = ctx.Document;
-        var builder = new DocumentBuilder(doc);
-
-        if (position == "end")
-            builder.MoveToDocumentEnd();
-        else
-            builder.MoveToDocumentStart();
-
-        if (!string.IsNullOrEmpty(title))
-        {
-            builder.ParagraphFormat.StyleIdentifier = StyleIdentifier.Heading1;
-            builder.Writeln(title);
-            builder.ParagraphFormat.StyleIdentifier = StyleIdentifier.Normal;
-        }
-
-        // Build TOC switches
-        var switches = $"\\o \"1-{maxLevel}\"";
-
-        if (!hyperlinks)
-            switches += " \\n";
-
-        if (!pageNumbers)
-            switches += " \\p \"\"";
-
-        if (!rightAlignPageNumbers)
-            switches += " \\l";
-
-        // Use InsertTableOfContents for clearer semantics
-        builder.InsertTableOfContents(switches);
-
-        // Update fields to populate TOC content immediately
-        doc.UpdateFields();
-
-        ctx.Save(outputPath);
-
-        var result = "Table of contents added\n";
-        result += ctx.GetOutputMessage(outputPath);
-        return result;
-    }
-
-    /// <summary>
-    ///     Updates the table of contents fields in the document.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="tocIndex">The optional zero-based index of a specific TOC field to update.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when tocIndex is out of range.</exception>
-    private static string UpdateTableOfContents(
-        DocumentContext<Document> ctx,
-        string? outputPath,
-        int? tocIndex)
-    {
-        var doc = ctx.Document;
-        var tocFields = doc.Range.Fields
-            .Where(f => f.Type == FieldType.FieldTOC)
-            .ToList();
-
-        if (tocFields.Count == 0)
-        {
-            var allFields = doc.Range.Fields.ToList();
-            var fieldTypes = allFields.Select(f => f.Type.ToString()).Distinct().ToList();
-            var message = "No table of contents fields found in document.";
-            if (allFields.Count > 0)
-                message += $" Found {allFields.Count} field(s) of other types: {string.Join(", ", fieldTypes)}.";
-            message += " Use 'add_table_of_contents' operation to add a table of contents first.";
-            return message;
-        }
-
-        if (tocIndex.HasValue)
-        {
-            if (tocIndex.Value < 0 || tocIndex.Value >= tocFields.Count)
-                throw new ArgumentException($"tocIndex must be between 0 and {tocFields.Count - 1}");
-            tocFields[tocIndex.Value].Update();
-        }
-        else
-        {
-            foreach (var tocField in tocFields)
-                tocField.Update();
-        }
-
-        doc.UpdateFields();
-        ctx.Save(outputPath);
-
-        var updatedCount = tocIndex.HasValue ? 1 : tocFields.Count;
-        var result = $"Updated {updatedCount} table of contents field(s)\n";
-        result += ctx.GetOutputMessage(outputPath);
-        return result;
-    }
-
-    /// <summary>
-    ///     Adds index entries and optionally an INDEX field to the document.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="indexEntriesJson">The index entries as a JSON array string.</param>
-    /// <param name="insertIndexAtEnd">Whether to insert an INDEX field at the end of the document.</param>
-    /// <param name="headingStyle">The heading style for the index title.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when indexEntriesJson is null, empty, or invalid JSON.</exception>
-    private static string AddIndex(
-        DocumentContext<Document> ctx,
-        string? outputPath,
-        string? indexEntriesJson,
+        bool rightAlignPageNumbers,
+        int? tocIndex,
+        string? indexEntries,
         bool insertIndexAtEnd,
-        string headingStyle)
-    {
-        if (string.IsNullOrEmpty(indexEntriesJson))
-            throw new ArgumentException("indexEntries is required for add_index operation");
-
-        var indexEntriesArray = JsonNode.Parse(indexEntriesJson)?.AsArray()
-                                ?? throw new ArgumentException("indexEntries must be a valid JSON array");
-
-        var doc = ctx.Document;
-        var builder = new DocumentBuilder(doc);
-
-        foreach (var entryObj in indexEntriesArray)
-            if (entryObj is JsonObject entry)
-            {
-                var text = entry["text"]?.GetValue<string>();
-                var subEntry = entry["subEntry"]?.GetValue<string>();
-                var pageRangeBookmark = entry["pageRangeBookmark"]?.GetValue<string>();
-
-                if (!string.IsNullOrEmpty(text))
-                {
-                    builder.MoveToDocumentEnd();
-                    var xeField = $"XE \"{text}\"";
-                    if (!string.IsNullOrEmpty(subEntry))
-                        xeField += $" \\t \"{subEntry}\"";
-                    if (!string.IsNullOrEmpty(pageRangeBookmark))
-                        xeField += $" \\r \"{pageRangeBookmark}\"";
-                    builder.InsertField(xeField);
-                }
-            }
-
-        if (insertIndexAtEnd)
-        {
-            builder.MoveToDocumentEnd();
-            builder.InsertBreak(BreakType.PageBreak);
-
-            // Check if headingStyle exists, fallback to Heading1 if not found
-            var style = doc.Styles[headingStyle];
-            if (style == null)
-                builder.ParagraphFormat.StyleIdentifier = StyleIdentifier.Heading1;
-            else
-                builder.ParagraphFormat.Style = style;
-
-            builder.Writeln("Index");
-            builder.ParagraphFormat.Style = doc.Styles["Normal"];
-            builder.InsertField("INDEX \\e \" \" \\h \"A\"");
-        }
-
-        ctx.Save(outputPath);
-
-        var result = $"Index entries added. Total entries: {indexEntriesArray.Count}\n";
-        result += ctx.GetOutputMessage(outputPath);
-        return result;
-    }
-
-    /// <summary>
-    ///     Adds a cross-reference (REF field) to the document.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="referenceType">The reference type: Heading, Bookmark, Figure, Table, or Equation.</param>
-    /// <param name="referenceText">The optional text to insert before the reference.</param>
-    /// <param name="targetName">The target name (heading text, bookmark name, etc.).</param>
-    /// <param name="insertAsHyperlink">Whether to insert the reference as a hyperlink.</param>
-    /// <param name="includeAboveBelow">Whether to include 'above' or 'below' text.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">
-    ///     Thrown when referenceType or targetName is not provided, or referenceType is
-    ///     invalid.
-    /// </exception>
-    private static string AddCrossReference(
-        DocumentContext<Document> ctx,
-        string? outputPath,
+        string headingStyle,
         string? referenceType,
         string? referenceText,
         string? targetName,
         bool insertAsHyperlink,
         bool includeAboveBelow)
     {
-        if (string.IsNullOrEmpty(referenceType))
-            throw new ArgumentException("referenceType is required for add_cross_reference operation");
-        if (string.IsNullOrEmpty(targetName))
-            throw new ArgumentException("targetName is required for add_cross_reference operation");
+        var parameters = new OperationParameters();
 
-        var validTypes = new[] { "Heading", "Bookmark", "Figure", "Table", "Equation" };
-        if (!validTypes.Contains(referenceType, StringComparer.OrdinalIgnoreCase))
-            throw new ArgumentException(
-                $"Invalid referenceType: {referenceType}. Valid types are: {string.Join(", ", validTypes)}");
+        switch (operation.ToLower())
+        {
+            case "add_table_of_contents":
+                parameters.Set("position", position);
+                parameters.Set("title", title);
+                parameters.Set("maxLevel", maxLevel);
+                parameters.Set("hyperlinks", hyperlinks);
+                parameters.Set("pageNumbers", pageNumbers);
+                parameters.Set("rightAlignPageNumbers", rightAlignPageNumbers);
+                break;
 
-        var doc = ctx.Document;
-        var builder = new DocumentBuilder(doc);
-        builder.MoveToDocumentEnd();
+            case "update_table_of_contents":
+                if (tocIndex.HasValue) parameters.Set("tocIndex", tocIndex.Value);
+                break;
 
-        if (!string.IsNullOrEmpty(referenceText))
-            builder.Write(referenceText);
+            case "add_index":
+                if (indexEntries != null) parameters.Set("indexEntries", indexEntries);
+                parameters.Set("insertIndexAtEnd", insertIndexAtEnd);
+                parameters.Set("headingStyle", headingStyle);
+                break;
 
-        var fieldCode = insertAsHyperlink ? $"REF {targetName} \\h" : $"REF {targetName}";
+            case "add_cross_reference":
+                if (referenceType != null) parameters.Set("referenceType", referenceType);
+                if (referenceText != null) parameters.Set("referenceText", referenceText);
+                if (targetName != null) parameters.Set("targetName", targetName);
+                parameters.Set("insertAsHyperlink", insertAsHyperlink);
+                parameters.Set("includeAboveBelow", includeAboveBelow);
+                break;
+        }
 
-        builder.InsertField(fieldCode);
-        if (includeAboveBelow)
-            builder.Write(" (above)");
-
-        ctx.Save(outputPath);
-
-        var result = $"Cross-reference added (Type: {referenceType})\n";
-        result += ctx.GetOutputMessage(outputPath);
-        return result;
+        return parameters;
     }
 }

@@ -1,8 +1,8 @@
 using System.ComponentModel;
-using System.Text.Json;
 using Aspose.Cells;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.Excel.MergeCells;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -13,6 +13,11 @@ namespace AsposeMcpServer.Tools.Excel;
 [McpServerToolType]
 public class ExcelMergeCellsTool
 {
+    /// <summary>
+    ///     Handler registry for merge cells operations.
+    /// </summary>
+    private readonly HandlerRegistry<Workbook> _handlerRegistry;
+
     /// <summary>
     ///     Session identity accessor for session isolation support.
     /// </summary>
@@ -33,6 +38,7 @@ public class ExcelMergeCellsTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = ExcelMergeCellsHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -75,130 +81,53 @@ WARNING: Merging cells will only keep the value of the top-left cell. All other 
     {
         using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
-        return operation.ToLower() switch
+        var parameters = BuildParameters(operation, sheetIndex, range);
+
+        var handler = _handlerRegistry.GetHandler(operation);
+
+        var operationContext = new OperationContext<Workbook>
         {
-            "merge" => MergeCells(ctx, outputPath, sheetIndex, range),
-            "unmerge" => UnmergeCells(ctx, outputPath, sheetIndex, range),
-            "get" => GetMergedCells(ctx, sheetIndex),
-            _ => throw new ArgumentException($"Unknown operation: {operation}")
-        };
-    }
-
-    /// <summary>
-    ///     Merges cells in a range.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <param name="range">The cell range to merge (e.g., 'A1:C3').</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when range is null or empty, or when the range contains only a single cell.</exception>
-    private static string MergeCells(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex, string? range)
-    {
-        if (string.IsNullOrEmpty(range))
-            throw new ArgumentException("range is required for merge operation");
-
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var cells = worksheet.Cells;
-
-        var cellRange = ExcelHelper.CreateRange(cells, range);
-
-        if (cellRange is { RowCount: 1, ColumnCount: 1 })
-            throw new ArgumentException(
-                $"Cannot merge a single cell. Range '{range}' must include at least 2 cells.");
-
-        cellRange.Merge();
-
-        ctx.Save(outputPath);
-        return
-            $"Range {range} merged ({cellRange.RowCount} rows x {cellRange.ColumnCount} columns). {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Unmerges cells in a range.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <param name="range">The cell range to unmerge (e.g., 'A1:C3').</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when range is null or empty.</exception>
-    private static string UnmergeCells(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex, string? range)
-    {
-        if (string.IsNullOrEmpty(range))
-            throw new ArgumentException("range is required for unmerge operation");
-
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var cells = worksheet.Cells;
-
-        var cellRange = ExcelHelper.CreateRange(cells, range);
-
-        cellRange.UnMerge();
-
-        ctx.Save(outputPath);
-        return $"Range {range} unmerged. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Gets all merged cell ranges from the worksheet.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <returns>A JSON string containing the merged cells information.</returns>
-    private static string GetMergedCells(DocumentContext<Workbook> ctx, int sheetIndex)
-    {
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var mergedCells = worksheet.Cells.MergedCells;
-
-        if (mergedCells == null || mergedCells.Count == 0)
-        {
-            var emptyResult = new
-            {
-                count = 0,
-                worksheetName = worksheet.Name,
-                items = Array.Empty<object>(),
-                message = "No merged cells found"
-            };
-            return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
-        }
-
-        List<object> mergedList = [];
-        for (var i = 0; i < mergedCells.Count; i++)
-        {
-            var mergedCellObj = mergedCells[i];
-
-            if (mergedCellObj is CellArea cellArea)
-            {
-                var startCellName = CellsHelper.CellIndexToName(cellArea.StartRow, cellArea.StartColumn);
-                var endCellName = CellsHelper.CellIndexToName(cellArea.EndRow, cellArea.EndColumn);
-                var rangeName = $"{startCellName}:{endCellName}";
-
-                var cell = worksheet.Cells[cellArea.StartRow, cellArea.StartColumn];
-                var cellValue = cell.Value?.ToString() ?? "(empty)";
-
-                mergedList.Add(new
-                {
-                    index = i,
-                    range = rangeName,
-                    startCell = startCellName,
-                    endCell = endCellName,
-                    rowCount = cellArea.EndRow - cellArea.StartRow + 1,
-                    columnCount = cellArea.EndColumn - cellArea.StartColumn + 1,
-                    value = cellValue
-                });
-            }
-        }
-
-        var result = new
-        {
-            count = mergedList.Count,
-            worksheetName = worksheet.Name,
-            items = mergedList
+            Document = ctx.Document,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = path,
+            OutputPath = outputPath
         };
 
-        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        var result = handler.Execute(operationContext, parameters);
+
+        if (operation.ToLowerInvariant() == "get")
+            return result;
+
+        if (operationContext.IsModified)
+            ctx.Save(outputPath);
+
+        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
+    }
+
+    /// <summary>
+    ///     Builds OperationParameters from method parameters.
+    /// </summary>
+    private static OperationParameters BuildParameters(
+        string operation,
+        int sheetIndex,
+        string? range)
+    {
+        var parameters = new OperationParameters();
+        parameters.Set("sheetIndex", sheetIndex);
+
+        switch (operation.ToLowerInvariant())
+        {
+            case "merge":
+            case "unmerge":
+                if (range != null) parameters.Set("range", range);
+                break;
+
+            case "get":
+                break;
+        }
+
+        return parameters;
     }
 }

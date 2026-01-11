@@ -1,0 +1,64 @@
+using Aspose.Words;
+using AsposeMcpServer.Core.Handlers;
+using WordParagraph = Aspose.Words.Paragraph;
+
+namespace AsposeMcpServer.Handlers.Word.Bookmark;
+
+/// <summary>
+///     Handler for getting bookmark location information in Word documents.
+/// </summary>
+public class GotoWordBookmarkHandler : OperationHandlerBase<Document>
+{
+    /// <inheritdoc />
+    public override string Operation => "goto";
+
+    /// <summary>
+    ///     Gets location information for a specific bookmark.
+    /// </summary>
+    /// <param name="context">The document context.</param>
+    /// <param name="parameters">
+    ///     Required: name
+    /// </param>
+    /// <returns>A message containing the bookmark's location information.</returns>
+    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    {
+        var name = parameters.GetOptional<string?>("name");
+
+        if (string.IsNullOrEmpty(name))
+            throw new ArgumentException("Bookmark name is required for goto operation");
+
+        var doc = context.Document;
+
+        var bookmark = doc.Range.Bookmarks[name];
+        if (bookmark == null)
+            throw new ArgumentException(
+                $"Bookmark '{name}' not found. Use get operation to view available bookmarks");
+
+        var bookmarkText = bookmark.Text;
+        var bookmarkRange = bookmark.BookmarkStart?.ParentNode as WordParagraph;
+
+        var paragraphIndex = -1;
+        var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true);
+        for (var i = 0; i < paragraphs.Count; i++)
+            if (paragraphs[i] == bookmarkRange)
+            {
+                paragraphIndex = i;
+                break;
+            }
+
+        var result = "Bookmark location information\n";
+        result += $"Bookmark name: {name}\n";
+        result += $"Bookmark text: {bookmarkText}\n";
+        if (paragraphIndex >= 0) result += $"Paragraph index: {paragraphIndex}\n";
+        result += $"Bookmark range length: {bookmarkText.Length} characters";
+
+        if (bookmarkRange != null)
+        {
+            var paraText = bookmarkRange.GetText().Trim();
+            if (paraText.Length > 100) paraText = paraText[..100] + "...";
+            result += $"\nParagraph content: {paraText}";
+        }
+
+        return result;
+    }
+}

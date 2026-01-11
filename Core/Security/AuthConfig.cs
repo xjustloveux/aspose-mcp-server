@@ -73,14 +73,14 @@ public class ApiKeyConfig
     public string HeaderName { get; set; } = "X-API-Key";
 
     /// <summary>
-    ///     Local mode: Dictionary of API keys to tenant IDs
+    ///     Local mode: Dictionary of API keys to group identifiers
     /// </summary>
     public Dictionary<string, string>? Keys { get; set; }
 
     /// <summary>
-    ///     Gateway mode: Header name containing tenant ID (set by gateway)
+    ///     Gateway mode: Header name containing group identifier (set by gateway)
     /// </summary>
-    public string TenantIdHeader { get; set; } = "X-Tenant-Id";
+    public string GroupIdentifierHeader { get; set; } = "X-Group-Id";
 
     /// <summary>
     ///     Introspection mode: Endpoint URL for key verification
@@ -94,7 +94,7 @@ public class ApiKeyConfig
 
     /// <summary>
     ///     Custom mode: Endpoint URL for custom verification
-    ///     Should return JSON: { "valid": bool, "tenant_id": string }
+    ///     Should return JSON: { "valid": bool, "group_id": string }
     /// </summary>
     public string? CustomEndpoint { get; set; }
 
@@ -107,6 +107,24 @@ public class ApiKeyConfig
     ///     Introspection mode: Field name for API key in request body (default: "key")
     /// </summary>
     public string IntrospectionKeyField { get; set; } = "key";
+
+    /// <summary>
+    ///     Enable authentication result caching for Introspection/Custom modes.
+    ///     When enabled, successful validation results are cached to reduce external API calls.
+    /// </summary>
+    public bool CacheEnabled { get; set; } = true;
+
+    /// <summary>
+    ///     Cache entry time-to-live in seconds (default: 300 = 5 minutes).
+    ///     Shorter TTL improves security but increases external API calls.
+    /// </summary>
+    public int CacheTtlSeconds { get; set; } = 300;
+
+    /// <summary>
+    ///     Maximum number of cache entries (default: 10000).
+    ///     Uses LRU eviction when limit is reached.
+    /// </summary>
+    public int CacheMaxSize { get; set; } = 10000;
 }
 
 /// <summary>
@@ -145,19 +163,21 @@ public class JwtConfig
     public string? Audience { get; set; }
 
     /// <summary>
-    ///     Local mode: Claim name for tenant ID (default: "tenant_id")
+    ///     Claim name for group identifier (default: "tenant_id").
+    ///     This can be configured to any claim such as "tenant_id", "team_id", "sub", or custom claims
+    ///     depending on how you want to isolate sessions.
     /// </summary>
-    public string TenantIdClaim { get; set; } = "tenant_id";
+    public string GroupIdentifierClaim { get; set; } = "tenant_id";
 
     /// <summary>
-    ///     Local mode: Claim name for user ID (default: "sub")
+    ///     Claim name for user ID, used for audit and logging (default: "sub")
     /// </summary>
     public string UserIdClaim { get; set; } = "sub";
 
     /// <summary>
-    ///     Gateway mode: Header name containing tenant ID (set by gateway)
+    ///     Gateway mode: Header name containing group identifier (set by gateway)
     /// </summary>
-    public string TenantIdHeader { get; set; } = "X-Tenant-Id";
+    public string GroupIdentifierHeader { get; set; } = "X-Group-Id";
 
     /// <summary>
     ///     Gateway mode: Header name containing user ID (set by gateway)
@@ -181,7 +201,7 @@ public class JwtConfig
 
     /// <summary>
     ///     Custom mode: Endpoint URL for custom verification
-    ///     Should return JSON: { "valid": bool, "tenant_id": string, "user_id": string }
+    ///     Should return JSON: { "valid": bool, "group_id": string, "user_id": string }
     /// </summary>
     public string? CustomEndpoint { get; set; }
 
@@ -189,6 +209,24 @@ public class JwtConfig
     ///     Timeout in seconds for external endpoint calls (Introspection/Custom mode)
     /// </summary>
     public int ExternalTimeoutSeconds { get; set; } = 5;
+
+    /// <summary>
+    ///     Enable authentication result caching for Introspection/Custom modes.
+    ///     When enabled, successful validation results are cached to reduce external API calls.
+    /// </summary>
+    public bool CacheEnabled { get; set; } = true;
+
+    /// <summary>
+    ///     Cache entry time-to-live in seconds (default: 300 = 5 minutes).
+    ///     Shorter TTL improves security but increases external API calls.
+    /// </summary>
+    public int CacheTtlSeconds { get; set; } = 300;
+
+    /// <summary>
+    ///     Maximum number of cache entries (default: 10000).
+    ///     Uses LRU eviction when limit is reached.
+    /// </summary>
+    public int CacheMaxSize { get; set; } = 10000;
 }
 
 /// <summary>
@@ -243,9 +281,9 @@ public class AuthConfig
                 if (separatorIndex > 0)
                 {
                     var key = pair[..separatorIndex].Trim();
-                    var tenant = pair[(separatorIndex + 1)..].Trim();
-                    if (!string.IsNullOrEmpty(key) && !string.IsNullOrEmpty(tenant))
-                        ApiKey.Keys[key] = tenant;
+                    var groupId = pair[(separatorIndex + 1)..].Trim();
+                    if (!string.IsNullOrEmpty(key) && !string.IsNullOrEmpty(groupId))
+                        ApiKey.Keys[key] = groupId;
                 }
             }
         }
@@ -254,9 +292,9 @@ public class AuthConfig
         if (!string.IsNullOrEmpty(apiKeyHeader))
             ApiKey.HeaderName = apiKeyHeader;
 
-        var apiKeyTenantHeader = Environment.GetEnvironmentVariable("ASPOSE_AUTH_APIKEY_TENANT_HEADER");
-        if (!string.IsNullOrEmpty(apiKeyTenantHeader))
-            ApiKey.TenantIdHeader = apiKeyTenantHeader;
+        var apiKeyGroupHeader = Environment.GetEnvironmentVariable("ASPOSE_AUTH_APIKEY_GROUP_HEADER");
+        if (!string.IsNullOrEmpty(apiKeyGroupHeader))
+            ApiKey.GroupIdentifierHeader = apiKeyGroupHeader;
 
         ApiKey.IntrospectionEndpoint =
             Environment.GetEnvironmentVariable("ASPOSE_AUTH_APIKEY_INTROSPECTION_URL");
@@ -272,6 +310,18 @@ public class AuthConfig
                 out var apiKeyTimeout))
             ApiKey.ExternalTimeoutSeconds = apiKeyTimeout;
 
+        if (bool.TryParse(Environment.GetEnvironmentVariable("ASPOSE_AUTH_APIKEY_CACHE_ENABLED"),
+                out var apiKeyCacheEnabled))
+            ApiKey.CacheEnabled = apiKeyCacheEnabled;
+
+        if (int.TryParse(Environment.GetEnvironmentVariable("ASPOSE_AUTH_APIKEY_CACHE_TTL"),
+                out var apiKeyCacheTtl))
+            ApiKey.CacheTtlSeconds = apiKeyCacheTtl;
+
+        if (int.TryParse(Environment.GetEnvironmentVariable("ASPOSE_AUTH_APIKEY_CACHE_MAX_SIZE"),
+                out var apiKeyCacheMaxSize))
+            ApiKey.CacheMaxSize = apiKeyCacheMaxSize;
+
         if (bool.TryParse(Environment.GetEnvironmentVariable("ASPOSE_AUTH_JWT_ENABLED"), out var jwtEnabled))
             Jwt.Enabled = jwtEnabled;
 
@@ -284,17 +334,17 @@ public class AuthConfig
         Jwt.Issuer = Environment.GetEnvironmentVariable("ASPOSE_AUTH_JWT_ISSUER");
         Jwt.Audience = Environment.GetEnvironmentVariable("ASPOSE_AUTH_JWT_AUDIENCE");
 
-        var jwtTenantClaim = Environment.GetEnvironmentVariable("ASPOSE_AUTH_JWT_TENANT_CLAIM");
-        if (!string.IsNullOrEmpty(jwtTenantClaim))
-            Jwt.TenantIdClaim = jwtTenantClaim;
+        var jwtGroupClaim = Environment.GetEnvironmentVariable("ASPOSE_AUTH_JWT_GROUP_CLAIM");
+        if (!string.IsNullOrEmpty(jwtGroupClaim))
+            Jwt.GroupIdentifierClaim = jwtGroupClaim;
 
         var jwtUserClaim = Environment.GetEnvironmentVariable("ASPOSE_AUTH_JWT_USER_CLAIM");
         if (!string.IsNullOrEmpty(jwtUserClaim))
             Jwt.UserIdClaim = jwtUserClaim;
 
-        var jwtTenantHeader = Environment.GetEnvironmentVariable("ASPOSE_AUTH_JWT_TENANT_HEADER");
-        if (!string.IsNullOrEmpty(jwtTenantHeader))
-            Jwt.TenantIdHeader = jwtTenantHeader;
+        var jwtGroupHeader = Environment.GetEnvironmentVariable("ASPOSE_AUTH_JWT_GROUP_HEADER");
+        if (!string.IsNullOrEmpty(jwtGroupHeader))
+            Jwt.GroupIdentifierHeader = jwtGroupHeader;
 
         var jwtUserHeader = Environment.GetEnvironmentVariable("ASPOSE_AUTH_JWT_USER_HEADER");
         if (!string.IsNullOrEmpty(jwtUserHeader))
@@ -307,6 +357,18 @@ public class AuthConfig
 
         if (int.TryParse(Environment.GetEnvironmentVariable("ASPOSE_AUTH_JWT_TIMEOUT"), out var jwtTimeout))
             Jwt.ExternalTimeoutSeconds = jwtTimeout;
+
+        if (bool.TryParse(Environment.GetEnvironmentVariable("ASPOSE_AUTH_JWT_CACHE_ENABLED"),
+                out var jwtCacheEnabled))
+            Jwt.CacheEnabled = jwtCacheEnabled;
+
+        if (int.TryParse(Environment.GetEnvironmentVariable("ASPOSE_AUTH_JWT_CACHE_TTL"),
+                out var jwtCacheTtl))
+            Jwt.CacheTtlSeconds = jwtCacheTtl;
+
+        if (int.TryParse(Environment.GetEnvironmentVariable("ASPOSE_AUTH_JWT_CACHE_MAX_SIZE"),
+                out var jwtCacheMaxSize))
+            Jwt.CacheMaxSize = jwtCacheMaxSize;
     }
 
     /// <summary>
@@ -334,10 +396,10 @@ public class AuthConfig
                 ApiKey.HeaderName = arg["--auth-apikey-header:".Length..];
             else if (arg.StartsWith("--auth-apikey-header=", StringComparison.OrdinalIgnoreCase))
                 ApiKey.HeaderName = arg["--auth-apikey-header=".Length..];
-            else if (arg.StartsWith("--auth-apikey-tenant-header:", StringComparison.OrdinalIgnoreCase))
-                ApiKey.TenantIdHeader = arg["--auth-apikey-tenant-header:".Length..];
-            else if (arg.StartsWith("--auth-apikey-tenant-header=", StringComparison.OrdinalIgnoreCase))
-                ApiKey.TenantIdHeader = arg["--auth-apikey-tenant-header=".Length..];
+            else if (arg.StartsWith("--auth-apikey-group-header:", StringComparison.OrdinalIgnoreCase))
+                ApiKey.GroupIdentifierHeader = arg["--auth-apikey-group-header:".Length..];
+            else if (arg.StartsWith("--auth-apikey-group-header=", StringComparison.OrdinalIgnoreCase))
+                ApiKey.GroupIdentifierHeader = arg["--auth-apikey-group-header=".Length..];
             else if (arg.StartsWith("--auth-apikey-introspection-auth:", StringComparison.OrdinalIgnoreCase))
                 ApiKey.IntrospectionAuthHeader = arg["--auth-apikey-introspection-auth:".Length..];
             else if (arg.StartsWith("--auth-apikey-introspection-auth=", StringComparison.OrdinalIgnoreCase))
@@ -360,6 +422,22 @@ public class AuthConfig
             else if (arg.StartsWith("--auth-apikey-timeout=", StringComparison.OrdinalIgnoreCase) &&
                      int.TryParse(arg["--auth-apikey-timeout=".Length..], out var apiKeyTimeout2))
                 ApiKey.ExternalTimeoutSeconds = apiKeyTimeout2;
+            else if (arg.Equals("--auth-apikey-cache-enabled", StringComparison.OrdinalIgnoreCase))
+                ApiKey.CacheEnabled = true;
+            else if (arg.Equals("--auth-apikey-cache-disabled", StringComparison.OrdinalIgnoreCase))
+                ApiKey.CacheEnabled = false;
+            else if (arg.StartsWith("--auth-apikey-cache-ttl:", StringComparison.OrdinalIgnoreCase) &&
+                     int.TryParse(arg["--auth-apikey-cache-ttl:".Length..], out var apiKeyCacheTtl1))
+                ApiKey.CacheTtlSeconds = apiKeyCacheTtl1;
+            else if (arg.StartsWith("--auth-apikey-cache-ttl=", StringComparison.OrdinalIgnoreCase) &&
+                     int.TryParse(arg["--auth-apikey-cache-ttl=".Length..], out var apiKeyCacheTtl2))
+                ApiKey.CacheTtlSeconds = apiKeyCacheTtl2;
+            else if (arg.StartsWith("--auth-apikey-cache-max-size:", StringComparison.OrdinalIgnoreCase) &&
+                     int.TryParse(arg["--auth-apikey-cache-max-size:".Length..], out var apiKeyCacheSize1))
+                ApiKey.CacheMaxSize = apiKeyCacheSize1;
+            else if (arg.StartsWith("--auth-apikey-cache-max-size=", StringComparison.OrdinalIgnoreCase) &&
+                     int.TryParse(arg["--auth-apikey-cache-max-size=".Length..], out var apiKeyCacheSize2))
+                ApiKey.CacheMaxSize = apiKeyCacheSize2;
             else if (arg.Equals("--auth-jwt-enabled", StringComparison.OrdinalIgnoreCase))
                 Jwt.Enabled = true;
             else if (arg.Equals("--auth-jwt-disabled", StringComparison.OrdinalIgnoreCase))
@@ -382,18 +460,18 @@ public class AuthConfig
                 Jwt.Audience = arg["--auth-jwt-audience:".Length..];
             else if (arg.StartsWith("--auth-jwt-audience=", StringComparison.OrdinalIgnoreCase))
                 Jwt.Audience = arg["--auth-jwt-audience=".Length..];
-            else if (arg.StartsWith("--auth-jwt-tenant-claim:", StringComparison.OrdinalIgnoreCase))
-                Jwt.TenantIdClaim = arg["--auth-jwt-tenant-claim:".Length..];
-            else if (arg.StartsWith("--auth-jwt-tenant-claim=", StringComparison.OrdinalIgnoreCase))
-                Jwt.TenantIdClaim = arg["--auth-jwt-tenant-claim=".Length..];
+            else if (arg.StartsWith("--auth-jwt-group-claim:", StringComparison.OrdinalIgnoreCase))
+                Jwt.GroupIdentifierClaim = arg["--auth-jwt-group-claim:".Length..];
+            else if (arg.StartsWith("--auth-jwt-group-claim=", StringComparison.OrdinalIgnoreCase))
+                Jwt.GroupIdentifierClaim = arg["--auth-jwt-group-claim=".Length..];
             else if (arg.StartsWith("--auth-jwt-user-claim:", StringComparison.OrdinalIgnoreCase))
                 Jwt.UserIdClaim = arg["--auth-jwt-user-claim:".Length..];
             else if (arg.StartsWith("--auth-jwt-user-claim=", StringComparison.OrdinalIgnoreCase))
                 Jwt.UserIdClaim = arg["--auth-jwt-user-claim=".Length..];
-            else if (arg.StartsWith("--auth-jwt-tenant-header:", StringComparison.OrdinalIgnoreCase))
-                Jwt.TenantIdHeader = arg["--auth-jwt-tenant-header:".Length..];
-            else if (arg.StartsWith("--auth-jwt-tenant-header=", StringComparison.OrdinalIgnoreCase))
-                Jwt.TenantIdHeader = arg["--auth-jwt-tenant-header=".Length..];
+            else if (arg.StartsWith("--auth-jwt-group-header:", StringComparison.OrdinalIgnoreCase))
+                Jwt.GroupIdentifierHeader = arg["--auth-jwt-group-header:".Length..];
+            else if (arg.StartsWith("--auth-jwt-group-header=", StringComparison.OrdinalIgnoreCase))
+                Jwt.GroupIdentifierHeader = arg["--auth-jwt-group-header=".Length..];
             else if (arg.StartsWith("--auth-jwt-user-header:", StringComparison.OrdinalIgnoreCase))
                 Jwt.UserIdHeader = arg["--auth-jwt-user-header:".Length..];
             else if (arg.StartsWith("--auth-jwt-user-header=", StringComparison.OrdinalIgnoreCase))
@@ -424,10 +502,26 @@ public class AuthConfig
             else if (arg.StartsWith("--auth-jwt-timeout=", StringComparison.OrdinalIgnoreCase) &&
                      int.TryParse(arg["--auth-jwt-timeout=".Length..], out var jwtTimeout2))
                 Jwt.ExternalTimeoutSeconds = jwtTimeout2;
+            else if (arg.Equals("--auth-jwt-cache-enabled", StringComparison.OrdinalIgnoreCase))
+                Jwt.CacheEnabled = true;
+            else if (arg.Equals("--auth-jwt-cache-disabled", StringComparison.OrdinalIgnoreCase))
+                Jwt.CacheEnabled = false;
+            else if (arg.StartsWith("--auth-jwt-cache-ttl:", StringComparison.OrdinalIgnoreCase) &&
+                     int.TryParse(arg["--auth-jwt-cache-ttl:".Length..], out var jwtCacheTtl1))
+                Jwt.CacheTtlSeconds = jwtCacheTtl1;
+            else if (arg.StartsWith("--auth-jwt-cache-ttl=", StringComparison.OrdinalIgnoreCase) &&
+                     int.TryParse(arg["--auth-jwt-cache-ttl=".Length..], out var jwtCacheTtl2))
+                Jwt.CacheTtlSeconds = jwtCacheTtl2;
+            else if (arg.StartsWith("--auth-jwt-cache-max-size:", StringComparison.OrdinalIgnoreCase) &&
+                     int.TryParse(arg["--auth-jwt-cache-max-size:".Length..], out var jwtCacheSize1))
+                Jwt.CacheMaxSize = jwtCacheSize1;
+            else if (arg.StartsWith("--auth-jwt-cache-max-size=", StringComparison.OrdinalIgnoreCase) &&
+                     int.TryParse(arg["--auth-jwt-cache-max-size=".Length..], out var jwtCacheSize2))
+                Jwt.CacheMaxSize = jwtCacheSize2;
     }
 
     /// <summary>
-    ///     Parses API key string in format "key1:tenant1,key2:tenant2"
+    ///     Parses API key string in format "key1:groupId1,key2:groupId2"
     ///     Note: Only the first ':' is used as separator to allow ':' in API keys (e.g., base64 encoded keys)
     /// </summary>
     private void ParseApiKeys(string keysString)
@@ -440,10 +534,82 @@ public class AuthConfig
             if (separatorIndex > 0)
             {
                 var key = pair[..separatorIndex].Trim();
-                var tenant = pair[(separatorIndex + 1)..].Trim();
-                if (!string.IsNullOrEmpty(key) && !string.IsNullOrEmpty(tenant))
-                    ApiKey.Keys[key] = tenant;
+                var groupId = pair[(separatorIndex + 1)..].Trim();
+                if (!string.IsNullOrEmpty(key) && !string.IsNullOrEmpty(groupId))
+                    ApiKey.Keys[key] = groupId;
             }
+        }
+    }
+
+    /// <summary>
+    ///     Validates the authentication configuration
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when configuration is invalid</exception>
+    public void Validate()
+    {
+        if (ApiKey.Enabled)
+        {
+            switch (ApiKey.Mode)
+            {
+                case ApiKeyMode.Local when ApiKey.Keys is null or { Count: 0 }:
+                    throw new InvalidOperationException(
+                        "API Key authentication in Local mode requires at least one key configured via --auth-apikey-keys or ASPOSE_AUTH_APIKEY_KEYS");
+                case ApiKeyMode.Introspection when string.IsNullOrEmpty(ApiKey.IntrospectionEndpoint):
+                    throw new InvalidOperationException(
+                        "API Key authentication in Introspection mode requires --auth-apikey-introspection-url or ASPOSE_AUTH_APIKEY_INTROSPECTION_URL");
+                case ApiKeyMode.Custom when string.IsNullOrEmpty(ApiKey.CustomEndpoint):
+                    throw new InvalidOperationException(
+                        "API Key authentication in Custom mode requires --auth-apikey-custom-url or ASPOSE_AUTH_APIKEY_CUSTOM_URL");
+            }
+
+            ValidateExternalCallConfig("API Key", ApiKey.ExternalTimeoutSeconds, ApiKey.CacheEnabled,
+                ApiKey.CacheTtlSeconds, ApiKey.CacheMaxSize,
+                ApiKey.Mode == ApiKeyMode.Introspection || ApiKey.Mode == ApiKeyMode.Custom);
+        }
+
+        if (Jwt.Enabled)
+        {
+            switch (Jwt.Mode)
+            {
+                case JwtMode.Local when string.IsNullOrEmpty(Jwt.Secret) && string.IsNullOrEmpty(Jwt.PublicKeyPath):
+                    throw new InvalidOperationException(
+                        "JWT authentication in Local mode requires --auth-jwt-secret or --auth-jwt-public-key-path");
+                case JwtMode.Local when !string.IsNullOrEmpty(Jwt.PublicKeyPath) && !File.Exists(Jwt.PublicKeyPath):
+                    throw new InvalidOperationException(
+                        $"JWT public key file not found: {Jwt.PublicKeyPath}");
+                case JwtMode.Introspection when string.IsNullOrEmpty(Jwt.IntrospectionEndpoint):
+                    throw new InvalidOperationException(
+                        "JWT authentication in Introspection mode requires --auth-jwt-introspection-url or ASPOSE_AUTH_JWT_INTROSPECTION_URL");
+                case JwtMode.Custom when string.IsNullOrEmpty(Jwt.CustomEndpoint):
+                    throw new InvalidOperationException(
+                        "JWT authentication in Custom mode requires --auth-jwt-custom-url or ASPOSE_AUTH_JWT_CUSTOM_URL");
+            }
+
+            ValidateExternalCallConfig("JWT", Jwt.ExternalTimeoutSeconds, Jwt.CacheEnabled,
+                Jwt.CacheTtlSeconds, Jwt.CacheMaxSize,
+                Jwt.Mode == JwtMode.Introspection || Jwt.Mode == JwtMode.Custom);
+        }
+    }
+
+    /// <summary>
+    ///     Validates external call configuration parameters
+    /// </summary>
+    // ReSharper disable once ParameterOnlyUsedForPreconditionCheck.Local - Validation is the intended purpose
+    private static void ValidateExternalCallConfig(string authType, int timeoutSeconds, bool cacheEnabled,
+        int cacheTtlSeconds, int cacheMaxSize, bool requiresExternalCall)
+    {
+        if (timeoutSeconds is < 1 or > 300)
+            throw new InvalidOperationException(
+                $"{authType} authentication timeout must be between 1 and 300 seconds");
+
+        if (cacheEnabled && requiresExternalCall)
+        {
+            if (cacheTtlSeconds < 1)
+                throw new InvalidOperationException(
+                    $"{authType} cache TTL must be at least 1 second");
+            if (cacheMaxSize < 1)
+                throw new InvalidOperationException(
+                    $"{authType} cache max size must be at least 1");
         }
     }
 }

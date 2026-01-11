@@ -1,9 +1,9 @@
 using System.ComponentModel;
 using Aspose.Words;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.Word.Watermark;
 using ModelContextProtocol.Server;
-using SkiaSharp;
 
 namespace AsposeMcpServer.Tools.Word;
 
@@ -13,6 +13,11 @@ namespace AsposeMcpServer.Tools.Word;
 [McpServerToolType]
 public class WordWatermarkTool
 {
+    /// <summary>
+    ///     Handler registry for watermark operations
+    /// </summary>
+    private readonly HandlerRegistry<Document> _handlerRegistry;
+
     /// <summary>
     ///     Identity accessor for session isolation
     /// </summary>
@@ -33,6 +38,7 @@ public class WordWatermarkTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = WordWatermarkHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -87,113 +93,66 @@ Note: On Linux/Docker environments, ensure the specified font (default: Arial) i
         [Description("Apply washout effect to make image lighter (optional, default: true)")]
         bool isWashout = true)
     {
+        var parameters = BuildParameters(operation, text, fontFamily, fontSize, isSemitransparent, layout, imagePath,
+            scale, isWashout);
+
+        var handler = _handlerRegistry.GetHandler(operation);
+
         using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
+
         var effectiveOutputPath = outputPath ?? path;
 
-        return operation.ToLower() switch
+        var operationContext = new OperationContext<Document>
         {
-            "add" => AddTextWatermark(ctx, effectiveOutputPath, text, fontFamily, fontSize, isSemitransparent, layout),
-            "add_image" => AddImageWatermark(ctx, effectiveOutputPath, imagePath, scale, isWashout),
-            "remove" => RemoveWatermark(ctx, effectiveOutputPath),
-            _ => throw new ArgumentException($"Unknown operation: {operation}")
+            Document = ctx.Document,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = path,
+            OutputPath = effectiveOutputPath
         };
+
+        var result = handler.Execute(operationContext, parameters);
+
+        if (operationContext.IsModified)
+            ctx.Save(effectiveOutputPath);
+
+        return ctx.IsSession ? result : $"{result}\n{ctx.GetOutputMessage(effectiveOutputPath)}";
     }
 
     /// <summary>
-    ///     Adds a text watermark to the document.
+    ///     Builds OperationParameters from method parameters.
     /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="text">The watermark text.</param>
-    /// <param name="fontFamily">The font family for the watermark text.</param>
-    /// <param name="fontSize">The font size for the watermark text.</param>
-    /// <param name="isSemitransparent">Whether the watermark should be semitransparent.</param>
-    /// <param name="layout">The watermark layout (Diagonal or Horizontal).</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when text is null or empty.</exception>
-    private static string AddTextWatermark(DocumentContext<Document> ctx, string? outputPath, string? text,
-        string fontFamily, double fontSize, bool isSemitransparent, string layout)
+    private static OperationParameters BuildParameters(
+        string operation,
+        string? text,
+        string fontFamily,
+        double fontSize,
+        bool isSemitransparent,
+        string layout,
+        string? imagePath,
+        double scale,
+        bool isWashout)
     {
-        if (string.IsNullOrEmpty(text))
-            throw new ArgumentException("Text is required for add operation");
+        var parameters = new OperationParameters();
 
-        var doc = ctx.Document;
-
-        var watermarkOptions = new TextWatermarkOptions
+        switch (operation.ToLower())
         {
-            FontFamily = fontFamily,
-            FontSize = (float)fontSize,
-            IsSemitrasparent = isSemitransparent,
-            Layout = layout.ToLower() == "horizontal" ? WatermarkLayout.Horizontal : WatermarkLayout.Diagonal
-        };
+            case "add":
+                if (text != null) parameters.Set("text", text);
+                parameters.Set("fontFamily", fontFamily);
+                parameters.Set("fontSize", fontSize);
+                parameters.Set("isSemitransparent", isSemitransparent);
+                parameters.Set("layout", layout);
+                break;
 
-        doc.Watermark.SetText(text, watermarkOptions);
+            case "add_image":
+                if (imagePath != null) parameters.Set("imagePath", imagePath);
+                parameters.Set("scale", scale);
+                parameters.Set("isWashout", isWashout);
+                break;
+        }
 
-        ctx.Save(outputPath);
-
-        return $"Text watermark added to document.\n{ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Adds an image watermark to the document.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="imagePath">The image file path for the watermark.</param>
-    /// <param name="scale">The scale factor for the image.</param>
-    /// <param name="isWashout">Whether to apply washout effect to the image.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when imagePath is null or empty, or image cannot be decoded.</exception>
-    /// <exception cref="FileNotFoundException">Thrown when the image file is not found.</exception>
-    private static string AddImageWatermark(DocumentContext<Document> ctx, string? outputPath,
-        string? imagePath, double scale, bool isWashout)
-    {
-        if (string.IsNullOrEmpty(imagePath))
-            throw new ArgumentException("imagePath is required for add_image operation");
-
-        SecurityHelper.ValidateFilePath(imagePath, "imagePath", true);
-
-        if (!File.Exists(imagePath))
-            throw new FileNotFoundException($"Image file not found: {imagePath}");
-
-        var doc = ctx.Document;
-
-        var watermarkOptions = new ImageWatermarkOptions
-        {
-            Scale = scale,
-            IsWashout = isWashout
-        };
-
-        using var bitmap = SKBitmap.Decode(imagePath);
-        if (bitmap == null)
-            throw new ArgumentException(
-                $"Failed to decode image: {imagePath}. Ensure the file is a valid image format.");
-
-        doc.Watermark.SetImage(bitmap, watermarkOptions);
-
-        ctx.Save(outputPath);
-
-        return
-            $"Image watermark added to document. Image: {Path.GetFileName(imagePath)}, Scale: {scale}, Washout: {isWashout}.\n{ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Removes watermark from the document.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    private static string RemoveWatermark(DocumentContext<Document> ctx, string? outputPath)
-    {
-        var doc = ctx.Document;
-
-        if (doc.Watermark.Type == WatermarkType.None)
-            return $"No watermark found in document.\n{ctx.GetOutputMessage(outputPath)}";
-
-        doc.Watermark.Remove();
-
-        ctx.Save(outputPath);
-
-        return $"Watermark removed from document.\n{ctx.GetOutputMessage(outputPath)}";
+        return parameters;
     }
 }

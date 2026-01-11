@@ -48,14 +48,13 @@ public class TransportConfig
         var config = new TransportConfig();
         config.LoadFromEnvironment();
         config.LoadFromCommandLine(args);
-        config.Validate();
         return config;
     }
 
     /// <summary>
     ///     Validates the configuration values
     /// </summary>
-    private void Validate()
+    public void Validate()
     {
         if (Port is < 1 or > 65535)
         {
@@ -93,7 +92,7 @@ public class TransportConfig
     {
         var transport = Environment.GetEnvironmentVariable("ASPOSE_TRANSPORT");
         if (!string.IsNullOrEmpty(transport))
-            Mode = transport.ToLower() switch
+            Mode = transport.ToLowerInvariant() switch
             {
                 "stdio" => TransportMode.Stdio,
                 "sse" => TransportMode.Sse,

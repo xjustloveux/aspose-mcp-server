@@ -180,15 +180,15 @@
         "--sse",
         "--port:3000",
         "--auth-apikey-enabled",
-        "--auth-apikey-keys:mykey1:tenant1,mykey2:tenant2"
+        "--auth-apikey-keys:mykey1:group1,mykey2:group2"
       ]
     }
   },
 
   "_範例15": "========================================",
-  "_範例15說明": "SSE 模式 + Session 隔離（租戶級）",
-  "_範例15適用": "多租戶環境，同租戶用戶可共享 session",
-  "mcpServers_example15_tenant_isolation": {
+  "_範例15說明": "SSE 模式 + Session 群組隔離",
+  "_範例15適用": "多群組環境，同群組用戶可共享 session",
+  "mcpServers_example15_group_isolation": {
     "aspose-all": {
       "command": "C:/Tools/aspose-mcp-server/AsposeMcpServer.exe",
       "args": [
@@ -196,7 +196,7 @@
         "--sse",
         "--port:3000",
         "--session-enabled",
-        "--session-isolation:tenant",
+        "--session-isolation:group",
         "--auth-jwt-enabled",
         "--auth-jwt-secret:your-jwt-secret"
       ]
@@ -204,9 +204,9 @@
   },
 
   "_範例16": "========================================",
-  "_範例16說明": "SSE 模式 + Session 隔離（用戶級）",
-  "_範例16適用": "多租戶環境，每個用戶 session 完全隔離",
-  "mcpServers_example16_user_isolation": {
+  "_範例16說明": "SSE 模式 + 自訂群組識別符來源",
+  "_範例16適用": "使用非預設的 JWT claim 作為群組識別符",
+  "mcpServers_example16_custom_group_claim": {
     "aspose-all": {
       "command": "C:/Tools/aspose-mcp-server/AsposeMcpServer.exe",
       "args": [
@@ -214,9 +214,10 @@
         "--sse",
         "--port:3000",
         "--session-enabled",
-        "--session-isolation:user",
+        "--session-isolation:group",
         "--auth-jwt-enabled",
-        "--auth-jwt-secret:your-jwt-secret"
+        "--auth-jwt-secret:your-jwt-secret",
+        "--auth-jwt-group-claim:team_id"
       ]
     }
   },
@@ -241,26 +242,28 @@
     "--session-enabled": "啟用 Session 管理",
     "--session-max:N": "最大 Session 數（預設：10）",
     "--session-timeout:N": "Session 逾時分鐘（預設：30）",
-    "--session-isolation:mode": "隔離模式（none/tenant/user，預設：user）",
+    "--session-isolation:mode": "隔離模式（none/group，預設：group）",
     "--session-temp-retention-hours:N": "暫存檔保留時間（預設：24 小時）",
     "--session-on-disconnect:behavior": "斷線行為（SaveToTemp/Discard/KeepInMemory）"
   },
   "_參數列表_Session_隔離模式說明": {
     "none": "無隔離 - 所有用戶可存取所有 session（Stdio 模式向後兼容）",
-    "tenant": "租戶級隔離 - 同租戶內的用戶可相互存取 session",
-    "user": "用戶級隔離 - 用戶只能存取自己的 session（預設）"
+    "group": "群組級隔離 - 同群組內的用戶可相互存取 session（預設）"
   },
   "_參數列表_認證_ApiKey": {
     "--auth-apikey-enabled": "啟用 API Key 認證",
     "--auth-apikey-mode:mode": "驗證模式（local, gateway, introspection, custom）",
-    "--auth-apikey-keys:key1:tenant1,key2:tenant2": "API Key 列表（tenant 可包含冒號）",
+    "--auth-apikey-keys:key1:group1,key2:group2": "API Key 列表（group 可包含冒號）",
     "--auth-apikey-header:name": "Header 名稱（預設：X-API-Key）",
-    "--auth-apikey-tenant-header:name": "Tenant ID Header（Gateway 模式，預設：X-Tenant-Id）",
+    "--auth-apikey-group-header:name": "Group ID Header（Gateway 模式，預設：X-Group-Id）",
     "--auth-apikey-introspection-url:url": "Introspection 端點 URL",
     "--auth-apikey-introspection-auth:value": "Introspection 認證 Header",
     "--auth-apikey-introspection-field:name": "Introspection 請求欄位名稱（預設：key）",
     "--auth-apikey-custom-url:url": "Custom 驗證端點 URL",
-    "--auth-apikey-timeout:N": "外部驗證逾時秒數（Introspection/Custom，預設：5）"
+    "--auth-apikey-timeout:N": "外部驗證逾時秒數（Introspection/Custom，預設：5）",
+    "--auth-apikey-cache-enabled": "啟用驗證結果快取（預設：true）",
+    "--auth-apikey-cache-ttl:N": "快取存活時間秒數（預設：300）",
+    "--auth-apikey-cache-max-size:N": "快取最大項目數（預設：10000）"
   },
   "_參數列表_認證_JWT": {
     "--auth-jwt-enabled": "啟用 JWT 認證",
@@ -269,15 +272,18 @@
     "--auth-jwt-public-key-path:path": "RSA/ECDSA 公鑰文件路徑",
     "--auth-jwt-issuer:value": "JWT 發行者",
     "--auth-jwt-audience:value": "JWT 受眾",
-    "--auth-jwt-tenant-claim:name": "Tenant ID Claim 名稱（預設：tenant_id）",
+    "--auth-jwt-group-claim:name": "Group ID Claim 名稱（預設：tenant_id，可設為 team_id, org_id 等）",
     "--auth-jwt-user-claim:name": "User ID Claim 名稱（預設：sub）",
-    "--auth-jwt-tenant-header:name": "Tenant ID Header（Gateway 模式，預設：X-Tenant-Id）",
+    "--auth-jwt-group-header:name": "Group ID Header（Gateway 模式，預設：X-Group-Id）",
     "--auth-jwt-user-header:name": "User ID Header（Gateway 模式，預設：X-User-Id）",
     "--auth-jwt-introspection-url:url": "OAuth Introspection 端點 URL",
     "--auth-jwt-client-id:value": "OAuth Client ID（Introspection 模式）",
     "--auth-jwt-client-secret:value": "OAuth Client Secret（Introspection 模式）",
     "--auth-jwt-custom-url:url": "Custom 驗證端點 URL",
-    "--auth-jwt-timeout:N": "外部驗證逾時秒數（Introspection/Custom，預設：5）"
+    "--auth-jwt-timeout:N": "外部驗證逾時秒數（Introspection/Custom，預設：5）",
+    "--auth-jwt-cache-enabled": "啟用驗證結果快取（預設：true）",
+    "--auth-jwt-cache-ttl:N": "快取存活時間秒數（預設：300）",
+    "--auth-jwt-cache-max-size:N": "快取最大項目數（預設：10000）"
   },
   "_參數列表_追蹤": {
     "--log-enabled": "啟用日誌",

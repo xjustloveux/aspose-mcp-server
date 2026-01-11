@@ -1,0 +1,164 @@
+using Aspose.Pdf;
+using AsposeMcpServer.Handlers.Pdf.Watermark;
+using AsposeMcpServer.Tests.Helpers;
+
+namespace AsposeMcpServer.Tests.Handlers.Pdf.Watermark;
+
+public class AddPdfWatermarkHandlerTests : PdfHandlerTestBase
+{
+    private readonly AddPdfWatermarkHandler _handler = new();
+
+    #region Operation Property
+
+    [Fact]
+    public void Operation_Returns_Add()
+    {
+        Assert.Equal("add", _handler.Operation);
+    }
+
+    #endregion
+
+    #region Helper Methods
+
+    private static Document CreatePdfWithPages(int pageCount)
+    {
+        var document = new Document();
+        for (var i = 0; i < pageCount; i++) document.Pages.Add();
+        return document;
+    }
+
+    #endregion
+
+    #region Basic Add Watermark Operations
+
+    [SkippableFact]
+    public void Execute_AddsWatermark()
+    {
+        SkipInEvaluationMode(AsposeLibraryType.Pdf);
+        var document = CreateEmptyDocument();
+        var context = CreateContext(document);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "text", "CONFIDENTIAL" }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("watermark added", result.ToLower());
+        Assert.Contains("1 page", result.ToLower());
+        AssertModified(context);
+    }
+
+    [SkippableFact]
+    public void Execute_AddsWatermarkWithCustomSettings()
+    {
+        SkipInEvaluationMode(AsposeLibraryType.Pdf);
+        var document = CreateEmptyDocument();
+        var context = CreateContext(document);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "text", "DRAFT" },
+            { "opacity", 0.5 },
+            { "fontSize", 48.0 },
+            { "rotation", 30.0 },
+            { "color", "Red" }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("watermark added", result.ToLower());
+    }
+
+    [SkippableFact]
+    public void Execute_AddsWatermarkWithAlignment()
+    {
+        SkipInEvaluationMode(AsposeLibraryType.Pdf);
+        var document = CreateEmptyDocument();
+        var context = CreateContext(document);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "text", "SECRET" },
+            { "horizontalAlignment", "Left" },
+            { "verticalAlignment", "Top" }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("watermark added", result.ToLower());
+    }
+
+    [SkippableFact]
+    public void Execute_AddsWatermarkAsBackground()
+    {
+        SkipInEvaluationMode(AsposeLibraryType.Pdf);
+        var document = CreateEmptyDocument();
+        var context = CreateContext(document);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "text", "BACKGROUND" },
+            { "isBackground", true }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("watermark added", result.ToLower());
+    }
+
+    [SkippableFact]
+    public void Execute_AddsWatermarkToMultiplePages()
+    {
+        SkipInEvaluationMode(AsposeLibraryType.Pdf);
+        var document = CreatePdfWithPages(3);
+        var context = CreateContext(document);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "text", "WATERMARK" }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("3 page", result.ToLower());
+    }
+
+    [SkippableFact]
+    public void Execute_AddsWatermarkToPageRange()
+    {
+        SkipInEvaluationMode(AsposeLibraryType.Pdf);
+        var document = CreatePdfWithPages(5);
+        var context = CreateContext(document);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "text", "WATERMARK" },
+            { "pageRange", "1-3" }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("3 page", result.ToLower());
+    }
+
+    [Fact]
+    public void Execute_WithNoText_ThrowsArgumentException()
+    {
+        var document = CreateEmptyDocument();
+        var context = CreateContext(document);
+        var parameters = CreateEmptyParameters();
+
+        Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+    }
+
+    [Fact]
+    public void Execute_WithEmptyText_ThrowsArgumentException()
+    {
+        var document = CreateEmptyDocument();
+        var context = CreateContext(document);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "text", "" }
+        });
+
+        Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+    }
+
+    #endregion
+}

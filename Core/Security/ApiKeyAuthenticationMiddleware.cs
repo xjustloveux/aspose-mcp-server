@@ -16,9 +16,9 @@ public class ApiKeyAuthResult
     public bool IsValid { get; set; }
 
     /// <summary>
-    ///     Tenant identifier extracted from the API key
+    ///     Group identifier extracted from the API key
     /// </summary>
-    public string? TenantId { get; set; }
+    public string? GroupId { get; set; }
 
     /// <summary>
     ///     Error message if validation failed
@@ -29,8 +29,13 @@ public class ApiKeyAuthResult
 /// <summary>
 ///     Middleware for API Key authentication supporting multiple verification modes
 /// </summary>
-public class ApiKeyAuthenticationMiddleware : IDisposable
+public class ApiKeyAuthenticationMiddleware : IMiddleware, IDisposable
 {
+    /// <summary>
+    ///     Authentication result cache for Introspection/Custom modes
+    /// </summary>
+    private readonly AuthCache<ApiKeyAuthResult>? _cache;
+
     /// <summary>
     ///     API key authentication configuration
     /// </summary>
@@ -47,11 +52,6 @@ public class ApiKeyAuthenticationMiddleware : IDisposable
     private readonly ILogger<ApiKeyAuthenticationMiddleware> _logger;
 
     /// <summary>
-    ///     Next middleware in the pipeline
-    /// </summary>
-    private readonly RequestDelegate _next;
-
-    /// <summary>
     ///     Indicates whether we own the HTTP client and should dispose it
     /// </summary>
     private readonly bool _ownsHttpClient;
@@ -64,22 +64,20 @@ public class ApiKeyAuthenticationMiddleware : IDisposable
     /// <summary>
     ///     Creates a new API key authentication middleware instance
     /// </summary>
-    /// <param name="next">Next middleware delegate</param>
     /// <param name="config">API key configuration</param>
     /// <param name="logger">Logger instance</param>
     /// <param name="httpClientFactory">Optional HTTP client factory</param>
     public ApiKeyAuthenticationMiddleware(
-        RequestDelegate next,
         ApiKeyConfig config,
         ILogger<ApiKeyAuthenticationMiddleware> logger,
         IHttpClientFactory? httpClientFactory = null)
     {
-        _next = next;
         _config = config;
         _logger = logger;
         if (httpClientFactory != null)
         {
             _httpClient = httpClientFactory.CreateClient("ApiKeyAuth");
+            _httpClient.Timeout = TimeSpan.FromSeconds(config.ExternalTimeoutSeconds);
             _ownsHttpClient = false;
         }
         else
@@ -90,6 +88,12 @@ public class ApiKeyAuthenticationMiddleware : IDisposable
             };
             _ownsHttpClient = true;
         }
+
+        if (config.CacheEnabled &&
+            (config.Mode == ApiKeyMode.Introspection || config.Mode == ApiKeyMode.Custom))
+            _cache = new AuthCache<ApiKeyAuthResult>(
+                config.CacheTtlSeconds,
+                config.CacheMaxSize);
     }
 
     /// <summary>
@@ -98,11 +102,10 @@ public class ApiKeyAuthenticationMiddleware : IDisposable
     /// </summary>
     public void Dispose()
     {
-        // Atomically set _disposed to 1, return previous value
-        // If previous value was already 1, another thread already disposed
         if (Interlocked.Exchange(ref _disposed, 1) == 1)
             return;
 
+        _cache?.Clear();
         if (_ownsHttpClient)
             _httpClient.Dispose();
         GC.SuppressFinalize(this);
@@ -112,11 +115,12 @@ public class ApiKeyAuthenticationMiddleware : IDisposable
     ///     Processes an HTTP request to validate API Key authentication
     /// </summary>
     /// <param name="context">HTTP context for the current request</param>
-    public async Task InvokeAsync(HttpContext context)
+    /// <param name="next">Next middleware delegate</param>
+    public async Task InvokeAsync(HttpContext context, RequestDelegate next)
     {
         if (ShouldSkipAuthentication(context.Request.Path))
         {
-            await _next(context);
+            await next(context);
             return;
         }
 
@@ -135,9 +139,9 @@ public class ApiKeyAuthenticationMiddleware : IDisposable
             return;
         }
 
-        if (!string.IsNullOrEmpty(result.TenantId)) context.Items["TenantId"] = result.TenantId;
+        if (!string.IsNullOrEmpty(result.GroupId)) context.Items["GroupId"] = result.GroupId;
 
-        await _next(context);
+        await next(context);
     }
 
     /// <summary>
@@ -172,10 +176,30 @@ public class ApiKeyAuthenticationMiddleware : IDisposable
         {
             ApiKeyMode.Local => ValidateLocal(apiKey),
             ApiKeyMode.Gateway => ValidateGateway(context, apiKey),
-            ApiKeyMode.Introspection => await ValidateIntrospectionAsync(apiKey),
-            ApiKeyMode.Custom => await ValidateCustomAsync(apiKey),
+            ApiKeyMode.Introspection => await ValidateWithCacheAsync(apiKey, () => ValidateIntrospectionAsync(apiKey)),
+            ApiKeyMode.Custom => await ValidateWithCacheAsync(apiKey, () => ValidateCustomAsync(apiKey)),
             _ => new ApiKeyAuthResult { IsValid = false, ErrorMessage = "Unknown authentication mode" }
         };
+    }
+
+    /// <summary>
+    ///     Validates API key with optional caching.
+    ///     Only successful validation results are cached.
+    /// </summary>
+    /// <param name="apiKey">API key to use as cache key</param>
+    /// <param name="validateFunc">Function to call when cache misses</param>
+    /// <returns>Authentication result</returns>
+    private async Task<ApiKeyAuthResult> ValidateWithCacheAsync(
+        string apiKey,
+        Func<Task<ApiKeyAuthResult>> validateFunc)
+    {
+        if (_cache == null)
+            return await validateFunc();
+
+        return await _cache.GetOrValidateAsync(
+            apiKey,
+            validateFunc,
+            result => result.IsValid);
     }
 
     /// <summary>
@@ -195,13 +219,13 @@ public class ApiKeyAuthenticationMiddleware : IDisposable
             };
         }
 
-        if (_config.Keys.TryGetValue(apiKey, out var tenantId))
+        if (_config.Keys.TryGetValue(apiKey, out var groupId))
         {
-            _logger.LogDebug("API Key validated for tenant: {TenantId}", tenantId);
+            _logger.LogDebug("API Key validated for group: {GroupId}", groupId);
             return new ApiKeyAuthResult
             {
                 IsValid = true,
-                TenantId = tenantId
+                GroupId = groupId
             };
         }
 
@@ -214,30 +238,20 @@ public class ApiKeyAuthenticationMiddleware : IDisposable
 
     /// <summary>
     ///     Gateway mode: Trust that the API Gateway has validated the request
-    ///     Extract tenant ID from configured header
+    ///     Extract group identifier from configured header
     /// </summary>
     /// <param name="context">HTTP context containing the request</param>
     /// <param name="_">API key (unused in gateway mode, validation is trusted from gateway)</param>
     /// <returns>Authentication result</returns>
     private ApiKeyAuthResult ValidateGateway(HttpContext context, string _)
     {
-        var tenantId = context.Request.Headers[_config.TenantIdHeader].FirstOrDefault();
+        var groupId = context.Request.Headers[_config.GroupIdentifierHeader].FirstOrDefault();
 
-        if (string.IsNullOrEmpty(tenantId))
-        {
-            _logger.LogWarning("Gateway mode: Missing tenant ID header {Header}", _config.TenantIdHeader);
-            return new ApiKeyAuthResult
-            {
-                IsValid = false,
-                ErrorMessage = $"Missing {_config.TenantIdHeader} header from gateway"
-            };
-        }
-
-        _logger.LogDebug("Gateway mode: Trusted request for tenant {TenantId}", tenantId);
+        _logger.LogDebug("Gateway mode: Trusted request for group {GroupId}", groupId ?? "(anonymous)");
         return new ApiKeyAuthResult
         {
             IsValid = true,
-            TenantId = tenantId
+            GroupId = groupId
         };
     }
 
@@ -269,8 +283,7 @@ public class ApiKeyAuthenticationMiddleware : IDisposable
             if (!string.IsNullOrEmpty(_config.IntrospectionAuthHeader))
                 request.Headers.Authorization = AuthenticationHeaderValue.Parse(_config.IntrospectionAuthHeader);
 
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(_config.ExternalTimeoutSeconds));
-            var response = await _httpClient.SendAsync(request, cts.Token);
+            var response = await _httpClient.SendAsync(request);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -282,7 +295,7 @@ public class ApiKeyAuthenticationMiddleware : IDisposable
                 };
             }
 
-            var content = await response.Content.ReadAsStringAsync(cts.Token);
+            var content = await response.Content.ReadAsStringAsync();
             var result = JsonSerializer.Deserialize<IntrospectionResponse>(content, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
@@ -290,11 +303,11 @@ public class ApiKeyAuthenticationMiddleware : IDisposable
 
             if (result?.Active == true)
             {
-                _logger.LogDebug("Introspection validated key for tenant: {TenantId}", result.TenantId);
+                _logger.LogDebug("Introspection validated key for group: {GroupId}", result.GroupId);
                 return new ApiKeyAuthResult
                 {
                     IsValid = true,
-                    TenantId = result.TenantId
+                    GroupId = result.GroupId
                 };
             }
 
@@ -340,8 +353,7 @@ public class ApiKeyAuthenticationMiddleware : IDisposable
                 Encoding.UTF8,
                 "application/json");
 
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(_config.ExternalTimeoutSeconds));
-            var response = await _httpClient.SendAsync(request, cts.Token);
+            var response = await _httpClient.SendAsync(request);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -353,7 +365,7 @@ public class ApiKeyAuthenticationMiddleware : IDisposable
                 };
             }
 
-            var content = await response.Content.ReadAsStringAsync(cts.Token);
+            var content = await response.Content.ReadAsStringAsync();
             var result = JsonSerializer.Deserialize<CustomValidationResponse>(content, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
@@ -361,11 +373,11 @@ public class ApiKeyAuthenticationMiddleware : IDisposable
 
             if (result?.Valid == true)
             {
-                _logger.LogDebug("Custom endpoint validated key for tenant: {TenantId}", result.TenantId);
+                _logger.LogDebug("Custom endpoint validated key for group: {GroupId}", result.GroupId);
                 return new ApiKeyAuthResult
                 {
                     IsValid = true,
-                    TenantId = result.TenantId
+                    GroupId = result.GroupId
                 };
             }
 
@@ -393,7 +405,7 @@ public class ApiKeyAuthenticationMiddleware : IDisposable
     {
         public bool Active { get; init; }
 
-        [JsonPropertyName("tenant_id")] public string? TenantId { get; init; }
+        [JsonPropertyName("group_id")] public string? GroupId { get; init; }
     }
 
     /// <summary>
@@ -403,30 +415,8 @@ public class ApiKeyAuthenticationMiddleware : IDisposable
     {
         public bool Valid { get; init; }
 
-        [JsonPropertyName("tenant_id")] public string? TenantId { get; init; }
+        [JsonPropertyName("group_id")] public string? GroupId { get; init; }
 
         public string? Error { get; init; }
-    }
-}
-
-/// <summary>
-///     Extension methods for adding API Key authentication middleware
-/// </summary>
-public static class ApiKeyAuthenticationExtensions
-{
-    /// <summary>
-    ///     Adds API key authentication middleware to the application pipeline
-    /// </summary>
-    /// <param name="app">The application builder</param>
-    /// <param name="config">API key configuration</param>
-    /// <returns>The application builder for chaining</returns>
-    public static IApplicationBuilder UseApiKeyAuthentication(
-        this IApplicationBuilder app,
-        ApiKeyConfig config)
-    {
-        if (!config.Enabled)
-            return app;
-
-        return app.UseMiddleware<ApiKeyAuthenticationMiddleware>(config);
     }
 }

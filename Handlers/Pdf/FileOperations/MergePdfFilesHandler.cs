@@ -1,0 +1,52 @@
+using Aspose.Pdf;
+using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Core.Helpers;
+
+namespace AsposeMcpServer.Handlers.Pdf.FileOperations;
+
+/// <summary>
+///     Handler for merging multiple PDF documents into a single document.
+/// </summary>
+public class MergePdfFilesHandler : OperationHandlerBase<Document>
+{
+    /// <inheritdoc />
+    public override string Operation => "merge";
+
+    /// <summary>
+    ///     Merges multiple PDF documents into a single document.
+    /// </summary>
+    /// <param name="context">The document context.</param>
+    /// <param name="parameters">
+    ///     Required: outputPath, inputPaths (string array)
+    /// </param>
+    /// <returns>Success message with merge count and output path.</returns>
+    public override string Execute(OperationContext<Document> context, OperationParameters parameters)
+    {
+        var outputPath = parameters.GetRequired<string>("outputPath");
+        var inputPaths = parameters.GetRequired<string[]>("inputPaths");
+
+        if (inputPaths.Length == 0)
+            throw new ArgumentException("inputPaths is required for merge operation");
+
+        SecurityHelper.ValidateArraySize(inputPaths, "inputPaths");
+
+        var validPaths = inputPaths.Where(p => !string.IsNullOrEmpty(p)).ToList();
+        if (validPaths.Count == 0)
+            throw new ArgumentException("At least one input path is required");
+
+        foreach (var inputPath in validPaths)
+            SecurityHelper.ValidateFilePath(inputPath, "inputPaths", true);
+        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
+
+        using var mergedDocument = new Document(validPaths[0]);
+        for (var i = 1; i < validPaths.Count; i++)
+        {
+            using var doc = new Document(validPaths[i]);
+            mergedDocument.Pages.Add(doc.Pages);
+        }
+
+        mergedDocument.Save(outputPath);
+
+        return Success($"Merged {validPaths.Count} PDF documents. Output: {outputPath}");
+    }
+}

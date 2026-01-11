@@ -1,7 +1,8 @@
 using System.ComponentModel;
 using Aspose.Cells;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.Excel.ViewSettings;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -15,6 +16,11 @@ namespace AsposeMcpServer.Tools.Excel;
 [McpServerToolType]
 public class ExcelViewSettingsTool
 {
+    /// <summary>
+    ///     Handler registry for view settings operations.
+    /// </summary>
+    private readonly HandlerRegistry<Workbook> _handlerRegistry;
+
     /// <summary>
     ///     Session identity accessor for session isolation support.
     /// </summary>
@@ -35,6 +41,7 @@ public class ExcelViewSettingsTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = ExcelViewSettingsHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -151,393 +158,129 @@ Usage examples:
     {
         using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
-        return operation.ToLower() switch
+        var parameters = BuildParameters(operation, sheetIndex, zoom, visible, columnIndex, width, rowIndex, height,
+            imagePath, removeBackground, color, showGridlines, showRowColumnHeaders, showZeroValues, displayRightToLeft,
+            freezeRow, freezeColumn, unfreeze, splitRow, splitColumn, removeSplit, startRow, endRow, startColumn,
+            endColumn);
+
+        var handler = _handlerRegistry.GetHandler(operation);
+
+        var operationContext = new OperationContext<Workbook>
         {
-            "set_zoom" => SetZoom(ctx, outputPath, sheetIndex, zoom),
-            "set_gridlines" => SetGridlines(ctx, outputPath, sheetIndex, visible),
-            "set_headers" => SetHeaders(ctx, outputPath, sheetIndex, visible),
-            "set_zero_values" => SetZeroValues(ctx, outputPath, sheetIndex, visible),
-            "set_column_width" => SetColumnWidth(ctx, outputPath, sheetIndex, columnIndex, width),
-            "set_row_height" => SetRowHeight(ctx, outputPath, sheetIndex, rowIndex, height),
-            "set_background" => SetBackground(ctx, outputPath, sheetIndex, imagePath, removeBackground),
-            "set_tab_color" => SetTabColor(ctx, outputPath, sheetIndex, color),
-            "set_all" => SetAll(ctx, outputPath, sheetIndex, zoom, showGridlines, showRowColumnHeaders, showZeroValues,
-                displayRightToLeft),
-            "freeze_panes" => FreezePanes(ctx, outputPath, sheetIndex, freezeRow, freezeColumn, unfreeze),
-            "split_window" => SplitWindow(ctx, outputPath, sheetIndex, splitRow, splitColumn, removeSplit),
-            "auto_fit_column" => AutoFitColumn(ctx, outputPath, sheetIndex, columnIndex, startRow, endRow),
-            "auto_fit_row" => AutoFitRow(ctx, outputPath, sheetIndex, rowIndex, startColumn, endColumn),
-            "show_formulas" => ShowFormulas(ctx, outputPath, sheetIndex, visible),
-            _ => throw new ArgumentException($"Unknown operation: {operation}")
+            Document = ctx.Document,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = path,
+            OutputPath = outputPath
         };
+
+        var result = handler.Execute(operationContext, parameters);
+
+        if (operationContext.IsModified)
+            ctx.Save(outputPath);
+
+        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Sets the zoom level for a worksheet.
+    ///     Builds OperationParameters from method parameters.
     /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <param name="zoom">The zoom percentage (10-400).</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when zoom is not between 10 and 400.</exception>
-    private static string SetZoom(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex, int zoom)
+    private static OperationParameters BuildParameters(
+        string operation,
+        int sheetIndex,
+        int zoom,
+        bool visible,
+        int columnIndex,
+        double width,
+        int rowIndex,
+        double height,
+        string? imagePath,
+        bool removeBackground,
+        string? color,
+        bool? showGridlines,
+        bool? showRowColumnHeaders,
+        bool? showZeroValues,
+        bool? displayRightToLeft,
+        int? freezeRow,
+        int? freezeColumn,
+        bool unfreeze,
+        int? splitRow,
+        int? splitColumn,
+        bool removeSplit,
+        int? startRow,
+        int? endRow,
+        int? startColumn,
+        int? endColumn)
     {
-        if (zoom < 10 || zoom > 400)
-            throw new ArgumentException("Zoom must be between 10 and 400");
+        var parameters = new OperationParameters();
+        parameters.Set("sheetIndex", sheetIndex);
 
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        worksheet.Zoom = zoom;
-
-        ctx.Save(outputPath);
-        return $"Zoom level set to {zoom}% for sheet {sheetIndex}. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Sets the visibility of gridlines.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <param name="visible">Whether gridlines should be visible.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    private static string SetGridlines(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex, bool visible)
-    {
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        worksheet.IsGridlinesVisible = visible;
-
-        ctx.Save(outputPath);
-        return $"Gridlines visibility set to {(visible ? "visible" : "hidden")}. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Sets the visibility of row and column headers.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <param name="visible">Whether row and column headers should be visible.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    private static string SetHeaders(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex, bool visible)
-    {
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        worksheet.IsRowColumnHeadersVisible = visible;
-
-        ctx.Save(outputPath);
-        return
-            $"RowColumnHeaders visibility set to {(visible ? "visible" : "hidden")}. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Sets whether zero values are displayed.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <param name="visible">Whether zero values should be displayed.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    private static string SetZeroValues(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex, bool visible)
-    {
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        worksheet.DisplayZeros = visible;
-
-        ctx.Save(outputPath);
-        return $"Zero values visibility set to {(visible ? "visible" : "hidden")}. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Sets the width of a column.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <param name="columnIndex">The zero-based column index.</param>
-    /// <param name="width">The column width in characters.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    private static string SetColumnWidth(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex,
-        int columnIndex, double width)
-    {
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-
-        worksheet.Cells.SetColumnWidth(columnIndex, width);
-
-        ctx.Save(outputPath);
-        return $"Column {columnIndex} width set to {width} characters. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Sets the height of a row.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <param name="rowIndex">The zero-based row index.</param>
-    /// <param name="height">The row height in points.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    private static string SetRowHeight(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex, int rowIndex,
-        double height)
-    {
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-
-        worksheet.Cells.SetRowHeight(rowIndex, height);
-
-        ctx.Save(outputPath);
-        return $"Row {rowIndex} height set to {height} points. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Sets or removes the background image for a worksheet.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <param name="imagePath">The path to the background image file.</param>
-    /// <param name="removeBackground">Whether to remove the background image.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="FileNotFoundException">Thrown when the image file is not found.</exception>
-    /// <exception cref="ArgumentException">Thrown when neither imagePath nor removeBackground is provided.</exception>
-    private static string SetBackground(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex,
-        string? imagePath, bool removeBackground)
-    {
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-
-        if (removeBackground)
+        switch (operation.ToLowerInvariant())
         {
-            worksheet.BackgroundImage = null;
-        }
-        else if (!string.IsNullOrEmpty(imagePath))
-        {
-            if (!File.Exists(imagePath))
-                throw new FileNotFoundException($"Image file not found: {imagePath}");
-            var imageBytes = File.ReadAllBytes(imagePath);
-            worksheet.BackgroundImage = imageBytes;
-        }
-        else
-        {
-            throw new ArgumentException("Either imagePath or removeBackground must be provided");
+            case "set_zoom":
+                parameters.Set("zoom", zoom);
+                break;
+
+            case "set_gridlines":
+            case "set_headers":
+            case "set_zero_values":
+            case "show_formulas":
+                parameters.Set("visible", visible);
+                break;
+
+            case "set_column_width":
+                parameters.Set("columnIndex", columnIndex);
+                parameters.Set("width", width);
+                break;
+
+            case "set_row_height":
+                parameters.Set("rowIndex", rowIndex);
+                parameters.Set("height", height);
+                break;
+
+            case "set_background":
+                if (imagePath != null) parameters.Set("imagePath", imagePath);
+                parameters.Set("removeBackground", removeBackground);
+                break;
+
+            case "set_tab_color":
+                if (color != null) parameters.Set("color", color);
+                break;
+
+            case "set_all":
+                parameters.Set("zoom", zoom);
+                if (showGridlines.HasValue) parameters.Set("showGridlines", showGridlines.Value);
+                if (showRowColumnHeaders.HasValue) parameters.Set("showRowColumnHeaders", showRowColumnHeaders.Value);
+                if (showZeroValues.HasValue) parameters.Set("showZeroValues", showZeroValues.Value);
+                if (displayRightToLeft.HasValue) parameters.Set("displayRightToLeft", displayRightToLeft.Value);
+                break;
+
+            case "freeze_panes":
+                if (freezeRow.HasValue) parameters.Set("freezeRow", freezeRow.Value);
+                if (freezeColumn.HasValue) parameters.Set("freezeColumn", freezeColumn.Value);
+                parameters.Set("unfreeze", unfreeze);
+                break;
+
+            case "split_window":
+                if (splitRow.HasValue) parameters.Set("splitRow", splitRow.Value);
+                if (splitColumn.HasValue) parameters.Set("splitColumn", splitColumn.Value);
+                parameters.Set("removeSplit", removeSplit);
+                break;
+
+            case "auto_fit_column":
+                parameters.Set("columnIndex", columnIndex);
+                if (startRow.HasValue) parameters.Set("startRow", startRow.Value);
+                if (endRow.HasValue) parameters.Set("endRow", endRow.Value);
+                break;
+
+            case "auto_fit_row":
+                parameters.Set("rowIndex", rowIndex);
+                if (startColumn.HasValue) parameters.Set("startColumn", startColumn.Value);
+                if (endColumn.HasValue) parameters.Set("endColumn", endColumn.Value);
+                break;
         }
 
-        ctx.Save(outputPath);
-        return removeBackground
-            ? $"Background image removed from sheet {sheetIndex}. {ctx.GetOutputMessage(outputPath)}"
-            : $"Background image set for sheet {sheetIndex}. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Sets the tab color for a worksheet.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <param name="color">The color in hex format (e.g., '#FF0000').</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when color is null or empty.</exception>
-    private static string SetTabColor(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex, string? color)
-    {
-        if (string.IsNullOrEmpty(color))
-            throw new ArgumentException("color is required for set_tab_color operation");
-
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-
-        var parsedColor = ColorHelper.ParseColor(color);
-        worksheet.TabColor = parsedColor;
-
-        ctx.Save(outputPath);
-        return $"Sheet tab color set to {color}. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Sets multiple view settings at once.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <param name="zoom">The zoom percentage (10-400).</param>
-    /// <param name="showGridlines">Whether to show gridlines.</param>
-    /// <param name="showRowColumnHeaders">Whether to show row and column headers.</param>
-    /// <param name="showZeroValues">Whether to show zero values.</param>
-    /// <param name="displayRightToLeft">Whether to display right to left.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when zoom is not between 10 and 400.</exception>
-    private static string SetAll(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex, int zoom,
-        bool? showGridlines, bool? showRowColumnHeaders, bool? showZeroValues, bool? displayRightToLeft)
-    {
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-
-        if (zoom != 100)
-        {
-            if (zoom < 10 || zoom > 400)
-                throw new ArgumentException("Zoom must be between 10 and 400");
-            worksheet.Zoom = zoom;
-        }
-
-        if (showGridlines.HasValue)
-            worksheet.IsGridlinesVisible = showGridlines.Value;
-
-        if (showRowColumnHeaders.HasValue)
-            worksheet.IsRowColumnHeadersVisible = showRowColumnHeaders.Value;
-
-        if (showZeroValues.HasValue)
-            worksheet.DisplayZeros = showZeroValues.Value;
-
-        if (displayRightToLeft.HasValue)
-            worksheet.DisplayRightToLeft = displayRightToLeft.Value;
-
-        ctx.Save(outputPath);
-        return $"View settings updated for sheet {sheetIndex}. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Freezes or unfreezes panes in a worksheet.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <param name="freezeRow">The row index to freeze at (0-based).</param>
-    /// <param name="freezeColumn">The column index to freeze at (0-based).</param>
-    /// <param name="unfreeze">Whether to unfreeze panes.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when neither freezeRow, freezeColumn, nor unfreeze is provided.</exception>
-    private static string FreezePanes(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex,
-        int? freezeRow, int? freezeColumn, bool unfreeze)
-    {
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-
-        if (unfreeze)
-        {
-            worksheet.UnFreezePanes();
-        }
-        else if (freezeRow.HasValue || freezeColumn.HasValue)
-        {
-            var row = freezeRow ?? 0;
-            var col = freezeColumn ?? 0;
-            worksheet.FreezePanes(row, col, row, col);
-        }
-        else
-        {
-            throw new ArgumentException("Either freezeRow, freezeColumn, or unfreeze must be provided");
-        }
-
-        ctx.Save(outputPath);
-        return unfreeze
-            ? $"Panes unfrozen for sheet {sheetIndex}. {ctx.GetOutputMessage(outputPath)}"
-            : $"Panes frozen at row {freezeRow ?? 0}, column {freezeColumn ?? 0} for sheet {sheetIndex}. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Splits or unsplits the window in a worksheet.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <param name="splitRow">The row position to split at in pixels.</param>
-    /// <param name="splitColumn">The column position to split at in pixels.</param>
-    /// <param name="removeSplit">Whether to remove the window split.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when neither splitRow, splitColumn, nor removeSplit is provided.</exception>
-    private static string SplitWindow(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex,
-        int? splitRow, int? splitColumn, bool removeSplit)
-    {
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-
-        if (removeSplit)
-        {
-            worksheet.RemoveSplit();
-        }
-        else if (splitRow.HasValue || splitColumn.HasValue)
-        {
-            var row = splitRow ?? 0;
-            var col = splitColumn ?? 0;
-            worksheet.ActiveCell = CellsHelper.CellIndexToName(row, col);
-            worksheet.Split();
-        }
-        else
-        {
-            throw new ArgumentException("Either splitRow, splitColumn, or removeSplit must be provided");
-        }
-
-        ctx.Save(outputPath);
-        return removeSplit
-            ? $"Window split removed for sheet {sheetIndex}. {ctx.GetOutputMessage(outputPath)}"
-            : $"Window split at row {splitRow ?? 0}, column {splitColumn ?? 0} for sheet {sheetIndex}. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Auto-fits a column width to its content.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <param name="columnIndex">The zero-based column index to auto-fit.</param>
-    /// <param name="startRow">The start row index for auto fit range (0-based).</param>
-    /// <param name="endRow">The end row index for auto fit range (0-based).</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    private static string AutoFitColumn(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex,
-        int columnIndex, int? startRow, int? endRow)
-    {
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-
-        if (startRow.HasValue && endRow.HasValue)
-            worksheet.AutoFitColumn(columnIndex, startRow.Value, endRow.Value);
-        else
-            worksheet.AutoFitColumn(columnIndex);
-
-        ctx.Save(outputPath);
-        return $"Column {columnIndex} auto-fitted. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Auto-fits a row height to its content.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <param name="rowIndex">The zero-based row index to auto-fit.</param>
-    /// <param name="startColumn">The start column index for auto fit range (0-based).</param>
-    /// <param name="endColumn">The end column index for auto fit range (0-based).</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    private static string AutoFitRow(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex,
-        int rowIndex, int? startColumn, int? endColumn)
-    {
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-
-        if (startColumn.HasValue && endColumn.HasValue)
-            worksheet.AutoFitRow(rowIndex, startColumn.Value, endColumn.Value);
-        else
-            worksheet.AutoFitRow(rowIndex);
-
-        ctx.Save(outputPath);
-        return $"Row {rowIndex} auto-fitted. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Sets whether formulas are displayed instead of values.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <param name="visible">Whether formulas should be displayed instead of values.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    private static string ShowFormulas(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex, bool visible)
-    {
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        worksheet.ShowFormulas = visible;
-
-        ctx.Save(outputPath);
-        return $"Formulas {(visible ? "shown" : "hidden")} for sheet {sheetIndex}. {ctx.GetOutputMessage(outputPath)}";
+        return parameters;
     }
 }

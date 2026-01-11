@@ -5,6 +5,11 @@ using AsposeMcpServer.Tools.Excel;
 
 namespace AsposeMcpServer.Tests.Tools.Excel;
 
+/// <summary>
+///     Integration tests for ExcelCommentTool.
+///     Focuses on session management, file I/O, and operation routing.
+///     Detailed parameter validation and business logic tests are in Handler tests.
+/// </summary>
 public class ExcelCommentToolTests : ExcelTestBase
 {
     private readonly ExcelCommentTool _tool;
@@ -28,7 +33,7 @@ public class ExcelCommentToolTests : ExcelTestBase
         return path;
     }
 
-    #region General
+    #region File I/O Smoke Tests
 
     [Fact]
     public void Add_ShouldAddComment()
@@ -45,29 +50,6 @@ public class ExcelCommentToolTests : ExcelTestBase
     }
 
     [Fact]
-    public void Add_WithAuthor_ShouldSetAuthor()
-    {
-        var workbookPath = CreateExcelWorkbook("test_add_author.xlsx");
-        var outputPath = CreateTestFilePath("test_add_author_output.xlsx");
-        _tool.Execute("add", workbookPath, cell: "A1", comment: "Test comment", author: "CustomAuthor",
-            outputPath: outputPath);
-        using var workbook = new Workbook(outputPath);
-        var comment = workbook.Worksheets[0].Comments["A1"];
-        Assert.Equal("CustomAuthor", comment.Author);
-    }
-
-    [Fact]
-    public void Add_WithDefaultAuthor_ShouldUseDefaultAuthor()
-    {
-        var workbookPath = CreateExcelWorkbook("test_add_default_author.xlsx");
-        var outputPath = CreateTestFilePath("test_add_default_author_output.xlsx");
-        _tool.Execute("add", workbookPath, cell: "A1", comment: "Test comment", outputPath: outputPath);
-        using var workbook = new Workbook(outputPath);
-        var comment = workbook.Worksheets[0].Comments["A1"];
-        Assert.Equal("AsposeMCP", comment.Author);
-    }
-
-    [Fact]
     public void Get_ShouldReturnAllComments()
     {
         var workbookPath = CreateWorkbookWithComment("test_get.xlsx");
@@ -75,36 +57,6 @@ public class ExcelCommentToolTests : ExcelTestBase
         var json = JsonDocument.Parse(result);
         Assert.Equal(1, json.RootElement.GetProperty("count").GetInt32());
         Assert.Contains("Test comment", result);
-    }
-
-    [Fact]
-    public void Get_WithCell_ShouldReturnSpecificComment()
-    {
-        var workbookPath = CreateWorkbookWithComment("test_get_cell.xlsx", "B2", "Specific comment");
-        var result = _tool.Execute("get", workbookPath, cell: "B2");
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(1, json.RootElement.GetProperty("count").GetInt32());
-        Assert.Contains("Specific comment", result);
-    }
-
-    [Fact]
-    public void Get_WithNoComments_ShouldReturnEmptyResult()
-    {
-        var workbookPath = CreateExcelWorkbook("test_get_empty.xlsx");
-        var result = _tool.Execute("get", workbookPath);
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(0, json.RootElement.GetProperty("count").GetInt32());
-        Assert.Contains("No comments found", json.RootElement.GetProperty("message").GetString());
-    }
-
-    [Fact]
-    public void Get_WithCellNoComment_ShouldReturnEmptyResult()
-    {
-        var workbookPath = CreateExcelWorkbook("test_get_cell_empty.xlsx");
-        var result = _tool.Execute("get", workbookPath, cell: "A1");
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(0, json.RootElement.GetProperty("count").GetInt32());
-        Assert.Contains("No comment found on cell A1", json.RootElement.GetProperty("message").GetString());
     }
 
     [Fact]
@@ -120,18 +72,6 @@ public class ExcelCommentToolTests : ExcelTestBase
     }
 
     [Fact]
-    public void Edit_WithAuthor_ShouldUpdateAuthor()
-    {
-        var workbookPath = CreateWorkbookWithComment("test_edit_author.xlsx", "A1", "Test comment", "OldAuthor");
-        var outputPath = CreateTestFilePath("test_edit_author_output.xlsx");
-        _tool.Execute("edit", workbookPath, cell: "A1", comment: "Updated", author: "NewAuthor",
-            outputPath: outputPath);
-        using var workbook = new Workbook(outputPath);
-        var comment = workbook.Worksheets[0].Comments["A1"];
-        Assert.Equal("NewAuthor", comment.Author);
-    }
-
-    [Fact]
     public void Delete_ShouldDeleteComment()
     {
         var workbookPath = CreateWorkbookWithComment("test_delete.xlsx");
@@ -142,53 +82,21 @@ public class ExcelCommentToolTests : ExcelTestBase
         Assert.Null(workbook.Worksheets[0].Comments["A1"]);
     }
 
-    [Fact]
-    public void Delete_NonExistentComment_ShouldSucceed()
-    {
-        var workbookPath = CreateExcelWorkbook("test_delete_nonexistent.xlsx");
-        var outputPath = CreateTestFilePath("test_delete_nonexistent_output.xlsx");
-        var result = _tool.Execute("delete", workbookPath, cell: "A1", outputPath: outputPath);
-        Assert.StartsWith("Comment deleted", result);
-    }
+    #endregion
+
+    #region Operation Routing
 
     [Theory]
     [InlineData("ADD")]
     [InlineData("Add")]
     [InlineData("add")]
-    public void Operation_ShouldBeCaseInsensitive_Add(string operation)
+    public void Operation_ShouldBeCaseInsensitive(string operation)
     {
         var workbookPath = CreateExcelWorkbook($"test_case_{operation}.xlsx");
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.xlsx");
         var result = _tool.Execute(operation, workbookPath, cell: "A1", comment: "Test", outputPath: outputPath);
         Assert.StartsWith("Comment added", result);
     }
-
-    [Theory]
-    [InlineData("GET")]
-    [InlineData("Get")]
-    [InlineData("get")]
-    public void Operation_ShouldBeCaseInsensitive_Get(string operation)
-    {
-        var workbookPath = CreateExcelWorkbook($"test_case_get_{operation}.xlsx");
-        var result = _tool.Execute(operation, workbookPath);
-        Assert.Contains("count", result);
-    }
-
-    [Theory]
-    [InlineData("DELETE")]
-    [InlineData("Delete")]
-    [InlineData("delete")]
-    public void Operation_ShouldBeCaseInsensitive_Delete(string operation)
-    {
-        var workbookPath = CreateWorkbookWithComment($"test_case_delete_{operation}.xlsx");
-        var outputPath = CreateTestFilePath($"test_case_delete_{operation}_output.xlsx");
-        var result = _tool.Execute(operation, workbookPath, cell: "A1", outputPath: outputPath);
-        Assert.StartsWith("Comment deleted", result);
-    }
-
-    #endregion
-
-    #region Exception
 
     [Fact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
@@ -199,75 +107,6 @@ public class ExcelCommentToolTests : ExcelTestBase
     }
 
     [Fact]
-    public void Add_WithMissingCell_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_add_missing_cell.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", workbookPath, comment: "Test comment"));
-        Assert.Contains("cell is required", ex.Message);
-    }
-
-    [Fact]
-    public void Add_WithMissingComment_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_add_missing_comment.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", workbookPath, cell: "A1"));
-        Assert.Contains("comment is required", ex.Message);
-    }
-
-    [Fact]
-    public void Add_WithInvalidCellAddress_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_add_invalid_cell.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", workbookPath, cell: "InvalidCell", comment: "Test"));
-        Assert.Contains("Invalid cell address format", ex.Message);
-    }
-
-    [Fact]
-    public void Edit_WithMissingCell_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_edit_missing_cell.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("edit", workbookPath, comment: "Test"));
-        Assert.Contains("cell is required", ex.Message);
-    }
-
-    [Fact]
-    public void Edit_WithMissingComment_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateWorkbookWithComment("test_edit_missing_comment.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("edit", workbookPath, cell: "A1"));
-        Assert.Contains("comment is required", ex.Message);
-    }
-
-    [Fact]
-    public void Edit_WithNonExistentComment_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_edit_nonexistent.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("edit", workbookPath, cell: "A1", comment: "Test"));
-        Assert.Contains("No comment found", ex.Message);
-    }
-
-    [Fact]
-    public void Delete_WithMissingCell_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_delete_missing_cell.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("delete", workbookPath));
-        Assert.Contains("cell is required", ex.Message);
-    }
-
-    [Fact]
-    public void Execute_WithEmptyPath_ShouldThrowException()
-    {
-        Assert.Throws<ArgumentException>(() => _tool.Execute("get", ""));
-    }
-
-    [Fact]
     public void Execute_WithNoPathOrSessionId_ShouldThrowException()
     {
         Assert.ThrowsAny<Exception>(() => _tool.Execute("get"));
@@ -275,7 +114,7 @@ public class ExcelCommentToolTests : ExcelTestBase
 
     #endregion
 
-    #region Session
+    #region Session Management
 
     [Fact]
     public void Add_WithSessionId_ShouldAddInMemory()

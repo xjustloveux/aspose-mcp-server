@@ -5,6 +5,11 @@ using AsposeMcpServer.Tools.Pdf;
 
 namespace AsposeMcpServer.Tests.Tools.Pdf;
 
+/// <summary>
+///     Integration tests for PdfPageTool.
+///     Focuses on session management, file I/O, and operation routing.
+///     Detailed parameter validation and business logic tests are in Handler tests.
+/// </summary>
 public class PdfPageToolTests : PdfTestBase
 {
     private readonly PdfPageTool _tool;
@@ -24,10 +29,10 @@ public class PdfPageToolTests : PdfTestBase
         return filePath;
     }
 
-    #region General
+    #region File I/O Smoke Tests
 
     [Fact]
-    public void Add_ShouldAddPage()
+    public void Add_ShouldAddPageAndPersistToFile()
     {
         var pdfPath = CreateTestPdf("test_add.pdf");
         var outputPath = CreateTestFilePath("test_add_output.pdf");
@@ -40,60 +45,7 @@ public class PdfPageToolTests : PdfTestBase
     }
 
     [Fact]
-    public void Add_WithCustomSize_ShouldAddPageWithSize()
-    {
-        var pdfPath = CreateTestPdf("test_add_size.pdf");
-        var outputPath = CreateTestFilePath("test_add_size_output.pdf");
-        const double expectedWidth = 400;
-        const double expectedHeight = 600;
-
-        var result = _tool.Execute("add", pdfPath, outputPath: outputPath,
-            count: 1, width: expectedWidth, height: expectedHeight);
-
-        Assert.StartsWith("Added 1 page(s)", result);
-        using var document = new Document(outputPath);
-        Assert.Equal(3, document.Pages.Count);
-
-        var newPage = document.Pages[document.Pages.Count];
-        var pageWidth = newPage.MediaBox.Width;
-        var pageHeight = newPage.MediaBox.Height;
-
-        Assert.True(Math.Abs(pageWidth - expectedWidth) < 1.0,
-            $"Page width {pageWidth} should be approximately {expectedWidth}");
-        Assert.True(Math.Abs(pageHeight - expectedHeight) < 1.0,
-            $"Page height {pageHeight} should be approximately {expectedHeight}");
-    }
-
-    [Fact]
-    public void Add_WithInsertAt_ShouldInsertAtPosition()
-    {
-        var pdfPath = CreateTestPdf("test_insert.pdf");
-        var outputPath = CreateTestFilePath("test_insert_output.pdf");
-
-        var result = _tool.Execute("add", pdfPath, outputPath: outputPath,
-            count: 1, insertAt: 1);
-
-        Assert.StartsWith("Added 1 page(s)", result);
-        using var document = new Document(outputPath);
-        Assert.Equal(3, document.Pages.Count);
-    }
-
-    [SkippableFact]
-    public void Add_WithMultiplePages_ShouldAddMultiplePages()
-    {
-        SkipInEvaluationMode(AsposeLibraryType.Pdf, "Adding 3 pages to 2-page PDF exceeds 4-page limit");
-        var pdfPath = CreateTestPdf("test_add_multi.pdf");
-        var outputPath = CreateTestFilePath("test_add_multi_output.pdf");
-
-        var result = _tool.Execute("add", pdfPath, outputPath: outputPath, count: 3);
-
-        Assert.StartsWith("Added 3 page(s)", result);
-        using var document = new Document(outputPath);
-        Assert.Equal(5, document.Pages.Count);
-    }
-
-    [Fact]
-    public void Delete_ShouldDeletePage()
+    public void Delete_ShouldDeletePageAndPersistToFile()
     {
         var pdfPath = CreateTestPdf("test_delete.pdf");
         var outputPath = CreateTestFilePath("test_delete_output.pdf");
@@ -106,7 +58,7 @@ public class PdfPageToolTests : PdfTestBase
     }
 
     [Fact]
-    public void Rotate_ShouldRotatePage()
+    public void Rotate_ShouldRotatePageAndPersistToFile()
     {
         var pdfPath = CreateTestPdf("test_rotate.pdf");
         var outputPath = CreateTestFilePath("test_rotate_output.pdf");
@@ -120,50 +72,7 @@ public class PdfPageToolTests : PdfTestBase
     }
 
     [Fact]
-    public void Rotate_WithPageIndices_ShouldRotateMultiplePages()
-    {
-        var pdfPath = CreateTestPdf("test_rotate_multi.pdf");
-        var outputPath = CreateTestFilePath("test_rotate_multi_output.pdf");
-
-        var result = _tool.Execute("rotate", pdfPath, outputPath: outputPath,
-            rotation: 90, pageIndices: [1, 2]);
-
-        Assert.StartsWith("Rotated 2 page(s) by 90 degrees", result);
-        using var document = new Document(outputPath);
-        Assert.Equal(Rotation.on90, document.Pages[1].Rotate);
-        Assert.Equal(Rotation.on90, document.Pages[2].Rotate);
-    }
-
-    [Fact]
-    public void Rotate_WithoutPageIndex_ShouldRotateAllPages()
-    {
-        var pdfPath = CreateTestPdf("test_rotate_all.pdf");
-        var outputPath = CreateTestFilePath("test_rotate_all_output.pdf");
-
-        var result = _tool.Execute("rotate", pdfPath, outputPath: outputPath, rotation: 180);
-
-        Assert.StartsWith("Rotated 2 page(s) by 180 degrees", result);
-        using var document = new Document(outputPath);
-        Assert.Equal(Rotation.on180, document.Pages[1].Rotate);
-        Assert.Equal(Rotation.on180, document.Pages[2].Rotate);
-    }
-
-    [Theory]
-    [InlineData(0, Rotation.None)]
-    [InlineData(90, Rotation.on90)]
-    [InlineData(180, Rotation.on180)]
-    [InlineData(270, Rotation.on270)]
-    public void Rotate_WithValidAngles_ShouldApplyCorrectRotation(int angle, Rotation expected)
-    {
-        var pdfPath = CreateTestPdf($"test_rotate_{angle}.pdf");
-        var outputPath = CreateTestFilePath($"test_rotate_{angle}_output.pdf");
-        _tool.Execute("rotate", pdfPath, outputPath: outputPath, pageIndex: 1, rotation: angle);
-        using var document = new Document(outputPath);
-        Assert.Equal(expected, document.Pages[1].Rotate);
-    }
-
-    [Fact]
-    public void GetInfo_ShouldReturnPageInfo()
+    public void GetInfo_ShouldReturnPageInfoFromFile()
     {
         var pdfPath = CreateTestPdf("test_info.pdf");
         var result = _tool.Execute("get_info", pdfPath);
@@ -174,7 +83,7 @@ public class PdfPageToolTests : PdfTestBase
     }
 
     [Fact]
-    public void GetDetails_ShouldReturnPageDetails()
+    public void GetDetails_ShouldReturnPageDetailsFromFile()
     {
         var pdfPath = CreateTestPdf("test_details.pdf");
         var result = _tool.Execute("get_details", pdfPath, pageIndex: 1);
@@ -182,15 +91,17 @@ public class PdfPageToolTests : PdfTestBase
         Assert.Equal(1, json.GetProperty("pageIndex").GetInt32());
         Assert.True(json.TryGetProperty("width", out _));
         Assert.True(json.TryGetProperty("height", out _));
-        Assert.True(json.TryGetProperty("mediaBox", out _));
-        Assert.True(json.TryGetProperty("cropBox", out _));
     }
+
+    #endregion
+
+    #region Operation Routing
 
     [Theory]
     [InlineData("ADD")]
     [InlineData("Add")]
     [InlineData("add")]
-    public void Operation_ShouldBeCaseInsensitive_Add(string operation)
+    public void Operation_ShouldBeCaseInsensitive(string operation)
     {
         var pdfPath = CreateTestPdf($"test_case_{operation}.pdf");
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.pdf");
@@ -199,25 +110,6 @@ public class PdfPageToolTests : PdfTestBase
 
         Assert.StartsWith("Added 1 page(s)", result);
     }
-
-    [Theory]
-    [InlineData("GET_INFO")]
-    [InlineData("Get_Info")]
-    [InlineData("get_info")]
-    public void Operation_ShouldBeCaseInsensitive_GetInfo(string operation)
-    {
-        var pdfPath = CreateTestPdf($"test_case_info_{operation.Replace("_", "")}.pdf");
-
-        var result = _tool.Execute(operation, pdfPath);
-        var json = JsonSerializer.Deserialize<JsonElement>(result);
-
-        Assert.True(json.TryGetProperty("count", out var countProp));
-        Assert.Equal(2, countProp.GetInt32());
-    }
-
-    #endregion
-
-    #region Exception
 
     [Fact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
@@ -228,33 +120,6 @@ public class PdfPageToolTests : PdfTestBase
     }
 
     [Fact]
-    public void Delete_WithInvalidPageIndex_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreateTestPdf("test_delete_invalid.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("delete", pdfPath, pageIndex: 99));
-        Assert.StartsWith("pageIndex must be between 1 and", ex.Message);
-    }
-
-    [Fact]
-    public void Rotate_WithInvalidRotation_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreateTestPdf("test_rotate_invalid.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("rotate", pdfPath, pageIndex: 1, rotation: 45));
-        Assert.Equal("rotation must be 0, 90, 180, or 270", ex.Message);
-    }
-
-    [Fact]
-    public void GetDetails_WithInvalidPageIndex_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreateTestPdf("test_details_invalid.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("get_details", pdfPath, pageIndex: 99));
-        Assert.StartsWith("pageIndex must be between 1 and", ex.Message);
-    }
-
-    [Fact]
     public void Execute_WithNoPathOrSessionId_ShouldThrowException()
     {
         Assert.ThrowsAny<Exception>(() => _tool.Execute("get_info"));
@@ -262,7 +127,7 @@ public class PdfPageToolTests : PdfTestBase
 
     #endregion
 
-    #region Session
+    #region Session Management
 
     [Fact]
     public void GetInfo_WithSessionId_ShouldGetFromSession()

@@ -1,8 +1,8 @@
 using System.ComponentModel;
-using System.Text.Json;
 using Aspose.Pdf;
-using Aspose.Pdf.Annotations;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.Pdf.Bookmark;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Pdf;
@@ -14,9 +14,9 @@ namespace AsposeMcpServer.Tools.Pdf;
 public class PdfBookmarkTool
 {
     /// <summary>
-    ///     JSON serialization options for formatted output.
+    ///     Handler registry for bookmark operations.
     /// </summary>
-    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
+    private readonly HandlerRegistry<Document> _handlerRegistry;
 
     /// <summary>
     ///     The session identity accessor for session isolation.
@@ -38,6 +38,7 @@ public class PdfBookmarkTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = PdfBookmarkHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -80,192 +81,65 @@ Usage examples:
         [Description("Bookmark index (1-based, required for delete, edit, optional for get)")]
         int? bookmarkIndex = null)
     {
-        return operation.ToLower() switch
-        {
-            "add" => AddBookmark(sessionId, path, outputPath, title, pageIndex),
-            "delete" => DeleteBookmark(sessionId, path, outputPath, bookmarkIndex),
-            "edit" => EditBookmark(sessionId, path, outputPath, bookmarkIndex, title, pageIndex),
-            "get" => GetBookmarks(sessionId, path),
-            _ => throw new ArgumentException($"Unknown operation: {operation}")
-        };
-    }
-
-    /// <summary>
-    ///     Adds a new bookmark to the PDF document.
-    /// </summary>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
-    /// <param name="path">The PDF file path.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="title">The bookmark title.</param>
-    /// <param name="pageIndex">The 1-based target page index.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when required parameters are missing or invalid.</exception>
-    private string AddBookmark(string? sessionId, string? path, string? outputPath, string? title, int? pageIndex)
-    {
-        if (string.IsNullOrEmpty(title))
-            throw new ArgumentException("title is required for add operation");
-        if (!pageIndex.HasValue)
-            throw new ArgumentException("pageIndex is required for add operation");
-
         using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
-        var document = ctx.Document;
 
-        if (pageIndex.Value < 1 || pageIndex.Value > document.Pages.Count)
-            throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
+        var parameters = BuildParameters(operation, title, pageIndex, bookmarkIndex);
 
-        var bookmark = new OutlineItemCollection(document.Outlines)
+        var handler = _handlerRegistry.GetHandler(operation);
+
+        var operationContext = new OperationContext<Document>
         {
-            Title = title,
-            Action = new GoToAction(document.Pages[pageIndex.Value])
+            Document = ctx.Document,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = path,
+            OutputPath = outputPath
         };
 
-        document.Outlines.Add(bookmark);
-        ctx.Save(outputPath);
-        return $"Added bookmark '{title}' pointing to page {pageIndex.Value}. {ctx.GetOutputMessage(outputPath)}";
+        var result = handler.Execute(operationContext, parameters);
+
+        if (operation.ToLowerInvariant() == "get")
+            return result;
+
+        if (operationContext.IsModified)
+            ctx.Save(outputPath);
+
+        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Deletes a bookmark from the PDF document.
+    ///     Builds OperationParameters from method parameters.
     /// </summary>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
-    /// <param name="path">The PDF file path.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="bookmarkIndex">The 1-based bookmark index.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when the bookmark index is invalid.</exception>
-    private string DeleteBookmark(string? sessionId, string? path, string? outputPath, int? bookmarkIndex)
+    private static OperationParameters BuildParameters(
+        string operation,
+        string? title,
+        int? pageIndex,
+        int? bookmarkIndex)
     {
-        if (!bookmarkIndex.HasValue)
-            throw new ArgumentException("bookmarkIndex is required for delete operation");
+        var parameters = new OperationParameters();
 
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
-        var document = ctx.Document;
-
-        if (bookmarkIndex.Value < 1 || bookmarkIndex.Value > document.Outlines.Count)
-            throw new ArgumentException($"bookmarkIndex must be between 1 and {document.Outlines.Count}");
-
-        var bookmark = document.Outlines[bookmarkIndex.Value];
-        var title = bookmark.Title;
-
-        var countBefore = document.Outlines.Count;
-        document.Outlines.Delete(title);
-        var countAfter = document.Outlines.Count;
-        var deletedCount = countBefore - countAfter;
-
-        ctx.Save(outputPath);
-
-        return deletedCount > 1
-            ? $"Deleted {deletedCount} bookmark(s) with title '{title}' (requested index {bookmarkIndex.Value}). {ctx.GetOutputMessage(outputPath)}"
-            : $"Deleted bookmark '{title}' (index {bookmarkIndex.Value}). {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Edits an existing bookmark in the PDF document.
-    /// </summary>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
-    /// <param name="path">The PDF file path.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="bookmarkIndex">The 1-based bookmark index.</param>
-    /// <param name="title">The new bookmark title.</param>
-    /// <param name="pageIndex">The new 1-based target page index.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when the bookmark index is invalid.</exception>
-    private string EditBookmark(string? sessionId, string? path, string? outputPath, int? bookmarkIndex, string? title,
-        int? pageIndex)
-    {
-        if (!bookmarkIndex.HasValue)
-            throw new ArgumentException("bookmarkIndex is required for edit operation");
-
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
-        var document = ctx.Document;
-
-        if (bookmarkIndex.Value < 1 || bookmarkIndex.Value > document.Outlines.Count)
-            throw new ArgumentException($"bookmarkIndex must be between 1 and {document.Outlines.Count}");
-
-        var bookmark = document.Outlines[bookmarkIndex.Value];
-
-        if (!string.IsNullOrEmpty(title))
-            bookmark.Title = title;
-
-        if (pageIndex.HasValue)
+        switch (operation.ToLowerInvariant())
         {
-            if (pageIndex.Value < 1 || pageIndex.Value > document.Pages.Count)
-                throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
-            bookmark.Action = new GoToAction(document.Pages[pageIndex.Value]);
+            case "add":
+                if (title != null) parameters.Set("title", title);
+                if (pageIndex.HasValue) parameters.Set("pageIndex", pageIndex.Value);
+                break;
+
+            case "delete":
+                if (bookmarkIndex.HasValue) parameters.Set("bookmarkIndex", bookmarkIndex.Value);
+                break;
+
+            case "edit":
+                if (bookmarkIndex.HasValue) parameters.Set("bookmarkIndex", bookmarkIndex.Value);
+                if (title != null) parameters.Set("title", title);
+                if (pageIndex.HasValue) parameters.Set("pageIndex", pageIndex.Value);
+                break;
+
+            case "get":
+                break;
         }
 
-        ctx.Save(outputPath);
-        return $"Edited bookmark (index {bookmarkIndex.Value}). {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Retrieves all bookmarks from the PDF document.
-    /// </summary>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
-    /// <param name="path">The PDF file path.</param>
-    /// <returns>A JSON string containing bookmark information.</returns>
-    private string GetBookmarks(string? sessionId, string? path)
-    {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
-        var document = ctx.Document;
-
-        if (document.Outlines.Count == 0)
-        {
-            var emptyResult = new
-            {
-                count = 0,
-                items = Array.Empty<object>(),
-                message = "No bookmarks found"
-            };
-            return JsonSerializer.Serialize(emptyResult, JsonOptions);
-        }
-
-        List<object> bookmarkList = [];
-        var index = 0;
-
-        foreach (var bookmark in document.Outlines)
-        {
-            index++;
-            var bookmarkInfo = new Dictionary<string, object?>
-            {
-                ["index"] = index,
-                ["title"] = bookmark.Title
-            };
-
-            var extractedPageIndex = ExtractPageIndex(bookmark, document);
-            if (extractedPageIndex.HasValue)
-                bookmarkInfo["pageIndex"] = extractedPageIndex.Value;
-
-            bookmarkList.Add(bookmarkInfo);
-        }
-
-        var result = new
-        {
-            count = bookmarkList.Count,
-            items = bookmarkList
-        };
-        return JsonSerializer.Serialize(result, JsonOptions);
-    }
-
-    /// <summary>
-    ///     Extracts the target page index from a bookmark.
-    /// </summary>
-    /// <param name="bookmark">The bookmark to extract the page index from.</param>
-    /// <param name="document">The PDF document.</param>
-    /// <returns>The 1-based page index, or null if not available.</returns>
-    private static int? ExtractPageIndex(OutlineItemCollection bookmark, Document document)
-    {
-        Page? page = null;
-
-        if (bookmark.Destination is ExplicitDestination explicitDest)
-            page = explicitDest.Page;
-        else if (bookmark.Action is GoToAction { Destination: ExplicitDestination actionDest })
-            page = actionDest.Page;
-
-        if (page == null)
-            return null;
-
-        var pageIndex = document.Pages.IndexOf(page);
-        return pageIndex > 0 ? pageIndex : null;
+        return parameters;
     }
 }

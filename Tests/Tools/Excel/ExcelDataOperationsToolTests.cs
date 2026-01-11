@@ -5,6 +5,11 @@ using AsposeMcpServer.Tools.Excel;
 
 namespace AsposeMcpServer.Tests.Tools.Excel;
 
+/// <summary>
+///     Integration tests for ExcelDataOperationsTool.
+///     Focuses on session management, file I/O, and operation routing.
+///     Detailed parameter validation and business logic tests are in Handler tests.
+/// </summary>
 public class ExcelDataOperationsToolTests : ExcelTestBase
 {
     private readonly ExcelDataOperationsTool _tool;
@@ -49,7 +54,7 @@ public class ExcelDataOperationsToolTests : ExcelTestBase
         return path;
     }
 
-    #region General
+    #region File I/O Smoke Tests
 
     [Fact]
     public void Sort_ShouldSortRange()
@@ -64,32 +69,6 @@ public class ExcelDataOperationsToolTests : ExcelTestBase
     }
 
     [Fact]
-    public void Sort_Descending_ShouldSortDescending()
-    {
-        var workbookPath = CreateWorkbookForSort("test_sort_desc.xlsx");
-        var outputPath = CreateTestFilePath("test_sort_desc_output.xlsx");
-        _tool.Execute("sort", workbookPath, range: "A1:A3", sortColumn: 0, ascending: false, outputPath: outputPath);
-        using var workbook = new Workbook(outputPath);
-        Assert.Equal("C", workbook.Worksheets[0].Cells["A1"].Value);
-        Assert.Equal("B", workbook.Worksheets[0].Cells["A2"].Value);
-        Assert.Equal("A", workbook.Worksheets[0].Cells["A3"].Value);
-    }
-
-    [Fact]
-    public void Sort_WithHasHeader_ShouldSkipHeaderRow()
-    {
-        var workbookPath = CreateWorkbookForSort("test_sort_header.xlsx", true);
-        var outputPath = CreateTestFilePath("test_sort_header_output.xlsx");
-        _tool.Execute("sort", workbookPath, range: "A1:A4", sortColumn: 0, ascending: true, hasHeader: true,
-            outputPath: outputPath);
-        using var workbook = new Workbook(outputPath);
-        Assert.Equal("Name", workbook.Worksheets[0].Cells["A1"].Value);
-        Assert.Equal("A", workbook.Worksheets[0].Cells["A2"].Value);
-        Assert.Equal("B", workbook.Worksheets[0].Cells["A3"].Value);
-        Assert.Equal("C", workbook.Worksheets[0].Cells["A4"].Value);
-    }
-
-    [Fact]
     public void FindReplace_ShouldReplaceText()
     {
         var workbookPath = CreateExcelWorkbookWithData("test_find_replace.xlsx", 3);
@@ -97,26 +76,6 @@ public class ExcelDataOperationsToolTests : ExcelTestBase
         _tool.Execute("find_replace", workbookPath, findText: "R1C1", replaceText: "Replaced", outputPath: outputPath);
         using var workbook = new Workbook(outputPath);
         Assert.Equal("Replaced", workbook.Worksheets[0].Cells["A1"].Value);
-    }
-
-    [Fact]
-    public void FindReplace_WithSubstring_ShouldNotLoopInfinitely()
-    {
-        var workbookPath = CreateExcelWorkbook("test_find_replace_substring.xlsx");
-        using (var wb = new Workbook(workbookPath))
-        {
-            wb.Worksheets[0].Cells["A1"].Value = "Apple";
-            wb.Worksheets[0].Cells["A2"].Value = "Apple Pie";
-            wb.Save(workbookPath);
-        }
-
-        var outputPath = CreateTestFilePath("test_find_replace_substring_output.xlsx");
-        var result = _tool.Execute("find_replace", workbookPath, findText: "Apple", replaceText: "AppleTree",
-            outputPath: outputPath);
-        Assert.Contains("2 replacements", result);
-        using var workbook = new Workbook(outputPath);
-        Assert.Equal("AppleTree", workbook.Worksheets[0].Cells["A1"].Value);
-        Assert.Equal("AppleTree Pie", workbook.Worksheets[0].Cells["A2"].Value);
     }
 
     [Fact]
@@ -133,43 +92,12 @@ public class ExcelDataOperationsToolTests : ExcelTestBase
     }
 
     [Fact]
-    public void BatchWrite_WithArrayFormat_ShouldWriteValues()
-    {
-        var workbookPath = CreateExcelWorkbook("test_batch_write_array.xlsx");
-        var outputPath = CreateTestFilePath("test_batch_write_array_output.xlsx");
-        var data = JsonNode.Parse("[{\"cell\":\"A1\",\"value\":\"Value1\"},{\"cell\":\"B1\",\"value\":\"Value2\"}]");
-        _tool.Execute("batch_write", workbookPath, data: data, outputPath: outputPath);
-        using var workbook = new Workbook(outputPath);
-        Assert.Equal("Value1", workbook.Worksheets[0].Cells["A1"].Value);
-        Assert.Equal("Value2", workbook.Worksheets[0].Cells["B1"].Value);
-    }
-
-    [Fact]
-    public void BatchWrite_WithNullData_ShouldSucceedWithZeroCells()
-    {
-        var workbookPath = CreateExcelWorkbook("test_batch_write_null.xlsx");
-        var outputPath = CreateTestFilePath("test_batch_write_null_output.xlsx");
-        var result = _tool.Execute("batch_write", workbookPath, outputPath: outputPath);
-        Assert.True(File.Exists(outputPath));
-        Assert.StartsWith("Batch write completed", result);
-        Assert.Contains("0 cells written", result); // Verify specific content
-    }
-
-    [Fact]
     public void GetContent_ShouldReturnContent()
     {
         var workbookPath = CreateExcelWorkbookWithData("test_get_content.xlsx", 3);
         var result = _tool.Execute("get_content", workbookPath, range: "A1:B2");
         Assert.NotEmpty(result);
         Assert.Contains("R1C1", result);
-    }
-
-    [Fact]
-    public void GetContent_WithoutRange_ShouldReturnAllContent()
-    {
-        var workbookPath = CreateExcelWorkbookWithData("test_get_content_all.xlsx", 3);
-        var result = _tool.Execute("get_content", workbookPath);
-        Assert.NotEmpty(result);
     }
 
     [Fact]
@@ -189,66 +117,21 @@ public class ExcelDataOperationsToolTests : ExcelTestBase
         Assert.Contains("range", result, StringComparison.OrdinalIgnoreCase);
     }
 
+    #endregion
+
+    #region Operation Routing
+
     [Theory]
     [InlineData("SORT")]
     [InlineData("Sort")]
     [InlineData("sort")]
-    public void Operation_ShouldBeCaseInsensitive_Sort(string operation)
+    public void Operation_ShouldBeCaseInsensitive(string operation)
     {
         var workbookPath = CreateWorkbookForSort($"test_case_{operation}.xlsx");
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.xlsx");
         var result = _tool.Execute(operation, workbookPath, range: "A1:A3", sortColumn: 0, outputPath: outputPath);
         Assert.StartsWith("Sorted range", result);
     }
-
-    [Theory]
-    [InlineData("FIND_REPLACE")]
-    [InlineData("Find_Replace")]
-    [InlineData("find_replace")]
-    public void Operation_ShouldBeCaseInsensitive_FindReplace(string operation)
-    {
-        var workbookPath = CreateExcelWorkbookWithData($"test_case_fr_{operation}.xlsx", 3);
-        var outputPath = CreateTestFilePath($"test_case_fr_{operation}_output.xlsx");
-        var result = _tool.Execute(operation, workbookPath, findText: "R1C1", replaceText: "X", outputPath: outputPath);
-        Assert.StartsWith("Replaced", result);
-    }
-
-    [Theory]
-    [InlineData("GET_CONTENT")]
-    [InlineData("Get_Content")]
-    [InlineData("get_content")]
-    public void Operation_ShouldBeCaseInsensitive_GetContent(string operation)
-    {
-        var workbookPath = CreateExcelWorkbookWithData($"test_case_gc_{operation}.xlsx", 3);
-        var result = _tool.Execute(operation, workbookPath, range: "A1:B2");
-        Assert.NotEmpty(result);
-    }
-
-    [Theory]
-    [InlineData("GET_STATISTICS")]
-    [InlineData("Get_Statistics")]
-    [InlineData("get_statistics")]
-    public void Operation_ShouldBeCaseInsensitive_GetStatistics(string operation)
-    {
-        var workbookPath = CreateWorkbookWithNumericData($"test_case_gs_{operation}.xlsx");
-        var result = _tool.Execute(operation, workbookPath, range: "A1:A3");
-        Assert.Contains("sum", result, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Theory]
-    [InlineData("GET_USED_RANGE")]
-    [InlineData("Get_Used_Range")]
-    [InlineData("get_used_range")]
-    public void Operation_ShouldBeCaseInsensitive_GetUsedRange(string operation)
-    {
-        var workbookPath = CreateExcelWorkbookWithData($"test_case_gur_{operation}.xlsx", 3);
-        var result = _tool.Execute(operation, workbookPath);
-        Assert.Contains("range", result, StringComparison.OrdinalIgnoreCase);
-    }
-
-    #endregion
-
-    #region Exception
 
     [Fact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
@@ -259,39 +142,6 @@ public class ExcelDataOperationsToolTests : ExcelTestBase
     }
 
     [Fact]
-    public void Sort_WithMissingRange_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_sort_missing_range.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("sort", workbookPath, sortColumn: 0));
-        Assert.Contains("range is required", ex.Message);
-    }
-
-    [Fact]
-    public void FindReplace_WithMissingFindText_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_fr_missing_find.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("find_replace", workbookPath, replaceText: "New"));
-        Assert.Contains("findText is required", ex.Message);
-    }
-
-    [Fact]
-    public void FindReplace_WithMissingReplaceText_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_fr_missing_replace.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("find_replace", workbookPath, findText: "Old"));
-        Assert.Contains("replaceText is required", ex.Message);
-    }
-
-    [Fact]
-    public void Execute_WithEmptyPath_ShouldThrowException()
-    {
-        Assert.Throws<ArgumentException>(() => _tool.Execute("get_content", ""));
-    }
-
-    [Fact]
     public void Execute_WithNoPathOrSessionId_ShouldThrowException()
     {
         Assert.ThrowsAny<Exception>(() => _tool.Execute("get_content"));
@@ -299,7 +149,7 @@ public class ExcelDataOperationsToolTests : ExcelTestBase
 
     #endregion
 
-    #region Session
+    #region Session Management
 
     [Fact]
     public void Sort_WithSessionId_ShouldSortInMemory()
@@ -331,7 +181,6 @@ public class ExcelDataOperationsToolTests : ExcelTestBase
         var data = JsonNode.Parse("{\"A1\":\"SessionValue1\",\"B1\":\"SessionValue2\"}");
         var result = _tool.Execute("batch_write", sessionId: sessionId, data: data);
         Assert.StartsWith("Batch write completed", result);
-        Assert.Contains("session", result); // Verify session was used
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.Equal("SessionValue1", workbook.Worksheets[0].Cells["A1"].Value?.ToString());
         Assert.Equal("SessionValue2", workbook.Worksheets[0].Cells["B1"].Value?.ToString());

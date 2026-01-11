@@ -6,6 +6,11 @@ using AsposeMcpServer.Tools.Pdf;
 
 namespace AsposeMcpServer.Tests.Tools.Pdf;
 
+/// <summary>
+///     Integration tests for PdfInfoTool.
+///     Focuses on session management, file I/O, and operation routing.
+///     Detailed parameter validation and business logic tests are in Handler tests.
+/// </summary>
 public class PdfInfoToolTests : PdfTestBase
 {
     private readonly PdfInfoTool _tool;
@@ -29,7 +34,7 @@ public class PdfInfoToolTests : PdfTestBase
         return filePath;
     }
 
-    #region General
+    #region File I/O Smoke Tests
 
     [Fact]
     public void GetContent_ShouldReturnContent()
@@ -40,7 +45,6 @@ public class PdfInfoToolTests : PdfTestBase
         Assert.True(json.TryGetProperty("totalPages", out _));
         Assert.True(json.TryGetProperty("extractedPages", out _));
         Assert.True(json.TryGetProperty("content", out _));
-        Assert.True(json.TryGetProperty("truncated", out _));
     }
 
     [Fact]
@@ -51,28 +55,6 @@ public class PdfInfoToolTests : PdfTestBase
         var json = JsonSerializer.Deserialize<JsonElement>(result);
         Assert.Equal(1, json.GetProperty("pageIndex").GetInt32());
         Assert.Equal(2, json.GetProperty("totalPages").GetInt32());
-        Assert.True(json.TryGetProperty("content", out _));
-    }
-
-    [SkippableFact]
-    public void GetContent_WithMaxPages_ShouldLimitExtraction()
-    {
-        SkipInEvaluationMode(AsposeLibraryType.Pdf, "5 pages exceeds 4-page limit in evaluation mode");
-        var pdfPath = CreateTestPdf("test_max_pages.pdf", 5);
-        var result = _tool.Execute("get_content", pdfPath, maxPages: 2);
-        var json = JsonSerializer.Deserialize<JsonElement>(result);
-        Assert.Equal(2, json.GetProperty("extractedPages").GetInt32());
-        Assert.True(json.GetProperty("truncated").GetBoolean());
-        Assert.Equal(5, json.GetProperty("totalPages").GetInt32());
-    }
-
-    [Fact]
-    public void GetContent_WithoutMaxPages_ShouldNotTruncate()
-    {
-        var pdfPath = CreateTestPdf("test_default_max.pdf");
-        var result = _tool.Execute("get_content", pdfPath);
-        var json = JsonSerializer.Deserialize<JsonElement>(result);
-        Assert.False(json.GetProperty("truncated").GetBoolean());
     }
 
     [Fact]
@@ -82,41 +64,24 @@ public class PdfInfoToolTests : PdfTestBase
         var result = _tool.Execute("get_statistics", pdfPath);
         var json = JsonSerializer.Deserialize<JsonElement>(result);
         Assert.True(json.TryGetProperty("fileSizeBytes", out _));
-        Assert.True(json.TryGetProperty("fileSizeKb", out _));
         Assert.True(json.TryGetProperty("totalPages", out _));
         Assert.True(json.TryGetProperty("isEncrypted", out _));
-        Assert.True(json.TryGetProperty("isLinearized", out _));
-        Assert.True(json.TryGetProperty("bookmarks", out _));
-        Assert.True(json.TryGetProperty("formFields", out _));
-        Assert.True(json.TryGetProperty("totalAnnotations", out _));
-        Assert.True(json.TryGetProperty("totalParagraphs", out _));
     }
+
+    #endregion
+
+    #region Operation Routing
 
     [Theory]
     [InlineData("GET_CONTENT")]
     [InlineData("Get_Content")]
     [InlineData("get_content")]
-    public void Operation_ShouldBeCaseInsensitive_GetContent(string operation)
+    public void Operation_ShouldBeCaseInsensitive(string operation)
     {
         var pdfPath = CreateTestPdf($"test_case_{operation.Replace("_", "")}.pdf");
         var result = _tool.Execute(operation, pdfPath);
         Assert.Contains("content", result);
     }
-
-    [Theory]
-    [InlineData("GET_STATISTICS")]
-    [InlineData("Get_Statistics")]
-    [InlineData("get_statistics")]
-    public void Operation_ShouldBeCaseInsensitive_GetStatistics(string operation)
-    {
-        var pdfPath = CreateTestPdf($"test_case_stat_{operation.Replace("_", "")}.pdf");
-        var result = _tool.Execute(operation, pdfPath);
-        Assert.Contains("totalPages", result);
-    }
-
-    #endregion
-
-    #region Exception
 
     [Fact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
@@ -126,40 +91,9 @@ public class PdfInfoToolTests : PdfTestBase
         Assert.Contains("Unknown operation", ex.Message);
     }
 
-    [Fact]
-    public void GetContent_WithInvalidPageIndex_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreateTestPdf("test_invalid_page.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("get_content", pdfPath, pageIndex: 99));
-        Assert.Contains("pageIndex must be between", ex.Message);
-    }
-
-    [Fact]
-    public void GetStatistics_WithNoPath_ShouldThrowArgumentException()
-    {
-        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("get_statistics"));
-        Assert.Contains("path", ex.Message.ToLower());
-    }
-
-    [Fact]
-    public void Execute_WithNoPathOrSessionId_ShouldThrowException()
-    {
-        Assert.ThrowsAny<Exception>(() => _tool.Execute("get_content"));
-    }
-
-    [Fact]
-    public void GetContent_WithNegativeMaxPages_ShouldReturnNegativeExtracted()
-    {
-        var pdfPath = CreateTestPdf("test_negative_max.pdf");
-        var result = _tool.Execute("get_content", pdfPath, maxPages: -1);
-        var json = JsonSerializer.Deserialize<JsonElement>(result);
-        Assert.True(json.GetProperty("extractedPages").GetInt32() < 0);
-    }
-
     #endregion
 
-    #region Session
+    #region Session Management
 
     [Fact]
     public void GetContent_WithSessionId_ShouldGetFromSession()
@@ -179,22 +113,6 @@ public class PdfInfoToolTests : PdfTestBase
         var result = _tool.Execute("get_statistics", sessionId: sessionId);
         var json = JsonSerializer.Deserialize<JsonElement>(result);
         Assert.True(json.TryGetProperty("totalPages", out _));
-        Assert.True(json.TryGetProperty("note", out _));
-    }
-
-    [Fact]
-    public void GetContent_WithSessionId_ShouldReflectInMemoryDocument()
-    {
-        var pdfPath = CreateTestPdf("test_session_memory.pdf");
-        var sessionId = OpenSession(pdfPath);
-        var docBefore = SessionManager.GetDocument<Document>(sessionId);
-        Assert.NotNull(docBefore);
-
-        var result = _tool.Execute("get_content", sessionId: sessionId);
-        Assert.NotNull(result);
-
-        var docAfter = SessionManager.GetDocument<Document>(sessionId);
-        Assert.Same(docBefore, docAfter);
     }
 
     [Fact]

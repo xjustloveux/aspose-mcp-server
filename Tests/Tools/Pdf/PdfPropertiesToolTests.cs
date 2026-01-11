@@ -5,6 +5,11 @@ using AsposeMcpServer.Tools.Pdf;
 
 namespace AsposeMcpServer.Tests.Tools.Pdf;
 
+/// <summary>
+///     Integration tests for PdfPropertiesTool.
+///     Focuses on session management, file I/O, and operation routing.
+///     Detailed parameter validation and business logic tests are in Handler tests.
+/// </summary>
 public class PdfPropertiesToolTests : PdfTestBase
 {
     private readonly PdfPropertiesTool _tool;
@@ -23,7 +28,7 @@ public class PdfPropertiesToolTests : PdfTestBase
         return filePath;
     }
 
-    #region General
+    #region File I/O Smoke Tests
 
     [Fact]
     public void Get_ShouldReturnProperties()
@@ -33,13 +38,7 @@ public class PdfPropertiesToolTests : PdfTestBase
         var json = JsonSerializer.Deserialize<JsonElement>(result);
         Assert.True(json.TryGetProperty("title", out _));
         Assert.True(json.TryGetProperty("author", out _));
-        Assert.True(json.TryGetProperty("subject", out _));
-        Assert.True(json.TryGetProperty("keywords", out _));
-        Assert.True(json.TryGetProperty("creator", out _));
-        Assert.True(json.TryGetProperty("producer", out _));
         Assert.True(json.TryGetProperty("totalPages", out _));
-        Assert.True(json.TryGetProperty("isEncrypted", out _));
-        Assert.True(json.TryGetProperty("isLinearized", out _));
     }
 
     [Fact]
@@ -53,76 +52,20 @@ public class PdfPropertiesToolTests : PdfTestBase
         Assert.StartsWith("Document properties updated", result);
     }
 
-    [Fact]
-    public void Set_WithKeywords_ShouldSetKeywords()
-    {
-        var pdfPath = CreateTestPdf("test_keywords.pdf");
-        var outputPath = CreateTestFilePath("test_keywords_output.pdf");
-        var result = _tool.Execute("set", pdfPath, outputPath: outputPath,
-            keywords: "test, pdf, keywords");
-        Assert.True(File.Exists(outputPath));
-        Assert.StartsWith("Document properties updated", result);
-    }
+    #endregion
 
-    [Fact]
-    public void Set_WithCreatorAndProducer_ShouldAttemptToSet()
-    {
-        var pdfPath = CreateTestPdf("test_creator.pdf");
-        var outputPath = CreateTestFilePath("test_creator_output.pdf");
-        var result = _tool.Execute("set", pdfPath, outputPath: outputPath,
-            creator: "Test Creator", producer: "Test Producer");
-        Assert.True(File.Exists(outputPath));
-        Assert.StartsWith("Document properties updated", result);
-    }
-
-    [Fact]
-    public void Set_WithAllProperties_ShouldSetAll()
-    {
-        var pdfPath = CreateTestPdf("test_all.pdf");
-        var outputPath = CreateTestFilePath("test_all_output.pdf");
-        var result = _tool.Execute("set", pdfPath, outputPath: outputPath,
-            title: "Full Test", author: "Full Author", subject: "Full Subject",
-            keywords: "full, test", creator: "Full Creator", producer: "Full Producer");
-        Assert.True(File.Exists(outputPath));
-        Assert.StartsWith("Document properties updated", result);
-    }
-
-    [Fact]
-    public void Set_WithNoProperties_ShouldStillSave()
-    {
-        var pdfPath = CreateTestPdf("test_empty.pdf");
-        var outputPath = CreateTestFilePath("test_empty_output.pdf");
-        var result = _tool.Execute("set", pdfPath, outputPath: outputPath);
-        Assert.True(File.Exists(outputPath));
-        Assert.StartsWith("Document properties updated", result);
-    }
+    #region Operation Routing
 
     [Theory]
     [InlineData("GET")]
     [InlineData("Get")]
     [InlineData("get")]
-    public void Operation_ShouldBeCaseInsensitive_Get(string operation)
+    public void Operation_ShouldBeCaseInsensitive(string operation)
     {
         var pdfPath = CreateTestPdf($"test_case_{operation}.pdf");
         var result = _tool.Execute(operation, pdfPath);
         Assert.Contains("title", result);
     }
-
-    [Theory]
-    [InlineData("SET")]
-    [InlineData("Set")]
-    [InlineData("set")]
-    public void Operation_ShouldBeCaseInsensitive_Set(string operation)
-    {
-        var pdfPath = CreateTestPdf($"test_case_set_{operation}.pdf");
-        var outputPath = CreateTestFilePath($"test_case_set_{operation}_output.pdf");
-        var result = _tool.Execute(operation, pdfPath, outputPath: outputPath, title: "Test");
-        Assert.StartsWith("Document properties updated", result);
-    }
-
-    #endregion
-
-    #region Exception
 
     [Fact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
@@ -132,21 +75,9 @@ public class PdfPropertiesToolTests : PdfTestBase
         Assert.Contains("Unknown operation", ex.Message);
     }
 
-    [Fact]
-    public void Execute_WithNoPathOrSessionId_ShouldThrowException()
-    {
-        Assert.ThrowsAny<Exception>(() => _tool.Execute("get"));
-    }
-
-    [Fact]
-    public void Execute_WithNonExistentFile_ShouldThrowException()
-    {
-        Assert.ThrowsAny<IOException>(() => _tool.Execute("get", @"C:\nonexistent\file.pdf"));
-    }
-
     #endregion
 
-    #region Session
+    #region Session Management
 
     [Fact]
     public void Get_WithSessionId_ShouldGetFromSession()
@@ -171,18 +102,6 @@ public class PdfPropertiesToolTests : PdfTestBase
         var doc = SessionManager.GetDocument<Document>(sessionId);
         Assert.Equal("Session Title", doc.Info.Title);
         Assert.Equal("Session Author", doc.Info.Author);
-    }
-
-    [Fact]
-    public void Set_WithSessionId_AndAllProperties_ShouldPersistChanges()
-    {
-        var pdfPath = CreateTestPdf("test_session_all.pdf");
-        var sessionId = OpenSession(pdfPath);
-        _tool.Execute("set", sessionId: sessionId,
-            title: "Persisted Title", subject: "Persisted Subject", keywords: "test");
-        var doc = SessionManager.GetDocument<Document>(sessionId);
-        Assert.Equal("Persisted Title", doc.Info.Title);
-        Assert.Equal("Persisted Subject", doc.Info.Subject);
     }
 
     [Fact]

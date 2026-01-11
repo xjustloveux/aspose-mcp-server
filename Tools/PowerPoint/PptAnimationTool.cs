@@ -1,9 +1,8 @@
 using System.ComponentModel;
-using System.Text.Json;
 using Aspose.Slides;
-using Aspose.Slides.Animation;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.PowerPoint.Animation;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.PowerPoint;
@@ -14,6 +13,11 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 [McpServerToolType]
 public class PptAnimationTool
 {
+    /// <summary>
+    ///     Handler registry for animation operations.
+    /// </summary>
+    private readonly HandlerRegistry<Presentation> _handlerRegistry;
+
     /// <summary>
     ///     Identity accessor for session isolation.
     /// </summary>
@@ -34,6 +38,7 @@ public class PptAnimationTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = PptAnimationHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -89,273 +94,78 @@ Usage examples:
     {
         using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
-        return operation.ToLower() switch
+        var parameters = BuildParameters(operation, slideIndex, shapeIndex, animationIndex,
+            effectType, effectSubtype, triggerType, duration, delay);
+
+        var handler = _handlerRegistry.GetHandler(operation);
+
+        var operationContext = new OperationContext<Presentation>
         {
-            "add" => AddAnimation(ctx, outputPath, slideIndex, shapeIndex, effectType, effectSubtype, triggerType),
-            "edit" => EditAnimation(ctx, outputPath, slideIndex, shapeIndex, animationIndex, effectType, effectSubtype,
-                triggerType, duration, delay),
-            "delete" => DeleteAnimation(ctx, outputPath, slideIndex, shapeIndex, animationIndex),
-            "get" => GetAnimations(ctx, slideIndex, shapeIndex),
-            _ => throw new ArgumentException($"Unknown operation: {operation}")
-        };
-    }
-
-    /// <summary>
-    ///     Gets animation information for a slide or specific shape.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="slideIndex">The slide index (0-based).</param>
-    /// <param name="shapeIndex">The shape index (0-based, optional). If provided, only returns animations for that shape.</param>
-    /// <returns>A JSON string containing the animation information.</returns>
-    private static string GetAnimations(DocumentContext<Presentation> ctx, int slideIndex, int? shapeIndex)
-    {
-        var presentation = ctx.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-        var sequence = slide.Timeline.MainSequence;
-
-        List<object> animations = [];
-        var index = 0;
-
-        foreach (var effect in sequence)
-        {
-            // If shapeIndex is specified, filter by that shape
-            if (shapeIndex.HasValue)
-            {
-                var targetShapeIndex = slide.Shapes.IndexOf(effect.TargetShape);
-                if (targetShapeIndex != shapeIndex.Value)
-                    continue;
-            }
-
-            var shapeName = effect.TargetShape?.Name ?? "(unknown)";
-            var shapeIdx = effect.TargetShape != null ? slide.Shapes.IndexOf(effect.TargetShape) : -1;
-
-            animations.Add(new
-            {
-                index,
-                shapeIndex = shapeIdx,
-                shapeName,
-                effectType = effect.Type.ToString(),
-                effectSubtype = effect.Subtype.ToString(),
-                triggerType = effect.Timing.TriggerType.ToString(),
-                duration = effect.Timing.Duration,
-                delay = effect.Timing.TriggerDelayTime
-            });
-
-            index++;
-        }
-
-        var result = new
-        {
-            slideIndex,
-            filterByShapeIndex = shapeIndex,
-            totalAnimationsOnSlide = sequence.Count,
-            animations
+            Document = ctx.Document,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = path,
+            OutputPath = outputPath
         };
 
-        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        var result = handler.Execute(operationContext, parameters);
+
+        if (operation.ToLowerInvariant() == "get")
+            return result;
+
+        if (operationContext.IsModified)
+            ctx.Save(outputPath);
+
+        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Adds animation to a shape.
+    ///     Builds OperationParameters from method parameters.
     /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="slideIndex">The slide index (0-based).</param>
-    /// <param name="shapeIndex">The shape index (0-based).</param>
-    /// <param name="effectTypeStr">The animation effect type string.</param>
-    /// <param name="effectSubtypeStr">The animation effect subtype string.</param>
-    /// <param name="triggerTypeStr">The animation trigger type string.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when shapeIndex is not provided.</exception>
-    private static string AddAnimation(DocumentContext<Presentation> ctx, string? outputPath, int slideIndex,
-        int? shapeIndex, string? effectTypeStr, string? effectSubtypeStr, string? triggerTypeStr)
+    private static OperationParameters BuildParameters(
+        string operation,
+        int slideIndex,
+        int? shapeIndex,
+        int? animationIndex,
+        string? effectType,
+        string? effectSubtype,
+        string? triggerType,
+        float? duration,
+        float? delay)
     {
-        if (!shapeIndex.HasValue)
-            throw new ArgumentException("shapeIndex is required for add operation");
+        var parameters = new OperationParameters();
+        parameters.Set("slideIndex", slideIndex);
 
-        var presentation = ctx.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-        PowerPointHelper.ValidateShapeIndex(shapeIndex.Value, slide);
-        var shape = slide.Shapes[shapeIndex.Value];
-
-        var effectType = ParseEffectType(effectTypeStr ?? "Fade");
-        var effectSubtype = ParseEffectSubtype(effectSubtypeStr);
-        var triggerType = ParseTriggerType(triggerTypeStr);
-
-        slide.Timeline.MainSequence.AddEffect(shape, effectType, effectSubtype, triggerType);
-
-        ctx.Save(outputPath);
-
-        var result = $"Animation '{effectTypeStr ?? "Fade"}' added to shape {shapeIndex} on slide {slideIndex}.\n";
-        result += ctx.GetOutputMessage(outputPath);
-        return result;
-    }
-
-    /// <summary>
-    ///     Edits animation properties. If animationIndex is provided, modifies that specific animation;
-    ///     otherwise replaces all animations for the shape.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="slideIndex">The slide index (0-based).</param>
-    /// <param name="shapeIndex">The shape index (0-based).</param>
-    /// <param name="animationIndex">The animation index (0-based, optional).</param>
-    /// <param name="effectTypeStr">The animation effect type string.</param>
-    /// <param name="effectSubtypeStr">The animation effect subtype string.</param>
-    /// <param name="triggerTypeStr">The animation trigger type string.</param>
-    /// <param name="duration">The animation duration in seconds.</param>
-    /// <param name="delay">The animation delay in seconds.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when shapeIndex is not provided or animationIndex is out of range.</exception>
-    private static string EditAnimation(DocumentContext<Presentation> ctx, string? outputPath, int slideIndex,
-        int? shapeIndex, int? animationIndex, string? effectTypeStr, string? effectSubtypeStr,
-        string? triggerTypeStr, float? duration, float? delay)
-    {
-        if (!shapeIndex.HasValue)
-            throw new ArgumentException("shapeIndex is required for edit operation");
-
-        var presentation = ctx.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-        PowerPointHelper.ValidateShapeIndex(shapeIndex.Value, slide);
-
-        var shape = slide.Shapes[shapeIndex.Value];
-        var sequence = slide.Timeline.MainSequence;
-        var animations = sequence.Where(e => e.TargetShape == shape).ToList();
-
-        if (animationIndex.HasValue)
+        switch (operation.ToLowerInvariant())
         {
-            if (animationIndex.Value < 0 || animationIndex.Value >= animations.Count)
-                throw new ArgumentException($"animationIndex must be between 0 and {animations.Count - 1}");
+            case "add":
+                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
+                if (effectType != null) parameters.Set("effectType", effectType);
+                if (effectSubtype != null) parameters.Set("effectSubtype", effectSubtype);
+                if (triggerType != null) parameters.Set("triggerType", triggerType);
+                break;
 
-            var effect = animations[animationIndex.Value];
-            if (duration.HasValue) effect.Timing.Duration = duration.Value;
-            if (delay.HasValue) effect.Timing.TriggerDelayTime = delay.Value;
+            case "edit":
+                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
+                if (animationIndex.HasValue) parameters.Set("animationIndex", animationIndex.Value);
+                if (effectType != null) parameters.Set("effectType", effectType);
+                if (effectSubtype != null) parameters.Set("effectSubtype", effectSubtype);
+                if (triggerType != null) parameters.Set("triggerType", triggerType);
+                if (duration.HasValue) parameters.Set("duration", duration.Value);
+                if (delay.HasValue) parameters.Set("delay", delay.Value);
+                break;
 
-            if (!string.IsNullOrEmpty(effectTypeStr) || !string.IsNullOrEmpty(effectSubtypeStr) ||
-                !string.IsNullOrEmpty(triggerTypeStr))
-            {
-                var newEffectType = !string.IsNullOrEmpty(effectTypeStr)
-                    ? ParseEffectType(effectTypeStr)
-                    : effect.Type;
-                var newSubtype = !string.IsNullOrEmpty(effectSubtypeStr)
-                    ? ParseEffectSubtype(effectSubtypeStr)
-                    : effect.Subtype;
-                var newTrigger = !string.IsNullOrEmpty(triggerTypeStr)
-                    ? ParseTriggerType(triggerTypeStr)
-                    : effect.Timing.TriggerType;
+            case "delete":
+                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
+                if (animationIndex.HasValue) parameters.Set("animationIndex", animationIndex.Value);
+                break;
 
-                var currentDuration = effect.Timing.Duration;
-                var currentDelay = effect.Timing.TriggerDelayTime;
-
-                sequence.Remove(effect);
-                var newEffect = sequence.AddEffect(shape, newEffectType, newSubtype, newTrigger);
-                newEffect.Timing.Duration = duration ?? currentDuration;
-                newEffect.Timing.TriggerDelayTime = delay ?? currentDelay;
-            }
-        }
-        else
-        {
-            foreach (var anim in animations)
-                sequence.Remove(anim);
-
-            if (!string.IsNullOrEmpty(effectTypeStr))
-            {
-                var effectType = ParseEffectType(effectTypeStr);
-                var effectSubtype = ParseEffectSubtype(effectSubtypeStr);
-                var triggerType = ParseTriggerType(triggerTypeStr);
-                var effect = sequence.AddEffect(shape, effectType, effectSubtype, triggerType);
-
-                if (duration.HasValue) effect.Timing.Duration = duration.Value;
-                if (delay.HasValue) effect.Timing.TriggerDelayTime = delay.Value;
-            }
+            case "get":
+                if (shapeIndex.HasValue) parameters.Set("shapeIndex", shapeIndex.Value);
+                break;
         }
 
-        ctx.Save(outputPath);
-
-        var result = $"Animation updated on slide {slideIndex}, shape {shapeIndex}.\n";
-        result += ctx.GetOutputMessage(outputPath);
-        return result;
-    }
-
-    /// <summary>
-    ///     Deletes animation(s) from a shape or slide.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="slideIndex">The slide index (0-based).</param>
-    /// <param name="shapeIndex">The shape index (0-based, optional).</param>
-    /// <param name="animationIndex">The animation index (0-based, optional).</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when animationIndex is out of range.</exception>
-    private static string DeleteAnimation(DocumentContext<Presentation> ctx, string? outputPath, int slideIndex,
-        int? shapeIndex, int? animationIndex)
-    {
-        var presentation = ctx.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-        var sequence = slide.Timeline.MainSequence;
-
-        if (shapeIndex.HasValue)
-        {
-            PowerPointHelper.ValidateShapeIndex(shapeIndex.Value, slide);
-            var shape = slide.Shapes[shapeIndex.Value];
-            var animations = sequence.Where(e => e.TargetShape == shape).ToList();
-
-            if (animationIndex.HasValue)
-            {
-                if (animationIndex.Value < 0 || animationIndex.Value >= animations.Count)
-                    throw new ArgumentException($"animationIndex must be between 0 and {animations.Count - 1}");
-                sequence.Remove(animations[animationIndex.Value]);
-            }
-            else
-            {
-                foreach (var anim in animations)
-                    sequence.Remove(anim);
-            }
-        }
-        else
-        {
-            sequence.Clear();
-        }
-
-        ctx.Save(outputPath);
-
-        var result = $"Animation(s) deleted from slide {slideIndex}.\n";
-        result += ctx.GetOutputMessage(outputPath);
-        return result;
-    }
-
-    /// <summary>
-    ///     Parses effect type string to EffectType enum.
-    /// </summary>
-    /// <param name="effectTypeStr">The effect type string to parse.</param>
-    /// <returns>The parsed EffectType enum value, or Fade as default.</returns>
-    private static EffectType ParseEffectType(string? effectTypeStr)
-    {
-        if (string.IsNullOrEmpty(effectTypeStr)) return EffectType.Fade;
-        return Enum.TryParse<EffectType>(effectTypeStr, true, out var result) ? result : EffectType.Fade;
-    }
-
-    /// <summary>
-    ///     Parses effect subtype string to EffectSubtype enum.
-    /// </summary>
-    /// <param name="subtypeStr">The effect subtype string to parse.</param>
-    /// <returns>The parsed EffectSubtype enum value, or None as default.</returns>
-    private static EffectSubtype ParseEffectSubtype(string? subtypeStr)
-    {
-        if (string.IsNullOrEmpty(subtypeStr)) return EffectSubtype.None;
-        return Enum.TryParse<EffectSubtype>(subtypeStr, true, out var result) ? result : EffectSubtype.None;
-    }
-
-    /// <summary>
-    ///     Parses trigger type string to EffectTriggerType enum.
-    /// </summary>
-    /// <param name="triggerTypeStr">The trigger type string to parse.</param>
-    /// <returns>The parsed EffectTriggerType enum value, or OnClick as default.</returns>
-    private static EffectTriggerType ParseTriggerType(string? triggerTypeStr)
-    {
-        if (string.IsNullOrEmpty(triggerTypeStr)) return EffectTriggerType.OnClick;
-        return Enum.TryParse<EffectTriggerType>(triggerTypeStr, true, out var result)
-            ? result
-            : EffectTriggerType.OnClick;
+        return parameters;
     }
 }

@@ -19,7 +19,7 @@ public class ApiKeyAuthenticationMiddlewareTests
     #region Local Mode Tests
 
     [Fact]
-    public async Task LocalMode_ValidKey_ShouldSetTenantId()
+    public async Task LocalMode_ValidKey_ShouldSetGroupId()
     {
         var config = new ApiKeyConfig
         {
@@ -28,24 +28,21 @@ public class ApiKeyAuthenticationMiddlewareTests
             HeaderName = "X-API-Key",
             Keys = new Dictionary<string, string>
             {
-                ["valid-key"] = "tenant-123"
+                ["valid-key"] = "group-123"
             }
         };
 
         var context = CreateHttpContext();
         context.Request.Headers["X-API-Key"] = "valid-key";
 
-        string? capturedTenantId = null;
-        var middleware = new ApiKeyAuthenticationMiddleware(
-            ctx =>
-            {
-                capturedTenantId = ctx.Items["TenantId"]?.ToString();
-                return Task.CompletedTask;
-            },
-            config,
-            _logger);
-        await middleware.InvokeAsync(context);
-        Assert.Equal("tenant-123", capturedTenantId);
+        string? capturedGroupId = null;
+        var middleware = new ApiKeyAuthenticationMiddleware(config, _logger);
+        await middleware.InvokeAsync(context, ctx =>
+        {
+            capturedGroupId = ctx.Items["GroupId"]?.ToString();
+            return Task.CompletedTask;
+        });
+        Assert.Equal("group-123", capturedGroupId);
         Assert.Equal(200, context.Response.StatusCode);
     }
 
@@ -59,18 +56,15 @@ public class ApiKeyAuthenticationMiddlewareTests
             HeaderName = "X-API-Key",
             Keys = new Dictionary<string, string>
             {
-                ["valid-key"] = "tenant-123"
+                ["valid-key"] = "group-123"
             }
         };
 
         var context = CreateHttpContext();
         context.Request.Headers["X-API-Key"] = "invalid-key";
 
-        var middleware = new ApiKeyAuthenticationMiddleware(
-            _ => Task.CompletedTask,
-            config,
-            _logger);
-        await middleware.InvokeAsync(context);
+        var middleware = new ApiKeyAuthenticationMiddleware(config, _logger);
+        await middleware.InvokeAsync(context, _ => Task.CompletedTask);
         Assert.Equal(401, context.Response.StatusCode);
     }
 
@@ -84,17 +78,14 @@ public class ApiKeyAuthenticationMiddlewareTests
             HeaderName = "X-API-Key",
             Keys = new Dictionary<string, string>
             {
-                ["valid-key"] = "tenant-123"
+                ["valid-key"] = "group-123"
             }
         };
 
         var context = CreateHttpContext();
 
-        var middleware = new ApiKeyAuthenticationMiddleware(
-            _ => Task.CompletedTask,
-            config,
-            _logger);
-        await middleware.InvokeAsync(context);
+        var middleware = new ApiKeyAuthenticationMiddleware(config, _logger);
+        await middleware.InvokeAsync(context, _ => Task.CompletedTask);
         Assert.Equal(401, context.Response.StatusCode);
     }
 
@@ -111,11 +102,8 @@ public class ApiKeyAuthenticationMiddlewareTests
         var context = CreateHttpContext();
         context.Request.Headers["X-API-Key"] = "any-key";
 
-        var middleware = new ApiKeyAuthenticationMiddleware(
-            _ => Task.CompletedTask,
-            config,
-            _logger);
-        await middleware.InvokeAsync(context);
+        var middleware = new ApiKeyAuthenticationMiddleware(config, _logger);
+        await middleware.InvokeAsync(context, _ => Task.CompletedTask);
         Assert.Equal(401, context.Response.StatusCode);
     }
 
@@ -129,24 +117,21 @@ public class ApiKeyAuthenticationMiddlewareTests
             HeaderName = "Authorization-Key",
             Keys = new Dictionary<string, string>
             {
-                ["my-api-key"] = "my-tenant"
+                ["my-api-key"] = "my-group"
             }
         };
 
         var context = CreateHttpContext();
         context.Request.Headers["Authorization-Key"] = "my-api-key";
 
-        string? capturedTenantId = null;
-        var middleware = new ApiKeyAuthenticationMiddleware(
-            ctx =>
-            {
-                capturedTenantId = ctx.Items["TenantId"]?.ToString();
-                return Task.CompletedTask;
-            },
-            config,
-            _logger);
-        await middleware.InvokeAsync(context);
-        Assert.Equal("my-tenant", capturedTenantId);
+        string? capturedGroupId = null;
+        var middleware = new ApiKeyAuthenticationMiddleware(config, _logger);
+        await middleware.InvokeAsync(context, ctx =>
+        {
+            capturedGroupId = ctx.Items["GroupId"]?.ToString();
+            return Task.CompletedTask;
+        });
+        Assert.Equal("my-group", capturedGroupId);
     }
 
     #endregion
@@ -154,54 +139,54 @@ public class ApiKeyAuthenticationMiddlewareTests
     #region Gateway Mode Tests
 
     [Fact]
-    public async Task GatewayMode_WithTenantIdHeader_ShouldSetTenantId()
+    public async Task GatewayMode_WithGroupIdHeader_ShouldSetGroupId()
     {
         var config = new ApiKeyConfig
         {
             Enabled = true,
             Mode = ApiKeyMode.Gateway,
             HeaderName = "X-API-Key",
-            TenantIdHeader = "X-Tenant-Id"
+            GroupIdentifierHeader = "X-Group-Id"
         };
 
         var context = CreateHttpContext();
         context.Request.Headers["X-API-Key"] = "any-key";
-        context.Request.Headers["X-Tenant-Id"] = "gateway-tenant";
+        context.Request.Headers["X-Group-Id"] = "gateway-group";
 
-        string? capturedTenantId = null;
-        var middleware = new ApiKeyAuthenticationMiddleware(
-            ctx =>
-            {
-                capturedTenantId = ctx.Items["TenantId"]?.ToString();
-                return Task.CompletedTask;
-            },
-            config,
-            _logger);
-        await middleware.InvokeAsync(context);
-        Assert.Equal("gateway-tenant", capturedTenantId);
+        string? capturedGroupId = null;
+        var middleware = new ApiKeyAuthenticationMiddleware(config, _logger);
+        await middleware.InvokeAsync(context, ctx =>
+        {
+            capturedGroupId = ctx.Items["GroupId"]?.ToString();
+            return Task.CompletedTask;
+        });
+        Assert.Equal("gateway-group", capturedGroupId);
         Assert.Equal(200, context.Response.StatusCode);
     }
 
     [Fact]
-    public async Task GatewayMode_MissingTenantIdHeader_ShouldReturn401()
+    public async Task GatewayMode_MissingGroupIdHeader_ShouldAllowAsAnonymous()
     {
         var config = new ApiKeyConfig
         {
             Enabled = true,
             Mode = ApiKeyMode.Gateway,
             HeaderName = "X-API-Key",
-            TenantIdHeader = "X-Tenant-Id"
+            GroupIdentifierHeader = "X-Group-Id"
         };
 
         var context = CreateHttpContext();
         context.Request.Headers["X-API-Key"] = "any-key";
 
-        var middleware = new ApiKeyAuthenticationMiddleware(
-            _ => Task.CompletedTask,
-            config,
-            _logger);
-        await middleware.InvokeAsync(context);
-        Assert.Equal(401, context.Response.StatusCode);
+        var capturedGroupId = "not-null";
+        var middleware = new ApiKeyAuthenticationMiddleware(config, _logger);
+        await middleware.InvokeAsync(context, ctx =>
+        {
+            capturedGroupId = ctx.Items["GroupId"]?.ToString();
+            return Task.CompletedTask;
+        });
+        Assert.Null(capturedGroupId);
+        Assert.Equal(200, context.Response.StatusCode);
     }
 
     #endregion
@@ -209,7 +194,7 @@ public class ApiKeyAuthenticationMiddlewareTests
     #region Introspection Mode Tests
 
     [Fact]
-    public async Task IntrospectionMode_ActiveResponse_ShouldSetTenantId()
+    public async Task IntrospectionMode_ActiveResponse_ShouldSetGroupId()
     {
         var config = new ApiKeyConfig
         {
@@ -221,25 +206,21 @@ public class ApiKeyAuthenticationMiddlewareTests
 
         var mockHandler = CreateMockHttpHandler(
             HttpStatusCode.OK,
-            """{"active": true, "tenant_id": "introspection-tenant"}""");
+            """{"active": true, "group_id": "introspection-group"}""");
         var httpClientFactory = CreateMockHttpClientFactory(mockHandler);
 
         var context = CreateHttpContext();
         context.Request.Headers["X-API-Key"] = "some-api-key";
 
-        string? capturedTenantId = null;
-        var middleware = new ApiKeyAuthenticationMiddleware(
-            ctx =>
-            {
-                capturedTenantId = ctx.Items["TenantId"]?.ToString();
-                return Task.CompletedTask;
-            },
-            config,
-            _logger,
-            httpClientFactory);
-        await middleware.InvokeAsync(context);
+        string? capturedGroupId = null;
+        var middleware = new ApiKeyAuthenticationMiddleware(config, _logger, httpClientFactory);
+        await middleware.InvokeAsync(context, ctx =>
+        {
+            capturedGroupId = ctx.Items["GroupId"]?.ToString();
+            return Task.CompletedTask;
+        });
 
-        Assert.Equal("introspection-tenant", capturedTenantId);
+        Assert.Equal("introspection-group", capturedGroupId);
         Assert.Equal(200, context.Response.StatusCode);
     }
 
@@ -262,12 +243,8 @@ public class ApiKeyAuthenticationMiddlewareTests
         var context = CreateHttpContext();
         context.Request.Headers["X-API-Key"] = "invalid-key";
 
-        var middleware = new ApiKeyAuthenticationMiddleware(
-            _ => Task.CompletedTask,
-            config,
-            _logger,
-            httpClientFactory);
-        await middleware.InvokeAsync(context);
+        var middleware = new ApiKeyAuthenticationMiddleware(config, _logger, httpClientFactory);
+        await middleware.InvokeAsync(context, _ => Task.CompletedTask);
 
         Assert.Equal(401, context.Response.StatusCode);
     }
@@ -289,12 +266,8 @@ public class ApiKeyAuthenticationMiddlewareTests
         var context = CreateHttpContext();
         context.Request.Headers["X-API-Key"] = "some-key";
 
-        var middleware = new ApiKeyAuthenticationMiddleware(
-            _ => Task.CompletedTask,
-            config,
-            _logger,
-            httpClientFactory);
-        await middleware.InvokeAsync(context);
+        var middleware = new ApiKeyAuthenticationMiddleware(config, _logger, httpClientFactory);
+        await middleware.InvokeAsync(context, _ => Task.CompletedTask);
 
         Assert.Equal(401, context.Response.StatusCode);
     }
@@ -312,11 +285,8 @@ public class ApiKeyAuthenticationMiddlewareTests
         var context = CreateHttpContext();
         context.Request.Headers["X-API-Key"] = "some-key";
 
-        var middleware = new ApiKeyAuthenticationMiddleware(
-            _ => Task.CompletedTask,
-            config,
-            _logger);
-        await middleware.InvokeAsync(context);
+        var middleware = new ApiKeyAuthenticationMiddleware(config, _logger);
+        await middleware.InvokeAsync(context, _ => Task.CompletedTask);
 
         Assert.Equal(401, context.Response.StatusCode);
     }
@@ -346,7 +316,7 @@ public class ApiKeyAuthenticationMiddlewareTests
                 return new HttpResponseMessage
                 {
                     StatusCode = HttpStatusCode.OK,
-                    Content = new StringContent("""{"active": true, "tenant_id": "test-tenant"}""")
+                    Content = new StringContent("""{"active": true, "group_id": "test-group"}""")
                 };
             });
 
@@ -355,12 +325,8 @@ public class ApiKeyAuthenticationMiddlewareTests
         var context = CreateHttpContext();
         context.Request.Headers["X-API-Key"] = "my-api-key";
 
-        var middleware = new ApiKeyAuthenticationMiddleware(
-            _ => Task.CompletedTask,
-            config,
-            _logger,
-            httpClientFactory);
-        await middleware.InvokeAsync(context);
+        var middleware = new ApiKeyAuthenticationMiddleware(config, _logger, httpClientFactory);
+        await middleware.InvokeAsync(context, _ => Task.CompletedTask);
 
         Assert.NotNull(capturedContent);
         Assert.Contains("api_token=my-api-key", capturedContent);
@@ -390,7 +356,7 @@ public class ApiKeyAuthenticationMiddlewareTests
                 return new HttpResponseMessage
                 {
                     StatusCode = HttpStatusCode.OK,
-                    Content = new StringContent("""{"active": true, "tenant_id": "test-tenant"}""")
+                    Content = new StringContent("""{"active": true, "group_id": "test-group"}""")
                 };
             });
 
@@ -399,12 +365,8 @@ public class ApiKeyAuthenticationMiddlewareTests
         var context = CreateHttpContext();
         context.Request.Headers["X-API-Key"] = "my-api-key";
 
-        var middleware = new ApiKeyAuthenticationMiddleware(
-            _ => Task.CompletedTask,
-            config,
-            _logger,
-            httpClientFactory);
-        await middleware.InvokeAsync(context);
+        var middleware = new ApiKeyAuthenticationMiddleware(config, _logger, httpClientFactory);
+        await middleware.InvokeAsync(context, _ => Task.CompletedTask);
 
         Assert.NotNull(capturedContent);
         Assert.Contains("key=my-api-key", capturedContent);
@@ -415,7 +377,7 @@ public class ApiKeyAuthenticationMiddlewareTests
     #region Custom Mode Tests
 
     [Fact]
-    public async Task CustomMode_ValidResponse_ShouldSetTenantId()
+    public async Task CustomMode_ValidResponse_ShouldSetGroupId()
     {
         var config = new ApiKeyConfig
         {
@@ -427,25 +389,21 @@ public class ApiKeyAuthenticationMiddlewareTests
 
         var mockHandler = CreateMockHttpHandler(
             HttpStatusCode.OK,
-            """{"valid": true, "tenant_id": "custom-tenant"}""");
+            """{"valid": true, "group_id": "custom-group"}""");
         var httpClientFactory = CreateMockHttpClientFactory(mockHandler);
 
         var context = CreateHttpContext();
         context.Request.Headers["X-API-Key"] = "custom-key";
 
-        string? capturedTenantId = null;
-        var middleware = new ApiKeyAuthenticationMiddleware(
-            ctx =>
-            {
-                capturedTenantId = ctx.Items["TenantId"]?.ToString();
-                return Task.CompletedTask;
-            },
-            config,
-            _logger,
-            httpClientFactory);
-        await middleware.InvokeAsync(context);
+        string? capturedGroupId = null;
+        var middleware = new ApiKeyAuthenticationMiddleware(config, _logger, httpClientFactory);
+        await middleware.InvokeAsync(context, ctx =>
+        {
+            capturedGroupId = ctx.Items["GroupId"]?.ToString();
+            return Task.CompletedTask;
+        });
 
-        Assert.Equal("custom-tenant", capturedTenantId);
+        Assert.Equal("custom-group", capturedGroupId);
         Assert.Equal(200, context.Response.StatusCode);
     }
 
@@ -468,12 +426,8 @@ public class ApiKeyAuthenticationMiddlewareTests
         var context = CreateHttpContext();
         context.Request.Headers["X-API-Key"] = "invalid-key";
 
-        var middleware = new ApiKeyAuthenticationMiddleware(
-            _ => Task.CompletedTask,
-            config,
-            _logger,
-            httpClientFactory);
-        await middleware.InvokeAsync(context);
+        var middleware = new ApiKeyAuthenticationMiddleware(config, _logger, httpClientFactory);
+        await middleware.InvokeAsync(context, _ => Task.CompletedTask);
 
         Assert.Equal(401, context.Response.StatusCode);
     }
@@ -495,12 +449,8 @@ public class ApiKeyAuthenticationMiddlewareTests
         var context = CreateHttpContext();
         context.Request.Headers["X-API-Key"] = "some-key";
 
-        var middleware = new ApiKeyAuthenticationMiddleware(
-            _ => Task.CompletedTask,
-            config,
-            _logger,
-            httpClientFactory);
-        await middleware.InvokeAsync(context);
+        var middleware = new ApiKeyAuthenticationMiddleware(config, _logger, httpClientFactory);
+        await middleware.InvokeAsync(context, _ => Task.CompletedTask);
 
         Assert.Equal(401, context.Response.StatusCode);
     }
@@ -518,11 +468,8 @@ public class ApiKeyAuthenticationMiddlewareTests
         var context = CreateHttpContext();
         context.Request.Headers["X-API-Key"] = "some-key";
 
-        var middleware = new ApiKeyAuthenticationMiddleware(
-            _ => Task.CompletedTask,
-            config,
-            _logger);
-        await middleware.InvokeAsync(context);
+        var middleware = new ApiKeyAuthenticationMiddleware(config, _logger);
+        await middleware.InvokeAsync(context, _ => Task.CompletedTask);
 
         Assert.Equal(401, context.Response.StatusCode);
     }
@@ -544,15 +491,12 @@ public class ApiKeyAuthenticationMiddlewareTests
         var context = CreateHttpContext("/health");
 
         var nextCalled = false;
-        var middleware = new ApiKeyAuthenticationMiddleware(
-            _ =>
-            {
-                nextCalled = true;
-                return Task.CompletedTask;
-            },
-            config,
-            _logger);
-        await middleware.InvokeAsync(context);
+        var middleware = new ApiKeyAuthenticationMiddleware(config, _logger);
+        await middleware.InvokeAsync(context, _ =>
+        {
+            nextCalled = true;
+            return Task.CompletedTask;
+        });
         Assert.True(nextCalled);
         Assert.Equal(200, context.Response.StatusCode);
     }
@@ -570,15 +514,12 @@ public class ApiKeyAuthenticationMiddlewareTests
         var context = CreateHttpContext("/metrics");
 
         var nextCalled = false;
-        var middleware = new ApiKeyAuthenticationMiddleware(
-            _ =>
-            {
-                nextCalled = true;
-                return Task.CompletedTask;
-            },
-            config,
-            _logger);
-        await middleware.InvokeAsync(context);
+        var middleware = new ApiKeyAuthenticationMiddleware(config, _logger);
+        await middleware.InvokeAsync(context, _ =>
+        {
+            nextCalled = true;
+            return Task.CompletedTask;
+        });
         Assert.True(nextCalled);
     }
 
@@ -595,15 +536,12 @@ public class ApiKeyAuthenticationMiddlewareTests
         var context = CreateHttpContext("/ready");
 
         var nextCalled = false;
-        var middleware = new ApiKeyAuthenticationMiddleware(
-            _ =>
-            {
-                nextCalled = true;
-                return Task.CompletedTask;
-            },
-            config,
-            _logger);
-        await middleware.InvokeAsync(context);
+        var middleware = new ApiKeyAuthenticationMiddleware(config, _logger);
+        await middleware.InvokeAsync(context, _ =>
+        {
+            nextCalled = true;
+            return Task.CompletedTask;
+        });
         Assert.True(nextCalled);
     }
 

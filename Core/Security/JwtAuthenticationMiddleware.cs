@@ -19,12 +19,12 @@ public class JwtAuthResult
     public bool IsValid { get; set; }
 
     /// <summary>
-    ///     Tenant identifier extracted from the token
+    ///     Group identifier extracted from the token
     /// </summary>
-    public string? TenantId { get; set; }
+    public string? GroupId { get; set; }
 
     /// <summary>
-    ///     User identifier extracted from the token
+    ///     User identifier extracted from the token (for audit and logging)
     /// </summary>
     public string? UserId { get; set; }
 
@@ -37,8 +37,13 @@ public class JwtAuthResult
 /// <summary>
 ///     Middleware for JWT authentication supporting multiple verification modes
 /// </summary>
-public class JwtAuthenticationMiddleware : IDisposable
+public class JwtAuthenticationMiddleware : IMiddleware, IDisposable
 {
+    /// <summary>
+    ///     Authentication result cache for Introspection/Custom modes
+    /// </summary>
+    private readonly AuthCache<JwtAuthResult>? _cache;
+
     /// <summary>
     ///     JWT authentication configuration
     /// </summary>
@@ -60,11 +65,6 @@ public class JwtAuthenticationMiddleware : IDisposable
     private readonly ILogger<JwtAuthenticationMiddleware> _logger;
 
     /// <summary>
-    ///     Next middleware in the pipeline
-    /// </summary>
-    private readonly RequestDelegate _next;
-
-    /// <summary>
     ///     Indicates whether we own the HTTP client and should dispose it
     /// </summary>
     private readonly bool _ownsHttpClient;
@@ -82,22 +82,20 @@ public class JwtAuthenticationMiddleware : IDisposable
     /// <summary>
     ///     Creates a new JWT authentication middleware instance
     /// </summary>
-    /// <param name="next">Next middleware delegate</param>
     /// <param name="config">JWT configuration</param>
     /// <param name="logger">Logger instance</param>
     /// <param name="httpClientFactory">Optional HTTP client factory</param>
     public JwtAuthenticationMiddleware(
-        RequestDelegate next,
         JwtConfig config,
         ILogger<JwtAuthenticationMiddleware> logger,
         IHttpClientFactory? httpClientFactory = null)
     {
-        _next = next;
         _config = config;
         _logger = logger;
         if (httpClientFactory != null)
         {
             _httpClient = httpClientFactory.CreateClient("JwtAuth");
+            _httpClient.Timeout = TimeSpan.FromSeconds(config.ExternalTimeoutSeconds);
             _ownsHttpClient = false;
         }
         else
@@ -111,6 +109,12 @@ public class JwtAuthenticationMiddleware : IDisposable
 
         if (config.Mode == JwtMode.Local)
             (_validationParameters, _cryptoKey) = BuildValidationParameters();
+
+        if (config.CacheEnabled &&
+            (config.Mode == JwtMode.Introspection || config.Mode == JwtMode.Custom))
+            _cache = new AuthCache<JwtAuthResult>(
+                config.CacheTtlSeconds,
+                config.CacheMaxSize);
     }
 
     /// <summary>
@@ -119,15 +123,50 @@ public class JwtAuthenticationMiddleware : IDisposable
     /// </summary>
     public void Dispose()
     {
-        // Atomically set _disposed to 1, return previous value
-        // If previous value was already 1, another thread already disposed
         if (Interlocked.Exchange(ref _disposed, 1) == 1)
             return;
 
+        _cache?.Clear();
         _cryptoKey?.Dispose();
         if (_ownsHttpClient)
             _httpClient.Dispose();
         GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    ///     Processes an HTTP request to validate JWT authentication
+    /// </summary>
+    /// <param name="context">HTTP context for the current request</param>
+    /// <param name="next">Next middleware delegate</param>
+    public async Task InvokeAsync(HttpContext context, RequestDelegate next)
+    {
+        if (ShouldSkipAuthentication(context.Request.Path))
+        {
+            await next(context);
+            return;
+        }
+
+        var result = await ValidateJwtAsync(context);
+
+        if (!result.IsValid)
+        {
+            _logger.LogWarning("JWT authentication failed: {Error}", result.ErrorMessage);
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(JsonSerializer.Serialize(new
+            {
+                error = "Unauthorized",
+                message = result.ErrorMessage ?? "Invalid or missing JWT token"
+            }));
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(result.GroupId))
+            context.Items["GroupId"] = result.GroupId;
+        if (!string.IsNullOrEmpty(result.UserId))
+            context.Items["UserId"] = result.UserId;
+
+        await next(context);
     }
 
     /// <summary>
@@ -182,41 +221,6 @@ public class JwtAuthenticationMiddleware : IDisposable
     }
 
     /// <summary>
-    ///     Processes an HTTP request to validate JWT authentication
-    /// </summary>
-    /// <param name="context">HTTP context for the current request</param>
-    public async Task InvokeAsync(HttpContext context)
-    {
-        if (ShouldSkipAuthentication(context.Request.Path))
-        {
-            await _next(context);
-            return;
-        }
-
-        var result = await ValidateJwtAsync(context);
-
-        if (!result.IsValid)
-        {
-            _logger.LogWarning("JWT authentication failed: {Error}", result.ErrorMessage);
-            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            context.Response.ContentType = "application/json";
-            await context.Response.WriteAsync(JsonSerializer.Serialize(new
-            {
-                error = "Unauthorized",
-                message = result.ErrorMessage ?? "Invalid or missing JWT token"
-            }));
-            return;
-        }
-
-        if (!string.IsNullOrEmpty(result.TenantId))
-            context.Items["TenantId"] = result.TenantId;
-        if (!string.IsNullOrEmpty(result.UserId))
-            context.Items["UserId"] = result.UserId;
-
-        await _next(context);
-    }
-
-    /// <summary>
     ///     Determines if authentication should be skipped for health/metrics endpoints
     /// </summary>
     /// <param name="path">Request path to check</param>
@@ -249,10 +253,30 @@ public class JwtAuthenticationMiddleware : IDisposable
         {
             JwtMode.Local => ValidateLocal(token),
             JwtMode.Gateway => ValidateGateway(context),
-            JwtMode.Introspection => await ValidateIntrospectionAsync(token),
-            JwtMode.Custom => await ValidateCustomAsync(token),
+            JwtMode.Introspection => await ValidateWithCacheAsync(token, () => ValidateIntrospectionAsync(token)),
+            JwtMode.Custom => await ValidateWithCacheAsync(token, () => ValidateCustomAsync(token)),
             _ => new JwtAuthResult { IsValid = false, ErrorMessage = "Unknown authentication mode" }
         };
+    }
+
+    /// <summary>
+    ///     Validates JWT token with optional caching.
+    ///     Only successful validation results are cached.
+    /// </summary>
+    /// <param name="token">Token to use as cache key</param>
+    /// <param name="validateFunc">Function to call when cache misses</param>
+    /// <returns>Authentication result</returns>
+    private async Task<JwtAuthResult> ValidateWithCacheAsync(
+        string token,
+        Func<Task<JwtAuthResult>> validateFunc)
+    {
+        if (_cache == null)
+            return await validateFunc();
+
+        return await _cache.GetOrValidateAsync(
+            token,
+            validateFunc,
+            result => result.IsValid);
     }
 
     /// <summary>
@@ -277,15 +301,15 @@ public class JwtAuthenticationMiddleware : IDisposable
             };
             var principal = handler.ValidateToken(token, _validationParameters, out _);
 
-            var tenantId = principal.FindFirst(_config.TenantIdClaim)?.Value;
+            var groupId = principal.FindFirst(_config.GroupIdentifierClaim)?.Value;
             var userId = principal.FindFirst(_config.UserIdClaim)?.Value;
 
-            _logger.LogDebug("JWT validated for tenant: {TenantId}, user: {UserId}", tenantId, userId);
+            _logger.LogDebug("JWT validated for group: {GroupId}, user: {UserId}", groupId, userId);
 
             return new JwtAuthResult
             {
                 IsValid = true,
-                TenantId = tenantId,
+                GroupId = groupId,
                 UserId = userId
             };
         }
@@ -319,31 +343,22 @@ public class JwtAuthenticationMiddleware : IDisposable
 
     /// <summary>
     ///     Gateway mode: Trust that the API Gateway has validated the token
-    ///     Extract tenant/user ID from configured headers
+    ///     Extract group/user ID from configured headers
     /// </summary>
     /// <param name="context">HTTP context containing the request</param>
     /// <returns>Authentication result</returns>
     private JwtAuthResult ValidateGateway(HttpContext context)
     {
-        var tenantId = context.Request.Headers[_config.TenantIdHeader].FirstOrDefault();
+        var groupId = context.Request.Headers[_config.GroupIdentifierHeader].FirstOrDefault();
         var userId = context.Request.Headers[_config.UserIdHeader].FirstOrDefault();
 
-        if (string.IsNullOrEmpty(tenantId) && string.IsNullOrEmpty(userId))
-        {
-            _logger.LogWarning("Gateway mode: Missing identity headers");
-            return new JwtAuthResult
-            {
-                IsValid = false,
-                ErrorMessage = "Missing identity headers from gateway"
-            };
-        }
-
-        _logger.LogDebug("Gateway mode: Trusted request for tenant {TenantId}, user {UserId}", tenantId, userId);
+        _logger.LogDebug("Gateway mode: Trusted request for group {GroupId}, user {UserId}",
+            groupId ?? "(anonymous)", userId ?? "(anonymous)");
 
         return new JwtAuthResult
         {
             IsValid = true,
-            TenantId = tenantId,
+            GroupId = groupId,
             UserId = userId
         };
     }
@@ -379,8 +394,7 @@ public class JwtAuthenticationMiddleware : IDisposable
                 ["token_type_hint"] = "access_token"
             });
 
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(_config.ExternalTimeoutSeconds));
-            var response = await _httpClient.SendAsync(request, cts.Token);
+            var response = await _httpClient.SendAsync(request);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -392,7 +406,7 @@ public class JwtAuthenticationMiddleware : IDisposable
                 };
             }
 
-            var content = await response.Content.ReadAsStringAsync(cts.Token);
+            var content = await response.Content.ReadAsStringAsync();
             var result = JsonSerializer.Deserialize<IntrospectionResponse>(content, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
@@ -404,7 +418,7 @@ public class JwtAuthenticationMiddleware : IDisposable
                 return new JwtAuthResult
                 {
                     IsValid = true,
-                    TenantId = result.TenantId ?? result.ClientId,
+                    GroupId = result.GroupId ?? result.ClientId,
                     UserId = result.Sub
                 };
             }
@@ -448,8 +462,7 @@ public class JwtAuthenticationMiddleware : IDisposable
                 Encoding.UTF8,
                 "application/json");
 
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(_config.ExternalTimeoutSeconds));
-            var response = await _httpClient.SendAsync(request, cts.Token);
+            var response = await _httpClient.SendAsync(request);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -461,7 +474,7 @@ public class JwtAuthenticationMiddleware : IDisposable
                 };
             }
 
-            var content = await response.Content.ReadAsStringAsync(cts.Token);
+            var content = await response.Content.ReadAsStringAsync();
             var result = JsonSerializer.Deserialize<CustomValidationResponse>(content, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
@@ -469,11 +482,11 @@ public class JwtAuthenticationMiddleware : IDisposable
 
             if (result?.Valid == true)
             {
-                _logger.LogDebug("Custom endpoint validated token for tenant: {TenantId}", result.TenantId);
+                _logger.LogDebug("Custom endpoint validated token for group: {GroupId}", result.GroupId);
                 return new JwtAuthResult
                 {
                     IsValid = true,
-                    TenantId = result.TenantId,
+                    GroupId = result.GroupId,
                     UserId = result.UserId
                 };
             }
@@ -505,7 +518,7 @@ public class JwtAuthenticationMiddleware : IDisposable
 
         [JsonPropertyName("client_id")] public string? ClientId { get; init; }
 
-        [JsonPropertyName("tenant_id")] public string? TenantId { get; init; }
+        [JsonPropertyName("group_id")] public string? GroupId { get; init; }
     }
 
     /// <summary>
@@ -515,32 +528,10 @@ public class JwtAuthenticationMiddleware : IDisposable
     {
         public bool Valid { get; init; }
 
-        [JsonPropertyName("tenant_id")] public string? TenantId { get; init; }
+        [JsonPropertyName("group_id")] public string? GroupId { get; init; }
 
         [JsonPropertyName("user_id")] public string? UserId { get; init; }
 
         public string? Error { get; init; }
-    }
-}
-
-/// <summary>
-///     Extension methods for adding JWT authentication middleware
-/// </summary>
-public static class JwtAuthenticationExtensions
-{
-    /// <summary>
-    ///     Adds JWT authentication middleware to the application pipeline
-    /// </summary>
-    /// <param name="app">The application builder</param>
-    /// <param name="config">JWT configuration</param>
-    /// <returns>The application builder for chaining</returns>
-    public static IApplicationBuilder UseJwtAuthentication(
-        this IApplicationBuilder app,
-        JwtConfig config)
-    {
-        if (!config.Enabled)
-            return app;
-
-        return app.UseMiddleware<JwtAuthenticationMiddleware>(config);
     }
 }

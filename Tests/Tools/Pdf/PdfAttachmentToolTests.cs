@@ -4,6 +4,11 @@ using AsposeMcpServer.Tools.Pdf;
 
 namespace AsposeMcpServer.Tests.Tools.Pdf;
 
+/// <summary>
+///     Integration tests for PdfAttachmentTool.
+///     Focuses on session management, file I/O, and operation routing.
+///     Detailed parameter validation and business logic tests are in Handler tests.
+/// </summary>
 public class PdfAttachmentToolTests : PdfTestBase
 {
     private readonly PdfAttachmentTool _tool;
@@ -40,7 +45,7 @@ public class PdfAttachmentToolTests : PdfTestBase
         return filePath;
     }
 
-    #region General
+    #region File I/O Smoke Tests
 
     [Fact]
     public void Add_ShouldAddAttachment()
@@ -56,34 +61,12 @@ public class PdfAttachmentToolTests : PdfTestBase
     }
 
     [Fact]
-    public void Add_WithDescription_ShouldAddAttachmentWithDescription()
-    {
-        var pdfPath = CreateTestPdf("test_add_desc.pdf");
-        var attachmentPath = CreateTestAttachment("test_attachment_desc.txt");
-        var outputPath = CreateTestFilePath("test_add_desc_output.pdf");
-        var result = _tool.Execute("add", pdfPath, outputPath: outputPath,
-            attachmentPath: attachmentPath, attachmentName: "test_attachment_desc.txt",
-            description: "Test description");
-        Assert.StartsWith("Added attachment", result);
-        Assert.True(File.Exists(outputPath));
-    }
-
-    [Fact]
     public void Get_WithAttachments_ShouldReturnAttachmentInfo()
     {
         var pdfPath = CreatePdfWithAttachment("test_get.pdf", "test_attachment.txt");
         var result = _tool.Execute("get", pdfPath);
         Assert.Contains("\"count\": 1", result);
         Assert.Contains("test_attachment.txt", result);
-    }
-
-    [Fact]
-    public void Get_WithNoAttachments_ShouldReturnEmptyResult()
-    {
-        var pdfPath = CreateTestPdf("test_get_empty.pdf");
-        var result = _tool.Execute("get", pdfPath);
-        Assert.Contains("\"count\": 0", result);
-        Assert.Contains("No attachments found", result);
     }
 
     [Fact]
@@ -98,11 +81,15 @@ public class PdfAttachmentToolTests : PdfTestBase
         Assert.Empty(document.EmbeddedFiles);
     }
 
+    #endregion
+
+    #region Operation Routing
+
     [Theory]
     [InlineData("ADD")]
     [InlineData("Add")]
     [InlineData("add")]
-    public void Operation_ShouldBeCaseInsensitive_Add(string operation)
+    public void Operation_ShouldBeCaseInsensitive(string operation)
     {
         var pdfPath = CreateTestPdf($"test_case_{operation}.pdf");
         var attachmentPath = CreateTestAttachment($"test_case_{operation}.txt");
@@ -112,21 +99,6 @@ public class PdfAttachmentToolTests : PdfTestBase
         Assert.StartsWith("Added attachment", result);
     }
 
-    [Theory]
-    [InlineData("GET")]
-    [InlineData("Get")]
-    [InlineData("get")]
-    public void Operation_ShouldBeCaseInsensitive_Get(string operation)
-    {
-        var pdfPath = CreateTestPdf($"test_case_get_{operation}.pdf");
-        var result = _tool.Execute(operation, pdfPath);
-        Assert.Contains("count", result);
-    }
-
-    #endregion
-
-    #region Exception
-
     [Fact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
     {
@@ -135,72 +107,9 @@ public class PdfAttachmentToolTests : PdfTestBase
         Assert.Contains("Unknown operation", ex.Message);
     }
 
-    [Fact]
-    public void Add_WithMissingAttachmentPath_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreateTestPdf("test_add_no_path.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", pdfPath, attachmentName: "test.txt"));
-        Assert.Contains("attachmentPath is required", ex.Message);
-    }
-
-    [Fact]
-    public void Add_WithMissingAttachmentName_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreateTestPdf("test_add_no_name.pdf");
-        var attachmentPath = CreateTestAttachment("test_no_name.txt");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", pdfPath, attachmentPath: attachmentPath));
-        Assert.Contains("attachmentName is required", ex.Message);
-    }
-
-    [Fact]
-    public void Add_WithNonExistentFile_ShouldThrowFileNotFoundException()
-    {
-        var pdfPath = CreateTestPdf("test_add_notfound.pdf");
-        Assert.Throws<FileNotFoundException>(() =>
-            _tool.Execute("add", pdfPath, attachmentPath: "nonexistent_file.txt",
-                attachmentName: "test.txt"));
-    }
-
-    [Fact]
-    public void Add_WithDuplicateName_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreatePdfWithAttachment("test_add_duplicate.pdf");
-        var attachmentPath = CreateTestAttachment("test_dup.txt");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", pdfPath, attachmentPath: attachmentPath,
-                attachmentName: "existing.txt"));
-        Assert.Contains("already exists", ex.Message);
-    }
-
-    [Fact]
-    public void Delete_WithMissingAttachmentName_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreatePdfWithAttachment("test_delete_no_name.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("delete", pdfPath));
-        Assert.Contains("attachmentName is required", ex.Message);
-    }
-
-    [Fact]
-    public void Delete_WithNonExistentAttachment_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreateTestPdf("test_delete_notfound.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("delete", pdfPath, attachmentName: "nonexistent.txt"));
-        Assert.Contains("not found", ex.Message);
-    }
-
-    [Fact]
-    public void Execute_WithNoPathOrSessionId_ShouldThrowException()
-    {
-        Assert.ThrowsAny<Exception>(() => _tool.Execute("get"));
-    }
-
     #endregion
 
-    #region Session
+    #region Session Management
 
     [Fact]
     public void Get_WithSessionId_ShouldGetFromSession()
@@ -224,25 +133,10 @@ public class PdfAttachmentToolTests : PdfTestBase
     }
 
     [Fact]
-    public void Add_WithSessionId_ShouldModifyInMemory()
-    {
-        var pdfPath = CreateTestPdf("test_session_memory.pdf");
-        var attachmentPath = CreateTestAttachment("memory_attachment.txt");
-        var sessionId = OpenSession(pdfPath);
-        _tool.Execute("add", sessionId: sessionId,
-            attachmentPath: attachmentPath, attachmentName: "memory_attachment.txt");
-        var document = SessionManager.GetDocument<Document>(sessionId);
-        Assert.NotNull(document);
-        Assert.True(document.EmbeddedFiles.Count > 0);
-    }
-
-    [Fact]
     public void Delete_WithSessionId_ShouldDeleteFromSession()
     {
         var pdfPath = CreatePdfWithAttachment("test_session_delete.pdf", "to_delete.txt");
         var sessionId = OpenSession(pdfPath);
-        var docBefore = SessionManager.GetDocument<Document>(sessionId);
-        Assert.True(docBefore.EmbeddedFiles.Count > 0);
         var result = _tool.Execute("delete", sessionId: sessionId, attachmentName: "to_delete.txt");
         Assert.StartsWith("Deleted attachment", result);
         Assert.Contains("session", result);

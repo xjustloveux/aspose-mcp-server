@@ -1,7 +1,8 @@
 using System.ComponentModel;
-using System.Text.Json;
 using Aspose.Pdf;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.Pdf.Properties;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Pdf;
@@ -12,6 +13,11 @@ namespace AsposeMcpServer.Tools.Pdf;
 [McpServerToolType]
 public class PdfPropertiesTool
 {
+    /// <summary>
+    ///     Handler registry for properties operations.
+    /// </summary>
+    private readonly HandlerRegistry<Document> _handlerRegistry;
+
     /// <summary>
     ///     The session identity accessor for session isolation.
     /// </summary>
@@ -32,6 +38,7 @@ public class PdfPropertiesTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = PdfPropertiesHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -73,118 +80,57 @@ Usage examples:
         [Description("Creator (for set)")] string? creator = null,
         [Description("Producer (for set)")] string? producer = null)
     {
-        return operation.ToLower() switch
-        {
-            "get" => GetProperties(sessionId, path),
-            "set" => SetProperties(sessionId, path, outputPath, title, author, subject, keywords, creator, producer),
-            _ => throw new ArgumentException($"Unknown operation: {operation}")
-        };
-    }
-
-    /// <summary>
-    ///     Retrieves document properties from the PDF.
-    /// </summary>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
-    /// <param name="path">The PDF file path.</param>
-    /// <returns>A JSON string containing document properties.</returns>
-    private string GetProperties(string? sessionId, string? path)
-    {
         using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
-        var document = ctx.Document;
-        var metadata = document.Metadata;
 
-        var result = new
+        var parameters = BuildParameters(operation, title, author, subject, keywords, creator, producer);
+
+        var handler = _handlerRegistry.GetHandler(operation);
+
+        var operationContext = new OperationContext<Document>
         {
-            title = metadata["Title"]?.ToString(),
-            author = metadata["Author"]?.ToString(),
-            subject = metadata["Subject"]?.ToString(),
-            keywords = metadata["Keywords"]?.ToString(),
-            creator = metadata["Creator"]?.ToString(),
-            producer = metadata["Producer"]?.ToString(),
-            creationDate = metadata["CreationDate"]?.ToString(),
-            modificationDate = metadata["ModDate"]?.ToString(),
-            totalPages = document.Pages.Count,
-            isEncrypted = document.IsEncrypted,
-            isLinearized = document.IsLinearized
+            Document = ctx.Document,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = path,
+            OutputPath = outputPath
         };
 
-        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        var result = handler.Execute(operationContext, parameters);
+
+        if (operation.ToLowerInvariant() == "get")
+            return result;
+
+        if (operationContext.IsModified)
+            ctx.Save(outputPath);
+
+        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Sets document properties in the PDF.
+    ///     Builds OperationParameters from method parameters.
     /// </summary>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
-    /// <param name="path">The PDF file path.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="title">Optional document title.</param>
-    /// <param name="author">Optional document author.</param>
-    /// <param name="subject">Optional document subject.</param>
-    /// <param name="keywords">Optional document keywords.</param>
-    /// <param name="creator">Optional document creator.</param>
-    /// <param name="producer">Optional document producer.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when property modification fails.</exception>
-    private string SetProperties(string? sessionId, string? path, string? outputPath, string? title, string? author,
-        string? subject, string? keywords, string? creator, string? producer)
+    private static OperationParameters BuildParameters(
+        string operation,
+        string? title,
+        string? author,
+        string? subject,
+        string? keywords,
+        string? creator,
+        string? producer)
     {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
-        var document = ctx.Document;
-        var docInfo = document.Info;
+        var parameters = new OperationParameters();
 
-        try
+        if (operation.ToLowerInvariant() == "set")
         {
-            SetPropertyWithFallback(document, "Title", title, v => docInfo.Title = v);
-            SetPropertyWithFallback(document, "Author", author, v => docInfo.Author = v);
-            SetPropertyWithFallback(document, "Subject", subject, v => docInfo.Subject = v);
-            SetPropertyWithFallback(document, "Keywords", keywords, v => docInfo.Keywords = v);
-            SetPropertyWithFallback(document, "Creator", creator, null);
-            SetPropertyWithFallback(document, "Producer", producer, null);
-        }
-        catch (ArgumentException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            throw new ArgumentException(
-                $"Failed to set document properties: {ex.Message}. Note: Some PDF files may have restrictions on modifying metadata, or the document may be encrypted/protected.");
+            if (title != null) parameters.Set("title", title);
+            if (author != null) parameters.Set("author", author);
+            if (subject != null) parameters.Set("subject", subject);
+            if (keywords != null) parameters.Set("keywords", keywords);
+            if (creator != null) parameters.Set("creator", creator);
+            if (producer != null) parameters.Set("producer", producer);
         }
 
-        ctx.Save(outputPath);
-
-        return $"Document properties updated. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Sets a document property with fallback to DocumentInfo if metadata fails.
-    /// </summary>
-    /// <param name="document">The PDF document.</param>
-    /// <param name="key">The property key to set.</param>
-    /// <param name="value">The value to set.</param>
-    /// <param name="infoSetter">Optional fallback setter using DocumentInfo.</param>
-    private static void SetPropertyWithFallback(Document document, string key, string? value,
-        Action<string>? infoSetter)
-    {
-        if (string.IsNullOrEmpty(value)) return;
-
-        try
-        {
-            document.Metadata[key] = value;
-        }
-        catch
-        {
-            if (infoSetter != null)
-                try
-                {
-                    infoSetter(value);
-                }
-                catch (Exception ex)
-                {
-                    Console.Error.WriteLine($"[WARN] Failed to set PDF {key} property: {ex.Message}");
-                }
-            else
-                Console.Error.WriteLine($"[WARN] Failed to set PDF {key} property (may be read-only)");
-        }
+        return parameters;
     }
 }

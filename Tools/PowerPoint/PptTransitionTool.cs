@@ -1,9 +1,8 @@
 using System.ComponentModel;
-using System.Text.Json;
 using Aspose.Slides;
-using Aspose.Slides.SlideShow;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.PowerPoint.Transition;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.PowerPoint;
@@ -15,6 +14,11 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 [McpServerToolType]
 public class PptTransitionTool
 {
+    /// <summary>
+    ///     Handler registry for transition operations.
+    /// </summary>
+    private readonly HandlerRegistry<Presentation> _handlerRegistry;
+
     /// <summary>
     ///     Identity accessor for session isolation.
     /// </summary>
@@ -35,6 +39,7 @@ public class PptTransitionTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = PptTransitionHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -85,100 +90,55 @@ Usage examples:
     {
         using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
-        return operation.ToLower() switch
+        var parameters = BuildParameters(operation, slideIndex, transitionType, advanceAfterSeconds);
+
+        var handler = _handlerRegistry.GetHandler(operation);
+
+        var operationContext = new OperationContext<Presentation>
         {
-            "set" => SetTransition(ctx, outputPath, slideIndex, transitionType, advanceAfterSeconds),
-            "get" => GetTransition(ctx, slideIndex),
-            "delete" => DeleteTransition(ctx, outputPath, slideIndex),
-            _ => throw new ArgumentException($"Unknown operation: {operation}")
+            Document = ctx.Document,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = path,
+            OutputPath = outputPath
         };
+
+        var result = handler.Execute(operationContext, parameters);
+
+        if (operation.ToLowerInvariant() == "get")
+            return result;
+
+        if (operationContext.IsModified)
+            ctx.Save(outputPath);
+
+        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Sets slide transition effect.
+    ///     Builds OperationParameters from method parameters.
     /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="slideIndex">The slide index (0-based).</param>
-    /// <param name="transitionTypeStr">The transition type string.</param>
-    /// <param name="advanceAfterSeconds">Seconds before auto-advancing to next slide.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when transitionType is not provided or invalid.</exception>
-    private static string SetTransition(DocumentContext<Presentation> ctx, string? outputPath, int slideIndex,
-        string? transitionTypeStr, double? advanceAfterSeconds)
+    private static OperationParameters BuildParameters(
+        string operation,
+        int slideIndex,
+        string? transitionType,
+        double? advanceAfterSeconds)
     {
-        if (string.IsNullOrEmpty(transitionTypeStr))
-            throw new ArgumentException("transitionType is required for set operation");
+        var parameters = new OperationParameters();
+        parameters.Set("slideIndex", slideIndex);
 
-        if (!Enum.TryParse<TransitionType>(transitionTypeStr, true, out var transitionType))
-            throw new ArgumentException(
-                $"Invalid transition type: '{transitionTypeStr}'. Valid values: {string.Join(", ", Enum.GetNames<TransitionType>())}");
-
-        var presentation = ctx.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-        var transition = slide.SlideShowTransition;
-
-        transition.Type = transitionType;
-
-        if (advanceAfterSeconds.HasValue)
+        switch (operation.ToLowerInvariant())
         {
-            transition.AdvanceAfterTime = (uint)(advanceAfterSeconds.Value * 1000);
-            transition.AdvanceOnClick = true;
+            case "set":
+                if (transitionType != null) parameters.Set("transitionType", transitionType);
+                if (advanceAfterSeconds.HasValue) parameters.Set("advanceAfterSeconds", advanceAfterSeconds.Value);
+                break;
+
+            case "get":
+            case "delete":
+                break;
         }
 
-        ctx.Save(outputPath);
-
-        var message = $"Transition '{transition.Type}' set for slide {slideIndex}.";
-        if (advanceAfterSeconds.HasValue)
-            message += $" Auto-advance after {advanceAfterSeconds.Value:0.##}s.";
-        return message + $" {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Gets transition information for a slide.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="slideIndex">The slide index (0-based).</param>
-    /// <returns>A JSON string containing the transition information.</returns>
-    private static string GetTransition(DocumentContext<Presentation> ctx, int slideIndex)
-    {
-        var presentation = ctx.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-        var transition = slide.SlideShowTransition;
-
-        var advanceAfterTimeMs = transition?.AdvanceAfterTime ?? 0;
-        var result = new
-        {
-            slideIndex,
-            hasTransition = transition?.Type != TransitionType.None,
-            type = transition?.Type.ToString(),
-            speed = transition?.Speed.ToString(),
-            advanceOnClick = transition?.AdvanceOnClick,
-            advanceAfterSeconds = advanceAfterTimeMs > 0 ? advanceAfterTimeMs / 1000.0 : (double?)null,
-            soundMode = transition?.SoundMode.ToString(),
-            hasSound = transition?.Sound != null
-        };
-
-        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
-    }
-
-    /// <summary>
-    ///     Removes transition from a slide.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="slideIndex">The slide index (0-based).</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    private static string DeleteTransition(DocumentContext<Presentation> ctx, string? outputPath, int slideIndex)
-    {
-        var presentation = ctx.Document;
-        var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
-        slide.SlideShowTransition.Type = TransitionType.None;
-        slide.SlideShowTransition.AdvanceOnClick = true;
-        slide.SlideShowTransition.AdvanceAfterTime = 0;
-
-        ctx.Save(outputPath);
-
-        return $"Transition removed from slide {slideIndex}. {ctx.GetOutputMessage(outputPath)}";
+        return parameters;
     }
 }

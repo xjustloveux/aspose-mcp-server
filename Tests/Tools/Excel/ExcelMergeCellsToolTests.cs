@@ -5,6 +5,11 @@ using AsposeMcpServer.Tools.Excel;
 
 namespace AsposeMcpServer.Tests.Tools.Excel;
 
+/// <summary>
+///     Integration tests for ExcelMergeCellsTool.
+///     Focuses on session management, file I/O, and operation routing.
+///     Detailed parameter validation and business logic tests are in Handler tests.
+/// </summary>
 public class ExcelMergeCellsToolTests : ExcelTestBase
 {
     private readonly ExcelMergeCellsTool _tool;
@@ -33,7 +38,7 @@ public class ExcelMergeCellsToolTests : ExcelTestBase
         return workbookPath;
     }
 
-    #region General
+    #region File I/O Smoke Tests
 
     [Fact]
     public void Merge_ShouldMergeRange()
@@ -44,36 +49,6 @@ public class ExcelMergeCellsToolTests : ExcelTestBase
         Assert.StartsWith("Range A1:C1 merged", result);
         using var workbook = new Workbook(outputPath);
         Assert.True(workbook.Worksheets[0].Cells.MergedCells.Count > 0);
-    }
-
-    [Fact]
-    public void Merge_MultipleRows_ShouldMerge()
-    {
-        var workbookPath = CreateExcelWorkbookWithData("test_merge_multi.xlsx", 5, 5);
-        var outputPath = CreateTestFilePath("test_merge_multi_output.xlsx");
-        var result = _tool.Execute("merge", workbookPath, range: "A1:B3", outputPath: outputPath);
-        Assert.StartsWith("Range A1:B3 merged", result);
-        using var workbook = new Workbook(outputPath);
-        Assert.Single(workbook.Worksheets[0].Cells.MergedCells);
-    }
-
-    [Fact]
-    public void Merge_WithSheetIndex_ShouldMergeCorrectSheet()
-    {
-        var workbookPath = CreateExcelWorkbookWithData("test_merge_sheet.xlsx", 3);
-        using (var wb = new Workbook(workbookPath))
-        {
-            wb.Worksheets.Add("Sheet2");
-            wb.Worksheets[1].Cells[0, 0].Value = "Test";
-            wb.Save(workbookPath);
-        }
-
-        var outputPath = CreateTestFilePath("test_merge_sheet_output.xlsx");
-        var result = _tool.Execute("merge", workbookPath, sheetIndex: 1, range: "A1:C1", outputPath: outputPath);
-        Assert.StartsWith("Range A1:C1 merged", result);
-        using var workbook = new Workbook(outputPath);
-        Assert.Empty(workbook.Worksheets[0].Cells.MergedCells);
-        Assert.Single(workbook.Worksheets[1].Cells.MergedCells);
     }
 
     [Fact]
@@ -93,15 +68,7 @@ public class ExcelMergeCellsToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithMergedCells("test_get.xlsx");
         var result = _tool.Execute("get", workbookPath);
         var json = JsonDocument.Parse(result);
-        var root = json.RootElement;
-        Assert.Equal(1, root.GetProperty("count").GetInt32());
-        var firstItem = root.GetProperty("items")[0];
-        Assert.Equal("A1:C1", firstItem.GetProperty("range").GetString());
-        Assert.Equal("A1", firstItem.GetProperty("startCell").GetString());
-        Assert.Equal("C1", firstItem.GetProperty("endCell").GetString());
-        Assert.Equal(1, firstItem.GetProperty("rowCount").GetInt32());
-        Assert.Equal(3, firstItem.GetProperty("columnCount").GetInt32());
-        Assert.Equal("Header", firstItem.GetProperty("value").GetString());
+        Assert.Equal(1, json.RootElement.GetProperty("count").GetInt32());
     }
 
     [Fact]
@@ -111,64 +78,23 @@ public class ExcelMergeCellsToolTests : ExcelTestBase
         var result = _tool.Execute("get", workbookPath);
         var json = JsonDocument.Parse(result);
         Assert.Equal(0, json.RootElement.GetProperty("count").GetInt32());
-        Assert.Equal("No merged cells found", json.RootElement.GetProperty("message").GetString());
     }
 
-    [Fact]
-    public void Get_MultipleMergedRanges_ShouldReturnAll()
-    {
-        var workbookPath = CreateExcelWorkbookWithData("test_get_multi.xlsx", 10, 5);
-        using (var wb = new Workbook(workbookPath))
-        {
-            wb.Worksheets[0].Cells.Merge(0, 0, 1, 3);
-            wb.Worksheets[0].Cells.Merge(2, 0, 2, 2);
-            wb.Save(workbookPath);
-        }
+    #endregion
 
-        var result = _tool.Execute("get", workbookPath);
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(2, json.RootElement.GetProperty("count").GetInt32());
-        Assert.Equal(2, json.RootElement.GetProperty("items").GetArrayLength());
-    }
+    #region Operation Routing
 
     [Theory]
     [InlineData("MERGE")]
     [InlineData("Merge")]
     [InlineData("merge")]
-    public void Operation_ShouldBeCaseInsensitive_Merge(string operation)
+    public void Operation_ShouldBeCaseInsensitive(string operation)
     {
         var workbookPath = CreateExcelWorkbookWithData($"test_case_{operation}.xlsx", 3);
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.xlsx");
         var result = _tool.Execute(operation, workbookPath, range: "A1:B1", outputPath: outputPath);
         Assert.StartsWith("Range A1:B1 merged", result);
     }
-
-    [Theory]
-    [InlineData("GET")]
-    [InlineData("Get")]
-    [InlineData("get")]
-    public void Operation_ShouldBeCaseInsensitive_Get(string operation)
-    {
-        var workbookPath = CreateExcelWorkbook($"test_case_get_{operation}.xlsx");
-        var result = _tool.Execute(operation, workbookPath);
-        Assert.Contains("count", result);
-    }
-
-    [Theory]
-    [InlineData("UNMERGE")]
-    [InlineData("Unmerge")]
-    [InlineData("unmerge")]
-    public void Operation_ShouldBeCaseInsensitive_Unmerge(string operation)
-    {
-        var workbookPath = CreateWorkbookWithMergedCells($"test_case_unmerge_{operation}.xlsx", "A1:B1");
-        var outputPath = CreateTestFilePath($"test_case_unmerge_{operation}_output.xlsx");
-        var result = _tool.Execute(operation, workbookPath, range: "A1:B1", outputPath: outputPath);
-        Assert.StartsWith("Range A1:B1 unmerged", result);
-    }
-
-    #endregion
-
-    #region Exception
 
     [Fact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
@@ -178,72 +104,9 @@ public class ExcelMergeCellsToolTests : ExcelTestBase
         Assert.Contains("Unknown operation", ex.Message);
     }
 
-    [Fact]
-    public void Merge_WithMissingRange_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_merge_missing_range.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("merge", workbookPath));
-        Assert.Contains("range", ex.Message.ToLower());
-    }
-
-    [Fact]
-    public void Merge_WithSingleCell_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateExcelWorkbookWithData("test_merge_single.xlsx", 3);
-        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("merge", workbookPath, range: "A1"));
-        Assert.Contains("Cannot merge a single cell", ex.Message);
-    }
-
-    [Fact]
-    public void Merge_WithInvalidSheetIndex_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateExcelWorkbookWithData("test_merge_invalid_sheet.xlsx", 3);
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("merge", workbookPath, sheetIndex: 99, range: "A1:C1"));
-        Assert.Contains("out of range", ex.Message);
-    }
-
-    [Fact]
-    public void Unmerge_WithMissingRange_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_unmerge_missing_range.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("unmerge", workbookPath));
-        Assert.Contains("range", ex.Message.ToLower());
-    }
-
-    [Fact]
-    public void Unmerge_WithInvalidSheetIndex_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateExcelWorkbookWithData("test_unmerge_invalid_sheet.xlsx", 3);
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("unmerge", workbookPath, sheetIndex: 99, range: "A1:C1"));
-        Assert.Contains("out of range", ex.Message);
-    }
-
-    [Fact]
-    public void Get_WithInvalidSheetIndex_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_get_invalid_sheet.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("get", workbookPath, sheetIndex: 99));
-        Assert.Contains("out of range", ex.Message);
-    }
-
-    [Fact]
-    public void Execute_WithEmptyPath_ShouldThrowException()
-    {
-        Assert.Throws<ArgumentException>(() => _tool.Execute("get", ""));
-    }
-
-    [Fact]
-    public void Execute_WithNoPathOrSessionId_ShouldThrowException()
-    {
-        Assert.ThrowsAny<Exception>(() => _tool.Execute("get"));
-    }
-
     #endregion
 
-    #region Session
+    #region Session Management
 
     [Fact]
     public void Merge_WithSessionId_ShouldMergeInMemory()

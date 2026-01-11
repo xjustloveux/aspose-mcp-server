@@ -1,12 +1,9 @@
 using System.ComponentModel;
-using System.Text.RegularExpressions;
 using Aspose.Pdf;
-using Aspose.Pdf.Annotations;
-using Aspose.Pdf.Text;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.Pdf.Redact;
 using ModelContextProtocol.Server;
-using Color = System.Drawing.Color;
 
 namespace AsposeMcpServer.Tools.Pdf;
 
@@ -16,6 +13,11 @@ namespace AsposeMcpServer.Tools.Pdf;
 [McpServerToolType]
 public class PdfRedactTool
 {
+    /// <summary>
+    ///     Handler registry for redact operations.
+    /// </summary>
+    private readonly HandlerRegistry<Document> _handlerRegistry;
+
     /// <summary>
     ///     The session identity accessor for session isolation.
     /// </summary>
@@ -36,6 +38,7 @@ public class PdfRedactTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = PdfRedactHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -49,7 +52,7 @@ public class PdfRedactTool
     /// <param name="y">Y position of redaction area in PDF coordinates (required for area redaction).</param>
     /// <param name="width">Width of redaction area in PDF points (required for area redaction).</param>
     /// <param name="height">Height of redaction area in PDF points (required for area redaction).</param>
-    /// <param name="textToRedact">Text to search and redact (alternative to area redaction).</param>
+    /// <param name="textToRedact">Text to search and redact (required for text redaction).</param>
     /// <param name="caseSensitive">Whether text search is case sensitive (default: true).</param>
     /// <param name="fillColor">Fill color (optional, default: black).</param>
     /// <param name="overlayText">Text to display over the redacted area (optional).</param>
@@ -57,6 +60,7 @@ public class PdfRedactTool
     /// <exception cref="ArgumentException">Thrown when required parameters are missing.</exception>
     [McpServerTool(Name = "pdf_redact")]
     [Description(@"Redact (black out) text or area on PDF page. This permanently removes the underlying content.
+Auto-detects mode: if textToRedact is provided, uses text search mode; otherwise uses area redaction mode.
 
 Usage examples:
 - Redact area: pdf_redact(path='doc.pdf', pageIndex=1, x=100, y=100, width=200, height=50)
@@ -71,7 +75,7 @@ Usage examples:
         string? sessionId = null,
         [Description("Output file path (file mode only)")]
         string? outputPath = null,
-        [Description("Page index (1-based, optional for text search - searches all pages if not specified)")]
+        [Description("Page index (1-based, required for area redaction, optional for text search)")]
         int? pageIndex = null,
         [Description(
             "X position of redaction area in PDF coordinates, origin at bottom-left corner (required for area redaction)")]
@@ -83,9 +87,9 @@ Usage examples:
         double? width = null,
         [Description("Height of redaction area in PDF points (required for area redaction)")]
         double? height = null,
-        [Description("Text to search and redact (alternative to area redaction, searches and redacts all occurrences)")]
+        [Description("Text to search and redact (if provided, uses text search mode instead of area redaction)")]
         string? textToRedact = null,
-        [Description("Whether text search is case sensitive (default: true, only for textToRedact)")]
+        [Description("Whether text search is case sensitive (default: true, only for text mode)")]
         bool caseSensitive = true,
         [Description("Fill color (optional, default: black, format: 'R,G,B' or color name)")]
         string? fillColor = null,
@@ -94,148 +98,70 @@ Usage examples:
     {
         using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
-        if (!string.IsNullOrEmpty(textToRedact))
-            return RedactByText(ctx, outputPath, textToRedact, pageIndex, caseSensitive, fillColor, overlayText);
+        // Auto-detect operation based on parameters
+        var operation = !string.IsNullOrEmpty(textToRedact) ? "text" : "area";
 
-        return RedactByArea(ctx, outputPath, pageIndex, x, y, width, height, fillColor, overlayText);
+        var parameters = BuildParameters(operation, pageIndex, x, y, width, height,
+            textToRedact, caseSensitive, fillColor, overlayText);
+
+        var handler = _handlerRegistry.GetHandler(operation);
+
+        var operationContext = new OperationContext<Document>
+        {
+            Document = ctx.Document,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = path,
+            OutputPath = outputPath
+        };
+
+        var result = handler.Execute(operationContext, parameters);
+
+        if (operationContext.IsModified)
+            ctx.Save(outputPath);
+
+        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Redacts text by searching for occurrences and applying redaction.
+    ///     Builds OperationParameters from method parameters.
     /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="textToRedact">The text to search for and redact.</param>
-    /// <param name="pageIndex">Optional 1-based page index to search on a specific page.</param>
-    /// <param name="caseSensitive">Whether the search is case-sensitive.</param>
-    /// <param name="fillColor">Optional fill color for the redaction.</param>
-    /// <param name="overlayText">Optional overlay text to display on the redaction.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when the page index is invalid.</exception>
-    private static string RedactByText(DocumentContext<Document> ctx, string? outputPath, string textToRedact,
-        int? pageIndex, bool caseSensitive, string? fillColor, string? overlayText)
+    private static OperationParameters BuildParameters(
+        string operation,
+        int? pageIndex,
+        double? x,
+        double? y,
+        double? width,
+        double? height,
+        string? textToRedact,
+        bool caseSensitive,
+        string? fillColor,
+        string? overlayText)
     {
-        var document = ctx.Document;
+        var parameters = new OperationParameters();
 
-        if (pageIndex.HasValue && (pageIndex.Value < 1 || pageIndex.Value > document.Pages.Count))
-            throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
-
-        TextFragmentAbsorber absorber;
-        if (caseSensitive)
+        switch (operation.ToLowerInvariant())
         {
-            absorber = new TextFragmentAbsorber(textToRedact);
-        }
-        else
-        {
-            var escapedPattern = Regex.Escape(textToRedact);
-            var textSearchOptions = new TextSearchOptions(true);
-            absorber = new TextFragmentAbsorber($"(?i){escapedPattern}", textSearchOptions);
-        }
+            case "area":
+                if (pageIndex.HasValue) parameters.Set("pageIndex", pageIndex.Value);
+                if (x.HasValue) parameters.Set("x", x.Value);
+                if (y.HasValue) parameters.Set("y", y.Value);
+                if (width.HasValue) parameters.Set("width", width.Value);
+                if (height.HasValue) parameters.Set("height", height.Value);
+                if (fillColor != null) parameters.Set("fillColor", fillColor);
+                if (overlayText != null) parameters.Set("overlayText", overlayText);
+                break;
 
-        var redactionCount = 0;
-        var pagesAffected = new HashSet<int>();
-
-        if (pageIndex.HasValue)
-            document.Pages[pageIndex.Value].Accept(absorber);
-        else
-            document.Pages.Accept(absorber);
-
-        foreach (var fragment in absorber.TextFragments)
-        {
-            var page = fragment.Page;
-            var rect = fragment.Rectangle;
-
-            var redactionAnnotation = new RedactionAnnotation(page, rect);
-            ApplyRedactionStyle(redactionAnnotation, fillColor, overlayText);
-
-            page.Annotations.Add(redactionAnnotation);
-            redactionAnnotation.Redact();
-
-            redactionCount++;
-            pagesAffected.Add(document.Pages.IndexOf(page));
+            case "text":
+                if (pageIndex.HasValue) parameters.Set("pageIndex", pageIndex.Value);
+                if (textToRedact != null) parameters.Set("textToRedact", textToRedact);
+                parameters.Set("caseSensitive", caseSensitive);
+                if (fillColor != null) parameters.Set("fillColor", fillColor);
+                if (overlayText != null) parameters.Set("overlayText", overlayText);
+                break;
         }
 
-        if (redactionCount == 0)
-            return $"No occurrences of '{textToRedact}' found. No redactions applied.";
-
-        ctx.Save(outputPath);
-        var pageInfo = pagesAffected.Count == 1
-            ? $"page {pagesAffected.First()}"
-            : $"{pagesAffected.Count} pages";
-        return
-            $"Redacted {redactionCount} occurrence(s) of '{textToRedact}' on {pageInfo}. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Redacts a specific rectangular area on a page.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="pageIndex">The 1-based page index.</param>
-    /// <param name="x">The X position of the redaction area.</param>
-    /// <param name="y">The Y position of the redaction area.</param>
-    /// <param name="width">The width of the redaction area.</param>
-    /// <param name="height">The height of the redaction area.</param>
-    /// <param name="fillColor">Optional fill color for the redaction.</param>
-    /// <param name="overlayText">Optional overlay text to display on the redaction.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when required parameters are missing or invalid.</exception>
-    private static string RedactByArea(DocumentContext<Document> ctx, string? outputPath,
-        int? pageIndex, double? x, double? y, double? width, double? height,
-        string? fillColor, string? overlayText)
-    {
-        if (!pageIndex.HasValue)
-            throw new ArgumentException("pageIndex is required for area redaction");
-        if (!x.HasValue)
-            throw new ArgumentException("x is required for area redaction");
-        if (!y.HasValue)
-            throw new ArgumentException("y is required for area redaction");
-        if (!width.HasValue)
-            throw new ArgumentException("width is required for area redaction");
-        if (!height.HasValue)
-            throw new ArgumentException("height is required for area redaction");
-
-        var document = ctx.Document;
-
-        if (pageIndex.Value < 1 || pageIndex.Value > document.Pages.Count)
-            throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
-
-        var page = document.Pages[pageIndex.Value];
-        var rect = new Rectangle(x.Value, y.Value, x.Value + width.Value, y.Value + height.Value);
-
-        var redactionAnnotation = new RedactionAnnotation(page, rect);
-        ApplyRedactionStyle(redactionAnnotation, fillColor, overlayText);
-
-        page.Annotations.Add(redactionAnnotation);
-        redactionAnnotation.Redact();
-
-        ctx.Save(outputPath);
-
-        return $"Redaction applied to page {pageIndex.Value}. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Applies styling options to a redaction annotation.
-    /// </summary>
-    /// <param name="annotation">The redaction annotation to style.</param>
-    /// <param name="fillColor">Optional fill color for the redaction.</param>
-    /// <param name="overlayText">Optional overlay text to display on the redaction.</param>
-    private static void ApplyRedactionStyle(RedactionAnnotation annotation, string? fillColor, string? overlayText)
-    {
-        if (!string.IsNullOrEmpty(fillColor))
-        {
-            var systemColor = ColorHelper.ParseColor(fillColor, Color.Black);
-            annotation.FillColor = ColorHelper.ToPdfColor(systemColor);
-        }
-        else
-        {
-            annotation.FillColor = Aspose.Pdf.Color.Black;
-        }
-
-        if (!string.IsNullOrEmpty(overlayText))
-        {
-            annotation.OverlayText = overlayText;
-            annotation.Repeat = true;
-        }
+        return parameters;
     }
 }

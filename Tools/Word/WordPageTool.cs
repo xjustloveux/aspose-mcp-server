@@ -1,8 +1,9 @@
 using System.ComponentModel;
 using System.Text.Json.Nodes;
 using Aspose.Words;
-using Aspose.Words.Layout;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.Word.Page;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Word;
@@ -15,6 +16,11 @@ namespace AsposeMcpServer.Tools.Word;
 [McpServerToolType]
 public class WordPageTool
 {
+    /// <summary>
+    ///     Handler registry for page operations
+    /// </summary>
+    private readonly HandlerRegistry<Document> _handlerRegistry;
+
     /// <summary>
     ///     Identity accessor for session isolation
     /// </summary>
@@ -35,6 +41,7 @@ public class WordPageTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = WordPageHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -117,423 +124,124 @@ Usage examples:
     {
         using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
-        return operation.ToLower() switch
+        var parameters = BuildParameters(operation, top, bottom, left, right, orientation, width, height, paperSize,
+            pageNumberFormat, startingPageNumber, sectionIndex, sectionIndices, pageIndex, insertAtPageIndex,
+            paragraphIndex);
+
+        var handler = _handlerRegistry.GetHandler(operation);
+
+        var operationContext = new OperationContext<Document>
         {
-            "set_margins" => SetMargins(ctx, outputPath, top, bottom, left, right, sectionIndex, sectionIndices),
-            "set_orientation" => SetOrientation(ctx, outputPath, orientation, sectionIndex, sectionIndices),
-            "set_size" => SetSize(ctx, outputPath, width, height, paperSize, sectionIndex, sectionIndices),
-            "set_page_number" => SetPageNumber(ctx, outputPath, pageNumberFormat, startingPageNumber, sectionIndex),
-            "set_page_setup" => SetPageSetup(ctx, outputPath, top, bottom, left, right, orientation, sectionIndex),
-            "delete_page" => DeletePage(ctx, outputPath, pageIndex),
-            "insert_blank_page" => InsertBlankPage(ctx, outputPath, insertAtPageIndex),
-            "add_page_break" => AddPageBreak(ctx, outputPath, paragraphIndex),
-            _ => throw new ArgumentException($"Unknown operation: {operation}")
+            Document = ctx.Document,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = path,
+            OutputPath = outputPath
         };
-    }
 
-    /// <summary>
-    ///     Gets the list of section indices to operate on based on provided parameters.
-    /// </summary>
-    /// <param name="doc">The Word document.</param>
-    /// <param name="sectionIndex">Optional single section index.</param>
-    /// <param name="sectionIndices">Optional array of section indices.</param>
-    /// <param name="validateRange">Whether to validate that indices are within range.</param>
-    /// <returns>A list of section indices to operate on.</returns>
-    /// <exception cref="ArgumentException">Thrown when section index is out of range.</exception>
-    private static List<int> GetTargetSections(Document doc, int? sectionIndex, JsonArray? sectionIndices,
-        bool validateRange = true)
-    {
-        if (sectionIndices is { Count: > 0 })
+        var result = handler.Execute(operationContext, parameters);
+
+        // Handle delete_page operation which creates a new document
+        if (operation.ToLower() == "delete_page" && operationContext.ResultDocument != null)
         {
-            var indices = sectionIndices
-                .Select(s => s?.GetValue<int>())
-                .Where(s => s.HasValue)
-                .Select(s => s!.Value)
-                .ToList();
-
-            if (validateRange)
-                foreach (var idx in indices)
-                    if (idx < 0 || idx >= doc.Sections.Count)
-                        throw new ArgumentException(
-                            $"sectionIndex {idx} must be between 0 and {doc.Sections.Count - 1}");
-
-            return indices;
-        }
-
-        if (sectionIndex.HasValue)
-        {
-            if (validateRange && (sectionIndex.Value < 0 || sectionIndex.Value >= doc.Sections.Count))
-                throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
-            return [sectionIndex.Value];
-        }
-
-        return Enumerable.Range(0, doc.Sections.Count).ToList();
-    }
-
-    /// <summary>
-    ///     Sets page margins for the specified sections.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="top">The top margin in points.</param>
-    /// <param name="bottom">The bottom margin in points.</param>
-    /// <param name="left">The left margin in points.</param>
-    /// <param name="right">The right margin in points.</param>
-    /// <param name="sectionIndex">Optional section index.</param>
-    /// <param name="sectionIndices">Optional array of section indices.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    private static string SetMargins(DocumentContext<Document> ctx, string? outputPath, double? top, double? bottom,
-        double? left, double? right, int? sectionIndex, JsonArray? sectionIndices)
-    {
-        var doc = ctx.Document;
-        var sectionsToUpdate = GetTargetSections(doc, sectionIndex, sectionIndices);
-
-        foreach (var idx in sectionsToUpdate)
-        {
-            var pageSetup = doc.Sections[idx].PageSetup;
-            if (top.HasValue) pageSetup.TopMargin = top.Value;
-            if (bottom.HasValue) pageSetup.BottomMargin = bottom.Value;
-            if (left.HasValue) pageSetup.LeftMargin = left.Value;
-            if (right.HasValue) pageSetup.RightMargin = right.Value;
-        }
-
-        ctx.Save(outputPath);
-        return $"Page margins updated for {sectionsToUpdate.Count} section(s)\n{ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Sets page orientation (portrait or landscape) for the specified sections.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="orientation">The page orientation (Portrait or Landscape).</param>
-    /// <param name="sectionIndex">Optional section index.</param>
-    /// <param name="sectionIndices">Optional array of section indices.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when orientation is not specified.</exception>
-    private static string SetOrientation(DocumentContext<Document> ctx, string? outputPath, string? orientation,
-        int? sectionIndex, JsonArray? sectionIndices)
-    {
-        if (string.IsNullOrEmpty(orientation))
-            throw new ArgumentException("orientation parameter is required for set_orientation operation");
-
-        var doc = ctx.Document;
-        var orientationEnum = orientation.ToLower() == "landscape" ? Orientation.Landscape : Orientation.Portrait;
-        var sectionsToUpdate = GetTargetSections(doc, sectionIndex, sectionIndices);
-
-        foreach (var idx in sectionsToUpdate)
-            doc.Sections[idx].PageSetup.Orientation = orientationEnum;
-
-        ctx.Save(outputPath);
-        return
-            $"Page orientation set to {orientation} for {sectionsToUpdate.Count} section(s)\n{ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Sets page size using custom dimensions or predefined paper sizes.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="width">The page width in points.</param>
-    /// <param name="height">The page height in points.</param>
-    /// <param name="paperSize">The predefined paper size (A4, Letter, Legal, A3, A5).</param>
-    /// <param name="sectionIndex">Optional section index.</param>
-    /// <param name="sectionIndices">Optional array of section indices.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when neither paperSize nor width/height are provided.</exception>
-    private static string SetSize(DocumentContext<Document> ctx, string? outputPath, double? width, double? height,
-        string? paperSize, int? sectionIndex, JsonArray? sectionIndices)
-    {
-        var doc = ctx.Document;
-        var sectionsToUpdate = GetTargetSections(doc, sectionIndex, sectionIndices);
-
-        foreach (var idx in sectionsToUpdate)
-        {
-            var pageSetup = doc.Sections[idx].PageSetup;
-
-            if (!string.IsNullOrEmpty(paperSize))
+            if (!ctx.IsSession)
             {
-                pageSetup.PaperSize = paperSize.ToUpper() switch
-                {
-                    "A4" => PaperSize.A4,
-                    "LETTER" => PaperSize.Letter,
-                    "LEGAL" => PaperSize.Legal,
-                    "A3" => PaperSize.A3,
-                    "A5" => PaperSize.A5,
-                    _ => PaperSize.A4
-                };
-            }
-            else if (width.HasValue && height.HasValue)
-            {
-                pageSetup.PageWidth = width.Value;
-                pageSetup.PageHeight = height.Value;
-            }
-            else
-            {
-                throw new ArgumentException("Either paperSize or both width and height must be provided");
-            }
-        }
-
-        ctx.Save(outputPath);
-        return $"Page size updated for {sectionsToUpdate.Count} section(s)\n{ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Sets page number format and starting number for a section.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="pageNumberFormat">The page number format (arabic, roman, letter).</param>
-    /// <param name="startingPageNumber">The starting page number.</param>
-    /// <param name="sectionIndex">Optional section index.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when section index is out of range.</exception>
-    private static string SetPageNumber(DocumentContext<Document> ctx, string? outputPath, string? pageNumberFormat,
-        int? startingPageNumber, int? sectionIndex)
-    {
-        var doc = ctx.Document;
-        List<int> sectionsToUpdate;
-
-        if (sectionIndex.HasValue)
-        {
-            if (sectionIndex.Value < 0 || sectionIndex.Value >= doc.Sections.Count)
-                throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
-            sectionsToUpdate = [sectionIndex.Value];
-        }
-        else
-        {
-            sectionsToUpdate = [0];
-        }
-
-        foreach (var idx in sectionsToUpdate)
-        {
-            var pageSetup = doc.Sections[idx].PageSetup;
-
-            if (!string.IsNullOrEmpty(pageNumberFormat))
-            {
-                var numStyle = pageNumberFormat.ToLower() switch
-                {
-                    "roman" => NumberStyle.UppercaseRoman,
-                    "letter" => NumberStyle.UppercaseLetter,
-                    _ => NumberStyle.Arabic
-                };
-                pageSetup.PageNumberStyle = numStyle;
+                var savePath = outputPath ?? throw new InvalidOperationException("Output path required for file mode");
+                operationContext.ResultDocument.Save(savePath);
+                return $"{result}\nOutput: {savePath}";
             }
 
-            if (startingPageNumber.HasValue)
-            {
-                pageSetup.RestartPageNumbering = true;
-                pageSetup.PageStartingNumber = startingPageNumber.Value;
-            }
+            // For session mode, update the session document
+            var doc = ctx.Document;
+            doc.RemoveAllChildren();
+            foreach (var section in operationContext.ResultDocument.Sections.Cast<Section>())
+                doc.AppendChild(doc.ImportNode(section, true));
         }
 
-        ctx.Save(outputPath);
-        return
-            $"Page number settings updated for {sectionsToUpdate.Count} section(s)\n{ctx.GetOutputMessage(outputPath)}";
+        // Standard save behavior
+        if (operationContext.IsModified)
+            ctx.Save(outputPath);
+
+        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Sets multiple page setup options (margins and orientation) for a section.
+    ///     Builds OperationParameters from method parameters.
     /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="top">The top margin in points.</param>
-    /// <param name="bottom">The bottom margin in points.</param>
-    /// <param name="left">The left margin in points.</param>
-    /// <param name="right">The right margin in points.</param>
-    /// <param name="orientation">The page orientation.</param>
-    /// <param name="sectionIndex">Optional section index.</param>
-    /// <returns>A message indicating the changes made.</returns>
-    /// <exception cref="ArgumentException">Thrown when section index is out of range.</exception>
-    private static string SetPageSetup(DocumentContext<Document> ctx, string? outputPath, double? top, double? bottom,
-        double? left, double? right, string? orientation, int? sectionIndex)
+    private static OperationParameters BuildParameters(
+        string operation,
+        double? top,
+        double? bottom,
+        double? left,
+        double? right,
+        string? orientation,
+        double? width,
+        double? height,
+        string? paperSize,
+        string? pageNumberFormat,
+        int? startingPageNumber,
+        int? sectionIndex,
+        JsonArray? sectionIndices,
+        int? pageIndex,
+        int? insertAtPageIndex,
+        int? paragraphIndex)
     {
-        var doc = ctx.Document;
-        var idx = sectionIndex ?? 0;
+        var parameters = new OperationParameters();
 
-        if (idx < 0 || idx >= doc.Sections.Count)
-            throw new ArgumentException($"sectionIndex must be between 0 and {doc.Sections.Count - 1}");
-
-        var pageSetup = doc.Sections[idx].PageSetup;
-        List<string> changes = [];
-
-        if (top.HasValue)
+        switch (operation.ToLower())
         {
-            pageSetup.TopMargin = top.Value;
-            changes.Add($"Top margin: {top.Value}");
+            case "set_margins":
+                if (top.HasValue) parameters.Set("top", top.Value);
+                if (bottom.HasValue) parameters.Set("bottom", bottom.Value);
+                if (left.HasValue) parameters.Set("left", left.Value);
+                if (right.HasValue) parameters.Set("right", right.Value);
+                if (sectionIndex.HasValue) parameters.Set("sectionIndex", sectionIndex.Value);
+                if (sectionIndices != null) parameters.Set("sectionIndices", sectionIndices);
+                break;
+
+            case "set_orientation":
+                if (orientation != null) parameters.Set("orientation", orientation);
+                if (sectionIndex.HasValue) parameters.Set("sectionIndex", sectionIndex.Value);
+                if (sectionIndices != null) parameters.Set("sectionIndices", sectionIndices);
+                break;
+
+            case "set_size":
+                if (width.HasValue) parameters.Set("width", width.Value);
+                if (height.HasValue) parameters.Set("height", height.Value);
+                if (paperSize != null) parameters.Set("paperSize", paperSize);
+                if (sectionIndex.HasValue) parameters.Set("sectionIndex", sectionIndex.Value);
+                if (sectionIndices != null) parameters.Set("sectionIndices", sectionIndices);
+                break;
+
+            case "set_page_number":
+                if (pageNumberFormat != null) parameters.Set("pageNumberFormat", pageNumberFormat);
+                if (startingPageNumber.HasValue) parameters.Set("startingPageNumber", startingPageNumber.Value);
+                if (sectionIndex.HasValue) parameters.Set("sectionIndex", sectionIndex.Value);
+                break;
+
+            case "set_page_setup":
+                if (top.HasValue) parameters.Set("top", top.Value);
+                if (bottom.HasValue) parameters.Set("bottom", bottom.Value);
+                if (left.HasValue) parameters.Set("left", left.Value);
+                if (right.HasValue) parameters.Set("right", right.Value);
+                if (orientation != null) parameters.Set("orientation", orientation);
+                if (sectionIndex.HasValue) parameters.Set("sectionIndex", sectionIndex.Value);
+                break;
+
+            case "delete_page":
+                if (pageIndex.HasValue) parameters.Set("pageIndex", pageIndex.Value);
+                break;
+
+            case "insert_blank_page":
+                if (insertAtPageIndex.HasValue) parameters.Set("insertAtPageIndex", insertAtPageIndex.Value);
+                break;
+
+            case "add_page_break":
+                if (paragraphIndex.HasValue) parameters.Set("paragraphIndex", paragraphIndex.Value);
+                break;
         }
 
-        if (bottom.HasValue)
-        {
-            pageSetup.BottomMargin = bottom.Value;
-            changes.Add($"Bottom margin: {bottom.Value}");
-        }
-
-        if (left.HasValue)
-        {
-            pageSetup.LeftMargin = left.Value;
-            changes.Add($"Left margin: {left.Value}");
-        }
-
-        if (right.HasValue)
-        {
-            pageSetup.RightMargin = right.Value;
-            changes.Add($"Right margin: {right.Value}");
-        }
-
-        if (!string.IsNullOrEmpty(orientation))
-        {
-            pageSetup.Orientation = orientation.ToLower() == "landscape" ? Orientation.Landscape : Orientation.Portrait;
-            changes.Add($"Orientation: {orientation}");
-        }
-
-        ctx.Save(outputPath);
-        return $"Page setup updated: {string.Join(", ", changes)}";
-    }
-
-    /// <summary>
-    ///     Deletes a specific page from the document by extracting and recombining pages.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="pageIndex">The page index to delete (0-based).</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when page index is not provided or out of range.</exception>
-    /// <exception cref="InvalidOperationException">Thrown when output path is required but not provided.</exception>
-    private static string DeletePage(DocumentContext<Document> ctx, string? outputPath, int? pageIndex)
-    {
-        if (!pageIndex.HasValue)
-            throw new ArgumentException("pageIndex parameter is required for delete_page operation");
-
-        var doc = ctx.Document;
-        var pageCount = doc.PageCount;
-
-        if (pageIndex.Value < 0 || pageIndex.Value >= pageCount)
-            throw new ArgumentException(
-                $"pageIndex must be between 0 and {pageCount - 1} (document has {pageCount} pages)");
-
-        var resultDoc = new Document();
-        resultDoc.RemoveAllChildren();
-
-        if (pageIndex.Value > 0)
-        {
-            var beforePages = doc.ExtractPages(0, pageIndex.Value);
-            foreach (var section in beforePages.Sections.Cast<Section>())
-                resultDoc.AppendChild(resultDoc.ImportNode(section, true));
-        }
-
-        if (pageIndex.Value < pageCount - 1)
-        {
-            var afterPages = doc.ExtractPages(pageIndex.Value + 1, pageCount - pageIndex.Value - 1);
-            foreach (var section in afterPages.Sections.Cast<Section>())
-                resultDoc.AppendChild(resultDoc.ImportNode(section, true));
-        }
-
-        // For file mode, save the result document directly
-        if (!ctx.IsSession)
-        {
-            var savePath = outputPath ?? throw new InvalidOperationException("Output path required for file mode");
-            resultDoc.Save(savePath);
-            return
-                $"Page {pageIndex.Value} deleted successfully (document now has {resultDoc.PageCount} pages)\nOutput: {savePath}";
-        }
-
-        // For session mode, we need to update the session document
-        // Clear the current document and copy content from result
-        doc.RemoveAllChildren();
-        foreach (var section in resultDoc.Sections.Cast<Section>())
-            doc.AppendChild(doc.ImportNode(section, true));
-
-        ctx.Save(outputPath);
-        return
-            $"Page {pageIndex.Value} deleted successfully (document now has {doc.PageCount} pages)\n{ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Inserts a blank page at the specified position in the document.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="insertAtPageIndex">The page index to insert at (0-based).</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when insert page index is out of range.</exception>
-    private static string InsertBlankPage(DocumentContext<Document> ctx, string? outputPath, int? insertAtPageIndex)
-    {
-        var doc = ctx.Document;
-        var builder = new DocumentBuilder(doc);
-
-        if (insertAtPageIndex is > 0)
-        {
-            var pageCount = doc.PageCount;
-            if (insertAtPageIndex.Value > pageCount)
-                throw new ArgumentException(
-                    $"insertAtPageIndex must be between 0 and {pageCount} (document has {pageCount} pages)");
-
-            var layoutCollector = new LayoutCollector(doc);
-            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
-
-            Paragraph? targetParagraph = null;
-            foreach (var para in paragraphs)
-            {
-                var paraPage = layoutCollector.GetStartPageIndex(para);
-                if (paraPage == insertAtPageIndex.Value + 1)
-                {
-                    targetParagraph = para;
-                    break;
-                }
-            }
-
-            if (targetParagraph != null)
-            {
-                builder.MoveTo(targetParagraph);
-                builder.InsertBreak(BreakType.PageBreak);
-            }
-            else
-            {
-                builder.MoveToDocumentEnd();
-                builder.InsertBreak(BreakType.PageBreak);
-            }
-        }
-        else
-        {
-            builder.MoveToDocumentEnd();
-            builder.InsertBreak(BreakType.PageBreak);
-        }
-
-        ctx.Save(outputPath);
-        return $"Blank page inserted at page {insertAtPageIndex ?? doc.PageCount}\n{ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Adds a page break at the specified paragraph or at document end.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="paragraphIndex">The paragraph index to insert page break after (0-based).</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when paragraph index is out of range.</exception>
-    private static string AddPageBreak(DocumentContext<Document> ctx, string? outputPath, int? paragraphIndex)
-    {
-        var doc = ctx.Document;
-        var builder = new DocumentBuilder(doc);
-
-        if (paragraphIndex.HasValue)
-        {
-            var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
-            if (paragraphIndex.Value < 0 || paragraphIndex.Value >= paragraphs.Count)
-                throw new ArgumentException($"paragraphIndex must be between 0 and {paragraphs.Count - 1}");
-
-            builder.MoveTo(paragraphs[paragraphIndex.Value]);
-            builder.InsertBreak(BreakType.PageBreak);
-        }
-        else
-        {
-            builder.MoveToDocumentEnd();
-            builder.InsertBreak(BreakType.PageBreak);
-        }
-
-        ctx.Save(outputPath);
-        var location = paragraphIndex.HasValue ? $"after paragraph {paragraphIndex.Value}" : "at document end";
-        return $"Page break added {location}\n{ctx.GetOutputMessage(outputPath)}";
+        return parameters;
     }
 }

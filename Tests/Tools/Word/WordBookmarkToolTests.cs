@@ -4,6 +4,11 @@ using AsposeMcpServer.Tools.Word;
 
 namespace AsposeMcpServer.Tests.Tools.Word;
 
+/// <summary>
+///     Integration tests for WordBookmarkTool.
+///     Focuses on session management, file I/O, and operation routing.
+///     Detailed parameter validation and business logic tests are in Handler tests.
+/// </summary>
 public class WordBookmarkToolTests : WordTestBase
 {
     private readonly WordBookmarkTool _tool;
@@ -13,10 +18,10 @@ public class WordBookmarkToolTests : WordTestBase
         _tool = new WordBookmarkTool(SessionManager);
     }
 
-    #region General
+    #region File I/O Smoke Tests
 
     [Fact]
-    public void AddBookmark_ShouldAddBookmark()
+    public void AddBookmark_ShouldAddBookmarkAndPersistToFile()
     {
         var docPath = CreateWordDocumentWithContent("test_add_bookmark.docx", "Test content");
         var outputPath = CreateTestFilePath("test_add_bookmark_output.docx");
@@ -24,62 +29,10 @@ public class WordBookmarkToolTests : WordTestBase
         var doc = new Document(outputPath);
         var bookmark = doc.Range.Bookmarks["TestBookmark"];
         Assert.NotNull(bookmark);
-        Assert.Contains("Bookmarked text", bookmark.Text, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public void AddBookmark_WithParagraphIndex_ShouldAddAtSpecificParagraph()
-    {
-        var docPath = CreateWordDocumentWithContent("test_add_para_idx.docx", "First paragraph");
-        var doc = new Document(docPath);
-        var builder = new DocumentBuilder(doc);
-        builder.Writeln("Second paragraph");
-        builder.Writeln("Third paragraph");
-        doc.Save(docPath);
-
-        var outputPath = CreateTestFilePath("test_add_para_idx_output.docx");
-        _tool.Execute("add", docPath, outputPath: outputPath, name: "ParaBookmark", text: "At para 1",
-            paragraphIndex: 1);
-        var resultDoc = new Document(outputPath);
-        var bookmark = resultDoc.Range.Bookmarks["ParaBookmark"];
-        Assert.NotNull(bookmark);
-    }
-
-    [Fact]
-    public void AddBookmark_WithNegativeOneParagraphIndex_ShouldAddAtBeginning()
-    {
-        var docPath = CreateWordDocumentWithContent("test_add_begin.docx", "Test content");
-        var outputPath = CreateTestFilePath("test_add_begin_output.docx");
-        var result = _tool.Execute("add", docPath, outputPath: outputPath, name: "BeginBookmark", text: "At beginning",
-            paragraphIndex: -1);
-        Assert.StartsWith("Bookmark added successfully", result);
-        var doc = new Document(outputPath);
-        Assert.NotNull(doc.Range.Bookmarks["BeginBookmark"]);
-    }
-
-    [Fact]
-    public void AddBookmark_WithoutParagraphIndex_ShouldAddAtEnd()
-    {
-        var docPath = CreateWordDocumentWithContent("test_add_end.docx", "Test content");
-        var outputPath = CreateTestFilePath("test_add_end_output.docx");
-        var result = _tool.Execute("add", docPath, outputPath: outputPath, name: "EndBookmark", text: "At end");
-        Assert.StartsWith("Bookmark added successfully", result);
-    }
-
-    [Fact]
-    public void AddBookmark_WithoutText_ShouldAddEmptyBookmark()
-    {
-        var docPath = CreateWordDocumentWithContent("test_add_empty.docx", "Test content");
-        var outputPath = CreateTestFilePath("test_add_empty_output.docx");
-        _tool.Execute("add", docPath, outputPath: outputPath, name: "EmptyBookmark");
-        var doc = new Document(outputPath);
-        var bookmark = doc.Range.Bookmarks["EmptyBookmark"];
-        Assert.NotNull(bookmark);
-        Assert.Empty(bookmark.Text);
-    }
-
-    [Fact]
-    public void GetBookmarks_ShouldReturnAllBookmarks()
+    public void GetBookmarks_ShouldReturnBookmarksFromFile()
     {
         var docPath = CreateWordDocument("test_get_bookmarks.docx");
         var doc = new Document(docPath);
@@ -87,46 +40,15 @@ public class WordBookmarkToolTests : WordTestBase
         builder.StartBookmark("Bookmark1");
         builder.Write("Content1");
         builder.EndBookmark("Bookmark1");
-        builder.StartBookmark("Bookmark2");
-        builder.Write("Content2");
-        builder.EndBookmark("Bookmark2");
         doc.Save(docPath);
 
         var result = _tool.Execute("get", docPath);
         Assert.Contains("Bookmark1", result);
-        Assert.Contains("Bookmark2", result);
-        Assert.Contains("\"count\":2", result.Replace(" ", ""));
+        Assert.Contains("\"count\":", result);
     }
 
     [Fact]
-    public void GetBookmarks_ShouldReturnJsonWithCorrectFields()
-    {
-        var docPath = CreateWordDocument("test_get_fields.docx");
-        var doc = new Document(docPath);
-        var builder = new DocumentBuilder(doc);
-        builder.StartBookmark("TestBookmark");
-        builder.Write("Test content");
-        builder.EndBookmark("TestBookmark");
-        doc.Save(docPath);
-
-        var result = _tool.Execute("get", docPath);
-        Assert.Contains("\"name\"", result);
-        Assert.Contains("\"text\"", result);
-        Assert.Contains("\"length\"", result);
-        Assert.Contains("\"index\"", result);
-    }
-
-    [Fact]
-    public void GetBookmarks_WithNoBookmarks_ShouldReturnEmptyResult()
-    {
-        var docPath = CreateWordDocumentWithContent("test_get_no_bookmarks.docx", "No bookmarks here");
-        var result = _tool.Execute("get", docPath);
-        Assert.Contains("\"count\":0", result.Replace(" ", ""));
-        Assert.Contains("No bookmarks found", result);
-    }
-
-    [Fact]
-    public void DeleteBookmark_ShouldDeleteBookmark()
+    public void DeleteBookmark_ShouldDeleteBookmarkAndPersistToFile()
     {
         var docPath = CreateWordDocument("test_delete_bookmark.docx");
         var doc = new Document(docPath);
@@ -143,23 +65,7 @@ public class WordBookmarkToolTests : WordTestBase
     }
 
     [Fact]
-    public void DeleteBookmark_WithKeepTextFalse_ShouldRemoveBookmarkAndText()
-    {
-        var docPath = CreateWordDocument("test_delete_no_keep.docx");
-        var doc = new Document(docPath);
-        var builder = new DocumentBuilder(doc);
-        builder.StartBookmark("DeleteWithText");
-        builder.Write("TextToRemove");
-        builder.EndBookmark("DeleteWithText");
-        doc.Save(docPath);
-
-        var outputPath = CreateTestFilePath("test_delete_no_keep_output.docx");
-        var result = _tool.Execute("delete", docPath, outputPath: outputPath, name: "DeleteWithText", keepText: false);
-        Assert.Contains("deleted successfully", result);
-    }
-
-    [Fact]
-    public void EditBookmark_ShouldEditBookmarkText()
+    public void EditBookmark_ShouldEditBookmarkAndPersistToFile()
     {
         var docPath = CreateWordDocument("test_edit_bookmark.docx");
         var doc = new Document(docPath);
@@ -170,63 +76,11 @@ public class WordBookmarkToolTests : WordTestBase
         doc.Save(docPath);
 
         var outputPath = CreateTestFilePath("test_edit_bookmark_output.docx");
-        _tool.Execute("edit", docPath, outputPath: outputPath, name: "BookmarkToEdit", text: "Updated text");
+        _tool.Execute("edit", docPath, outputPath: outputPath, name: "BookmarkToEdit", newText: "Updated text");
         var resultDoc = new Document(outputPath);
         var bookmark = resultDoc.Range.Bookmarks["BookmarkToEdit"];
         Assert.NotNull(bookmark);
-        Assert.Contains("Updated text", bookmark.Text, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public void EditBookmark_WithNewName_ShouldRenameBookmark()
-    {
-        var docPath = CreateWordDocument("test_edit_name.docx");
-        var doc = new Document(docPath);
-        var builder = new DocumentBuilder(doc);
-        builder.StartBookmark("OldName");
-        builder.Write("Content");
-        builder.EndBookmark("OldName");
-        doc.Save(docPath);
-
-        var outputPath = CreateTestFilePath("test_edit_name_output.docx");
-        _tool.Execute("edit", docPath, outputPath: outputPath, name: "OldName", newName: "NewName");
-        var resultDoc = new Document(outputPath);
-        Assert.Null(resultDoc.Range.Bookmarks["OldName"]);
-        Assert.NotNull(resultDoc.Range.Bookmarks["NewName"]);
-    }
-
-    [Fact]
-    public void EditBookmark_WithNewText_ShouldUpdateContent()
-    {
-        var docPath = CreateWordDocument("test_edit_text.docx");
-        var doc = new Document(docPath);
-        var builder = new DocumentBuilder(doc);
-        builder.StartBookmark("EditText");
-        builder.Write("Old content");
-        builder.EndBookmark("EditText");
-        doc.Save(docPath);
-
-        var outputPath = CreateTestFilePath("test_edit_text_output.docx");
-        _tool.Execute("edit", docPath, outputPath: outputPath, name: "EditText", newText: "New content");
-        var resultDoc = new Document(outputPath);
-        Assert.Contains("New content", resultDoc.Range.Bookmarks["EditText"].Text);
-    }
-
-    [Fact]
-    public void EditBookmark_WithBothNewNameAndNewText_ShouldUpdateBoth()
-    {
-        var docPath = CreateWordDocument("test_edit_both.docx");
-        var doc = new Document(docPath);
-        var builder = new DocumentBuilder(doc);
-        builder.StartBookmark("OldBoth");
-        builder.Write("Old");
-        builder.EndBookmark("OldBoth");
-        doc.Save(docPath);
-
-        var outputPath = CreateTestFilePath("test_edit_both_output.docx");
-        var result = _tool.Execute("edit", docPath, outputPath: outputPath, name: "OldBoth", newName: "NewBoth",
-            newText: "New");
-        Assert.Contains("edited successfully", result);
+        Assert.Contains("Updated text", bookmark.Text);
     }
 
     [Fact]
@@ -235,7 +89,6 @@ public class WordBookmarkToolTests : WordTestBase
         var docPath = CreateWordDocumentWithContent("test_goto_bookmark.docx", "Content before bookmark");
         var doc = new Document(docPath);
         var builder = new DocumentBuilder(doc);
-        builder.Writeln("Content after");
         builder.StartBookmark("TargetBookmark");
         builder.Write("Target content");
         builder.EndBookmark("TargetBookmark");
@@ -246,87 +99,21 @@ public class WordBookmarkToolTests : WordTestBase
         Assert.Contains("Target content", result);
     }
 
+    #endregion
+
+    #region Operation Routing
+
     [Theory]
     [InlineData("ADD")]
     [InlineData("Add")]
     [InlineData("add")]
-    public void Operation_ShouldBeCaseInsensitive_Add(string operation)
+    public void Operation_ShouldBeCaseInsensitive(string operation)
     {
-        var docPath = CreateWordDocumentWithContent($"test_case_add_{operation}.docx", "Test");
-        var outputPath = CreateTestFilePath($"test_case_add_{operation}_output.docx");
+        var docPath = CreateWordDocumentWithContent($"test_case_{operation}.docx", "Test");
+        var outputPath = CreateTestFilePath($"test_case_{operation}_output.docx");
         var result = _tool.Execute(operation, docPath, outputPath: outputPath, name: $"BM_{operation}", text: "Text");
         Assert.StartsWith("Bookmark added successfully", result);
     }
-
-    [Theory]
-    [InlineData("GET")]
-    [InlineData("Get")]
-    [InlineData("get")]
-    public void Operation_ShouldBeCaseInsensitive_Get(string operation)
-    {
-        var docPath = CreateWordDocumentWithContent($"test_case_get_{operation}.docx", "Test");
-        var result = _tool.Execute(operation, docPath);
-        Assert.Contains("count", result);
-    }
-
-    [Theory]
-    [InlineData("DELETE")]
-    [InlineData("Delete")]
-    [InlineData("delete")]
-    public void Operation_ShouldBeCaseInsensitive_Delete(string operation)
-    {
-        var docPath = CreateWordDocument($"test_case_del_{operation}.docx");
-        var doc = new Document(docPath);
-        var builder = new DocumentBuilder(doc);
-        builder.StartBookmark($"BM_{operation}");
-        builder.EndBookmark($"BM_{operation}");
-        doc.Save(docPath);
-
-        var outputPath = CreateTestFilePath($"test_case_del_{operation}_output.docx");
-        var result = _tool.Execute(operation, docPath, outputPath: outputPath, name: $"BM_{operation}");
-        Assert.Contains("deleted successfully", result);
-    }
-
-    [Theory]
-    [InlineData("EDIT")]
-    [InlineData("Edit")]
-    [InlineData("edit")]
-    public void Operation_ShouldBeCaseInsensitive_Edit(string operation)
-    {
-        var docPath = CreateWordDocument($"test_case_edit_{operation}.docx");
-        var doc = new Document(docPath);
-        var builder = new DocumentBuilder(doc);
-        builder.StartBookmark($"BM_{operation}");
-        builder.Write("Old");
-        builder.EndBookmark($"BM_{operation}");
-        doc.Save(docPath);
-
-        var outputPath = CreateTestFilePath($"test_case_edit_{operation}_output.docx");
-        var result = _tool.Execute(operation, docPath, outputPath: outputPath, name: $"BM_{operation}", newText: "New");
-        Assert.Contains("edited successfully", result);
-    }
-
-    [Theory]
-    [InlineData("GOTO")]
-    [InlineData("Goto")]
-    [InlineData("goto")]
-    public void Operation_ShouldBeCaseInsensitive_Goto(string operation)
-    {
-        var docPath = CreateWordDocument($"test_case_goto_{operation}.docx");
-        var doc = new Document(docPath);
-        var builder = new DocumentBuilder(doc);
-        builder.StartBookmark($"BM_{operation}");
-        builder.Write("Content");
-        builder.EndBookmark($"BM_{operation}");
-        doc.Save(docPath);
-
-        var result = _tool.Execute(operation, docPath, name: $"BM_{operation}");
-        Assert.StartsWith("Bookmark location information", result);
-    }
-
-    #endregion
-
-    #region Exception
 
     [Fact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
@@ -337,165 +124,15 @@ public class WordBookmarkToolTests : WordTestBase
         Assert.Contains("Unknown operation", ex.Message);
     }
 
-    [Theory]
-    [InlineData("")]
-    [InlineData(null)]
-    public void AddBookmark_WithEmptyOrNullName_ShouldThrowArgumentException(string? name)
-    {
-        var docPath = CreateWordDocumentWithContent("test_add_empty_name.docx", "Test content");
-        var outputPath = CreateTestFilePath("test_add_empty_name_output.docx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", docPath, outputPath: outputPath, name: name, text: "Some text"));
-        Assert.Contains("Bookmark name is required", ex.Message);
-    }
-
     [Fact]
-    public void AddBookmark_WithDuplicateName_ShouldThrowInvalidOperationException()
+    public void Execute_WithNoPathOrSessionId_ShouldThrowException()
     {
-        var docPath = CreateWordDocument("test_add_duplicate.docx");
-        var doc = new Document(docPath);
-        var builder = new DocumentBuilder(doc);
-        builder.StartBookmark("ExistingBookmark");
-        builder.Write("Existing content");
-        builder.EndBookmark("ExistingBookmark");
-        doc.Save(docPath);
-
-        var outputPath = CreateTestFilePath("test_add_duplicate_output.docx");
-        var ex = Assert.Throws<InvalidOperationException>(() =>
-            _tool.Execute("add", docPath, outputPath: outputPath, name: "ExistingBookmark", text: "New text"));
-        Assert.Contains("already exists", ex.Message);
-    }
-
-    [Fact]
-    public void AddBookmark_WithDuplicateNameCaseInsensitive_ShouldThrowInvalidOperationException()
-    {
-        var docPath = CreateWordDocument("test_add_duplicate_case.docx");
-        var doc = new Document(docPath);
-        var builder = new DocumentBuilder(doc);
-        builder.StartBookmark("MyBookmark");
-        builder.EndBookmark("MyBookmark");
-        doc.Save(docPath);
-
-        var outputPath = CreateTestFilePath("test_add_duplicate_case_output.docx");
-        var ex = Assert.Throws<InvalidOperationException>(() =>
-            _tool.Execute("add", docPath, outputPath: outputPath, name: "MYBOOKMARK", text: "Text"));
-        Assert.Contains("already exists", ex.Message);
-        Assert.Contains("case-insensitive", ex.Message);
-    }
-
-    [Fact]
-    public void AddBookmark_WithInvalidParagraphIndex_ShouldThrowArgumentException()
-    {
-        var docPath = CreateWordDocumentWithContent("test_add_invalid_para.docx", "Single paragraph");
-        var outputPath = CreateTestFilePath("test_add_invalid_para_output.docx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", docPath, outputPath: outputPath, name: "NewBookmark", text: "Text",
-                paragraphIndex: 999));
-        Assert.Contains("out of range", ex.Message);
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData(null)]
-    public void EditBookmark_WithEmptyOrNullName_ShouldThrowArgumentException(string? name)
-    {
-        var docPath = CreateWordDocumentWithContent("test_edit_empty_name.docx", "Test content");
-        var outputPath = CreateTestFilePath("test_edit_empty_name_output.docx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("edit", docPath, outputPath: outputPath, name: name, text: "New text"));
-        Assert.Contains("Bookmark name is required", ex.Message);
-    }
-
-    [Fact]
-    public void EditBookmark_WithNonExistentBookmark_ShouldThrowArgumentException()
-    {
-        var docPath = CreateWordDocumentWithContent("test_edit_nonexistent.docx", "Test content");
-        var outputPath = CreateTestFilePath("test_edit_nonexistent_output.docx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("edit", docPath, outputPath: outputPath, name: "NonExistentBookmark", text: "New text"));
-        Assert.Contains("not found", ex.Message);
-    }
-
-    [Fact]
-    public void EditBookmark_WithNoChanges_ShouldThrowArgumentException()
-    {
-        var docPath = CreateWordDocument("test_edit_no_changes.docx");
-        var doc = new Document(docPath);
-        var builder = new DocumentBuilder(doc);
-        builder.StartBookmark("TestBookmark");
-        builder.Write("Original text");
-        builder.EndBookmark("TestBookmark");
-        doc.Save(docPath);
-
-        var outputPath = CreateTestFilePath("test_edit_no_changes_output.docx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("edit", docPath, outputPath: outputPath, name: "TestBookmark"));
-        Assert.Contains("newName or newText is required", ex.Message);
-    }
-
-    [Fact]
-    public void EditBookmark_WithDuplicateNewName_ShouldThrowArgumentException()
-    {
-        var docPath = CreateWordDocument("test_edit_dup_name.docx");
-        var doc = new Document(docPath);
-        var builder = new DocumentBuilder(doc);
-        builder.StartBookmark("Bookmark1");
-        builder.EndBookmark("Bookmark1");
-        builder.StartBookmark("Bookmark2");
-        builder.EndBookmark("Bookmark2");
-        doc.Save(docPath);
-
-        var outputPath = CreateTestFilePath("test_edit_dup_name_output.docx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("edit", docPath, outputPath: outputPath, name: "Bookmark1", newName: "Bookmark2"));
-        Assert.Contains("already exists", ex.Message);
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData(null)]
-    public void DeleteBookmark_WithEmptyOrNullName_ShouldThrowArgumentException(string? name)
-    {
-        var docPath = CreateWordDocumentWithContent("test_delete_empty_name.docx", "Test content");
-        var outputPath = CreateTestFilePath("test_delete_empty_name_output.docx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("delete", docPath, outputPath: outputPath, name: name));
-        Assert.Contains("Bookmark name is required", ex.Message);
-    }
-
-    [Fact]
-    public void DeleteBookmark_WithNonExistentBookmark_ShouldThrowArgumentException()
-    {
-        var docPath = CreateWordDocumentWithContent("test_delete_nonexistent.docx", "Test content");
-        var outputPath = CreateTestFilePath("test_delete_nonexistent_output.docx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("delete", docPath, outputPath: outputPath, name: "NonExistentBookmark"));
-        Assert.Contains("not found", ex.Message);
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData(null)]
-    public void GotoBookmark_WithEmptyOrNullName_ShouldThrowArgumentException(string? name)
-    {
-        var docPath = CreateWordDocumentWithContent("test_goto_empty_name.docx", "Test content");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("goto", docPath, name: name));
-        Assert.Contains("Bookmark name is required", ex.Message);
-    }
-
-    [Fact]
-    public void GotoBookmark_WithNonExistentBookmark_ShouldThrowArgumentException()
-    {
-        var docPath = CreateWordDocumentWithContent("test_goto_nonexistent.docx", "Test content");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("goto", docPath, name: "NonExistentBookmark"));
-        Assert.Contains("not found", ex.Message);
+        Assert.ThrowsAny<Exception>(() => _tool.Execute("get"));
     }
 
     #endregion
 
-    #region Session
+    #region Session Management
 
     [Fact]
     public void AddBookmark_WithSessionId_ShouldAddBookmarkInMemory()

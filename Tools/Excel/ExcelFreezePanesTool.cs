@@ -1,8 +1,8 @@
 using System.ComponentModel;
-using System.Text.Json;
 using Aspose.Cells;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.Excel.FreezePanes;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -13,6 +13,11 @@ namespace AsposeMcpServer.Tools.Excel;
 [McpServerToolType]
 public class ExcelFreezePanesTool
 {
+    /// <summary>
+    ///     Handler registry for freeze panes operations.
+    /// </summary>
+    private readonly HandlerRegistry<Workbook> _handlerRegistry;
+
     /// <summary>
     ///     Session identity accessor for session isolation support.
     /// </summary>
@@ -33,6 +38,7 @@ public class ExcelFreezePanesTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = ExcelFreezePanesHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -73,93 +79,59 @@ Usage examples:
         [Description("Number of columns to freeze from left (0-based, required for freeze)")]
         int column = 0)
     {
-        return operation.ToLower() switch
+        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
+
+        var parameters = BuildParameters(operation, sheetIndex, row, column);
+
+        var handler = _handlerRegistry.GetHandler(operation);
+
+        var operationContext = new OperationContext<Workbook>
         {
-            "freeze" => FreezePanes(path, sessionId, outputPath, sheetIndex, row, column),
-            "unfreeze" => UnfreezePanes(path, sessionId, outputPath, sheetIndex),
-            "get" => GetFreezePanes(path, sessionId, sheetIndex),
-            _ => throw new ArgumentException($"Unknown operation: {operation}")
+            Document = ctx.Document,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = path,
+            OutputPath = outputPath
         };
+
+        var result = handler.Execute(operationContext, parameters);
+
+        if (operation.ToLowerInvariant() == "get")
+            return result;
+
+        if (operationContext.IsModified)
+            ctx.Save(outputPath);
+
+        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Freezes panes at the specified row and column.
+    ///     Builds OperationParameters from method parameters.
     /// </summary>
-    /// <param name="path">The Excel file path.</param>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <param name="row">The number of rows to freeze from top.</param>
-    /// <param name="column">The number of columns to freeze from left.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    private string FreezePanes(string? path, string? sessionId, string? outputPath, int sheetIndex, int row, int column)
+    private static OperationParameters BuildParameters(
+        string operation,
+        int sheetIndex,
+        int row,
+        int column)
     {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
-        var worksheet = ExcelHelper.GetWorksheet(ctx.Document, sheetIndex);
+        var parameters = new OperationParameters();
+        parameters.Set("sheetIndex", sheetIndex);
 
-        worksheet.FreezePanes(row + 1, column + 1, row, column);
-
-        ctx.Save(outputPath);
-        return $"Frozen panes at row {row}, column {column}. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Removes freeze panes from the worksheet.
-    /// </summary>
-    /// <param name="path">The Excel file path.</param>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    private string UnfreezePanes(string? path, string? sessionId, string? outputPath, int sheetIndex)
-    {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
-        var worksheet = ExcelHelper.GetWorksheet(ctx.Document, sheetIndex);
-
-        worksheet.UnFreezePanes();
-
-        ctx.Save(outputPath);
-        return $"Unfrozen panes. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Gets the current freeze panes status.
-    /// </summary>
-    /// <param name="path">The Excel file path.</param>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <returns>A JSON string containing the freeze panes status information.</returns>
-    private string GetFreezePanes(string? path, string? sessionId, int sheetIndex)
-    {
-        using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
-        var worksheet = ExcelHelper.GetWorksheet(ctx.Document, sheetIndex);
-
-        var isFrozen = worksheet.PaneState == PaneStateType.Frozen;
-        int? frozenRow = null;
-        int? frozenColumn = null;
-        int? frozenRows = null;
-        int? frozenColumns = null;
-
-        if (isFrozen)
+        switch (operation.ToLowerInvariant())
         {
-            worksheet.GetFreezedPanes(out var r, out var col, out var rows, out var cols);
-            frozenRow = r > 0 ? r - 1 : 0;
-            frozenColumn = col > 0 ? col - 1 : 0;
-            frozenRows = rows;
-            frozenColumns = cols;
+            case "freeze":
+                parameters.Set("row", row);
+                parameters.Set("column", column);
+                break;
+
+            case "unfreeze":
+                break;
+
+            case "get":
+                break;
         }
 
-        var result = new
-        {
-            worksheetName = worksheet.Name,
-            isFrozen,
-            frozenRow,
-            frozenColumn,
-            frozenRows,
-            frozenColumns,
-            status = isFrozen ? "Panes are frozen" : "Panes are not frozen"
-        };
-
-        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        return parameters;
     }
 }

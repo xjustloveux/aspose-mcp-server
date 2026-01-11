@@ -117,14 +117,17 @@ services:
       # - ASPOSE_SESSION_TEMP_DIR=/tmp      # Temp directory (default: system temp)
       # - ASPOSE_SESSION_TEMP_RETENTION_HOURS=24  # Temp file retention in hours (default: 24)
       # - ASPOSE_SESSION_ON_DISCONNECT=SaveToTemp  # Disconnect behavior: SaveToTemp, Discard, KeepInMemory
-      # - ASPOSE_SESSION_ISOLATION=user     # Isolation mode: none (no isolation), tenant (tenant-level), user (user-level, default)
+      # - ASPOSE_SESSION_ISOLATION=group    # Isolation mode: none (no isolation), group (group-level, default)
 
       # === API Key Authentication (Optional) ===
       # - ASPOSE_AUTH_APIKEY_ENABLED=true
       # - ASPOSE_AUTH_APIKEY_MODE=local    # local, gateway, introspection, custom
-      # - ASPOSE_AUTH_APIKEY_KEYS=key1:tenant1,key2:tenant2
+      # - ASPOSE_AUTH_APIKEY_KEYS=key1:group1,key2:group2
       # - ASPOSE_AUTH_APIKEY_HEADER=X-API-Key
-      # - ASPOSE_AUTH_APIKEY_TENANT_HEADER=X-Tenant-Id
+      # - ASPOSE_AUTH_APIKEY_GROUP_HEADER=X-Group-Id
+      # - ASPOSE_AUTH_APIKEY_CACHE_ENABLED=true
+      # - ASPOSE_AUTH_APIKEY_CACHE_TTL=300
+      # - ASPOSE_AUTH_APIKEY_CACHE_MAX_SIZE=10000
       # - ASPOSE_AUTH_APIKEY_INTROSPECTION_URL=https://auth.example.com/introspect
       # - ASPOSE_AUTH_APIKEY_INTROSPECTION_AUTH=Bearer token
       # - ASPOSE_AUTH_APIKEY_CUSTOM_URL=https://auth.example.com/validate
@@ -137,9 +140,12 @@ services:
       # - ASPOSE_AUTH_JWT_PUBLIC_KEY_PATH=/app/keys/public.pem
       # - ASPOSE_AUTH_JWT_ISSUER=your-issuer
       # - ASPOSE_AUTH_JWT_AUDIENCE=your-audience
-      # - ASPOSE_AUTH_JWT_TENANT_CLAIM=tenant_id
-      # - ASPOSE_AUTH_JWT_TENANT_HEADER=X-Tenant-Id
+      # - ASPOSE_AUTH_JWT_GROUP_CLAIM=tenant_id  # Claim for group ID (e.g., tenant_id, team_id, org_id)
+      # - ASPOSE_AUTH_JWT_GROUP_HEADER=X-Group-Id
       # - ASPOSE_AUTH_JWT_USER_HEADER=X-User-Id
+      # - ASPOSE_AUTH_JWT_CACHE_ENABLED=true
+      # - ASPOSE_AUTH_JWT_CACHE_TTL=300
+      # - ASPOSE_AUTH_JWT_CACHE_MAX_SIZE=10000
       # - ASPOSE_AUTH_JWT_INTROSPECTION_URL=https://auth.example.com/introspect
       # - ASPOSE_AUTH_JWT_CLIENT_ID=your-client-id
       # - ASPOSE_AUTH_JWT_CLIENT_SECRET=your-client-secret
@@ -249,7 +255,7 @@ spec:
             # - name: ASPOSE_SESSION_ON_DISCONNECT
             #   value: "SaveToTemp"         # Disconnect behavior: SaveToTemp, Discard, KeepInMemory
             # - name: ASPOSE_SESSION_ISOLATION
-            #   value: "user"               # Isolation mode: none (no isolation), tenant (tenant-level), user (user-level, default)
+            #   value: "group"              # Isolation mode: none (no isolation), group (group-level, default)
 
             # === API Key Authentication (Optional) ===
             # - name: ASPOSE_AUTH_APIKEY_ENABLED
@@ -257,11 +263,17 @@ spec:
             # - name: ASPOSE_AUTH_APIKEY_MODE
             #   value: "local"            # local, gateway, introspection, custom
             # - name: ASPOSE_AUTH_APIKEY_KEYS
-            #   value: "key1:tenant1,key2:tenant2"
+            #   value: "key1:group1,key2:group2"
             # - name: ASPOSE_AUTH_APIKEY_HEADER
             #   value: "X-API-Key"
-            # - name: ASPOSE_AUTH_APIKEY_TENANT_HEADER
-            #   value: "X-Tenant-Id"
+            # - name: ASPOSE_AUTH_APIKEY_GROUP_HEADER
+            #   value: "X-Group-Id"
+            # - name: ASPOSE_AUTH_APIKEY_CACHE_ENABLED
+            #   value: "true"                # Cache auth results (default: true)
+            # - name: ASPOSE_AUTH_APIKEY_CACHE_TTL
+            #   value: "300"                 # Cache TTL in seconds (default: 300)
+            # - name: ASPOSE_AUTH_APIKEY_CACHE_MAX_SIZE
+            #   value: "10000"               # Max cache entries (default: 10000)
             # - name: ASPOSE_AUTH_APIKEY_INTROSPECTION_URL
             #   value: "https://auth.example.com/introspect"
             # - name: ASPOSE_AUTH_APIKEY_INTROSPECTION_AUTH
@@ -284,12 +296,18 @@ spec:
             #   value: "your-issuer"
             # - name: ASPOSE_AUTH_JWT_AUDIENCE
             #   value: "your-audience"
-            # - name: ASPOSE_AUTH_JWT_TENANT_CLAIM
-            #   value: "tenant_id"
-            # - name: ASPOSE_AUTH_JWT_TENANT_HEADER
-            #   value: "X-Tenant-Id"
+            # - name: ASPOSE_AUTH_JWT_GROUP_CLAIM
+            #   value: "tenant_id"           # Claim for group ID (e.g., tenant_id, team_id, org_id)
+            # - name: ASPOSE_AUTH_JWT_GROUP_HEADER
+            #   value: "X-Group-Id"
             # - name: ASPOSE_AUTH_JWT_USER_HEADER
             #   value: "X-User-Id"
+            # - name: ASPOSE_AUTH_JWT_CACHE_ENABLED
+            #   value: "true"                # Cache auth results (default: true)
+            # - name: ASPOSE_AUTH_JWT_CACHE_TTL
+            #   value: "300"                 # Cache TTL in seconds (default: 300)
+            # - name: ASPOSE_AUTH_JWT_CACHE_MAX_SIZE
+            #   value: "10000"               # Max cache entries (default: 10000)
             # - name: ASPOSE_AUTH_JWT_INTROSPECTION_URL
             #   value: "https://auth.example.com/introspect"
             # - name: ASPOSE_AUTH_JWT_CLIENT_ID
@@ -429,7 +447,7 @@ kubectl get pods -l app=aspose-mcp</pre>
           &lt;!-- &lt;environmentVariable name="ASPOSE_SESSION_MAX" value="10" /&gt; --&gt;
           &lt;!-- &lt;environmentVariable name="ASPOSE_SESSION_TIMEOUT" value="30" /&gt; --&gt;
           &lt;!-- &lt;environmentVariable name="ASPOSE_SESSION_TEMP_RETENTION_HOURS" value="24" /&gt; --&gt;
-          &lt;!-- &lt;environmentVariable name="ASPOSE_SESSION_ISOLATION" value="user" /&gt; --&gt; &lt;!-- none, tenant, user (default) --&gt;
+          &lt;!-- &lt;environmentVariable name="ASPOSE_SESSION_ISOLATION" value="group" /&gt; --&gt; &lt;!-- none (no isolation), group (group-level, default) --&gt;
         &lt;/environmentVariables&gt;
       &lt;/aspNetCore&gt;
 
@@ -609,8 +627,8 @@ kubectl get pods -l app=aspose-mcp</pre>
             <td style="padding: 10px;">
                 <code>--session-isolation:mode</code>
             </td>
-            <td style="padding: 10px;">Session 隔離模式（none/tenant/user）</td>
-            <td style="padding: 10px;">user</td>
+            <td style="padding: 10px;">Session 隔離模式（none/group）</td>
+            <td style="padding: 10px;">group</td>
         </tr>
         </tbody>
     </table>
@@ -620,8 +638,7 @@ kubectl get pods -l app=aspose-mcp</pre>
     <strong>Session 隔離模式說明：</strong>
     <ul style="margin: 10px 0 0 0; padding-left: 20px;">
         <li><code>none</code> - 無隔離，所有用戶可存取所有 session（Stdio 模式向後兼容）</li>
-        <li><code>tenant</code> - 租戶級隔離，同租戶內的用戶可相互存取 session</li>
-        <li><code>user</code> - 用戶級隔離，用戶只能存取自己的 session（預設）</li>
+        <li><code>group</code> - 群組級隔離，同群組內的用戶可相互存取 session（預設）。群組識別符來源可透過 <code>--auth-jwt-group-claim</code> 配置（預設為 tenant_id）</li>
     </ul>
 </div>
 
@@ -669,7 +686,7 @@ kubectl get pods -l app=aspose-mcp</pre>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
         <code>--auth-apikey-keys:keys</code>
     </td>
-    <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">API Key 列表（key:tenant 格式）</td>
+    <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">API Key 列表（key:group 格式）</td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">-</td>
 </tr>
 <tr>
@@ -684,13 +701,13 @@ kubectl get pods -l app=aspose-mcp</pre>
 </tr>
 <tr>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-        <code>ASPOSE_AUTH_APIKEY_TENANT_HEADER</code>
+        <code>ASPOSE_AUTH_APIKEY_GROUP_HEADER</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-        <code>--auth-apikey-tenant-header:name</code>
+        <code>--auth-apikey-group-header:name</code>
     </td>
-    <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">Tenant ID Header（Gateway 模式）</td>
-    <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">X-Tenant-Id</td>
+    <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">Group ID Header（Gateway 模式）</td>
+    <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">X-Group-Id</td>
 </tr>
 <tr>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
@@ -804,12 +821,12 @@ kubectl get pods -l app=aspose-mcp</pre>
 </tr>
 <tr>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-        <code>ASPOSE_AUTH_JWT_TENANT_CLAIM</code>
+        <code>ASPOSE_AUTH_JWT_GROUP_CLAIM</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-        <code>--auth-jwt-tenant-claim:name</code>
+        <code>--auth-jwt-group-claim:name</code>
     </td>
-    <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">Tenant ID Claim 名稱</td>
+    <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">Group ID Claim 名稱（如 tenant_id, team_id, org_id）</td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">tenant_id</td>
 </tr>
 <tr>
@@ -824,13 +841,13 @@ kubectl get pods -l app=aspose-mcp</pre>
 </tr>
 <tr>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-        <code>ASPOSE_AUTH_JWT_TENANT_HEADER</code>
+        <code>ASPOSE_AUTH_JWT_GROUP_HEADER</code>
     </td>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
-        <code>--auth-jwt-tenant-header:name</code>
+        <code>--auth-jwt-group-header:name</code>
     </td>
-    <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">Tenant ID Header（Gateway 模式）</td>
-    <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">X-Tenant-Id</td>
+    <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">Group ID Header（Gateway 模式）</td>
+    <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">X-Group-Id</td>
 </tr>
 <tr>
     <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
@@ -899,10 +916,10 @@ kubectl get pods -l app=aspose-mcp</pre>
 <div class="info-box" style="margin: 15px 0; padding: 15px; background: var(--bg-hover); border-left: 4px solid var(--accent-color); border-radius: 4px;">
     <strong>Introspection/Custom 端點回應格式：</strong>
     <ul style="margin: 10px 0 0 0; padding-left: 20px;">
-        <li>API Key Introspection：<code>{"active": true, "tenant_id": "..."}</code></li>
-        <li>API Key Custom：<code>{"valid": true, "tenant_id": "..."}</code></li>
-        <li>JWT Introspection：<code>{"active": true, "tenant_id": "...", "sub": "..."}</code></li>
-        <li>JWT Custom：<code>{"valid": true, "tenant_id": "...", "user_id": "..."}</code></li>
+        <li>API Key Introspection：<code>{"active": true, "group_id": "..."}</code></li>
+        <li>API Key Custom：<code>{"valid": true, "group_id": "..."}</code></li>
+        <li>JWT Introspection：<code>{"active": true, "group_id": "...", "sub": "..."}</code>（group_id 可由 GROUP_CLAIM 配置指定來源 claim）</li>
+        <li>JWT Custom：<code>{"valid": true, "group_id": "...", "user_id": "..."}</code></li>
     </ul>
 </div>
 

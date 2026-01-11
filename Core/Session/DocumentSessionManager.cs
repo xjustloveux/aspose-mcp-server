@@ -390,8 +390,7 @@ public class DocumentSessionManager : IDisposable
     {
         IEnumerable<DocumentSession> sessions;
 
-        // Anonymous or None mode: show all sessions
-        if (requestor.IsAnonymous || Config.IsolationMode == SessionIsolationMode.None)
+        if (Config.IsolationMode == SessionIsolationMode.None)
         {
             sessions = _sessionsByOwner.Values.SelectMany(s => s.Values);
         }
@@ -406,7 +405,7 @@ public class DocumentSessionManager : IDisposable
         return sessions.Select(s => new SessionInfo
         {
             SessionId = s.SessionId,
-            DocumentType = s.Type.ToString().ToLower(),
+            DocumentType = s.Type.ToString().ToLowerInvariant(),
             Path = s.Path,
             Mode = s.Mode,
             IsDirty = s.IsDirty,
@@ -440,7 +439,7 @@ public class DocumentSessionManager : IDisposable
         return new SessionInfo
         {
             SessionId = session.SessionId,
-            DocumentType = session.Type.ToString().ToLower(),
+            DocumentType = session.Type.ToString().ToLowerInvariant(),
             Path = session.Path,
             Mode = session.Mode,
             IsDirty = session.IsDirty,
@@ -716,7 +715,7 @@ public class DocumentSessionManager : IDisposable
             DocumentType = session.Type.ToString(),
             SavedAt = DateTime.UtcNow,
             PromptOnReconnect = promptOnReconnect,
-            OwnerTenantId = session.Owner.TenantId,
+            OwnerGroupId = session.Owner.GroupId,
             OwnerUserId = session.Owner.UserId
         };
 

@@ -1,7 +1,8 @@
 using System.ComponentModel;
 using Aspose.Cells;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.Excel.Group;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -12,6 +13,11 @@ namespace AsposeMcpServer.Tools.Excel;
 [McpServerToolType]
 public class ExcelGroupTool
 {
+    /// <summary>
+    ///     Handler registry for group operations.
+    /// </summary>
+    private readonly HandlerRegistry<Workbook> _handlerRegistry;
+
     /// <summary>
     ///     Session identity accessor for session isolation support.
     /// </summary>
@@ -32,6 +38,7 @@ public class ExcelGroupTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = ExcelGroupHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -81,165 +88,68 @@ Usage examples:
     {
         using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
-        return operation.ToLower() switch
+        var parameters = BuildParameters(operation, sheetIndex, startRow, endRow, startColumn, endColumn, isCollapsed);
+
+        var handler = _handlerRegistry.GetHandler(operation);
+
+        var operationContext = new OperationContext<Workbook>
         {
-            "group_rows" => GroupRows(ctx, outputPath, sheetIndex, startRow, endRow, isCollapsed),
-            "ungroup_rows" => UngroupRows(ctx, outputPath, sheetIndex, startRow, endRow),
-            "group_columns" => GroupColumns(ctx, outputPath, sheetIndex, startColumn, endColumn, isCollapsed),
-            "ungroup_columns" => UngroupColumns(ctx, outputPath, sheetIndex, startColumn, endColumn),
-            _ => throw new ArgumentException($"Unknown operation: {operation}")
+            Document = ctx.Document,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = path,
+            OutputPath = outputPath
         };
+
+        var result = handler.Execute(operationContext, parameters);
+
+        if (operationContext.IsModified)
+            ctx.Save(outputPath);
+
+        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Groups rows together.
+    ///     Builds OperationParameters from method parameters.
     /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <param name="startRow">The start row index (0-based).</param>
-    /// <param name="endRow">The end row index (0-based).</param>
-    /// <param name="isCollapsed">Whether to collapse the group initially.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when startRow or endRow is not provided, or when the range is invalid.</exception>
-    private static string GroupRows(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex, int? startRow,
-        int? endRow, bool isCollapsed)
+    private static OperationParameters BuildParameters(
+        string operation,
+        int sheetIndex,
+        int? startRow,
+        int? endRow,
+        int? startColumn,
+        int? endColumn,
+        bool isCollapsed)
     {
-        if (!startRow.HasValue)
-            throw new ArgumentException("Operation 'group_rows' requires parameter 'startRow'.");
-        if (!endRow.HasValue)
-            throw new ArgumentException("Operation 'group_rows' requires parameter 'endRow'.");
+        var parameters = new OperationParameters();
+        parameters.Set("sheetIndex", sheetIndex);
 
-        ValidateRowRange(startRow.Value, endRow.Value);
+        switch (operation.ToLowerInvariant())
+        {
+            case "group_rows":
+                if (startRow.HasValue) parameters.Set("startRow", startRow.Value);
+                if (endRow.HasValue) parameters.Set("endRow", endRow.Value);
+                parameters.Set("isCollapsed", isCollapsed);
+                break;
 
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        worksheet.Cells.GroupRows(startRow.Value, endRow.Value, isCollapsed);
+            case "ungroup_rows":
+                if (startRow.HasValue) parameters.Set("startRow", startRow.Value);
+                if (endRow.HasValue) parameters.Set("endRow", endRow.Value);
+                break;
 
-        ctx.Save(outputPath);
-        return $"Rows {startRow}-{endRow} grouped in sheet {sheetIndex}. {ctx.GetOutputMessage(outputPath)}";
-    }
+            case "group_columns":
+                if (startColumn.HasValue) parameters.Set("startColumn", startColumn.Value);
+                if (endColumn.HasValue) parameters.Set("endColumn", endColumn.Value);
+                parameters.Set("isCollapsed", isCollapsed);
+                break;
 
-    /// <summary>
-    ///     Ungroups rows.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <param name="startRow">The start row index (0-based).</param>
-    /// <param name="endRow">The end row index (0-based).</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when startRow or endRow is not provided, or when the range is invalid.</exception>
-    private static string UngroupRows(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex, int? startRow,
-        int? endRow)
-    {
-        if (!startRow.HasValue)
-            throw new ArgumentException("Operation 'ungroup_rows' requires parameter 'startRow'.");
-        if (!endRow.HasValue)
-            throw new ArgumentException("Operation 'ungroup_rows' requires parameter 'endRow'.");
+            case "ungroup_columns":
+                if (startColumn.HasValue) parameters.Set("startColumn", startColumn.Value);
+                if (endColumn.HasValue) parameters.Set("endColumn", endColumn.Value);
+                break;
+        }
 
-        ValidateRowRange(startRow.Value, endRow.Value);
-
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        worksheet.Cells.UngroupRows(startRow.Value, endRow.Value);
-
-        ctx.Save(outputPath);
-        return $"Rows {startRow}-{endRow} ungrouped in sheet {sheetIndex}. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Groups columns together.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <param name="startColumn">The start column index (0-based).</param>
-    /// <param name="endColumn">The end column index (0-based).</param>
-    /// <param name="isCollapsed">Whether to collapse the group initially.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when startColumn or endColumn is not provided, or when the range is invalid.</exception>
-    private static string GroupColumns(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex,
-        int? startColumn, int? endColumn, bool isCollapsed)
-    {
-        if (!startColumn.HasValue)
-            throw new ArgumentException("Operation 'group_columns' requires parameter 'startColumn'.");
-        if (!endColumn.HasValue)
-            throw new ArgumentException("Operation 'group_columns' requires parameter 'endColumn'.");
-
-        ValidateColumnRange(startColumn.Value, endColumn.Value);
-
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        worksheet.Cells.GroupColumns(startColumn.Value, endColumn.Value, isCollapsed);
-
-        ctx.Save(outputPath);
-        return $"Columns {startColumn}-{endColumn} grouped in sheet {sheetIndex}. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Ungroups columns.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <param name="startColumn">The start column index (0-based).</param>
-    /// <param name="endColumn">The end column index (0-based).</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when startColumn or endColumn is not provided, or when the range is invalid.</exception>
-    private static string UngroupColumns(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex,
-        int? startColumn, int? endColumn)
-    {
-        if (!startColumn.HasValue)
-            throw new ArgumentException("Operation 'ungroup_columns' requires parameter 'startColumn'.");
-        if (!endColumn.HasValue)
-            throw new ArgumentException("Operation 'ungroup_columns' requires parameter 'endColumn'.");
-
-        ValidateColumnRange(startColumn.Value, endColumn.Value);
-
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        worksheet.Cells.UngroupColumns(startColumn.Value, endColumn.Value);
-
-        ctx.Save(outputPath);
-        return $"Columns {startColumn}-{endColumn} ungrouped in sheet {sheetIndex}. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Validates row range indices.
-    /// </summary>
-    /// <param name="startRow">The start row index (0-based).</param>
-    /// <param name="endRow">The end row index (0-based).</param>
-    /// <exception cref="ArgumentException">
-    ///     Thrown when startRow or endRow is negative, or when startRow is greater than
-    ///     endRow.
-    /// </exception>
-    private static void ValidateRowRange(int startRow, int endRow)
-    {
-        if (startRow < 0)
-            throw new ArgumentException($"startRow cannot be negative. Got: {startRow}");
-        if (endRow < 0)
-            throw new ArgumentException($"endRow cannot be negative. Got: {endRow}");
-        if (startRow > endRow)
-            throw new ArgumentException($"startRow ({startRow}) cannot be greater than endRow ({endRow}).");
-    }
-
-    /// <summary>
-    ///     Validates column range indices.
-    /// </summary>
-    /// <param name="startColumn">The start column index (0-based).</param>
-    /// <param name="endColumn">The end column index (0-based).</param>
-    /// <exception cref="ArgumentException">
-    ///     Thrown when startColumn or endColumn is negative, or when startColumn is greater
-    ///     than endColumn.
-    /// </exception>
-    private static void ValidateColumnRange(int startColumn, int endColumn)
-    {
-        if (startColumn < 0)
-            throw new ArgumentException($"startColumn cannot be negative. Got: {startColumn}");
-        if (endColumn < 0)
-            throw new ArgumentException($"endColumn cannot be negative. Got: {endColumn}");
-        if (startColumn > endColumn)
-            throw new ArgumentException($"startColumn ({startColumn}) cannot be greater than endColumn ({endColumn}).");
+        return parameters;
     }
 }

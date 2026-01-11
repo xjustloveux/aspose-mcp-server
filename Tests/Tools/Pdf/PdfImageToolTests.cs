@@ -10,6 +10,11 @@ using Rectangle = Aspose.Pdf.Rectangle;
 
 namespace AsposeMcpServer.Tests.Tools.Pdf;
 
+/// <summary>
+///     Integration tests for PdfImageTool.
+///     Focuses on session management, file I/O, and operation routing.
+///     Detailed parameter validation and business logic tests are in Handler tests.
+/// </summary>
 [SupportedOSPlatform("windows")]
 public class PdfImageToolTests : PdfTestBase
 {
@@ -58,7 +63,7 @@ public class PdfImageToolTests : PdfTestBase
         return filePath;
     }
 
-    #region General
+    #region File I/O Smoke Tests
 
     [Fact]
     public void Add_ShouldAddImageToPdf()
@@ -74,18 +79,6 @@ public class PdfImageToolTests : PdfTestBase
     }
 
     [Fact]
-    public void Add_WithWidthHeight_ShouldAddWithSize()
-    {
-        var pdfPath = CreateTestPdf("test_add_size.pdf");
-        var imagePath = CreateTestImage("test_add_size_image.png");
-        var outputPath = CreateTestFilePath("test_add_size_output.pdf");
-        var result = _tool.Execute("add", pdfPath, outputPath: outputPath,
-            pageIndex: 1, imagePath: imagePath, x: 100, y: 100, width: 300, height: 300);
-        Assert.StartsWith("Added image", result);
-        Assert.True(File.Exists(outputPath));
-    }
-
-    [Fact]
     public void Delete_ShouldDeleteImage()
     {
         var pdfPath = CreatePdfWithImage("test_delete.pdf");
@@ -95,40 +88,6 @@ public class PdfImageToolTests : PdfTestBase
         Assert.StartsWith("Deleted image", result);
         using var document = new Document(outputPath);
         Assert.Empty(document.Pages[1].Resources.Images);
-    }
-
-    [Fact]
-    public void Edit_WithImagePath_ShouldReplaceImage()
-    {
-        var pdfPath = CreatePdfWithImage("test_edit_replace.pdf");
-        var newImagePath = CreateTestImage("test_edit_new.png");
-        var outputPath = CreateTestFilePath("test_edit_replace_output.pdf");
-        var result = _tool.Execute("edit", pdfPath, outputPath: outputPath,
-            pageIndex: 1, imageIndex: 1, imagePath: newImagePath, x: 200, y: 200);
-        Assert.StartsWith("Replaced", result);
-        Assert.True(File.Exists(outputPath));
-    }
-
-    [Fact]
-    public void Edit_WithoutImagePath_ShouldMoveImage()
-    {
-        var pdfPath = CreatePdfWithImage("test_edit_move.pdf");
-        var outputPath = CreateTestFilePath("test_edit_move_output.pdf");
-        var result = _tool.Execute("edit", pdfPath, outputPath: outputPath,
-            pageIndex: 1, imageIndex: 1, x: 300, y: 300);
-        Assert.StartsWith("Moved", result);
-        Assert.True(File.Exists(outputPath));
-    }
-
-    [Fact]
-    public void Edit_WithWidthHeight_ShouldResizeImage()
-    {
-        var pdfPath = CreatePdfWithImage("test_edit_resize.pdf");
-        var outputPath = CreateTestFilePath("test_edit_resize_output.pdf");
-        var result = _tool.Execute("edit", pdfPath, outputPath: outputPath,
-            pageIndex: 1, imageIndex: 1, width: 400, height: 400);
-        Assert.StartsWith("Moved", result);
-        Assert.True(File.Exists(outputPath));
     }
 
     [Fact]
@@ -143,27 +102,6 @@ public class PdfImageToolTests : PdfTestBase
     }
 
     [Fact]
-    public void Extract_WithOutputDir_ShouldExtractAllImages()
-    {
-        var pdfPath = CreatePdfWithImage("test_extract_all.pdf");
-        var outputDir = Path.Combine(Path.GetTempPath(), $"PdfImageTest_{Guid.NewGuid()}");
-        Directory.CreateDirectory(outputDir);
-        try
-        {
-            var result = _tool.Execute("extract", pdfPath,
-                outputDir: outputDir, pageIndex: 1);
-            Assert.StartsWith("Extracted", result);
-            var files = Directory.GetFiles(outputDir, "*.png");
-            Assert.NotEmpty(files);
-        }
-        finally
-        {
-            if (Directory.Exists(outputDir))
-                Directory.Delete(outputDir, true);
-        }
-    }
-
-    [Fact]
     public void Get_WithImages_ShouldReturnImageInfo()
     {
         var pdfPath = CreatePdfWithImage("test_get.pdf");
@@ -173,30 +111,15 @@ public class PdfImageToolTests : PdfTestBase
         Assert.True(json.TryGetProperty("items", out _));
     }
 
-    [Fact]
-    public void Get_WithNoImages_ShouldReturnEmptyResult()
-    {
-        var pdfPath = CreateTestPdf("test_get_empty.pdf");
-        var result = _tool.Execute("get", pdfPath, pageIndex: 1);
-        var json = JsonSerializer.Deserialize<JsonElement>(result);
-        Assert.Equal(0, json.GetProperty("count").GetInt32());
-        Assert.Contains("No images found", result);
-    }
+    #endregion
 
-    [Fact]
-    public void Get_WithoutPageIndex_ShouldReturnAllImages()
-    {
-        var pdfPath = CreatePdfWithImage("test_get_all.pdf");
-        var result = _tool.Execute("get", pdfPath);
-        var json = JsonSerializer.Deserialize<JsonElement>(result);
-        Assert.True(json.TryGetProperty("count", out _));
-    }
+    #region Operation Routing
 
     [Theory]
     [InlineData("ADD")]
     [InlineData("Add")]
     [InlineData("add")]
-    public void Operation_ShouldBeCaseInsensitive_Add(string operation)
+    public void Operation_ShouldBeCaseInsensitive(string operation)
     {
         var pdfPath = CreateTestPdf($"test_case_{operation}.pdf");
         var imagePath = CreateTestImage($"test_case_{operation}.png");
@@ -206,21 +129,6 @@ public class PdfImageToolTests : PdfTestBase
         Assert.StartsWith("Added", result);
     }
 
-    [Theory]
-    [InlineData("GET")]
-    [InlineData("Get")]
-    [InlineData("get")]
-    public void Operation_ShouldBeCaseInsensitive_Get(string operation)
-    {
-        var pdfPath = CreateTestPdf($"test_case_get_{operation}.pdf");
-        var result = _tool.Execute(operation, pdfPath, pageIndex: 1);
-        Assert.Contains("count", result);
-    }
-
-    #endregion
-
-    #region Exception
-
     [Fact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
     {
@@ -229,108 +137,9 @@ public class PdfImageToolTests : PdfTestBase
         Assert.Contains("Unknown operation", ex.Message);
     }
 
-    [Fact]
-    public void Add_WithInvalidPageIndex_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreateTestPdf("test_add_invalid_page.pdf");
-        var imagePath = CreateTestImage("test_add_invalid_page.png");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", pdfPath, pageIndex: 99, imagePath: imagePath, x: 100, y: 100));
-        Assert.Contains("pageIndex must be between", ex.Message);
-    }
-
-    [Fact]
-    public void Add_WithMissingImagePath_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreateTestPdf("test_add_no_image.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", pdfPath, pageIndex: 1, x: 100, y: 100));
-        Assert.Contains("imagePath", ex.Message);
-    }
-
-    [Fact]
-    public void Add_WithNonExistentImagePath_ShouldThrowFileNotFoundException()
-    {
-        var pdfPath = CreateTestPdf("test_add_nonexistent.pdf");
-        Assert.Throws<FileNotFoundException>(() =>
-            _tool.Execute("add", pdfPath, pageIndex: 1, imagePath: @"C:\nonexistent\image.png", x: 100, y: 100));
-    }
-
-    [Fact]
-    public void Delete_WithInvalidImageIndex_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreatePdfWithImage("test_delete_invalid.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("delete", pdfPath, pageIndex: 1, imageIndex: 99));
-        Assert.Contains("imageIndex must be between", ex.Message);
-    }
-
-    [Fact]
-    public void Delete_WithNoImages_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreateTestPdf("test_delete_no_images.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("delete", pdfPath, pageIndex: 1, imageIndex: 1));
-        Assert.Contains("imageIndex must be between", ex.Message);
-    }
-
-    [Fact]
-    public void Edit_WithInvalidImageIndex_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreatePdfWithImage("test_edit_invalid.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("edit", pdfPath, pageIndex: 1, imageIndex: 99, x: 100, y: 100));
-        Assert.Contains("imageIndex must be between", ex.Message);
-    }
-
-    [Fact]
-    public void Extract_WithInvalidPageIndex_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreatePdfWithImage("test_extract_invalid_page.pdf");
-        var outputPath = CreateTestFilePath("test_extract_invalid.png");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("extract", pdfPath, outputPath: outputPath, pageIndex: 99, imageIndex: 1));
-        Assert.Contains("pageIndex must be between", ex.Message);
-    }
-
-    [Fact]
-    public void Extract_WithInvalidImageIndex_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreatePdfWithImage("test_extract_invalid_img.pdf");
-        var outputPath = CreateTestFilePath("test_extract_invalid_img.png");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("extract", pdfPath, outputPath: outputPath, pageIndex: 1, imageIndex: 99));
-        Assert.Contains("imageIndex must be between", ex.Message);
-    }
-
-    [Fact]
-    public void Extract_WithNoImages_ShouldReturnNoImagesMessage()
-    {
-        var pdfPath = CreateTestPdf("test_extract_no_images.pdf");
-        var outputPath = CreateTestFilePath("test_extract_no_images.png");
-        var result = _tool.Execute("extract", pdfPath, outputPath: outputPath, pageIndex: 1);
-        Assert.Contains("No images found", result);
-    }
-
-    [Fact]
-    public void Get_WithInvalidPageIndex_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreateTestPdf("test_get_invalid_page.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("get", pdfPath, pageIndex: 99));
-        Assert.Contains("pageIndex must be between", ex.Message);
-    }
-
-    [Fact]
-    public void Execute_WithNoPathOrSessionId_ShouldThrowException()
-    {
-        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("get"));
-        Assert.Contains("path", ex.Message.ToLower());
-    }
-
     #endregion
 
-    #region Session
+    #region Session Management
 
     [Fact]
     public void Get_WithSessionId_ShouldGetFromSession()
@@ -348,14 +157,10 @@ public class PdfImageToolTests : PdfTestBase
         var pdfPath = CreateTestPdf("test_session_add.pdf");
         var sessionId = OpenSession(pdfPath);
         var imagePath = CreateTestImage("test_session_add.png");
-        var docBefore = SessionManager.GetDocument<Document>(sessionId);
-        var countBefore = docBefore.Pages[1].Resources.Images.Count;
         var result = _tool.Execute("add", sessionId: sessionId,
             pageIndex: 1, imagePath: imagePath, x: 100, y: 100);
         Assert.StartsWith("Added image", result);
         Assert.Contains("session", result);
-        var docAfter = SessionManager.GetDocument<Document>(sessionId);
-        Assert.True(docAfter.Pages[1].Resources.Images.Count > countBefore);
     }
 
     [Fact]
@@ -363,25 +168,9 @@ public class PdfImageToolTests : PdfTestBase
     {
         var pdfPath = CreatePdfWithImage("test_session_delete.pdf");
         var sessionId = OpenSession(pdfPath);
-        var docBefore = SessionManager.GetDocument<Document>(sessionId);
-        var countBefore = docBefore.Pages[1].Resources.Images.Count;
-        Assert.True(countBefore > 0);
         var result = _tool.Execute("delete", sessionId: sessionId,
             pageIndex: 1, imageIndex: 1);
         Assert.StartsWith("Deleted", result);
-        Assert.Contains("session", result);
-        var docAfter = SessionManager.GetDocument<Document>(sessionId);
-        Assert.True(docAfter.Pages[1].Resources.Images.Count < countBefore);
-    }
-
-    [Fact]
-    public void Edit_WithSessionId_ShouldEditInSession()
-    {
-        var pdfPath = CreatePdfWithImage("test_session_edit.pdf");
-        var sessionId = OpenSession(pdfPath);
-        var result = _tool.Execute("edit", sessionId: sessionId,
-            pageIndex: 1, imageIndex: 1, x: 300, y: 300);
-        Assert.StartsWith("Moved", result);
         Assert.Contains("session", result);
     }
 

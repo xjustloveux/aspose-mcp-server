@@ -5,6 +5,11 @@ using AsposeMcpServer.Tools.Excel;
 
 namespace AsposeMcpServer.Tests.Tools.Excel;
 
+/// <summary>
+///     Integration tests for ExcelNamedRangeTool.
+///     Focuses on session management, file I/O, and operation routing.
+///     Detailed parameter validation and business logic tests are in Handler tests.
+/// </summary>
 public class ExcelNamedRangeToolTests : ExcelTestBase
 {
     private readonly ExcelNamedRangeTool _tool;
@@ -31,7 +36,7 @@ public class ExcelNamedRangeToolTests : ExcelTestBase
         return workbookPath;
     }
 
-    #region General
+    #region File I/O Smoke Tests
 
     [Fact]
     public void Add_ShouldAddNamedRange()
@@ -40,76 +45,8 @@ public class ExcelNamedRangeToolTests : ExcelTestBase
         var outputPath = CreateTestFilePath("test_add_output.xlsx");
         var result = _tool.Execute("add", workbookPath, name: "TestRange", range: "A1:C5", outputPath: outputPath);
         Assert.StartsWith("Named range 'TestRange' added", result);
-        Assert.Contains("reference:", result);
         using var workbook = new Workbook(outputPath);
         Assert.NotNull(workbook.Worksheets.Names["TestRange"]);
-    }
-
-    [Fact]
-    public void Add_WithComment_ShouldAddComment()
-    {
-        var workbookPath = CreateExcelWorkbook("test_add_comment.xlsx");
-        var outputPath = CreateTestFilePath("test_add_comment_output.xlsx");
-        var result = _tool.Execute("add", workbookPath, name: "CommentedRange", range: "A1:B2",
-            comment: "This is a test range", outputPath: outputPath);
-        Assert.StartsWith("Named range 'CommentedRange' added", result);
-        using var workbook = new Workbook(outputPath);
-        var namedRange = workbook.Worksheets.Names["CommentedRange"];
-        Assert.NotNull(namedRange);
-        Assert.Equal("This is a test range", namedRange.Comment);
-    }
-
-    [Fact]
-    public void Add_SingleCell_ShouldAddRange()
-    {
-        var workbookPath = CreateExcelWorkbook("test_add_single.xlsx");
-        var outputPath = CreateTestFilePath("test_add_single_output.xlsx");
-        var result = _tool.Execute("add", workbookPath, name: "SingleCell", range: "A1", outputPath: outputPath);
-        Assert.StartsWith("Named range 'SingleCell' added", result);
-        using var workbook = new Workbook(outputPath);
-        Assert.NotNull(workbook.Worksheets.Names["SingleCell"]);
-    }
-
-    [Fact]
-    public void Add_WithSheetReference_ShouldAddToCorrectSheet()
-    {
-        var workbookPath = CreateExcelWorkbook("test_add_sheetref.xlsx");
-        using (var wb = new Workbook(workbookPath))
-        {
-            wb.Worksheets.Add("DataSheet");
-            wb.Save(workbookPath);
-        }
-
-        var outputPath = CreateTestFilePath("test_add_sheetref_output.xlsx");
-        var result = _tool.Execute("add", workbookPath, name: "SheetRange",
-            range: "DataSheet!A1:C5", outputPath: outputPath);
-        Assert.StartsWith("Named range 'SheetRange' added", result);
-        Assert.Contains("DataSheet", result);
-        using var workbook = new Workbook(outputPath);
-        var namedRange = workbook.Worksheets.Names["SheetRange"];
-        Assert.NotNull(namedRange);
-        Assert.Contains("DataSheet", namedRange.RefersTo);
-    }
-
-    [SkippableFact]
-    public void Add_WithSheetIndex_ShouldAddToCorrectSheet()
-    {
-        SkipInEvaluationMode(AsposeLibraryType.Cells, "Adding sheet exceeds evaluation limit");
-        var workbookPath = CreateExcelWorkbook("test_add_sheetindex.xlsx");
-        using (var wb = new Workbook(workbookPath))
-        {
-            wb.Worksheets.Add("Sheet2");
-            wb.Save(workbookPath);
-        }
-
-        var outputPath = CreateTestFilePath("test_add_sheetindex_output.xlsx");
-        var result = _tool.Execute("add", workbookPath, name: "Sheet2Range",
-            range: "A1:C5", sheetIndex: 1, outputPath: outputPath);
-        Assert.StartsWith("Named range 'Sheet2Range' added", result);
-        using var workbook = new Workbook(outputPath);
-        var namedRange = workbook.Worksheets.Names["Sheet2Range"];
-        Assert.NotNull(namedRange);
-        Assert.Contains("Sheet2", namedRange.RefersTo);
     }
 
     [Fact]
@@ -137,8 +74,6 @@ public class ExcelNamedRangeToolTests : ExcelTestBase
         var result = _tool.Execute("get", workbookPath);
         var json = JsonDocument.Parse(result);
         Assert.Equal(2, json.RootElement.GetProperty("count").GetInt32());
-        Assert.Contains("Range1", result);
-        Assert.Contains("Range2", result);
     }
 
     [Fact]
@@ -148,37 +83,17 @@ public class ExcelNamedRangeToolTests : ExcelTestBase
         var result = _tool.Execute("get", workbookPath);
         var json = JsonDocument.Parse(result);
         Assert.Equal(0, json.RootElement.GetProperty("count").GetInt32());
-        Assert.Equal("No named ranges found", json.RootElement.GetProperty("message").GetString());
     }
 
-    [Fact]
-    public void Get_ShouldIncludeAllProperties()
-    {
-        var workbookPath = CreateExcelWorkbook("test_get_props.xlsx");
-        using (var wb = new Workbook(workbookPath))
-        {
-            var range = wb.Worksheets[0].Cells.CreateRange("A1", "B2");
-            range.Name = "DetailedRange";
-            wb.Worksheets.Names["DetailedRange"].Comment = "Test comment";
-            wb.Save(workbookPath);
-        }
+    #endregion
 
-        var result = _tool.Execute("get", workbookPath);
-        var json = JsonDocument.Parse(result);
-        var firstItem = json.RootElement.GetProperty("items")[0];
-        Assert.True(firstItem.TryGetProperty("name", out _));
-        Assert.True(firstItem.TryGetProperty("reference", out _));
-        Assert.True(firstItem.TryGetProperty("comment", out _));
-        Assert.True(firstItem.TryGetProperty("isVisible", out _));
-        Assert.Equal("DetailedRange", firstItem.GetProperty("name").GetString());
-        Assert.Equal("Test comment", firstItem.GetProperty("comment").GetString());
-    }
+    #region Operation Routing
 
     [Theory]
     [InlineData("ADD")]
     [InlineData("Add")]
     [InlineData("add")]
-    public void Operation_ShouldBeCaseInsensitive_Add(string operation)
+    public void Operation_ShouldBeCaseInsensitive(string operation)
     {
         var workbookPath = CreateExcelWorkbook($"test_case_{operation}.xlsx");
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.xlsx");
@@ -186,33 +101,6 @@ public class ExcelNamedRangeToolTests : ExcelTestBase
             range: "A1:B2", outputPath: outputPath);
         Assert.Contains("added", result);
     }
-
-    [Theory]
-    [InlineData("GET")]
-    [InlineData("Get")]
-    [InlineData("get")]
-    public void Operation_ShouldBeCaseInsensitive_Get(string operation)
-    {
-        var workbookPath = CreateExcelWorkbook($"test_case_get_{operation}.xlsx");
-        var result = _tool.Execute(operation, workbookPath);
-        Assert.Contains("count", result);
-    }
-
-    [Theory]
-    [InlineData("DELETE")]
-    [InlineData("Delete")]
-    [InlineData("delete")]
-    public void Operation_ShouldBeCaseInsensitive_Delete(string operation)
-    {
-        var workbookPath = CreateWorkbookWithNamedRange($"test_case_del_{operation}.xlsx", "TestRange", "A1:B2");
-        var outputPath = CreateTestFilePath($"test_case_del_{operation}_output.xlsx");
-        var result = _tool.Execute(operation, workbookPath, name: "TestRange", outputPath: outputPath);
-        Assert.Contains("deleted", result);
-    }
-
-    #endregion
-
-    #region Exception
 
     [Fact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
@@ -222,84 +110,9 @@ public class ExcelNamedRangeToolTests : ExcelTestBase
         Assert.Contains("Unknown operation", ex.Message);
     }
 
-    [Fact]
-    public void Add_WithMissingName_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_add_missing_name.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", workbookPath, range: "A1:B2"));
-        Assert.Contains("name", ex.Message.ToLower());
-    }
-
-    [Fact]
-    public void Add_WithMissingRange_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_add_missing_range.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", workbookPath, name: "TestRange"));
-        Assert.Contains("range", ex.Message.ToLower());
-    }
-
-    [Fact]
-    public void Add_WithDuplicateName_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateWorkbookWithNamedRange("test_add_duplicate.xlsx", "ExistingRange", "A1:B2");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", workbookPath, name: "ExistingRange", range: "C1:D2"));
-        Assert.Contains("already exists", ex.Message);
-    }
-
-    [Fact]
-    public void Add_WithInvalidSheetIndex_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_add_invalid_sheet.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", workbookPath, name: "TestRange", range: "A1:B2", sheetIndex: 99));
-        Assert.Contains("out of range", ex.Message);
-    }
-
-    [Fact]
-    public void Add_WithInvalidSheetReference_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_add_invalid_sheetref.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", workbookPath, name: "TestRange", range: "NonExistentSheet!A1:B2"));
-        Assert.Contains("not found", ex.Message);
-    }
-
-    [Fact]
-    public void Delete_WithMissingName_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_delete_missing_name.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("delete", workbookPath));
-        Assert.Contains("name", ex.Message.ToLower());
-    }
-
-    [Fact]
-    public void Delete_WithNonExistentName_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_delete_nonexistent.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("delete", workbookPath, name: "NonExistentRange"));
-        Assert.Contains("does not exist", ex.Message);
-    }
-
-    [Fact]
-    public void Execute_WithEmptyPath_ShouldThrowException()
-    {
-        Assert.Throws<ArgumentException>(() => _tool.Execute("get", ""));
-    }
-
-    [Fact]
-    public void Execute_WithNoPathOrSessionId_ShouldThrowException()
-    {
-        Assert.ThrowsAny<Exception>(() => _tool.Execute("get"));
-    }
-
     #endregion
 
-    #region Session
+    #region Session Management
 
     [Fact]
     public void Add_WithSessionId_ShouldAddInMemory()
@@ -333,7 +146,6 @@ public class ExcelNamedRangeToolTests : ExcelTestBase
         var result = _tool.Execute("get", sessionId: sessionId);
         var json = JsonDocument.Parse(result);
         Assert.Equal(1, json.RootElement.GetProperty("count").GetInt32());
-        Assert.Contains("SessionRange", result);
     }
 
     [Fact]

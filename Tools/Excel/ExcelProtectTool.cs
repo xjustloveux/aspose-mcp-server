@@ -1,38 +1,22 @@
 using System.ComponentModel;
-using System.Text.Json;
 using Aspose.Cells;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.Excel.Protect;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
 
 /// <summary>
 ///     Unified tool for managing Excel protection (protect, unprotect, get, set_cell_locked).
-///     Merges: ExcelProtectTool, ExcelUnprotectTool, ExcelGetProtectionTool, ExcelProtectWorkbookTool.
 /// </summary>
 [McpServerToolType]
 public class ExcelProtectTool
 {
     /// <summary>
-    ///     Operation name for protecting workbook or sheet.
+    ///     Handler registry for protection operations.
     /// </summary>
-    private const string OperationProtect = "protect";
-
-    /// <summary>
-    ///     Operation name for removing protection.
-    /// </summary>
-    private const string OperationUnprotect = "unprotect";
-
-    /// <summary>
-    ///     Operation name for getting protection status.
-    /// </summary>
-    private const string OperationGet = "get";
-
-    /// <summary>
-    ///     Operation name for setting cell locked status.
-    /// </summary>
-    private const string OperationSetCellLocked = "set_cell_locked";
+    private readonly HandlerRegistry<Workbook> _handlerRegistry;
 
     /// <summary>
     ///     Session identity accessor for session isolation support.
@@ -54,6 +38,7 @@ public class ExcelProtectTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = ExcelProtectHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -122,200 +107,70 @@ Usage examples:
     {
         using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
-        return operation.ToLowerInvariant() switch
+        var parameters = BuildParameters(operation, sheetIndex, password, protectWorkbook, protectStructure,
+            protectWindows, range, locked);
+
+        var handler = _handlerRegistry.GetHandler(operation);
+
+        var operationContext = new OperationContext<Workbook>
         {
-            OperationProtect => Protect(ctx, outputPath, sheetIndex, password, protectWorkbook, protectStructure,
-                protectWindows),
-            OperationUnprotect => Unprotect(ctx, outputPath, sheetIndex, password),
-            OperationGet => GetProtection(ctx, sheetIndex),
-            OperationSetCellLocked => SetCellLocked(ctx, outputPath, sheetIndex ?? 0, range, locked),
-            _ => throw new ArgumentException($"Unknown operation: {operation}")
+            Document = ctx.Document,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = path,
+            OutputPath = outputPath
         };
-    }
 
-    /// <summary>
-    ///     Protects workbook or worksheet with password.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The sheet index (0-based), or null for workbook-level protection.</param>
-    /// <param name="password">The protection password.</param>
-    /// <param name="protectWorkbook">Whether to protect the workbook structure.</param>
-    /// <param name="protectStructure">Whether to protect the workbook structure (when protectWorkbook is true).</param>
-    /// <param name="protectWindows">Whether to protect the workbook windows (when protectWorkbook is true).</param>
-    /// <returns>A message indicating the result of the protection operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when password is null or empty.</exception>
-    private static string Protect(DocumentContext<Workbook> ctx, string? outputPath, int? sheetIndex,
-        string? password, bool protectWorkbook, bool protectStructure, bool protectWindows)
-    {
-        if (string.IsNullOrEmpty(password))
-            throw new ArgumentException("password is required for protect operation");
+        var result = handler.Execute(operationContext, parameters);
 
-        var workbook = ctx.Document;
+        if (operation.ToLowerInvariant() == "get")
+            return result;
 
-        if (protectWorkbook || (!sheetIndex.HasValue && !protectWorkbook))
-        {
-            var protectionType = ProtectionType.None;
-            if (protectStructure && protectWindows)
-                protectionType = ProtectionType.All;
-            else if (protectStructure)
-                protectionType = ProtectionType.Structure;
-            else if (protectWindows)
-                protectionType = ProtectionType.Windows;
-
-            if (protectionType != ProtectionType.None)
-                workbook.Protect(protectionType, password);
-        }
-        else if (sheetIndex.HasValue)
-        {
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex.Value);
-            worksheet.Protect(ProtectionType.All, password, null);
-        }
-
-        ctx.Save(outputPath);
-
-        var target = protectWorkbook ? "workbook" :
-            sheetIndex.HasValue ? $"worksheet {sheetIndex.Value}" : "workbook";
-        return $"Excel {target} protected with password successfully. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Removes protection from workbook or worksheet.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The sheet index (0-based), or null for workbook-level unprotection.</param>
-    /// <param name="password">The protection password used to unprotect.</param>
-    /// <returns>A message indicating the result of the unprotection operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when the password is incorrect.</exception>
-    private static string Unprotect(DocumentContext<Workbook> ctx, string? outputPath, int? sheetIndex,
-        string? password)
-    {
-        var workbook = ctx.Document;
-
-        if (sheetIndex.HasValue)
-        {
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex.Value);
-
-            if (!worksheet.IsProtected)
-            {
-                ctx.Save(outputPath);
-                return $"Worksheet '{worksheet.Name}' is not protected. {ctx.GetOutputMessage(outputPath)}";
-            }
-
-            try
-            {
-                worksheet.Unprotect(password);
-            }
-            catch (Exception ex)
-            {
-                throw new ArgumentException(
-                    $"Incorrect password. Cannot unprotect worksheet '{worksheet.Name}'. Error: {ex.Message}");
-            }
-
+        if (operationContext.IsModified)
             ctx.Save(outputPath);
-            return $"Worksheet '{worksheet.Name}' protection removed successfully. {ctx.GetOutputMessage(outputPath)}";
-        }
 
-        workbook.Unprotect(password);
-        ctx.Save(outputPath);
-        return $"Workbook protection removed successfully. {ctx.GetOutputMessage(outputPath)}";
+        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Gets protection status for workbook or worksheet.
+    ///     Builds OperationParameters from method parameters.
     /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="sheetIndex">The sheet index (0-based), or null to get all worksheets' protection status.</param>
-    /// <returns>A JSON string containing the protection status information.</returns>
-    private static string GetProtection(DocumentContext<Workbook> ctx, int? sheetIndex)
+    private static OperationParameters BuildParameters(
+        string operation,
+        int? sheetIndex,
+        string? password,
+        bool protectWorkbook,
+        bool protectStructure,
+        bool protectWindows,
+        string? range,
+        bool locked)
     {
-        var workbook = ctx.Document;
-        List<object> worksheets = [];
+        var parameters = new OperationParameters();
+        if (sheetIndex.HasValue) parameters.Set("sheetIndex", sheetIndex.Value);
 
-        if (sheetIndex.HasValue)
+        switch (operation.ToLowerInvariant())
         {
-            var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex.Value);
-            worksheets.Add(CreateSheetProtectionInfo(worksheet, sheetIndex.Value));
+            case "protect":
+                if (password != null) parameters.Set("password", password);
+                parameters.Set("protectWorkbook", protectWorkbook);
+                parameters.Set("protectStructure", protectStructure);
+                parameters.Set("protectWindows", protectWindows);
+                break;
+
+            case "unprotect":
+                if (password != null) parameters.Set("password", password);
+                break;
+
+            case "get":
+                break;
+
+            case "set_cell_locked":
+                if (range != null) parameters.Set("range", range);
+                parameters.Set("locked", locked);
+                break;
         }
-        else
-        {
-            for (var i = 0; i < workbook.Worksheets.Count; i++)
-                worksheets.Add(CreateSheetProtectionInfo(workbook.Worksheets[i], i));
-        }
 
-        var result = new
-        {
-            count = worksheets.Count,
-            totalWorksheets = workbook.Worksheets.Count,
-            worksheets
-        };
-
-        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
-    }
-
-    /// <summary>
-    ///     Creates protection information object for a worksheet.
-    /// </summary>
-    /// <param name="worksheet">The worksheet to get protection information from.</param>
-    /// <param name="index">The index of the worksheet.</param>
-    /// <returns>An anonymous object containing the worksheet's protection details.</returns>
-    private static object CreateSheetProtectionInfo(Worksheet worksheet, int index)
-    {
-        var protection = worksheet.Protection;
-        return new
-        {
-            index,
-            name = worksheet.Name,
-            isProtected = protection.IsProtectedWithPassword,
-            allowSelectingLockedCell = protection.AllowSelectingLockedCell,
-            allowSelectingUnlockedCell = protection.AllowSelectingUnlockedCell,
-            allowFormattingCell = protection.AllowFormattingCell,
-            allowFormattingColumn = protection.AllowFormattingColumn,
-            allowFormattingRow = protection.AllowFormattingRow,
-            allowInsertingColumn = protection.AllowInsertingColumn,
-            allowInsertingRow = protection.AllowInsertingRow,
-            allowInsertingHyperlink = protection.AllowInsertingHyperlink,
-            allowDeletingColumn = protection.AllowDeletingColumn,
-            allowDeletingRow = protection.AllowDeletingRow,
-            allowSorting = protection.AllowSorting,
-            allowFiltering = protection.AllowFiltering,
-            allowUsingPivotTable = protection.AllowUsingPivotTable,
-            allowEditingObject = protection.AllowEditingObject,
-            allowEditingScenario = protection.AllowEditingScenario
-        };
-    }
-
-    /// <summary>
-    ///     Sets cell locked status.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The sheet index (0-based).</param>
-    /// <param name="range">The cell range to set locked status (e.g., 'A1:B10').</param>
-    /// <param name="locked">Whether the cells should be locked.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when range is null or empty.</exception>
-    private static string SetCellLocked(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex,
-        string? range, bool locked)
-    {
-        if (string.IsNullOrEmpty(range))
-            throw new ArgumentException("range is required for set_cell_locked operation");
-
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var cells = worksheet.Cells;
-
-        var cellRange = ExcelHelper.CreateRange(cells, range);
-
-        var style = workbook.CreateStyle();
-        style.IsLocked = locked;
-
-        var styleFlag = new StyleFlag { Locked = true };
-        cellRange.ApplyStyle(style, styleFlag);
-
-        ctx.Save(outputPath);
-        return
-            $"Cell lock status set to {(locked ? "locked" : "unlocked")} for range {range} in sheet {sheetIndex}. {ctx.GetOutputMessage(outputPath)}";
+        return parameters;
     }
 }

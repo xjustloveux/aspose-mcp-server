@@ -14,18 +14,23 @@ insert_final_newline = true
 [*.cs]
 indent_size = 4
 
-# ===== JetBrains ReSharper/InspectCode 規則排除 =====
-# 參考文件: CODE_QUALITY_EXCEPTIONS.md
+# ===== JetBrains ReSharper/InspectCode Rule Exclusions =====
+# Reference: CODE_QUALITY_EXCEPTIONS.md
 
-# JSON 序列化相關（配置類需要 public setter）
+# JSON serialization (config classes need public setters)
 resharper_auto_property_can_be_made_get_only_global_highlighting = none
 resharper_property_can_be_made_init_only_global_highlighting = none
 resharper_unused_auto_property_accessor_global_highlighting = none
 
-# 公開 API 相關（供外部使用者調用）
+# Public API (for external consumers)
 resharper_unused_member_global_highlighting = none
 resharper_unused_type_global_highlighting = none
 resharper_member_can_be_private_global_highlighting = none
+
+# Test files specific rules
+[Tests/**/*.cs]
+# Record.Exception() pattern - lambda executes synchronously before dispose
+resharper_access_to_disposed_closure_highlighting = none
 
 # XML and config files
 [*.{xml,config,json,yml,yaml}]

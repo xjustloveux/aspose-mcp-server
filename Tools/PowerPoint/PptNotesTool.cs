@@ -1,8 +1,8 @@
 using System.ComponentModel;
-using System.Text.Json;
 using Aspose.Slides;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.PowerPoint.Notes;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.PowerPoint;
@@ -16,9 +16,9 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 public class PptNotesTool
 {
     /// <summary>
-    ///     JSON serializer options for consistent output formatting.
+    ///     Handler registry for notes operations.
     /// </summary>
-    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
+    private readonly HandlerRegistry<Presentation> _handlerRegistry;
 
     /// <summary>
     ///     Identity accessor for session isolation.
@@ -40,6 +40,7 @@ public class PptNotesTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = PptNotesHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -96,221 +97,70 @@ Usage examples:
     {
         using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
-        return operation.ToLower() switch
+        var parameters = BuildParameters(operation, slideIndex, notes, slideIndices,
+            headerText, footerText, dateText, showPageNumber);
+
+        var handler = _handlerRegistry.GetHandler(operation);
+
+        var operationContext = new OperationContext<Presentation>
         {
-            "set" => SetNotes(ctx, outputPath, slideIndex, notes),
-            "get" => GetNotes(ctx, slideIndex),
-            "clear" => ClearNotes(ctx, outputPath, slideIndices),
-            "set_header_footer" => SetNotesHeaderFooter(ctx, outputPath, headerText, footerText, dateText,
-                showPageNumber),
-            _ => throw new ArgumentException($"Unknown operation: {operation}")
+            Document = ctx.Document,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = path,
+            OutputPath = outputPath
         };
+
+        var result = handler.Execute(operationContext, parameters);
+
+        if (operation.ToLowerInvariant() == "get")
+            return result;
+
+        if (operationContext.IsModified)
+            ctx.Save(outputPath);
+
+        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Sets (replaces) notes on a slide.
+    ///     Builds OperationParameters from method parameters.
     /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="slideIndex">The slide index (0-based).</param>
-    /// <param name="notes">The notes text content.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when slideIndex or notes is not provided.</exception>
-    private static string SetNotes(DocumentContext<Presentation> ctx, string? outputPath, int? slideIndex,
-        string? notes)
+    private static OperationParameters BuildParameters(
+        string operation,
+        int? slideIndex,
+        string? notes,
+        int[]? slideIndices,
+        string? headerText,
+        string? footerText,
+        string? dateText,
+        bool showPageNumber)
     {
-        if (!slideIndex.HasValue)
-            throw new ArgumentException("slideIndex is required for set operation");
-        if (string.IsNullOrEmpty(notes))
-            throw new ArgumentException("notes is required for set operation");
+        var parameters = new OperationParameters();
 
-        var presentation = ctx.Document;
-        PowerPointHelper.ValidateCollectionIndex(slideIndex.Value, presentation.Slides.Count, "slide");
-
-        var slide = presentation.Slides[slideIndex.Value];
-        var notesSlide = GetOrAddNotesSlide(slide);
-        notesSlide.NotesTextFrame.Text = notes;
-
-        ctx.Save(outputPath);
-
-        var result = $"Notes set for slide {slideIndex}.\n";
-        result += ctx.GetOutputMessage(outputPath);
-        return result;
-    }
-
-    /// <summary>
-    ///     Gets notes from slides.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="slideIndex">The slide index (0-based), or null to get all slides.</param>
-    /// <returns>A JSON string containing notes information.</returns>
-    private static string GetNotes(DocumentContext<Presentation> ctx, int? slideIndex)
-    {
-        var presentation = ctx.Document;
-
-        if (slideIndex.HasValue)
+        switch (operation.ToLowerInvariant())
         {
-            PowerPointHelper.ValidateCollectionIndex(slideIndex.Value, presentation.Slides.Count, "slide");
+            case "set":
+                if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
+                if (notes != null) parameters.Set("notes", notes);
+                break;
 
-            var notesSlide = presentation.Slides[slideIndex.Value].NotesSlideManager.NotesSlide;
-            var notesText = notesSlide?.NotesTextFrame?.Text;
+            case "get":
+                if (slideIndex.HasValue) parameters.Set("slideIndex", slideIndex.Value);
+                break;
 
-            var result = new
-            {
-                slideIndex = slideIndex.Value,
-                hasNotes = !string.IsNullOrWhiteSpace(notesText),
-                notes = notesText
-            };
+            case "clear":
+                if (slideIndices != null) parameters.Set("slideIndices", slideIndices);
+                break;
 
-            return JsonSerializer.Serialize(result, JsonOptions);
-        }
-        else
-        {
-            List<object> notesList = [];
-            for (var i = 0; i < presentation.Slides.Count; i++)
-            {
-                var notesSlide = presentation.Slides[i].NotesSlideManager.NotesSlide;
-                var notesText = notesSlide?.NotesTextFrame?.Text;
-
-                notesList.Add(new
-                {
-                    slideIndex = i,
-                    hasNotes = !string.IsNullOrWhiteSpace(notesText),
-                    notes = notesText
-                });
-            }
-
-            var result = new
-            {
-                count = presentation.Slides.Count,
-                slides = notesList
-            };
-
-            return JsonSerializer.Serialize(result, JsonOptions);
-        }
-    }
-
-    /// <summary>
-    ///     Clears notes from slides. Only clears if notes slide exists.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="slideIndices">The array of slide indices to clear, or null for all slides.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    private static string ClearNotes(DocumentContext<Presentation> ctx, string? outputPath, int[]? slideIndices)
-    {
-        var presentation = ctx.Document;
-        var targets = slideIndices?.Length > 0
-            ? slideIndices
-            : Enumerable.Range(0, presentation.Slides.Count).ToArray();
-
-        ValidateSlideIndices(targets, presentation.Slides.Count);
-
-        var clearedCount = 0;
-        foreach (var idx in targets)
-        {
-            var slide = presentation.Slides[idx];
-            var notesSlide = slide.NotesSlideManager.NotesSlide;
-            if (notesSlide?.NotesTextFrame != null)
-            {
-                notesSlide.NotesTextFrame.Text = string.Empty;
-                clearedCount++;
-            }
+            case "set_header_footer":
+                if (headerText != null) parameters.Set("headerText", headerText);
+                if (footerText != null) parameters.Set("footerText", footerText);
+                if (dateText != null) parameters.Set("dateText", dateText);
+                parameters.Set("showPageNumber", showPageNumber);
+                break;
         }
 
-        ctx.Save(outputPath);
-
-        var result = $"Cleared speaker notes for {clearedCount} slides (of {targets.Length} targeted).\n";
-        result += ctx.GetOutputMessage(outputPath);
-        return result;
-    }
-
-    /// <summary>
-    ///     Sets header and footer for notes master.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="headerText">The header text for notes pages.</param>
-    /// <param name="footerText">The footer text for notes pages.</param>
-    /// <param name="dateText">The date/time text for notes pages.</param>
-    /// <param name="showPageNumber">Whether to show page numbers.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="InvalidOperationException">
-    ///     Thrown when the presentation has no slides or notes master cannot be
-    ///     created.
-    /// </exception>
-    private static string SetNotesHeaderFooter(DocumentContext<Presentation> ctx, string? outputPath,
-        string? headerText, string? footerText, string? dateText, bool showPageNumber)
-    {
-        var presentation = ctx.Document;
-
-        if (presentation.Slides.Count == 0)
-            throw new InvalidOperationException(
-                "Presentation has no slides. Cannot set notes header/footer on empty presentation.");
-
-        if (presentation.MasterNotesSlideManager.MasterNotesSlide == null)
-            presentation.Slides[0].NotesSlideManager.AddNotesSlide();
-
-        var notesMaster = presentation.MasterNotesSlideManager.MasterNotesSlide;
-        if (notesMaster == null)
-            throw new InvalidOperationException("Failed to create notes master slide.");
-
-        var manager = notesMaster.HeaderFooterManager;
-
-        if (!string.IsNullOrEmpty(headerText))
-        {
-            manager.SetHeaderText(headerText);
-            manager.SetHeaderVisibility(true);
-        }
-
-        if (!string.IsNullOrEmpty(footerText))
-        {
-            manager.SetFooterText(footerText);
-            manager.SetFooterVisibility(true);
-        }
-
-        if (!string.IsNullOrEmpty(dateText))
-        {
-            manager.SetDateTimeText(dateText);
-            manager.SetDateTimeVisibility(true);
-        }
-
-        manager.SetSlideNumberVisibility(showPageNumber);
-
-        ctx.Save(outputPath);
-
-        List<string> settings = [];
-        if (!string.IsNullOrEmpty(headerText)) settings.Add("header");
-        if (!string.IsNullOrEmpty(footerText)) settings.Add("footer");
-        if (!string.IsNullOrEmpty(dateText)) settings.Add("date");
-        settings.Add(showPageNumber ? "page number shown" : "page number hidden");
-
-        var result = $"Notes master header/footer updated ({string.Join(", ", settings)}).\n";
-        result += ctx.GetOutputMessage(outputPath);
-        return result;
-    }
-
-    /// <summary>
-    ///     Gets or creates a notes slide for the given slide.
-    /// </summary>
-    /// <param name="slide">The slide to get or create notes for.</param>
-    /// <returns>The notes slide for the given slide.</returns>
-    private static INotesSlide GetOrAddNotesSlide(ISlide slide)
-    {
-        return slide.NotesSlideManager.NotesSlide ?? slide.NotesSlideManager.AddNotesSlide();
-    }
-
-    /// <summary>
-    ///     Validates all slide indices before processing.
-    /// </summary>
-    /// <param name="indices">The array of slide indices to validate.</param>
-    /// <param name="slideCount">The total number of slides in the presentation.</param>
-    /// <exception cref="ArgumentException">Thrown when any slide index is out of range.</exception>
-    private static void ValidateSlideIndices(int[] indices, int slideCount)
-    {
-        var invalidIndices = indices.Where(idx => idx < 0 || idx >= slideCount).ToList();
-        if (invalidIndices.Count > 0)
-            throw new ArgumentException(
-                $"Invalid slide indices: [{string.Join(", ", invalidIndices)}]. Valid range: 0 to {slideCount - 1}");
+        return parameters;
     }
 }

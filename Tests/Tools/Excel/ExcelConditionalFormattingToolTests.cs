@@ -1,10 +1,14 @@
-using System.Text.Json;
 using Aspose.Cells;
 using AsposeMcpServer.Tests.Helpers;
 using AsposeMcpServer.Tools.Excel;
 
 namespace AsposeMcpServer.Tests.Tools.Excel;
 
+/// <summary>
+///     Integration tests for ExcelConditionalFormattingTool.
+///     Focuses on session management, file I/O, and operation routing.
+///     Detailed parameter validation and business logic tests are in Handler tests.
+/// </summary>
 public class ExcelConditionalFormattingToolTests : ExcelTestBase
 {
     private readonly ExcelConditionalFormattingTool _tool;
@@ -14,13 +18,12 @@ public class ExcelConditionalFormattingToolTests : ExcelTestBase
         _tool = new ExcelConditionalFormattingTool(SessionManager);
     }
 
-    private string CreateWorkbookWithConditionalFormatting(string fileName, string range = "A1:A5",
-        OperatorType operatorType = OperatorType.GreaterThan, string formula1 = "10")
+    private string CreateWorkbookWithConditionalFormatting(string fileName)
     {
         var path = CreateExcelWorkbook(fileName);
         using var workbook = new Workbook(path);
         var worksheet = workbook.Worksheets[0];
-        var cellRange = worksheet.Cells.CreateRange(range);
+        var cellRange = worksheet.Cells.CreateRange("A1:A5");
         var index = worksheet.ConditionalFormattings.Add();
         var formatting = worksheet.ConditionalFormattings[index];
         var area = new CellArea
@@ -31,12 +34,12 @@ public class ExcelConditionalFormattingToolTests : ExcelTestBase
             EndColumn = cellRange.FirstColumn + cellRange.ColumnCount - 1
         };
         formatting.AddArea(area);
-        formatting.AddCondition(FormatConditionType.CellValue, operatorType, formula1, null);
+        formatting.AddCondition(FormatConditionType.CellValue, OperatorType.GreaterThan, "10", null);
         workbook.Save(path);
         return path;
     }
 
-    #region General
+    #region File I/O Smoke Tests
 
     [Fact]
     public void Add_ShouldAddConditionalFormatting()
@@ -51,57 +54,11 @@ public class ExcelConditionalFormattingToolTests : ExcelTestBase
     }
 
     [Fact]
-    public void Add_WithBetweenCondition_ShouldUseBothFormulas()
-    {
-        var workbookPath = CreateExcelWorkbookWithData("test_add_between.xlsx", 5, 5);
-        var outputPath = CreateTestFilePath("test_add_between_output.xlsx");
-        _tool.Execute("add", workbookPath, range: "A1:A5", condition: "Between", value: "10", formula2: "50",
-            outputPath: outputPath);
-        using var workbook = new Workbook(outputPath);
-        Assert.True(workbook.Worksheets[0].ConditionalFormattings.Count > 0);
-    }
-
-    [Fact]
-    public void Add_WithBackgroundColor_ShouldSetColor()
-    {
-        var workbookPath = CreateExcelWorkbookWithData("test_add_color.xlsx", 5, 5);
-        var outputPath = CreateTestFilePath("test_add_color_output.xlsx");
-        _tool.Execute("add", workbookPath, range: "A1:A5", condition: "GreaterThan", value: "10",
-            backgroundColor: "#FF0000", outputPath: outputPath);
-        using var workbook = new Workbook(outputPath);
-        Assert.True(workbook.Worksheets[0].ConditionalFormattings.Count > 0);
-    }
-
-    [Theory]
-    [InlineData("GreaterThan")]
-    [InlineData("LessThan")]
-    [InlineData("Equal")]
-    public void Add_AllConditionTypes_ShouldWork(string condition)
-    {
-        var workbookPath = CreateExcelWorkbookWithData($"test_add_{condition}.xlsx", 5, 5);
-        var outputPath = CreateTestFilePath($"test_add_{condition}_output.xlsx");
-        var result = _tool.Execute("add", workbookPath, range: "A1:A5", condition: condition, value: "10",
-            outputPath: outputPath);
-        Assert.StartsWith("Conditional formatting added", result);
-    }
-
-    [Fact]
     public void Get_ShouldReturnFormattingInfo()
     {
         var workbookPath = CreateWorkbookWithConditionalFormatting("test_get.xlsx");
         var result = _tool.Execute("get", workbookPath, conditionalFormattingIndex: 0);
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.GetProperty("count").GetInt32() > 0);
-    }
-
-    [Fact]
-    public void Get_WithNoFormattings_ShouldReturnEmptyResult()
-    {
-        var workbookPath = CreateExcelWorkbook("test_get_empty.xlsx");
-        var result = _tool.Execute("get", workbookPath);
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(0, json.RootElement.GetProperty("count").GetInt32());
-        Assert.Contains("No conditional formattings found", json.RootElement.GetProperty("message").GetString());
+        Assert.Contains("count", result);
     }
 
     [Fact]
@@ -112,18 +69,6 @@ public class ExcelConditionalFormattingToolTests : ExcelTestBase
         var result = _tool.Execute("edit", workbookPath, conditionalFormattingIndex: 0, conditionIndex: 0,
             condition: "LessThan", value: "20", outputPath: outputPath);
         Assert.StartsWith("Edited conditional formatting", result);
-        using var workbook = new Workbook(outputPath);
-        Assert.True(workbook.Worksheets[0].ConditionalFormattings.Count > 0);
-    }
-
-    [Fact]
-    public void Edit_WithBackgroundColor_ShouldUpdateColor()
-    {
-        var workbookPath = CreateWorkbookWithConditionalFormatting("test_edit_color.xlsx");
-        var outputPath = CreateTestFilePath("test_edit_color_output.xlsx");
-        var result = _tool.Execute("edit", workbookPath, conditionalFormattingIndex: 0, conditionIndex: 0,
-            backgroundColor: "#00FF00", outputPath: outputPath);
-        Assert.Contains("BackgroundColor=#00FF00", result);
     }
 
     [Fact]
@@ -133,16 +78,19 @@ public class ExcelConditionalFormattingToolTests : ExcelTestBase
         var outputPath = CreateTestFilePath("test_delete_output.xlsx");
         var result = _tool.Execute("delete", workbookPath, conditionalFormattingIndex: 0, outputPath: outputPath);
         Assert.StartsWith("Deleted conditional formatting", result);
-        Assert.Contains("remaining: 0", result); // Verify remaining count
         using var workbook = new Workbook(outputPath);
         Assert.Empty(workbook.Worksheets[0].ConditionalFormattings);
     }
+
+    #endregion
+
+    #region Operation Routing
 
     [Theory]
     [InlineData("ADD")]
     [InlineData("Add")]
     [InlineData("add")]
-    public void Operation_ShouldBeCaseInsensitive_Add(string operation)
+    public void Operation_ShouldBeCaseInsensitive(string operation)
     {
         var workbookPath = CreateExcelWorkbookWithData($"test_case_{operation}.xlsx", 5, 5);
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.xlsx");
@@ -150,33 +98,6 @@ public class ExcelConditionalFormattingToolTests : ExcelTestBase
             outputPath: outputPath);
         Assert.StartsWith("Conditional formatting added", result);
     }
-
-    [Theory]
-    [InlineData("GET")]
-    [InlineData("Get")]
-    [InlineData("get")]
-    public void Operation_ShouldBeCaseInsensitive_Get(string operation)
-    {
-        var workbookPath = CreateExcelWorkbook($"test_case_get_{operation}.xlsx");
-        var result = _tool.Execute(operation, workbookPath);
-        Assert.Contains("count", result);
-    }
-
-    [Theory]
-    [InlineData("DELETE")]
-    [InlineData("Delete")]
-    [InlineData("delete")]
-    public void Operation_ShouldBeCaseInsensitive_Delete(string operation)
-    {
-        var workbookPath = CreateWorkbookWithConditionalFormatting($"test_case_delete_{operation}.xlsx");
-        var outputPath = CreateTestFilePath($"test_case_delete_{operation}_output.xlsx");
-        var result = _tool.Execute(operation, workbookPath, conditionalFormattingIndex: 0, outputPath: outputPath);
-        Assert.StartsWith("Deleted conditional formatting", result);
-    }
-
-    #endregion
-
-    #region Exception
 
     [Fact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
@@ -186,75 +107,9 @@ public class ExcelConditionalFormattingToolTests : ExcelTestBase
         Assert.Contains("Unknown operation", ex.Message);
     }
 
-    [Fact]
-    public void Add_WithMissingRange_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_missing_range.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", workbookPath, condition: "GreaterThan", value: "10"));
-        Assert.Contains("range is required", ex.Message);
-    }
-
-    [Fact]
-    public void Add_WithMissingCondition_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_missing_condition.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", workbookPath, range: "A1:A5", value: "10"));
-        Assert.Contains("condition is required", ex.Message);
-    }
-
-    [Fact]
-    public void Add_WithMissingValue_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_missing_value.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", workbookPath, range: "A1:A5", condition: "GreaterThan"));
-        Assert.Contains("value is required", ex.Message);
-    }
-
-    [Fact]
-    public void Add_WithInvalidRange_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_invalid_range.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", workbookPath, range: "InvalidRange", condition: "GreaterThan", value: "10"));
-        Assert.Contains("Invalid range format", ex.Message);
-    }
-
-    [Fact]
-    public void Edit_WithInvalidIndex_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_edit_invalid.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("edit", workbookPath, conditionalFormattingIndex: 99, conditionIndex: 0, value: "10"));
-        Assert.Contains("out of range", ex.Message);
-    }
-
-    [Fact]
-    public void Delete_WithInvalidIndex_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateExcelWorkbook("test_delete_invalid.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("delete", workbookPath, conditionalFormattingIndex: 99));
-        Assert.Contains("out of range", ex.Message);
-    }
-
-    [Fact]
-    public void Execute_WithEmptyPath_ShouldThrowException()
-    {
-        Assert.Throws<ArgumentException>(() => _tool.Execute("get", ""));
-    }
-
-    [Fact]
-    public void Execute_WithNoPathOrSessionId_ShouldThrowException()
-    {
-        Assert.ThrowsAny<Exception>(() => _tool.Execute("get"));
-    }
-
     #endregion
 
-    #region Session
+    #region Session Management
 
     [Fact]
     public void Add_WithSessionId_ShouldAddInMemory()
@@ -263,7 +118,7 @@ public class ExcelConditionalFormattingToolTests : ExcelTestBase
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("add", sessionId: sessionId, range: "A1:A5", condition: "GreaterThan", value: "10");
         Assert.StartsWith("Conditional formatting added", result);
-        Assert.Contains("session", result); // Verify session was used
+        Assert.Contains("session", result);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.True(workbook.Worksheets[0].ConditionalFormattings.Count > 0);
     }
@@ -274,19 +129,7 @@ public class ExcelConditionalFormattingToolTests : ExcelTestBase
         var workbookPath = CreateWorkbookWithConditionalFormatting("test_session_get.xlsx");
         var sessionId = OpenSession(workbookPath);
         var result = _tool.Execute("get", sessionId: sessionId);
-        var json = JsonDocument.Parse(result);
-        Assert.True(json.RootElement.GetProperty("count").GetInt32() > 0);
-    }
-
-    [Fact]
-    public void Edit_WithSessionId_ShouldEditInMemory()
-    {
-        var workbookPath = CreateWorkbookWithConditionalFormatting("test_session_edit.xlsx");
-        var sessionId = OpenSession(workbookPath);
-        _tool.Execute("edit", sessionId: sessionId, conditionalFormattingIndex: 0, conditionIndex: 0,
-            condition: "LessThan", value: "5");
-        var workbook = SessionManager.GetDocument<Workbook>(sessionId);
-        Assert.True(workbook.Worksheets[0].ConditionalFormattings.Count > 0);
+        Assert.Contains("count", result);
     }
 
     [Fact]
@@ -294,8 +137,6 @@ public class ExcelConditionalFormattingToolTests : ExcelTestBase
     {
         var workbookPath = CreateWorkbookWithConditionalFormatting("test_session_delete.xlsx");
         var sessionId = OpenSession(workbookPath);
-        var beforeWorkbook = SessionManager.GetDocument<Workbook>(sessionId);
-        Assert.True(beforeWorkbook.Worksheets[0].ConditionalFormattings.Count > 0);
         _tool.Execute("delete", sessionId: sessionId, conditionalFormattingIndex: 0);
         var workbook = SessionManager.GetDocument<Workbook>(sessionId);
         Assert.Empty(workbook.Worksheets[0].ConditionalFormattings);

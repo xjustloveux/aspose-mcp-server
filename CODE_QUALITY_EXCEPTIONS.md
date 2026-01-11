@@ -3,7 +3,7 @@
 本文件記錄 JetBrains InspectCode 報告中被排除修復的問題及其原因。
 這些問題經過評估後決定保留，未來進行代碼品質檢查時可參考本文件跳過這些項目。
 
-**最後更新日期**: 2026-01-06
+**最後更新日期**: 2026-01-11
 **分析工具**: JetBrains InspectCode 2025.3.0.4
 
 ---
@@ -179,8 +179,8 @@ Enum 可以改為 protected 可見性。
 
 | 檔案 | 行號 | 方法 |
 |------|------|------|
-| `Tests/Core/Security/ApiKeyAuthenticationMiddlewareTests.cs` | 345 | `ReadAsStringAsync` |
-| `Tests/Core/Security/ApiKeyAuthenticationMiddlewareTests.cs` | 389 | `ReadAsStringAsync` |
+| `Tests/Core/Security/ApiKeyAuthenticationMiddlewareTests.cs` | 315 | `ReadAsStringAsync` |
+| `Tests/Core/Security/ApiKeyAuthenticationMiddlewareTests.cs` | 355 | `ReadAsStringAsync` |
 
 ### 問題描述
 
@@ -199,43 +199,20 @@ Enum 可以改為 protected 可見性。
 | 項目 | 內容 |
 |------|------|
 | **級別** | Warning |
-| **數量** | 5 |
+| **數量** | 0 |
 | **訊息** | Parameter output value is always discarded |
 
 ### 受影響檔案
 
-| 檔案 | 行號 | 參數 |
-|------|------|------|
-| `Tests/Tools/Conversion/ConvertDocumentToolTests.cs` | 107 | `expectedContents` |
-| `Tests/Tools/Conversion/ConvertDocumentToolTests.cs` | 168 | `expectedContents` |
-| `Tests/Tools/Conversion/ConvertToPdfToolTests.cs` | 36 | `expectedContents` |
-| `Tests/Tools/Conversion/ConvertToPdfToolTests.cs` | 89 | `expectedContents` |
-| `Tests/Tools/Conversion/ConvertToPdfToolTests.cs` | 143 | `expectedContents` |
+~~已無受影響檔案~~（2026-01-11 重構後移除）
 
-### 問題描述
+原本的 `expectedContents` out 參數模式已在重構中移除。
 
-out 參數的輸出值總是被丟棄（使用 `out _`）。
+### 歷史記錄
 
-### 不修復原因
-
-- **這是預期行為**，是修復 UnusedVariable 後產生的
-- 我們使用 `out _` discard 模式來明確表示不需要輸出值
-- 這些輔助方法設計上需要返回 out 參數（給需要它的測試），但有些測試不需要該值
-- 這是正確的 C# discard 模式使用
-
-### 範例代碼
-
-```csharp
-// 輔助方法設計有 out 參數
-private string CreateRichWordDocument(string fileName, out List<string> expectedContents)
-
-// 有些測試需要 expectedContents
-var docPath = CreateRichWordDocument("test.docx", out var contents);
-foreach (var content in contents) { Assert.Contains(content, result); }
-
-// 有些測試不需要，使用 discard
-var docPath = CreateRichWordDocument("test.docx", out _);
-```
+原本有 5 個項目：
+- ~~`Tests/Tools/Conversion/ConvertDocumentToolTests.cs`~~（已重構）
+- ~~`Tests/Tools/Conversion/ConvertToPdfToolTests.cs`~~（已重構）
 
 ---
 
@@ -301,7 +278,7 @@ public string Host { get; init; } = "localhost";  // 會導致反序列化失敗
 | `Core/Session/DocumentSessionManager.cs` | 772 | `EstimatedMemoryMb.get` |
 | `Core/Session/DocumentSessionManager.cs` | 767 | `LastAccessedAt.get` |
 | `Core/Session/DocumentSessionManager.cs` | 762 | `OpenedAt.get` |
-| `Core/Session/TempFileManager.cs` | 605 | `OwnerTenantId.get` |
+| `Core/Session/TempFileManager.cs` | 605 | `OwnerGroupId.get` |
 | `Core/Session/TempFileManager.cs` | 610 | `OwnerUserId.get` |
 | `Core/Session/TempFileManager.cs` | 575 | `TempPath.get` |
 
@@ -358,28 +335,20 @@ public string Host { get; init; } = "localhost";  // 會導致反序列化失敗
 | 項目 | 內容 |
 |------|------|
 | **級別** | Warning |
-| **數量** | 4 |
+| **數量** | 0 |
 | **訊息** | Member is never used |
 
 ### 受影響檔案
 
-| 檔案 | 行號 | 成員 |
-|------|------|------|
-| `Tests/Tools/Conversion/ConvertDocumentToolTests.cs` | 95 | `CreateExcelWorkbook()` |
-| `Tests/Tools/Conversion/ConvertDocumentToolTests.cs` | 157 | `CreatePowerPointPresentation()` |
-| `Tests/Tools/Conversion/ConvertToPdfToolTests.cs` | 77 | `CreateExcelWorkbook()` |
-| `Tests/Tools/Conversion/ConvertToPdfToolTests.cs` | 132 | `CreatePowerPointPresentation()` |
+~~已無受影響檔案~~（2026-01-11 重構後已使用）
 
-### 問題描述
+### 歷史記錄
 
-本地私有成員未使用。
-
-### 不修復原因
-
-- 這些是測試輔助方法，可能被未來測試使用
-- 保留提供完整的測試基礎設施
-- 刪除後如需使用還要重新撰寫
-- 與其他已使用的 `CreateRichXxx()` 方法形成完整的測試工具組
+原本有 4 個項目，現已被使用：
+- ~~`Tests/Tools/Conversion/ConvertDocumentToolTests.cs` - `CreateExcelWorkbook()`~~（現在有使用）
+- ~~`Tests/Tools/Conversion/ConvertDocumentToolTests.cs` - `CreatePowerPointPresentation()`~~（現在有使用）
+- ~~`Tests/Tools/Conversion/ConvertToPdfToolTests.cs` - `CreateExcelWorkbook()`~~（現在有使用）
+- ~~`Tests/Tools/Conversion/ConvertToPdfToolTests.cs` - `CreatePowerPointPresentation()`~~（現在有使用）
 
 ---
 
@@ -464,37 +433,22 @@ app.UseTracking();
 | 項目 | 內容 |
 |------|------|
 | **級別** | Note |
-| **數量** | 1 |
+| **數量** | 0 |
 | **訊息** | Use object initializer |
 
 ### 受影響檔案
 
-| 檔案 | 行號 | 變量 |
-|------|------|------|
-| `Tests/Tools/Word/WordPropertiesToolTests.cs` | 132 | `doc` |
+~~已無受影響檔案~~（2026-01-11 重構後已使用 object initializer）
 
-### 問題描述
+### 歷史記錄
 
-建議使用對象初始化器語法。
+原本有 1 個項目：
+- ~~`Tests/Tools/Word/WordPropertiesToolTests.cs`~~（已重構為使用 object initializer 語法）
 
-### 不修復原因
-
-代碼設置的是子對象的屬性，無法在對象初始化器中設置：
-
+現在代碼使用：
 ```csharp
-// 實際代碼 - 設置子對象屬性
-var doc = new Document(docPath);
-doc.BuiltInDocumentProperties.Title = "Original Title";    // 子對象屬性
-doc.BuiltInDocumentProperties.Author = "Original Author";  // 子對象屬性
-
-// 無法使用對象初始化器
-var doc = new Document(docPath)
-{
-    // BuiltInDocumentProperties 是唯讀屬性，無法在此設置其子屬性
-};
+var doc = new Document(docPath) { BuiltInDocumentProperties = { Title = "Title" } };
 ```
-
-這是 C# 語言限制，不適用初始化器語法。
 
 ---
 
@@ -507,15 +461,15 @@ var doc = new Document(docPath)
 | MemberCanBePrivate.Global | 7 | Note | 公開 API |
 | MemberCanBeProtected.Global | 1 | Note | 測試彈性 |
 | MethodSupportsCancellation | 2 | Note | 測試不需要 |
-| OutParameterValueIsAlwaysDiscarded.Local | 5 | Warning | 預期 discard |
+| ~~OutParameterValueIsAlwaysDiscarded.Local~~ | ~~0~~ | ~~Warning~~ | ~~已重構移除~~ |
 | PropertyCanBeMadeInitOnly.Global | 38 | Note | JSON 序列化 |
 | UnusedAutoPropertyAccessor.Global | 7 | Warning | JSON 序列化 / 外部 API |
 | UnusedMember.Global | 9 | Note | 公開 API |
-| UnusedMember.Local | 4 | Warning | 未來使用 |
+| ~~UnusedMember.Local~~ | ~~0~~ | ~~Warning~~ | ~~已重構移除~~ |
 | UnusedMethodReturnValue.Global | 1 | Note | 公開 API |
 | UnusedType.Global | 3 | Note | 公開 API |
-| UseObjectOrCollectionInitializer | 1 | Note | 語言限制 |
-| **總計** | **86** | - | - |
+| ~~UseObjectOrCollectionInitializer~~ | ~~0~~ | ~~Note~~ | ~~已重構移除~~ |
+| **總計** | **76** | - | - |
 
 ---
 
@@ -561,3 +515,4 @@ public void SomePublicApiMethod() { }
 | 日期 | 版本 | 變更內容 |
 |------|------|----------|
 | 2026-01-06 | 1.0.0 | 初始建立文件，記錄 86 個例外項目 |
+| 2026-01-11 | 1.1.0 | 重構後更新：移除 10 個已解決項目（OutParameterValueIsAlwaysDiscarded.Local: 5 個, UnusedMember.Local: 4 個, UseObjectOrCollectionInitializer: 1 個），更新 MethodSupportsCancellation 行號，總計 76 個 |

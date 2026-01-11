@@ -17,15 +17,15 @@ public class StdioSessionIdentityAccessor : ISessionIdentityAccessor
     /// </summary>
     public StdioSessionIdentityAccessor()
     {
-        var tenantId = Environment.GetEnvironmentVariable("ASPOSE_SESSION_TENANT_ID");
+        var groupId = Environment.GetEnvironmentVariable("ASPOSE_SESSION_GROUP_ID");
         var userId = Environment.GetEnvironmentVariable("ASPOSE_SESSION_USER_ID");
 
-        if (string.IsNullOrEmpty(tenantId) && string.IsNullOrEmpty(userId))
+        if (string.IsNullOrEmpty(groupId) && string.IsNullOrEmpty(userId))
             _identity = SessionIdentity.GetAnonymous();
         else
             _identity = new SessionIdentity
             {
-                TenantId = tenantId,
+                GroupId = groupId,
                 UserId = userId
             };
     }

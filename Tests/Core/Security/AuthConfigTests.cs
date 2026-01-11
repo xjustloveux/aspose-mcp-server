@@ -12,7 +12,7 @@ public class AuthConfigTests
         Assert.False(config.Enabled);
         Assert.Equal(ApiKeyMode.Local, config.Mode);
         Assert.Equal("X-API-Key", config.HeaderName);
-        Assert.Equal("X-Tenant-Id", config.TenantIdHeader);
+        Assert.Equal("X-Group-Id", config.GroupIdentifierHeader);
         Assert.Equal(5, config.ExternalTimeoutSeconds);
         Assert.Equal("key", config.IntrospectionKeyField);
         Assert.Null(config.Keys);
@@ -25,9 +25,9 @@ public class AuthConfigTests
 
         Assert.False(config.Enabled);
         Assert.Equal(JwtMode.Local, config.Mode);
-        Assert.Equal("tenant_id", config.TenantIdClaim);
+        Assert.Equal("tenant_id", config.GroupIdentifierClaim);
         Assert.Equal("sub", config.UserIdClaim);
-        Assert.Equal("X-Tenant-Id", config.TenantIdHeader);
+        Assert.Equal("X-Group-Id", config.GroupIdentifierHeader);
         Assert.Equal("X-User-Id", config.UserIdHeader);
         Assert.Equal(5, config.ExternalTimeoutSeconds);
     }

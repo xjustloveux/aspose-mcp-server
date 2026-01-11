@@ -1,8 +1,8 @@
 using System.ComponentModel;
-using System.Text.Json;
 using Aspose.Pdf;
-using Aspose.Pdf.Annotations;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.Pdf.Annotation;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Pdf;
@@ -13,6 +13,11 @@ namespace AsposeMcpServer.Tools.Pdf;
 [McpServerToolType]
 public class PdfAnnotationTool
 {
+    /// <summary>
+    ///     Handler registry for annotation operations.
+    /// </summary>
+    private readonly HandlerRegistry<Document> _handlerRegistry;
+
     /// <summary>
     ///     The session identity accessor for session isolation.
     /// </summary>
@@ -33,6 +38,7 @@ public class PdfAnnotationTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = PdfAnnotationHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -81,243 +87,73 @@ Usage examples:
         [Description("Y position in points (origin is bottom-left, 72 points = 1 inch, for add/edit, default: 700)")]
         double y = 700)
     {
-        return operation.ToLower() switch
-        {
-            "add" => AddAnnotation(sessionId, path, outputPath, pageIndex, text, x, y),
-            "delete" => DeleteAnnotation(sessionId, path, outputPath, pageIndex, annotationIndex),
-            "edit" => EditAnnotation(sessionId, path, outputPath, pageIndex, annotationIndex, text, x, y),
-            "get" => GetAnnotations(sessionId, path, pageIndex),
-            _ => throw new ArgumentException($"Unknown operation: {operation}")
-        };
-    }
-
-    /// <summary>
-    ///     Adds a new text annotation to the specified page.
-    /// </summary>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
-    /// <param name="path">The PDF file path.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="pageIndex">The 1-based page index.</param>
-    /// <param name="text">The annotation text content.</param>
-    /// <param name="x">The X position in PDF coordinates.</param>
-    /// <param name="y">The Y position in PDF coordinates.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when required parameters are missing or invalid.</exception>
-    private string AddAnnotation(string? sessionId, string? path, string? outputPath, int? pageIndex, string? text,
-        double x, double y)
-    {
-        if (!pageIndex.HasValue)
-            throw new ArgumentException("pageIndex is required for add operation");
-        if (string.IsNullOrEmpty(text))
-            throw new ArgumentException("text is required for add operation");
-
         using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
-        var document = ctx.Document;
 
-        if (pageIndex.Value < 1 || pageIndex.Value > document.Pages.Count)
-            throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
+        var parameters = BuildParameters(operation, pageIndex, annotationIndex, text, x, y);
 
-        var page = document.Pages[pageIndex.Value];
-        var annotation = new TextAnnotation(page, new Rectangle(x, y, x + 200, y + 50))
+        var handler = _handlerRegistry.GetHandler(operation);
+
+        var operationContext = new OperationContext<Document>
         {
-            Title = "Comment",
-            Subject = "Annotation",
-            Contents = text,
-            Open = false,
-            Icon = TextIcon.Note
+            Document = ctx.Document,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = path,
+            OutputPath = outputPath
         };
 
-        page.Annotations.Add(annotation);
+        var result = handler.Execute(operationContext, parameters);
 
-        ctx.Save(outputPath);
-        return $"Added annotation to page {pageIndex.Value}. {ctx.GetOutputMessage(outputPath)}";
-    }
+        if (operation.ToLowerInvariant() == "get")
+            return result;
 
-    /// <summary>
-    ///     Deletes one or all annotations from the specified page.
-    /// </summary>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
-    /// <param name="path">The PDF file path.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="pageIndex">The 1-based page index.</param>
-    /// <param name="annotationIndex">The 1-based annotation index, or null to delete all annotations.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when required parameters are missing or invalid.</exception>
-    private string DeleteAnnotation(string? sessionId, string? path, string? outputPath, int? pageIndex,
-        int? annotationIndex)
-    {
-        if (!pageIndex.HasValue)
-            throw new ArgumentException("pageIndex is required for delete operation");
-
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
-        var document = ctx.Document;
-
-        if (pageIndex.Value < 1 || pageIndex.Value > document.Pages.Count)
-            throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
-
-        var page = document.Pages[pageIndex.Value];
-
-        if (annotationIndex.HasValue)
-        {
-            if (annotationIndex.Value < 1 || annotationIndex.Value > page.Annotations.Count)
-                throw new ArgumentException($"annotationIndex must be between 1 and {page.Annotations.Count}");
-
-            page.Annotations.Delete(annotationIndex.Value);
+        if (operationContext.IsModified)
             ctx.Save(outputPath);
-            return
-                $"Deleted annotation {annotationIndex.Value} from page {pageIndex.Value}. {ctx.GetOutputMessage(outputPath)}";
-        }
 
-        var count = page.Annotations.Count;
-        if (count == 0)
-            throw new ArgumentException($"No annotations found on page {pageIndex.Value}");
-
-        page.Annotations.Delete();
-        ctx.Save(outputPath);
-        return $"Deleted all {count} annotation(s) from page {pageIndex.Value}. {ctx.GetOutputMessage(outputPath)}";
+        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Edits an existing text annotation on the specified page.
+    ///     Builds OperationParameters from method parameters.
     /// </summary>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
-    /// <param name="path">The PDF file path.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="pageIndex">The 1-based page index.</param>
-    /// <param name="annotationIndex">The 1-based annotation index.</param>
-    /// <param name="text">The new annotation text content.</param>
-    /// <param name="x">The new X position in PDF coordinates.</param>
-    /// <param name="y">The new Y position in PDF coordinates.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when required parameters are missing or invalid.</exception>
-    private string EditAnnotation(string? sessionId, string? path, string? outputPath, int? pageIndex,
-        int? annotationIndex, string? text, double x, double y)
+    private static OperationParameters BuildParameters(
+        string operation,
+        int? pageIndex,
+        int? annotationIndex,
+        string? text,
+        double x,
+        double y)
     {
-        if (!pageIndex.HasValue)
-            throw new ArgumentException("pageIndex is required for edit operation");
-        if (!annotationIndex.HasValue)
-            throw new ArgumentException("annotationIndex is required for edit operation");
-        if (string.IsNullOrEmpty(text))
-            throw new ArgumentException("text is required for edit operation");
+        var parameters = new OperationParameters();
 
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
-        var document = ctx.Document;
-
-        if (pageIndex.Value < 1 || pageIndex.Value > document.Pages.Count)
-            throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
-
-        var page = document.Pages[pageIndex.Value];
-        if (annotationIndex.Value < 1 || annotationIndex.Value > page.Annotations.Count)
-            throw new ArgumentException($"annotationIndex must be between 1 and {page.Annotations.Count}");
-
-        try
+        switch (operation.ToLowerInvariant())
         {
-            var annotation = page.Annotations[annotationIndex.Value];
-            if (annotation is TextAnnotation textAnnotation)
-            {
-                textAnnotation.Contents = text;
-                if (Math.Abs(x - 100) > 0.001 || Math.Abs(y - 700) > 0.001)
-                    textAnnotation.Rect = new Rectangle(x, y, x + 200, y + 50);
-            }
-            else
-            {
-                throw new ArgumentException(
-                    $"Annotation at index {annotationIndex.Value} is not a TextAnnotation and cannot be edited");
-            }
-        }
-        catch (Exception ex) when (ex is not ArgumentException)
-        {
-            throw new ArgumentException($"Failed to edit annotation: {ex.Message}");
+            case "add":
+                if (pageIndex.HasValue) parameters.Set("pageIndex", pageIndex.Value);
+                if (text != null) parameters.Set("text", text);
+                parameters.Set("x", x);
+                parameters.Set("y", y);
+                break;
+
+            case "delete":
+                if (pageIndex.HasValue) parameters.Set("pageIndex", pageIndex.Value);
+                if (annotationIndex.HasValue) parameters.Set("annotationIndex", annotationIndex.Value);
+                break;
+
+            case "edit":
+                if (pageIndex.HasValue) parameters.Set("pageIndex", pageIndex.Value);
+                if (annotationIndex.HasValue) parameters.Set("annotationIndex", annotationIndex.Value);
+                if (text != null) parameters.Set("text", text);
+                parameters.Set("x", x);
+                parameters.Set("y", y);
+                break;
+
+            case "get":
+                if (pageIndex.HasValue) parameters.Set("pageIndex", pageIndex.Value);
+                break;
         }
 
-        ctx.Save(outputPath);
-        return
-            $"Edited annotation {annotationIndex.Value} on page {pageIndex.Value}. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Retrieves annotations from the specified page or all pages.
-    /// </summary>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
-    /// <param name="path">The PDF file path.</param>
-    /// <param name="pageIndex">The 1-based page index, or null for all pages.</param>
-    /// <returns>A JSON string containing annotation information.</returns>
-    /// <exception cref="ArgumentException">Thrown when the page index is out of range.</exception>
-    private string GetAnnotations(string? sessionId, string? path, int? pageIndex)
-    {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
-        var document = ctx.Document;
-        List<object> annotationList = [];
-
-        if (pageIndex.HasValue)
-        {
-            if (pageIndex.Value < 1 || pageIndex.Value > document.Pages.Count)
-                throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
-
-            var page = document.Pages[pageIndex.Value];
-            CollectAnnotationsFromPage(page, pageIndex.Value, annotationList);
-
-            var result = new
-            {
-                count = annotationList.Count,
-                pageIndex = pageIndex.Value,
-                items = annotationList
-            };
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
-        }
-
-        for (var i = 1; i <= document.Pages.Count; i++)
-        {
-            var page = document.Pages[i];
-            CollectAnnotationsFromPage(page, i, annotationList);
-        }
-
-        var allResult = new
-        {
-            count = annotationList.Count,
-            items = annotationList,
-            message = annotationList.Count == 0 ? "No annotations found" : null
-        };
-        return JsonSerializer.Serialize(allResult, new JsonSerializerOptions { WriteIndented = true });
-    }
-
-    /// <summary>
-    ///     Collects annotation information from a single page.
-    /// </summary>
-    /// <param name="page">The PDF page to collect annotations from.</param>
-    /// <param name="pageIndex">The 1-based page index for reference.</param>
-    /// <param name="annotationList">The list to add annotation information to.</param>
-    private static void CollectAnnotationsFromPage(Page page, int pageIndex, List<object> annotationList)
-    {
-        for (var i = 1; i <= page.Annotations.Count; i++)
-        {
-            var annotation = page.Annotations[i];
-            var annotationInfo = new Dictionary<string, object?>
-            {
-                ["index"] = i,
-                ["pageIndex"] = pageIndex,
-                ["type"] = annotation.GetType().Name,
-                ["name"] = !string.IsNullOrEmpty(annotation.Name) ? annotation.Name : null,
-                ["modified"] = annotation.Modified != DateTime.MinValue ? annotation.Modified.ToString("o") : null
-            };
-
-            if (annotation is MarkupAnnotation markupAnnotation)
-            {
-                annotationInfo["contents"] = markupAnnotation.Contents;
-                annotationInfo["subject"] =
-                    !string.IsNullOrEmpty(markupAnnotation.Subject) ? markupAnnotation.Subject : null;
-                annotationInfo["title"] = !string.IsNullOrEmpty(markupAnnotation.Title) ? markupAnnotation.Title : null;
-            }
-
-            if (annotation.Rect != null)
-            {
-                annotationInfo["x"] = annotation.Rect.LLX;
-                annotationInfo["y"] = annotation.Rect.LLY;
-                annotationInfo["width"] = annotation.Rect.Width;
-                annotationInfo["height"] = annotation.Rect.Height;
-            }
-
-            annotationList.Add(annotationInfo);
-        }
+        return parameters;
     }
 }

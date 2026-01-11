@@ -4,6 +4,11 @@ using AsposeMcpServer.Tools.Word;
 
 namespace AsposeMcpServer.Tests.Tools.Word;
 
+/// <summary>
+///     Integration tests for WordCommentTool.
+///     Focuses on session management, file I/O, and operation routing.
+///     Detailed parameter validation and business logic tests are in Handler tests.
+/// </summary>
 public class WordCommentToolTests : WordTestBase
 {
     private readonly WordCommentTool _tool;
@@ -13,7 +18,7 @@ public class WordCommentToolTests : WordTestBase
         _tool = new WordCommentTool(SessionManager);
     }
 
-    #region General
+    #region File I/O Smoke Tests
 
     [Fact]
     public void AddComment_ShouldAddComment()
@@ -26,72 +31,6 @@ public class WordCommentToolTests : WordTestBase
         var comments = doc.GetChildNodes(NodeType.Comment, true).Cast<Comment>().ToList();
         Assert.True(comments.Count > 0, "Document should contain at least one comment");
         Assert.Contains("test comment", comments[0].GetText(), StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public void AddComment_WithAuthorInitials_ShouldUseProvidedInitials()
-    {
-        var docPath = CreateWordDocumentWithContent("test_add_initials.docx", "Test paragraph");
-        var outputPath = CreateTestFilePath("test_add_initials_output.docx");
-        _tool.Execute("add", docPath, outputPath: outputPath,
-            text: "Comment with initials", author: "Test Author", authorInitial: "XY", paragraphIndex: 0);
-        var doc = new Document(outputPath);
-        var comments = doc.GetChildNodes(NodeType.Comment, true).Cast<Comment>().ToList();
-        Assert.True(comments.Count > 0);
-        Assert.Equal("XY", comments[0].Initial);
-    }
-
-    [Fact]
-    public void AddComment_WithNegativeOneParagraphIndex_ShouldAddToLastParagraph()
-    {
-        var docPath = CreateWordDocumentWithContent("test_add_last.docx", "First paragraph");
-        var doc = new Document(docPath);
-        var builder = new DocumentBuilder(doc);
-        builder.Writeln("Second paragraph");
-        builder.Writeln("Last paragraph");
-        doc.Save(docPath);
-
-        var outputPath = CreateTestFilePath("test_add_last_output.docx");
-        _tool.Execute("add", docPath, outputPath: outputPath,
-            text: "Comment on last", author: "Author", paragraphIndex: -1);
-        var resultDoc = new Document(outputPath);
-        var comments = resultDoc.GetChildNodes(NodeType.Comment, true).Cast<Comment>().ToList();
-        Assert.True(comments.Count > 0);
-    }
-
-    [Fact]
-    public void AddComment_WithoutParagraphIndex_ShouldAddAtEnd()
-    {
-        var docPath = CreateWordDocumentWithContent("test_add_end.docx", "Test content");
-        var outputPath = CreateTestFilePath("test_add_end_output.docx");
-        _tool.Execute("add", docPath, outputPath: outputPath, text: "Comment at end", author: "Author");
-        var doc = new Document(outputPath);
-        var comments = doc.GetChildNodes(NodeType.Comment, true).Cast<Comment>().ToList();
-        Assert.True(comments.Count > 0);
-    }
-
-    [Fact]
-    public void AddComment_WithRunIndexes_ShouldAddToSpecificRuns()
-    {
-        var docPath = CreateWordDocumentWithContent("test_add_runs.docx", "Test content for runs");
-        var outputPath = CreateTestFilePath("test_add_runs_output.docx");
-        _tool.Execute("add", docPath, outputPath: outputPath,
-            text: "Comment on runs", author: "Author", paragraphIndex: 0, startRunIndex: 0, endRunIndex: 0);
-        var doc = new Document(outputPath);
-        var comments = doc.GetChildNodes(NodeType.Comment, true).Cast<Comment>().ToList();
-        Assert.True(comments.Count > 0);
-    }
-
-    [Fact]
-    public void AddComment_WithOnlyStartRunIndex_ShouldUseAsSingleRun()
-    {
-        var docPath = CreateWordDocumentWithContent("test_add_single_run.docx", "Test content");
-        var outputPath = CreateTestFilePath("test_add_single_run_output.docx");
-        _tool.Execute("add", docPath, outputPath: outputPath,
-            text: "Single run comment", author: "Author", paragraphIndex: 0, startRunIndex: 0);
-        var doc = new Document(outputPath);
-        var comments = doc.GetChildNodes(NodeType.Comment, true).Cast<Comment>().ToList();
-        Assert.True(comments.Count > 0);
     }
 
     [Fact]
@@ -108,34 +47,6 @@ public class WordCommentToolTests : WordTestBase
         Assert.NotNull(result);
         Assert.NotEmpty(result);
         Assert.Contains("Comment", result, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public void GetComments_ShouldReturnJsonWithCorrectFields()
-    {
-        var docPath = CreateWordDocumentWithContent("test_get_fields.docx", "Test");
-        var doc = new Document(docPath);
-        var comment = new Comment(doc, "Test Author", "TA", DateTime.Now);
-        comment.Paragraphs.Add(new Paragraph(doc));
-        comment.FirstParagraph.Runs.Add(new Run(doc, "Test comment"));
-        doc.FirstSection.Body.FirstParagraph.AppendChild(comment);
-        doc.Save(docPath);
-        var result = _tool.Execute("get", docPath);
-        Assert.Contains("\"author\"", result);
-        Assert.Contains("\"initial\"", result);
-        Assert.Contains("\"date\"", result);
-        Assert.Contains("\"content\"", result);
-        Assert.Contains("\"replyCount\"", result);
-    }
-
-    [Fact]
-    public void GetComments_WithNoComments_ShouldReturnEmptyResult()
-    {
-        var docPath = CreateWordDocumentWithContent("test_get_no_comments.docx", "No comments here");
-        var result = _tool.Execute("get", docPath);
-        Assert.NotNull(result);
-        Assert.Contains("\"count\":0", result.Replace(" ", ""));
-        Assert.Contains("No comments found", result);
     }
 
     [Fact]
@@ -180,28 +91,15 @@ public class WordCommentToolTests : WordTestBase
         Assert.Contains("reply", allCommentText, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
-    public void ReplyToComment_WithTextParameter_ShouldAddReply()
-    {
-        var docPath = CreateWordDocumentWithContent("test_reply_text.docx", "Test");
-        var doc = new Document(docPath);
-        var comment = new Comment(doc, "Author", "AU", DateTime.Now);
-        comment.Paragraphs.Add(new Paragraph(doc));
-        comment.FirstParagraph.Runs.Add(new Run(doc, "Comment"));
-        doc.FirstSection.Body.FirstParagraph.AppendChild(comment);
-        doc.Save(docPath);
+    #endregion
 
-        var outputPath = CreateTestFilePath("test_reply_text_output.docx");
-        var result = _tool.Execute("reply", docPath, outputPath: outputPath,
-            commentIndex: 0, text: "Reply via text param", author: "Author");
-        Assert.StartsWith("Reply added", result);
-    }
+    #region Operation Routing
 
     [Theory]
     [InlineData("ADD")]
     [InlineData("Add")]
     [InlineData("add")]
-    public void Operation_ShouldBeCaseInsensitive_Add(string operation)
+    public void Operation_ShouldBeCaseInsensitive(string operation)
     {
         var docPath = CreateWordDocumentWithContent($"test_case_{operation}.docx", "Test");
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.docx");
@@ -209,60 +107,6 @@ public class WordCommentToolTests : WordTestBase
             text: "Case test comment", author: "Author", paragraphIndex: 0);
         Assert.StartsWith("Comment added", result);
     }
-
-    [Theory]
-    [InlineData("GET")]
-    [InlineData("Get")]
-    [InlineData("get")]
-    public void Operation_ShouldBeCaseInsensitive_Get(string operation)
-    {
-        var docPath = CreateWordDocumentWithContent($"test_case_get_{operation}.docx", "Test");
-        var result = _tool.Execute(operation, docPath);
-        Assert.Contains("count", result);
-    }
-
-    [Theory]
-    [InlineData("DELETE")]
-    [InlineData("Delete")]
-    [InlineData("delete")]
-    public void Operation_ShouldBeCaseInsensitive_Delete(string operation)
-    {
-        var docPath = CreateWordDocumentWithContent($"test_case_del_{operation}.docx", "Test");
-        var doc = new Document(docPath);
-        var comment = new Comment(doc, "Author", "AU", DateTime.Now);
-        comment.Paragraphs.Add(new Paragraph(doc));
-        comment.FirstParagraph.Runs.Add(new Run(doc, "Comment"));
-        doc.FirstSection.Body.FirstParagraph.AppendChild(comment);
-        doc.Save(docPath);
-
-        var outputPath = CreateTestFilePath($"test_case_del_{operation}_output.docx");
-        var result = _tool.Execute(operation, docPath, outputPath: outputPath, commentIndex: 0);
-        Assert.Contains("deleted", result, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Theory]
-    [InlineData("REPLY")]
-    [InlineData("Reply")]
-    [InlineData("reply")]
-    public void Operation_ShouldBeCaseInsensitive_Reply(string operation)
-    {
-        var docPath = CreateWordDocumentWithContent($"test_case_reply_{operation}.docx", "Test");
-        var doc = new Document(docPath);
-        var comment = new Comment(doc, "Author", "AU", DateTime.Now);
-        comment.Paragraphs.Add(new Paragraph(doc));
-        comment.FirstParagraph.Runs.Add(new Run(doc, "Comment"));
-        doc.FirstSection.Body.FirstParagraph.AppendChild(comment);
-        doc.Save(docPath);
-
-        var outputPath = CreateTestFilePath($"test_case_reply_{operation}_output.docx");
-        var result = _tool.Execute(operation, docPath, outputPath: outputPath,
-            commentIndex: 0, replyText: "Reply", author: "Author");
-        Assert.StartsWith("Reply added", result);
-    }
-
-    #endregion
-
-    #region Exception
 
     [Fact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
@@ -273,141 +117,16 @@ public class WordCommentToolTests : WordTestBase
         Assert.Contains("Unknown operation", ex.Message);
     }
 
-    [Theory]
-    [InlineData("")]
-    [InlineData(null)]
-    public void AddComment_WithEmptyOrNullText_ShouldThrowArgumentException(string? text)
-    {
-        var docPath = CreateWordDocumentWithContent("test_add_empty_text.docx", "Test content");
-        var outputPath = CreateTestFilePath("test_add_empty_text_output.docx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", docPath, outputPath: outputPath, text: text, author: "Author"));
-        Assert.Contains("text is required", ex.Message);
-    }
-
     [Fact]
-    public void AddComment_WithInvalidParagraphIndex_ShouldThrowArgumentException()
+    public void Execute_WithNoPathOrSessionId_ShouldThrowException()
     {
-        var docPath = CreateWordDocumentWithContent("test_add_invalid_para.docx", "Single paragraph");
-        var outputPath = CreateTestFilePath("test_add_invalid_para_output.docx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", docPath, outputPath: outputPath, text: "Comment", paragraphIndex: 999));
-        Assert.Contains("out of range", ex.Message);
-    }
-
-    [Fact]
-    public void AddComment_WithNegativeParagraphIndex_ShouldThrowArgumentException()
-    {
-        var docPath = CreateWordDocumentWithContent("test_add_neg_para.docx", "Single paragraph");
-        var outputPath = CreateTestFilePath("test_add_neg_para_output.docx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", docPath, outputPath: outputPath, text: "Comment", paragraphIndex: -5));
-        Assert.Contains("out of range", ex.Message);
-    }
-
-    [Fact]
-    public void AddComment_WithInvalidRunIndex_ShouldThrowArgumentException()
-    {
-        var docPath = CreateWordDocumentWithContent("test_add_invalid_run.docx", "Test content");
-        var outputPath = CreateTestFilePath("test_add_invalid_run_output.docx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", docPath, outputPath: outputPath, text: "Comment",
-                paragraphIndex: 0, startRunIndex: 999, endRunIndex: 999));
-        Assert.Contains("out of range", ex.Message);
-    }
-
-    [Fact]
-    public void AddComment_WithNegativeStartRunIndex_ShouldThrowArgumentException()
-    {
-        var docPath = CreateWordDocumentWithContent("test_add_neg_run.docx", "Test content");
-        var outputPath = CreateTestFilePath("test_add_neg_run_output.docx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", docPath, outputPath: outputPath, text: "Comment",
-                paragraphIndex: 0, startRunIndex: -1, endRunIndex: 0));
-        Assert.Contains("out of range", ex.Message);
-    }
-
-    [Fact]
-    public void AddComment_WithStartGreaterThanEnd_ShouldThrowArgumentException()
-    {
-        var docPath = CreateWordDocumentWithContent("test_add_start_gt_end.docx", "Test content");
-        var outputPath = CreateTestFilePath("test_add_start_gt_end_output.docx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", docPath, outputPath: outputPath, text: "Comment",
-                paragraphIndex: 0, startRunIndex: 1, endRunIndex: 0));
-        Assert.Contains("out of range", ex.Message);
-    }
-
-    [Fact]
-    public void DeleteComment_WithoutIndex_ShouldThrowArgumentException()
-    {
-        var docPath = CreateWordDocumentWithContent("test_delete_no_index.docx", "Test content");
-        var outputPath = CreateTestFilePath("test_delete_no_index_output.docx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("delete", docPath, outputPath: outputPath));
-        Assert.Contains("commentIndex is required", ex.Message);
-    }
-
-    [Fact]
-    public void DeleteComment_WithInvalidIndex_ShouldThrowArgumentException()
-    {
-        var docPath = CreateWordDocumentWithContent("test_delete_invalid_index.docx", "Test content");
-        var outputPath = CreateTestFilePath("test_delete_invalid_index_output.docx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("delete", docPath, outputPath: outputPath, commentIndex: 999));
-        Assert.Contains("out of range", ex.Message);
-    }
-
-    [Fact]
-    public void DeleteComment_WithNegativeIndex_ShouldThrowArgumentException()
-    {
-        var docPath = CreateWordDocumentWithContent("test_delete_neg_index.docx", "Test content");
-        var outputPath = CreateTestFilePath("test_delete_neg_index_output.docx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("delete", docPath, outputPath: outputPath, commentIndex: -1));
-        Assert.Contains("out of range", ex.Message);
-    }
-
-    [Fact]
-    public void Reply_WithoutCommentIndex_ShouldThrowArgumentException()
-    {
-        var docPath = CreateWordDocumentWithContent("test_reply_no_index.docx", "Test content");
-        var outputPath = CreateTestFilePath("test_reply_no_index_output.docx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("reply", docPath, outputPath: outputPath, replyText: "Reply"));
-        Assert.Contains("commentIndex is required", ex.Message);
-    }
-
-    [Fact]
-    public void Reply_WithEmptyReplyText_ShouldThrowArgumentException()
-    {
-        var docPath = CreateWordDocumentWithContent("test_reply_empty_text.docx", "Test");
-        var doc = new Document(docPath);
-        var comment = new Comment(doc, "Author", "AU", DateTime.Now);
-        comment.Paragraphs.Add(new Paragraph(doc));
-        comment.FirstParagraph.Runs.Add(new Run(doc, "Comment"));
-        doc.FirstSection.Body.FirstParagraph.AppendChild(comment);
-        doc.Save(docPath);
-
-        var outputPath = CreateTestFilePath("test_reply_empty_text_output.docx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("reply", docPath, outputPath: outputPath, commentIndex: 0, replyText: ""));
-        Assert.Contains("text or replyText is required", ex.Message);
-    }
-
-    [Fact]
-    public void Reply_WithInvalidCommentIndex_ShouldThrowArgumentException()
-    {
-        var docPath = CreateWordDocumentWithContent("test_reply_invalid_index.docx", "Test content");
-        var outputPath = CreateTestFilePath("test_reply_invalid_index_output.docx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("reply", docPath, outputPath: outputPath, commentIndex: 999, replyText: "Reply"));
-        Assert.Contains("out of range", ex.Message);
+        Assert.ThrowsAny<Exception>(() =>
+            _tool.Execute("get"));
     }
 
     #endregion
 
-    #region Session
+    #region Session Management
 
     [Fact]
     public void AddComment_WithSessionId_ShouldAddCommentInMemory()

@@ -26,14 +26,17 @@ services:
       # - ASPOSE_SESSION_TEMP_DIR=/tmp      # Temp directory (default: system temp)
       # - ASPOSE_SESSION_TEMP_RETENTION_HOURS=24  # Temp file retention in hours (default: 24)
       # - ASPOSE_SESSION_ON_DISCONNECT=SaveToTemp  # Disconnect behavior: SaveToTemp, Discard, KeepInMemory
-      # - ASPOSE_SESSION_ISOLATION=user     # Isolation mode: none (no isolation), tenant (tenant-level), user (user-level, default)
+      # - ASPOSE_SESSION_ISOLATION=group    # Isolation mode: none (no isolation), group (group-level, default)
 
       # === API Key Authentication (Optional) ===
       # - ASPOSE_AUTH_APIKEY_ENABLED=true
       # - ASPOSE_AUTH_APIKEY_MODE=local    # local, gateway, introspection, custom
-      # - ASPOSE_AUTH_APIKEY_KEYS=key1:tenant1,key2:tenant2
+      # - ASPOSE_AUTH_APIKEY_KEYS=key1:group1,key2:group2
       # - ASPOSE_AUTH_APIKEY_HEADER=X-API-Key
-      # - ASPOSE_AUTH_APIKEY_TENANT_HEADER=X-Tenant-Id
+      # - ASPOSE_AUTH_APIKEY_GROUP_HEADER=X-Group-Id
+      # - ASPOSE_AUTH_APIKEY_CACHE_ENABLED=true
+      # - ASPOSE_AUTH_APIKEY_CACHE_TTL=300
+      # - ASPOSE_AUTH_APIKEY_CACHE_MAX_SIZE=10000
       # - ASPOSE_AUTH_APIKEY_INTROSPECTION_URL=https://auth.example.com/introspect
       # - ASPOSE_AUTH_APIKEY_INTROSPECTION_AUTH=Bearer token
       # - ASPOSE_AUTH_APIKEY_CUSTOM_URL=https://auth.example.com/validate
@@ -46,10 +49,13 @@ services:
       # - ASPOSE_AUTH_JWT_PUBLIC_KEY_PATH=/app/keys/public.pem
       # - ASPOSE_AUTH_JWT_ISSUER=your-issuer
       # - ASPOSE_AUTH_JWT_AUDIENCE=your-audience
-      # - ASPOSE_AUTH_JWT_TENANT_CLAIM=tenant_id
+      # - ASPOSE_AUTH_JWT_GROUP_CLAIM=tenant_id  # Claim for group ID (e.g., tenant_id, team_id, org_id)
       # - ASPOSE_AUTH_JWT_USER_CLAIM=sub
-      # - ASPOSE_AUTH_JWT_TENANT_HEADER=X-Tenant-Id
+      # - ASPOSE_AUTH_JWT_GROUP_HEADER=X-Group-Id
       # - ASPOSE_AUTH_JWT_USER_HEADER=X-User-Id
+      # - ASPOSE_AUTH_JWT_CACHE_ENABLED=true
+      # - ASPOSE_AUTH_JWT_CACHE_TTL=300
+      # - ASPOSE_AUTH_JWT_CACHE_MAX_SIZE=10000
       # - ASPOSE_AUTH_JWT_INTROSPECTION_URL=https://auth.example.com/introspect
       # - ASPOSE_AUTH_JWT_CLIENT_ID=your-client-id
       # - ASPOSE_AUTH_JWT_CLIENT_SECRET=your-client-secret

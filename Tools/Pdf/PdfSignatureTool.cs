@@ -1,12 +1,9 @@
 using System.ComponentModel;
-using System.Text.Json;
 using Aspose.Pdf;
-using Aspose.Pdf.Facades;
-using Aspose.Pdf.Forms;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.Pdf.Signature;
 using ModelContextProtocol.Server;
-using Rectangle = System.Drawing.Rectangle;
 
 namespace AsposeMcpServer.Tools.Pdf;
 
@@ -16,6 +13,11 @@ namespace AsposeMcpServer.Tools.Pdf;
 [McpServerToolType]
 public class PdfSignatureTool
 {
+    /// <summary>
+    ///     Handler registry for signature operations.
+    /// </summary>
+    private readonly HandlerRegistry<Document> _handlerRegistry;
+
     /// <summary>
     ///     The session identity accessor for session isolation.
     /// </summary>
@@ -36,6 +38,7 @@ public class PdfSignatureTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = PdfSignatureHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -101,161 +104,74 @@ Usage examples:
     {
         using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
-        return operation.ToLower() switch
+        var parameters = BuildParameters(operation, certificatePath, certificatePassword, reason, location,
+            signatureIndex, pageIndex, x, y, width, height, imagePath);
+
+        var handler = _handlerRegistry.GetHandler(operation);
+
+        var operationContext = new OperationContext<Document>
         {
-            "sign" => SignDocument(ctx, outputPath, certificatePath, certificatePassword, reason, location, pageIndex,
-                x, y, width, height, imagePath),
-            "delete" => DeleteSignature(ctx, outputPath, signatureIndex),
-            "get" => GetSignatures(ctx),
-            _ => throw new ArgumentException($"Unknown operation: {operation}")
+            Document = ctx.Document,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = path,
+            OutputPath = outputPath
         };
+
+        var result = handler.Execute(operationContext, parameters);
+
+        if (operation.ToLowerInvariant() == "get")
+            return result;
+
+        if (operationContext.IsModified)
+            ctx.Save(outputPath);
+
+        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Digitally signs the PDF document using a certificate.
+    ///     Builds OperationParameters from method parameters.
     /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="certificatePath">The path to the certificate file (.pfx).</param>
-    /// <param name="certificatePassword">The certificate password.</param>
-    /// <param name="reason">The reason for signing.</param>
-    /// <param name="location">The location of signing.</param>
-    /// <param name="pageIndex">The 1-based page index to place the signature.</param>
-    /// <param name="x">The X position of the signature.</param>
-    /// <param name="y">The Y position of the signature.</param>
-    /// <param name="width">The width of the signature rectangle.</param>
-    /// <param name="height">The height of the signature rectangle.</param>
-    /// <param name="imagePath">Optional path to a signature appearance image.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when required parameters are missing or invalid.</exception>
-    /// <exception cref="FileNotFoundException">Thrown when certificate or image files are not found.</exception>
-    private static string SignDocument(DocumentContext<Document> ctx, string? outputPath,
-        string? certificatePath, string? certificatePassword,
-        string reason, string location,
-        int pageIndex, int x, int y, int width, int height, string? imagePath)
+    private static OperationParameters BuildParameters(
+        string operation,
+        string? certificatePath,
+        string? certificatePassword,
+        string reason,
+        string location,
+        int signatureIndex,
+        int pageIndex,
+        int x,
+        int y,
+        int width,
+        int height,
+        string? imagePath)
     {
-        if (string.IsNullOrEmpty(certificatePath))
-            throw new ArgumentException("certificatePath is required for sign operation");
-        if (string.IsNullOrEmpty(certificatePassword))
-            throw new ArgumentException("certificatePassword is required for sign operation");
+        var parameters = new OperationParameters();
 
-        SecurityHelper.ValidateFilePath(certificatePath, "certificatePath", true);
-
-        if (!File.Exists(certificatePath))
-            throw new FileNotFoundException($"Certificate file not found: {certificatePath}");
-
-        var document = ctx.Document;
-
-        if (pageIndex < 1 || pageIndex > document.Pages.Count)
-            throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
-
-        using var pdfSign = new PdfFileSignature(document);
-        var pkcs = new PKCS7(certificatePath, certificatePassword)
+        switch (operation.ToLowerInvariant())
         {
-            Reason = reason,
-            Location = location
-        };
+            case "sign":
+                if (certificatePath != null) parameters.Set("certificatePath", certificatePath);
+                if (certificatePassword != null) parameters.Set("password", certificatePassword);
+                parameters.Set("reason", reason);
+                parameters.Set("location", location);
+                parameters.Set("pageIndex", pageIndex);
+                parameters.Set("x", x);
+                parameters.Set("y", y);
+                parameters.Set("width", width);
+                parameters.Set("height", height);
+                if (imagePath != null) parameters.Set("imagePath", imagePath);
+                break;
 
-        if (!string.IsNullOrEmpty(imagePath))
-        {
-            SecurityHelper.ValidateFilePath(imagePath, "imagePath", true);
-            if (!File.Exists(imagePath))
-                throw new FileNotFoundException($"Signature image file not found: {imagePath}");
-            pdfSign.SignatureAppearance = imagePath;
+            case "delete":
+                parameters.Set("signatureIndex", signatureIndex);
+                break;
+
+            case "get":
+                break;
         }
 
-        var rect = new Rectangle(x, y, width, height);
-        pdfSign.Sign(pageIndex, true, rect, pkcs);
-
-        ctx.Save(outputPath);
-
-        return $"PDF digitally signed on page {pageIndex}. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Deletes a digital signature from the PDF document.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="signatureIndex">The 0-based signature index to delete.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when the signature index is invalid.</exception>
-    private static string DeleteSignature(DocumentContext<Document> ctx, string? outputPath, int signatureIndex)
-    {
-        var document = ctx.Document;
-        using var pdfSign = new PdfFileSignature(document);
-        var signatureNames = pdfSign.GetSignNames();
-
-        if (signatureIndex < 0 || signatureIndex >= signatureNames.Count)
-            throw new ArgumentException($"signatureIndex must be between 0 and {signatureNames.Count - 1}");
-
-        var signatureName = signatureNames[signatureIndex];
-        pdfSign.RemoveSignature(signatureName);
-
-        ctx.Save(outputPath);
-
-        return $"Deleted signature '{signatureName}' (index {signatureIndex}). {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Retrieves all digital signatures from the PDF document.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <returns>A JSON string containing signature information.</returns>
-    private static string GetSignatures(DocumentContext<Document> ctx)
-    {
-        var document = ctx.Document;
-        using var pdfSign = new PdfFileSignature(document);
-        var signatureNames = pdfSign.GetSignNames();
-
-        if (signatureNames.Count == 0)
-        {
-            var emptyResult = new
-            {
-                count = 0,
-                items = Array.Empty<object>(),
-                message = "No signatures found"
-            };
-            return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
-        }
-
-        List<object> signatureList = [];
-        for (var i = 0; i < signatureNames.Count; i++)
-        {
-            var signatureName = signatureNames[i];
-            var signatureInfo = new Dictionary<string, object?>
-            {
-                ["index"] = i,
-                ["name"] = signatureName
-            };
-
-            try
-            {
-                signatureInfo["isValid"] = pdfSign.VerifySignature(signatureName);
-            }
-            catch
-            {
-                signatureInfo["isValid"] = false;
-            }
-
-            try
-            {
-                _ = pdfSign.ExtractCertificate(signatureName);
-                signatureInfo["hasCertificate"] = true;
-            }
-            catch
-            {
-                signatureInfo["hasCertificate"] = false;
-            }
-
-            signatureList.Add(signatureInfo);
-        }
-
-        var result = new
-        {
-            count = signatureList.Count,
-            items = signatureList
-        };
-        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        return parameters;
     }
 }

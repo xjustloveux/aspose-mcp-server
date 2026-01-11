@@ -1,9 +1,8 @@
 using System.ComponentModel;
-using System.Text.Json;
-using System.Text.RegularExpressions;
 using Aspose.Cells;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.Excel.Cell;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -15,9 +14,9 @@ namespace AsposeMcpServer.Tools.Excel;
 public class ExcelCellTool
 {
     /// <summary>
-    ///     Regex pattern for validating Excel cell addresses (e.g., A1, B2, AA100).
+    ///     Handler registry for cell operations.
     /// </summary>
-    private static readonly Regex CellAddressRegex = new(@"^[A-Za-z]{1,3}\d+$", RegexOptions.Compiled);
+    private readonly HandlerRegistry<Workbook> _handlerRegistry;
 
     /// <summary>
     ///     Session identity accessor for session isolation support.
@@ -39,6 +38,7 @@ public class ExcelCellTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = ExcelCellHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -97,182 +97,79 @@ Usage examples:
         [Description("Clear cell format (optional, for clear, default: false)")]
         bool clearFormat = false)
     {
-        if (string.IsNullOrEmpty(cell))
-            throw new ArgumentException("cell is required");
-
-        ValidateCellAddress(cell);
-
         using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
-        return operation.ToLower() switch
+        var parameters = BuildParameters(operation, sheetIndex, cell, value, formula, clearValue,
+            calculateFormula, includeFormula, includeFormat, clearContent, clearFormat);
+
+        var handler = _handlerRegistry.GetHandler(operation);
+
+        var operationContext = new OperationContext<Workbook>
         {
-            "write" => WriteCell(ctx, outputPath, sheetIndex, cell, value),
-            "edit" => EditCell(ctx, outputPath, sheetIndex, cell, value, formula, clearValue),
-            "get" => GetCell(ctx, sheetIndex, cell, calculateFormula, includeFormula, includeFormat),
-            "clear" => ClearCell(ctx, outputPath, sheetIndex, cell, clearContent, clearFormat),
-            _ => throw new ArgumentException($"Unknown operation: {operation}")
+            Document = ctx.Document,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = path,
+            OutputPath = outputPath
         };
+
+        var result = handler.Execute(operationContext, parameters);
+
+        if (operation.ToLowerInvariant() == "get")
+            return result;
+
+        if (operationContext.IsModified)
+            ctx.Save(outputPath);
+
+        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Validates the cell address format.
+    ///     Builds OperationParameters from method parameters.
     /// </summary>
-    /// <param name="cell">The cell address to validate.</param>
-    /// <exception cref="ArgumentException">Thrown when the cell address format is invalid.</exception>
-    private static void ValidateCellAddress(string cell)
+    private static OperationParameters BuildParameters(
+        string operation,
+        int sheetIndex,
+        string? cell,
+        string? value,
+        string? formula,
+        bool clearValue,
+        bool calculateFormula,
+        bool includeFormula,
+        bool includeFormat,
+        bool clearContent,
+        bool clearFormat)
     {
-        if (!CellAddressRegex.IsMatch(cell))
-            throw new ArgumentException(
-                $"Invalid cell address format: '{cell}'. Expected format like 'A1', 'B2', 'AA100'");
-    }
+        var parameters = new OperationParameters();
+        parameters.Set("sheetIndex", sheetIndex);
 
-    /// <summary>
-    ///     Writes a value to the specified cell.
-    /// </summary>
-    /// <param name="ctx">The document context containing the workbook.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <param name="cell">The cell address.</param>
-    /// <param name="value">The value to write.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    private static string WriteCell(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex, string cell,
-        string? value)
-    {
-        if (string.IsNullOrEmpty(value))
-            throw new ArgumentException("value is required for write operation");
+        if (cell != null) parameters.Set("cell", cell);
 
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var cellObj = worksheet.Cells[cell];
-
-        ExcelHelper.SetCellValue(cellObj, value);
-
-        ctx.Save(outputPath);
-        return $"Cell {cell} written with value '{value}' in sheet {sheetIndex}. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Edits the specified cell with a new value, formula, or clears it.
-    /// </summary>
-    /// <param name="ctx">The document context containing the workbook.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <param name="cell">The cell address.</param>
-    /// <param name="value">The value to set.</param>
-    /// <param name="formula">The formula to set.</param>
-    /// <param name="clearValue">Whether to clear the cell value.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    private static string EditCell(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex, string cell,
-        string? value, string? formula, bool clearValue)
-    {
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var cellObj = worksheet.Cells[cell];
-
-        if (clearValue)
-            cellObj.PutValue("");
-        else if (!string.IsNullOrEmpty(formula))
-            cellObj.Formula = formula;
-        else if (!string.IsNullOrEmpty(value))
-            ExcelHelper.SetCellValue(cellObj, value);
-        else
-            throw new ArgumentException("Either value, formula, or clearValue must be provided");
-
-        ctx.Save(outputPath);
-        return $"Cell {cell} edited in sheet {sheetIndex}. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Gets the value and properties of the specified cell.
-    /// </summary>
-    /// <param name="ctx">The document context containing the workbook.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <param name="cell">The cell address.</param>
-    /// <param name="calculateFormula">Whether to calculate formulas before reading.</param>
-    /// <param name="includeFormula">Whether to include formula in the result.</param>
-    /// <param name="includeFormat">Whether to include format information in the result.</param>
-    /// <returns>A JSON string containing the cell information.</returns>
-    private static string GetCell(DocumentContext<Workbook> ctx, int sheetIndex, string cell, bool calculateFormula,
-        bool includeFormula, bool includeFormat)
-    {
-        var workbook = ctx.Document;
-
-        if (calculateFormula)
-            workbook.CalculateFormula();
-
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var cellObj = worksheet.Cells[cell];
-
-        object? resultObj;
-
-        if (includeFormat)
+        switch (operation.ToLowerInvariant())
         {
-            var style = cellObj.GetStyle();
-            resultObj = new
-            {
-                cell,
-                value = cellObj.Value?.ToString() ?? "(empty)",
-                valueType = cellObj.Type.ToString(),
-                formula = includeFormula && !string.IsNullOrEmpty(cellObj.Formula) ? cellObj.Formula : null,
-                format = new
-                {
-                    fontName = style.Font.Name,
-                    fontSize = style.Font.Size,
-                    bold = style.Font.IsBold,
-                    italic = style.Font.IsItalic,
-                    backgroundColor = style.ForegroundColor.ToString(),
-                    numberFormat = style.Number
-                }
-            };
-        }
-        else
-        {
-            resultObj = new
-            {
-                cell,
-                value = cellObj.Value?.ToString() ?? "(empty)",
-                valueType = cellObj.Type.ToString(),
-                formula = includeFormula && !string.IsNullOrEmpty(cellObj.Formula) ? cellObj.Formula : null
-            };
+            case "write":
+                if (value != null) parameters.Set("value", value);
+                break;
+
+            case "edit":
+                if (value != null) parameters.Set("value", value);
+                if (formula != null) parameters.Set("formula", formula);
+                parameters.Set("clearValue", clearValue);
+                break;
+
+            case "get":
+                parameters.Set("calculateFormula", calculateFormula);
+                parameters.Set("includeFormula", includeFormula);
+                parameters.Set("includeFormat", includeFormat);
+                break;
+
+            case "clear":
+                parameters.Set("clearContent", clearContent);
+                parameters.Set("clearFormat", clearFormat);
+                break;
         }
 
-        return JsonSerializer.Serialize(resultObj, new JsonSerializerOptions { WriteIndented = true });
-    }
-
-    /// <summary>
-    ///     Clears the content and/or format of the specified cell.
-    /// </summary>
-    /// <param name="ctx">The document context containing the workbook.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <param name="cell">The cell address.</param>
-    /// <param name="clearContent">Whether to clear the cell content.</param>
-    /// <param name="clearFormat">Whether to clear the cell format.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    private static string ClearCell(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex, string cell,
-        bool clearContent, bool clearFormat)
-    {
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var cellObj = worksheet.Cells[cell];
-
-        if (clearContent && clearFormat)
-        {
-            cellObj.PutValue("");
-            var defaultStyle = workbook.CreateStyle();
-            cellObj.SetStyle(defaultStyle);
-        }
-        else if (clearContent)
-        {
-            cellObj.PutValue("");
-        }
-        else if (clearFormat)
-        {
-            var defaultStyle = workbook.CreateStyle();
-            cellObj.SetStyle(defaultStyle);
-        }
-
-        ctx.Save(outputPath);
-        return $"Cell {cell} cleared in sheet {sheetIndex}. {ctx.GetOutputMessage(outputPath)}";
+        return parameters;
     }
 }

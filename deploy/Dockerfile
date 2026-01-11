@@ -20,7 +20,7 @@ RUN VERSION_NUM=$(echo "${VERSION}" | sed 's/^v//') && \
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 
-# Update system packages to fix security vulnerabilities (e.g., zlib CVE-2023-45853)
+# Update system packages to latest security patches
 RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get clean && \

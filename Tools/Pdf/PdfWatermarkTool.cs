@@ -1,8 +1,8 @@
 using System.ComponentModel;
 using Aspose.Pdf;
-using Aspose.Pdf.Text;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.Pdf.Watermark;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Pdf;
@@ -13,6 +13,11 @@ namespace AsposeMcpServer.Tools.Pdf;
 [McpServerToolType]
 public class PdfWatermarkTool
 {
+    /// <summary>
+    ///     Handler registry for watermark operations.
+    /// </summary>
+    private readonly HandlerRegistry<Document> _handlerRegistry;
+
     /// <summary>
     ///     The session identity accessor for session isolation.
     /// </summary>
@@ -33,6 +38,7 @@ public class PdfWatermarkTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = PdfWatermarkHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -94,175 +100,57 @@ Usage examples:
     {
         using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
-        return operation.ToLower() switch
+        var parameters = BuildParameters(text, opacity, fontSize, fontName, rotation, color,
+            pageRange, isBackground, horizontalAlignment, verticalAlignment);
+
+        var handler = _handlerRegistry.GetHandler(operation);
+
+        var operationContext = new OperationContext<Document>
         {
-            "add" => AddWatermark(ctx, outputPath, text, opacity, fontSize, fontName, rotation, color, pageRange,
-                isBackground, horizontalAlignment, verticalAlignment),
-            _ => throw new ArgumentException($"Unknown operation: {operation}")
+            Document = ctx.Document,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = path,
+            OutputPath = outputPath
         };
+
+        var result = handler.Execute(operationContext, parameters);
+
+        if (operationContext.IsModified)
+            ctx.Save(outputPath);
+
+        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Adds a watermark to the PDF document.
+    ///     Builds OperationParameters from method parameters.
     /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="text">The watermark text.</param>
-    /// <param name="opacity">The opacity of the watermark (0.0 to 1.0).</param>
-    /// <param name="fontSize">The font size in points.</param>
-    /// <param name="fontName">The font name.</param>
-    /// <param name="rotation">The rotation angle in degrees.</param>
-    /// <param name="colorName">The watermark color name or hex code.</param>
-    /// <param name="pageRange">Optional page range to apply watermark to.</param>
-    /// <param name="isBackground">Whether to place the watermark behind content.</param>
-    /// <param name="horizontalAlignment">The horizontal alignment of the watermark.</param>
-    /// <param name="verticalAlignment">The vertical alignment of the watermark.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when text is empty.</exception>
-    private static string AddWatermark(DocumentContext<Document> ctx, string? outputPath, string? text, double opacity,
-        double fontSize, string fontName, double rotation, string colorName, string? pageRange, bool isBackground,
-        string horizontalAlignment, string verticalAlignment)
+    private static OperationParameters BuildParameters(
+        string? text,
+        double opacity,
+        double fontSize,
+        string fontName,
+        double rotation,
+        string color,
+        string? pageRange,
+        bool isBackground,
+        string horizontalAlignment,
+        string verticalAlignment)
     {
-        if (string.IsNullOrEmpty(text))
-            throw new ArgumentException("text is required for add operation");
+        var parameters = new OperationParameters();
 
-        var document = ctx.Document;
+        if (text != null) parameters.Set("text", text);
+        parameters.Set("opacity", opacity);
+        parameters.Set("fontSize", fontSize);
+        parameters.Set("fontName", fontName);
+        parameters.Set("rotation", rotation);
+        parameters.Set("color", color);
+        if (pageRange != null) parameters.Set("pageRange", pageRange);
+        parameters.Set("isBackground", isBackground);
+        parameters.Set("horizontalAlignment", horizontalAlignment);
+        parameters.Set("verticalAlignment", verticalAlignment);
 
-        var hAlign = horizontalAlignment.ToLower() switch
-        {
-            "left" => HorizontalAlignment.Left,
-            "right" => HorizontalAlignment.Right,
-            _ => HorizontalAlignment.Center
-        };
-
-        var vAlign = verticalAlignment.ToLower() switch
-        {
-            "top" => VerticalAlignment.Top,
-            "bottom" => VerticalAlignment.Bottom,
-            _ => VerticalAlignment.Center
-        };
-
-        var watermarkColor = ParseColor(colorName);
-        var pageIndices = ParsePageRange(pageRange, document.Pages.Count);
-        var appliedCount = 0;
-
-        foreach (var pageIndex in pageIndices)
-        {
-            var page = document.Pages[pageIndex];
-            var watermark = new WatermarkArtifact();
-            var textState = new TextState
-            {
-                ForegroundColor = watermarkColor
-            };
-
-            FontHelper.Pdf.ApplyFontSettings(textState, fontName, fontSize);
-
-            watermark.SetTextAndState(text, textState);
-            watermark.ArtifactHorizontalAlignment = hAlign;
-            watermark.ArtifactVerticalAlignment = vAlign;
-            watermark.Rotation = rotation;
-            watermark.Opacity = opacity;
-            watermark.IsBackground = isBackground;
-
-            page.Artifacts.Add(watermark);
-            appliedCount++;
-        }
-
-        ctx.Save(outputPath);
-
-        return $"Watermark added to {appliedCount} page(s). {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Parses a color name or hex code into a PDF Color object.
-    /// </summary>
-    /// <param name="colorName">The color name or hex code (e.g., "Red" or "#FF0000").</param>
-    /// <returns>The parsed Color object, or Gray if parsing fails.</returns>
-    private static Color ParseColor(string colorName)
-    {
-        if (string.IsNullOrEmpty(colorName))
-            return Color.Gray;
-
-        if (colorName.StartsWith('#') && (colorName.Length == 7 || colorName.Length == 9))
-            try
-            {
-                var hex = colorName.TrimStart('#');
-                var r = Convert.ToByte(hex[..2], 16);
-                var g = Convert.ToByte(hex.Substring(2, 2), 16);
-                var b = Convert.ToByte(hex.Substring(4, 2), 16);
-                return Color.FromRgb(r / 255.0, g / 255.0, b / 255.0);
-            }
-            catch
-            {
-                return Color.Gray;
-            }
-
-        return colorName.ToLower() switch
-        {
-            "red" => Color.Red,
-            "blue" => Color.Blue,
-            "green" => Color.Green,
-            "black" => Color.Black,
-            "white" => Color.White,
-            "yellow" => Color.Yellow,
-            "orange" => Color.Orange,
-            "purple" => Color.Purple,
-            "pink" => Color.Pink,
-            "cyan" => Color.Cyan,
-            "magenta" => Color.Magenta,
-            "lightgray" => Color.LightGray,
-            "darkgray" => Color.DarkGray,
-            _ => Color.Gray
-        };
-    }
-
-    /// <summary>
-    ///     Parses a page range string into a list of page indices.
-    /// </summary>
-    /// <param name="pageRange">The page range string (e.g., "1,3,5-10").</param>
-    /// <param name="totalPages">The total number of pages in the document.</param>
-    /// <returns>A list of 1-based page indices.</returns>
-    /// <exception cref="ArgumentException">Thrown when the page range format is invalid or out of bounds.</exception>
-    private static List<int> ParsePageRange(string? pageRange, int totalPages)
-    {
-        if (string.IsNullOrEmpty(pageRange))
-            return Enumerable.Range(1, totalPages).ToList();
-
-        var result = new HashSet<int>();
-        var parts = pageRange.Split(',', StringSplitOptions.RemoveEmptyEntries);
-
-        foreach (var part in parts)
-        {
-            var trimmed = part.Trim();
-            if (trimmed.Contains('-'))
-            {
-                var rangeParts = trimmed.Split('-');
-                if (rangeParts.Length != 2 ||
-                    !int.TryParse(rangeParts[0].Trim(), out var start) ||
-                    !int.TryParse(rangeParts[1].Trim(), out var end))
-                    throw new ArgumentException(
-                        $"Invalid page range format: '{trimmed}'. Expected format: 'start-end' (e.g., '5-10')");
-
-                if (start < 1 || end > totalPages || start > end)
-                    throw new ArgumentException(
-                        $"Page range '{trimmed}' is out of bounds. Document has {totalPages} page(s)");
-
-                for (var i = start; i <= end; i++)
-                    result.Add(i);
-            }
-            else
-            {
-                if (!int.TryParse(trimmed, out var pageNum))
-                    throw new ArgumentException($"Invalid page number: '{trimmed}'");
-
-                if (pageNum < 1 || pageNum > totalPages)
-                    throw new ArgumentException(
-                        $"Page number {pageNum} is out of bounds. Document has {totalPages} page(s)");
-
-                result.Add(pageNum);
-            }
-        }
-
-        return result.OrderBy(x => x).ToList();
+        return parameters;
     }
 }

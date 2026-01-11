@@ -1,10 +1,8 @@
 using System.ComponentModel;
-using System.Drawing;
-using System.Drawing.Imaging;
 using Aspose.Slides;
-using Aspose.Slides.Export;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.PowerPoint.FileOperations;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.PowerPoint;
@@ -16,6 +14,11 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 [McpServerToolType]
 public class PptFileOperationsTool
 {
+    /// <summary>
+    ///     Handler registry for file operations.
+    /// </summary>
+    private readonly HandlerRegistry<Presentation> _handlerRegistry;
+
     /// <summary>
     ///     The session identity accessor for session isolation.
     /// </summary>
@@ -36,6 +39,7 @@ public class PptFileOperationsTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = PptFileOperationsHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -100,237 +104,81 @@ Usage examples:
             "Output file name pattern, use {index} for slide number (optional, for split, default: 'slide_{index}.pptx')")]
         string outputFileNamePattern = "slide_{index}.pptx")
     {
-        return operation.ToLower() switch
+        var parameters = BuildParameters(operation, sessionId, path, outputPath, inputPath, outputDirectory,
+            format, slideIndex, inputPaths, keepSourceFormatting, slidesPerFile,
+            startSlideIndex, endSlideIndex, outputFileNamePattern);
+
+        var handler = _handlerRegistry.GetHandler(operation);
+
+        var operationContext = new OperationContext<Presentation>
         {
-            "create" => CreatePresentation(path, outputPath),
-            "convert" => ConvertPresentation(inputPath, path, sessionId, outputPath, format, slideIndex),
-            "merge" => MergePresentations(path, outputPath, inputPaths, keepSourceFormatting),
-            "split" => SplitPresentation(inputPath, path, sessionId, outputDirectory, slidesPerFile, startSlideIndex,
-                endSlideIndex, outputFileNamePattern),
-            _ => throw new ArgumentException($"Unknown operation: {operation}")
+            Document = null!,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = inputPath ?? path,
+            OutputPath = outputPath
         };
+
+        return handler.Execute(operationContext, parameters);
     }
 
     /// <summary>
-    ///     Creates a new presentation.
+    ///     Builds OperationParameters from method parameters.
     /// </summary>
-    /// <param name="path">The file path to save the presentation.</param>
-    /// <param name="outputPath">Alternative output file path (used if path is null).</param>
-    /// <returns>A message indicating the presentation was created successfully.</returns>
-    /// <exception cref="ArgumentException">Thrown when neither path nor outputPath is provided.</exception>
-    private static string CreatePresentation(string? path, string? outputPath)
-    {
-        var savePath = path ?? outputPath;
-        if (string.IsNullOrEmpty(savePath))
-            throw new ArgumentException("path or outputPath is required for create operation");
-
-        SecurityHelper.ValidateFilePath(savePath, allowAbsolutePaths: true);
-
-        using var presentation = new Presentation();
-        presentation.Save(savePath, SaveFormat.Pptx);
-
-        return $"PowerPoint presentation created successfully. Output: {savePath}";
-    }
-
-    /// <summary>
-    ///     Converts presentation to another format.
-    /// </summary>
-    /// <param name="inputPath">The input presentation file path.</param>
-    /// <param name="path">Alternative input file path (used if inputPath is null).</param>
-    /// <param name="sessionId">Session ID to read presentation from session.</param>
-    /// <param name="outputPath">The output file path for the converted presentation.</param>
-    /// <param name="format">The target format (pdf, html, pptx, jpg, png, etc.).</param>
-    /// <param name="slideIndex">The zero-based slide index to convert (for image formats).</param>
-    /// <returns>A message indicating the conversion was successful.</returns>
-    /// <exception cref="ArgumentException">Thrown when required parameters are missing or format is unsupported.</exception>
-    private string ConvertPresentation(string? inputPath, string? path, string? sessionId, string? outputPath,
+    private static OperationParameters BuildParameters(
+        string operation,
+        string? sessionId,
+        string? path,
+        string? outputPath,
+        string? inputPath,
+        string? outputDirectory,
         string? format,
-        int slideIndex)
+        int slideIndex,
+        string[]? inputPaths,
+        bool keepSourceFormatting,
+        int slidesPerFile,
+        int? startSlideIndex,
+        int? endSlideIndex,
+        string outputFileNamePattern)
     {
-        var sourcePath = inputPath ?? path;
-        if (string.IsNullOrEmpty(sourcePath) && string.IsNullOrEmpty(sessionId))
-            throw new ArgumentException("Either inputPath, path, or sessionId is required for convert operation");
-        if (string.IsNullOrEmpty(outputPath))
-            throw new ArgumentException("outputPath is required for convert operation");
-        if (string.IsNullOrEmpty(format))
-            throw new ArgumentException("format is required for convert operation");
+        var parameters = new OperationParameters();
 
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
-
-        format = format.ToLower();
-
-        Presentation presentation;
-        string sourceDescription;
-
-        if (!string.IsNullOrEmpty(sessionId))
+        switch (operation.ToLowerInvariant())
         {
-            if (_sessionManager == null)
-                throw new InvalidOperationException("Session management is not enabled");
+            case "create":
+                if (path != null) parameters.Set("path", path);
+                if (outputPath != null) parameters.Set("outputPath", outputPath);
+                break;
 
-            var identity = _identityAccessor?.GetCurrentIdentity() ?? SessionIdentity.GetAnonymous();
-            presentation = _sessionManager.GetDocument<Presentation>(sessionId, identity);
-            sourceDescription = $"session {sessionId}";
-        }
-        else
-        {
-            SecurityHelper.ValidateFilePath(sourcePath!, "inputPath", true);
-            presentation = new Presentation(sourcePath);
-            sourceDescription = sourcePath!;
-        }
+            case "convert":
+                if (inputPath != null) parameters.Set("inputPath", inputPath);
+                if (path != null) parameters.Set("path", path);
+                if (sessionId != null) parameters.Set("sessionId", sessionId);
+                if (outputPath != null) parameters.Set("outputPath", outputPath);
+                if (format != null) parameters.Set("format", format);
+                parameters.Set("slideIndex", slideIndex);
+                break;
 
-        if (format is "jpg" or "jpeg" or "png")
-        {
-            var slide = PowerPointHelper.GetSlide(presentation, slideIndex);
+            case "merge":
+                if (path != null) parameters.Set("path", path);
+                if (outputPath != null) parameters.Set("outputPath", outputPath);
+                if (inputPaths != null) parameters.Set("inputPaths", inputPaths);
+                parameters.Set("keepSourceFormatting", keepSourceFormatting);
+                break;
 
-            var slideSize = presentation.SlideSize.Size;
-            var targetSize = new Size((int)slideSize.Width, (int)slideSize.Height);
-
-#pragma warning disable CA1416 // Validate platform compatibility
-            using var bitmap = slide.GetThumbnail(targetSize);
-            var imageFormat = format == "png" ? ImageFormat.Png : ImageFormat.Jpeg;
-            bitmap.Save(outputPath, imageFormat);
-#pragma warning restore CA1416
-
-            var formatName = format == "png" ? "PNG" : "JPEG";
-            return $"Slide {slideIndex} from {sourceDescription} converted to {formatName}. Output: {outputPath}";
+            case "split":
+                if (inputPath != null) parameters.Set("inputPath", inputPath);
+                if (path != null) parameters.Set("path", path);
+                if (sessionId != null) parameters.Set("sessionId", sessionId);
+                if (outputDirectory != null) parameters.Set("outputDirectory", outputDirectory);
+                parameters.Set("slidesPerFile", slidesPerFile);
+                if (startSlideIndex.HasValue) parameters.Set("startSlideIndex", startSlideIndex.Value);
+                if (endSlideIndex.HasValue) parameters.Set("endSlideIndex", endSlideIndex.Value);
+                parameters.Set("outputFileNamePattern", outputFileNamePattern);
+                break;
         }
 
-        var saveFormat = format switch
-        {
-            "pdf" => SaveFormat.Pdf,
-            "html" => SaveFormat.Html,
-            "pptx" => SaveFormat.Pptx,
-            "ppt" => SaveFormat.Ppt,
-            "odp" => SaveFormat.Odp,
-            "xps" => SaveFormat.Xps,
-            "tiff" => SaveFormat.Tiff,
-            _ => throw new ArgumentException($"Unsupported format: {format}")
-        };
-
-        presentation.Save(outputPath, saveFormat);
-
-        return $"Presentation from {sourceDescription} converted to {format.ToUpper()} format. Output: {outputPath}";
-    }
-
-    /// <summary>
-    ///     Merges multiple presentations into one.
-    /// </summary>
-    /// <param name="path">The output file path to save the merged presentation.</param>
-    /// <param name="outputPath">Alternative output file path (used if path is null).</param>
-    /// <param name="inputPaths">Array of input presentation file paths to merge.</param>
-    /// <param name="keepSourceFormatting">Whether to keep source formatting when merging slides.</param>
-    /// <returns>A message indicating the merge was successful with file count information.</returns>
-    /// <exception cref="ArgumentException">Thrown when required parameters are missing or no valid input paths are provided.</exception>
-    private static string MergePresentations(string? path, string? outputPath, string[]? inputPaths,
-        bool keepSourceFormatting)
-    {
-        var savePath = path ?? outputPath;
-        if (string.IsNullOrEmpty(savePath))
-            throw new ArgumentException("path or outputPath is required for merge operation");
-        if (inputPaths == null || inputPaths.Length == 0)
-            throw new ArgumentException("inputPaths is required for merge operation");
-
-        SecurityHelper.ValidateFilePath(savePath, "outputPath", true);
-
-        var validPaths = inputPaths.Where(p => !string.IsNullOrEmpty(p)).ToList();
-        if (validPaths.Count == 0)
-            throw new ArgumentException("No valid input paths provided");
-
-        using var masterPresentation = new Presentation(validPaths[0]);
-
-        for (var i = 1; i < validPaths.Count; i++)
-        {
-            var inputPath = validPaths[i];
-            if (string.IsNullOrEmpty(inputPath) || !File.Exists(inputPath)) continue;
-
-            using var sourcePresentation = new Presentation(inputPath);
-            foreach (var slide in sourcePresentation.Slides)
-                if (keepSourceFormatting)
-                {
-                    var sourceMaster = slide.LayoutSlide.MasterSlide;
-                    var destMaster = masterPresentation.Masters.AddClone(sourceMaster);
-                    masterPresentation.Slides.AddClone(slide, destMaster, true);
-                }
-                else
-                {
-                    masterPresentation.Slides.AddClone(slide, masterPresentation.Masters[0], true);
-                }
-        }
-
-        masterPresentation.Save(savePath, SaveFormat.Pptx);
-        return
-            $"Merged {validPaths.Count} presentations (Total slides: {masterPresentation.Slides.Count}). Output: {savePath}";
-    }
-
-    /// <summary>
-    ///     Splits presentation into multiple files.
-    /// </summary>
-    /// <param name="inputPath">The input presentation file path.</param>
-    /// <param name="path">Alternative input file path (used if inputPath is null).</param>
-    /// <param name="sessionId">Session ID to read presentation from session.</param>
-    /// <param name="outputDirectory">The output directory path for split files.</param>
-    /// <param name="slidesPerFile">Number of slides per output file.</param>
-    /// <param name="startSlideIndex">The zero-based start slide index (null for beginning).</param>
-    /// <param name="endSlideIndex">The zero-based end slide index (null for end).</param>
-    /// <param name="fileNamePattern">Output file name pattern with {index} placeholder.</param>
-    /// <returns>A message indicating the split was successful with file count information.</returns>
-    /// <exception cref="ArgumentException">Thrown when required parameters are missing or slide range is invalid.</exception>
-    private string SplitPresentation(string? inputPath, string? path, string? sessionId, string? outputDirectory,
-        int slidesPerFile, int? startSlideIndex, int? endSlideIndex, string fileNamePattern)
-    {
-        var sourcePath = inputPath ?? path;
-        if (string.IsNullOrEmpty(sourcePath) && string.IsNullOrEmpty(sessionId))
-            throw new ArgumentException("Either inputPath, path, or sessionId is required for split operation");
-        if (string.IsNullOrEmpty(outputDirectory))
-            throw new ArgumentException("outputDirectory is required for split operation");
-
-        if (!Directory.Exists(outputDirectory))
-            Directory.CreateDirectory(outputDirectory);
-
-        Presentation presentation;
-
-        if (!string.IsNullOrEmpty(sessionId))
-        {
-            if (_sessionManager == null)
-                throw new InvalidOperationException("Session management is not enabled");
-
-            var identity = _identityAccessor?.GetCurrentIdentity() ?? SessionIdentity.GetAnonymous();
-            presentation = _sessionManager.GetDocument<Presentation>(sessionId, identity);
-        }
-        else
-        {
-            presentation = new Presentation(sourcePath);
-        }
-
-        var totalSlides = presentation.Slides.Count;
-
-        var start = startSlideIndex ?? 0;
-        var end = endSlideIndex ?? totalSlides - 1;
-
-        if (start < 0 || start >= totalSlides || end < 0 || end >= totalSlides || start > end)
-            throw new ArgumentException($"Invalid slide range: start={start}, end={end}, total={totalSlides}");
-
-        var fileCount = 0;
-        for (var i = start; i <= end; i += slidesPerFile)
-        {
-            using var newPresentation = new Presentation();
-            newPresentation.Slides.RemoveAt(0);
-
-            for (var j = 0; j < slidesPerFile && i + j <= end; j++)
-            {
-                var sourceSlide = presentation.Slides[i + j];
-                var sourceMaster = sourceSlide.LayoutSlide.MasterSlide;
-                var destMaster = newPresentation.Masters.AddClone(sourceMaster);
-                newPresentation.Slides.AddClone(sourceSlide, destMaster, true);
-            }
-
-            var outputFileName = fileNamePattern.Replace("{index}", fileCount.ToString());
-            outputFileName = SecurityHelper.SanitizeFileName(outputFileName);
-            var outPath = Path.Combine(outputDirectory, outputFileName);
-            newPresentation.Save(outPath, SaveFormat.Pptx);
-            fileCount++;
-        }
-
-        return $"Split presentation into {fileCount} file(s). Output: {outputDirectory}";
+        return parameters;
     }
 }

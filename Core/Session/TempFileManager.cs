@@ -92,7 +92,7 @@ public class TempFileManager : IHostedService, IDisposable
     {
         var owner = new SessionIdentity
         {
-            TenantId = metadata.OwnerTenantId,
+            GroupId = metadata.OwnerGroupId,
             UserId = metadata.OwnerUserId
         };
         return requestor.CanAccess(owner, _config.IsolationMode);
@@ -227,7 +227,7 @@ public class TempFileManager : IHostedService, IDisposable
                         ExpiresAt = expiresAt,
                         FileSizeBytes = fileInfo.Length,
                         PromptOnReconnect = metadata.PromptOnReconnect,
-                        OwnerTenantId = metadata.OwnerTenantId,
+                        OwnerGroupId = metadata.OwnerGroupId,
                         OwnerUserId = metadata.OwnerUserId
                     });
                 }
@@ -544,12 +544,12 @@ public class TempFileMetadata
     public bool PromptOnReconnect { get; set; }
 
     /// <summary>
-    ///     Owner tenant ID for session isolation
+    ///     Owner group ID for session isolation
     /// </summary>
-    public string? OwnerTenantId { get; set; }
+    public string? OwnerGroupId { get; set; }
 
     /// <summary>
-    ///     Owner user ID for session isolation
+    ///     Owner user ID for audit and logging
     /// </summary>
     public string? OwnerUserId { get; set; }
 }
@@ -600,12 +600,12 @@ public class RecoverableFileInfo
     public bool PromptOnReconnect { get; set; }
 
     /// <summary>
-    ///     Owner tenant ID for session isolation
+    ///     Owner group ID for session isolation
     /// </summary>
-    public string? OwnerTenantId { get; set; }
+    public string? OwnerGroupId { get; set; }
 
     /// <summary>
-    ///     Owner user ID for session isolation
+    ///     Owner user ID for audit and logging
     /// </summary>
     public string? OwnerUserId { get; set; }
 }

@@ -53,14 +53,14 @@ public class DocumentSessionManagerIsolationTests : IDisposable
     [Fact]
     public void CloseDocument_UnauthorizedUserCannotClose()
     {
-        using var manager = CreateManager(SessionIsolationMode.User);
+        using var manager = CreateManager(SessionIsolationMode.Group);
 
-        var owner = new SessionIdentity { TenantId = "tenant1", UserId = "user1" };
-        var other = new SessionIdentity { TenantId = "tenant1", UserId = "user2" };
+        var owner = new SessionIdentity { GroupId = "group1", UserId = "user1" };
+        var other = new SessionIdentity { GroupId = "group2", UserId = "user2" };
 
         var sessionId = manager.OpenDocument(_testFilePath, owner);
 
-        // Other user should not be able to close
+        // Other group should not be able to close
         Assert.Throws<KeyNotFoundException>(() => manager.CloseDocument(sessionId, other, true));
 
         // Owner should be able to close
@@ -74,14 +74,14 @@ public class DocumentSessionManagerIsolationTests : IDisposable
     [Fact]
     public void SaveDocument_UnauthorizedUserCannotSave()
     {
-        using var manager = CreateManager(SessionIsolationMode.User);
+        using var manager = CreateManager(SessionIsolationMode.Group);
 
-        var owner = new SessionIdentity { TenantId = "tenant1", UserId = "user1" };
-        var other = new SessionIdentity { TenantId = "tenant1", UserId = "user2" };
+        var owner = new SessionIdentity { GroupId = "group1", UserId = "user1" };
+        var other = new SessionIdentity { GroupId = "group2", UserId = "user2" };
 
         var sessionId = manager.OpenDocument(_testFilePath, owner);
 
-        // Other user should not be able to save
+        // Other group should not be able to save
         Assert.Throws<KeyNotFoundException>(() => manager.SaveDocument(sessionId, other));
 
         manager.CloseDocument(sessionId, owner, true);
@@ -92,29 +92,29 @@ public class DocumentSessionManagerIsolationTests : IDisposable
     #region Session Limit Per Owner Tests
 
     [Fact]
-    public void SessionLimitIsPerOwnerInUserMode()
+    public void SessionLimitIsPerOwnerInGroupMode()
     {
         var config = new SessionConfig
         {
             Enabled = true,
             MaxSessions = 2,
-            IsolationMode = SessionIsolationMode.User
+            IsolationMode = SessionIsolationMode.Group
         };
         using var manager = new DocumentSessionManager(config);
 
-        var user1 = new SessionIdentity { TenantId = "tenant1", UserId = "user1" };
-        var user2 = new SessionIdentity { TenantId = "tenant1", UserId = "user2" };
+        var group1 = new SessionIdentity { GroupId = "group1", UserId = "user1" };
+        var group2 = new SessionIdentity { GroupId = "group2", UserId = "user2" };
 
-        // User1 can open 2 sessions
-        manager.OpenDocument(_testFilePath, user1);
-        manager.OpenDocument(_testFilePath, user1);
+        // Group1 can open 2 sessions
+        manager.OpenDocument(_testFilePath, group1);
+        manager.OpenDocument(_testFilePath, group1);
 
-        // User1 cannot open a 3rd
-        Assert.Throws<InvalidOperationException>(() => manager.OpenDocument(_testFilePath, user1));
+        // Group1 cannot open a 3rd
+        Assert.Throws<InvalidOperationException>(() => manager.OpenDocument(_testFilePath, group1));
 
-        // But user2 can still open sessions
-        manager.OpenDocument(_testFilePath, user2);
-        manager.OpenDocument(_testFilePath, user2);
+        // But group2 can still open sessions
+        manager.OpenDocument(_testFilePath, group2);
+        manager.OpenDocument(_testFilePath, group2);
     }
 
     #endregion
@@ -126,16 +126,16 @@ public class DocumentSessionManagerIsolationTests : IDisposable
     {
         using var manager = CreateManager(SessionIsolationMode.None);
 
-        var tenant1User1 = new SessionIdentity { TenantId = "tenant1", UserId = "user1" };
-        var tenant2User2 = new SessionIdentity { TenantId = "tenant2", UserId = "user2" };
+        var group1User1 = new SessionIdentity { GroupId = "group1", UserId = "user1" };
+        var group2User2 = new SessionIdentity { GroupId = "group2", UserId = "user2" };
 
-        var sessionId = manager.OpenDocument(_testFilePath, tenant1User1);
+        var sessionId = manager.OpenDocument(_testFilePath, group1User1);
 
-        // tenant2/user2 should be able to access it
-        var session = manager.TryGetSession(sessionId, tenant2User2);
+        // group2/user2 should be able to access it
+        var session = manager.TryGetSession(sessionId, group2User2);
         Assert.NotNull(session);
 
-        manager.CloseDocument(sessionId, tenant2User2, true);
+        manager.CloseDocument(sessionId, group2User2, true);
     }
 
     [Fact]
@@ -143,31 +143,31 @@ public class DocumentSessionManagerIsolationTests : IDisposable
     {
         using var manager = CreateManager(SessionIsolationMode.None);
 
-        var tenant1 = new SessionIdentity { TenantId = "tenant1", UserId = "user1" };
-        var tenant2 = new SessionIdentity { TenantId = "tenant2", UserId = "user2" };
+        var group1 = new SessionIdentity { GroupId = "group1", UserId = "user1" };
+        var group2 = new SessionIdentity { GroupId = "group2", UserId = "user2" };
 
-        manager.OpenDocument(_testFilePath, tenant1);
-        manager.OpenDocument(_testFilePath, tenant2);
+        manager.OpenDocument(_testFilePath, group1);
+        manager.OpenDocument(_testFilePath, group2);
 
-        var sessions = manager.ListSessions(tenant1).ToList();
+        var sessions = manager.ListSessions(group1).ToList();
         Assert.Equal(2, sessions.Count);
     }
 
     #endregion
 
-    #region Tenant Mode Tests
+    #region Group Mode Tests
 
     [Fact]
-    public void TenantMode_SameTenantDifferentUserCanAccess()
+    public void GroupMode_SameGroupDifferentUserCanAccess()
     {
-        using var manager = CreateManager(SessionIsolationMode.Tenant);
+        using var manager = CreateManager(SessionIsolationMode.Group);
 
-        var user1 = new SessionIdentity { TenantId = "tenant1", UserId = "user1" };
-        var user2 = new SessionIdentity { TenantId = "tenant1", UserId = "user2" };
+        var user1 = new SessionIdentity { GroupId = "group1", UserId = "user1" };
+        var user2 = new SessionIdentity { GroupId = "group1", UserId = "user2" };
 
         var sessionId = manager.OpenDocument(_testFilePath, user1);
 
-        // Same tenant, different user should access
+        // Same group, different user should access
         var session = manager.TryGetSession(sessionId, user2);
         Assert.NotNull(session);
 
@@ -175,54 +175,50 @@ public class DocumentSessionManagerIsolationTests : IDisposable
     }
 
     [Fact]
-    public void TenantMode_DifferentTenantCannotAccess()
+    public void GroupMode_DifferentGroupCannotAccess()
     {
-        using var manager = CreateManager(SessionIsolationMode.Tenant);
+        using var manager = CreateManager(SessionIsolationMode.Group);
 
-        var tenant1 = new SessionIdentity { TenantId = "tenant1", UserId = "user1" };
-        var tenant2 = new SessionIdentity { TenantId = "tenant2", UserId = "user1" };
+        var group1 = new SessionIdentity { GroupId = "group1", UserId = "user1" };
+        var group2 = new SessionIdentity { GroupId = "group2", UserId = "user1" };
 
-        var sessionId = manager.OpenDocument(_testFilePath, tenant1);
+        var sessionId = manager.OpenDocument(_testFilePath, group1);
 
-        // Different tenant should NOT access
-        var session = manager.TryGetSession(sessionId, tenant2);
+        // Different group should NOT access
+        var session = manager.TryGetSession(sessionId, group2);
         Assert.Null(session);
 
-        manager.CloseDocument(sessionId, tenant1, true);
+        manager.CloseDocument(sessionId, group1, true);
     }
 
     [Fact]
-    public void TenantMode_ListSessionsShowsSameTenantOnly()
+    public void GroupMode_ListSessionsShowsSameGroupOnly()
     {
-        using var manager = CreateManager(SessionIsolationMode.Tenant);
+        using var manager = CreateManager(SessionIsolationMode.Group);
 
-        var tenant1User1 = new SessionIdentity { TenantId = "tenant1", UserId = "user1" };
-        var tenant1User2 = new SessionIdentity { TenantId = "tenant1", UserId = "user2" };
-        var tenant2 = new SessionIdentity { TenantId = "tenant2", UserId = "user1" };
+        var group1User1 = new SessionIdentity { GroupId = "group1", UserId = "user1" };
+        var group1User2 = new SessionIdentity { GroupId = "group1", UserId = "user2" };
+        var group2 = new SessionIdentity { GroupId = "group2", UserId = "user1" };
 
-        manager.OpenDocument(_testFilePath, tenant1User1);
-        manager.OpenDocument(_testFilePath, tenant1User2);
-        manager.OpenDocument(_testFilePath, tenant2);
+        manager.OpenDocument(_testFilePath, group1User1);
+        manager.OpenDocument(_testFilePath, group1User2);
+        manager.OpenDocument(_testFilePath, group2);
 
-        // Tenant1 users should see 2 sessions
-        var tenant1Sessions = manager.ListSessions(tenant1User1).ToList();
-        Assert.Equal(2, tenant1Sessions.Count);
+        // Group1 users should see 2 sessions
+        var group1Sessions = manager.ListSessions(group1User1).ToList();
+        Assert.Equal(2, group1Sessions.Count);
 
-        // Tenant2 should see 1 session
-        var tenant2Sessions = manager.ListSessions(tenant2).ToList();
-        Assert.Single(tenant2Sessions);
+        // Group2 should see 1 session
+        var group2Sessions = manager.ListSessions(group2).ToList();
+        Assert.Single(group2Sessions);
     }
 
-    #endregion
-
-    #region User Mode Tests
-
     [Fact]
-    public void UserMode_SameUserCanAccess()
+    public void GroupMode_SameGroupSameUserCanAccess()
     {
-        using var manager = CreateManager(SessionIsolationMode.User);
+        using var manager = CreateManager(SessionIsolationMode.Group);
 
-        var user = new SessionIdentity { TenantId = "tenant1", UserId = "user1" };
+        var user = new SessionIdentity { GroupId = "group1", UserId = "user1" };
 
         var sessionId = manager.OpenDocument(_testFilePath, user);
 
@@ -233,120 +229,57 @@ public class DocumentSessionManagerIsolationTests : IDisposable
         manager.CloseDocument(sessionId, user, true);
     }
 
-    [Fact]
-    public void UserMode_SameTenantDifferentUserCannotAccess()
-    {
-        using var manager = CreateManager(SessionIsolationMode.User);
-
-        var user1 = new SessionIdentity { TenantId = "tenant1", UserId = "user1" };
-        var user2 = new SessionIdentity { TenantId = "tenant1", UserId = "user2" };
-
-        var sessionId = manager.OpenDocument(_testFilePath, user1);
-
-        // Same tenant, different user should NOT access
-        var session = manager.TryGetSession(sessionId, user2);
-        Assert.Null(session);
-
-        manager.CloseDocument(sessionId, user1, true);
-    }
-
-    [Fact]
-    public void UserMode_DifferentTenantCannotAccess()
-    {
-        using var manager = CreateManager(SessionIsolationMode.User);
-
-        var tenant1 = new SessionIdentity { TenantId = "tenant1", UserId = "user1" };
-        var tenant2 = new SessionIdentity { TenantId = "tenant2", UserId = "user1" };
-
-        var sessionId = manager.OpenDocument(_testFilePath, tenant1);
-
-        // Different tenant should NOT access
-        var session = manager.TryGetSession(sessionId, tenant2);
-        Assert.Null(session);
-
-        manager.CloseDocument(sessionId, tenant1, true);
-    }
-
-    [Fact]
-    public void UserMode_ListSessionsShowsOwnOnly()
-    {
-        using var manager = CreateManager(SessionIsolationMode.User);
-
-        var user1 = new SessionIdentity { TenantId = "tenant1", UserId = "user1" };
-        var user2 = new SessionIdentity { TenantId = "tenant1", UserId = "user2" };
-        var user3 = new SessionIdentity { TenantId = "tenant2", UserId = "user1" };
-
-        manager.OpenDocument(_testFilePath, user1);
-        manager.OpenDocument(_testFilePath, user1);
-        manager.OpenDocument(_testFilePath, user2);
-        manager.OpenDocument(_testFilePath, user3);
-
-        // User1 should see 2 sessions
-        var user1Sessions = manager.ListSessions(user1).ToList();
-        Assert.Equal(2, user1Sessions.Count);
-
-        // User2 should see 1 session
-        var user2Sessions = manager.ListSessions(user2).ToList();
-        Assert.Single(user2Sessions);
-
-        // User3 should see 1 session
-        var user3Sessions = manager.ListSessions(user3).ToList();
-        Assert.Single(user3Sessions);
-    }
-
     #endregion
 
     #region Anonymous Access Tests
 
     [Fact]
-    public void AnonymousRequestor_CanAccessAnySession()
+    public void AnonymousRequestor_CannotAccessOwnedSession()
     {
-        using var manager = CreateManager(SessionIsolationMode.User);
+        using var manager = CreateManager(SessionIsolationMode.Group);
 
-        var owner = new SessionIdentity { TenantId = "tenant1", UserId = "user1" };
+        var owner = new SessionIdentity { GroupId = "group1", UserId = "user1" };
         var anonymous = SessionIdentity.GetAnonymous();
 
         var sessionId = manager.OpenDocument(_testFilePath, owner);
 
-        // Anonymous should access any session (backward compatibility)
         var session = manager.TryGetSession(sessionId, anonymous);
-        Assert.NotNull(session);
+        Assert.Null(session);
+
+        manager.CloseDocument(sessionId, owner, true);
+    }
+
+    [Fact]
+    public void AnonymousOwner_CannotBeAccessedByOtherGroup()
+    {
+        using var manager = CreateManager(SessionIsolationMode.Group);
+
+        var anonymous = SessionIdentity.GetAnonymous();
+        var user = new SessionIdentity { GroupId = "group1", UserId = "user1" };
+
+        var sessionId = manager.OpenDocument(_testFilePath, anonymous);
+
+        var session = manager.TryGetSession(sessionId, user);
+        Assert.Null(session);
 
         manager.CloseDocument(sessionId, anonymous, true);
     }
 
     [Fact]
-    public void AnonymousOwner_CanBeAccessedByAnyone()
+    public void AnonymousRequestor_ListSessionsShowsOnlyAnonymousSessions()
     {
-        using var manager = CreateManager(SessionIsolationMode.User);
+        using var manager = CreateManager(SessionIsolationMode.Group);
 
-        var anonymous = SessionIdentity.GetAnonymous();
-        var user = new SessionIdentity { TenantId = "tenant1", UserId = "user1" };
-
-        var sessionId = manager.OpenDocument(_testFilePath, anonymous);
-
-        // Any user should access anonymous-owned session
-        var session = manager.TryGetSession(sessionId, user);
-        Assert.NotNull(session);
-
-        manager.CloseDocument(sessionId, user, true);
-    }
-
-    [Fact]
-    public void AnonymousRequestor_ListSessionsShowsAll()
-    {
-        using var manager = CreateManager(SessionIsolationMode.User);
-
-        var user1 = new SessionIdentity { TenantId = "tenant1", UserId = "user1" };
-        var user2 = new SessionIdentity { TenantId = "tenant2", UserId = "user2" };
+        var user1 = new SessionIdentity { GroupId = "group1", UserId = "user1" };
+        var user2 = new SessionIdentity { GroupId = "group2", UserId = "user2" };
         var anonymous = SessionIdentity.GetAnonymous();
 
         manager.OpenDocument(_testFilePath, user1);
         manager.OpenDocument(_testFilePath, user2);
+        manager.OpenDocument(_testFilePath, anonymous);
 
-        // Anonymous should see all sessions
         var sessions = manager.ListSessions(anonymous).ToList();
-        Assert.Equal(2, sessions.Count);
+        Assert.Single(sessions);
     }
 
     #endregion

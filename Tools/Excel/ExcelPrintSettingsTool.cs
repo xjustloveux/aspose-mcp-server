@@ -1,33 +1,22 @@
 using System.ComponentModel;
 using Aspose.Cells;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.Excel.PrintSettings;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
 
 /// <summary>
 ///     Unified tool for managing Excel print settings (print area, titles, page setup, etc.).
-///     Merges: ExcelSetPrintAreaTool, ExcelSetPrintTitlesTool, ExcelSetPrintSettingsTool, ExcelSetPageSetupTool.
 /// </summary>
 [McpServerToolType]
 public class ExcelPrintSettingsTool
 {
     /// <summary>
-    ///     Supported paper size mappings.
+    ///     Handler registry for print settings operations.
     /// </summary>
-    private static readonly Dictionary<string, PaperSizeType> PaperSizeMap = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["A3"] = PaperSizeType.PaperA3,
-        ["A4"] = PaperSizeType.PaperA4,
-        ["A5"] = PaperSizeType.PaperA5,
-        ["B4"] = PaperSizeType.PaperB4,
-        ["B5"] = PaperSizeType.PaperB5,
-        ["Letter"] = PaperSizeType.PaperLetter,
-        ["Legal"] = PaperSizeType.PaperLegal,
-        ["Tabloid"] = PaperSizeType.PaperTabloid,
-        ["Executive"] = PaperSizeType.PaperExecutive
-    };
+    private readonly HandlerRegistry<Workbook> _handlerRegistry;
 
     /// <summary>
     ///     Session identity accessor for session isolation support.
@@ -49,6 +38,7 @@ public class ExcelPrintSettingsTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = ExcelPrintSettingsHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -144,263 +134,101 @@ Usage examples:
     {
         using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
-        return operation.ToLower() switch
+        var parameters = BuildParameters(operation, sheetIndex, range, clearPrintArea, rows, columns, clearTitles,
+            orientation, paperSize, leftMargin, rightMargin, topMargin, bottomMargin, header, footer,
+            fitToPage, fitToPagesWide, fitToPagesTall);
+
+        var handler = _handlerRegistry.GetHandler(operation);
+
+        var operationContext = new OperationContext<Workbook>
         {
-            "set_print_area" => SetPrintArea(ctx, outputPath, sheetIndex, range, clearPrintArea),
-            "set_print_titles" => SetPrintTitles(ctx, outputPath, sheetIndex, rows, columns, clearTitles),
-            "set_page_setup" => SetPageSetup(ctx, outputPath, sheetIndex, orientation, paperSize, leftMargin,
-                rightMargin, topMargin, bottomMargin, header, footer, fitToPage, fitToPagesWide, fitToPagesTall),
-            "set_all" => SetAll(ctx, outputPath, sheetIndex, range, rows, columns, orientation, paperSize, leftMargin,
-                rightMargin, topMargin, bottomMargin, header, footer, fitToPage, fitToPagesWide, fitToPagesTall),
-            _ => throw new ArgumentException($"Unknown operation: {operation}")
+            Document = ctx.Document,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = path,
+            OutputPath = outputPath
         };
+
+        var result = handler.Execute(operationContext, parameters);
+
+        if (operationContext.IsModified)
+            ctx.Save(outputPath);
+
+        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Sets print area for the worksheet.
+    ///     Builds OperationParameters from method parameters.
     /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <param name="range">The print area range (e.g., 'A1:D10').</param>
-    /// <param name="clearPrintArea">Whether to clear the print area.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when neither range nor clearPrintArea is provided.</exception>
-    private static string SetPrintArea(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex,
-        string? range, bool clearPrintArea)
+    private static OperationParameters BuildParameters(
+        string operation,
+        int sheetIndex,
+        string? range,
+        bool clearPrintArea,
+        string? rows,
+        string? columns,
+        bool clearTitles,
+        string? orientation,
+        string? paperSize,
+        double? leftMargin,
+        double? rightMargin,
+        double? topMargin,
+        double? bottomMargin,
+        string? header,
+        string? footer,
+        bool? fitToPage,
+        int? fitToPagesWide,
+        int? fitToPagesTall)
     {
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        var parameters = new OperationParameters();
+        parameters.Set("sheetIndex", sheetIndex);
 
-        if (clearPrintArea)
-            worksheet.PageSetup.PrintArea = "";
-        else if (!string.IsNullOrEmpty(range))
-            worksheet.PageSetup.PrintArea = range;
-        else
-            throw new ArgumentException("Either range or clearPrintArea must be provided");
-
-        ctx.Save(outputPath);
-        return clearPrintArea
-            ? $"Print area cleared for sheet {sheetIndex}. {ctx.GetOutputMessage(outputPath)}"
-            : $"Print area set to {range} for sheet {sheetIndex}. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Sets print titles (rows/columns to repeat on each page).
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <param name="rows">The rows to repeat on each page (e.g., '1:1').</param>
-    /// <param name="columns">The columns to repeat on each page (e.g., 'A:A').</param>
-    /// <param name="clearTitles">Whether to clear the print titles.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    private static string SetPrintTitles(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex,
-        string? rows, string? columns, bool clearTitles)
-    {
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-
-        if (clearTitles)
+        switch (operation.ToLowerInvariant())
         {
-            worksheet.PageSetup.PrintTitleRows = "";
-            worksheet.PageSetup.PrintTitleColumns = "";
-        }
-        else
-        {
-            if (!string.IsNullOrEmpty(rows)) worksheet.PageSetup.PrintTitleRows = rows;
-            if (!string.IsNullOrEmpty(columns)) worksheet.PageSetup.PrintTitleColumns = columns;
-        }
+            case "set_print_area":
+                if (range != null) parameters.Set("range", range);
+                parameters.Set("clearPrintArea", clearPrintArea);
+                break;
 
-        ctx.Save(outputPath);
-        return $"Print titles updated for sheet {sheetIndex}. {ctx.GetOutputMessage(outputPath)}";
-    }
+            case "set_print_titles":
+                if (rows != null) parameters.Set("rows", rows);
+                if (columns != null) parameters.Set("columns", columns);
+                parameters.Set("clearTitles", clearTitles);
+                break;
 
-    /// <summary>
-    ///     Sets page setup options.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <param name="orientation">The page orientation ('Portrait' or 'Landscape').</param>
-    /// <param name="paperSize">The paper size (e.g., 'A4', 'Letter').</param>
-    /// <param name="leftMargin">The left margin in inches.</param>
-    /// <param name="rightMargin">The right margin in inches.</param>
-    /// <param name="topMargin">The top margin in inches.</param>
-    /// <param name="bottomMargin">The bottom margin in inches.</param>
-    /// <param name="header">The header text for center section.</param>
-    /// <param name="footer">The footer text for center section.</param>
-    /// <param name="fitToPage">Whether to enable fit to page mode.</param>
-    /// <param name="fitToPagesWide">The number of pages wide to fit content.</param>
-    /// <param name="fitToPagesTall">The number of pages tall to fit content.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    private static string SetPageSetup(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex,
-        string? orientation, string? paperSize, double? leftMargin, double? rightMargin,
-        double? topMargin, double? bottomMargin, string? header, string? footer,
-        bool? fitToPage, int? fitToPagesWide, int? fitToPagesTall)
-    {
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var pageSetup = worksheet.PageSetup;
+            case "set_page_setup":
+                if (orientation != null) parameters.Set("orientation", orientation);
+                if (paperSize != null) parameters.Set("paperSize", paperSize);
+                if (leftMargin.HasValue) parameters.Set("leftMargin", leftMargin.Value);
+                if (rightMargin.HasValue) parameters.Set("rightMargin", rightMargin.Value);
+                if (topMargin.HasValue) parameters.Set("topMargin", topMargin.Value);
+                if (bottomMargin.HasValue) parameters.Set("bottomMargin", bottomMargin.Value);
+                if (header != null) parameters.Set("header", header);
+                if (footer != null) parameters.Set("footer", footer);
+                if (fitToPage.HasValue) parameters.Set("fitToPage", fitToPage.Value);
+                if (fitToPagesWide.HasValue) parameters.Set("fitToPagesWide", fitToPagesWide.Value);
+                if (fitToPagesTall.HasValue) parameters.Set("fitToPagesTall", fitToPagesTall.Value);
+                break;
 
-        var changes = ApplyPageSetup(pageSetup, orientation, paperSize, leftMargin, rightMargin,
-            topMargin, bottomMargin, header, footer, fitToPage, fitToPagesWide, fitToPagesTall);
-
-        ctx.Save(outputPath);
-
-        var changesStr = changes.Count > 0 ? string.Join(", ", changes) : "no changes";
-        return $"Page setup updated ({changesStr}). {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Applies page setup options to the PageSetup object.
-    /// </summary>
-    /// <param name="pageSetup">The PageSetup object to modify.</param>
-    /// <param name="orientation">The page orientation ('Portrait' or 'Landscape').</param>
-    /// <param name="paperSize">The paper size (e.g., 'A4', 'Letter').</param>
-    /// <param name="leftMargin">The left margin in inches.</param>
-    /// <param name="rightMargin">The right margin in inches.</param>
-    /// <param name="topMargin">The top margin in inches.</param>
-    /// <param name="bottomMargin">The bottom margin in inches.</param>
-    /// <param name="header">The header text for center section.</param>
-    /// <param name="footer">The footer text for center section.</param>
-    /// <param name="fitToPage">Whether to enable fit to page mode.</param>
-    /// <param name="fitToPagesWide">The number of pages wide to fit content.</param>
-    /// <param name="fitToPagesTall">The number of pages tall to fit content.</param>
-    /// <returns>A list of change descriptions indicating what settings were modified.</returns>
-    /// <exception cref="ArgumentException">Thrown when an invalid paper size is specified.</exception>
-    private static List<string> ApplyPageSetup(PageSetup pageSetup, string? orientation, string? paperSize,
-        double? leftMargin, double? rightMargin, double? topMargin, double? bottomMargin,
-        string? header, string? footer, bool? fitToPage, int? fitToPagesWide, int? fitToPagesTall)
-    {
-        List<string> changes = [];
-
-        if (!string.IsNullOrEmpty(orientation))
-        {
-            pageSetup.Orientation = string.Equals(orientation, "Landscape", StringComparison.OrdinalIgnoreCase)
-                ? PageOrientationType.Landscape
-                : PageOrientationType.Portrait;
-            changes.Add($"orientation={orientation}");
+            case "set_all":
+                if (range != null) parameters.Set("range", range);
+                if (rows != null) parameters.Set("rows", rows);
+                if (columns != null) parameters.Set("columns", columns);
+                if (orientation != null) parameters.Set("orientation", orientation);
+                if (paperSize != null) parameters.Set("paperSize", paperSize);
+                if (leftMargin.HasValue) parameters.Set("leftMargin", leftMargin.Value);
+                if (rightMargin.HasValue) parameters.Set("rightMargin", rightMargin.Value);
+                if (topMargin.HasValue) parameters.Set("topMargin", topMargin.Value);
+                if (bottomMargin.HasValue) parameters.Set("bottomMargin", bottomMargin.Value);
+                if (header != null) parameters.Set("header", header);
+                if (footer != null) parameters.Set("footer", footer);
+                if (fitToPage.HasValue) parameters.Set("fitToPage", fitToPage.Value);
+                if (fitToPagesWide.HasValue) parameters.Set("fitToPagesWide", fitToPagesWide.Value);
+                if (fitToPagesTall.HasValue) parameters.Set("fitToPagesTall", fitToPagesTall.Value);
+                break;
         }
 
-        if (!string.IsNullOrEmpty(paperSize))
-        {
-            if (PaperSizeMap.TryGetValue(paperSize, out var size))
-            {
-                pageSetup.PaperSize = size;
-                changes.Add($"paperSize={paperSize}");
-            }
-            else
-            {
-                throw new ArgumentException(
-                    $"Invalid paper size: '{paperSize}'. Supported values: {string.Join(", ", PaperSizeMap.Keys)}");
-            }
-        }
-
-        if (leftMargin.HasValue)
-        {
-            pageSetup.LeftMargin = leftMargin.Value;
-            changes.Add($"leftMargin={leftMargin.Value}");
-        }
-
-        if (rightMargin.HasValue)
-        {
-            pageSetup.RightMargin = rightMargin.Value;
-            changes.Add($"rightMargin={rightMargin.Value}");
-        }
-
-        if (topMargin.HasValue)
-        {
-            pageSetup.TopMargin = topMargin.Value;
-            changes.Add($"topMargin={topMargin.Value}");
-        }
-
-        if (bottomMargin.HasValue)
-        {
-            pageSetup.BottomMargin = bottomMargin.Value;
-            changes.Add($"bottomMargin={bottomMargin.Value}");
-        }
-
-        if (!string.IsNullOrEmpty(header))
-        {
-            pageSetup.SetHeader(1, header);
-            changes.Add("header");
-        }
-
-        if (!string.IsNullOrEmpty(footer))
-        {
-            pageSetup.SetFooter(1, footer);
-            changes.Add("footer");
-        }
-
-        if (fitToPage == true)
-        {
-            pageSetup.FitToPagesWide = fitToPagesWide ?? 1;
-            pageSetup.FitToPagesTall = fitToPagesTall ?? 1;
-            changes.Add($"fitToPage(wide={pageSetup.FitToPagesWide}, tall={pageSetup.FitToPagesTall})");
-        }
-
-        return changes;
-    }
-
-    /// <summary>
-    ///     Sets all print settings at once.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <param name="printArea">The print area range (e.g., 'A1:D10').</param>
-    /// <param name="printTitleRows">The rows to repeat on each page (e.g., '1:1').</param>
-    /// <param name="printTitleColumns">The columns to repeat on each page (e.g., 'A:A').</param>
-    /// <param name="orientation">The page orientation ('Portrait' or 'Landscape').</param>
-    /// <param name="paperSize">The paper size (e.g., 'A4', 'Letter').</param>
-    /// <param name="leftMargin">The left margin in inches.</param>
-    /// <param name="rightMargin">The right margin in inches.</param>
-    /// <param name="topMargin">The top margin in inches.</param>
-    /// <param name="bottomMargin">The bottom margin in inches.</param>
-    /// <param name="header">The header text for center section.</param>
-    /// <param name="footer">The footer text for center section.</param>
-    /// <param name="fitToPage">Whether to enable fit to page mode.</param>
-    /// <param name="fitToPagesWide">The number of pages wide to fit content.</param>
-    /// <param name="fitToPagesTall">The number of pages tall to fit content.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    private static string SetAll(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex,
-        string? printArea, string? printTitleRows, string? printTitleColumns,
-        string? orientation, string? paperSize, double? leftMargin, double? rightMargin,
-        double? topMargin, double? bottomMargin, string? header, string? footer,
-        bool? fitToPage, int? fitToPagesWide, int? fitToPagesTall)
-    {
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var pageSetup = worksheet.PageSetup;
-
-        List<string> changes = [];
-
-        if (!string.IsNullOrEmpty(printArea))
-        {
-            pageSetup.PrintArea = printArea;
-            changes.Add($"printArea={printArea}");
-        }
-
-        if (!string.IsNullOrEmpty(printTitleRows))
-        {
-            pageSetup.PrintTitleRows = printTitleRows;
-            changes.Add($"printTitleRows={printTitleRows}");
-        }
-
-        if (!string.IsNullOrEmpty(printTitleColumns))
-        {
-            pageSetup.PrintTitleColumns = printTitleColumns;
-            changes.Add($"printTitleColumns={printTitleColumns}");
-        }
-
-        var pageSetupChanges = ApplyPageSetup(pageSetup, orientation, paperSize, leftMargin, rightMargin,
-            topMargin, bottomMargin, header, footer, fitToPage, fitToPagesWide, fitToPagesTall);
-        changes.AddRange(pageSetupChanges);
-
-        ctx.Save(outputPath);
-
-        var changesStr = changes.Count > 0 ? string.Join(", ", changes) : "no changes";
-        return $"Print settings updated for sheet {sheetIndex} ({changesStr}). {ctx.GetOutputMessage(outputPath)}";
+        return parameters;
     }
 }

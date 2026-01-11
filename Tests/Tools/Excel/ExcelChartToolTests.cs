@@ -6,6 +6,11 @@ using AsposeMcpServer.Tools.Excel;
 
 namespace AsposeMcpServer.Tests.Tools.Excel;
 
+/// <summary>
+///     Integration tests for ExcelChartTool.
+///     Focuses on session management, file I/O, and operation routing.
+///     Detailed parameter validation and business logic tests are in Handler tests.
+/// </summary>
 public class ExcelChartToolTests : ExcelTestBase
 {
     private readonly ExcelChartTool _tool;
@@ -41,7 +46,7 @@ public class ExcelChartToolTests : ExcelTestBase
         return filePath;
     }
 
-    #region General
+    #region File I/O Smoke Tests
 
     [Fact]
     public void Add_ShouldAddChart()
@@ -55,63 +60,6 @@ public class ExcelChartToolTests : ExcelTestBase
         Assert.Single(workbook.Worksheets[0].Charts);
     }
 
-    [Theory]
-    [InlineData("Column", ChartType.Column)]
-    [InlineData("Bar", ChartType.Bar)]
-    [InlineData("Pie", ChartType.Pie)]
-    [InlineData("Area", ChartType.Area)]
-    public void Add_WithChartType_ShouldAddCorrectType(string chartTypeStr, ChartType expectedType)
-    {
-        var workbookPath = CreateWorkbookWithChartData($"test_add_{chartTypeStr}.xlsx", 5);
-        var outputPath = CreateTestFilePath($"test_add_{chartTypeStr}_output.xlsx");
-        _tool.Execute("add", workbookPath, chartType: chartTypeStr, dataRange: "B1:B5", categoryAxisDataRange: "A1:A5",
-            outputPath: outputPath);
-        using var workbook = new Workbook(outputPath);
-        Assert.Equal(expectedType, workbook.Worksheets[0].Charts[0].Type);
-    }
-
-    [Fact]
-    public void Add_WithTitle_ShouldSetTitle()
-    {
-        var workbookPath = CreateWorkbookWithChartData("test_add_title.xlsx");
-        var outputPath = CreateTestFilePath("test_add_title_output.xlsx");
-        _tool.Execute("add", workbookPath, dataRange: "B1:B10", title: "Sales Report", outputPath: outputPath);
-        using var workbook = new Workbook(outputPath);
-        Assert.Equal("Sales Report", workbook.Worksheets[0].Charts[0].Title.Text);
-    }
-
-    [Fact]
-    public void Add_WithMultipleSeries_ShouldAddMultipleSeries()
-    {
-        var workbookPath = CreateWorkbookWithChartData("test_add_multi.xlsx", 5, 2);
-        var outputPath = CreateTestFilePath("test_add_multi_output.xlsx");
-        _tool.Execute("add", workbookPath, dataRange: "B1:C5", categoryAxisDataRange: "A1:A5", outputPath: outputPath);
-        using var workbook = new Workbook(outputPath);
-        Assert.True(workbook.Worksheets[0].Charts[0].NSeries.Count >= 1);
-    }
-
-    [Fact]
-    public void Add_WithInvalidChartType_ShouldUseDefaultColumn()
-    {
-        var workbookPath = CreateWorkbookWithChartData("test_add_invalid_type.xlsx", 5);
-        var outputPath = CreateTestFilePath("test_add_invalid_type_output.xlsx");
-        _tool.Execute("add", workbookPath, chartType: "InvalidType", dataRange: "B1:B5", outputPath: outputPath);
-        using var workbook = new Workbook(outputPath);
-        Assert.Equal(ChartType.Column, workbook.Worksheets[0].Charts[0].Type);
-    }
-
-    [Fact]
-    public void Add_WithPosition_ShouldPlaceChartAtPosition()
-    {
-        var workbookPath = CreateWorkbookWithChartData("test_add_position.xlsx");
-        var outputPath = CreateTestFilePath("test_add_position_output.xlsx");
-        _tool.Execute("add", workbookPath, dataRange: "B1:B10", topRow: 20, leftColumn: 5, outputPath: outputPath);
-        using var workbook = new Workbook(outputPath);
-        var chart = workbook.Worksheets[0].Charts[0];
-        Assert.Equal(20, chart.ChartObject.UpperLeftRow);
-        Assert.Equal(5, chart.ChartObject.UpperLeftColumn);
-    }
-
     [Fact]
     public void Get_ShouldReturnChartsInfo()
     {
@@ -123,16 +71,6 @@ public class ExcelChartToolTests : ExcelTestBase
     }
 
     [Fact]
-    public void Get_WithNoCharts_ShouldReturnEmptyResult()
-    {
-        var workbookPath = CreateWorkbookWithChartData("test_get_empty.xlsx");
-        var result = _tool.Execute("get", workbookPath);
-        var json = JsonDocument.Parse(result);
-        Assert.Equal(0, json.RootElement.GetProperty("count").GetInt32());
-        Assert.Contains("No charts found", json.RootElement.GetProperty("message").GetString());
-    }
-
-    [Fact]
     public void Edit_ShouldModifyChartType()
     {
         var workbookPath = CreateWorkbookWithChart("test_edit.xlsx");
@@ -141,25 +79,6 @@ public class ExcelChartToolTests : ExcelTestBase
         Assert.StartsWith("Chart #0 edited", result);
         using var workbook = new Workbook(outputPath);
         Assert.Equal(ChartType.Bar, workbook.Worksheets[0].Charts[0].Type);
-    }
-
-    [Fact]
-    public void Edit_WithTitle_ShouldUpdateTitle()
-    {
-        var workbookPath = CreateWorkbookWithChart("test_edit_title.xlsx");
-        var outputPath = CreateTestFilePath("test_edit_title_output.xlsx");
-        _tool.Execute("edit", workbookPath, chartIndex: 0, title: "Updated Title", outputPath: outputPath);
-        using var workbook = new Workbook(outputPath);
-        Assert.Equal("Updated Title", workbook.Worksheets[0].Charts[0].Title.Text);
-    }
-
-    [Fact]
-    public void Edit_WithLegend_ShouldUpdateLegendSettings()
-    {
-        var workbookPath = CreateWorkbookWithChart("test_edit_legend.xlsx");
-        var outputPath = CreateTestFilePath("test_edit_legend_output.xlsx");
-        var result = _tool.Execute("edit", workbookPath, chartIndex: 0, showLegend: false, outputPath: outputPath);
-        Assert.StartsWith("Chart #0 edited", result);
     }
 
     [Fact]
@@ -197,71 +116,21 @@ public class ExcelChartToolTests : ExcelTestBase
         Assert.Equal("New Title", workbook.Worksheets[0].Charts[0].Title.Text);
     }
 
-    [Fact]
-    public void SetProperties_WithRemoveTitle_ShouldRemoveTitle()
-    {
-        var workbookPath = CreateWorkbookWithChart("test_set_props_remove.xlsx");
-        using (var wb = new Workbook(workbookPath))
-        {
-            wb.Worksheets[0].Charts[0].Title.Text = "Existing Title";
-            wb.Save(workbookPath);
-        }
+    #endregion
 
-        var outputPath = CreateTestFilePath("test_set_props_remove_output.xlsx");
-        var result = _tool.Execute("set_properties", workbookPath, chartIndex: 0, removeTitle: true,
-            outputPath: outputPath);
-        Assert.StartsWith("Chart #0 properties updated", result);
-    }
-
-    [Fact]
-    public void SetProperties_WithLegendPosition_ShouldSetPosition()
-    {
-        var workbookPath = CreateWorkbookWithChart("test_set_props_legend.xlsx");
-        var outputPath = CreateTestFilePath("test_set_props_legend_output.xlsx");
-        var result = _tool.Execute("set_properties", workbookPath, chartIndex: 0, legendVisible: true,
-            legendPosition: "Top", outputPath: outputPath);
-        Assert.StartsWith("Chart #0 properties updated", result);
-    }
+    #region Operation Routing
 
     [Theory]
     [InlineData("ADD")]
     [InlineData("Add")]
     [InlineData("add")]
-    public void Operation_ShouldBeCaseInsensitive_Add(string operation)
+    public void Operation_ShouldBeCaseInsensitive(string operation)
     {
         var workbookPath = CreateWorkbookWithChartData($"test_case_{operation}.xlsx");
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.xlsx");
         var result = _tool.Execute(operation, workbookPath, dataRange: "B1:B10", outputPath: outputPath);
         Assert.StartsWith("Chart added", result);
     }
-
-    [Theory]
-    [InlineData("GET")]
-    [InlineData("Get")]
-    [InlineData("get")]
-    public void Operation_ShouldBeCaseInsensitive_Get(string operation)
-    {
-        var workbookPath = CreateWorkbookWithChartData($"test_case_get_{operation}.xlsx");
-        var result = _tool.Execute(operation, workbookPath);
-        Assert.Contains("count", result);
-    }
-
-    [Theory]
-    [InlineData("DELETE")]
-    [InlineData("Delete")]
-    [InlineData("delete")]
-    public void Operation_ShouldBeCaseInsensitive_Delete(string operation)
-    {
-        var workbookPath = CreateWorkbookWithChart($"test_case_delete_{operation}.xlsx");
-        var outputPath = CreateTestFilePath($"test_case_delete_{operation}_output.xlsx");
-        var result = _tool.Execute(operation, workbookPath, chartIndex: 0, outputPath: outputPath);
-        Assert.StartsWith("Chart #0", result);
-        Assert.Contains("deleted", result);
-    }
-
-    #endregion
-
-    #region Exception
 
     [Fact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
@@ -272,63 +141,6 @@ public class ExcelChartToolTests : ExcelTestBase
     }
 
     [Fact]
-    public void Add_WithMissingDataRange_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateWorkbookWithChartData("test_add_missing_range.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("add", workbookPath, chartType: "Column"));
-        Assert.Contains("dataRange is required", ex.Message);
-    }
-
-    [Fact]
-    public void Edit_WithInvalidChartIndex_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateWorkbookWithChartData("test_edit_invalid_index.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("edit", workbookPath, chartIndex: 99, title: "Test"));
-        Assert.Contains("out of range", ex.Message);
-    }
-
-    [Fact]
-    public void Delete_WithInvalidChartIndex_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateWorkbookWithChartData("test_delete_invalid_index.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("delete", workbookPath, chartIndex: 99));
-        Assert.Contains("out of range", ex.Message);
-    }
-
-    [Fact]
-    public void UpdateData_WithMissingDataRange_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateWorkbookWithChart("test_update_missing_range.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() => _tool.Execute("update_data", workbookPath, chartIndex: 0));
-        Assert.Contains("dataRange is required", ex.Message);
-    }
-
-    [Fact]
-    public void UpdateData_WithInvalidChartIndex_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateWorkbookWithChartData("test_update_invalid_index.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("update_data", workbookPath, chartIndex: 99, dataRange: "B1:B5"));
-        Assert.Contains("out of range", ex.Message);
-    }
-
-    [Fact]
-    public void SetProperties_WithInvalidChartIndex_ShouldThrowArgumentException()
-    {
-        var workbookPath = CreateWorkbookWithChartData("test_setprops_invalid_index.xlsx");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("set_properties", workbookPath, chartIndex: 99, title: "Test"));
-        Assert.Contains("out of range", ex.Message);
-    }
-
-    [Fact]
-    public void Execute_WithEmptyPath_ShouldThrowException()
-    {
-        Assert.Throws<ArgumentException>(() => _tool.Execute("get", ""));
-    }
-
-    [Fact]
     public void Execute_WithNoPathOrSessionId_ShouldThrowException()
     {
         Assert.ThrowsAny<Exception>(() => _tool.Execute("get"));
@@ -336,7 +148,7 @@ public class ExcelChartToolTests : ExcelTestBase
 
     #endregion
 
-    #region Session
+    #region Session Management
 
     [Fact]
     public void Add_WithSessionId_ShouldAddInMemory()

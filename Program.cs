@@ -18,6 +18,10 @@ var trackingConfig = TrackingConfig.LoadFromArgs(args);
 try
 {
     config.Validate();
+    transportConfig.Validate();
+    sessionConfig.Validate();
+    authConfig.Validate();
+    trackingConfig.Validate();
 }
 catch (InvalidOperationException ex)
 {
@@ -58,7 +62,6 @@ catch (Exception ex)
     Environment.Exit(1);
 }
 
-// Creates a host configured for stdio transport mode
 IHost CreateStdioHost()
 {
     var builder = Host.CreateApplicationBuilder(args);
@@ -66,7 +69,6 @@ IHost CreateStdioHost()
     builder.Logging.ClearProviders();
     builder.Logging.AddConsole(options => { options.LogToStandardErrorThreshold = LogLevel.Trace; });
 
-    // Register configurations
     builder.Services.AddSingleton(transportConfig);
     builder.Services.AddSingleton(sessionConfig);
     builder.Services.AddSingleton(authConfig);
@@ -76,9 +78,6 @@ IHost CreateStdioHost()
     builder.Services.AddSingleton<DocumentSessionManager>();
     builder.Services.AddSingleton<TempFileManager>();
     builder.Services.AddHostedService(sp => sp.GetRequiredService<TempFileManager>());
-
-    // Register session identity accessor for Stdio mode
-    // (reads from environment variables if available, otherwise anonymous)
     builder.Services.AddSingleton<ISessionIdentityAccessor, StdioSessionIdentityAccessor>();
 
     builder.Services.AddMcpServer()
@@ -88,7 +87,6 @@ IHost CreateStdioHost()
     return builder.Build();
 }
 
-// Creates a host configured for Server-Sent Events (SSE) transport mode
 IHost CreateSseHost(TransportConfig transport)
 {
     var builder = WebApplication.CreateBuilder(args);
@@ -106,7 +104,6 @@ IHost CreateSseHost(TransportConfig transport)
     builder.Logging.ClearProviders();
     builder.Logging.AddConsole(options => { options.LogToStandardErrorThreshold = LogLevel.Trace; });
 
-    // Register configurations
     builder.Services.AddSingleton(transportConfig);
     builder.Services.AddSingleton(sessionConfig);
     builder.Services.AddSingleton(authConfig);
@@ -116,10 +113,14 @@ IHost CreateSseHost(TransportConfig transport)
     builder.Services.AddSingleton<DocumentSessionManager>();
     builder.Services.AddSingleton<TempFileManager>();
     builder.Services.AddHostedService(sp => sp.GetRequiredService<TempFileManager>());
-
-    // Register session identity accessor for SSE mode (from HttpContext)
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddSingleton<ISessionIdentityAccessor, HttpContextSessionIdentityAccessor>();
+    builder.Services.AddHttpClient();
+
+    if (authConfig.ApiKey.Enabled)
+        builder.Services.AddSingleton<ApiKeyAuthenticationMiddleware>();
+    if (authConfig.Jwt.Enabled)
+        builder.Services.AddSingleton<JwtAuthenticationMiddleware>();
 
     builder.Services.AddMcpServer()
         .WithFilteredTools(config, sessionConfig);
@@ -128,7 +129,6 @@ IHost CreateSseHost(TransportConfig transport)
 
     Console.Error.WriteLine($"[INFO] SSE server listening on http://{transport.Host}:{transport.Port}");
 
-    // Add authentication middleware if enabled
     if (authConfig.ApiKey.Enabled)
     {
         Console.Error.WriteLine($"[INFO] API Key authentication enabled (mode: {authConfig.ApiKey.Mode})");
@@ -141,23 +141,19 @@ IHost CreateSseHost(TransportConfig transport)
         app.UseMiddleware<JwtAuthenticationMiddleware>();
     }
 
-    // Add tracking middleware if enabled
     if (trackingConfig.LogEnabled || trackingConfig.WebhookEnabled || trackingConfig.MetricsEnabled)
     {
         Console.Error.WriteLine("[INFO] Tracking middleware enabled");
         app.UseMiddleware<TrackingMiddleware>();
     }
 
-    // Health check endpoints for container orchestration
     app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
     app.MapGet("/ready", () => Results.Ok(new { status = "ready" }));
-
     app.MapMcp("/mcp");
 
     return app;
 }
 
-// Creates a host configured for WebSocket transport mode
 IHost CreateWebSocketHost(TransportConfig transport)
 {
     var builder = WebApplication.CreateBuilder(args);
@@ -175,7 +171,6 @@ IHost CreateWebSocketHost(TransportConfig transport)
     builder.Logging.ClearProviders();
     builder.Logging.AddConsole(options => { options.LogToStandardErrorThreshold = LogLevel.Trace; });
 
-    // Register configurations
     builder.Services.AddSingleton(transportConfig);
     builder.Services.AddSingleton(sessionConfig);
     builder.Services.AddSingleton(authConfig);
@@ -185,16 +180,19 @@ IHost CreateWebSocketHost(TransportConfig transport)
     builder.Services.AddSingleton<DocumentSessionManager>();
     builder.Services.AddSingleton<TempFileManager>();
     builder.Services.AddHostedService(sp => sp.GetRequiredService<TempFileManager>());
-
-    // Register session identity accessor for WebSocket mode (from HttpContext)
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddSingleton<ISessionIdentityAccessor, HttpContextSessionIdentityAccessor>();
+    builder.Services.AddHttpClient();
+
+    if (authConfig.ApiKey.Enabled)
+        builder.Services.AddSingleton<ApiKeyAuthenticationMiddleware>();
+    if (authConfig.Jwt.Enabled)
+        builder.Services.AddSingleton<JwtAuthenticationMiddleware>();
 
     var app = builder.Build();
 
     Console.Error.WriteLine($"[INFO] WebSocket server listening on ws://{transport.Host}:{transport.Port}");
 
-    // Add authentication middleware if enabled
     if (authConfig.ApiKey.Enabled)
     {
         Console.Error.WriteLine($"[INFO] API Key authentication enabled (mode: {authConfig.ApiKey.Mode})");
@@ -207,7 +205,6 @@ IHost CreateWebSocketHost(TransportConfig transport)
         app.UseMiddleware<JwtAuthenticationMiddleware>();
     }
 
-    // Add tracking middleware if enabled
     if (trackingConfig.LogEnabled || trackingConfig.WebhookEnabled || trackingConfig.MetricsEnabled)
     {
         Console.Error.WriteLine("[INFO] Tracking middleware enabled");
@@ -216,7 +213,6 @@ IHost CreateWebSocketHost(TransportConfig transport)
 
     app.UseWebSockets();
 
-    // Health check endpoints for container orchestration
     app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
     app.MapGet("/ready", () => Results.Ok(new { status = "ready" }));
 
@@ -237,12 +233,10 @@ IHost CreateWebSocketHost(TransportConfig transport)
     {
         if (context.WebSockets.IsWebSocketRequest)
         {
-            // Extract authentication context set by auth middleware
-            var tenantId = context.Items["TenantId"]?.ToString();
+            var groupId = context.Items["GroupId"]?.ToString();
             var userId = context.Items["UserId"]?.ToString();
-
             var webSocket = await context.WebSockets.AcceptWebSocketAsync();
-            await handler.HandleConnectionAsync(webSocket, context.RequestAborted, tenantId, userId);
+            await handler.HandleConnectionAsync(webSocket, context.RequestAborted, groupId, userId);
         }
         else
         {

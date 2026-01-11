@@ -51,18 +51,19 @@ public class WebSocketConnectionHandler
     /// </summary>
     /// <param name="webSocket">The WebSocket connection to handle.</param>
     /// <param name="cancellationToken">Cancellation token for the operation.</param>
-    /// <param name="tenantId">Optional tenant ID from authentication (passed to child process).</param>
+    /// <param name="groupId">Optional group ID from authentication (passed to child process).</param>
     /// <param name="userId">Optional user ID from authentication (passed to child process).</param>
     public async Task HandleConnectionAsync(
         WebSocket webSocket,
         CancellationToken cancellationToken,
-        string? tenantId = null,
+        string? groupId = null,
         string? userId = null)
     {
         var connectionId = Guid.NewGuid().ToString("N")[..8];
         _logger?.LogInformation("WebSocket connection {ConnectionId} established", connectionId);
 
         Process? process = null;
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
         try
         {
@@ -80,9 +81,8 @@ public class WebSocketConnectionHandler
                 StandardErrorEncoding = Encoding.UTF8
             };
 
-            // Pass authentication context to child process via environment variables
-            if (!string.IsNullOrEmpty(tenantId))
-                startInfo.Environment["ASPOSE_SESSION_TENANT_ID"] = tenantId;
+            if (!string.IsNullOrEmpty(groupId))
+                startInfo.Environment["ASPOSE_SESSION_GROUP_ID"] = groupId;
             if (!string.IsNullOrEmpty(userId))
                 startInfo.Environment["ASPOSE_SESSION_USER_ID"] = userId;
 
@@ -92,11 +92,19 @@ public class WebSocketConnectionHandler
             _logger?.LogDebug("Started Stdio process {ProcessId} for WebSocket {ConnectionId}", process.Id,
                 connectionId);
 
-            var readTask = ReadFromProcessAsync(process, webSocket, connectionId, cancellationToken);
-            var writeTask = WriteToProcessAsync(webSocket, process, connectionId, cancellationToken);
-            var stderrTask = ReadStderrAsync(process, connectionId, cancellationToken);
+            var readTask = ReadFromProcessAsync(process, webSocket, connectionId, linkedCts.Token);
+            var writeTask = WriteToProcessAsync(webSocket, process, connectionId, linkedCts.Token);
+            var stderrTask = ReadStderrAsync(process, connectionId, linkedCts.Token);
 
             await Task.WhenAny(readTask, writeTask, stderrTask);
+
+            await linkedCts.CancelAsync();
+
+            await Task.WhenAll(
+                readTask.ContinueWith(_ => { }, TaskContinuationOptions.OnlyOnFaulted),
+                writeTask.ContinueWith(_ => { }, TaskContinuationOptions.OnlyOnFaulted),
+                stderrTask.ContinueWith(_ => { }, TaskContinuationOptions.OnlyOnFaulted)
+            ).WaitAsync(TimeSpan.FromSeconds(2));
         }
         catch (WebSocketException ex) when (ex.WebSocketErrorCode == WebSocketError.ConnectionClosedPrematurely)
         {
@@ -115,12 +123,20 @@ public class WebSocketConnectionHandler
             if (process is { HasExited: false })
                 try
                 {
-                    process.Kill();
-                    _logger?.LogDebug("Killed Stdio process for WebSocket {ConnectionId}", connectionId);
+                    process.StandardInput.Close();
+                    if (!process.WaitForExit(1000))
+                    {
+                        process.Kill();
+                        _logger?.LogDebug("Killed Stdio process for WebSocket {ConnectionId}", connectionId);
+                    }
+                    else
+                    {
+                        _logger?.LogDebug("Stdio process exited gracefully for WebSocket {ConnectionId}", connectionId);
+                    }
                 }
                 catch
                 {
-                    // Ignore process kill errors (process may already be terminated)
+                    // Ignore process termination errors
                 }
 
             process?.Dispose();
@@ -135,7 +151,7 @@ public class WebSocketConnectionHandler
                 }
                 catch
                 {
-                    // Ignore WebSocket close errors (connection may already be closed)
+                    // Ignore WebSocket close errors
                 }
 
             _logger?.LogInformation("WebSocket connection {ConnectionId} closed", connectionId);

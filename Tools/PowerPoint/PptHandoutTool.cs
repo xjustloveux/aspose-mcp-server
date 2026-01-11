@@ -1,6 +1,8 @@
 using System.ComponentModel;
 using Aspose.Slides;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.PowerPoint.Handout;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.PowerPoint;
@@ -12,6 +14,11 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 [McpServerToolType]
 public class PptHandoutTool
 {
+    /// <summary>
+    ///     Handler registry for handout operations.
+    /// </summary>
+    private readonly HandlerRegistry<Presentation> _handlerRegistry;
+
     /// <summary>
     ///     Identity accessor for session isolation.
     /// </summary>
@@ -32,6 +39,7 @@ public class PptHandoutTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = PptHandoutHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -76,69 +84,44 @@ Usage examples:
     {
         using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
-        return operation.ToLower() switch
+        var parameters = BuildParameters(headerText, footerText, dateText, showPageNumber);
+
+        var handler = _handlerRegistry.GetHandler(operation);
+
+        var operationContext = new OperationContext<Presentation>
         {
-            "set_header_footer" => SetHandoutHeaderFooter(ctx, outputPath, headerText, footerText, dateText,
-                showPageNumber),
-            _ => throw new ArgumentException($"Unknown operation: {operation}")
+            Document = ctx.Document,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = path,
+            OutputPath = outputPath
         };
+
+        var result = handler.Execute(operationContext, parameters);
+
+        if (operationContext.IsModified)
+            ctx.Save(outputPath);
+
+        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Sets header and footer for handout master.
-    ///     Note: Handout pages have separate header and footer fields (unlike slides which only have footer).
+    ///     Builds OperationParameters from method parameters.
     /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="headerText">The header text.</param>
-    /// <param name="footerText">The footer text.</param>
-    /// <param name="dateText">The date/time text.</param>
-    /// <param name="showPageNumber">Whether to show page numbers.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the presentation does not have a handout master slide.</exception>
-    private static string SetHandoutHeaderFooter(DocumentContext<Presentation> ctx, string? outputPath,
-        string? headerText, string? footerText, string? dateText, bool showPageNumber)
+    private static OperationParameters BuildParameters(
+        string? headerText,
+        string? footerText,
+        string? dateText,
+        bool showPageNumber)
     {
-        var presentation = ctx.Document;
+        var parameters = new OperationParameters();
 
-        var handoutMaster = presentation.MasterHandoutSlideManager.MasterHandoutSlide;
-        if (handoutMaster == null)
-            throw new InvalidOperationException(
-                "Presentation does not have a handout master slide. " +
-                "Please open the presentation in PowerPoint, go to View > Handout Master to create one, then save.");
+        if (headerText != null) parameters.Set("headerText", headerText);
+        if (footerText != null) parameters.Set("footerText", footerText);
+        if (dateText != null) parameters.Set("dateText", dateText);
+        parameters.Set("showPageNumber", showPageNumber);
 
-        var manager = handoutMaster.HeaderFooterManager;
-
-        if (!string.IsNullOrEmpty(headerText))
-        {
-            manager.SetHeaderText(headerText);
-            manager.SetHeaderVisibility(true);
-        }
-
-        if (!string.IsNullOrEmpty(footerText))
-        {
-            manager.SetFooterText(footerText);
-            manager.SetFooterVisibility(true);
-        }
-
-        if (!string.IsNullOrEmpty(dateText))
-        {
-            manager.SetDateTimeText(dateText);
-            manager.SetDateTimeVisibility(true);
-        }
-
-        manager.SetSlideNumberVisibility(showPageNumber);
-
-        ctx.Save(outputPath);
-
-        List<string> settings = [];
-        if (!string.IsNullOrEmpty(headerText)) settings.Add("header");
-        if (!string.IsNullOrEmpty(footerText)) settings.Add("footer");
-        if (!string.IsNullOrEmpty(dateText)) settings.Add("date");
-        settings.Add(showPageNumber ? "page number shown" : "page number hidden");
-
-        var result = $"Handout master header/footer updated ({string.Join(", ", settings)}). ";
-        result += ctx.GetOutputMessage(outputPath);
-        return result;
+        return parameters;
     }
 }

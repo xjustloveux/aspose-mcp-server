@@ -1,9 +1,8 @@
 using System.ComponentModel;
-using System.Drawing.Imaging;
-using System.Text.Json;
 using Aspose.Pdf;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.Pdf.Image;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Pdf;
@@ -14,6 +13,11 @@ namespace AsposeMcpServer.Tools.Pdf;
 [McpServerToolType]
 public class PdfImageTool
 {
+    /// <summary>
+    ///     Handler registry for image operations.
+    /// </summary>
+    private readonly HandlerRegistry<Document> _handlerRegistry;
+
     /// <summary>
     ///     The session identity accessor for session isolation.
     /// </summary>
@@ -34,6 +38,7 @@ public class PdfImageTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = PdfImageHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -95,356 +100,90 @@ Usage examples:
         [Description("Output directory for extracted images (for extract)")]
         string? outputDir = null)
     {
-        return operation.ToLower() switch
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
+
+        var parameters = BuildParameters(operation, pageIndex, imagePath, imageIndex, x, y, width, height, outputPath,
+            outputDir);
+
+        var handler = _handlerRegistry.GetHandler(operation);
+
+        var operationContext = new OperationContext<Document>
         {
-            "add" => AddImage(sessionId, path, outputPath, pageIndex, imagePath, x, y, width, height),
-            "delete" => DeleteImage(sessionId, path, outputPath, pageIndex, imageIndex),
-            "edit" => EditImage(sessionId, path, outputPath, pageIndex, imageIndex, imagePath, x, y, width, height),
-            "extract" => ExtractImages(path, outputPath, outputDir, pageIndex, imageIndex),
-            "get" => GetImages(sessionId, path, pageIndex),
-            _ => throw new ArgumentException($"Unknown operation: {operation}")
+            Document = ctx.Document,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = path,
+            OutputPath = outputPath
         };
-    }
 
-    /// <summary>
-    ///     Adds an image to the specified page of the PDF document.
-    /// </summary>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
-    /// <param name="path">The PDF file path.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="pageIndex">The 1-based page index.</param>
-    /// <param name="imagePath">The path to the image file to add.</param>
-    /// <param name="x">The X position in PDF coordinates.</param>
-    /// <param name="y">The Y position in PDF coordinates.</param>
-    /// <param name="width">Optional width for the image.</param>
-    /// <param name="height">Optional height for the image.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when required parameters are missing or invalid.</exception>
-    /// <exception cref="FileNotFoundException">Thrown when the image file is not found.</exception>
-    private string AddImage(string? sessionId, string? path, string? outputPath, int pageIndex, string? imagePath,
-        double x, double y, double? width, double? height)
-    {
-        if (string.IsNullOrEmpty(imagePath))
-            throw new ArgumentException("imagePath is required for add operation");
+        var result = handler.Execute(operationContext, parameters);
 
-        SecurityHelper.ValidateFilePath(imagePath, "imagePath", true);
+        if (operation.Equals("get", StringComparison.OrdinalIgnoreCase) ||
+            operation.Equals("extract", StringComparison.OrdinalIgnoreCase))
+            return result;
 
-        if (!File.Exists(imagePath))
-            throw new FileNotFoundException($"Image file not found: {imagePath}");
-
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
-        var document = ctx.Document;
-
-        var actualPageIndex = pageIndex < 1 ? 1 : pageIndex;
-        if (actualPageIndex > document.Pages.Count)
-            throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
-
-        var page = document.Pages[actualPageIndex];
-        page.AddImage(imagePath,
-            new Rectangle(x, y, width.HasValue ? x + width.Value : x + 200,
-                height.HasValue ? y + height.Value : y + 200));
-
-        ctx.Save(outputPath);
-
-        return $"Added image to page {actualPageIndex}. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Deletes an image from the specified page of the PDF document.
-    /// </summary>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
-    /// <param name="path">The PDF file path.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="pageIndex">The 1-based page index.</param>
-    /// <param name="imageIndex">The 1-based image index.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when the page or image index is invalid.</exception>
-    private string DeleteImage(string? sessionId, string? path, string? outputPath, int pageIndex, int imageIndex)
-    {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
-        var document = ctx.Document;
-
-        var actualPageIndex = pageIndex < 1 ? 1 : pageIndex;
-        var actualImageIndex = imageIndex < 1 ? 1 : imageIndex;
-        if (actualPageIndex > document.Pages.Count)
-            throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
-
-        var page = document.Pages[actualPageIndex];
-        var images = page.Resources?.Images;
-        if (images == null)
-            throw new ArgumentException("No images found on the page");
-        if (actualImageIndex > images.Count)
-            throw new ArgumentException($"imageIndex must be between 1 and {images.Count}");
-
-        images.Delete(actualImageIndex);
-
-        ctx.Save(outputPath);
-
-        return $"Deleted image {actualImageIndex} from page {actualPageIndex}. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Edits an existing image on the specified page (move or replace).
-    /// </summary>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
-    /// <param name="path">The PDF file path.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="pageIndex">The 1-based page index.</param>
-    /// <param name="imageIndex">The 1-based image index.</param>
-    /// <param name="imagePath">Optional new image path to replace the existing image.</param>
-    /// <param name="x">The new X position in PDF coordinates.</param>
-    /// <param name="y">The new Y position in PDF coordinates.</param>
-    /// <param name="width">Optional new width for the image.</param>
-    /// <param name="height">Optional new height for the image.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when the page or image index is invalid.</exception>
-    private string EditImage(string? sessionId, string? path, string? outputPath, int pageIndex, int imageIndex,
-        string? imagePath, double? x, double? y, double? width, double? height)
-    {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
-        var document = ctx.Document;
-
-        var actualPageIndex = pageIndex < 1 ? 1 : pageIndex;
-        if (actualPageIndex > document.Pages.Count)
-            throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
-
-        var page = document.Pages[actualPageIndex];
-        var images = page.Resources?.Images;
-        if (images == null)
-            throw new ArgumentException("No images found on the page");
-        if (imageIndex < 1 || imageIndex > images.Count)
-            throw new ArgumentException($"imageIndex must be between 1 and {images.Count}");
-
-        string? tempImagePath = null;
-        try
-        {
-            if (string.IsNullOrEmpty(imagePath))
-            {
-                tempImagePath = Path.Combine(Path.GetTempPath(), $"temp_image_{Guid.NewGuid()}.png");
-                using var imageStream = new FileStream(tempImagePath, FileMode.Create);
-#pragma warning disable CA1416
-                images[imageIndex].Save(imageStream, ImageFormat.Png);
-#pragma warning restore CA1416
-                imagePath = tempImagePath;
-            }
-            else
-            {
-                SecurityHelper.ValidateFilePath(imagePath, "imagePath", true);
-                if (!File.Exists(imagePath))
-                    throw new FileNotFoundException($"Image file not found: {imagePath}");
-            }
-
-            images.Delete(imageIndex);
-            var newX = x ?? 100;
-            var newY = y ?? 600;
-            page.AddImage(imagePath,
-                new Rectangle(newX, newY, width.HasValue ? newX + width.Value : newX + 200,
-                    height.HasValue ? newY + height.Value : newY + 200));
-
+        if (operationContext.IsModified)
             ctx.Save(outputPath);
 
-            var action = tempImagePath != null ? "Moved" : "Replaced";
-            return $"{action} image {imageIndex} on page {pageIndex}. {ctx.GetOutputMessage(outputPath)}";
-        }
-        finally
-        {
-            if (tempImagePath != null && File.Exists(tempImagePath))
-                File.Delete(tempImagePath);
-        }
+        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Extracts images from the specified page of the PDF document.
+    ///     Builds OperationParameters from method parameters.
     /// </summary>
-    /// <param name="path">The PDF file path.</param>
-    /// <param name="outputPath">The output file path for a single image.</param>
-    /// <param name="outputDir">The output directory for multiple images.</param>
-    /// <param name="pageIndex">The 1-based page index.</param>
-    /// <param name="imageIndex">Optional 1-based image index for extracting a specific image.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when required parameters are missing or invalid.</exception>
-    private static string ExtractImages(string? path, string? outputPath, string? outputDir, int pageIndex,
-        int? imageIndex)
+    private static OperationParameters BuildParameters(
+        string operation,
+        int pageIndex,
+        string? imagePath,
+        int imageIndex,
+        double x,
+        double y,
+        double? width,
+        double? height,
+        string? outputPath,
+        string? outputDir)
     {
-        if (string.IsNullOrEmpty(path))
-            throw new ArgumentException("path is required for extract operation");
+        var parameters = new OperationParameters();
 
-        SecurityHelper.ValidateFilePath(path, "path", true);
-
-        if (!string.IsNullOrEmpty(outputPath))
-            SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
-        if (!string.IsNullOrEmpty(outputDir))
-            SecurityHelper.ValidateFilePath(outputDir, "outputDir", true);
-
-        var targetDir = outputDir ?? Path.GetDirectoryName(outputPath) ?? Path.GetDirectoryName(path) ?? ".";
-        Directory.CreateDirectory(targetDir);
-
-        using var document = new Document(path);
-        var actualPageIndex = pageIndex < 1 ? 1 : pageIndex;
-        if (actualPageIndex > document.Pages.Count)
-            throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
-
-        var page = document.Pages[actualPageIndex];
-        var images = page.Resources?.Images;
-        if (images == null || images.Count == 0)
-            return $"No images found on page {pageIndex}.";
-
-        if (imageIndex is > 0)
+        switch (operation.ToLowerInvariant())
         {
-            if (imageIndex.Value < 1 || imageIndex.Value > images.Count)
-                throw new ArgumentException($"imageIndex must be between 1 and {images.Count}");
+            case "add":
+                parameters.Set("pageIndex", pageIndex);
+                if (imagePath != null) parameters.Set("imagePath", imagePath);
+                parameters.Set("x", x);
+                parameters.Set("y", y);
+                if (width.HasValue) parameters.Set("width", width.Value);
+                if (height.HasValue) parameters.Set("height", height.Value);
+                break;
 
-            var image = images[imageIndex.Value];
-            var fileName = outputPath ?? Path.Combine(targetDir, $"page_{pageIndex}_image_{imageIndex.Value}.png");
-            using var imageStream = new FileStream(fileName, FileMode.Create);
-#pragma warning disable CA1416
-            image.Save(imageStream, ImageFormat.Png);
-#pragma warning restore CA1416
-            return $"Extracted image {imageIndex.Value} from page {pageIndex} to: {fileName}";
+            case "delete":
+                parameters.Set("pageIndex", pageIndex);
+                parameters.Set("imageIndex", imageIndex);
+                break;
+
+            case "edit":
+                parameters.Set("pageIndex", pageIndex);
+                parameters.Set("imageIndex", imageIndex);
+                if (imagePath != null) parameters.Set("imagePath", imagePath);
+                parameters.Set("x", x);
+                parameters.Set("y", y);
+                if (width.HasValue) parameters.Set("width", width.Value);
+                if (height.HasValue) parameters.Set("height", height.Value);
+                break;
+
+            case "extract":
+                parameters.Set("pageIndex", pageIndex);
+                if (imageIndex > 0) parameters.Set("imageIndex", imageIndex);
+                if (outputPath != null) parameters.Set("outputPath", outputPath);
+                if (outputDir != null) parameters.Set("outputDir", outputDir);
+                break;
+
+            case "get":
+                if (pageIndex > 0) parameters.Set("pageIndex", pageIndex);
+                break;
         }
 
-        var count = 0;
-        for (var i = 1; i <= images.Count; i++)
-        {
-            var image = images[i];
-            var fileName = Path.Combine(targetDir, $"page_{pageIndex}_image_{i}.png");
-            using var imageStream = new FileStream(fileName, FileMode.Create);
-#pragma warning disable CA1416
-            image.Save(imageStream, ImageFormat.Png);
-#pragma warning restore CA1416
-            count++;
-        }
-
-        return $"Extracted {count} image(s) from page {pageIndex} to: {targetDir}";
-    }
-
-    /// <summary>
-    ///     Retrieves information about images in the PDF document.
-    /// </summary>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
-    /// <param name="path">The PDF file path.</param>
-    /// <param name="pageIndex">Optional 1-based page index to get images from a specific page.</param>
-    /// <returns>A JSON string containing image information.</returns>
-    /// <exception cref="ArgumentException">Thrown when the page index is out of range.</exception>
-    private string GetImages(string? sessionId, string? path, int? pageIndex)
-    {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
-        var document = ctx.Document;
-        List<object> imageList = [];
-
-        if (pageIndex is > 0)
-        {
-            if (pageIndex.Value < 1 || pageIndex.Value > document.Pages.Count)
-                throw new ArgumentException($"pageIndex must be between 1 and {document.Pages.Count}");
-            var page = document.Pages[pageIndex.Value];
-            var images = page.Resources?.Images;
-
-            if (images == null || images.Count == 0)
-            {
-                var emptyResult = new
-                {
-                    count = 0,
-                    pageIndex = pageIndex.Value,
-                    items = Array.Empty<object>(),
-                    message = $"No images found on page {pageIndex.Value}"
-                };
-                return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
-            }
-
-            for (var i = 1; i <= images.Count; i++)
-                try
-                {
-                    var image = images[i];
-                    var imageInfo = new Dictionary<string, object?>
-                    {
-                        ["index"] = i,
-                        ["pageIndex"] = pageIndex.Value
-                    };
-                    try
-                    {
-                        if (image.Width > 0 && image.Height > 0)
-                        {
-                            imageInfo["width"] = image.Width;
-                            imageInfo["height"] = image.Height;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        imageInfo["width"] = null;
-                        imageInfo["height"] = null;
-                        Console.Error.WriteLine($"[WARN] Failed to read image size: {ex.Message}");
-                    }
-
-                    imageList.Add(imageInfo);
-                }
-                catch (Exception ex)
-                {
-                    imageList.Add(new { index = i, pageIndex = pageIndex.Value, error = ex.Message });
-                }
-
-            var result = new
-            {
-                count = imageList.Count,
-                pageIndex = pageIndex.Value,
-                items = imageList
-            };
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
-        }
-        else
-        {
-            for (var pageNum = 1; pageNum <= document.Pages.Count; pageNum++)
-            {
-                var page = document.Pages[pageNum];
-                var images = page.Resources?.Images;
-                if (images is { Count: > 0 })
-                    for (var i = 1; i <= images.Count; i++)
-                        try
-                        {
-                            var image = images[i];
-                            var imageInfo = new Dictionary<string, object?>
-                            {
-                                ["index"] = i,
-                                ["pageIndex"] = pageNum
-                            };
-                            try
-                            {
-                                if (image.Width > 0 && image.Height > 0)
-                                {
-                                    imageInfo["width"] = image.Width;
-                                    imageInfo["height"] = image.Height;
-                                }
-                            }
-                            catch
-                            {
-                                imageInfo["width"] = null;
-                                imageInfo["height"] = null;
-                            }
-
-                            imageList.Add(imageInfo);
-                        }
-                        catch (Exception ex)
-                        {
-                            imageList.Add(new { index = i, pageIndex = pageNum, error = ex.Message });
-                        }
-            }
-
-            if (imageList.Count == 0)
-            {
-                var emptyResult = new
-                {
-                    count = 0,
-                    items = Array.Empty<object>(),
-                    message = "No images found in document"
-                };
-                return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
-            }
-
-            var result = new
-            {
-                count = imageList.Count,
-                items = imageList
-            };
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
-        }
+        return parameters;
     }
 }

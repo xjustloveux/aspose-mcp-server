@@ -100,14 +100,20 @@
     <h2>📁 倉庫結構</h2>
     <div class="structure-tree">
         aspose-mcp-server/
-        ├── Tools/ 📁 工具原始碼
+        ├── Tools/ 📁 工具原始碼（MCP Tool 入口點）
         │ ├── Word/ 24 個工具
         │ ├── Excel/ 25 個工具
         │ ├── PowerPoint/ 21 個工具
         │ ├── PDF/ 15 個工具
         │ ├── Conversion/ 2 個工具
         │ └── Session/ 1 個工具
+        ├── Handlers/ 📁 操作處理器（業務邏輯實作）
+        │ ├── Word/ Word 處理器
+        │ ├── Excel/ Excel 處理器
+        │ ├── PowerPoint/ PowerPoint 處理器
+        │ └── Pdf/ PDF 處理器
         ├── Core/ 🔧 MCP 伺服器核心
+        │ ├── Handlers/ Handler 基礎架構
         │ ├── Helpers/ 通用輔助工具
         │ ├── Security/ 認證模組
         │ ├── Session/ Session 管理模組
@@ -117,6 +123,7 @@
         │ └── LicenseManager.cs - 授權管理
         ├── Tests/ 🧪 單元測試
         │ ├── Core/ 核心功能測試
+        │ ├── Handlers/ Handler 測試（408 個測試類）
         │ ├── Tools/ 工具測試
         │ │ ├── Word/ 24 個測試類
         │ │ ├── Excel/ 25 個測試類
@@ -304,13 +311,22 @@ cd aspose-mcp-server">
 
     <h3>測試結構</h3>
     <ul style="margin-top: 15px; padding-left: 25px;">
-        <li><code>Tests/Core/</code> - 核心功能測試（Helpers、Security、Session、Tracking）</li>
+        <li><code>Tests/Core/</code> - 核心功能測試（Handlers、Helpers、Security、Session、Tracking）</li>
+        <li>
+            <code>Tests/Handlers/</code> - Handler 測試（408 個測試類）
+            <ul style="margin-top: 5px; padding-left: 20px;">
+                <li><code>Word/</code> - Word Handler 測試</li>
+                <li><code>Excel/</code> - Excel Handler 測試</li>
+                <li><code>PowerPoint/</code> - PowerPoint Handler 測試</li>
+                <li><code>Pdf/</code> - PDF Handler 測試</li>
+            </ul>
+        </li>
         <li><code>Tests/Tools/Word/</code> - Word 工具測試（24 個測試類）</li>
         <li><code>Tests/Tools/Excel/</code> - Excel 工具測試（25 個測試類）</li>
         <li><code>Tests/Tools/PowerPoint/</code> - PowerPoint 工具測試（21 個測試類）</li>
         <li><code>Tests/Tools/Pdf/</code> - PDF 工具測試（15 個測試類）</li>
         <li><code>Tests/Tools/Conversion/</code> - 轉換工具測試（2 個測試類）</li>
-        <li><code>Tests/Helpers/</code> - 測試基礎設施（TestBase、WordTestBase、ExcelTestBase、PdfTestBase）</li>
+        <li><code>Tests/Helpers/</code> - 測試基礎設施（TestBase、WordTestBase、ExcelTestBase、PdfTestBase、HandlerTestBase）</li>
     </ul>
 
     <h3>CI/CD 集成</h3>
@@ -371,6 +387,12 @@ cd aspose-mcp-server">
 
 <div class="section">
     <h2>🔧 核心組件</h2>
+
+    <h3>Core/Handlers/</h3>
+    <p>Handler 基礎架構：IOperationHandler（介面）、OperationHandlerBase（基類）、OperationContext（上下文）、OperationParameters（參數）、HandlerRegistry（註冊器）。實現 Tool 與業務邏輯的分離。</p>
+
+    <h3>Handlers/</h3>
+    <p>操作處理器：407 個 Handler 實作業務邏輯。每個 Handler 對應一個操作（如 AddWordBookmarkHandler），並透過 HandlerRegistry 註冊。100% 單元測試覆蓋（408 個測試類）。</p>
 
     <h3>Core/Helpers/</h3>
     <p>通用輔助工具：SecurityHelper（安全驗證）、ColorHelper（顏色處理）、FontHelper（字型設定）、ValueHelper（值轉換）等。</p>

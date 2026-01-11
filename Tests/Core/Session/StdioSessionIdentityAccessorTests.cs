@@ -10,20 +10,20 @@ public class StdioSessionIdentityAccessorTests
     /// <summary>
     ///     Helper to safely set and restore environment variables during tests
     /// </summary>
-    private static void WithEnvironmentVariables(string? tenantId, string? userId, Action action)
+    private static void WithEnvironmentVariables(string? groupId, string? userId, Action action)
     {
-        var originalTenantId = Environment.GetEnvironmentVariable("ASPOSE_SESSION_TENANT_ID");
+        var originalGroupId = Environment.GetEnvironmentVariable("ASPOSE_SESSION_GROUP_ID");
         var originalUserId = Environment.GetEnvironmentVariable("ASPOSE_SESSION_USER_ID");
 
         try
         {
-            Environment.SetEnvironmentVariable("ASPOSE_SESSION_TENANT_ID", tenantId);
+            Environment.SetEnvironmentVariable("ASPOSE_SESSION_GROUP_ID", groupId);
             Environment.SetEnvironmentVariable("ASPOSE_SESSION_USER_ID", userId);
             action();
         }
         finally
         {
-            Environment.SetEnvironmentVariable("ASPOSE_SESSION_TENANT_ID", originalTenantId);
+            Environment.SetEnvironmentVariable("ASPOSE_SESSION_GROUP_ID", originalGroupId);
             Environment.SetEnvironmentVariable("ASPOSE_SESSION_USER_ID", originalUserId);
         }
     }
@@ -39,7 +39,7 @@ public class StdioSessionIdentityAccessorTests
             var identity = accessor.GetCurrentIdentity();
 
             Assert.False(identity.IsAnonymous);
-            Assert.Null(identity.TenantId);
+            Assert.Null(identity.GroupId);
             Assert.Equal("user1", identity.UserId);
         });
     }
@@ -51,7 +51,7 @@ public class StdioSessionIdentityAccessorTests
     [Fact]
     public void GetCurrentIdentity_CalledMultipleTimes_ShouldReturnSameInstance()
     {
-        WithEnvironmentVariables("tenant1", "user1", () =>
+        WithEnvironmentVariables("group1", "user1", () =>
         {
             var accessor = new StdioSessionIdentityAccessor();
             var identity1 = accessor.GetCurrentIdentity();
@@ -91,24 +91,24 @@ public class StdioSessionIdentityAccessorTests
 
     #endregion
 
-    #region TenantId Environment Variable Tests
+    #region GroupId Environment Variable Tests
 
     [Fact]
-    public void GetCurrentIdentity_WithTenantIdOnly_ShouldReturnIdentityWithTenantId()
+    public void GetCurrentIdentity_WithGroupIdOnly_ShouldReturnIdentityWithGroupId()
     {
-        WithEnvironmentVariables("tenant1", null, () =>
+        WithEnvironmentVariables("group1", null, () =>
         {
             var accessor = new StdioSessionIdentityAccessor();
             var identity = accessor.GetCurrentIdentity();
 
             Assert.False(identity.IsAnonymous);
-            Assert.Equal("tenant1", identity.TenantId);
+            Assert.Equal("group1", identity.GroupId);
             Assert.Null(identity.UserId);
         });
     }
 
     [Fact]
-    public void GetCurrentIdentity_WithTenantIdEmpty_ShouldReturnAnonymous()
+    public void GetCurrentIdentity_WithGroupIdEmpty_ShouldReturnAnonymous()
     {
         WithEnvironmentVariables("", "user1", () =>
         {
@@ -116,7 +116,7 @@ public class StdioSessionIdentityAccessorTests
             var identity = accessor.GetCurrentIdentity();
 
             Assert.False(identity.IsAnonymous);
-            Assert.Null(identity.TenantId);
+            Assert.Null(identity.GroupId);
             Assert.Equal("user1", identity.UserId);
         });
     }
@@ -128,13 +128,13 @@ public class StdioSessionIdentityAccessorTests
     [Fact]
     public void GetCurrentIdentity_WithBothVariables_ShouldReturnFullIdentity()
     {
-        WithEnvironmentVariables("tenant1", "user1", () =>
+        WithEnvironmentVariables("group1", "user1", () =>
         {
             var accessor = new StdioSessionIdentityAccessor();
             var identity = accessor.GetCurrentIdentity();
 
             Assert.False(identity.IsAnonymous);
-            Assert.Equal("tenant1", identity.TenantId);
+            Assert.Equal("group1", identity.GroupId);
             Assert.Equal("user1", identity.UserId);
         });
     }
@@ -142,12 +142,12 @@ public class StdioSessionIdentityAccessorTests
     [Fact]
     public void GetCurrentIdentity_WithSpecialCharacters_ShouldPreserveValues()
     {
-        WithEnvironmentVariables("tenant:with:colons", "user@domain.com", () =>
+        WithEnvironmentVariables("group:with:colons", "user@domain.com", () =>
         {
             var accessor = new StdioSessionIdentityAccessor();
             var identity = accessor.GetCurrentIdentity();
 
-            Assert.Equal("tenant:with:colons", identity.TenantId);
+            Assert.Equal("group:with:colons", identity.GroupId);
             Assert.Equal("user@domain.com", identity.UserId);
         });
     }

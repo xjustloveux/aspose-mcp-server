@@ -18,38 +18,35 @@ public class JwtAuthenticationMiddlewareTests
     private readonly ILogger<JwtAuthenticationMiddleware> _logger = NullLogger<JwtAuthenticationMiddleware>.Instance;
 
     [Fact]
-    public async Task LocalMode_ValidToken_ShouldSetTenantAndUserId()
+    public async Task LocalMode_ValidToken_ShouldSetGroupAndUserId()
     {
         var config = new JwtConfig
         {
             Enabled = true,
             Mode = JwtMode.Local,
             Secret = TestSecret,
-            TenantIdClaim = "tenant_id"
+            GroupIdentifierClaim = "tenant_id"
         };
 
         var token = GenerateTestToken(new Dictionary<string, string>
         {
-            ["tenant_id"] = "test-tenant",
+            ["tenant_id"] = "test-group",
             ["sub"] = "user-123"
         });
 
         var context = CreateHttpContext();
         context.Request.Headers.Authorization = $"Bearer {token}";
 
-        string? capturedTenantId = null;
+        string? capturedGroupId = null;
         string? capturedUserId = null;
-        var middleware = new JwtAuthenticationMiddleware(
-            ctx =>
-            {
-                capturedTenantId = ctx.Items["TenantId"]?.ToString();
-                capturedUserId = ctx.Items["UserId"]?.ToString();
-                return Task.CompletedTask;
-            },
-            config,
-            _logger);
-        await middleware.InvokeAsync(context);
-        Assert.Equal("test-tenant", capturedTenantId);
+        var middleware = new JwtAuthenticationMiddleware(config, _logger);
+        await middleware.InvokeAsync(context, ctx =>
+        {
+            capturedGroupId = ctx.Items["GroupId"]?.ToString();
+            capturedUserId = ctx.Items["UserId"]?.ToString();
+            return Task.CompletedTask;
+        });
+        Assert.Equal("test-group", capturedGroupId);
         Assert.Equal("user-123", capturedUserId);
         Assert.Equal(200, context.Response.StatusCode);
     }
@@ -67,11 +64,8 @@ public class JwtAuthenticationMiddlewareTests
         var context = CreateHttpContext();
         context.Request.Headers.Authorization = "Bearer invalid-token";
 
-        var middleware = new JwtAuthenticationMiddleware(
-            _ => Task.CompletedTask,
-            config,
-            _logger);
-        await middleware.InvokeAsync(context);
+        var middleware = new JwtAuthenticationMiddleware(config, _logger);
+        await middleware.InvokeAsync(context, _ => Task.CompletedTask);
         Assert.Equal(401, context.Response.StatusCode);
     }
 
@@ -92,11 +86,8 @@ public class JwtAuthenticationMiddlewareTests
         var context = CreateHttpContext();
         context.Request.Headers.Authorization = $"Bearer {token}";
 
-        var middleware = new JwtAuthenticationMiddleware(
-            _ => Task.CompletedTask,
-            config,
-            _logger);
-        await middleware.InvokeAsync(context);
+        var middleware = new JwtAuthenticationMiddleware(config, _logger);
+        await middleware.InvokeAsync(context, _ => Task.CompletedTask);
         Assert.Equal(401, context.Response.StatusCode);
     }
 
@@ -112,11 +103,8 @@ public class JwtAuthenticationMiddlewareTests
 
         var context = CreateHttpContext();
 
-        var middleware = new JwtAuthenticationMiddleware(
-            _ => Task.CompletedTask,
-            config,
-            _logger);
-        await middleware.InvokeAsync(context);
+        var middleware = new JwtAuthenticationMiddleware(config, _logger);
+        await middleware.InvokeAsync(context, _ => Task.CompletedTask);
         Assert.Equal(401, context.Response.StatusCode);
     }
 
@@ -133,66 +121,66 @@ public class JwtAuthenticationMiddlewareTests
         var context = CreateHttpContext();
         context.Request.Headers.Authorization = "Basic dXNlcjpwYXNz";
 
-        var middleware = new JwtAuthenticationMiddleware(
-            _ => Task.CompletedTask,
-            config,
-            _logger);
-        await middleware.InvokeAsync(context);
+        var middleware = new JwtAuthenticationMiddleware(config, _logger);
+        await middleware.InvokeAsync(context, _ => Task.CompletedTask);
         Assert.Equal(401, context.Response.StatusCode);
     }
 
     [Fact]
-    public async Task GatewayMode_WithHeaders_ShouldSetTenantAndUserId()
+    public async Task GatewayMode_WithHeaders_ShouldSetGroupAndUserId()
     {
         var config = new JwtConfig
         {
             Enabled = true,
             Mode = JwtMode.Gateway,
-            TenantIdHeader = "X-Tenant-Id",
+            GroupIdentifierHeader = "X-Group-Id",
             UserIdHeader = "X-User-Id"
         };
 
         var context = CreateHttpContext();
         context.Request.Headers.Authorization = "Bearer any-token";
-        context.Request.Headers["X-Tenant-Id"] = "gateway-tenant";
+        context.Request.Headers["X-Group-Id"] = "gateway-group";
         context.Request.Headers["X-User-Id"] = "gateway-user";
 
-        string? capturedTenantId = null;
+        string? capturedGroupId = null;
         string? capturedUserId = null;
-        var middleware = new JwtAuthenticationMiddleware(
-            ctx =>
-            {
-                capturedTenantId = ctx.Items["TenantId"]?.ToString();
-                capturedUserId = ctx.Items["UserId"]?.ToString();
-                return Task.CompletedTask;
-            },
-            config,
-            _logger);
-        await middleware.InvokeAsync(context);
-        Assert.Equal("gateway-tenant", capturedTenantId);
+        var middleware = new JwtAuthenticationMiddleware(config, _logger);
+        await middleware.InvokeAsync(context, ctx =>
+        {
+            capturedGroupId = ctx.Items["GroupId"]?.ToString();
+            capturedUserId = ctx.Items["UserId"]?.ToString();
+            return Task.CompletedTask;
+        });
+        Assert.Equal("gateway-group", capturedGroupId);
         Assert.Equal("gateway-user", capturedUserId);
     }
 
     [Fact]
-    public async Task GatewayMode_MissingHeaders_ShouldReturn401()
+    public async Task GatewayMode_MissingHeaders_ShouldAllowAsAnonymous()
     {
         var config = new JwtConfig
         {
             Enabled = true,
             Mode = JwtMode.Gateway,
-            TenantIdHeader = "X-Tenant-Id",
+            GroupIdentifierHeader = "X-Group-Id",
             UserIdHeader = "X-User-Id"
         };
 
         var context = CreateHttpContext();
         context.Request.Headers.Authorization = "Bearer any-token";
 
-        var middleware = new JwtAuthenticationMiddleware(
-            _ => Task.CompletedTask,
-            config,
-            _logger);
-        await middleware.InvokeAsync(context);
-        Assert.Equal(401, context.Response.StatusCode);
+        var capturedGroupId = "not-null";
+        var capturedUserId = "not-null";
+        var middleware = new JwtAuthenticationMiddleware(config, _logger);
+        await middleware.InvokeAsync(context, ctx =>
+        {
+            capturedGroupId = ctx.Items["GroupId"]?.ToString();
+            capturedUserId = ctx.Items["UserId"]?.ToString();
+            return Task.CompletedTask;
+        });
+        Assert.Null(capturedGroupId);
+        Assert.Null(capturedUserId);
+        Assert.Equal(200, context.Response.StatusCode);
     }
 
     [Fact]
@@ -208,15 +196,12 @@ public class JwtAuthenticationMiddlewareTests
         var context = CreateHttpContext("/health");
 
         var nextCalled = false;
-        var middleware = new JwtAuthenticationMiddleware(
-            _ =>
-            {
-                nextCalled = true;
-                return Task.CompletedTask;
-            },
-            config,
-            _logger);
-        await middleware.InvokeAsync(context);
+        var middleware = new JwtAuthenticationMiddleware(config, _logger);
+        await middleware.InvokeAsync(context, _ =>
+        {
+            nextCalled = true;
+            return Task.CompletedTask;
+        });
         Assert.True(nextCalled);
     }
 
@@ -239,15 +224,12 @@ public class JwtAuthenticationMiddlewareTests
         context.Request.Headers.Authorization = $"Bearer {token}";
 
         var nextCalled = false;
-        var middleware = new JwtAuthenticationMiddleware(
-            _ =>
-            {
-                nextCalled = true;
-                return Task.CompletedTask;
-            },
-            config,
-            _logger);
-        await middleware.InvokeAsync(context);
+        var middleware = new JwtAuthenticationMiddleware(config, _logger);
+        await middleware.InvokeAsync(context, _ =>
+        {
+            nextCalled = true;
+            return Task.CompletedTask;
+        });
         Assert.True(nextCalled);
         Assert.Equal(200, context.Response.StatusCode);
     }
@@ -270,11 +252,8 @@ public class JwtAuthenticationMiddlewareTests
         var context = CreateHttpContext();
         context.Request.Headers.Authorization = $"Bearer {token}";
 
-        var middleware = new JwtAuthenticationMiddleware(
-            _ => Task.CompletedTask,
-            config,
-            _logger);
-        await middleware.InvokeAsync(context);
+        var middleware = new JwtAuthenticationMiddleware(config, _logger);
+        await middleware.InvokeAsync(context, _ => Task.CompletedTask);
         Assert.Equal(401, context.Response.StatusCode);
     }
 
@@ -285,17 +264,14 @@ public class JwtAuthenticationMiddlewareTests
         {
             Enabled = true,
             Mode = JwtMode.Local,
-            Secret = null // No secret
+            Secret = null
         };
 
         var context = CreateHttpContext();
         context.Request.Headers.Authorization = "Bearer some-token";
 
-        var middleware = new JwtAuthenticationMiddleware(
-            _ => Task.CompletedTask,
-            config,
-            _logger);
-        await middleware.InvokeAsync(context);
+        var middleware = new JwtAuthenticationMiddleware(config, _logger);
+        await middleware.InvokeAsync(context, _ => Task.CompletedTask);
         Assert.Equal(401, context.Response.StatusCode);
     }
 
@@ -320,7 +296,7 @@ public class JwtAuthenticationMiddlewareTests
     }
 
     [Fact]
-    public async Task IntrospectionMode_ActiveResponse_ShouldSetTenantAndUserId()
+    public async Task IntrospectionMode_ActiveResponse_ShouldSetGroupAndUserId()
     {
         var config = new JwtConfig
         {
@@ -334,27 +310,23 @@ public class JwtAuthenticationMiddlewareTests
 
         var mockHandler = CreateMockHttpHandler(
             HttpStatusCode.OK,
-            """{"active": true, "tenant_id": "introspection-tenant", "sub": "introspection-user"}""");
+            """{"active": true, "group_id": "introspection-group", "sub": "introspection-user"}""");
         var httpClientFactory = CreateMockHttpClientFactory(mockHandler);
 
         var context = CreateHttpContext();
         context.Request.Headers.Authorization = "Bearer some-token";
 
-        string? capturedTenantId = null;
+        string? capturedGroupId = null;
         string? capturedUserId = null;
-        var middleware = new JwtAuthenticationMiddleware(
-            ctx =>
-            {
-                capturedTenantId = ctx.Items["TenantId"]?.ToString();
-                capturedUserId = ctx.Items["UserId"]?.ToString();
-                return Task.CompletedTask;
-            },
-            config,
-            _logger,
-            httpClientFactory);
-        await middleware.InvokeAsync(context);
+        var middleware = new JwtAuthenticationMiddleware(config, _logger, httpClientFactory);
+        await middleware.InvokeAsync(context, ctx =>
+        {
+            capturedGroupId = ctx.Items["GroupId"]?.ToString();
+            capturedUserId = ctx.Items["UserId"]?.ToString();
+            return Task.CompletedTask;
+        });
 
-        Assert.Equal("introspection-tenant", capturedTenantId);
+        Assert.Equal("introspection-group", capturedGroupId);
         Assert.Equal("introspection-user", capturedUserId);
         Assert.Equal(200, context.Response.StatusCode);
     }
@@ -378,12 +350,8 @@ public class JwtAuthenticationMiddlewareTests
         var context = CreateHttpContext();
         context.Request.Headers.Authorization = "Bearer invalid-token";
 
-        var middleware = new JwtAuthenticationMiddleware(
-            _ => Task.CompletedTask,
-            config,
-            _logger,
-            httpClientFactory);
-        await middleware.InvokeAsync(context);
+        var middleware = new JwtAuthenticationMiddleware(config, _logger, httpClientFactory);
+        await middleware.InvokeAsync(context, _ => Task.CompletedTask);
 
         Assert.Equal(401, context.Response.StatusCode);
     }
@@ -405,12 +373,8 @@ public class JwtAuthenticationMiddlewareTests
         var context = CreateHttpContext();
         context.Request.Headers.Authorization = "Bearer some-token";
 
-        var middleware = new JwtAuthenticationMiddleware(
-            _ => Task.CompletedTask,
-            config,
-            _logger,
-            httpClientFactory);
-        await middleware.InvokeAsync(context);
+        var middleware = new JwtAuthenticationMiddleware(config, _logger, httpClientFactory);
+        await middleware.InvokeAsync(context, _ => Task.CompletedTask);
 
         Assert.Equal(401, context.Response.StatusCode);
     }
@@ -428,17 +392,14 @@ public class JwtAuthenticationMiddlewareTests
         var context = CreateHttpContext();
         context.Request.Headers.Authorization = "Bearer some-token";
 
-        var middleware = new JwtAuthenticationMiddleware(
-            _ => Task.CompletedTask,
-            config,
-            _logger);
-        await middleware.InvokeAsync(context);
+        var middleware = new JwtAuthenticationMiddleware(config, _logger);
+        await middleware.InvokeAsync(context, _ => Task.CompletedTask);
 
         Assert.Equal(401, context.Response.StatusCode);
     }
 
     [Fact]
-    public async Task CustomMode_ValidResponse_ShouldSetTenantAndUserId()
+    public async Task CustomMode_ValidResponse_ShouldSetGroupAndUserId()
     {
         var config = new JwtConfig
         {
@@ -450,27 +411,23 @@ public class JwtAuthenticationMiddlewareTests
 
         var mockHandler = CreateMockHttpHandler(
             HttpStatusCode.OK,
-            """{"valid": true, "tenant_id": "custom-tenant", "user_id": "custom-user"}""");
+            """{"valid": true, "group_id": "custom-group", "user_id": "custom-user"}""");
         var httpClientFactory = CreateMockHttpClientFactory(mockHandler);
 
         var context = CreateHttpContext();
         context.Request.Headers.Authorization = "Bearer custom-token";
 
-        string? capturedTenantId = null;
+        string? capturedGroupId = null;
         string? capturedUserId = null;
-        var middleware = new JwtAuthenticationMiddleware(
-            ctx =>
-            {
-                capturedTenantId = ctx.Items["TenantId"]?.ToString();
-                capturedUserId = ctx.Items["UserId"]?.ToString();
-                return Task.CompletedTask;
-            },
-            config,
-            _logger,
-            httpClientFactory);
-        await middleware.InvokeAsync(context);
+        var middleware = new JwtAuthenticationMiddleware(config, _logger, httpClientFactory);
+        await middleware.InvokeAsync(context, ctx =>
+        {
+            capturedGroupId = ctx.Items["GroupId"]?.ToString();
+            capturedUserId = ctx.Items["UserId"]?.ToString();
+            return Task.CompletedTask;
+        });
 
-        Assert.Equal("custom-tenant", capturedTenantId);
+        Assert.Equal("custom-group", capturedGroupId);
         Assert.Equal("custom-user", capturedUserId);
         Assert.Equal(200, context.Response.StatusCode);
     }
@@ -494,12 +451,8 @@ public class JwtAuthenticationMiddlewareTests
         var context = CreateHttpContext();
         context.Request.Headers.Authorization = "Bearer expired-token";
 
-        var middleware = new JwtAuthenticationMiddleware(
-            _ => Task.CompletedTask,
-            config,
-            _logger,
-            httpClientFactory);
-        await middleware.InvokeAsync(context);
+        var middleware = new JwtAuthenticationMiddleware(config, _logger, httpClientFactory);
+        await middleware.InvokeAsync(context, _ => Task.CompletedTask);
 
         Assert.Equal(401, context.Response.StatusCode);
     }
@@ -521,12 +474,8 @@ public class JwtAuthenticationMiddlewareTests
         var context = CreateHttpContext();
         context.Request.Headers.Authorization = "Bearer some-token";
 
-        var middleware = new JwtAuthenticationMiddleware(
-            _ => Task.CompletedTask,
-            config,
-            _logger,
-            httpClientFactory);
-        await middleware.InvokeAsync(context);
+        var middleware = new JwtAuthenticationMiddleware(config, _logger, httpClientFactory);
+        await middleware.InvokeAsync(context, _ => Task.CompletedTask);
 
         Assert.Equal(401, context.Response.StatusCode);
     }
@@ -544,11 +493,8 @@ public class JwtAuthenticationMiddlewareTests
         var context = CreateHttpContext();
         context.Request.Headers.Authorization = "Bearer some-token";
 
-        var middleware = new JwtAuthenticationMiddleware(
-            _ => Task.CompletedTask,
-            config,
-            _logger);
-        await middleware.InvokeAsync(context);
+        var middleware = new JwtAuthenticationMiddleware(config, _logger);
+        await middleware.InvokeAsync(context, _ => Task.CompletedTask);
 
         Assert.Equal(401, context.Response.StatusCode);
     }

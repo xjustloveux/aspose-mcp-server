@@ -5,6 +5,11 @@ using AsposeMcpServer.Tools.Pdf;
 
 namespace AsposeMcpServer.Tests.Tools.Pdf;
 
+/// <summary>
+///     Integration tests for PdfAnnotationTool.
+///     Focuses on session management, file I/O, and operation routing.
+///     Detailed parameter validation and business logic tests are in Handler tests.
+/// </summary>
 public class PdfAnnotationToolTests : PdfTestBase
 {
     private readonly PdfAnnotationTool _tool;
@@ -56,7 +61,7 @@ public class PdfAnnotationToolTests : PdfTestBase
         return filePath;
     }
 
-    #region General
+    #region File I/O Smoke Tests
 
     [Fact]
     public void Add_ShouldAddAnnotation()
@@ -68,9 +73,6 @@ public class PdfAnnotationToolTests : PdfTestBase
         Assert.StartsWith("Added annotation", result);
         using var document = new Document(outputPath);
         Assert.True(document.Pages[1].Annotations.Count > 0);
-        var annotation = document.Pages[1].Annotations[1] as TextAnnotation;
-        Assert.NotNull(annotation);
-        Assert.Equal("Test Note", annotation.Contents);
     }
 
     [Fact]
@@ -78,33 +80,8 @@ public class PdfAnnotationToolTests : PdfTestBase
     {
         var pdfPath = CreatePdfWithAnnotation("test_get.pdf");
         var result = _tool.Execute("get", pdfPath, pageIndex: 1);
-        Assert.Contains("TextAnnotation", result);
+        Assert.Contains("\"type\": \"Text\"", result);
         Assert.Contains("\"pageIndex\": 1", result);
-    }
-
-    [Fact]
-    public void Get_WithoutPageIndex_ShouldReturnAllAnnotations()
-    {
-        var filePath = CreateTestFilePath("test_get_all.pdf");
-        using (var document = new Document())
-        {
-            var page1 = document.Pages.Add();
-            var page2 = document.Pages.Add();
-            page1.Annotations.Add(new TextAnnotation(page1, new Rectangle(100, 100, 200, 130)) { Contents = "Note 1" });
-            page2.Annotations.Add(new TextAnnotation(page2, new Rectangle(100, 100, 200, 130)) { Contents = "Note 2" });
-            document.Save(filePath);
-        }
-
-        var result = _tool.Execute("get", filePath);
-        Assert.Contains("\"count\": 2", result);
-    }
-
-    [Fact]
-    public void Get_WithNoAnnotations_ShouldReturnEmptyResult()
-    {
-        var pdfPath = CreateTestPdf("test_get_empty.pdf");
-        var result = _tool.Execute("get", pdfPath, pageIndex: 1);
-        Assert.Contains("\"count\": 0", result);
     }
 
     [Fact]
@@ -120,50 +97,28 @@ public class PdfAnnotationToolTests : PdfTestBase
     }
 
     [Fact]
-    public void Delete_WithoutIndex_ShouldDeleteAllAnnotations()
-    {
-        var pdfPath = CreatePdfWithMultipleAnnotations("test_delete_all.pdf");
-        var outputPath = CreateTestFilePath("test_delete_all_output.pdf");
-        var result = _tool.Execute("delete", pdfPath, outputPath: outputPath, pageIndex: 1);
-        Assert.StartsWith("Deleted all 2 annotation(s)", result);
-        using var document = new Document(outputPath);
-        Assert.Empty(document.Pages[1].Annotations);
-    }
-
-    [Fact]
     public void Edit_Text_ShouldModifyAnnotation()
     {
         var pdfPath = CreatePdfWithAnnotation("test_edit.pdf", "Original Note");
         var outputPath = CreateTestFilePath("test_edit_output.pdf");
         var result = _tool.Execute("edit", pdfPath, outputPath: outputPath,
             pageIndex: 1, annotationIndex: 1, text: "Updated Note");
-        Assert.StartsWith("Edited annotation", result);
+        Assert.StartsWith("Annotation 1 on page 1 updated", result);
         using var document = new Document(outputPath);
         var annotation = document.Pages[1].Annotations[1] as TextAnnotation;
         Assert.NotNull(annotation);
         Assert.Equal("Updated Note", annotation.Contents);
     }
 
-    [Fact]
-    public void Edit_WithPosition_ShouldUpdatePosition()
-    {
-        var pdfPath = CreatePdfWithAnnotation("test_edit_position.pdf");
-        var outputPath = CreateTestFilePath("test_edit_position_output.pdf");
-        var result = _tool.Execute("edit", pdfPath, outputPath: outputPath,
-            pageIndex: 1, annotationIndex: 1, text: "Moved Note", x: 200, y: 500);
-        Assert.StartsWith("Edited annotation", result);
-        using var document = new Document(outputPath);
-        var annotation = document.Pages[1].Annotations[1] as TextAnnotation;
-        Assert.NotNull(annotation);
-        Assert.Equal(200, annotation.Rect.LLX, 1);
-        Assert.Equal(500, annotation.Rect.LLY, 1);
-    }
+    #endregion
+
+    #region Operation Routing
 
     [Theory]
     [InlineData("ADD")]
     [InlineData("Add")]
     [InlineData("add")]
-    public void Operation_ShouldBeCaseInsensitive_Add(string operation)
+    public void Operation_ShouldBeCaseInsensitive(string operation)
     {
         var pdfPath = CreateTestPdf($"test_case_{operation}.pdf");
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.pdf");
@@ -171,21 +126,6 @@ public class PdfAnnotationToolTests : PdfTestBase
             pageIndex: 1, text: "Test", x: 100, y: 100);
         Assert.StartsWith("Added annotation", result);
     }
-
-    [Theory]
-    [InlineData("GET")]
-    [InlineData("Get")]
-    [InlineData("get")]
-    public void Operation_ShouldBeCaseInsensitive_Get(string operation)
-    {
-        var pdfPath = CreateTestPdf($"test_case_get_{operation}.pdf");
-        var result = _tool.Execute(operation, pdfPath, pageIndex: 1);
-        Assert.Contains("count", result);
-    }
-
-    #endregion
-
-    #region Exception
 
     [Fact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
@@ -196,105 +136,6 @@ public class PdfAnnotationToolTests : PdfTestBase
     }
 
     [Fact]
-    public void Add_WithMissingPageIndex_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreateTestPdf("test_add_no_page.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", pdfPath, text: "Test Note"));
-        Assert.Contains("pageIndex is required", ex.Message);
-    }
-
-    [Fact]
-    public void Add_WithMissingText_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreateTestPdf("test_add_no_text.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", pdfPath, pageIndex: 1));
-        Assert.Contains("text is required", ex.Message);
-    }
-
-    [Fact]
-    public void Add_WithInvalidPageIndex_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreateTestPdf("test_add_invalid_page.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", pdfPath, pageIndex: 99, text: "Test"));
-        Assert.Contains("pageIndex must be between", ex.Message);
-    }
-
-    [Fact]
-    public void Get_WithInvalidPageIndex_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreateTestPdf("test_get_invalid_page.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("get", pdfPath, pageIndex: 99));
-        Assert.Contains("pageIndex must be between", ex.Message);
-    }
-
-    [Fact]
-    public void Delete_WithMissingPageIndex_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreatePdfWithAnnotation("test_delete_no_page.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("delete", pdfPath));
-        Assert.Contains("pageIndex is required", ex.Message);
-    }
-
-    [Fact]
-    public void Delete_WithNoAnnotations_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreateTestPdf("test_delete_empty.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("delete", pdfPath, pageIndex: 1));
-        Assert.Contains("No annotations found", ex.Message);
-    }
-
-    [Fact]
-    public void Delete_WithInvalidAnnotationIndex_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreatePdfWithAnnotation("test_delete_invalid_index.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("delete", pdfPath, pageIndex: 1, annotationIndex: 99));
-        Assert.Contains("annotationIndex must be between", ex.Message);
-    }
-
-    [Fact]
-    public void Edit_WithMissingPageIndex_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreatePdfWithAnnotation("test_edit_no_page.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("edit", pdfPath, annotationIndex: 1, text: "Test"));
-        Assert.Contains("pageIndex is required", ex.Message);
-    }
-
-    [Fact]
-    public void Edit_WithMissingAnnotationIndex_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreatePdfWithAnnotation("test_edit_no_index.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("edit", pdfPath, pageIndex: 1, text: "Test"));
-        Assert.Contains("annotationIndex is required", ex.Message);
-    }
-
-    [Fact]
-    public void Edit_WithMissingText_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreatePdfWithAnnotation("test_edit_no_text.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("edit", pdfPath, pageIndex: 1, annotationIndex: 1));
-        Assert.Contains("text is required", ex.Message);
-    }
-
-    [Fact]
-    public void Edit_WithInvalidAnnotationIndex_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreatePdfWithAnnotation("test_edit_invalid_index.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("edit", pdfPath, pageIndex: 1, annotationIndex: 99, text: "Test"));
-        Assert.Contains("annotationIndex must be between", ex.Message);
-    }
-
-    [Fact]
     public void Execute_WithNoPathOrSessionId_ShouldThrowException()
     {
         Assert.ThrowsAny<Exception>(() => _tool.Execute("get", pageIndex: 1));
@@ -302,7 +143,7 @@ public class PdfAnnotationToolTests : PdfTestBase
 
     #endregion
 
-    #region Session
+    #region Session Management
 
     [Fact]
     public void Get_WithSessionId_ShouldGetFromSession()
@@ -310,7 +151,7 @@ public class PdfAnnotationToolTests : PdfTestBase
         var pdfPath = CreatePdfWithAnnotation("test_session_get.pdf", "Session Note");
         var sessionId = OpenSession(pdfPath);
         var result = _tool.Execute("get", sessionId: sessionId, pageIndex: 1);
-        Assert.Contains("TextAnnotation", result);
+        Assert.Contains("\"type\": \"Text\"", result);
     }
 
     [Fact]
@@ -321,18 +162,7 @@ public class PdfAnnotationToolTests : PdfTestBase
         var result = _tool.Execute("add", sessionId: sessionId,
             pageIndex: 1, text: "Session Annotation", x: 150, y: 150);
         Assert.StartsWith("Added annotation", result);
-        Assert.Contains("session", result);
-    }
-
-    [Fact]
-    public void Add_WithSessionId_ShouldModifyInMemory()
-    {
-        var pdfPath = CreateTestPdf("test_session_memory.pdf");
-        var sessionId = OpenSession(pdfPath);
-        _tool.Execute("add", sessionId: sessionId,
-            pageIndex: 1, text: "In-Memory Annotation", x: 200, y: 200);
         var document = SessionManager.GetDocument<Document>(sessionId);
-        Assert.NotNull(document);
         Assert.True(document.Pages[1].Annotations.Count > 0);
     }
 
@@ -343,7 +173,6 @@ public class PdfAnnotationToolTests : PdfTestBase
         var sessionId = OpenSession(pdfPath);
         var result = _tool.Execute("delete", sessionId: sessionId, pageIndex: 1);
         Assert.StartsWith("Deleted all 2 annotation(s)", result);
-        Assert.Contains("session", result);
     }
 
     [Fact]
@@ -353,8 +182,7 @@ public class PdfAnnotationToolTests : PdfTestBase
         var sessionId = OpenSession(pdfPath);
         var result = _tool.Execute("edit", sessionId: sessionId,
             pageIndex: 1, annotationIndex: 1, text: "Edited");
-        Assert.StartsWith("Edited annotation", result);
-        Assert.Contains("session", result);
+        Assert.StartsWith("Annotation 1 on page 1 updated", result);
         var document = SessionManager.GetDocument<Document>(sessionId);
         var annotation = document.Pages[1].Annotations[1] as TextAnnotation;
         Assert.NotNull(annotation);

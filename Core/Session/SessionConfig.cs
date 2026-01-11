@@ -1,7 +1,8 @@
 namespace AsposeMcpServer.Core.Session;
 
 /// <summary>
-///     Session isolation mode for multi-tenant environments
+///     Session isolation mode for configurable group-based isolation.
+///     The group identifier is determined by the GROUP_IDENTIFIER_CLAIM configuration.
 /// </summary>
 public enum SessionIsolationMode
 {
@@ -11,14 +12,10 @@ public enum SessionIsolationMode
     None,
 
     /// <summary>
-    ///     Tenant-level isolation - users within the same tenant can access each other's sessions
+    ///     Group-level isolation - users within the same group can access each other's sessions.
+    ///     The group is determined by the configured GROUP_IDENTIFIER_CLAIM (e.g., tenant_id, team_id, sub).
     /// </summary>
-    Tenant,
-
-    /// <summary>
-    ///     User-level isolation - users can only access their own sessions
-    /// </summary>
-    User
+    Group
 }
 
 /// <summary>
@@ -63,11 +60,12 @@ public class SessionConfig
     public int TempRetentionHours { get; set; } = 24;
 
     /// <summary>
-    ///     Session isolation mode for multi-tenant environments.
-    ///     Default is User (each user can only access their own sessions).
+    ///     Session isolation mode for group-based environments.
+    ///     Default is Group (users within the same group can access each other's sessions).
+    ///     The group is determined by GROUP_IDENTIFIER_CLAIM configuration.
     ///     Set via ASPOSE_SESSION_ISOLATION or --session-isolation:mode
     /// </summary>
-    public SessionIsolationMode IsolationMode { get; set; } = SessionIsolationMode.User;
+    public SessionIsolationMode IsolationMode { get; set; } = SessionIsolationMode.Group;
 
     /// <summary>
     ///     Loads configuration from environment variables and command line arguments.
@@ -174,5 +172,30 @@ public class SessionConfig
                      Enum.TryParse<SessionIsolationMode>(arg["--session-isolation=".Length..], true,
                          out var isolation2))
                 IsolationMode = isolation2;
+    }
+
+    /// <summary>
+    ///     Validates the session configuration
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when configuration is invalid</exception>
+    public void Validate()
+    {
+        if (!Enabled)
+            return;
+
+        if (MaxSessions < 1)
+            throw new InvalidOperationException("MaxSessions must be at least 1");
+
+        if (IdleTimeoutMinutes < 0)
+            throw new InvalidOperationException("IdleTimeoutMinutes cannot be negative");
+
+        if (MaxFileSizeMb < 1)
+            throw new InvalidOperationException("MaxFileSizeMb must be at least 1");
+
+        if (TempRetentionHours < 1)
+            throw new InvalidOperationException("TempRetentionHours must be at least 1");
+
+        if (string.IsNullOrEmpty(TempDirectory))
+            throw new InvalidOperationException("TempDirectory cannot be empty");
     }
 }

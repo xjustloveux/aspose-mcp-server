@@ -1,9 +1,8 @@
 using System.ComponentModel;
-using System.Drawing;
-using System.Text.Json;
 using Aspose.Slides;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.PowerPoint.TextFormat;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.PowerPoint;
@@ -15,6 +14,11 @@ namespace AsposeMcpServer.Tools.PowerPoint;
 [McpServerToolType]
 public class PptTextFormatTool
 {
+    /// <summary>
+    ///     Handler registry for text format operations.
+    /// </summary>
+    private readonly HandlerRegistry<Presentation> _handlerRegistry;
+
     /// <summary>
     ///     Identity accessor for session isolation.
     /// </summary>
@@ -35,11 +39,13 @@ public class PptTextFormatTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = PptTextFormatHandlerRegistry.Create();
     }
 
     /// <summary>
     ///     Executes a PowerPoint text format operation (batch format text).
     /// </summary>
+    /// <param name="operation">The operation to perform: format.</param>
     /// <param name="path">Presentation file path (required if no sessionId).</param>
     /// <param name="sessionId">Session ID for in-memory editing.</param>
     /// <param name="outputPath">Output file path (optional, defaults to input path).</param>
@@ -58,10 +64,11 @@ Applies to text in AutoShapes and Table cells.
 Color format: Hex color code (e.g., #FF5500, #RGB, #RRGGBB) or named colors (e.g., Red, Blue, DarkGreen).
 
 Usage examples:
-- Format all slides: ppt_text_format(path='presentation.pptx', fontName='Arial', fontSize=14, bold=true)
-- Format specific slides: ppt_text_format(path='presentation.pptx', slideIndices='[0,1,2]', fontName='Times New Roman', fontSize=12)
-- Format with color: ppt_text_format(path='presentation.pptx', color='#FF0000') or ppt_text_format(path='presentation.pptx', color='Red')")]
+- Format all slides: ppt_text_format(operation='format', path='presentation.pptx', fontName='Arial', fontSize=14, bold=true)
+- Format specific slides: ppt_text_format(operation='format', path='presentation.pptx', slideIndices='[0,1,2]', fontName='Times New Roman', fontSize=12)
+- Format with color: ppt_text_format(operation='format', path='presentation.pptx', color='#FF0000') or ppt_text_format(operation='format', path='presentation.pptx', color='Red')")]
     public string Execute(
+        [Description("Operation: format")] string operation = "format",
         [Description("Presentation file path (required if no sessionId)")]
         string? path = null,
         [Description("Session ID for in-memory editing")]
@@ -78,79 +85,49 @@ Usage examples:
         string? color = null)
     {
         using var ctx = DocumentContext<Presentation>.Create(_sessionManager, sessionId, path, _identityAccessor);
-        var presentation = ctx.Document;
 
-        int[] targets;
-        if (!string.IsNullOrWhiteSpace(slideIndices))
+        var parameters = BuildParameters(slideIndices, fontName, fontSize, bold, italic, color);
+
+        var handler = _handlerRegistry.GetHandler(operation);
+
+        var operationContext = new OperationContext<Presentation>
         {
-            var indices = JsonSerializer.Deserialize<int[]>(slideIndices);
-            targets = indices ?? Enumerable.Range(0, presentation.Slides.Count).ToArray();
-        }
-        else
-        {
-            targets = Enumerable.Range(0, presentation.Slides.Count).ToArray();
-        }
+            Document = ctx.Document,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = path,
+            OutputPath = outputPath
+        };
 
-        foreach (var idx in targets)
-            if (idx < 0 || idx >= presentation.Slides.Count)
-                throw new ArgumentException($"slide index {idx} out of range");
+        var result = handler.Execute(operationContext, parameters);
 
-        Color? parsedColor = null;
-        if (!string.IsNullOrWhiteSpace(color)) parsedColor = ColorHelper.ParseColor(color);
+        if (operationContext.IsModified)
+            ctx.Save(outputPath);
 
-        var colorStr = parsedColor.HasValue
-            ? $"#{parsedColor.Value.R:X2}{parsedColor.Value.G:X2}{parsedColor.Value.B:X2}"
-            : null;
-
-        foreach (var idx in targets)
-        {
-            var slide = presentation.Slides[idx];
-            foreach (var shape in slide.Shapes)
-                if (shape is IAutoShape { TextFrame: not null } auto)
-                    ApplyFontToTextFrame(auto.TextFrame, fontName, fontSize, bold, italic, colorStr);
-                else if (shape is ITable table)
-                    ApplyFontToTable(table, fontName, fontSize, bold, italic, colorStr);
-        }
-
-        ctx.Save(outputPath);
-        return $"Batch formatted text applied to {targets.Length} slides. {ctx.GetOutputMessage(outputPath)}";
+        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Applies font settings to all portions in a text frame.
+    ///     Builds OperationParameters from method parameters.
     /// </summary>
-    /// <param name="textFrame">The text frame to format.</param>
-    /// <param name="fontName">Font name (null to skip).</param>
-    /// <param name="fontSize">Font size (null to skip).</param>
-    /// <param name="bold">Bold setting (null to skip).</param>
-    /// <param name="italic">Italic setting (null to skip).</param>
-    /// <param name="colorStr">Color string in hex format (null to skip).</param>
-    private static void ApplyFontToTextFrame(ITextFrame textFrame, string? fontName, double? fontSize, bool? bold,
-        bool? italic, string? colorStr)
+    private static OperationParameters BuildParameters(
+        string? slideIndices,
+        string? fontName,
+        double? fontSize,
+        bool? bold,
+        bool? italic,
+        string? color)
     {
-        foreach (var para in textFrame.Paragraphs)
-        foreach (var portion in para.Portions)
-            FontHelper.Ppt.ApplyFontSettings(portion.PortionFormat, fontName, fontSize, bold, italic, colorStr);
-    }
+        var parameters = new OperationParameters();
 
-    /// <summary>
-    ///     Applies font settings to all cells in a table.
-    /// </summary>
-    /// <param name="table">The table to format.</param>
-    /// <param name="fontName">Font name (null to skip).</param>
-    /// <param name="fontSize">Font size (null to skip).</param>
-    /// <param name="bold">Bold setting (null to skip).</param>
-    /// <param name="italic">Italic setting (null to skip).</param>
-    /// <param name="colorStr">Color string in hex format (null to skip).</param>
-    private static void ApplyFontToTable(ITable table, string? fontName, double? fontSize, bool? bold, bool? italic,
-        string? colorStr)
-    {
-        for (var row = 0; row < table.Rows.Count; row++)
-        for (var col = 0; col < table.Columns.Count; col++)
-        {
-            var cell = table[col, row];
-            if (cell.TextFrame != null)
-                ApplyFontToTextFrame(cell.TextFrame, fontName, fontSize, bold, italic, colorStr);
-        }
+        if (slideIndices != null) parameters.Set("slideIndices", slideIndices);
+        if (fontName != null) parameters.Set("fontName", fontName);
+        if (fontSize.HasValue) parameters.Set("fontSize", fontSize.Value);
+        if (bold.HasValue) parameters.Set("bold", bold.Value);
+        if (italic.HasValue) parameters.Set("italic", italic.Value);
+        if (color != null) parameters.Set("color", color);
+
+        return parameters;
     }
 }

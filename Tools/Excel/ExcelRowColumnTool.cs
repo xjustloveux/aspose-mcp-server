@@ -1,19 +1,23 @@
 using System.ComponentModel;
 using Aspose.Cells;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.Excel.RowColumn;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
 
 /// <summary>
 ///     Unified tool for managing Excel rows and columns (insert/delete rows, columns, cells)
-///     Merges: ExcelInsertRowTool, ExcelDeleteRowTool, ExcelInsertColumnTool, ExcelDeleteColumnTool,
-///     ExcelInsertCellsTool, ExcelDeleteCellsTool
 /// </summary>
 [McpServerToolType]
 public class ExcelRowColumnTool
 {
+    /// <summary>
+    ///     Handler registry for row/column operations.
+    /// </summary>
+    private readonly HandlerRegistry<Workbook> _handlerRegistry;
+
     /// <summary>
     ///     Session identity accessor for session isolation support.
     /// </summary>
@@ -34,6 +38,7 @@ public class ExcelRowColumnTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = ExcelRowColumnHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -89,178 +94,71 @@ Usage examples:
         [Description("Shift direction: 'Right'/'Down' for insert_cells, 'Left'/'Up' for delete_cells")]
         string? shiftDirection = null)
     {
+        var op = operation.ToLowerInvariant();
+        if (op == "set_column_width")
+            throw new ArgumentException(
+                $"Operation 'set_column_width' is not supported by excel_row_column. Please use excel_view_settings operation instead. Example: excel_view_settings(operation='set_column_width', path='{path}', columnIndex=0, width=15)");
+
         using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
-        return operation.ToLowerInvariant() switch
+        var parameters = BuildParameters(operation, sheetIndex, rowIndex, columnIndex, range, count, shiftDirection);
+
+        var handler = _handlerRegistry.GetHandler(operation);
+
+        var operationContext = new OperationContext<Workbook>
         {
-            "insert_row" => InsertRow(ctx, outputPath, sheetIndex, rowIndex, count),
-            "delete_row" => DeleteRow(ctx, outputPath, sheetIndex, rowIndex, count),
-            "insert_column" => InsertColumn(ctx, outputPath, sheetIndex, columnIndex, count),
-            "delete_column" => DeleteColumn(ctx, outputPath, sheetIndex, columnIndex, count),
-            "insert_cells" => InsertCells(ctx, outputPath, sheetIndex, range, shiftDirection),
-            "delete_cells" => DeleteCells(ctx, outputPath, sheetIndex, range, shiftDirection),
-            "set_column_width" => throw new ArgumentException(
-                $"Operation 'set_column_width' is not supported by excel_row_column. Please use excel_view_settings operation instead. Example: excel_view_settings(operation='set_column_width', path='{path}', columnIndex=0, width=15)"),
-            _ => throw new ArgumentException($"Unknown operation: {operation}")
+            Document = ctx.Document,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = path,
+            OutputPath = outputPath
         };
+
+        var result = handler.Execute(operationContext, parameters);
+
+        if (operationContext.IsModified)
+            ctx.Save(outputPath);
+
+        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Inserts rows at the specified position.
+    ///     Builds OperationParameters from method parameters.
     /// </summary>
-    /// <param name="ctx">The document context containing the workbook.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The zero-based index of the worksheet.</param>
-    /// <param name="rowIndex">The zero-based index where rows will be inserted.</param>
-    /// <param name="count">The number of rows to insert.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    private static string InsertRow(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex, int rowIndex,
-        int count)
-    {
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-
-        worksheet.Cells.InsertRows(rowIndex, count);
-
-        ctx.Save(outputPath);
-        return $"Inserted {count} row(s) at row {rowIndex}. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Deletes rows starting from the specified position.
-    /// </summary>
-    /// <param name="ctx">The document context containing the workbook.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The zero-based index of the worksheet.</param>
-    /// <param name="rowIndex">The zero-based index of the first row to delete.</param>
-    /// <param name="count">The number of rows to delete.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    private static string DeleteRow(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex, int rowIndex,
-        int count)
-    {
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-
-        worksheet.Cells.DeleteRows(rowIndex, count);
-
-        ctx.Save(outputPath);
-        return $"Deleted {count} row(s) starting from row {rowIndex}. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Inserts columns at the specified position.
-    /// </summary>
-    /// <param name="ctx">The document context containing the workbook.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The zero-based index of the worksheet.</param>
-    /// <param name="columnIndex">The zero-based index where columns will be inserted.</param>
-    /// <param name="count">The number of columns to insert.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    private static string InsertColumn(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex,
-        int columnIndex, int count)
-    {
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-
-        worksheet.Cells.InsertColumns(columnIndex, count);
-
-        ctx.Save(outputPath);
-        return $"Inserted {count} column(s) at column {columnIndex}. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Deletes columns starting from the specified position.
-    /// </summary>
-    /// <param name="ctx">The document context containing the workbook.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The zero-based index of the worksheet.</param>
-    /// <param name="columnIndex">The zero-based index of the first column to delete.</param>
-    /// <param name="count">The number of columns to delete.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    private static string DeleteColumn(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex,
-        int columnIndex, int count)
-    {
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-
-        worksheet.Cells.DeleteColumns(columnIndex, count, true);
-
-        ctx.Save(outputPath);
-        return $"Deleted {count} column(s) starting from column {columnIndex}. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Inserts cells in a range and shifts existing cells.
-    /// </summary>
-    /// <param name="ctx">The document context containing the workbook.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The zero-based index of the worksheet.</param>
-    /// <param name="range">The cell range where cells will be inserted (e.g., 'A1:C5').</param>
-    /// <param name="shiftDirection">The direction to shift existing cells ('Right' or 'Down').</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when range or shiftDirection is null or empty.</exception>
-    private static string InsertCells(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex, string? range,
+    private static OperationParameters BuildParameters(
+        string operation,
+        int sheetIndex,
+        int rowIndex,
+        int columnIndex,
+        string? range,
+        int count,
         string? shiftDirection)
     {
-        if (string.IsNullOrEmpty(range))
-            throw new ArgumentException("range is required for insert_cells operation");
-        if (string.IsNullOrEmpty(shiftDirection))
-            throw new ArgumentException("shiftDirection is required for insert_cells operation");
+        var parameters = new OperationParameters();
+        parameters.Set("sheetIndex", sheetIndex);
 
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
+        switch (operation.ToLowerInvariant())
+        {
+            case "insert_row":
+            case "delete_row":
+                parameters.Set("rowIndex", rowIndex);
+                parameters.Set("count", count);
+                break;
 
-        var rangeObj = ExcelHelper.CreateRange(worksheet.Cells, range);
-        var shiftType = string.Equals(shiftDirection, "right", StringComparison.OrdinalIgnoreCase)
-            ? ShiftType.Right
-            : ShiftType.Down;
+            case "insert_column":
+            case "delete_column":
+                parameters.Set("columnIndex", columnIndex);
+                parameters.Set("count", count);
+                break;
 
-        var cellArea = CellArea.CreateCellArea(
-            rangeObj.FirstRow,
-            rangeObj.FirstColumn,
-            rangeObj.FirstRow + rangeObj.RowCount - 1,
-            rangeObj.FirstColumn + rangeObj.ColumnCount - 1);
+            case "insert_cells":
+            case "delete_cells":
+                if (range != null) parameters.Set("range", range);
+                if (shiftDirection != null) parameters.Set("shiftDirection", shiftDirection);
+                break;
+        }
 
-        worksheet.Cells.InsertRange(cellArea, shiftType);
-
-        ctx.Save(outputPath);
-        return $"Cells inserted in range {range}, shifted {shiftDirection}. {ctx.GetOutputMessage(outputPath)}";
-    }
-
-    /// <summary>
-    ///     Deletes cells in a range and shifts remaining cells.
-    /// </summary>
-    /// <param name="ctx">The document context containing the workbook.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The zero-based index of the worksheet.</param>
-    /// <param name="range">The cell range where cells will be deleted (e.g., 'A1:C5').</param>
-    /// <param name="shiftDirection">The direction to shift remaining cells ('Left' or 'Up').</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when range or shiftDirection is null or empty.</exception>
-    private static string DeleteCells(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex, string? range,
-        string? shiftDirection)
-    {
-        if (string.IsNullOrEmpty(range))
-            throw new ArgumentException("range is required for delete_cells operation");
-        if (string.IsNullOrEmpty(shiftDirection))
-            throw new ArgumentException("shiftDirection is required for delete_cells operation");
-
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-
-        var rangeObj = ExcelHelper.CreateRange(worksheet.Cells, range);
-        var shiftType = string.Equals(shiftDirection, "left", StringComparison.OrdinalIgnoreCase)
-            ? ShiftType.Left
-            : ShiftType.Up;
-
-        worksheet.Cells.DeleteRange(
-            rangeObj.FirstRow,
-            rangeObj.FirstColumn,
-            rangeObj.FirstRow + rangeObj.RowCount - 1,
-            rangeObj.FirstColumn + rangeObj.ColumnCount - 1,
-            shiftType);
-
-        ctx.Save(outputPath);
-        return $"Cells deleted in range {range}, shifted {shiftDirection}. {ctx.GetOutputMessage(outputPath)}";
+        return parameters;
     }
 }

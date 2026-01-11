@@ -1,21 +1,23 @@
 using System.ComponentModel;
-using System.Drawing;
-using System.Text.Json;
 using Aspose.Cells;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.Excel.Style;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
 
 /// <summary>
-///     Unified tool for managing Excel styles (create, apply, get, format cells)
-///     Merges: ExcelCreateStyleTool, ExcelApplyStyleTool, ExcelGetStylesTool, ExcelFormatCellsTool,
-///     ExcelBatchFormatCellsTool, ExcelGetCellFormatTool, ExcelCopySheetFormatTool
+///     Unified tool for managing Excel styles (format, get_format, copy_sheet_format)
 /// </summary>
 [McpServerToolType]
 public class ExcelStyleTool
 {
+    /// <summary>
+    ///     Handler registry for style operations.
+    /// </summary>
+    private readonly HandlerRegistry<Workbook> _handlerRegistry;
+
     /// <summary>
     ///     Session identity accessor for session isolation support.
     /// </summary>
@@ -36,6 +38,7 @@ public class ExcelStyleTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = ExcelStyleHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -130,366 +133,99 @@ Usage examples:
     {
         using var ctx = DocumentContext<Workbook>.Create(_sessionManager, sessionId, path, _identityAccessor);
 
-        return operation.ToLower() switch
+        var parameters = BuildParameters(operation, sheetIndex, sourceSheetIndex, targetSheetIndex, range, cell,
+            fields, ranges, fontName, fontSize, bold, italic, fontColor, backgroundColor, patternType, patternColor,
+            numberFormat, borderStyle, borderColor, horizontalAlignment, verticalAlignment,
+            copyColumnWidths, copyRowHeights);
+
+        var handler = _handlerRegistry.GetHandler(operation);
+
+        var operationContext = new OperationContext<Workbook>
         {
-            "format" => FormatCells(ctx, outputPath, sheetIndex, range, ranges, fontName, fontSize, bold, italic,
-                fontColor, backgroundColor, patternType, patternColor, numberFormat, borderStyle, borderColor,
-                horizontalAlignment, verticalAlignment),
-            "get_format" => GetCellFormat(ctx, sheetIndex, cell, range, fields),
-            "copy_sheet_format" => CopySheetFormat(ctx, outputPath, sourceSheetIndex, targetSheetIndex,
-                copyColumnWidths, copyRowHeights),
-            _ => throw new ArgumentException($"Unknown operation: {operation}")
-        };
-    }
-
-    /// <summary>
-    ///     Applies formatting to cells in a range.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <param name="range">The cell range to format.</param>
-    /// <param name="rangesJson">JSON array of cell ranges for batch formatting.</param>
-    /// <param name="fontName">The font name to apply.</param>
-    /// <param name="fontSize">The font size to apply.</param>
-    /// <param name="bold">Whether to apply bold formatting.</param>
-    /// <param name="italic">Whether to apply italic formatting.</param>
-    /// <param name="fontColor">The font color in hex format.</param>
-    /// <param name="backgroundColor">The background color in hex format.</param>
-    /// <param name="patternType">The fill pattern type.</param>
-    /// <param name="patternColor">The pattern color in hex format.</param>
-    /// <param name="numberFormat">The number format string.</param>
-    /// <param name="borderStyle">The border style.</param>
-    /// <param name="borderColor">The border color in hex format.</param>
-    /// <param name="horizontalAlignment">The horizontal alignment.</param>
-    /// <param name="verticalAlignment">The vertical alignment.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when the font color is invalid or neither range nor ranges is provided.</exception>
-    private static string FormatCells(DocumentContext<Workbook> ctx, string? outputPath, int sheetIndex,
-        string? range, string? rangesJson, string? fontName, int? fontSize, bool? bold, bool? italic,
-        string? fontColor, string? backgroundColor, string? patternType, string? patternColor,
-        string? numberFormat, string? borderStyle, string? borderColor,
-        string? horizontalAlignment, string? verticalAlignment)
-    {
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var style = workbook.CreateStyle();
-
-        try
-        {
-            FontHelper.Excel.ApplyFontSettings(
-                style,
-                fontName,
-                fontSize,
-                bold,
-                italic,
-                fontColor
-            );
-        }
-        catch (Exception colorEx) when (colorEx is ArgumentException && !string.IsNullOrWhiteSpace(fontColor))
-        {
-            throw new ArgumentException(
-                $"Unable to parse font color '{fontColor}': {colorEx.Message}. Please use a valid color format (e.g., #FF0000, 255,0,0, or red)");
-        }
-
-        if (!string.IsNullOrWhiteSpace(backgroundColor) || !string.IsNullOrWhiteSpace(patternType))
-        {
-            var bgPattern = BackgroundType.Solid;
-            if (!string.IsNullOrWhiteSpace(patternType))
-                bgPattern = patternType.ToLower() switch
-                {
-                    "solid" => BackgroundType.Solid,
-                    "gray50" => BackgroundType.Gray50,
-                    "gray75" => BackgroundType.Gray75,
-                    "gray25" => BackgroundType.Gray25,
-                    "horizontalstripe" => BackgroundType.HorizontalStripe,
-                    "verticalstripe" => BackgroundType.VerticalStripe,
-                    "diagonalstripe" => BackgroundType.DiagonalStripe,
-                    "reversediagonalstripe" => BackgroundType.ReverseDiagonalStripe,
-                    "diagonalcrosshatch" => BackgroundType.DiagonalCrosshatch,
-                    "thickdiagonalcrosshatch" => BackgroundType.ThickDiagonalCrosshatch,
-                    "thinhorizontalstripe" => BackgroundType.ThinHorizontalStripe,
-                    "thinverticalstripe" => BackgroundType.ThinVerticalStripe,
-                    "thinreversediagonalstripe" => BackgroundType.ThinReverseDiagonalStripe,
-                    "thindiagonalstripe" => BackgroundType.ThinDiagonalStripe,
-                    "thinhorizontalcrosshatch" => BackgroundType.ThinHorizontalCrosshatch,
-                    "thindiagonalcrosshatch" => BackgroundType.ThinDiagonalCrosshatch,
-                    _ => BackgroundType.Solid
-                };
-
-            style.Pattern = bgPattern;
-
-            if (!string.IsNullOrWhiteSpace(backgroundColor))
-                style.ForegroundColor = ColorHelper.ParseColor(backgroundColor, true);
-
-            if (!string.IsNullOrWhiteSpace(patternColor))
-                style.BackgroundColor = ColorHelper.ParseColor(patternColor, true);
-        }
-
-        if (!string.IsNullOrEmpty(numberFormat))
-        {
-            if (int.TryParse(numberFormat, out var formatNumber))
-                style.Number = formatNumber;
-            else
-                style.Custom = numberFormat;
-        }
-
-        if (!string.IsNullOrEmpty(horizontalAlignment))
-            style.HorizontalAlignment = horizontalAlignment.ToLower() switch
-            {
-                "left" => TextAlignmentType.Left,
-                "center" => TextAlignmentType.Center,
-                "right" => TextAlignmentType.Right,
-                _ => TextAlignmentType.Left
-            };
-
-        if (!string.IsNullOrEmpty(verticalAlignment))
-            style.VerticalAlignment = verticalAlignment.ToLower() switch
-            {
-                "top" => TextAlignmentType.Top,
-                "center" => TextAlignmentType.Center,
-                "bottom" => TextAlignmentType.Bottom,
-                _ => TextAlignmentType.Center
-            };
-
-        if (!string.IsNullOrEmpty(borderStyle))
-        {
-            var borderType = borderStyle.ToLower() switch
-            {
-                "none" => CellBorderType.None,
-                "thin" => CellBorderType.Thin,
-                "medium" => CellBorderType.Medium,
-                "thick" => CellBorderType.Thick,
-                "dotted" => CellBorderType.Dotted,
-                "dashed" => CellBorderType.Dashed,
-                "double" => CellBorderType.Double,
-                _ => CellBorderType.Thin
-            };
-
-            var borderColorValue = Color.Black;
-            if (!string.IsNullOrWhiteSpace(borderColor))
-                borderColorValue = ColorHelper.ParseColor(borderColor, true);
-
-            style.SetBorder(BorderType.TopBorder, borderType, borderColorValue);
-            style.SetBorder(BorderType.BottomBorder, borderType, borderColorValue);
-            style.SetBorder(BorderType.LeftBorder, borderType, borderColorValue);
-            style.SetBorder(BorderType.RightBorder, borderType, borderColorValue);
-        }
-
-        var styleFlag = new StyleFlag
-        {
-            All = true,
-            Borders = !string.IsNullOrEmpty(borderStyle)
+            Document = ctx.Document,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = path,
+            OutputPath = outputPath
         };
 
-        if (!string.IsNullOrEmpty(rangesJson))
-        {
-            var rangesList = JsonSerializer.Deserialize<List<string>>(rangesJson);
-            if (rangesList != null)
-                foreach (var rangeStr in rangesList)
-                    if (!string.IsNullOrEmpty(rangeStr))
-                    {
-                        var cellRange = ExcelHelper.CreateRange(worksheet.Cells, rangeStr);
-                        cellRange.ApplyStyle(style, styleFlag);
-                    }
-        }
-        else if (!string.IsNullOrEmpty(range))
-        {
-            var cellRange = ExcelHelper.CreateRange(worksheet.Cells, range);
-            cellRange.ApplyStyle(style, styleFlag);
-        }
-        else
-        {
-            throw new ArgumentException("Either range or ranges must be provided for format operation");
-        }
+        var result = handler.Execute(operationContext, parameters);
 
-        ctx.Save(outputPath);
-        return $"Cells formatted in sheet {sheetIndex}. {ctx.GetOutputMessage(outputPath)}";
+        if (operation.ToLowerInvariant() == "get_format")
+            return result;
+
+        if (operationContext.IsModified)
+            ctx.Save(outputPath);
+
+        return $"{result}\n{ctx.GetOutputMessage(outputPath)}";
     }
 
     /// <summary>
-    ///     Gets format information from cells.
+    ///     Builds OperationParameters from method parameters.
     /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="sheetIndex">The worksheet index.</param>
-    /// <param name="cell">The cell address.</param>
-    /// <param name="range">The cell range.</param>
-    /// <param name="fieldsParam">Comma-separated list of fields to retrieve.</param>
-    /// <returns>A JSON string containing the format information.</returns>
-    /// <exception cref="ArgumentException">Thrown when neither cell nor range is provided, or the cell range is invalid.</exception>
-    private static string GetCellFormat(DocumentContext<Workbook> ctx, int sheetIndex, string? cell, string? range,
-        string? fieldsParam)
+    private static OperationParameters BuildParameters(
+        string operation,
+        int sheetIndex,
+        int sourceSheetIndex,
+        int targetSheetIndex,
+        string? range,
+        string? cell,
+        string? fields,
+        string? ranges,
+        string? fontName,
+        int? fontSize,
+        bool? bold,
+        bool? italic,
+        string? fontColor,
+        string? backgroundColor,
+        string? patternType,
+        string? patternColor,
+        string? numberFormat,
+        string? borderStyle,
+        string? borderColor,
+        string? horizontalAlignment,
+        string? verticalAlignment,
+        bool copyColumnWidths,
+        bool copyRowHeights)
     {
-        if (string.IsNullOrEmpty(cell) && string.IsNullOrEmpty(range))
-            throw new ArgumentException("Either cell or range is required for get_format operation");
+        var parameters = new OperationParameters();
+        parameters.Set("sheetIndex", sheetIndex);
 
-        var cellOrRange = cell ?? range!;
-        var requestedFields = ParseFields(fieldsParam);
-
-        var workbook = ctx.Document;
-        var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
-        var cells = worksheet.Cells;
-
-        try
+        switch (operation.ToLowerInvariant())
         {
-            var cellRange = ExcelHelper.CreateRange(cells, cellOrRange);
-            var startRow = cellRange.FirstRow;
-            var endRow = cellRange.FirstRow + cellRange.RowCount - 1;
-            var startCol = cellRange.FirstColumn;
-            var endCol = cellRange.FirstColumn + cellRange.ColumnCount - 1;
+            case "format":
+                if (range != null) parameters.Set("range", range);
+                if (ranges != null) parameters.Set("ranges", ranges);
+                if (fontName != null) parameters.Set("fontName", fontName);
+                if (fontSize.HasValue) parameters.Set("fontSize", fontSize.Value);
+                if (bold.HasValue) parameters.Set("bold", bold.Value);
+                if (italic.HasValue) parameters.Set("italic", italic.Value);
+                if (fontColor != null) parameters.Set("fontColor", fontColor);
+                if (backgroundColor != null) parameters.Set("backgroundColor", backgroundColor);
+                if (patternType != null) parameters.Set("patternType", patternType);
+                if (patternColor != null) parameters.Set("patternColor", patternColor);
+                if (numberFormat != null) parameters.Set("numberFormat", numberFormat);
+                if (borderStyle != null) parameters.Set("borderStyle", borderStyle);
+                if (borderColor != null) parameters.Set("borderColor", borderColor);
+                if (horizontalAlignment != null) parameters.Set("horizontalAlignment", horizontalAlignment);
+                if (verticalAlignment != null) parameters.Set("verticalAlignment", verticalAlignment);
+                break;
 
-            List<Dictionary<string, object?>> cellList = [];
-            for (var row = startRow; row <= endRow; row++)
-            for (var col = startCol; col <= endCol; col++)
-            {
-                var cellObj = cells[row, col];
-                var style = cellObj.GetStyle();
+            case "get_format":
+                if (cell != null) parameters.Set("cell", cell);
+                if (range != null) parameters.Set("range", range);
+                if (fields != null) parameters.Set("fields", fields);
+                break;
 
-                var cellData = new Dictionary<string, object?>
-                {
-                    ["cell"] = CellsHelper.CellIndexToName(row, col)
-                };
-
-                if (requestedFields.Contains("value") || requestedFields.Contains("all"))
-                {
-                    cellData["value"] = cellObj.Value?.ToString() ?? "(empty)";
-                    cellData["formula"] = cellObj.Formula;
-                    cellData["dataType"] = cellObj.Type.ToString();
-                }
-
-                var formatData = new Dictionary<string, object?>();
-
-                if (requestedFields.Contains("font") || requestedFields.Contains("all"))
-                {
-                    formatData["fontName"] = style.Font.Name;
-                    formatData["fontSize"] = style.Font.Size;
-                    formatData["bold"] = style.Font.IsBold;
-                    formatData["italic"] = style.Font.IsItalic;
-                    formatData["underline"] = style.Font.Underline.ToString();
-                    formatData["strikethrough"] = style.Font.IsStrikeout;
-                }
-
-                if (requestedFields.Contains("color") || requestedFields.Contains("all"))
-                {
-                    formatData["fontColor"] = style.Font.Color.ToString();
-                    formatData["foregroundColor"] = style.ForegroundColor.ToString();
-                    formatData["backgroundColor"] = style.BackgroundColor.ToString();
-                    formatData["patternType"] = style.Pattern.ToString();
-                }
-
-                if (requestedFields.Contains("alignment") || requestedFields.Contains("all"))
-                {
-                    formatData["horizontalAlignment"] = style.HorizontalAlignment.ToString();
-                    formatData["verticalAlignment"] = style.VerticalAlignment.ToString();
-                }
-
-                if (requestedFields.Contains("number") || requestedFields.Contains("all"))
-                {
-                    formatData["numberFormat"] = style.Number;
-                    formatData["customFormat"] = style.Custom;
-                }
-
-                if (requestedFields.Contains("border") || requestedFields.Contains("all"))
-                {
-                    var topBorder = style.Borders[BorderType.TopBorder];
-                    var bottomBorder = style.Borders[BorderType.BottomBorder];
-                    var leftBorder = style.Borders[BorderType.LeftBorder];
-                    var rightBorder = style.Borders[BorderType.RightBorder];
-
-                    formatData["borders"] = new
-                    {
-                        top = new { lineStyle = topBorder.LineStyle.ToString(), color = topBorder.Color.ToString() },
-                        bottom = new
-                            { lineStyle = bottomBorder.LineStyle.ToString(), color = bottomBorder.Color.ToString() },
-                        left = new { lineStyle = leftBorder.LineStyle.ToString(), color = leftBorder.Color.ToString() },
-                        right = new
-                        {
-                            lineStyle = rightBorder.LineStyle.ToString(), color = rightBorder.Color.ToString()
-                        }
-                    };
-                }
-
-                if (formatData.Count > 0)
-                    cellData["format"] = formatData;
-
-                cellList.Add(cellData);
-            }
-
-            var result = new
-            {
-                count = cellList.Count,
-                worksheetName = worksheet.Name,
-                range = cellOrRange,
-                fields = fieldsParam ?? "all",
-                items = cellList
-            };
-
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
-        }
-        catch (Exception ex)
-        {
-            throw new ArgumentException(
-                $"Invalid cell range: '{cellOrRange}'. Expected format: single cell (e.g., 'A1') or range (e.g., 'A1:C5'). Error: {ex.Message}");
-        }
-    }
-
-    /// <summary>
-    ///     Parses comma-separated field names into a set.
-    /// </summary>
-    /// <param name="fieldsParam">Comma-separated list of field names.</param>
-    /// <returns>A set of field names, or a set containing "all" if no fields are specified.</returns>
-    private static HashSet<string> ParseFields(string? fieldsParam)
-    {
-        if (string.IsNullOrWhiteSpace(fieldsParam))
-            return ["all"];
-
-        var fields = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var field in fieldsParam.Split(',',
-                     StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            fields.Add(field.ToLower());
-
-        return fields.Count == 0 ? ["all"] : fields;
-    }
-
-    /// <summary>
-    ///     Copies format from one sheet to another.
-    /// </summary>
-    /// <param name="ctx">The document context.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="sourceSheetIndex">The source worksheet index.</param>
-    /// <param name="targetSheetIndex">The target worksheet index.</param>
-    /// <param name="copyColumnWidths">Whether to copy column widths.</param>
-    /// <param name="copyRowHeights">Whether to copy row heights.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    private static string CopySheetFormat(DocumentContext<Workbook> ctx, string? outputPath,
-        int sourceSheetIndex, int targetSheetIndex, bool copyColumnWidths, bool copyRowHeights)
-    {
-        var workbook = ctx.Document;
-        var sourceSheet = ExcelHelper.GetWorksheet(workbook, sourceSheetIndex);
-        var targetSheet = ExcelHelper.GetWorksheet(workbook, targetSheetIndex);
-
-        if (copyColumnWidths)
-        {
-            // Use MaxColumn to include columns with formatting but no data
-            // If both are negative (no data/formatting), copy at least the first column
-            var maxCol = Math.Max(sourceSheet.Cells.MaxColumn, sourceSheet.Cells.MaxDataColumn);
-            maxCol = Math.Max(maxCol, 0); // Ensure at least column 0 is copied
-            for (var i = 0; i <= maxCol; i++)
-                targetSheet.Cells.SetColumnWidth(i, sourceSheet.Cells.GetColumnWidth(i));
+            case "copy_sheet_format":
+                parameters.Set("sourceSheetIndex", sourceSheetIndex);
+                parameters.Set("targetSheetIndex", targetSheetIndex);
+                parameters.Set("copyColumnWidths", copyColumnWidths);
+                parameters.Set("copyRowHeights", copyRowHeights);
+                break;
         }
 
-        if (copyRowHeights)
-        {
-            // Use MaxRow to include rows with formatting but no data
-            // If both are negative (no data/formatting), copy at least the first row
-            var maxRow = Math.Max(sourceSheet.Cells.MaxRow, sourceSheet.Cells.MaxDataRow);
-            maxRow = Math.Max(maxRow, 0); // Ensure at least row 0 is copied
-            for (var i = 0; i <= maxRow; i++)
-                targetSheet.Cells.SetRowHeight(i, sourceSheet.Cells.GetRowHeight(i));
-        }
-
-        ctx.Save(outputPath);
-        return
-            $"Sheet format copied from sheet {sourceSheetIndex} to sheet {targetSheetIndex}. {ctx.GetOutputMessage(outputPath)}";
+        return parameters;
     }
 }

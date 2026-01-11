@@ -96,7 +96,7 @@ public class TrackingConfigTests
     {
         var evt = new TrackingEvent
         {
-            TenantId = "tenant1",
+            GroupId = "group1",
             UserId = "user1",
             Tool = "pdf_text",
             Operation = "get",
@@ -107,7 +107,7 @@ public class TrackingConfigTests
             RequestId = "req_abc"
         };
 
-        Assert.Equal("tenant1", evt.TenantId);
+        Assert.Equal("group1", evt.GroupId);
         Assert.Equal("user1", evt.UserId);
         Assert.Equal("pdf_text", evt.Tool);
         Assert.Equal("get", evt.Operation);
@@ -187,6 +187,7 @@ public class TrackingConfigTests
     public void TrackingConfig_Validate_InvalidTimeout_ShouldResetToDefault()
     {
         var config = TrackingConfig.LoadFromArgs(["--webhook-timeout:0"]);
+        config.Validate();
         Assert.Equal(5, config.WebhookTimeoutSeconds);
     }
 
@@ -194,6 +195,7 @@ public class TrackingConfigTests
     public void TrackingConfig_Validate_NegativeTimeout_ShouldResetToDefault()
     {
         var config = TrackingConfig.LoadFromArgs(["--webhook-timeout:-1"]);
+        config.Validate();
         Assert.Equal(5, config.WebhookTimeoutSeconds);
     }
 
@@ -201,6 +203,7 @@ public class TrackingConfigTests
     public void TrackingConfig_Validate_TooLargeTimeout_ShouldResetToDefault()
     {
         var config = TrackingConfig.LoadFromArgs(["--webhook-timeout:500"]);
+        config.Validate();
         Assert.Equal(5, config.WebhookTimeoutSeconds);
     }
 
@@ -208,6 +211,7 @@ public class TrackingConfigTests
     public void TrackingConfig_Validate_MetricsPathWithoutSlash_ShouldAddSlash()
     {
         var config = TrackingConfig.LoadFromArgs(["--metrics-path:metrics"]);
+        config.Validate();
         Assert.Equal("/metrics", config.MetricsPath);
     }
 

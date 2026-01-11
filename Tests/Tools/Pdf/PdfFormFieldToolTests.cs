@@ -6,6 +6,11 @@ using AsposeMcpServer.Tools.Pdf;
 
 namespace AsposeMcpServer.Tests.Tools.Pdf;
 
+/// <summary>
+///     Integration tests for PdfFormFieldTool.
+///     Focuses on session management, file I/O, and operation routing.
+///     Detailed parameter validation and business logic tests are in Handler tests.
+/// </summary>
 public class PdfFormFieldToolTests : PdfTestBase
 {
     private readonly PdfFormFieldTool _tool;
@@ -40,22 +45,7 @@ public class PdfFormFieldToolTests : PdfTestBase
         return filePath;
     }
 
-    private string CreatePdfWithCheckBox(string fileName, string fieldName = "testCheckBox")
-    {
-        var filePath = CreateTestFilePath(fileName);
-        using var document = new Document();
-        var page = document.Pages.Add();
-        var checkBox = new CheckboxField(page, new Rectangle(100, 700, 120, 720))
-        {
-            PartialName = fieldName,
-            Checked = false
-        };
-        document.Form.Add(checkBox);
-        document.Save(filePath);
-        return filePath;
-    }
-
-    #region General
+    #region File I/O Smoke Tests
 
     [Fact]
     public void Add_TextField_ShouldAddField()
@@ -68,75 +58,6 @@ public class PdfFormFieldToolTests : PdfTestBase
         Assert.StartsWith("Added", result);
         using var document = new Document(outputPath);
         Assert.True(document.Form.Count > 0);
-    }
-
-    [Fact]
-    public void Add_TextBox_ShouldAddField()
-    {
-        var pdfPath = CreateTestPdf("test_add_textbox.pdf");
-        var outputPath = CreateTestFilePath("test_add_textbox_output.pdf");
-        var result = _tool.Execute("add", pdfPath, outputPath: outputPath,
-            fieldType: "TextBox", fieldName: "textBoxField",
-            pageIndex: 1, x: 100, y: 700, width: 200, height: 20);
-        Assert.StartsWith("Added", result);
-        using var document = new Document(outputPath);
-        Assert.True(document.Form.Count > 0);
-    }
-
-    [Fact]
-    public void Add_CheckBox_ShouldAddField()
-    {
-        var pdfPath = CreateTestPdf("test_add_checkbox.pdf");
-        var outputPath = CreateTestFilePath("test_add_checkbox_output.pdf");
-        var result = _tool.Execute("add", pdfPath, outputPath: outputPath,
-            fieldType: "CheckBox", fieldName: "checkBoxField",
-            pageIndex: 1, x: 100, y: 700, width: 20, height: 20);
-        Assert.StartsWith("Added", result);
-        using var document = new Document(outputPath);
-        Assert.True(document.Form.Count > 0);
-    }
-
-    [Fact]
-    public void Add_RadioButton_ShouldAddField()
-    {
-        var pdfPath = CreateTestPdf("test_add_radio.pdf");
-        var outputPath = CreateTestFilePath("test_add_radio_output.pdf");
-        var result = _tool.Execute("add", pdfPath, outputPath: outputPath,
-            fieldType: "RadioButton", fieldName: "radioField",
-            pageIndex: 1, x: 100, y: 700, width: 20, height: 20);
-        Assert.StartsWith("Added", result);
-        using var document = new Document(outputPath);
-        Assert.True(document.Form.Count > 0);
-    }
-
-    [Fact]
-    public void Add_RadioButton_WithDefaultValue_ShouldUseAsOptionName()
-    {
-        var pdfPath = CreateTestPdf("test_add_radio_option.pdf");
-        var outputPath = CreateTestFilePath("test_add_radio_option_output.pdf");
-        var result = _tool.Execute("add", pdfPath, outputPath: outputPath,
-            fieldType: "RadioButton", fieldName: "radioField",
-            pageIndex: 1, x: 100, y: 700, width: 20, height: 20,
-            defaultValue: "CustomOption");
-        Assert.StartsWith("Added", result);
-        using var document = new Document(outputPath);
-        var field = document.Form["radioField"] as RadioButtonField;
-        Assert.NotNull(field);
-    }
-
-    [Fact]
-    public void Add_WithDefaultValue_ShouldSetValue()
-    {
-        var pdfPath = CreateTestPdf("test_add_default.pdf");
-        var outputPath = CreateTestFilePath("test_add_default_output.pdf");
-        _tool.Execute("add", pdfPath, outputPath: outputPath,
-            fieldType: "TextField", fieldName: "fieldWithDefault",
-            pageIndex: 1, x: 100, y: 700, width: 200, height: 20,
-            defaultValue: "Default Text");
-        using var document = new Document(outputPath);
-        var field = document.Form["fieldWithDefault"] as TextBoxField;
-        Assert.NotNull(field);
-        Assert.Equal("Default Text", field.Value);
     }
 
     [Fact]
@@ -166,20 +87,6 @@ public class PdfFormFieldToolTests : PdfTestBase
     }
 
     [Fact]
-    public void Edit_CheckBox_ShouldUpdateCheckedState()
-    {
-        var pdfPath = CreatePdfWithCheckBox("test_edit_checkbox.pdf", "checkToEdit");
-        var outputPath = CreateTestFilePath("test_edit_checkbox_output.pdf");
-        var result = _tool.Execute("edit", pdfPath, outputPath: outputPath,
-            fieldName: "checkToEdit", checkedValue: true);
-        Assert.StartsWith("Edited", result);
-        using var document = new Document(outputPath);
-        var field = document.Form["checkToEdit"] as CheckboxField;
-        Assert.NotNull(field);
-        Assert.True(field.Checked);
-    }
-
-    [Fact]
     public void Get_WithFields_ShouldReturnFieldInfo()
     {
         var pdfPath = CreatePdfWithTextField("test_get.pdf");
@@ -189,47 +96,15 @@ public class PdfFormFieldToolTests : PdfTestBase
         Assert.True(json.TryGetProperty("items", out _));
     }
 
-    [Fact]
-    public void Get_WithNoFields_ShouldReturnEmptyResult()
-    {
-        var pdfPath = CreateTestPdf("test_get_empty.pdf");
-        var result = _tool.Execute("get", pdfPath);
-        var json = JsonSerializer.Deserialize<JsonElement>(result);
-        Assert.Equal(0, json.GetProperty("count").GetInt32());
-        Assert.Contains("No form fields found", result);
-    }
+    #endregion
 
-    [Fact]
-    public void Get_WithLimit_ShouldRespectLimit()
-    {
-        var pdfPath = CreateTestFilePath("test_get_limit.pdf");
-        using (var document = new Document())
-        {
-            var page = document.Pages.Add();
-            for (var i = 0; i < 5; i++)
-            {
-                var field = new TextBoxField(page, new Rectangle(100, 700 - i * 30, 300, 720 - i * 30))
-                {
-                    PartialName = $"field{i}"
-                };
-                document.Form.Add(field);
-            }
-
-            document.Save(pdfPath);
-        }
-
-        var result = _tool.Execute("get", pdfPath, limit: 3);
-        var json = JsonSerializer.Deserialize<JsonElement>(result);
-        Assert.Equal(3, json.GetProperty("count").GetInt32());
-        Assert.Equal(5, json.GetProperty("totalCount").GetInt32());
-        Assert.True(json.GetProperty("truncated").GetBoolean());
-    }
+    #region Operation Routing
 
     [Theory]
     [InlineData("ADD")]
     [InlineData("Add")]
     [InlineData("add")]
-    public void Operation_ShouldBeCaseInsensitive_Add(string operation)
+    public void Operation_ShouldBeCaseInsensitive(string operation)
     {
         var pdfPath = CreateTestPdf($"test_case_{operation}.pdf");
         var outputPath = CreateTestFilePath($"test_case_{operation}_output.pdf");
@@ -239,21 +114,6 @@ public class PdfFormFieldToolTests : PdfTestBase
         Assert.StartsWith("Added", result);
     }
 
-    [Theory]
-    [InlineData("GET")]
-    [InlineData("Get")]
-    [InlineData("get")]
-    public void Operation_ShouldBeCaseInsensitive_Get(string operation)
-    {
-        var pdfPath = CreateTestPdf($"test_case_get_{operation}.pdf");
-        var result = _tool.Execute(operation, pdfPath);
-        Assert.Contains("count", result);
-    }
-
-    #endregion
-
-    #region Exception
-
     [Fact]
     public void Execute_WithUnknownOperation_ShouldThrowArgumentException()
     {
@@ -262,111 +122,9 @@ public class PdfFormFieldToolTests : PdfTestBase
         Assert.Contains("Unknown operation", ex.Message);
     }
 
-    [Fact]
-    public void Add_WithInvalidPageIndex_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreateTestPdf("test_add_invalid_page.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", pdfPath, fieldType: "TextBox", fieldName: "field",
-                pageIndex: 99, x: 100, y: 700, width: 200, height: 20));
-        Assert.Contains("pageIndex must be between", ex.Message);
-    }
-
-    [Fact]
-    public void Add_WithMissingFieldName_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreateTestPdf("test_add_no_name.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", pdfPath, fieldType: "TextField",
-                pageIndex: 1, x: 100, y: 700, width: 200, height: 20));
-        Assert.Contains("fieldName is required", ex.Message);
-    }
-
-    [Fact]
-    public void Add_WithMissingFieldType_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreateTestPdf("test_add_no_type.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", pdfPath, fieldName: "field",
-                pageIndex: 1, x: 100, y: 700, width: 200, height: 20));
-        Assert.Contains("fieldType is required", ex.Message);
-    }
-
-    [Fact]
-    public void Add_WithUnknownFieldType_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreateTestPdf("test_add_unknown_type.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", pdfPath, fieldType: "UnknownType", fieldName: "field",
-                pageIndex: 1, x: 100, y: 700, width: 200, height: 20));
-        Assert.Contains("Unknown field type", ex.Message);
-    }
-
-    [Fact]
-    public void Add_WithDuplicateName_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreatePdfWithTextField("test_add_duplicate.pdf", "existingField");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", pdfPath, fieldType: "TextBox", fieldName: "existingField",
-                pageIndex: 1, x: 100, y: 600, width: 200, height: 20));
-        Assert.Contains("already exists", ex.Message);
-    }
-
-    [Fact]
-    public void Add_WithMissingCoordinates_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreateTestPdf("test_add_no_coords.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("add", pdfPath, fieldType: "TextField", fieldName: "field",
-                pageIndex: 1, width: 200, height: 20));
-        Assert.Contains("x is required", ex.Message);
-    }
-
-    [Fact]
-    public void Delete_WithNonExistentField_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreateTestPdf("test_delete_nonexistent.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("delete", pdfPath, fieldName: "nonExistent"));
-        Assert.Contains("not found", ex.Message);
-    }
-
-    [Fact]
-    public void Delete_WithMissingFieldName_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreateTestPdf("test_delete_no_name.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("delete", pdfPath));
-        Assert.Contains("fieldName is required", ex.Message);
-    }
-
-    [Fact]
-    public void Edit_WithNonExistentField_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreateTestPdf("test_edit_nonexistent.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("edit", pdfPath, fieldName: "nonExistent", value: "test"));
-        Assert.Contains("not found", ex.Message);
-    }
-
-    [Fact]
-    public void Edit_WithMissingFieldName_ShouldThrowArgumentException()
-    {
-        var pdfPath = CreateTestPdf("test_edit_no_name.pdf");
-        var ex = Assert.Throws<ArgumentException>(() =>
-            _tool.Execute("edit", pdfPath, value: "test"));
-        Assert.Contains("fieldName is required", ex.Message);
-    }
-
-    [Fact]
-    public void Execute_WithNoPathOrSessionId_ShouldThrowException()
-    {
-        Assert.ThrowsAny<Exception>(() => _tool.Execute("get"));
-    }
-
     #endregion
 
-    #region Session
+    #region Session Management
 
     [Fact]
     public void Get_WithSessionId_ShouldGetFromSession()
@@ -382,15 +140,11 @@ public class PdfFormFieldToolTests : PdfTestBase
     {
         var pdfPath = CreateTestPdf("test_session_add.pdf");
         var sessionId = OpenSession(pdfPath);
-        var docBefore = SessionManager.GetDocument<Document>(sessionId);
-        var countBefore = docBefore.Form.Count;
         var result = _tool.Execute("add", sessionId: sessionId,
             fieldType: "TextField", fieldName: "sessionField",
             pageIndex: 1, x: 100, y: 700, width: 200, height: 20);
         Assert.StartsWith("Added", result);
         Assert.Contains("session", result);
-        var docAfter = SessionManager.GetDocument<Document>(sessionId);
-        Assert.True(docAfter.Form.Count > countBefore);
     }
 
     [Fact]
@@ -398,14 +152,9 @@ public class PdfFormFieldToolTests : PdfTestBase
     {
         var pdfPath = CreatePdfWithTextField("test_session_delete.pdf", "fieldToDelete");
         var sessionId = OpenSession(pdfPath);
-        var docBefore = SessionManager.GetDocument<Document>(sessionId);
-        var countBefore = docBefore.Form.Count;
-        Assert.True(countBefore > 0);
         var result = _tool.Execute("delete", sessionId: sessionId, fieldName: "fieldToDelete");
         Assert.StartsWith("Deleted", result);
         Assert.Contains("session", result);
-        var docAfter = SessionManager.GetDocument<Document>(sessionId);
-        Assert.True(docAfter.Form.Count < countBefore);
     }
 
     [Fact]

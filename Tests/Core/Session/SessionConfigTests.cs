@@ -98,19 +98,19 @@ public class SessionConfigTests
     #region Isolation Mode Tests
 
     [Fact]
-    public void SessionConfig_IsolationMode_DefaultShouldBeUser()
+    public void SessionConfig_IsolationMode_DefaultShouldBeGroup()
     {
         var config = new SessionConfig();
 
-        Assert.Equal(SessionIsolationMode.User, config.IsolationMode);
+        Assert.Equal(SessionIsolationMode.Group, config.IsolationMode);
     }
 
     [Fact]
     public void SessionConfig_IsolationMode_ShouldBeSettable()
     {
-        var config = new SessionConfig { IsolationMode = SessionIsolationMode.Tenant };
+        var config = new SessionConfig { IsolationMode = SessionIsolationMode.None };
 
-        Assert.Equal(SessionIsolationMode.Tenant, config.IsolationMode);
+        Assert.Equal(SessionIsolationMode.None, config.IsolationMode);
     }
 
     [Fact]
@@ -122,27 +122,19 @@ public class SessionConfigTests
     }
 
     [Fact]
-    public void SessionConfig_LoadFromArgs_IsolationTenant()
+    public void SessionConfig_LoadFromArgs_IsolationGroup()
     {
-        var config = SessionConfig.LoadFromArgs(["--session-isolation:tenant"]);
+        var config = SessionConfig.LoadFromArgs(["--session-isolation:group"]);
 
-        Assert.Equal(SessionIsolationMode.Tenant, config.IsolationMode);
-    }
-
-    [Fact]
-    public void SessionConfig_LoadFromArgs_IsolationUser()
-    {
-        var config = SessionConfig.LoadFromArgs(["--session-isolation:user"]);
-
-        Assert.Equal(SessionIsolationMode.User, config.IsolationMode);
+        Assert.Equal(SessionIsolationMode.Group, config.IsolationMode);
     }
 
     [Fact]
     public void SessionConfig_LoadFromArgs_IsolationCaseInsensitive()
     {
-        var config = SessionConfig.LoadFromArgs(["--session-isolation:TENANT"]);
+        var config = SessionConfig.LoadFromArgs(["--session-isolation:GROUP"]);
 
-        Assert.Equal(SessionIsolationMode.Tenant, config.IsolationMode);
+        Assert.Equal(SessionIsolationMode.Group, config.IsolationMode);
     }
 
     [Fact]
@@ -156,13 +148,13 @@ public class SessionConfigTests
     [Fact]
     public void SessionConfig_LoadFromEnvironment_Isolation()
     {
-        Environment.SetEnvironmentVariable("ASPOSE_SESSION_ISOLATION", "tenant");
+        Environment.SetEnvironmentVariable("ASPOSE_SESSION_ISOLATION", "group");
 
         try
         {
             var config = SessionConfig.LoadFromArgs([]);
 
-            Assert.Equal(SessionIsolationMode.Tenant, config.IsolationMode);
+            Assert.Equal(SessionIsolationMode.Group, config.IsolationMode);
         }
         finally
         {
@@ -173,13 +165,13 @@ public class SessionConfigTests
     [Fact]
     public void SessionConfig_LoadFromArgs_IsolationOverridesEnvironment()
     {
-        Environment.SetEnvironmentVariable("ASPOSE_SESSION_ISOLATION", "tenant");
+        Environment.SetEnvironmentVariable("ASPOSE_SESSION_ISOLATION", "none");
 
         try
         {
-            var config = SessionConfig.LoadFromArgs(["--session-isolation:user"]);
+            var config = SessionConfig.LoadFromArgs(["--session-isolation:group"]);
 
-            Assert.Equal(SessionIsolationMode.User, config.IsolationMode);
+            Assert.Equal(SessionIsolationMode.Group, config.IsolationMode);
         }
         finally
         {

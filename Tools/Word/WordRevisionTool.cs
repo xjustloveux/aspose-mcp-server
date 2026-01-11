@@ -1,9 +1,8 @@
 using System.ComponentModel;
-using System.Text.Json;
 using Aspose.Words;
-using Aspose.Words.Comparing;
-using AsposeMcpServer.Core.Helpers;
+using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
+using AsposeMcpServer.Handlers.Word.Revision;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Word;
@@ -15,9 +14,9 @@ namespace AsposeMcpServer.Tools.Word;
 public class WordRevisionTool
 {
     /// <summary>
-    ///     Maximum length of revision text to display in preview
+    ///     Handler registry for revision operations
     /// </summary>
-    private const int MaxRevisionTextLength = 100;
+    private readonly HandlerRegistry<Document> _handlerRegistry;
 
     /// <summary>
     ///     Identity accessor for session isolation
@@ -39,6 +38,7 @@ public class WordRevisionTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
+        _handlerRegistry = WordRevisionHandlerRegistry.Create();
     }
 
     /// <summary>
@@ -96,210 +96,88 @@ Notes:
         [Description("Ignore comments in comparison (for compare, default: false)")]
         bool ignoreComments = false)
     {
-        return operation.ToLower() switch
+        var normalizedOperation = operation.ToLower();
+
+        // Compare operation doesn't use session/document context - it loads its own files
+        if (normalizedOperation == "compare")
         {
-            "get_revisions" => GetRevisions(path, sessionId),
-            "accept_all" => AcceptAllRevisions(path, sessionId, outputPath),
-            "reject_all" => RejectAllRevisions(path, sessionId, outputPath),
-            "manage" => ManageRevision(path, sessionId, outputPath, revisionIndex, action),
-            "compare" => CompareDocuments(outputPath, originalPath, revisedPath, authorName, ignoreFormatting,
-                ignoreComments),
-            _ => throw new ArgumentException($"Unknown operation: {operation}")
-        };
-    }
+            var compareParameters = new OperationParameters();
+            if (outputPath != null) compareParameters.Set("outputPath", outputPath);
+            if (originalPath != null) compareParameters.Set("originalPath", originalPath);
+            if (revisedPath != null) compareParameters.Set("revisedPath", revisedPath);
+            compareParameters.Set("authorName", authorName);
+            compareParameters.Set("ignoreFormatting", ignoreFormatting);
+            compareParameters.Set("ignoreComments", ignoreComments);
 
-    /// <summary>
-    ///     Gets all revisions from the document with truncated text preview.
-    /// </summary>
-    /// <param name="path">The document file path.</param>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
-    /// <returns>A JSON string containing revision information.</returns>
-    private string GetRevisions(string? path, string? sessionId)
-    {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
-        var doc = ctx.Document;
+            var compareHandler = _handlerRegistry.GetHandler(normalizedOperation);
 
-        var revisions = doc.Revisions.ToList();
-        List<object> revisionList = [];
-
-        for (var i = 0; i < revisions.Count; i++)
-        {
-            var revision = revisions[i];
-            var text = revision.ParentNode?.ToString(SaveFormat.Text)?.Trim() ?? "(none)";
-            var truncatedText = TruncateText(text, MaxRevisionTextLength);
-
-            revisionList.Add(new
+            // CompareDocumentsHandler doesn't need a document context
+            var dummyContext = new OperationContext<Document>
             {
-                index = i,
-                type = revision.RevisionType.ToString(),
-                author = revision.Author,
-                date = revision.DateTime.ToString("yyyy-MM-dd HH:mm:ss"),
-                text = truncatedText
-            });
+                Document = null!,
+                SessionManager = _sessionManager,
+                IdentityAccessor = _identityAccessor,
+                SessionId = null,
+                SourcePath = null,
+                OutputPath = outputPath
+            };
+
+            return compareHandler.Execute(dummyContext, compareParameters);
         }
 
-        var result = new
+        var parameters = BuildParameters(normalizedOperation, revisionIndex, action);
+
+        var handler = _handlerRegistry.GetHandler(normalizedOperation);
+
+        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
+
+        var effectiveOutputPath = outputPath ?? path;
+
+        var operationContext = new OperationContext<Document>
         {
-            count = revisions.Count,
-            revisions = revisionList
+            Document = ctx.Document,
+            SessionManager = _sessionManager,
+            IdentityAccessor = _identityAccessor,
+            SessionId = sessionId,
+            SourcePath = path,
+            OutputPath = effectiveOutputPath
         };
 
-        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        var result = handler.Execute(operationContext, parameters);
+
+        if (operationContext.IsModified)
+            ctx.Save(effectiveOutputPath);
+
+        return ctx.IsSession ? result : $"{result}\n{ctx.GetOutputMessage(effectiveOutputPath)}";
     }
 
     /// <summary>
-    ///     Truncates text to specified maximum length with ellipsis.
+    ///     Builds OperationParameters from method parameters.
     /// </summary>
-    /// <param name="text">The text to truncate.</param>
-    /// <param name="maxLength">The maximum length before truncation.</param>
-    /// <returns>The truncated text with ellipsis if it exceeds the maximum length.</returns>
-    private static string TruncateText(string text, int maxLength)
-    {
-        if (string.IsNullOrEmpty(text) || text.Length <= maxLength)
-            return text;
-        return text[..maxLength] + "...";
-    }
-
-    /// <summary>
-    ///     Accepts all revisions in the document.
-    /// </summary>
-    /// <param name="path">The document file path.</param>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    private string AcceptAllRevisions(string? path, string? sessionId, string? outputPath)
-    {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
-        var doc = ctx.Document;
-
-        var count = doc.Revisions.Count;
-        doc.AcceptAllRevisions();
-
-        ctx.Save(outputPath);
-
-        var result = $"Accepted {count} revision(s)\n";
-        result += ctx.GetOutputMessage(outputPath);
-        return result;
-    }
-
-    /// <summary>
-    ///     Rejects all revisions in the document.
-    /// </summary>
-    /// <param name="path">The document file path.</param>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    private string RejectAllRevisions(string? path, string? sessionId, string? outputPath)
-    {
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
-        var doc = ctx.Document;
-
-        var count = doc.Revisions.Count;
-        doc.Revisions.RejectAll();
-
-        ctx.Save(outputPath);
-
-        var result = $"Rejected {count} revision(s)\n";
-        result += ctx.GetOutputMessage(outputPath);
-        return result;
-    }
-
-    /// <summary>
-    ///     Manages a specific revision by index (accept or reject).
-    /// </summary>
-    /// <param name="path">The document file path.</param>
-    /// <param name="sessionId">The session ID for in-memory editing.</param>
-    /// <param name="outputPath">The output file path.</param>
-    /// <param name="revisionIndex">The zero-based index of the revision to manage.</param>
-    /// <param name="action">The action to perform: accept or reject.</param>
-    /// <returns>A message indicating the result of the operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when revisionIndex is not provided, is out of range, or action is invalid.</exception>
-    private string ManageRevision(string? path, string? sessionId, string? outputPath, int? revisionIndex,
+    private static OperationParameters BuildParameters(
+        string operation,
+        int? revisionIndex,
         string action)
     {
-        if (!revisionIndex.HasValue)
-            throw new ArgumentException("revisionIndex is required for manage operation");
+        var parameters = new OperationParameters();
 
-        using var ctx = DocumentContext<Document>.Create(_sessionManager, sessionId, path, _identityAccessor);
-        var doc = ctx.Document;
-
-        var revisionsCount = doc.Revisions.Count;
-
-        if (revisionsCount == 0)
-            return "Document has no revisions";
-
-        if (revisionIndex.Value < 0 || revisionIndex.Value >= revisionsCount)
-            throw new ArgumentException(
-                $"revisionIndex must be between 0 and {revisionsCount - 1}, got: {revisionIndex.Value}");
-
-        var revision = doc.Revisions[revisionIndex.Value];
-        var revisionType = revision.RevisionType;
-        var revisionText = TruncateText(revision.ParentNode?.ToString(SaveFormat.Text)?.Trim() ?? "(none)", 50);
-
-        switch (action.ToLowerInvariant())
+        switch (operation)
         {
-            case "accept":
-                revision.Accept();
+            case "get_revisions":
+                // No additional parameters needed
                 break;
-            case "reject":
-                revision.Reject();
+
+            case "accept_all":
+            case "reject_all":
+                // No additional parameters needed
                 break;
-            default:
-                throw new ArgumentException($"action must be 'accept' or 'reject', got: {action}");
+
+            case "manage":
+                if (revisionIndex.HasValue) parameters.Set("revisionIndex", revisionIndex.Value);
+                parameters.Set("action", action);
+                break;
         }
 
-        ctx.Save(outputPath);
-
-        var result = $"Revision [{revisionIndex.Value}] {action}ed\n";
-        result += $"Type: {revisionType}\n";
-        result += $"Text: {revisionText}\n";
-        result += ctx.GetOutputMessage(outputPath);
-        return result;
-    }
-
-    /// <summary>
-    ///     Compares two documents and creates a comparison document showing differences as revisions.
-    /// </summary>
-    /// <param name="outputPath">The output file path for the comparison document.</param>
-    /// <param name="originalPath">The path to the original document.</param>
-    /// <param name="revisedPath">The path to the revised document.</param>
-    /// <param name="authorName">The author name for the revisions.</param>
-    /// <param name="ignoreFormatting">Whether to ignore formatting changes.</param>
-    /// <param name="ignoreComments">Whether to ignore comments in comparison.</param>
-    /// <returns>A message indicating the comparison result and number of differences found.</returns>
-    /// <exception cref="ArgumentException">Thrown when required paths are not provided.</exception>
-    private static string CompareDocuments(
-        string? outputPath,
-        string? originalPath,
-        string? revisedPath,
-        string authorName,
-        bool ignoreFormatting,
-        bool ignoreComments)
-    {
-        if (string.IsNullOrEmpty(outputPath))
-            throw new ArgumentException("outputPath is required for compare operation");
-        if (string.IsNullOrEmpty(originalPath))
-            throw new ArgumentException("originalPath is required for compare operation");
-        if (string.IsNullOrEmpty(revisedPath))
-            throw new ArgumentException("revisedPath is required for compare operation");
-
-        SecurityHelper.ValidateFilePath(originalPath, "originalPath", true);
-        SecurityHelper.ValidateFilePath(revisedPath, "revisedPath", true);
-        SecurityHelper.ValidateFilePath(outputPath, "outputPath", true);
-
-        var originalDoc = new Document(originalPath);
-        var revisedDoc = new Document(revisedPath);
-
-        var compareOptions = new CompareOptions
-        {
-            IgnoreFormatting = ignoreFormatting,
-            IgnoreComments = ignoreComments
-        };
-
-        originalDoc.Compare(revisedDoc, authorName, DateTime.Now, compareOptions);
-        var revisionCount = originalDoc.Revisions.Count;
-        originalDoc.Save(outputPath);
-
-        return $"Comparison completed: {revisionCount} difference(s) found\nOutput: {outputPath}";
+        return parameters;
     }
 }
