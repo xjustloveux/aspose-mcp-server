@@ -2,7 +2,6 @@ using System.ComponentModel;
 using Aspose.Pdf;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
-using AsposeMcpServer.Handlers.Pdf.Signature;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Pdf;
@@ -38,7 +37,7 @@ public class PdfSignatureTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
-        _handlerRegistry = PdfSignatureHandlerRegistry.Create();
+        _handlerRegistry = HandlerRegistry<Document>.CreateFromNamespace("AsposeMcpServer.Handlers.Pdf.Signature");
     }
 
     /// <summary>

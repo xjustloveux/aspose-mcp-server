@@ -2,7 +2,6 @@ using System.ComponentModel;
 using Aspose.Cells;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
-using AsposeMcpServer.Handlers.Excel.ViewSettings;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -41,7 +40,7 @@ public class ExcelViewSettingsTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
-        _handlerRegistry = ExcelViewSettingsHandlerRegistry.Create();
+        _handlerRegistry = HandlerRegistry<Workbook>.CreateFromNamespace("AsposeMcpServer.Handlers.Excel.ViewSettings");
     }
 
     /// <summary>

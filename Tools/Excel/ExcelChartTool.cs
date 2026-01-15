@@ -2,7 +2,6 @@ using System.ComponentModel;
 using Aspose.Cells;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
-using AsposeMcpServer.Handlers.Excel.Chart;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -38,7 +37,7 @@ public class ExcelChartTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
-        _handlerRegistry = ExcelChartHandlerRegistry.Create();
+        _handlerRegistry = HandlerRegistry<Workbook>.CreateFromNamespace("AsposeMcpServer.Handlers.Excel.Chart");
     }
 
     /// <summary>

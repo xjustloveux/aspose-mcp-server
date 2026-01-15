@@ -30,6 +30,25 @@ public class AddWordCommentHandlerTests : WordHandlerTestBase
 
     #endregion
 
+    #region Without Paragraph Index
+
+    [Fact]
+    public void Execute_WithoutParagraphIndex_AddsAtDocumentEnd()
+    {
+        var doc = CreateDocumentWithParagraphs(3);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "text", "Comment at end" }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("Comment added successfully", result);
+    }
+
+    #endregion
+
     #region Basic Add Operations
 
     [Fact]
@@ -168,6 +187,115 @@ public class AddWordCommentHandlerTests : WordHandlerTestBase
         {
             { "text", "Comment text" },
             { "paragraphIndex", 99 }
+        });
+
+        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    #endregion
+
+    #region Author Initial
+
+    [Fact]
+    public void Execute_WithAuthorInitial_UsesProvidedInitial()
+    {
+        var doc = CreateDocumentWithText("Sample text");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "text", "Comment text" },
+            { "author", "John Doe" },
+            { "authorInitial", "JD" }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("Comment added successfully", result);
+    }
+
+    [Fact]
+    public void Execute_WithShortAuthor_CalculatesInitial()
+    {
+        var doc = CreateDocumentWithText("Sample text");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "text", "Comment text" },
+            { "author", "A" }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("Comment added successfully", result);
+    }
+
+    #endregion
+
+    #region Run Indices
+
+    [Fact]
+    public void Execute_WithStartRunIndex_AddsToSpecificRun()
+    {
+        var doc = CreateDocumentWithParagraphs(1);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "text", "Comment on run" },
+            { "paragraphIndex", 0 },
+            { "startRunIndex", 0 }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("Comment added successfully", result);
+    }
+
+    [Fact]
+    public void Execute_WithStartAndEndRunIndex_AddsToRunRange()
+    {
+        var doc = CreateDocumentWithParagraphs(1);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "text", "Comment on run range" },
+            { "paragraphIndex", 0 },
+            { "startRunIndex", 0 },
+            { "endRunIndex", 0 }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("Comment added successfully", result);
+    }
+
+    [Fact]
+    public void Execute_WithInvalidStartRunIndex_ThrowsArgumentException()
+    {
+        var doc = CreateDocumentWithParagraphs(1);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "text", "Comment text" },
+            { "paragraphIndex", 0 },
+            { "startRunIndex", 99 }
+        });
+
+        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+        Assert.Contains("out of range", ex.Message);
+    }
+
+    [Fact]
+    public void Execute_WithInvalidStartEndRunIndices_ThrowsArgumentException()
+    {
+        var doc = CreateDocumentWithParagraphs(1);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "text", "Comment text" },
+            { "paragraphIndex", 0 },
+            { "startRunIndex", 99 },
+            { "endRunIndex", 99 }
         });
 
         var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));

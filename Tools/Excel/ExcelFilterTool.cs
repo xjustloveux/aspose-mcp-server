@@ -2,7 +2,6 @@ using System.ComponentModel;
 using Aspose.Cells;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
-using AsposeMcpServer.Handlers.Excel.Filter;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -39,7 +38,7 @@ public class ExcelFilterTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
-        _handlerRegistry = ExcelFilterHandlerRegistry.Create();
+        _handlerRegistry = HandlerRegistry<Workbook>.CreateFromNamespace("AsposeMcpServer.Handlers.Excel.Filter");
     }
 
     /// <summary>

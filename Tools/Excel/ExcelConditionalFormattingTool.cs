@@ -2,7 +2,6 @@ using System.ComponentModel;
 using Aspose.Cells;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
-using AsposeMcpServer.Handlers.Excel.ConditionalFormatting;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -38,7 +37,8 @@ public class ExcelConditionalFormattingTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
-        _handlerRegistry = ExcelConditionalFormattingHandlerRegistry.Create();
+        _handlerRegistry =
+            HandlerRegistry<Workbook>.CreateFromNamespace("AsposeMcpServer.Handlers.Excel.ConditionalFormatting");
     }
 
     /// <summary>

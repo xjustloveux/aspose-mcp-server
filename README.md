@@ -792,7 +792,7 @@ pwsh deploy/publish.ps1 -All -Clean
 
 **測試統計：**
 - **測試類**: 100+ 個測試類（含 Session、Security、Helpers 測試）
-- **測試用例**: 4,200+ 個測試用例
+- **測試用例**: 6,700+ 個測試用例
 - **測試框架**: xUnit 2.9.2
 
 **運行測試：**
@@ -1239,11 +1239,20 @@ A: 檢查：
 A: 檢查 MCP 客戶端的錯誤日誌。生產環境中，詳細錯誤資訊會被清理以防止資訊洩露。開發環境（DEBUG 模式）會顯示完整錯誤資訊。
 
 ### Q: 可以自訂工具嗎？
-A: 可以。工具使用 MCP SDK 的 `[McpServerToolType]` 屬性自動發現：
+A: 可以。工具和 Handler 都支援自動發現：
+
+**工具 (Tools)**：
 1. 創建新的工具類並添加 `[McpServerToolType]` 屬性
 2. 遵循命名約定（`*Tool.cs`）
 3. 放在對應的 `Tools/` 子目錄中
 4. 工具會透過 MCP SDK 自動註冊
+
+**Handler**：
+1. 創建新的 Handler 類並繼承 `OperationHandlerBase<TContext>`
+2. 實作 `Operation` 屬性和 `Execute` 方法
+3. 放在對應的 `Handlers/{DocumentType}/{Category}/` 目錄中
+4. Handler 會透過命名空間自動發現並註冊
+5. 如需排除特定 Handler，可標記 `[ExcludeFromAutoDiscovery]` 屬性
 
 ## 🔗 相關資源
 
@@ -1261,18 +1270,3 @@ A: 可以。工具使用 MCP SDK 的 `[McpServerToolType]` 屬性自動發現：
 - [GitHub Repository](https://github.com/xjustloveux/aspose-mcp-server)
 - [GitHub Pages 文檔](https://xjustloveux.github.io/aspose-mcp-server/) - 完整文檔網站
 - [配置範例](config_example.json) - 詳細的 MCP 客戶端配置範例
-
-## 📊 專案統計
-
-- **總工具數：** 88 個（Word 24、Excel 25、PowerPoint 21、PDF 15、轉換 2、Session 1）
-- **程式碼行數：** ~40,000+ 行
-- **測試類數：** 100+ 個測試類
-- **測試用例數：** 4,200+ 個測試用例
-- **測試框架：** xUnit 2.9.2
-- **CI/CD：** GitHub Actions 自動測試與多平台構建
-- **支援格式：** Word、Excel、PowerPoint、PDF 及其相互轉換
-- **傳輸模式：** Stdio、SSE、WebSocket
-- **認證機制：** API Key（4 種模式）、JWT（4 種模式）
-- **部署方式：** Docker、Kubernetes、IIS
-- **目標框架：** .NET 8.0
-- **授權：** 需要 Aspose 商業授權（見上方授權章節）

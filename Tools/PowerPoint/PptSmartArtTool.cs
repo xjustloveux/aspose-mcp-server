@@ -2,7 +2,6 @@ using System.ComponentModel;
 using Aspose.Slides;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
-using AsposeMcpServer.Handlers.PowerPoint.SmartArt;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.PowerPoint;
@@ -39,7 +38,8 @@ public class PptSmartArtTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
-        _handlerRegistry = PptSmartArtHandlerRegistry.Create();
+        _handlerRegistry =
+            HandlerRegistry<Presentation>.CreateFromNamespace("AsposeMcpServer.Handlers.PowerPoint.SmartArt");
     }
 
     /// <summary>

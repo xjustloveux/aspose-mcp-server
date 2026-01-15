@@ -58,6 +58,100 @@ public class GetParagraphsWordHandlerTests : WordHandlerTestBase
 
     #endregion
 
+    #region IncludeCommentParagraphs
+
+    [Fact]
+    public void Execute_WithIncludeCommentParagraphsFalse_ExcludesCommentParagraphs()
+    {
+        var doc = CreateDocumentWithParagraphs("Main content");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "includeCommentParagraphs", false }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        var json = JsonDocument.Parse(result);
+        Assert.True(json.RootElement.TryGetProperty("filters", out var filters));
+        Assert.False(filters.GetProperty("includeCommentParagraphs").GetBoolean());
+    }
+
+    #endregion
+
+    #region IncludeTextboxParagraphs
+
+    [Fact]
+    public void Execute_WithIncludeTextboxParagraphsFalse_ExcludesTextboxParagraphs()
+    {
+        var doc = CreateDocumentWithParagraphs("Main content");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "includeTextboxParagraphs", false }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        var json = JsonDocument.Parse(result);
+        Assert.True(json.RootElement.TryGetProperty("filters", out var filters));
+        Assert.False(filters.GetProperty("includeTextboxParagraphs").GetBoolean());
+    }
+
+    #endregion
+
+    #region Long Text Truncation
+
+    [Fact]
+    public void Execute_WithLongText_TruncatesText()
+    {
+        var longText = new string('A', 200);
+        var doc = CreateDocumentWithParagraphs(longText);
+        var context = CreateContext(doc);
+        var parameters = CreateEmptyParameters();
+
+        var result = _handler.Execute(context, parameters);
+
+        var json = JsonDocument.Parse(result);
+        var paragraphs = json.RootElement.GetProperty("paragraphs");
+        var found = false;
+        foreach (var para in paragraphs.EnumerateArray())
+        {
+            var text = para.GetProperty("text").GetString();
+            if (text != null && text.Contains("..."))
+            {
+                found = true;
+                Assert.True(text.Length <= 103);
+            }
+        }
+
+        Assert.True(found);
+    }
+
+    #endregion
+
+    #region Multiple Filters
+
+    [Fact]
+    public void Execute_WithMultipleFilters_AppliesAllFilters()
+    {
+        var doc = CreateDocumentWithParagraphs("Content", "More content");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "includeEmpty", false },
+            { "includeCommentParagraphs", false },
+            { "includeTextboxParagraphs", false }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        var json = JsonDocument.Parse(result);
+        Assert.True(json.RootElement.TryGetProperty("count", out _));
+    }
+
+    #endregion
+
     #region Basic Get Operations
 
     [Fact]

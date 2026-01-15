@@ -6,6 +6,7 @@ on:
     paths:
       - 'Core/**'
       - 'Tools/**'
+      - 'Handlers/**'
       - 'Tests/**'
       - 'Program.cs'
       - '*.csproj'
@@ -17,6 +18,7 @@ on:
     paths:
       - 'Core/**'
       - 'Tools/**'
+      - 'Handlers/**'
       - 'Tests/**'
       - 'Program.cs'
       - '*.csproj'
@@ -37,19 +39,50 @@ jobs:
 
     env:
       ASPOSE_LIC: ${{ secrets.ASPOSE_LIC }}
-    
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    
+      with:
+        fetch-depth: 0
+
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '8.0.x'
 
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: 17
+        distribution: 'zulu'
+
+    - name: Cache SonarCloud packages
+      uses: actions/cache@v4
+      with:
+        path: ~\sonar\cache
+        key: ${{ runner.os }}-sonar
+        restore-keys: ${{ runner.os }}-sonar
+
+    - name: Cache SonarCloud scanner
+      id: cache-sonar-scanner
+      uses: actions/cache@v4
+      with:
+        path: .\.sonar\scanner
+        key: ${{ runner.os }}-sonar-scanner
+        restore-keys: ${{ runner.os }}-sonar-scanner
+
+    - name: Install SonarCloud scanner
+      if: steps.cache-sonar-scanner.outputs.cache-hit != 'true'
+      shell: pwsh
+      run: |
+        New-Item -Path .\.sonar\scanner -ItemType Directory -Force
+        dotnet tool update dotnet-sonarscanner --tool-path .\.sonar\scanner
+
     - name: Restore dependencies
       run: dotnet restore AsposeMcpServer.sln
-    
+
     - name: Setup Aspose License
       if: env.ASPOSE_LIC != ''
       run: |
@@ -67,17 +100,33 @@ jobs:
         echo "ASPOSE_LICENSE_PATH=$licensePath" >> $env:GITHUB_ENV
       shell: pwsh
       continue-on-error: true
-    
+
+    - name: Begin SonarCloud Analysis
+      if: env.SONAR_TOKEN != ''
+      shell: pwsh
+      run: |
+        .\.sonar\scanner\dotnet-sonarscanner begin `
+          /k:"xjustloveux_aspose-mcp-server" `
+          /o:"xjustloveux" `
+          /d:sonar.token="${{ secrets.SONAR_TOKEN }}" `
+          /d:sonar.host.url="https://sonarcloud.io" `
+          /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" `
+          /d:sonar.coverage.exclusions="**/Tests/**,**/Program.cs"
+
     - name: Build Solution
       run: dotnet build AsposeMcpServer.sln --configuration Release --no-restore
-    
-    - name: Build Test Project
-      run: dotnet build Tests/AsposeMcpServer.Tests.csproj --configuration Release --no-restore
-    
+
     - name: Test with Coverage
       id: test
       run: |
-        .\test.ps1 -Coverage -NoBuild -Configuration Release
+        dotnet test Tests/AsposeMcpServer.Tests.csproj `
+          --configuration Release `
+          --no-build `
+          --settings Tests/coverlet.runsettings `
+          --collect "XPlat Code Coverage" `
+          --logger "trx;LogFileName=test-results.trx" `
+          --logger "console;verbosity=minimal"
+      shell: pwsh
       continue-on-error: true
     
     - name: Check Test Results
@@ -195,6 +244,13 @@ jobs:
         path: ${{ runner.temp }}/CoverageReport
         if-no-files-found: ignore
         retention-days: 1
+
+    - name: End SonarCloud Analysis
+      if: env.SONAR_TOKEN != ''
+      shell: pwsh
+      run: |
+        .\.sonar\scanner\dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+      continue-on-error: true
 
   # Evaluation mode test - manual trigger only
   test-evaluation-mode:

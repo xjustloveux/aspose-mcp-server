@@ -2,7 +2,6 @@ using System.ComponentModel;
 using Aspose.Cells;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
-using AsposeMcpServer.Handlers.Excel.FileOperations;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -38,7 +37,8 @@ public class ExcelFileOperationsTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
-        _handlerRegistry = ExcelFileOperationsHandlerRegistry.Create();
+        _handlerRegistry =
+            HandlerRegistry<Workbook>.CreateFromNamespace("AsposeMcpServer.Handlers.Excel.FileOperations");
     }
 
     /// <summary>

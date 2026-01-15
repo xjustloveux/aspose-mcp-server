@@ -6,6 +6,7 @@ on:
     paths:
       - 'Core/**'
       - 'Tools/**'
+      - 'Handlers/**'
       - 'Program.cs'
       - '*.csproj'
       - '*.sln'
@@ -16,6 +17,7 @@ on:
     paths:
       - 'Core/**'
       - 'Tools/**'
+      - 'Handlers/**'
       - 'Program.cs'
       - '*.csproj'
       - '*.sln'

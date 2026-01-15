@@ -93,6 +93,53 @@ public class SetArrayFormulaHandlerTests : ExcelHandlerTestBase
 
     #endregion
 
+    #region Formula Without Equals Sign
+
+    [Fact]
+    public void Execute_WithFormulaWithoutEquals_AddsEquals()
+    {
+        var workbook = CreateWorkbookWithData(new object[,]
+        {
+            { 1 },
+            { 2 }
+        });
+        var context = CreateContext(workbook);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "range", "B1:B2" },
+            { "formula", "A1:A2*2" }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("B1:B2", result);
+    }
+
+    #endregion
+
+    #region Single Cell Range
+
+    [Fact]
+    public void Execute_WithSingleCellRange_SetsFormula()
+    {
+        var workbook = CreateWorkbookWithData(new object[,]
+        {
+            { 1, 2, 3 }
+        });
+        var context = CreateContext(workbook);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "range", "A2" },
+            { "formula", "=SUM(A1:C1)" }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("formula", result, StringComparison.OrdinalIgnoreCase);
+    }
+
+    #endregion
+
     #region Basic Set Array Operations
 
     [Fact]

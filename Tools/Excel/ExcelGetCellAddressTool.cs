@@ -1,7 +1,6 @@
 using System.ComponentModel;
 using Aspose.Cells;
 using AsposeMcpServer.Core.Handlers;
-using AsposeMcpServer.Handlers.Excel.GetCellAddress;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -22,7 +21,8 @@ public class ExcelGetCellAddressTool
     /// </summary>
     public ExcelGetCellAddressTool()
     {
-        _handlerRegistry = ExcelGetCellAddressHandlerRegistry.Create();
+        _handlerRegistry =
+            HandlerRegistry<Workbook>.CreateFromNamespace("AsposeMcpServer.Handlers.Excel.GetCellAddress");
     }
 
     /// <summary>

@@ -3,7 +3,6 @@ using System.Text.Json.Nodes;
 using Aspose.Cells;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
-using AsposeMcpServer.Handlers.Excel.DataOperations;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Excel;
@@ -40,7 +39,8 @@ public class ExcelDataOperationsTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
-        _handlerRegistry = ExcelDataOperationsHandlerRegistry.Create();
+        _handlerRegistry =
+            HandlerRegistry<Workbook>.CreateFromNamespace("AsposeMcpServer.Handlers.Excel.DataOperations");
     }
 
     /// <summary>

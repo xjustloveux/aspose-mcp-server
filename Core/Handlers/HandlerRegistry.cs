@@ -1,7 +1,9 @@
+using System.Reflection;
+
 namespace AsposeMcpServer.Core.Handlers;
 
 /// <summary>
-///     Registry for operation handlers with manual registration support.
+///     Registry for operation handlers with manual registration and auto-discovery support.
 ///     Each Tool creates its own registry and registers relevant handlers.
 /// </summary>
 /// <typeparam name="TContext">The document context type.</typeparam>
@@ -11,14 +13,19 @@ namespace AsposeMcpServer.Core.Handlers;
 ///         Operation names are matched case-insensitively.
 ///     </para>
 ///     <para>
-///         Example usage:
+///         Auto-discovery example:
+///         <code>
+///         var registry = HandlerRegistry&lt;Document&gt;.CreateFromNamespace("AsposeMcpServer.Handlers.Word.Text");
+///         var handler = registry.GetHandler("add");
+///         var result = handler.Execute(context, parameters);
+///         </code>
+///     </para>
+///     <para>
+///         Manual registration example:
 ///         <code>
 ///         var registry = new HandlerRegistry&lt;Document&gt;();
 ///         registry.Register(new AddTextHandler());
 ///         registry.Register(new DeleteTextHandler());
-/// 
-///         var handler = registry.GetHandler("add");
-///         var result = handler.Execute(context, parameters);
 ///         </code>
 ///     </para>
 /// </remarks>
@@ -31,6 +38,54 @@ public class HandlerRegistry<TContext> where TContext : class
     ///     Gets the count of registered handlers.
     /// </summary>
     public int Count => _handlers.Count;
+
+    /// <summary>
+    ///     Creates a handler registry by auto-discovering all handlers in the specified namespace.
+    /// </summary>
+    /// <param name="targetNamespace">
+    ///     The namespace to scan for handlers implementing <see cref="IOperationHandler{TContext}" />.
+    /// </param>
+    /// <param name="assembly">
+    ///     The assembly to scan. If null, uses <see cref="Assembly.GetExecutingAssembly" />.
+    /// </param>
+    /// <returns>A configured handler registry with all discovered handlers registered.</returns>
+    /// <exception cref="ArgumentNullException">
+    ///     Thrown when <paramref name="targetNamespace" /> is null or empty.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">
+    ///     Thrown when a handler cannot be instantiated or when duplicate operations are detected.
+    /// </exception>
+    public static HandlerRegistry<TContext> CreateFromNamespace(string targetNamespace, Assembly? assembly = null)
+    {
+        if (string.IsNullOrEmpty(targetNamespace))
+            throw new ArgumentNullException(nameof(targetNamespace));
+
+        var registry = new HandlerRegistry<TContext>();
+        var handlerInterface = typeof(IOperationHandler<TContext>);
+        var scanAssembly = assembly ?? Assembly.GetExecutingAssembly();
+
+        var handlerTypes = scanAssembly.GetTypes()
+            .Where(t => t.Namespace == targetNamespace &&
+                        t.IsClass &&
+                        !t.IsAbstract &&
+                        handlerInterface.IsAssignableFrom(t) &&
+                        !t.IsDefined(typeof(ExcludeFromAutoDiscoveryAttribute), false) &&
+                        t.GetConstructor(Type.EmptyTypes) != null);
+
+        foreach (var handlerType in handlerTypes)
+            try
+            {
+                var handler = (IOperationHandler<TContext>)Activator.CreateInstance(handlerType)!;
+                registry.Register(handler);
+            }
+            catch (Exception ex) when (ex is not InvalidOperationException)
+            {
+                throw new InvalidOperationException(
+                    $"Failed to instantiate handler '{handlerType.FullName}': {ex.Message}", ex);
+            }
+
+        return registry;
+    }
 
     /// <summary>
     ///     Registers a handler for an operation.

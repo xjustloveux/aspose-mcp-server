@@ -84,6 +84,119 @@ public class CopyWordTableHandlerTests : WordHandlerTestBase
         Assert.Contains("sourceTableIndex", ex.Message);
     }
 
+    [Fact]
+    public void Execute_WithNegativeTableIndex_ThrowsArgumentException()
+    {
+        var doc = CreateDocumentWithTable(3, 3);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "tableIndex", -1 }
+        });
+
+        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+        Assert.Contains("sourceTableIndex", ex.Message);
+    }
+
+    #endregion
+
+    #region Target Paragraph Index
+
+    [Fact]
+    public void Execute_WithTargetParagraphIndex_CopiesToSpecifiedLocation()
+    {
+        var doc = CreateDocumentWithTable(2, 2);
+        var builder = new DocumentBuilder(doc);
+        builder.MoveToDocumentEnd();
+        builder.Writeln("Paragraph 1");
+        builder.Writeln("Paragraph 2");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "targetParagraphIndex", 0 }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("copied", result, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Execute_WithInvalidTargetParagraphIndex_ThrowsArgumentException()
+    {
+        var doc = CreateDocumentWithTable(2, 2);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "targetParagraphIndex", 999 }
+        });
+
+        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+        Assert.Contains("targetParagraphIndex", ex.Message);
+    }
+
+    [Fact]
+    public void Execute_WithNegativeTargetParagraphIndex_CopiesToEnd()
+    {
+        var doc = CreateDocumentWithTable(2, 2);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "targetParagraphIndex", -1 }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("copied", result, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(2, GetTableCount(doc));
+    }
+
+    #endregion
+
+    #region Section Index
+
+    [Fact]
+    public void Execute_WithInvalidSourceSectionIndex_ThrowsArgumentException()
+    {
+        var doc = CreateDocumentWithTable(2, 2);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "sourceSectionIndex", 99 }
+        });
+
+        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+        Assert.Contains("sourceSectionIndex", ex.Message);
+    }
+
+    [Fact]
+    public void Execute_WithInvalidTargetSectionIndex_ThrowsArgumentException()
+    {
+        var doc = CreateDocumentWithTable(2, 2);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "targetSectionIndex", 99 }
+        });
+
+        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+        Assert.Contains("targetSectionIndex", ex.Message);
+    }
+
+    [Fact]
+    public void Execute_WithNegativeSourceSectionIndex_ThrowsArgumentException()
+    {
+        var doc = CreateDocumentWithTable(2, 2);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "sourceSectionIndex", -1 }
+        });
+
+        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+        Assert.Contains("sourceSectionIndex", ex.Message);
+    }
+
     #endregion
 
     #region Helper Methods

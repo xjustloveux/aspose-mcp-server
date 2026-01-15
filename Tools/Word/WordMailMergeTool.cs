@@ -3,7 +3,6 @@ using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Helpers;
 using AsposeMcpServer.Core.Session;
-using AsposeMcpServer.Handlers.Word.MailMerge;
 using ModelContextProtocol.Server;
 
 namespace AsposeMcpServer.Tools.Word;
@@ -40,7 +39,7 @@ public class WordMailMergeTool
     {
         _sessionManager = sessionManager;
         _identityAccessor = identityAccessor;
-        _handlerRegistry = WordMailMergeHandlerRegistry.Create();
+        _handlerRegistry = HandlerRegistry<Document>.CreateFromNamespace("AsposeMcpServer.Handlers.Word.MailMerge");
     }
 
     /// <summary>

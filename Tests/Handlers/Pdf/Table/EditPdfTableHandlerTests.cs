@@ -48,6 +48,67 @@ public class EditPdfTableHandlerTests : PdfHandlerTestBase
 
     #endregion
 
+    #region Multiple Tables
+
+    [SkippableFact]
+    public void Execute_WithMultipleTables_EditsCorrectTable()
+    {
+        SkipInEvaluationMode(AsposeLibraryType.Pdf);
+        var document = new Document();
+        var page = document.Pages.Add();
+
+        for (var t = 0; t < 3; t++)
+        {
+            var table = new Aspose.Pdf.Table
+            {
+                ColumnWidths = "100 100",
+                DefaultCellBorder = new BorderInfo(BorderSide.All, 0.5F)
+            };
+            var row = table.Rows.Add();
+            row.Cells.Add().Paragraphs.Add(new TextFragment($"Table {t} Cell 0,0"));
+            row.Cells.Add().Paragraphs.Add(new TextFragment($"Table {t} Cell 0,1"));
+            page.Paragraphs.Add(table);
+        }
+
+        var context = CreateContext(document);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "tableIndex", 1 },
+            { "cellRow", 0 },
+            { "cellColumn", 0 },
+            { "cellValue", "Updated Second Table" }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("Edited table 1", result);
+        AssertModified(context);
+    }
+
+    #endregion
+
+    #region Default Table Index
+
+    [SkippableFact]
+    public void Execute_WithoutTableIndex_EditsFirstTable()
+    {
+        SkipInEvaluationMode(AsposeLibraryType.Pdf);
+        var document = CreatePdfWithTable(2, 2);
+        var context = CreateContext(document);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "cellRow", 0 },
+            { "cellColumn", 0 },
+            { "cellValue", "Updated First Cell" }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("Edited table 0", result);
+    }
+
+    #endregion
+
     #region Basic Edit Table Operations
 
     [SkippableFact]
@@ -129,6 +190,134 @@ public class EditPdfTableHandlerTests : PdfHandlerTestBase
         });
 
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+    }
+
+    #endregion
+
+    #region Cell Value Edge Cases
+
+    [SkippableFact]
+    public void Execute_WithoutCellValue_DoesNotUpdateCell()
+    {
+        SkipInEvaluationMode(AsposeLibraryType.Pdf);
+        var document = CreatePdfWithTable(2, 2);
+        var context = CreateContext(document);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "tableIndex", 0 },
+            { "cellRow", 0 },
+            { "cellColumn", 0 }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("edited", result.ToLower());
+    }
+
+    [SkippableFact]
+    public void Execute_WithEmptyCellValue_DoesNotUpdateCell()
+    {
+        SkipInEvaluationMode(AsposeLibraryType.Pdf);
+        var document = CreatePdfWithTable(2, 2);
+        var context = CreateContext(document);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "tableIndex", 0 },
+            { "cellRow", 0 },
+            { "cellColumn", 0 },
+            { "cellValue", "" }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("edited", result.ToLower());
+    }
+
+    [SkippableFact]
+    public void Execute_WithOnlyCellRow_DoesNotUpdateCell()
+    {
+        SkipInEvaluationMode(AsposeLibraryType.Pdf);
+        var document = CreatePdfWithTable(2, 2);
+        var context = CreateContext(document);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "tableIndex", 0 },
+            { "cellRow", 0 },
+            { "cellValue", "Test" }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("edited", result.ToLower());
+    }
+
+    [SkippableFact]
+    public void Execute_WithOnlyCellColumn_DoesNotUpdateCell()
+    {
+        SkipInEvaluationMode(AsposeLibraryType.Pdf);
+        var document = CreatePdfWithTable(2, 2);
+        var context = CreateContext(document);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "tableIndex", 0 },
+            { "cellColumn", 0 },
+            { "cellValue", "Test" }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("edited", result.ToLower());
+    }
+
+    #endregion
+
+    #region Table Index Boundary
+
+    [SkippableFact]
+    public void Execute_WithNegativeTableIndex_ThrowsArgumentException()
+    {
+        SkipInEvaluationMode(AsposeLibraryType.Pdf);
+        var document = CreatePdfWithTable(2, 2);
+        var context = CreateContext(document);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "tableIndex", -1 }
+        });
+
+        Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+    }
+
+    [SkippableFact]
+    public void Execute_WithLastTableIndex_EditsLastTable()
+    {
+        SkipInEvaluationMode(AsposeLibraryType.Pdf);
+        var document = new Document();
+        var page = document.Pages.Add();
+
+        for (var t = 0; t < 2; t++)
+        {
+            var table = new Aspose.Pdf.Table
+            {
+                ColumnWidths = "100",
+                DefaultCellBorder = new BorderInfo(BorderSide.All, 0.5F)
+            };
+            var row = table.Rows.Add();
+            row.Cells.Add().Paragraphs.Add(new TextFragment($"Table {t}"));
+            page.Paragraphs.Add(table);
+        }
+
+        var context = CreateContext(document);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "tableIndex", 1 },
+            { "cellRow", 0 },
+            { "cellColumn", 0 },
+            { "cellValue", "Updated Last Table" }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("Edited table 1", result);
     }
 
     #endregion

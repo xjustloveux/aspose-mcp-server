@@ -18,6 +18,46 @@ public class GetPdfImagesHandlerTests : PdfHandlerTestBase
 
     #endregion
 
+    #region Negative Page Index
+
+    [Fact]
+    public void Execute_WithNegativePageIndex_SearchesAllPages()
+    {
+        var doc = CreateDocumentWithPages(2);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "pageIndex", -1 }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("count", result);
+        Assert.DoesNotContain("pageIndex must be between", result);
+    }
+
+    #endregion
+
+    #region Specific Page With No Images
+
+    [Fact]
+    public void Execute_WithSpecificPageNoImages_ReturnsEmptyForPage()
+    {
+        var doc = CreateDocumentWithPages(2);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "pageIndex", 1 }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("\"count\": 0", result);
+        Assert.Contains("No images found on page 1", result);
+    }
+
+    #endregion
+
     #region Get All Images
 
     [Fact]
@@ -122,6 +162,44 @@ public class GetPdfImagesHandlerTests : PdfHandlerTestBase
 
         Assert.Contains("count", result);
         Assert.DoesNotContain("pageIndex must be between", result);
+    }
+
+    #endregion
+
+    #region Result Structure
+
+    [Fact]
+    public void Execute_WithoutImages_ReturnsCorrectStructure()
+    {
+        var doc = CreateEmptyDocument();
+        var context = CreateContext(doc);
+        var parameters = CreateEmptyParameters();
+
+        var result = _handler.Execute(context, parameters);
+
+        var json = JsonNode.Parse(result);
+        Assert.NotNull(json);
+        Assert.NotNull(json["count"]);
+        Assert.NotNull(json["items"]);
+        Assert.NotNull(json["message"]);
+    }
+
+    [Fact]
+    public void Execute_WithPageIndex_ReturnsItemsArray()
+    {
+        var doc = CreateDocumentWithPages(2);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "pageIndex", 1 }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        var json = JsonNode.Parse(result);
+        Assert.NotNull(json);
+        Assert.NotNull(json["items"]);
+        Assert.Empty(json["items"]!.AsArray());
     }
 
     #endregion

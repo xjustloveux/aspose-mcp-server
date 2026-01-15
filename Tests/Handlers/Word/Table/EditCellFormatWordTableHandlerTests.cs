@@ -42,6 +42,51 @@ public class EditCellFormatWordTableHandlerTests : WordHandlerTestBase
 
     #endregion
 
+    #region Apply To Table
+
+    [Fact]
+    public void Execute_WithApplyToTable_FormatsEntireTable()
+    {
+        var doc = CreateDocumentWithTable(3, 3);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "applyToTable", true },
+            { "backgroundColor", "#FF00FF" }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("entire table", result);
+        Assert.Contains("9 cells", result);
+    }
+
+    #endregion
+
+    #region Individual Padding
+
+    [Fact]
+    public void Execute_WithIndividualPadding_SetsEachPadding()
+    {
+        var doc = CreateDocumentWithTable(3, 3);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "rowIndex", 0 },
+            { "columnIndex", 0 },
+            { "paddingTop", 10.0 },
+            { "paddingBottom", 8.0 },
+            { "paddingLeft", 5.0 },
+            { "paddingRight", 5.0 }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("format", result, StringComparison.OrdinalIgnoreCase);
+    }
+
+    #endregion
+
     #region Basic Edit Operations
 
     [Fact]
@@ -225,6 +270,248 @@ public class EditCellFormatWordTableHandlerTests : WordHandlerTestBase
 
         var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
         Assert.Contains("Table index", ex.Message);
+    }
+
+    [Fact]
+    public void Execute_WithInvalidSectionIndex_ThrowsArgumentException()
+    {
+        var doc = CreateDocumentWithTable(3, 3);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "rowIndex", 0 },
+            { "columnIndex", 0 },
+            { "sectionIndex", 99 }
+        });
+
+        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+        Assert.Contains("Section index", ex.Message);
+    }
+
+    #endregion
+
+    #region Apply To Row
+
+    [Fact]
+    public void Execute_WithApplyToRow_FormatsEntireRow()
+    {
+        var doc = CreateDocumentWithTable(3, 3);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "rowIndex", 1 },
+            { "applyToRow", true },
+            { "backgroundColor", "#FFFF00" }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("row 1", result);
+        Assert.Contains("3 cells", result);
+    }
+
+    [Fact]
+    public void Execute_WithApplyToRowWithoutRowIndex_ThrowsArgumentException()
+    {
+        var doc = CreateDocumentWithTable(3, 3);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "applyToRow", true },
+            { "backgroundColor", "#FFFF00" }
+        });
+
+        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+        Assert.Contains("rowIndex is required", ex.Message);
+    }
+
+    [Fact]
+    public void Execute_WithApplyToRowWithInvalidRowIndex_ThrowsArgumentException()
+    {
+        var doc = CreateDocumentWithTable(3, 3);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "rowIndex", 99 },
+            { "applyToRow", true },
+            { "backgroundColor", "#FFFF00" }
+        });
+
+        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+        Assert.Contains("Row index", ex.Message);
+    }
+
+    #endregion
+
+    #region Apply To Column
+
+    [Fact]
+    public void Execute_WithApplyToColumn_FormatsEntireColumn()
+    {
+        var doc = CreateDocumentWithTable(3, 3);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "columnIndex", 1 },
+            { "applyToColumn", true },
+            { "backgroundColor", "#00FFFF" }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("column 1", result);
+        Assert.Contains("3 cells", result);
+    }
+
+    [Fact]
+    public void Execute_WithApplyToColumnWithoutColumnIndex_ThrowsArgumentException()
+    {
+        var doc = CreateDocumentWithTable(3, 3);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "applyToColumn", true },
+            { "backgroundColor", "#00FFFF" }
+        });
+
+        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+        Assert.Contains("columnIndex is required", ex.Message);
+    }
+
+    #endregion
+
+    #region Text Formatting
+
+    [Fact]
+    public void Execute_WithFontName_SetsFontName()
+    {
+        var doc = CreateDocumentWithTable(3, 3);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "rowIndex", 0 },
+            { "columnIndex", 0 },
+            { "fontName", "Arial" }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("format", result, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Execute_WithFontSize_SetsFontSize()
+    {
+        var doc = CreateDocumentWithTable(3, 3);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "rowIndex", 0 },
+            { "columnIndex", 0 },
+            { "cellFontSize", 14.0 }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("format", result, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Execute_WithBoldAndItalic_SetsTextStyle()
+    {
+        var doc = CreateDocumentWithTable(3, 3);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "rowIndex", 0 },
+            { "columnIndex", 0 },
+            { "bold", true },
+            { "italic", true }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("format", result, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Execute_WithColor_SetsTextColor()
+    {
+        var doc = CreateDocumentWithTable(3, 3);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "rowIndex", 0 },
+            { "columnIndex", 0 },
+            { "color", "#FF0000" }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("format", result, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Execute_WithFontNameAsciiAndFarEast_SetsFonts()
+    {
+        var doc = CreateDocumentWithTable(3, 3);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "rowIndex", 0 },
+            { "columnIndex", 0 },
+            { "fontNameAscii", "Arial" },
+            { "fontNameFarEast", "MS Gothic" }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("format", result, StringComparison.OrdinalIgnoreCase);
+    }
+
+    #endregion
+
+    #region Alignment Options
+
+    [Theory]
+    [InlineData("left")]
+    [InlineData("center")]
+    [InlineData("right")]
+    [InlineData("justify")]
+    public void Execute_WithAlignment_SetsHorizontalAlignment(string alignment)
+    {
+        var doc = CreateDocumentWithTable(3, 3);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "rowIndex", 0 },
+            { "columnIndex", 0 },
+            { "alignment", alignment }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("format", result, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("top")]
+    [InlineData("center")]
+    [InlineData("bottom")]
+    public void Execute_WithVerticalAlignmentFormat_SetsVerticalAlignment(string alignment)
+    {
+        var doc = CreateDocumentWithTable(3, 3);
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "rowIndex", 0 },
+            { "columnIndex", 0 },
+            { "verticalAlignmentFormat", alignment }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("format", result, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

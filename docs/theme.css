@@ -255,6 +255,7 @@ header {
 
 .btn:hover {
     background: var(--accent-hover);
+    color: white;
 }
 
 .btn-secondary {

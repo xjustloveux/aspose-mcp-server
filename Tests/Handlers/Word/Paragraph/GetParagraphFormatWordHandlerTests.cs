@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Aspose.Words;
 using AsposeMcpServer.Handlers.Word.Paragraph;
 using AsposeMcpServer.Tests.Helpers;
 
@@ -83,6 +84,27 @@ public class GetParagraphFormatWordHandlerTests : WordHandlerTestBase
 
     #endregion
 
+    #region Include Run Details False
+
+    [Fact]
+    public void Execute_WithIncludeRunDetailsFalse_OmitsRunDetails()
+    {
+        var doc = CreateDocumentWithParagraphs("Test paragraph");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "paragraphIndex", 0 },
+            { "includeRunDetails", false }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        var json = JsonDocument.Parse(result);
+        Assert.True(json.RootElement.TryGetProperty("paragraphFormat", out _));
+    }
+
+    #endregion
+
     #region Basic Get Operations
 
     [Fact]
@@ -153,6 +175,61 @@ public class GetParagraphFormatWordHandlerTests : WordHandlerTestBase
 
         var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
         Assert.Contains("index", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    #endregion
+
+    #region Paragraph with Formatting
+
+    [SkippableFact]
+    public void Execute_WithFormattedParagraph_ReturnsFormattingDetails()
+    {
+        SkipInEvaluationMode(AsposeLibraryType.Words, "Evaluation mode limits formatting operations");
+
+        var doc = CreateEmptyDocument();
+        var builder = new DocumentBuilder(doc);
+        builder.Font.Bold = true;
+        builder.Font.Italic = true;
+        builder.Font.Size = 14;
+        builder.Write("Formatted text");
+
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "paragraphIndex", 0 }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        var json = JsonDocument.Parse(result);
+        Assert.True(json.RootElement.TryGetProperty("fontFormat", out var fontFormat));
+        Assert.Equal(14, fontFormat.GetProperty("fontSize").GetDouble());
+    }
+
+    [SkippableFact]
+    public void Execute_WithMultipleRuns_ReturnsRunDetails()
+    {
+        SkipInEvaluationMode(AsposeLibraryType.Words, "Evaluation mode limits run operations");
+
+        var doc = CreateEmptyDocument();
+        var builder = new DocumentBuilder(doc);
+        builder.Font.Bold = true;
+        builder.Write("Bold ");
+        builder.Font.Bold = false;
+        builder.Font.Italic = true;
+        builder.Write("Italic");
+
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "paragraphIndex", 0 },
+            { "includeRunDetails", true }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        var json = JsonDocument.Parse(result);
+        Assert.True(json.RootElement.TryGetProperty("runs", out _));
     }
 
     #endregion

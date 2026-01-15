@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using AsposeMcpServer.Handlers.Word.Paragraph;
 using AsposeMcpServer.Tests.Helpers;
 
@@ -33,6 +34,55 @@ public class EditParagraphWordHandlerTests : WordHandlerTestBase
         var result = _handler.Execute(context, parameters);
 
         Assert.Contains("0", result);
+        AssertModified(context);
+    }
+
+    #endregion
+
+    #region Style Settings
+
+    [Fact]
+    public void Execute_WithValidStyleName_AppliesStyle()
+    {
+        var doc = CreateDocumentWithParagraphs("Test paragraph");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "paragraphIndex", 0 },
+            { "styleName", "Normal" }
+        });
+
+        var result = _handler.Execute(context, parameters);
+
+        Assert.Contains("edited", result, StringComparison.OrdinalIgnoreCase);
+    }
+
+    #endregion
+
+    #region Tab Stops
+
+    [Fact]
+    public void Execute_WithTabStops_AppliesTabStops()
+    {
+        var doc = CreateDocumentWithParagraphs("Test paragraph");
+        var context = CreateContext(doc);
+        var tabStops = new JsonArray
+        {
+            new JsonObject
+            {
+                ["position"] = 100.0,
+                ["alignment"] = "center",
+                ["leader"] = "dots"
+            }
+        };
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "paragraphIndex", 0 },
+            { "tabStops", tabStops }
+        });
+
+        _handler.Execute(context, parameters);
+
         AssertModified(context);
     }
 
@@ -257,6 +307,146 @@ public class EditParagraphWordHandlerTests : WordHandlerTestBase
 
         var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
         Assert.Contains("Section", ex.Message);
+    }
+
+    [Fact]
+    public void Execute_WithInvalidStyleName_ThrowsArgumentException()
+    {
+        var doc = CreateDocumentWithParagraphs("Test paragraph");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "paragraphIndex", 0 },
+            { "styleName", "NonExistentStyle" }
+        });
+
+        var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
+        Assert.Contains("Style", ex.Message);
+    }
+
+    #endregion
+
+    #region Font Settings
+
+    [Fact]
+    public void Execute_WithItalic_AppliesItalic()
+    {
+        var doc = CreateDocumentWithParagraphs("Test paragraph");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "paragraphIndex", 0 },
+            { "italic", true }
+        });
+
+        _handler.Execute(context, parameters);
+
+        AssertModified(context);
+    }
+
+    [Fact]
+    public void Execute_WithUnderline_AppliesUnderline()
+    {
+        var doc = CreateDocumentWithParagraphs("Test paragraph");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "paragraphIndex", 0 },
+            { "underline", true }
+        });
+
+        _handler.Execute(context, parameters);
+
+        AssertModified(context);
+    }
+
+    [Fact]
+    public void Execute_WithColor_AppliesFontColor()
+    {
+        var doc = CreateDocumentWithParagraphs("Test paragraph");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "paragraphIndex", 0 },
+            { "color", "#FF0000" }
+        });
+
+        _handler.Execute(context, parameters);
+
+        AssertModified(context);
+    }
+
+    [Fact]
+    public void Execute_WithFontNameAsciiAndFarEast_SetsBothFonts()
+    {
+        var doc = CreateDocumentWithParagraphs("Test paragraph");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "paragraphIndex", 0 },
+            { "fontNameAscii", "Arial" },
+            { "fontNameFarEast", "MS Gothic" }
+        });
+
+        _handler.Execute(context, parameters);
+
+        AssertModified(context);
+    }
+
+    #endregion
+
+    #region Paragraph Format Settings
+
+    [Fact]
+    public void Execute_WithFirstLineIndent_AppliesFirstLineIndent()
+    {
+        var doc = CreateDocumentWithParagraphs("Test paragraph");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "paragraphIndex", 0 },
+            { "firstLineIndent", 36.0 }
+        });
+
+        _handler.Execute(context, parameters);
+
+        AssertModified(context);
+    }
+
+    [Fact]
+    public void Execute_WithLineSpacingValue_AppliesLineSpacing()
+    {
+        var doc = CreateDocumentWithParagraphs("Test paragraph");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "paragraphIndex", 0 },
+            { "lineSpacing", 18.0 },
+            { "lineSpacingRule", "exactly" }
+        });
+
+        _handler.Execute(context, parameters);
+
+        AssertModified(context);
+    }
+
+    [Theory]
+    [InlineData("single")]
+    [InlineData("oneandhalf")]
+    [InlineData("double")]
+    public void Execute_WithLineSpacingRuleOnly_AppliesDefaultSpacing(string rule)
+    {
+        var doc = CreateDocumentWithParagraphs("Test paragraph");
+        var context = CreateContext(doc);
+        var parameters = CreateParameters(new Dictionary<string, object?>
+        {
+            { "paragraphIndex", 0 },
+            { "lineSpacingRule", rule }
+        });
+
+        _handler.Execute(context, parameters);
+
+        AssertModified(context);
     }
 
     #endregion
