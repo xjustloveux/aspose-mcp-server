@@ -2,6 +2,7 @@ using System.Text.Json;
 using Aspose.Words;
 using Aspose.Words.Drawing;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Core.Helpers;
 using WordComment = Aspose.Words.Comment;
 using WordShape = Aspose.Words.Drawing.Shape;
 
@@ -135,6 +136,6 @@ public class GetParagraphsWordHandler : OperationHandlerBase<Document>
             paragraphs = paragraphList
         };
 
-        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        return JsonSerializer.Serialize(result, JsonDefaults.Indented);
     }
 }

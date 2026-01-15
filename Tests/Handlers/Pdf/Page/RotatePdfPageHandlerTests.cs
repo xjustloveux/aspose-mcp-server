@@ -6,6 +6,8 @@ namespace AsposeMcpServer.Tests.Handlers.Pdf.Page;
 
 public class RotatePdfPageHandlerTests : PdfHandlerTestBase
 {
+    private static readonly int[] MultiplePageIndices = [1, 3, 5];
+
     private readonly RotatePdfPageHandler _handler = new();
 
     #region Operation Property
@@ -29,7 +31,7 @@ public class RotatePdfPageHandlerTests : PdfHandlerTestBase
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "rotation", 180 },
-            { "pageIndices", new[] { 1, 3, 5 } }
+            { "pageIndices", MultiplePageIndices }
         });
 
         var result = _handler.Execute(context, parameters);

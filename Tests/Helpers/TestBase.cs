@@ -483,7 +483,7 @@ public abstract class TestBase : IDisposable
     /// <summary>
     ///     Creates a JsonObject with common parameters
     /// </summary>
-    protected JsonObject CreateArguments(string operation, string path, string? outputPath = null)
+    protected static JsonObject CreateArguments(string operation, string path, string? outputPath = null)
     {
         var args = new JsonObject
         {

@@ -20,7 +20,7 @@ public class DeleteAudioHandlerTests : PptHandlerTestBase
 
     #region Helper Methods
 
-    private Presentation CreatePresentationWithAudio(string audioPath)
+    private static Presentation CreatePresentationWithAudio(string audioPath)
     {
         var pres = new Presentation();
         var slide = pres.Slides[0];

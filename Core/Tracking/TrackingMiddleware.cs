@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
+using AsposeMcpServer.Core.Helpers;
 
 namespace AsposeMcpServer.Core.Tracking;
 
@@ -150,7 +151,7 @@ public class TrackingMiddleware
     ///     Gets the current process memory usage in megabytes
     /// </summary>
     /// <returns>Memory usage in MB</returns>
-    private double GetSessionMemoryMb()
+    private static double GetSessionMemoryMb()
     {
         var process = Process.GetCurrentProcess();
         return process.WorkingSet64 / (1024.0 * 1024.0);
@@ -178,11 +179,7 @@ public class TrackingMiddleware
     /// <param name="trackingEvent">Event to log</param>
     private void LogEvent(TrackingEvent trackingEvent)
     {
-        var json = JsonSerializer.Serialize(trackingEvent, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            WriteIndented = false
-        });
+        var json = JsonSerializer.Serialize(trackingEvent, JsonDefaults.CamelCase);
 
         foreach (var target in _config.LogTargets)
             switch (target)
@@ -206,7 +203,7 @@ public class TrackingMiddleware
     /// <param name="trackingEvent">Event to write</param>
     /// <param name="json">JSON-serialized event data</param>
     // ReSharper disable UnusedParameter.Local
-    private void WriteToEventLog(TrackingEvent trackingEvent, string json)
+    private static void WriteToEventLog(TrackingEvent trackingEvent, string json)
         // ReSharper restore UnusedParameter.Local
     {
 #if WINDOWS
@@ -244,10 +241,7 @@ public class TrackingMiddleware
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(_config.WebhookTimeoutSeconds));
             using var request = new HttpRequestMessage(HttpMethod.Post, _config.WebhookUrl);
             request.Content = new StringContent(
-                JsonSerializer.Serialize(trackingEvent, new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                }),
+                JsonSerializer.Serialize(trackingEvent, JsonDefaults.CamelCase),
                 Encoding.UTF8,
                 "application/json");
 

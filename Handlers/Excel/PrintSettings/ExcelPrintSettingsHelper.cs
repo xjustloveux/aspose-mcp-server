@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using Aspose.Cells;
 
 namespace AsposeMcpServer.Handlers.Excel.PrintSettings;
@@ -11,18 +12,19 @@ public static class ExcelPrintSettingsHelper
     /// <summary>
     ///     Supported paper size mappings.
     /// </summary>
-    public static readonly Dictionary<string, PaperSizeType> PaperSizeMap = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["A3"] = PaperSizeType.PaperA3,
-        ["A4"] = PaperSizeType.PaperA4,
-        ["A5"] = PaperSizeType.PaperA5,
-        ["B4"] = PaperSizeType.PaperB4,
-        ["B5"] = PaperSizeType.PaperB5,
-        ["Letter"] = PaperSizeType.PaperLetter,
-        ["Legal"] = PaperSizeType.PaperLegal,
-        ["Tabloid"] = PaperSizeType.PaperTabloid,
-        ["Executive"] = PaperSizeType.PaperExecutive
-    };
+    public static FrozenDictionary<string, PaperSizeType> PaperSizeMap { get; } =
+        new Dictionary<string, PaperSizeType>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["A3"] = PaperSizeType.PaperA3,
+            ["A4"] = PaperSizeType.PaperA4,
+            ["A5"] = PaperSizeType.PaperA5,
+            ["B4"] = PaperSizeType.PaperB4,
+            ["B5"] = PaperSizeType.PaperB5,
+            ["Letter"] = PaperSizeType.PaperLetter,
+            ["Legal"] = PaperSizeType.PaperLegal,
+            ["Tabloid"] = PaperSizeType.PaperTabloid,
+            ["Executive"] = PaperSizeType.PaperExecutive
+        }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     ///     Applies page setup options to the PageSetup object.

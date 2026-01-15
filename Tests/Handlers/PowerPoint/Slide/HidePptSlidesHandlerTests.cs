@@ -6,6 +6,10 @@ namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Slide;
 
 public class HidePptSlidesHandlerTests : PptHandlerTestBase
 {
+    private static readonly int[] IndicesZeroTwo = [0, 2];
+    private static readonly int[] IndicesZeroTwoFour = [0, 2, 4];
+    private static readonly int[] IndicesOneThree = [1, 3];
+
     private readonly HidePptSlidesHandler _handler = new();
 
     #region Operation Property
@@ -49,7 +53,7 @@ public class HidePptSlidesHandlerTests : PptHandlerTestBase
     public void Execute_ReturnsSlideCountInMessage()
     {
         var pres = CreatePresentationWithSlides(5);
-        var indices = JsonSerializer.Serialize(new[] { 0, 2 });
+        var indices = JsonSerializer.Serialize(IndicesZeroTwo);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -73,7 +77,7 @@ public class HidePptSlidesHandlerTests : PptHandlerTestBase
         var pres = CreatePresentationWithSlides(5);
         pres.Slides[1].Hidden = true;
         pres.Slides[3].Hidden = true;
-        var indices = JsonSerializer.Serialize(new[] { 0, 2 });
+        var indices = JsonSerializer.Serialize(IndicesZeroTwo);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -117,7 +121,7 @@ public class HidePptSlidesHandlerTests : PptHandlerTestBase
     public void Execute_WithSpecificIndices_HidesOnlyThoseSlides()
     {
         var pres = CreatePresentationWithSlides(5);
-        var indices = JsonSerializer.Serialize(new[] { 0, 2, 4 });
+        var indices = JsonSerializer.Serialize(IndicesZeroTwoFour);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
@@ -171,7 +175,7 @@ public class HidePptSlidesHandlerTests : PptHandlerTestBase
         pres.Slides[2].Hidden = true;
         pres.Slides[3].Hidden = true;
         pres.Slides[4].Hidden = true;
-        var indices = JsonSerializer.Serialize(new[] { 1, 3 });
+        var indices = JsonSerializer.Serialize(IndicesOneThree);
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {

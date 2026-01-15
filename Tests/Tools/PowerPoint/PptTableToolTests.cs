@@ -18,7 +18,7 @@ public class PptTableToolTests : PptTestBase
         _tool = new PptTableTool(SessionManager);
     }
 
-    private int FindTableShapeIndex(string pptPath, int slideIndex)
+    private static int FindTableShapeIndex(string pptPath, int slideIndex)
     {
         using var presentation = new Presentation(pptPath);
         var slide = presentation.Slides[slideIndex];

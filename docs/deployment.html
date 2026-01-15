@@ -195,13 +195,13 @@ docker-compose down</pre>
 </div>
 
 <div class="section">
-    <h2>☸️ Kubernetes 部署</h2>
-    <p>使用 Kubernetes 部署 Aspose MCP Server。複製以下 YAML 並根據需求修改。</p>
+<h2>☸️ Kubernetes 部署</h2>
+<p>使用 Kubernetes 部署 Aspose MCP Server。複製以下 YAML 並根據需求修改。</p>
 
-    <h3>deployment.yaml</h3>
-    <div class="code-wrapper">
-        <button class="copy-button" onclick="copyCode(this)">📋 複製</button>
-        <pre class="code-block">apiVersion: apps/v1
+<h3>deployment.yaml</h3>
+<div class="code-wrapper">
+    <button class="copy-button" onclick="copyCode(this)">📋 複製</button>
+    <pre class="code-block">apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: aspose-mcp-server
@@ -217,11 +217,17 @@ spec:
       labels:
         app: aspose-mcp
     spec:
+      automountServiceAccountToken: false
       containers:
         - name: aspose-mcp
           image: ghcr.io/xjustloveux/aspose-mcp-server:latest
           ports:
             - containerPort: 3000
+          resources:
+            limits:
+              memory: "1Gi"
+            requests:
+              memory: "256Mi"
           env:
             # === Transport Settings ===
             - name: ASPOSE_TRANSPORT
@@ -374,12 +380,12 @@ spec:
       #     secret:
       #       secretName: aspose-license
       #       optional: true</pre>
-    </div>
+</div>
 
-    <h3>常用命令</h3>
-    <div class="code-wrapper">
-        <button class="copy-button" onclick="copyCode(this)">📋 複製</button>
-        <pre class="code-block"># 建立 License Secret
+<h3>常用命令</h3>
+<div class="code-wrapper">
+    <button class="copy-button" onclick="copyCode(this)">📋 複製</button>
+    <pre class="code-block"># 建立 License Secret
 kubectl create secret generic aspose-license \
   --from-file=Aspose.Total.lic=/path/to/license
 
@@ -391,7 +397,7 @@ kubectl expose deployment aspose-mcp-server --port=80 --target-port=3000
 
 # 查看狀態
 kubectl get pods -l app=aspose-mcp</pre>
-    </div>
+</div>
 </div>
 
 <div class="section">

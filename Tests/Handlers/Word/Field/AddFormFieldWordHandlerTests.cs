@@ -5,6 +5,8 @@ namespace AsposeMcpServer.Tests.Handlers.Word.Field;
 
 public class AddFormFieldWordHandlerTests : WordHandlerTestBase
 {
+    private static readonly string[] DropDownOptions = ["Option1", "Option2", "Option3"];
+
     private readonly AddFormFieldWordHandler _handler = new();
 
     #region Operation Property
@@ -97,7 +99,7 @@ public class AddFormFieldWordHandlerTests : WordHandlerTestBase
         {
             { "formFieldType", "DropDown" },
             { "fieldName", "DropField" },
-            { "options", new[] { "Option1", "Option2", "Option3" } }
+            { "options", DropDownOptions }
         });
 
         var result = _handler.Execute(context, parameters);

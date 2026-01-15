@@ -56,7 +56,7 @@ public class SplitWordDocumentHandler : OperationHandlerBase<Document>
             fileBaseName = SecurityHelper.SanitizeFileName(Path.GetFileNameWithoutExtension(path!));
         }
 
-        if (splitBy.ToLower() == "section")
+        if (string.Equals(splitBy, "section", StringComparison.OrdinalIgnoreCase))
         {
             for (var i = 0; i < doc.Sections.Count; i++)
             {

@@ -6,6 +6,11 @@ namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Shape;
 
 public class AlignPptShapesHandlerTests : PptHandlerTestBase
 {
+    private static readonly int[] TwoShapeIndices = [0, 1];
+    private static readonly int[] ThreeShapeIndices = [0, 1, 2];
+    private static readonly int[] SingleShapeIndex = [0];
+    private static readonly int[] InvalidShapeIndices = [0, 10];
+
     private readonly AlignPptShapesHandler _handler = new();
 
     #region Operation Property
@@ -30,7 +35,7 @@ public class AlignPptShapesHandlerTests : PptHandlerTestBase
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "slideIndex", 0 },
-            { "shapeIndices", new[] { 0, 1 } },
+            { "shapeIndices", TwoShapeIndices },
             { "align", "left" }
         });
 
@@ -54,7 +59,7 @@ public class AlignPptShapesHandlerTests : PptHandlerTestBase
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "slideIndex", 0 },
-            { "shapeIndices", new[] { 0, 1 } },
+            { "shapeIndices", TwoShapeIndices },
             { "align", "left" },
             { "alignToSlide", true }
         });
@@ -80,7 +85,7 @@ public class AlignPptShapesHandlerTests : PptHandlerTestBase
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "slideIndex", 0 },
-            { "shapeIndices", new[] { 0, 1, 2 } },
+            { "shapeIndices", ThreeShapeIndices },
             { "align", "top" }
         });
 
@@ -104,7 +109,7 @@ public class AlignPptShapesHandlerTests : PptHandlerTestBase
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "slideIndex", 0 },
-            { "shapeIndices", new[] { 0, 1 } },
+            { "shapeIndices", TwoShapeIndices },
             { "align", "center" }
         });
 
@@ -128,7 +133,7 @@ public class AlignPptShapesHandlerTests : PptHandlerTestBase
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "slideIndex", 0 },
-            { "shapeIndices", new[] { 0, 1 } },
+            { "shapeIndices", TwoShapeIndices },
             { "align", "left" }
         });
 
@@ -155,7 +160,7 @@ public class AlignPptShapesHandlerTests : PptHandlerTestBase
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "slideIndex", 0 },
-            { "shapeIndices", new[] { 0, 1 } },
+            { "shapeIndices", TwoShapeIndices },
             { "align", align }
         });
 
@@ -178,7 +183,7 @@ public class AlignPptShapesHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
-            { "shapeIndices", new[] { 0, 1 } },
+            { "shapeIndices", TwoShapeIndices },
             { "align", "left" }
         });
 
@@ -213,7 +218,7 @@ public class AlignPptShapesHandlerTests : PptHandlerTestBase
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "slideIndex", 0 },
-            { "shapeIndices", new[] { 0, 1 } }
+            { "shapeIndices", TwoShapeIndices }
         });
 
         var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
@@ -229,7 +234,7 @@ public class AlignPptShapesHandlerTests : PptHandlerTestBase
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "slideIndex", 0 },
-            { "shapeIndices", new[] { 0 } },
+            { "shapeIndices", SingleShapeIndex },
             { "align", "left" }
         });
 
@@ -247,7 +252,7 @@ public class AlignPptShapesHandlerTests : PptHandlerTestBase
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "slideIndex", 0 },
-            { "shapeIndices", new[] { 0, 1 } },
+            { "shapeIndices", TwoShapeIndices },
             { "align", "invalid" }
         });
 
@@ -265,7 +270,7 @@ public class AlignPptShapesHandlerTests : PptHandlerTestBase
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "slideIndex", 0 },
-            { "shapeIndices", new[] { 0, 10 } },
+            { "shapeIndices", InvalidShapeIndices },
             { "align", "left" }
         });
 

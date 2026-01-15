@@ -151,7 +151,7 @@ Usage examples:
 
         var result = handler.Execute(operationContext, parameters);
 
-        if (operation.ToLowerInvariant() == "get_format")
+        if (string.Equals(operation, "get_format", StringComparison.OrdinalIgnoreCase))
             return result;
 
         if (operationContext.IsModified)

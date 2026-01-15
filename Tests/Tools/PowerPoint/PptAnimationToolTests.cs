@@ -31,7 +31,7 @@ public class PptAnimationToolTests : PptTestBase
         return filePath;
     }
 
-    private int FindShapeIndex(string pptPath)
+    private static int FindShapeIndex(string pptPath)
     {
         using var ppt = new Presentation(pptPath);
         var slide = ppt.Slides[0];

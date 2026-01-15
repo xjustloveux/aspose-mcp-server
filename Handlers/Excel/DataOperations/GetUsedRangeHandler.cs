@@ -50,7 +50,7 @@ public class GetUsedRangeHandler : OperationHandlerBase<Workbook>
                 range = rangeAddress
             };
 
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(result, JsonDefaults.Indented);
         }
         catch (CellsException ex)
         {

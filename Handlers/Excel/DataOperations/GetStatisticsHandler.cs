@@ -50,7 +50,7 @@ public class GetStatisticsHandler : OperationHandlerBase<Workbook>
                 worksheets
             };
 
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(result, JsonDefaults.Indented);
         }
         catch (CellsException ex)
         {

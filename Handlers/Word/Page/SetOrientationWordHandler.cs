@@ -31,7 +31,9 @@ public class SetOrientationWordHandler : OperationHandlerBase<Document>
             throw new ArgumentException("orientation parameter is required for set_orientation operation");
 
         var doc = context.Document;
-        var orientationEnum = orientation.ToLower() == "landscape" ? Orientation.Landscape : Orientation.Portrait;
+        var orientationEnum = string.Equals(orientation, "landscape", StringComparison.OrdinalIgnoreCase)
+            ? Orientation.Landscape
+            : Orientation.Portrait;
         var sectionsToUpdate = WordPageHelper.GetTargetSections(doc, sectionIndex, sectionIndices);
 
         foreach (var idx in sectionsToUpdate)

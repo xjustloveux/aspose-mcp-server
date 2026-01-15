@@ -96,7 +96,7 @@ WARNING: Merging cells will only keep the value of the top-left cell. All other 
 
         var result = handler.Execute(operationContext, parameters);
 
-        if (operation.ToLowerInvariant() == "get")
+        if (string.Equals(operation, "get", StringComparison.OrdinalIgnoreCase))
             return result;
 
         if (operationContext.IsModified)

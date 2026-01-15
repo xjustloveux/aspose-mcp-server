@@ -5,6 +5,8 @@ namespace AsposeMcpServer.Tests.Handlers.PowerPoint.PageSetup;
 
 public class SetFooterHandlerTests : PptHandlerTestBase
 {
+    private static readonly int[] SlideIndicesZeroTwo = [0, 2];
+
     private readonly SetFooterHandler _handler = new();
 
     #region Operation Property
@@ -88,7 +90,7 @@ public class SetFooterHandlerTests : PptHandlerTestBase
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "footerText", "Test Footer" },
-            { "slideIndices", new[] { 0, 2 } }
+            { "slideIndices", SlideIndicesZeroTwo }
         });
 
         var result = _handler.Execute(context, parameters);

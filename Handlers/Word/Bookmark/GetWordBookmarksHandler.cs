@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Core.Helpers;
 
 namespace AsposeMcpServer.Handlers.Word.Bookmark;
 
@@ -47,6 +48,6 @@ public class GetWordBookmarksHandler : OperationHandlerBase<Document>
             bookmarks = bookmarkList
         };
 
-        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        return JsonSerializer.Serialize(result, JsonDefaults.Indented);
     }
 }

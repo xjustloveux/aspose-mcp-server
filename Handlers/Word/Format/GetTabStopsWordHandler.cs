@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Core.Helpers;
 using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.Format;
@@ -189,6 +190,6 @@ public class GetTabStopsWordHandler : OperationHandlerBase<Document>
             tabStops = tabStopsList
         };
 
-        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        return JsonSerializer.Serialize(result, JsonDefaults.Indented);
     }
 }

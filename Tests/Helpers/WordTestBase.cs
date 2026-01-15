@@ -49,7 +49,7 @@ public abstract class WordTestBase : TestBase
     /// <summary>
     ///     Verifies that a paragraph exists and has the expected text
     /// </summary>
-    protected void AssertParagraphExists(Document doc, int paragraphIndex, string expectedText)
+    protected static void AssertParagraphExists(Document doc, int paragraphIndex, string expectedText)
     {
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
         Assert.True(paragraphIndex < paragraphs.Count, $"Paragraph index {paragraphIndex} is out of range");
@@ -59,7 +59,7 @@ public abstract class WordTestBase : TestBase
     /// <summary>
     ///     Verifies that a paragraph has the expected style
     /// </summary>
-    protected void AssertParagraphStyle(Document doc, int paragraphIndex, string expectedStyleName)
+    protected static void AssertParagraphStyle(Document doc, int paragraphIndex, string expectedStyleName)
     {
         var paragraphs = doc.GetChildNodes(NodeType.Paragraph, true).Cast<Paragraph>().ToList();
         Assert.True(paragraphIndex < paragraphs.Count, $"Paragraph index {paragraphIndex} is out of range");
@@ -69,7 +69,7 @@ public abstract class WordTestBase : TestBase
     /// <summary>
     ///     Gets all paragraphs from a document
     /// </summary>
-    protected List<Paragraph> GetParagraphs(Document doc, bool includeNested = true)
+    protected static List<Paragraph> GetParagraphs(Document doc, bool includeNested = true)
     {
         return doc.GetChildNodes(NodeType.Paragraph, includeNested).Cast<Paragraph>().ToList();
     }

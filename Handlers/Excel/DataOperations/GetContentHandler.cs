@@ -33,8 +33,6 @@ public class GetContentHandler : OperationHandlerBase<Workbook>
             var worksheet = ExcelHelper.GetWorksheet(workbook, sheetIndex);
             var cells = worksheet.Cells;
 
-            var jsonOptions = new JsonSerializerOptions { WriteIndented = false };
-
             if (!string.IsNullOrEmpty(range))
             {
                 var cellRange = ExcelHelper.CreateRange(cells, range);
@@ -43,7 +41,7 @@ public class GetContentHandler : OperationHandlerBase<Workbook>
                     cellRange.RowCount, cellRange.ColumnCount, options);
 
                 var rows = ConvertDataTableToList(dataTable);
-                return JsonSerializer.Serialize(rows, jsonOptions);
+                return JsonSerializer.Serialize(rows);
             }
             else
             {
@@ -53,7 +51,7 @@ public class GetContentHandler : OperationHandlerBase<Workbook>
                 var dataTable = cells.ExportDataTable(0, 0, maxRow + 1, maxCol + 1, options);
 
                 var rows = ConvertDataTableToList(dataTable);
-                return JsonSerializer.Serialize(rows, jsonOptions);
+                return JsonSerializer.Serialize(rows);
             }
         }
         catch (CellsException ex)

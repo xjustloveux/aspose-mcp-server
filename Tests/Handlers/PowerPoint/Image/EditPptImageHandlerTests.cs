@@ -121,7 +121,7 @@ public class EditPptImageHandlerTests : PptHandlerTestBase
 
     #region Helper Methods
 
-    private Presentation CreatePresentationWithImage()
+    private static Presentation CreatePresentationWithImage()
     {
         var pres = new Presentation();
         var slide = pres.Slides[0];

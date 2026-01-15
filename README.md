@@ -6,6 +6,8 @@
 [![Build Status](https://img.shields.io/github/actions/workflow/status/xjustloveux/aspose-mcp-server/build-multi-platform.yml?branch=master&label=build&style=flat-square)](https://github.com/xjustloveux/aspose-mcp-server/actions/workflows/build-multi-platform.yml)
 [![Test Status](https://img.shields.io/github/actions/workflow/status/xjustloveux/aspose-mcp-server/test.yml?branch=master&label=tests&style=flat-square)](https://github.com/xjustloveux/aspose-mcp-server/actions/workflows/test.yml)
 [![Test Coverage](https://codecov.io/gh/xjustloveux/aspose-mcp-server/branch/master/graph/badge.svg)](https://codecov.io/gh/xjustloveux/aspose-mcp-server)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=xjustloveux_aspose-mcp-server&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=xjustloveux_aspose-mcp-server)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=xjustloveux_aspose-mcp-server&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=xjustloveux_aspose-mcp-server)
 [![MCP Version](https://img.shields.io/badge/MCP-2025--11--25-blue?style=flat-square)](https://modelcontextprotocol.io/)
 [![Aspose Version](https://img.shields.io/badge/Aspose-23.10.0-orange?style=flat-square)](https://products.aspose.com/total/net/)
 [![xUnit](https://img.shields.io/badge/xUnit-2.9.2-blue?style=flat-square&logo=xunit)](https://xunit.net/)

@@ -14,11 +14,17 @@ spec:
       labels:
         app: aspose-mcp
     spec:
+      automountServiceAccountToken: false
       containers:
         - name: aspose-mcp
           image: ghcr.io/xjustloveux/aspose-mcp-server:latest
           ports:
             - containerPort: 3000
+          resources:
+            limits:
+              memory: "1Gi"
+            requests:
+              memory: "256Mi"
           env:
             # === Transport Settings (Required) ===
             - name: ASPOSE_TRANSPORT
@@ -141,15 +147,6 @@ spec:
           #   - name: license
           #     mountPath: /app/license
           #     readOnly: true
-
-          # === Resources (Optional) ===
-          # resources:
-          #   requests:
-          #     memory: "256Mi"
-          #     cpu: "250m"
-          #   limits:
-          #     memory: "1Gi"
-          #     cpu: "1000m"
 
           # === Liveness Probe (Optional) ===
           # livenessProbe:

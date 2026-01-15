@@ -6,6 +6,9 @@ namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Notes;
 
 public class ClearNotesHandlerTests : PptHandlerTestBase
 {
+    private static readonly int[] SlideIndicesZeroTwo = [0, 2];
+    private static readonly int[] InvalidSlideIndex = [999];
+
     private readonly ClearNotesHandler _handler = new();
 
     #region Operation Property
@@ -58,7 +61,7 @@ public class ClearNotesHandlerTests : PptHandlerTestBase
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
-            { "slideIndices", new[] { 0, 2 } }
+            { "slideIndices", SlideIndicesZeroTwo }
         });
 
         var result = _handler.Execute(context, parameters);
@@ -73,7 +76,7 @@ public class ClearNotesHandlerTests : PptHandlerTestBase
         var context = CreateContext(presentation);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
-            { "slideIndices", new[] { 999 } }
+            { "slideIndices", InvalidSlideIndex }
         });
 
         Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));

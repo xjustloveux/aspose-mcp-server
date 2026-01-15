@@ -179,7 +179,9 @@ public class ExcelChartHelperTests
         var chart = worksheet.Charts[chartIndex];
         chart.NSeries.Add("B1:B5", true);
 
-        ExcelChartHelper.SetCategoryData(chart, "");
+        var exception = Record.Exception(() => ExcelChartHelper.SetCategoryData(chart, ""));
+
+        Assert.Null(exception);
     }
 
     [Fact]
@@ -191,7 +193,9 @@ public class ExcelChartHelperTests
         var chart = worksheet.Charts[chartIndex];
         chart.NSeries.Add("B1:B5", true);
 
-        ExcelChartHelper.SetCategoryData(chart, null!);
+        var exception = Record.Exception(() => ExcelChartHelper.SetCategoryData(chart, null!));
+
+        Assert.Null(exception);
     }
 
     [Fact]
@@ -202,7 +206,9 @@ public class ExcelChartHelperTests
         var chartIndex = worksheet.Charts.Add(ChartType.Column, 5, 0, 20, 10);
         var chart = worksheet.Charts[chartIndex];
 
-        ExcelChartHelper.SetCategoryData(chart, "A1:A5");
+        var exception = Record.Exception(() => ExcelChartHelper.SetCategoryData(chart, "A1:A5"));
+
+        Assert.Null(exception);
     }
 
     [Fact]

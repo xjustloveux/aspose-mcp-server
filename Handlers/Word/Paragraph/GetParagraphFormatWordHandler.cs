@@ -2,6 +2,7 @@ using System.Drawing;
 using System.Text.Json;
 using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Core.Helpers;
 
 namespace AsposeMcpServer.Handlers.Word.Paragraph;
 
@@ -185,6 +186,6 @@ public class GetParagraphFormatWordHandler : OperationHandlerBase<Document>
                 { total = para.Runs.Count, displayed = Math.Min(para.Runs.Count, 10), details = runs };
         }
 
-        return JsonSerializer.Serialize(resultDict, new JsonSerializerOptions { WriteIndented = true });
+        return JsonSerializer.Serialize(resultDict, JsonDefaults.Indented);
     }
 }

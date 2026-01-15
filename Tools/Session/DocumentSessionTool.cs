@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using AsposeMcpServer.Core.Helpers;
 using AsposeMcpServer.Core.Session;
 using ModelContextProtocol.Server;
 
@@ -152,7 +153,7 @@ Temp file operations:
             sessionId = newSessionId,
             message = "Document opened successfully",
             session
-        }, new JsonSerializerOptions { WriteIndented = true });
+        }, JsonDefaults.Indented);
     }
 
     /// <summary>
@@ -178,7 +179,7 @@ Temp file operations:
                 ? $"Document saved to: {outputPath}"
                 : "Document saved to original path",
             session
-        }, new JsonSerializerOptions { WriteIndented = true });
+        }, JsonDefaults.Indented);
     }
 
     /// <summary>
@@ -202,7 +203,7 @@ Temp file operations:
             message = discard
                 ? "Session closed (changes discarded)"
                 : "Session closed (changes saved)"
-        }, new JsonSerializerOptions { WriteIndented = true });
+        }, JsonDefaults.Indented);
     }
 
     /// <summary>
@@ -220,7 +221,7 @@ Temp file operations:
             count = sessions.Count,
             totalMemoryMB = _sessionManager.GetTotalMemoryMb(),
             sessions
-        }, new JsonSerializerOptions { WriteIndented = true });
+        }, JsonDefaults.Indented);
     }
 
     /// <summary>
@@ -245,7 +246,7 @@ Temp file operations:
         {
             success = true,
             session
-        }, new JsonSerializerOptions { WriteIndented = true });
+        }, JsonDefaults.Indented);
     }
 
     /// <summary>
@@ -271,7 +272,7 @@ Temp file operations:
                 FileSizeMb = f.FileSizeBytes / (1024.0 * 1024.0),
                 f.PromptOnReconnect
             })
-        }, new JsonSerializerOptions { WriteIndented = true });
+        }, JsonDefaults.Indented);
     }
 
     /// <summary>
@@ -300,7 +301,7 @@ Temp file operations:
             message = result.Success
                 ? $"Successfully recovered to: {result.RecoveredPath}"
                 : $"Recovery failed: {result.ErrorMessage}"
-        }, new JsonSerializerOptions { WriteIndented = true });
+        }, JsonDefaults.Indented);
     }
 
     /// <summary>
@@ -324,7 +325,7 @@ Temp file operations:
             message = deleted
                 ? "Temp file deleted successfully"
                 : "Temp file not found"
-        }, new JsonSerializerOptions { WriteIndented = true });
+        }, JsonDefaults.Indented);
     }
 
     /// <summary>
@@ -342,7 +343,7 @@ Temp file operations:
             result.DeletedCount,
             result.ErrorCount,
             message = $"Cleaned up {result.DeletedCount} expired files"
-        }, new JsonSerializerOptions { WriteIndented = true });
+        }, JsonDefaults.Indented);
     }
 
     /// <summary>
@@ -360,6 +361,6 @@ Temp file operations:
             stats.TotalSizeMb,
             stats.ExpiredCount,
             retentionHours = _sessionManager.Config.TempRetentionHours
-        }, new JsonSerializerOptions { WriteIndented = true });
+        }, JsonDefaults.Indented);
     }
 }

@@ -97,7 +97,7 @@ Usage examples:
 
         var result = handler.Execute(operationContext, parameters);
 
-        if (operation.ToLowerInvariant() == "get")
+        if (string.Equals(operation, "get", StringComparison.OrdinalIgnoreCase))
             return result;
 
         if (operationContext.IsModified)

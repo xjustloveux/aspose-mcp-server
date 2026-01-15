@@ -72,7 +72,7 @@ public class ExecuteMailMergeHandler : OperationHandlerBase<Document>
     /// <param name="data">The JSON object containing field names and values.</param>
     /// <param name="cleanupOptions">The mail merge cleanup options to apply.</param>
     /// <returns>A message indicating the result of the mail merge operation.</returns>
-    private string ExecuteSingleRecord(OperationContext<Document> context, string outputPath, JsonObject data,
+    private static string ExecuteSingleRecord(OperationContext<Document> context, string outputPath, JsonObject data,
         MailMergeCleanupOptions cleanupOptions)
     {
         var doc = context.Document.Clone() ?? throw new InvalidOperationException("Failed to clone document");
@@ -104,7 +104,8 @@ public class ExecuteMailMergeHandler : OperationHandlerBase<Document>
     /// <param name="dataArray">The JSON array containing multiple record objects.</param>
     /// <param name="cleanupOptions">The mail merge cleanup options to apply.</param>
     /// <returns>A message indicating the result of the mail merge operation.</returns>
-    private string ExecuteMultipleRecords(OperationContext<Document> context, string outputPath, JsonArray dataArray,
+    private static string ExecuteMultipleRecords(OperationContext<Document> context, string outputPath,
+        JsonArray dataArray,
         MailMergeCleanupOptions cleanupOptions)
     {
         List<string> outputFiles = [];

@@ -10,6 +10,8 @@ namespace AsposeMcpServer.Handlers.Word.Styles;
 /// </summary>
 public class GetWordStylesHandler : OperationHandlerBase<Document>
 {
+    private const double FloatTolerance = 0.0001;
+
     /// <inheritdoc />
     public override string Operation => "get_styles";
 
@@ -79,8 +81,8 @@ public class GetWordStylesHandler : OperationHandlerBase<Document>
             if (font.Italic) styleInfo["italic"] = true;
 
             styleInfo["alignment"] = paraFormat.Alignment.ToString();
-            if (paraFormat.SpaceBefore != 0) styleInfo["spaceBefore"] = paraFormat.SpaceBefore;
-            if (paraFormat.SpaceAfter != 0) styleInfo["spaceAfter"] = paraFormat.SpaceAfter;
+            if (Math.Abs(paraFormat.SpaceBefore) > FloatTolerance) styleInfo["spaceBefore"] = paraFormat.SpaceBefore;
+            if (Math.Abs(paraFormat.SpaceAfter) > FloatTolerance) styleInfo["spaceAfter"] = paraFormat.SpaceAfter;
 
             styleList.Add(styleInfo);
         }

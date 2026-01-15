@@ -37,7 +37,7 @@ public class DocumentSessionManagerIsolationTests : IDisposable
         }
     }
 
-    private DocumentSessionManager CreateManager(SessionIsolationMode mode)
+    private static DocumentSessionManager CreateManager(SessionIsolationMode mode)
     {
         var config = new SessionConfig
         {

@@ -166,10 +166,7 @@ Usage examples:
             revisionNumber = props.RevisionNumber
         };
 
-        return JsonSerializer.Serialize(result, new JsonSerializerOptions
-        {
-            WriteIndented = true
-        });
+        return JsonSerializer.Serialize(result, JsonDefaults.Indented);
     }
 
     /// <summary>

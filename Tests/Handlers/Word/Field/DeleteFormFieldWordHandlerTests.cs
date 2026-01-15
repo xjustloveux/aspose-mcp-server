@@ -7,6 +7,8 @@ namespace AsposeMcpServer.Tests.Handlers.Word.Field;
 
 public class DeleteFormFieldWordHandlerTests : WordHandlerTestBase
 {
+    private static readonly string[] FieldNamesToDelete = ["Field1", "Field2"];
+
     private readonly DeleteFormFieldWordHandler _handler = new();
 
     #region Operation Property
@@ -45,7 +47,7 @@ public class DeleteFormFieldWordHandlerTests : WordHandlerTestBase
         var context = CreateContext(doc);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
-            { "fieldNames", new[] { "Field1", "Field2" } }
+            { "fieldNames", FieldNamesToDelete }
         });
 
         var result = _handler.Execute(context, parameters);

@@ -1,7 +1,7 @@
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Core.Helpers;
 
 namespace AsposeMcpServer.Handlers.Word.Properties;
 
@@ -67,7 +67,7 @@ public class GetWordPropertiesHandler : OperationHandlerBase<Document>
             result["customProperties"] = customPropsJson;
         }
 
-        return result.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+        return result.ToJsonString(JsonDefaults.Indented);
     }
 
     /// <summary>

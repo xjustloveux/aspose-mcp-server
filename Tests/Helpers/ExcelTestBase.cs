@@ -38,7 +38,7 @@ public abstract class ExcelTestBase : TestBase
     /// <summary>
     ///     Verifies that a cell has the expected value
     /// </summary>
-    protected void AssertCellValue(Workbook workbook, int sheetIndex, int row, int column, object expectedValue)
+    protected static void AssertCellValue(Workbook workbook, int sheetIndex, int row, int column, object expectedValue)
     {
         var worksheet = workbook.Worksheets[sheetIndex];
         var actualValue = worksheet.Cells[row, column].Value;

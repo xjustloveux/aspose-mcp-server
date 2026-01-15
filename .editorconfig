@@ -27,10 +27,15 @@ resharper_unused_member_global_highlighting = none
 resharper_unused_type_global_highlighting = none
 resharper_member_can_be_private_global_highlighting = none
 
+# Style preferences (team decision to keep traditional syntax)
+resharper_convert_to_primary_constructor_highlighting = none
+
 # Test files specific rules
 [Tests/**/*.cs]
 # Record.Exception() pattern - lambda executes synchronously before dispose
 resharper_access_to_disposed_closure_highlighting = none
+# Tests don't need cancellation support
+resharper_method_supports_cancellation_highlighting = none
 
 # XML and config files
 [*.{xml,config,json,yml,yaml}]

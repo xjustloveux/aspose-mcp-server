@@ -6,6 +6,8 @@ namespace AsposeMcpServer.Tests.Handlers.Excel.FileOperations;
 
 public class SplitWorkbookHandlerTests : ExcelHandlerTestBase
 {
+    private static readonly int[] SheetIndices = [0, 2];
+
     private readonly SplitWorkbookHandler _handler = new();
 
     private string CreateMultiSheetWorkbook()
@@ -104,7 +106,7 @@ public class SplitWorkbookHandlerTests : ExcelHandlerTestBase
         {
             { "inputPath", inputPath },
             { "outputDirectory", outputDir },
-            { "sheetIndices", new[] { 0, 2 } }
+            { "sheetIndices", SheetIndices }
         });
 
         var result = _handler.Execute(context, parameters);

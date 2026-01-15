@@ -33,7 +33,7 @@ public class ExtractPdfTextHandler : OperationHandlerBase<Document>
         var page = document.Pages[pageIndex];
 
         var textAbsorber = new TextAbsorber();
-        if (extractionMode.ToLower() == "raw")
+        if (string.Equals(extractionMode, "raw", StringComparison.OrdinalIgnoreCase))
             textAbsorber.ExtractionOptions = new TextExtractionOptions(TextExtractionOptions.TextFormattingMode.Raw);
 
         page.Accept(textAbsorber);

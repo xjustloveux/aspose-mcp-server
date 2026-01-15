@@ -97,7 +97,7 @@ Usage examples:
 
         var result = handler.Execute(operationContext, parameters);
 
-        if (operation.ToLowerInvariant() == "get")
+        if (string.Equals(operation, "get", StringComparison.OrdinalIgnoreCase))
             return result;
 
         if (operationContext.IsModified)
@@ -120,7 +120,7 @@ Usage examples:
     {
         var parameters = new OperationParameters();
 
-        if (operation.ToLowerInvariant() == "set")
+        if (string.Equals(operation, "set", StringComparison.OrdinalIgnoreCase))
         {
             if (title != null) parameters.Set("title", title);
             if (author != null) parameters.Set("author", author);

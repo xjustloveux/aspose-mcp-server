@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Core.Helpers;
 
 namespace AsposeMcpServer.Handlers.Word.Format;
 
@@ -86,7 +87,7 @@ public class GetRunFormatWordHandler : OperationHandlerBase<Document>
                     colorName,
                     isAutoColor = font.Color is { IsEmpty: true } or { R: 0, G: 0, B: 0, A: 0 }
                 };
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(result, JsonDefaults.Indented);
         }
         else
         {
@@ -118,7 +119,7 @@ public class GetRunFormatWordHandler : OperationHandlerBase<Document>
                 count = runs.Count,
                 runs = runsList
             };
-            return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(result, JsonDefaults.Indented);
         }
     }
 }

@@ -66,8 +66,7 @@ public class HandlerRegistry<TContext> where TContext : class
 
         var handlerTypes = scanAssembly.GetTypes()
             .Where(t => t.Namespace == targetNamespace &&
-                        t.IsClass &&
-                        !t.IsAbstract &&
+                        t is { IsClass: true, IsAbstract: false } &&
                         handlerInterface.IsAssignableFrom(t) &&
                         !t.IsDefined(typeof(ExcludeFromAutoDiscoveryAttribute), false) &&
                         t.GetConstructor(Type.EmptyTypes) != null);

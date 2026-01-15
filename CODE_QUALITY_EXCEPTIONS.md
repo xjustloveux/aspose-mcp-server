@@ -3,7 +3,7 @@
 本文件記錄 JetBrains InspectCode 報告中被排除修復的問題及其原因。
 這些問題經過評估後決定保留，未來進行代碼品質檢查時可參考本文件跳過這些項目。
 
-**最後更新日期**: 2026-01-11
+**最後更新日期**: 2026-01-16
 **分析工具**: JetBrains InspectCode 2025.3.0.4
 
 ---
@@ -12,17 +12,20 @@
 
 1. [AccessToDisposedClosure](#1-accesstodisposedclosure)
 2. [AutoPropertyCanBeMadeGetOnly.Global](#2-autopropertycanbemadegetonlyglobal)
-3. [MemberCanBePrivate.Global](#3-membercanbeprivateglobal)
-4. [MemberCanBeProtected.Global](#4-membercanbeprotectedglobal)
-5. [MethodSupportsCancellation](#5-methodsupportscancellation)
-6. [OutParameterValueIsAlwaysDiscarded.Local](#6-outparametervalueisalwaysdiscardedlocal)
-7. [PropertyCanBeMadeInitOnly.Global](#7-propertycanbemadeinitonlyglobal)
-8. [UnusedAutoPropertyAccessor.Global](#8-unusedautopropertyaccessorglobal)
-9. [UnusedMember.Global](#9-unusedmemberglobal)
-10. [UnusedMember.Local](#10-unusedmemberlocal)
-11. [UnusedMethodReturnValue.Global](#11-unusedmethodreturnvalueglobal)
-12. [UnusedType.Global](#12-unusedtypeglobal)
-13. [UseObjectOrCollectionInitializer](#13-useobjectorollectioninitializer)
+3. [ClassNeverInstantiated.Global](#3-classneverinstantiatedglobal)
+4. [ConvertToPrimaryConstructor](#4-converttoprimaryconstructor)
+5. [MemberCanBePrivate.Global](#5-membercanbeprivateglobal)
+6. [MemberCanBeProtected.Global](#6-membercanbeprotectedglobal)
+7. [MethodSupportsCancellation](#7-methodsupportscancellation)
+8. [OutParameterValueIsAlwaysDiscarded.Local](#8-outparametervalueisalwaysdiscardedlocal)
+9. [PropertyCanBeMadeInitOnly.Global](#9-propertycanbemadeinitonlyglobal)
+10. [UnusedAutoPropertyAccessor.Global](#10-unusedautopropertyaccessorglobal)
+11. [UnusedMember.Global](#11-unusedmemberglobal)
+12. [UnusedMember.Local](#12-unusedmemberlocal)
+13. [UnusedMethodReturnValue.Global](#13-unusedmethodreturnvalueglobal)
+14. [UnusedType.Global](#14-unusedtypeglobal)
+15. [UseObjectOrCollectionInitializer](#15-useobjectorollectioninitializer)
+16. [UseUtf8StringLiteral](#16-useutf8stringliteral)
 
 ---
 
@@ -80,8 +83,8 @@ Assert.Throws<ObjectDisposedException>(() => document.SomeMethod());
 
 | 檔案 | 行號 | 屬性 |
 |------|------|------|
-| `Core/Security/AuthConfig.cs` | 202 | (JWT 配置屬性) |
-| `Core/Security/AuthConfig.cs` | 207 | (JWT 配置屬性) |
+| `Core/Security/AuthConfig.cs` | 200 | `ClientSecret` (JWT 配置屬性) |
+| `Core/Security/AuthConfig.cs` | 206 | `CustomEndpoint` (JWT 配置屬性) |
 
 ### 問題描述
 
@@ -108,7 +111,97 @@ var config = JsonSerializer.Deserialize<AuthConfig>(json);
 
 ---
 
-## 3. MemberCanBePrivate.Global
+## 3. ClassNeverInstantiated.Global
+
+| 項目 | 內容 |
+|------|------|
+| **級別** | Note |
+| **數量** | 1 |
+| **訊息** | Class is never instantiated |
+
+### 受影響檔案
+
+| 檔案 | 行號 | 類別 |
+|------|------|------|
+| `Tests/Core/Handlers/HandlerRegistryAutoDiscoveryTests.cs` | 115 | `DifferentContextDocument` |
+
+### 問題描述
+
+類別定義了但從未被 `new` 實例化。
+
+### 不修復原因
+
+- 這是測試用的類別，用於測試「當 Handler 的泛型參數是不同 Context 類型時，不會被自動發現」
+- 類別只需要存在作為泛型類型參數，不需要實際實例化
+- 這是有意為之的測試設計
+
+### 範例代碼
+
+```csharp
+// 這個類別用於驗證 DifferentContextHandler 不會被發現
+public class DifferentContextDocument
+{
+    public int Value { get; set; }
+}
+
+// 使用此類別的 Handler 不應被 HandlerRegistry<TestDiscoveryDocument> 發現
+public class DifferentContextHandler : OperationHandlerBase<DifferentContextDocument>
+{
+    // ...
+}
+```
+
+---
+
+## 4. ConvertToPrimaryConstructor
+
+| 項目 | 內容 |
+|------|------|
+| **級別** | Note |
+| **數量** | 1 |
+| **訊息** | Convert into primary constructor |
+| **處理方式** | 已在 `.editorconfig` 中全局排除 |
+
+### 受影響檔案
+
+| 檔案 | 行號 | 類別 |
+|------|------|------|
+| `Tests/Core/Handlers/HandlerRegistryAutoDiscoveryTests.cs` | 163 | `NoParameterlessCtorHandler` |
+
+### 問題描述
+
+建議將傳統建構函式轉換為 C# 12 的主要建構函式語法。
+
+### 不修復原因
+
+- 這是 C# 12 引入的語法糖，純屬風格選擇
+- 團隊決定保持傳統建構函式寫法以維持一致性
+- 測試類別 `NoParameterlessCtorHandler` 故意使用帶參數的建構函式來測試「沒有無參數建構函式的類別不會被自動發現」
+
+### 範例代碼
+
+```csharp
+// 目前寫法（保留）
+public class NoParameterlessCtorHandler : OperationHandlerBase<TestDiscoveryDocument>
+{
+    private readonly string _requiredValue;
+
+    public NoParameterlessCtorHandler(string requiredValue)
+    {
+        _requiredValue = requiredValue;
+    }
+}
+
+// C# 12 主要建構函式寫法（不採用）
+public class NoParameterlessCtorHandler(string requiredValue) : OperationHandlerBase<TestDiscoveryDocument>
+{
+    private readonly string _requiredValue = requiredValue;
+}
+```
+
+---
+
+## 5. MemberCanBePrivate.Global
 
 | 項目 | 內容 |
 |------|------|
@@ -126,7 +219,7 @@ var config = JsonSerializer.Deserialize<AuthConfig>(json);
 | `Core/Session/DocumentSession.cs` | 75 | `LastAccessedAt.set` |
 | `Core/Tracking/TrackingConfig.cs` | 47 | `WebhookAuthHeader.set` |
 | `Core/Tracking/TrackingConfig.cs` | 52 | `WebhookTimeoutSeconds.set` |
-| `Core/Session/DocumentSessionManager.cs` | 200 | `GetSession()` |
+| `Core/Session/DocumentSessionManager.cs` | 201 | `GetSession()` |
 
 ### 問題描述
 
@@ -141,7 +234,7 @@ var config = JsonSerializer.Deserialize<AuthConfig>(json);
 
 ---
 
-## 4. MemberCanBeProtected.Global
+## 6. MemberCanBeProtected.Global
 
 | 項目 | 內容 |
 |------|------|
@@ -167,20 +260,22 @@ Enum 可以改為 protected 可見性。
 
 ---
 
-## 5. MethodSupportsCancellation
+## 7. MethodSupportsCancellation
 
 | 項目 | 內容 |
 |------|------|
 | **級別** | Note |
-| **數量** | 2 |
+| **數量** | 3 |
 | **訊息** | Method has overload with cancellation support |
+| **處理方式** | 測試檔案已在 `.editorconfig` 中排除 |
 
 ### 受影響檔案
 
-| 檔案 | 行號 | 方法 |
-|------|------|------|
-| `Tests/Core/Security/ApiKeyAuthenticationMiddlewareTests.cs` | 315 | `ReadAsStringAsync` |
-| `Tests/Core/Security/ApiKeyAuthenticationMiddlewareTests.cs` | 355 | `ReadAsStringAsync` |
+| 檔案 | 行號 | 方法 | 備註 |
+|------|------|------|------|
+| `Core/Transport/WebSocketConnectionHandler.cs` | 270 | `FlushAsync` | 生產代碼，需評估 |
+| `Tests/Core/Security/ApiKeyAuthenticationMiddlewareTests.cs` | 315 | `ReadAsStringAsync` | 已排除 |
+| `Tests/Core/Security/ApiKeyAuthenticationMiddlewareTests.cs` | 355 | `ReadAsStringAsync` | 已排除 |
 
 ### 問題描述
 
@@ -188,13 +283,17 @@ Enum 可以改為 protected 可見性。
 
 ### 不修復原因
 
-- 這是測試代碼，不需要取消支援
-- 測試是同步執行的，添加 CancellationToken 會增加不必要的複雜性
-- 對測試的可讀性和維護性沒有實質幫助
+**測試代碼（已在 .editorconfig 排除）**：
+- 測試是同步執行的，不需要取消支援
+- 添加 CancellationToken 會增加不必要的複雜性
+
+**生產代碼（WebSocketConnectionHandler）**：
+- 這個呼叫在 WebSocket 連接處理中，改動會涉及較大範圍
+- 需要進一步評估是否有實際需求
 
 ---
 
-## 6. OutParameterValueIsAlwaysDiscarded.Local
+## 8. OutParameterValueIsAlwaysDiscarded.Local
 
 | 項目 | 內容 |
 |------|------|
@@ -216,7 +315,7 @@ Enum 可以改為 protected 可見性。
 
 ---
 
-## 7. PropertyCanBeMadeInitOnly.Global
+## 9. PropertyCanBeMadeInitOnly.Global
 
 | 項目 | 內容 |
 |------|------|
@@ -262,7 +361,7 @@ public string Host { get; init; } = "localhost";  // 會導致反序列化失敗
 
 ---
 
-## 8. UnusedAutoPropertyAccessor.Global
+## 10. UnusedAutoPropertyAccessor.Global
 
 | 項目 | 內容 |
 |------|------|
@@ -274,10 +373,10 @@ public string Host { get; init; } = "localhost";  // 會導致反序列化失敗
 
 | 檔案 | 行號 | 屬性 |
 |------|------|------|
-| `Core/Tracking/TrackingConfig.cs` | 263 | `Error.get` |
-| `Core/Session/DocumentSessionManager.cs` | 772 | `EstimatedMemoryMb.get` |
-| `Core/Session/DocumentSessionManager.cs` | 767 | `LastAccessedAt.get` |
-| `Core/Session/DocumentSessionManager.cs` | 762 | `OpenedAt.get` |
+| `Core/Tracking/TrackingConfig.cs` | 262 | `Error.get` |
+| `Core/Session/DocumentSessionManager.cs` | 771 | `EstimatedMemoryMb.get` |
+| `Core/Session/DocumentSessionManager.cs` | 766 | `LastAccessedAt.get` |
+| `Core/Session/DocumentSessionManager.cs` | 761 | `OpenedAt.get` |
 | `Core/Session/TempFileManager.cs` | 605 | `OwnerGroupId.get` |
 | `Core/Session/TempFileManager.cs` | 610 | `OwnerUserId.get` |
 | `Core/Session/TempFileManager.cs` | 575 | `TempPath.get` |
@@ -295,12 +394,12 @@ public string Host { get; init; } = "localhost";  // 會導致反序列化失敗
 
 ---
 
-## 9. UnusedMember.Global
+## 11. UnusedMember.Global
 
 | 項目 | 內容 |
 |------|------|
 | **級別** | Note |
-| **數量** | 9 |
+| **數量** | 7 |
 | **訊息** | Member is never used |
 
 ### 受影響檔案
@@ -313,9 +412,7 @@ public string Host { get; init; } = "localhost";  // 會導致反序列化失敗
 | `Tests/Helpers/PdfTestBase.cs` | 11 | `IsEvaluationMode()` |
 | `Core/Session/DocumentSession.cs` | 226 | `GetDocumentAsync()` |
 | `Core/Session/DocumentSessionManager.cs` | 467 | `OnServerShutdown()` |
-| `Core/Security/ApiKeyAuthenticationMiddleware.cs` | 423 | `UseApiKeyAuthentication()` |
-| `Core/Security/JwtAuthenticationMiddleware.cs` | 537 | `UseJwtAuthentication()` |
-| `Core/Tracking/TrackingMiddleware.cs` | 410 | `UseTracking()` |
+| `Core/Tracking/TrackingMiddleware.cs` | 404 | `UseTracking()` |
 
 ### 問題描述
 
@@ -330,7 +427,7 @@ public string Host { get; init; } = "localhost";  // 會導致反序列化失敗
 
 ---
 
-## 10. UnusedMember.Local
+## 12. UnusedMember.Local
 
 | 項目 | 內容 |
 |------|------|
@@ -352,7 +449,7 @@ public string Host { get; init; } = "localhost";  // 會導致反序列化失敗
 
 ---
 
-## 11. UnusedMethodReturnValue.Global
+## 13. UnusedMethodReturnValue.Global
 
 | 項目 | 內容 |
 |------|------|
@@ -390,21 +487,19 @@ builder.WithFilteredTools(filter);
 
 ---
 
-## 12. UnusedType.Global
+## 14. UnusedType.Global
 
 | 項目 | 內容 |
 |------|------|
 | **級別** | Note |
-| **數量** | 3 |
+| **數量** | 1 |
 | **訊息** | Type is never used |
 
 ### 受影響檔案
 
 | 檔案 | 行號 | 類型 |
 |------|------|------|
-| `Core/Security/ApiKeyAuthenticationMiddleware.cs` | 415 | `ApiKeyAuthenticationExtensions` |
-| `Core/Security/JwtAuthenticationMiddleware.cs` | 529 | `JwtAuthenticationExtensions` |
-| `Core/Tracking/TrackingMiddleware.cs` | 402 | `TrackingExtensions` |
+| `Core/Tracking/TrackingMiddleware.cs` | 396 | `TrackingExtensions` |
 
 ### 問題描述
 
@@ -413,7 +508,7 @@ builder.WithFilteredTools(filter);
 ### 不修復原因
 
 - 公開 API 類型，供外部使用者使用
-- 這些是 ASP.NET Core 擴展方法類，用於 `IApplicationBuilder` 配置
+- 這是 ASP.NET Core 擴展方法類，用於 `IApplicationBuilder` 配置
 - 專案內部使用不同的配置方式，但保留給外部使用者
 - 刪除會破壞外部依賴
 
@@ -421,55 +516,115 @@ builder.WithFilteredTools(filter);
 
 ```csharp
 // 外部使用者可以這樣配置
-app.UseApiKeyAuthentication();
-app.UseJwtAuthentication();
 app.UseTracking();
 ```
 
 ---
 
-## 13. UseObjectOrCollectionInitializer
+## 15. UseObjectOrCollectionInitializer
 
 | 項目 | 內容 |
 |------|------|
 | **級別** | Note |
-| **數量** | 0 |
+| **數量** | 3 |
 | **訊息** | Use object initializer |
 
 ### 受影響檔案
 
-~~已無受影響檔案~~（2026-01-11 重構後已使用 object initializer）
+| 檔案 | 行號 | 說明 |
+|------|------|------|
+| `Tests/Handlers/Word/Paragraph/GetParagraphFormatWordHandlerTests.cs` | 191 | 誤判 |
+| `Tests/Handlers/Word/Paragraph/GetParagraphFormatWordHandlerTests.cs` | 216 | 誤判 |
+| `Tests/Handlers/Word/Reference/AddTableOfContentsWordHandlerTests.cs` | 27 | 誤判 |
+
+### 問題描述
+
+建議使用物件初始化器語法。
+
+### 不修復原因
+
+**這是工具的誤判**。這些代碼是在修改已存在物件的屬性，不是在初始化新物件。
+
+```csharp
+// 目前代碼 - 修改 builder.Font 物件的屬性
+var builder = new DocumentBuilder(doc);
+builder.Font.Bold = true;       // Font 是 builder 的屬性，不是新物件
+builder.Font.Italic = true;
+builder.Font.Size = 14;
+
+// 工具錯誤建議（這樣寫是不正確的）
+var builder = new DocumentBuilder(doc)
+{
+    Font = { Bold = true }  // 錯誤：Font 是唯讀屬性，不能用初始化器
+};
+```
+
+`DocumentBuilder.Font` 是一個已存在的物件屬性，我們在修改它的子屬性，這與物件初始化器的使用場景不同。
 
 ### 歷史記錄
 
-原本有 1 個項目：
-- ~~`Tests/Tools/Word/WordPropertiesToolTests.cs`~~（已重構為使用 object initializer 語法）
+- 2026-01-11：原本 1 個項目已重構為使用 object initializer
+- 2026-01-15：新增 3 個誤判項目
 
-現在代碼使用：
+---
+
+## 16. UseUtf8StringLiteral
+
+| 項目 | 內容 |
+|------|------|
+| **級別** | Note |
+| **數量** | 2 |
+| **訊息** | Collection expression can be converted to a UTF-8 string literal |
+
+### 受影響檔案
+
+| 檔案 | 行號 | 說明 |
+|------|------|------|
+| `Tests/Core/ShapeDetailProviders/PictureFrameDetailProviderTests.cs` | 72 | 誤判 |
+| `Tests/Core/ShapeDetailProviders/PictureFrameDetailProviderTests.cs` | 79 | 誤判 |
+
+### 問題描述
+
+建議將 byte 陣列轉換為 UTF-8 字串字面量。
+
+### 不修復原因
+
+**這是工具的誤判**。這些 byte 陣列是 PNG 圖片格式的二進制數據（magic bytes），不是 UTF-8 編碼的文字。
+
 ```csharp
-var doc = new Document(docPath) { BuiltInDocumentProperties = { Title = "Title" } };
+// 目前代碼 - PNG 檔案的二進制標頭
+ms.Write([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);  // PNG signature
+ms.Write([0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52]);  // IHDR chunk
+
+// 工具錯誤建議（這樣轉換是不正確的）
+ms.Write("\x89PNG\r\n\x1a\n"u8);  // 0x89 不是有效的 UTF-8 字元
 ```
+
+PNG 檔案的 signature 包含 `0x89` 等非 ASCII 字元，這些是二進制數據，無法正確轉換為 UTF-8 字串字面量。
 
 ---
 
 ## 統計摘要
 
-| 問題類型 | 數量 | 級別 | 主要原因 |
-|----------|------|------|----------|
-| AccessToDisposedClosure | 6 | Warning | 測試邏輯需要 |
-| AutoPropertyCanBeMadeGetOnly.Global | 2 | Note | JSON 序列化 |
-| MemberCanBePrivate.Global | 7 | Note | 公開 API |
-| MemberCanBeProtected.Global | 1 | Note | 測試彈性 |
-| MethodSupportsCancellation | 2 | Note | 測試不需要 |
-| ~~OutParameterValueIsAlwaysDiscarded.Local~~ | ~~0~~ | ~~Warning~~ | ~~已重構移除~~ |
-| PropertyCanBeMadeInitOnly.Global | 38 | Note | JSON 序列化 |
-| UnusedAutoPropertyAccessor.Global | 7 | Warning | JSON 序列化 / 外部 API |
-| UnusedMember.Global | 9 | Note | 公開 API |
-| ~~UnusedMember.Local~~ | ~~0~~ | ~~Warning~~ | ~~已重構移除~~ |
-| UnusedMethodReturnValue.Global | 1 | Note | 公開 API |
-| UnusedType.Global | 3 | Note | 公開 API |
-| ~~UseObjectOrCollectionInitializer~~ | ~~0~~ | ~~Note~~ | ~~已重構移除~~ |
-| **總計** | **76** | - | - |
+| 問題類型 | 數量 | 級別 | 主要原因 | 處理方式 |
+|----------|------|------|----------|----------|
+| AccessToDisposedClosure | 6 | Warning | 測試邏輯需要 | 文件記錄 |
+| AutoPropertyCanBeMadeGetOnly.Global | 2 | Note | JSON 序列化 | 文件記錄 |
+| ClassNeverInstantiated.Global | 1 | Note | 測試類別 | 文件記錄 |
+| ConvertToPrimaryConstructor | 1 | Note | 風格選擇 | .editorconfig 排除 |
+| MemberCanBePrivate.Global | 7 | Note | 公開 API | 文件記錄 |
+| MemberCanBeProtected.Global | 1 | Note | 測試彈性 | 文件記錄 |
+| MethodSupportsCancellation | 3 | Note | 測試不需要 | 測試已在 .editorconfig 排除 |
+| ~~OutParameterValueIsAlwaysDiscarded.Local~~ | ~~0~~ | ~~Warning~~ | ~~已重構移除~~ | - |
+| PropertyCanBeMadeInitOnly.Global | 38 | Note | JSON 序列化 | 文件記錄 |
+| UnusedAutoPropertyAccessor.Global | 7 | Warning | JSON 序列化 / 外部 API | 文件記錄 |
+| UnusedMember.Global | 7 | Note | 公開 API | 文件記錄 |
+| ~~UnusedMember.Local~~ | ~~0~~ | ~~Warning~~ | ~~已重構移除~~ | - |
+| UnusedMethodReturnValue.Global | 1 | Note | 公開 API | 文件記錄 |
+| UnusedType.Global | 1 | Note | 公開 API | 文件記錄 |
+| UseObjectOrCollectionInitializer | 3 | Note | 誤判 | 文件記錄 |
+| UseUtf8StringLiteral | 2 | Note | 誤判 | 文件記錄 |
+| **總計** | **80** | - | - | - |
 
 ---
 
@@ -498,21 +653,3 @@ dotnet_diagnostic.IDE0059.severity = none  # UnusedVariable (已修復)
 // ReSharper disable once UnusedMember.Global
 public void SomePublicApiMethod() { }
 ```
-
----
-
-## 維護指南
-
-1. **新增例外時**：請在對應章節添加檔案、行號和原因
-2. **移除例外時**：當問題被修復後，從本文件中移除相關記錄
-3. **定期審查**：建議每季度審查一次，確認例外是否仍然有效
-4. **版本記錄**：重大更新時請更新「最後更新日期」
-
----
-
-## 變更歷史
-
-| 日期 | 版本 | 變更內容 |
-|------|------|----------|
-| 2026-01-06 | 1.0.0 | 初始建立文件，記錄 86 個例外項目 |
-| 2026-01-11 | 1.1.0 | 重構後更新：移除 10 個已解決項目（OutParameterValueIsAlwaysDiscarded.Local: 5 個, UnusedMember.Local: 4 個, UseObjectOrCollectionInitializer: 1 個），更新 MethodSupportsCancellation 行號，總計 76 個 |

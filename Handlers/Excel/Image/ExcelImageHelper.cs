@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using Aspose.Cells.Drawing;
 
 namespace AsposeMcpServer.Handlers.Excel.Image;
@@ -10,26 +11,28 @@ public static class ExcelImageHelper
     /// <summary>
     ///     Set of supported image file extensions.
     /// </summary>
-    public static readonly HashSet<string> SupportedImageExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".tif", ".emf", ".wmf"
-    };
+    public static FrozenSet<string> SupportedImageExtensions { get; } =
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".tif", ".emf", ".wmf"
+        }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     ///     Mapping of file extensions to Aspose.Cells ImageType enum values.
     /// </summary>
-    public static readonly Dictionary<string, ImageType> ExtensionToImageType = new(StringComparer.OrdinalIgnoreCase)
-    {
-        { ".png", ImageType.Png },
-        { ".jpg", ImageType.Jpeg },
-        { ".jpeg", ImageType.Jpeg },
-        { ".gif", ImageType.Gif },
-        { ".bmp", ImageType.Bmp },
-        { ".tiff", ImageType.Tiff },
-        { ".tif", ImageType.Tiff },
-        { ".emf", ImageType.Emf },
-        { ".wmf", ImageType.Wmf }
-    };
+    public static FrozenDictionary<string, ImageType> ExtensionToImageType { get; } =
+        new Dictionary<string, ImageType>(StringComparer.OrdinalIgnoreCase)
+        {
+            { ".png", ImageType.Png },
+            { ".jpg", ImageType.Jpeg },
+            { ".jpeg", ImageType.Jpeg },
+            { ".gif", ImageType.Gif },
+            { ".bmp", ImageType.Bmp },
+            { ".tiff", ImageType.Tiff },
+            { ".tif", ImageType.Tiff },
+            { ".emf", ImageType.Emf },
+            { ".wmf", ImageType.Wmf }
+        }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     ///     Validates that the image file has a supported format.

@@ -3,6 +3,7 @@ using System.Text.Json;
 using Aspose.Cells;
 using Aspose.Slides;
 using Aspose.Words;
+using AsposeMcpServer.Core.Helpers;
 using SaveFormat = Aspose.Slides.Export.SaveFormat;
 
 namespace AsposeMcpServer.Core.Session;
@@ -705,7 +706,7 @@ public class DocumentSessionManager : IDisposable
     /// <param name="session">Session to save metadata for</param>
     /// <param name="tempPath">Temporary file path where document was saved</param>
     /// <param name="promptOnReconnect">Whether to prompt user on reconnect</param>
-    private void SaveSessionMetadata(DocumentSession session, string tempPath, bool promptOnReconnect = false)
+    private static void SaveSessionMetadata(DocumentSession session, string tempPath, bool promptOnReconnect = false)
     {
         var metadata = new
         {
@@ -720,8 +721,7 @@ public class DocumentSessionManager : IDisposable
         };
 
         var metadataPath = tempPath + ".meta.json";
-        File.WriteAllText(metadataPath,
-            JsonSerializer.Serialize(metadata, new JsonSerializerOptions { WriteIndented = true }));
+        File.WriteAllText(metadataPath, JsonSerializer.Serialize(metadata, JsonDefaults.Indented));
     }
 }
 

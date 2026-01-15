@@ -65,7 +65,9 @@ public class SetPageSetupWordHandler : OperationHandlerBase<Document>
 
         if (!string.IsNullOrEmpty(orientation))
         {
-            pageSetup.Orientation = orientation.ToLower() == "landscape" ? Orientation.Landscape : Orientation.Portrait;
+            pageSetup.Orientation = string.Equals(orientation, "landscape", StringComparison.OrdinalIgnoreCase)
+                ? Orientation.Landscape
+                : Orientation.Portrait;
             changes.Add($"Orientation: {orientation}");
         }
 

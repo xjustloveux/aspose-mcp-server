@@ -6,6 +6,11 @@ namespace AsposeMcpServer.Tests.Handlers.PowerPoint.Shape;
 
 public class GroupPptShapesHandlerTests : PptHandlerTestBase
 {
+    private static readonly int[] TwoShapeIndices = [0, 1];
+    private static readonly int[] ThreeShapeIndices = [0, 1, 2];
+    private static readonly int[] SingleShapeIndex = [0];
+    private static readonly int[] InvalidShapeIndices = [0, 10];
+
     private readonly GroupPptShapesHandler _handler = new();
 
     #region Operation Property
@@ -30,7 +35,7 @@ public class GroupPptShapesHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
-            { "shapeIndices", new[] { 0, 1, 2 } }
+            { "shapeIndices", ThreeShapeIndices }
         });
 
         var result = _handler.Execute(context, parameters);
@@ -53,7 +58,7 @@ public class GroupPptShapesHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
-            { "shapeIndices", new[] { 0, 1 } }
+            { "shapeIndices", TwoShapeIndices }
         });
 
         _handler.Execute(context, parameters);
@@ -75,7 +80,7 @@ public class GroupPptShapesHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
-            { "shapeIndices", new[] { 0, 1 } }
+            { "shapeIndices", TwoShapeIndices }
         });
 
         var result = _handler.Execute(context, parameters);
@@ -96,7 +101,7 @@ public class GroupPptShapesHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
-            { "shapeIndices", new[] { 0, 1 } }
+            { "shapeIndices", TwoShapeIndices }
         });
 
         var result = _handler.Execute(context, parameters);
@@ -115,7 +120,7 @@ public class GroupPptShapesHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
-            { "shapeIndices", new[] { 0, 1 } }
+            { "shapeIndices", TwoShapeIndices }
         });
 
         _handler.Execute(context, parameters);
@@ -132,7 +137,7 @@ public class GroupPptShapesHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
-            { "shapeIndices", new[] { 0, 1 } }
+            { "shapeIndices", TwoShapeIndices }
         });
 
         _handler.Execute(context, parameters);
@@ -154,7 +159,7 @@ public class GroupPptShapesHandlerTests : PptHandlerTestBase
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
             { "slideIndex", 1 },
-            { "shapeIndices", new[] { 0, 1 } }
+            { "shapeIndices", TwoShapeIndices }
         });
 
         var result = _handler.Execute(context, parameters);
@@ -172,7 +177,7 @@ public class GroupPptShapesHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
-            { "shapeIndices", new[] { 0, 1 } }
+            { "shapeIndices", TwoShapeIndices }
         });
 
         _handler.Execute(context, parameters);
@@ -205,7 +210,7 @@ public class GroupPptShapesHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
-            { "shapeIndices", new[] { 0 } }
+            { "shapeIndices", SingleShapeIndex }
         });
 
         var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));
@@ -221,7 +226,7 @@ public class GroupPptShapesHandlerTests : PptHandlerTestBase
         var context = CreateContext(pres);
         var parameters = CreateParameters(new Dictionary<string, object?>
         {
-            { "shapeIndices", new[] { 0, 10 } }
+            { "shapeIndices", InvalidShapeIndices }
         });
 
         var ex = Assert.Throws<ArgumentException>(() => _handler.Execute(context, parameters));

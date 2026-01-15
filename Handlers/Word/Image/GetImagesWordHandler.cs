@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Core.Helpers;
 using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.Image;
@@ -40,7 +41,7 @@ public class GetImagesWordHandler : OperationHandlerBase<Document>
                     ? "No images found in document"
                     : $"No images found in section {sectionIndex}, use sectionIndex=-1 to search all sections"
             };
-            return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(emptyResult, JsonDefaults.Indented);
         }
 
         List<object> imageList = [];
@@ -118,6 +119,6 @@ public class GetImagesWordHandler : OperationHandlerBase<Document>
             images = imageList
         };
 
-        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        return JsonSerializer.Serialize(result, JsonDefaults.Indented);
     }
 }

@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using AsposeMcpServer.Core.Helpers;
 
 namespace AsposeMcpServer.Core.Security;
 
@@ -149,7 +150,7 @@ public class ApiKeyAuthenticationMiddleware : IMiddleware, IDisposable
     /// </summary>
     /// <param name="path">Request path to check</param>
     /// <returns>True if authentication should be skipped</returns>
-    private bool ShouldSkipAuthentication(PathString path)
+    private static bool ShouldSkipAuthentication(PathString path)
     {
         return path.StartsWithSegments("/health") ||
                path.StartsWithSegments("/metrics") ||
@@ -296,10 +297,7 @@ public class ApiKeyAuthenticationMiddleware : IMiddleware, IDisposable
             }
 
             var content = await response.Content.ReadAsStringAsync();
-            var result = JsonSerializer.Deserialize<IntrospectionResponse>(content, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+            var result = JsonSerializer.Deserialize<IntrospectionResponse>(content, JsonDefaults.CaseInsensitive);
 
             if (result?.Active == true)
             {
@@ -366,10 +364,7 @@ public class ApiKeyAuthenticationMiddleware : IMiddleware, IDisposable
             }
 
             var content = await response.Content.ReadAsStringAsync();
-            var result = JsonSerializer.Deserialize<CustomValidationResponse>(content, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+            var result = JsonSerializer.Deserialize<CustomValidationResponse>(content, JsonDefaults.CaseInsensitive);
 
             if (result?.Valid == true)
             {

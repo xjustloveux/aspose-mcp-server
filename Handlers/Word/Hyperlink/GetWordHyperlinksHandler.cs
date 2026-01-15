@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Core.Helpers;
 using WordParagraph = Aspose.Words.Paragraph;
 
 namespace AsposeMcpServer.Handlers.Word.Hyperlink;
@@ -76,6 +77,6 @@ public class GetWordHyperlinksHandler : OperationHandlerBase<Document>
             hyperlinks = hyperlinkList
         };
 
-        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        return JsonSerializer.Serialize(result, JsonDefaults.Indented);
     }
 }

@@ -2,6 +2,7 @@ using System.Text.Json;
 using Aspose.Pdf;
 using Aspose.Pdf.Forms;
 using AsposeMcpServer.Core.Handlers;
+using AsposeMcpServer.Core.Helpers;
 
 namespace AsposeMcpServer.Handlers.Pdf.FormField;
 
@@ -35,7 +36,7 @@ public class GetPdfFormFieldsHandler : OperationHandlerBase<Document>
                 items = Array.Empty<object>(),
                 message = "No form fields found"
             };
-            return JsonSerializer.Serialize(emptyResult, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(emptyResult, JsonDefaults.Indented);
         }
 
         List<object> fieldList = [];
@@ -63,6 +64,6 @@ public class GetPdfFormFieldsHandler : OperationHandlerBase<Document>
             truncated = totalCount > limit,
             items = fieldList
         };
-        return JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true });
+        return JsonSerializer.Serialize(result, JsonDefaults.Indented);
     }
 }

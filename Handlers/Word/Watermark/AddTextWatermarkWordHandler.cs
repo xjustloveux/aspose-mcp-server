@@ -39,7 +39,9 @@ public class AddTextWatermarkWordHandler : OperationHandlerBase<Document>
             FontFamily = fontFamily,
             FontSize = (float)fontSize,
             IsSemitrasparent = isSemitransparent,
-            Layout = layout.ToLower() == "horizontal" ? WatermarkLayout.Horizontal : WatermarkLayout.Diagonal
+            Layout = string.Equals(layout, "horizontal", StringComparison.OrdinalIgnoreCase)
+                ? WatermarkLayout.Horizontal
+                : WatermarkLayout.Diagonal
         };
 
         doc.Watermark.SetText(text, watermarkOptions);

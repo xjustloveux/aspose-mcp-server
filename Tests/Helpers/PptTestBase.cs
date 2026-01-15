@@ -110,7 +110,7 @@ public abstract class PptTestBase : TestBase
     /// </summary>
     /// <param name="presentation">The presentation to check.</param>
     /// <param name="expectedCount">The expected number of slides.</param>
-    protected void AssertSlideCount(Presentation presentation, int expectedCount)
+    protected static void AssertSlideCount(Presentation presentation, int expectedCount)
     {
         Assert.Equal(expectedCount, presentation.Slides.Count);
     }
@@ -120,7 +120,7 @@ public abstract class PptTestBase : TestBase
     /// </summary>
     /// <param name="slide">The slide to check.</param>
     /// <param name="shapeIndex">The expected shape index.</param>
-    protected void AssertSlideHasShape(ISlide slide, int shapeIndex)
+    protected static void AssertSlideHasShape(ISlide slide, int shapeIndex)
     {
         Assert.True(shapeIndex < slide.Shapes.Count, $"Shape index {shapeIndex} is out of range");
     }

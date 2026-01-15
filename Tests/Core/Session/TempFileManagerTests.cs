@@ -294,9 +294,13 @@ public class TempFileManagerTests : IDisposable
     {
         var manager = new TempFileManager(_config);
 
-        await manager.StartAsync(CancellationToken.None);
-        await manager.StopAsync(CancellationToken.None);
+        var exception = await Record.ExceptionAsync(async () =>
+        {
+            await manager.StartAsync(CancellationToken.None);
+            await manager.StopAsync(CancellationToken.None);
+        });
 
+        Assert.Null(exception);
         manager.Dispose();
     }
 
@@ -310,9 +314,13 @@ public class TempFileManagerTests : IDisposable
         };
         var manager = new TempFileManager(disabledConfig);
 
-        await manager.StartAsync(CancellationToken.None);
-        await manager.StopAsync(CancellationToken.None);
+        var exception = await Record.ExceptionAsync(async () =>
+        {
+            await manager.StartAsync(CancellationToken.None);
+            await manager.StopAsync(CancellationToken.None);
+        });
 
+        Assert.Null(exception);
         manager.Dispose();
     }
 
