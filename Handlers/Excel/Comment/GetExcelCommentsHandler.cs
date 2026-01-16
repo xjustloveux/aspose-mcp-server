@@ -114,5 +114,5 @@ public class GetExcelCommentsHandler : OperationHandlerBase<Workbook>
         return new GetParameters(sheetIndex, cell);
     }
 
-    private record GetParameters(int SheetIndex, string? Cell);
+    private sealed record GetParameters(int SheetIndex, string? Cell);
 }

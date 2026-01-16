@@ -54,5 +54,5 @@ public class AddExcelPivotTableHandler : OperationHandlerBase<Workbook>
         );
     }
 
-    private record AddPivotTableParameters(int SheetIndex, string SourceRange, string DestCell, string? Name);
+    private sealed record AddPivotTableParameters(int SheetIndex, string SourceRange, string DestCell, string? Name);
 }

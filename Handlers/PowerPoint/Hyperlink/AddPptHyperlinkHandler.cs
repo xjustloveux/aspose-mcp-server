@@ -143,7 +143,7 @@ public class AddPptHyperlinkHandler : OperationHandlerBase<Presentation>
     /// <param name="Y">The Y coordinate.</param>
     /// <param name="Width">The width.</param>
     /// <param name="Height">The height.</param>
-    private record HyperlinkParameters(
+    private sealed record HyperlinkParameters(
         int SlideIndex,
         int? ShapeIndex,
         string? Text,

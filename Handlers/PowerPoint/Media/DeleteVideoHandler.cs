@@ -57,5 +57,5 @@ public class DeleteVideoHandler : OperationHandlerBase<Presentation>
     /// </summary>
     /// <param name="SlideIndex">The slide index.</param>
     /// <param name="ShapeIndex">The shape index.</param>
-    private record DeleteVideoParameters(int SlideIndex, int ShapeIndex);
+    private sealed record DeleteVideoParameters(int SlideIndex, int ShapeIndex);
 }

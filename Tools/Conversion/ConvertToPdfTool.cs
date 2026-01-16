@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Cells;
 using Aspose.Slides;
 using Aspose.Words;
@@ -58,7 +58,7 @@ Usage examples:
 - Convert Excel to PDF: convert_to_pdf(inputPath='book.xlsx', outputPath='book.pdf')
 - Convert PowerPoint to PDF: convert_to_pdf(inputPath='presentation.pptx', outputPath='presentation.pdf')
 - Convert from session: convert_to_pdf(sessionId='sess_xxx', outputPath='doc.pdf')")]
-    public string Execute(
+    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
         [Description("Input file path (required if no sessionId)")]
         string? inputPath = null,
         [Description("Session ID to convert document from session")]

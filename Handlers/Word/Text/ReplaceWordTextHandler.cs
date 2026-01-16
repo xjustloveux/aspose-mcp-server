@@ -56,7 +56,7 @@ public class ReplaceWordTextHandler : OperationHandlerBase<Document>
             parameters.GetOptional("replaceInFields", false));
     }
 
-    private record ReplaceParameters(
+    private sealed record ReplaceParameters(
         string Find,
         string Replace,
         bool UseRegex,

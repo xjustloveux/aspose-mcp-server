@@ -59,5 +59,5 @@ public class AddExcelHyperlinkHandler : OperationHandlerBase<Workbook>
         return new AddParameters(sheetIndex, cell, url, displayText);
     }
 
-    private record AddParameters(int SheetIndex, string Cell, string Url, string? DisplayText);
+    private sealed record AddParameters(int SheetIndex, string Cell, string Url, string? DisplayText);
 }

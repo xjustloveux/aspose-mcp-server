@@ -88,7 +88,7 @@ public class AddExcelChartHandler : OperationHandlerBase<Workbook>
     /// <summary>
     ///     Record to hold add chart parameters.
     /// </summary>
-    private record AddParameters(
+    private sealed record AddParameters(
         int SheetIndex,
         string? ChartType,
         string? DataRange,

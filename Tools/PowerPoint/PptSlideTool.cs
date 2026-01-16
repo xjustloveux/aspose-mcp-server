@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Slides;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -74,7 +74,7 @@ Usage examples:
 - Hide slide: ppt_slide(operation='hide', path='presentation.pptx', slideIndex=0, hidden=true)
 - Clear slide: ppt_slide(operation='clear', path='presentation.pptx', slideIndex=0)
 - Edit slide: ppt_slide(operation='edit', path='presentation.pptx', slideIndex=0)")]
-    public string Execute(
+    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
         [Description(@"Operation to perform.
 - 'add': Add a new slide (required params: path)
 - 'delete': Delete a slide (required params: path, slideIndex)
@@ -138,8 +138,10 @@ Usage examples:
 
     /// <summary>
     ///     Builds OperationParameters from method parameters using strategy pattern.
+    ///     Parameters are documented on the Execute method.
     /// </summary>
-    private static OperationParameters BuildParameters(
+    /// <returns>OperationParameters configured with all input values.</returns>
+    private static OperationParameters BuildParameters( // NOSONAR S107
         string operation,
         int? slideIndex,
         string layoutType,

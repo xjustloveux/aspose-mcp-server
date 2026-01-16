@@ -182,7 +182,7 @@ public class InsertColumnWordTableHandler : OperationHandlerBase<Document>
         return new InsertColumnParameters(columnIndex.Value, tableIndex, columnData, insertBefore, sectionIndex);
     }
 
-    private record InsertColumnParameters(
+    private sealed record InsertColumnParameters(
         int ColumnIndex,
         int TableIndex,
         string? ColumnData,

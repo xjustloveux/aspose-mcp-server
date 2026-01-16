@@ -76,5 +76,11 @@ public class AddPptImageHandler : OperationHandlerBase<Presentation>
     /// <param name="Y">The Y coordinate.</param>
     /// <param name="Width">The optional width.</param>
     /// <param name="Height">The optional height.</param>
-    private record AddParameters(int SlideIndex, string ImagePath, float X, float Y, float? Width, float? Height);
+    private sealed record AddParameters(
+        int SlideIndex,
+        string ImagePath,
+        float X,
+        float Y,
+        float? Width,
+        float? Height);
 }

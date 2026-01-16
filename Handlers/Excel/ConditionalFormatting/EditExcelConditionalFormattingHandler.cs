@@ -170,7 +170,7 @@ public class EditExcelConditionalFormattingHandler : OperationHandlerBase<Workbo
         changes.Add($"BackgroundColor={backgroundColor}");
     }
 
-    private record EditParameters(
+    private sealed record EditParameters(
         int SheetIndex,
         int ConditionalFormattingIndex,
         int? ConditionIndex,

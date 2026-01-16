@@ -73,7 +73,7 @@ public class SetHeaderLineHandler : OperationHandlerBase<Document>
     /// <param name="LineWidth">The line width.</param>
     /// <param name="SectionIndex">The section index.</param>
     /// <param name="HeaderFooterType">The header/footer type.</param>
-    private record SetHeaderLineParameters(
+    private sealed record SetHeaderLineParameters(
         string LineStyle,
         double? LineWidth,
         int SectionIndex,

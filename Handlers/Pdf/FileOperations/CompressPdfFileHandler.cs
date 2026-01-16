@@ -67,5 +67,5 @@ public class CompressPdfFileHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Record to hold compress parameters.
     /// </summary>
-    private record CompressParameters(bool CompressImages, bool CompressFonts, bool RemoveUnusedObjects);
+    private sealed record CompressParameters(bool CompressImages, bool CompressFonts, bool RemoveUnusedObjects);
 }

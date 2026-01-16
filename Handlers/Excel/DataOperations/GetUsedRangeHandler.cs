@@ -72,5 +72,5 @@ public class GetUsedRangeHandler : OperationHandlerBase<Workbook>
     ///     Parameters for get used range operation.
     /// </summary>
     /// <param name="SheetIndex">The worksheet index (0-based).</param>
-    private record GetUsedRangeParameters(int SheetIndex);
+    private sealed record GetUsedRangeParameters(int SheetIndex);
 }

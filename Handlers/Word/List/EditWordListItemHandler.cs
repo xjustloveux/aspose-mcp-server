@@ -64,7 +64,7 @@ public class EditWordListItemHandler : OperationHandlerBase<Document>
             parameters.GetOptional<int?>("level"));
     }
 
-    private record EditListItemParameters(
+    private sealed record EditListItemParameters(
         int ParagraphIndex,
         string Text,
         int? Level);

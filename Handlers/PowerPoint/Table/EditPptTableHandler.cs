@@ -71,5 +71,11 @@ public class EditPptTableHandler : OperationHandlerBase<Presentation>
     /// <param name="Y">The optional Y position.</param>
     /// <param name="Width">The optional width.</param>
     /// <param name="Height">The optional height.</param>
-    private record EditTableParameters(int SlideIndex, int ShapeIndex, float? X, float? Y, float? Width, float? Height);
+    private sealed record EditTableParameters(
+        int SlideIndex,
+        int ShapeIndex,
+        float? X,
+        float? Y,
+        float? Width,
+        float? Height);
 }

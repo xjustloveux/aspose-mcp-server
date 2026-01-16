@@ -76,5 +76,5 @@ public class AddExcelNamedRangeHandler : OperationHandlerBase<Workbook>
         );
     }
 
-    private record AddNamedRangeParameters(int SheetIndex, string Name, string Range, string? Comment);
+    private sealed record AddNamedRangeParameters(int SheetIndex, string Name, string Range, string? Comment);
 }

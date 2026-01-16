@@ -114,7 +114,7 @@ public class EditFieldWordHandler : OperationHandlerBase<Document>
     /// <param name="LockField">Whether to lock the field.</param>
     /// <param name="UnlockField">Whether to unlock the field.</param>
     /// <param name="UpdateFieldAfter">Whether to update the field after editing.</param>
-    private record EditFieldParameters(
+    private sealed record EditFieldParameters(
         int FieldIndex,
         string? FieldCode,
         bool? LockField,

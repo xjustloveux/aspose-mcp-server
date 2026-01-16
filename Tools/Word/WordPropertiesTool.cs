@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -70,7 +70,7 @@ Notes:
 - The 'set' operation is for content metadata (title, author, subject, etc.), not for statistics (word count, page count)
 - Statistics like word count and page count are automatically calculated by Word and cannot be manually set
 - Custom properties support multiple types: string, number (integer/double), boolean, and datetime (ISO 8601 format)")]
-    public string Execute(
+    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
         [Description("Operation: get, set")] string operation,
         [Description("Document file path (required if no sessionId)")]
         string? path = null,
@@ -140,7 +140,7 @@ Notes:
     /// <param name="manager">The manager name.</param>
     /// <param name="customProperties">Custom properties as JSON string.</param>
     /// <returns>OperationParameters configured for the properties operation.</returns>
-    private static OperationParameters BuildParameters(
+    private static OperationParameters BuildParameters( // NOSONAR S107
         string operation,
         string? title,
         string? subject,

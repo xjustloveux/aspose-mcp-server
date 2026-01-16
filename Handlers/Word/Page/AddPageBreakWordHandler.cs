@@ -66,5 +66,5 @@ public class AddPageBreakWordHandler : OperationHandlerBase<Document>
     ///     Record to hold add page break parameters.
     /// </summary>
     /// <param name="ParagraphIndex">The 0-based paragraph index to insert page break after.</param>
-    private record AddPageBreakParameters(int? ParagraphIndex);
+    private sealed record AddPageBreakParameters(int? ParagraphIndex);
 }

@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Text.Json.Nodes;
 using Aspose.Cells;
 using AsposeMcpServer.Core.Handlers;
@@ -76,7 +76,7 @@ Usage examples:
 - Get content: excel_data_operations(operation='get_content', path='book.xlsx', range='A1:C10')
 - Get statistics: excel_data_operations(operation='get_statistics', path='book.xlsx', range='A1:A10')
 - Get used range: excel_data_operations(operation='get_used_range', path='book.xlsx')")]
-    public string Execute(
+    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
         [Description("Operation: sort, find_replace, batch_write, get_content, get_statistics, get_used_range")]
         string operation,
         [Description("Excel file path (required if no sessionId)")]
@@ -137,8 +137,10 @@ Usage examples:
 
     /// <summary>
     ///     Builds OperationParameters from method parameters using strategy pattern.
+    ///     Parameters are documented on the Execute method.
     /// </summary>
-    private static OperationParameters BuildParameters(
+    /// <returns>OperationParameters configured with all input values.</returns>
+    private static OperationParameters BuildParameters( // NOSONAR S107
         string operation,
         int sheetIndex,
         string? range,

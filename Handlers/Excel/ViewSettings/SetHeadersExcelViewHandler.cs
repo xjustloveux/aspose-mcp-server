@@ -49,7 +49,7 @@ public class SetHeadersExcelViewHandler : OperationHandlerBase<Workbook>
     /// </summary>
     /// <param name="SheetIndex">The index of the worksheet.</param>
     /// <param name="Visible">Whether row and column headers should be visible.</param>
-    private record SetHeadersParameters(
+    private sealed record SetHeadersParameters(
         int SheetIndex,
         bool Visible);
 }

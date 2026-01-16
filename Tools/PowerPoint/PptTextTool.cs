@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Slides;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -69,7 +69,7 @@ Usage examples:
 - Add text: ppt_text(operation='add', path='presentation.pptx', slideIndex=0, text='Hello World', x=100, y=100)
 - Edit text: ppt_text(operation='edit', path='presentation.pptx', slideIndex=0, shapeIndex=0, text='Updated Text')
 - Replace text: ppt_text(operation='replace', path='presentation.pptx', findText='old', replaceText='new')")]
-    public string Execute(
+    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
         [Description(@"Operation to perform.
 - 'add': Add text to slide (required params: path, slideIndex, text)
 - 'edit': Edit text in shape (required params: path, slideIndex, shapeIndex, text)
@@ -129,8 +129,10 @@ Usage examples:
 
     /// <summary>
     ///     Builds OperationParameters from method parameters using strategy pattern.
+    ///     Parameters are documented on the Execute method.
     /// </summary>
-    private static OperationParameters BuildParameters(
+    /// <returns>OperationParameters configured with all input values.</returns>
+    private static OperationParameters BuildParameters( // NOSONAR S107
         string operation,
         int? slideIndex,
         int? shapeIndex,

@@ -84,5 +84,9 @@ public class MergePresentationsHandler : OperationHandlerBase<Presentation>
     /// <param name="OutputPath">Alternative output file path.</param>
     /// <param name="InputPaths">The array of input file paths.</param>
     /// <param name="KeepSourceFormatting">Whether to keep source formatting.</param>
-    private record MergeParameters(string? Path, string? OutputPath, string[] InputPaths, bool KeepSourceFormatting);
+    private sealed record MergeParameters(
+        string? Path,
+        string? OutputPath,
+        string[] InputPaths,
+        bool KeepSourceFormatting);
 }

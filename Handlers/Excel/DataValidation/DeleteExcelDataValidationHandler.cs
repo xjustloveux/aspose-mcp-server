@@ -46,5 +46,5 @@ public class DeleteExcelDataValidationHandler : OperationHandlerBase<Workbook>
             parameters.GetRequired<int>("validationIndex"));
     }
 
-    private record DeleteParameters(int SheetIndex, int ValidationIndex);
+    private sealed record DeleteParameters(int SheetIndex, int ValidationIndex);
 }

@@ -30,7 +30,7 @@ public class ApiKeyAuthResult
 /// <summary>
 ///     Middleware for API Key authentication supporting multiple verification modes
 /// </summary>
-public class ApiKeyAuthenticationMiddleware : IMiddleware, IDisposable
+public sealed class ApiKeyAuthenticationMiddleware : IMiddleware, IDisposable
 {
     /// <summary>
     ///     Authentication result cache for Introspection/Custom modes
@@ -109,7 +109,6 @@ public class ApiKeyAuthenticationMiddleware : IMiddleware, IDisposable
         _cache?.Clear();
         if (_ownsHttpClient)
             _httpClient.Dispose();
-        GC.SuppressFinalize(this);
     }
 
     /// <summary>
@@ -396,7 +395,7 @@ public class ApiKeyAuthenticationMiddleware : IMiddleware, IDisposable
     /// <summary>
     ///     Response from introspection endpoint
     /// </summary>
-    private class IntrospectionResponse
+    private sealed class IntrospectionResponse
     {
         public bool Active { get; init; }
 
@@ -406,7 +405,7 @@ public class ApiKeyAuthenticationMiddleware : IMiddleware, IDisposable
     /// <summary>
     ///     Response from custom validation endpoint
     /// </summary>
-    private class CustomValidationResponse
+    private sealed class CustomValidationResponse
     {
         public bool Valid { get; init; }
 

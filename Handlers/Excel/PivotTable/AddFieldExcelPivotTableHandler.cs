@@ -110,7 +110,7 @@ public class AddFieldExcelPivotTableHandler : OperationHandlerBase<Workbook>
         );
     }
 
-    private record AddFieldParameters(
+    private sealed record AddFieldParameters(
         int SheetIndex,
         int PivotTableIndex,
         string FieldName,

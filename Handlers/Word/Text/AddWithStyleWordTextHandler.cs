@@ -39,20 +39,21 @@ public class AddWithStyleWordTextHandler : OperationHandlerBase<Document>
 
         var (targetPara, warningMessage) = SetupBuilderPosition(doc, builder, p.ParagraphIndex);
 
-        var para = CreateStyledParagraph(doc, p.Text, p.StyleName, p.FontName, p.FontNameAscii, p.FontNameFarEast,
-            p.FontSize, p.Bold, p.Italic, p.Underline, p.Color, p.Alignment, p.IndentLevel, p.LeftIndent,
-            p.FirstLineIndent, tabStops);
+        var para = CreateStyledParagraph(doc, p, tabStops);
 
         InsertParagraph(builder, para, targetPara, p.ParagraphIndex);
         FixEmptyParagraphStyles(doc, para);
 
         MarkModified(context);
 
-        return BuildResultMessage(p.ParagraphIndex, p.StyleName, p.FontName, p.FontNameAscii, p.FontNameFarEast,
-            p.FontSize, p.Bold, p.Italic, p.Underline, p.Color, p.Alignment, p.IndentLevel, p.LeftIndent,
-            p.FirstLineIndent, warningMessage);
+        return BuildResultMessage(p, warningMessage);
     }
 
+    /// <summary>
+    ///     Extracts add with style parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted add with style parameters.</returns>
     private static AddWithStyleParameters ExtractAddWithStyleParameters(OperationParameters parameters)
     {
         return new AddWithStyleParameters(
@@ -129,33 +130,17 @@ public class AddWithStyleWordTextHandler : OperationHandlerBase<Document>
     ///     Creates a styled paragraph with the specified formatting.
     /// </summary>
     /// <param name="doc">The document.</param>
-    /// <param name="text">The text content.</param>
-    /// <param name="styleName">The style name.</param>
-    /// <param name="fontName">The font name.</param>
-    /// <param name="fontNameAscii">The font name for ASCII characters.</param>
-    /// <param name="fontNameFarEast">The font name for Far East characters.</param>
-    /// <param name="fontSize">The font size.</param>
-    /// <param name="bold">Whether text should be bold.</param>
-    /// <param name="italic">Whether text should be italic.</param>
-    /// <param name="underline">Whether text should be underlined.</param>
-    /// <param name="color">The text color.</param>
-    /// <param name="alignment">The paragraph alignment.</param>
-    /// <param name="indentLevel">The indentation level.</param>
-    /// <param name="leftIndent">The left indentation in points.</param>
-    /// <param name="firstLineIndent">The first line indentation in points.</param>
+    /// <param name="p">The parameters containing text and formatting settings.</param>
     /// <param name="tabStops">Custom tab stops.</param>
     /// <returns>The created paragraph.</returns>
-    private static WordParagraph CreateStyledParagraph(Document doc, string text, string? styleName,
-        string? fontName, string? fontNameAscii, string? fontNameFarEast, double? fontSize,
-        bool? bold, bool? italic, bool? underline, string? color, string? alignment,
-        int? indentLevel, double? leftIndent, double? firstLineIndent, JsonArray? tabStops)
+    private static WordParagraph CreateStyledParagraph(Document doc, AddWithStyleParameters p, JsonArray? tabStops)
     {
         var para = new WordParagraph(doc);
-        var run = new Run(doc, text);
+        var run = new Run(doc, p.Text);
 
-        ApplyStyle(doc, para, styleName);
-        ApplyFontFormatting(run, fontName, fontNameAscii, fontNameFarEast, fontSize, bold, italic, underline, color);
-        ApplyParagraphFormatting(para, alignment, indentLevel, leftIndent, firstLineIndent);
+        ApplyStyle(doc, para, p.StyleName);
+        ApplyFontFormatting(run, p);
+        ApplyParagraphFormatting(para, p);
         ApplyTabStops(para, tabStops);
 
         para.AppendChild(run);
@@ -168,7 +153,8 @@ public class AddWithStyleWordTextHandler : OperationHandlerBase<Document>
     /// <param name="doc">The document.</param>
     /// <param name="para">The paragraph.</param>
     /// <param name="styleName">The style name.</param>
-    /// <exception cref="InvalidOperationException">Thrown when style is not found or cannot be applied.</exception>
+    /// <exception cref="ArgumentException">Thrown when the style is not found.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the style cannot be applied.</exception>
     private static void ApplyStyle(Document doc, WordParagraph para, string? styleName)
     {
         if (string.IsNullOrEmpty(styleName)) return;
@@ -193,27 +179,35 @@ public class AddWithStyleWordTextHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Applies font formatting to the run.
     /// </summary>
-    private static void ApplyFontFormatting(Run run, string? fontName, string? fontNameAscii,
-        string? fontNameFarEast, double? fontSize, bool? bold, bool? italic, bool? underline, string? color)
+    /// <param name="run">The run to format.</param>
+    /// <param name="p">The parameters containing font settings.</param>
+    private static void ApplyFontFormatting(Run run, AddWithStyleParameters p)
     {
-        var underlineStr = underline.HasValue ? underline.Value ? "single" : "none" : null;
-        FontHelper.Word.ApplyFontSettings(run, fontName, fontNameAscii, fontNameFarEast, fontSize,
-            bold, italic, underlineStr, color);
+        var underlineStr = GetUnderlineString(p.Underline);
+        FontHelper.Word.ApplyFontSettings(run, p.FontName, p.FontNameAscii, p.FontNameFarEast, p.FontSize,
+            p.Bold, p.Italic, underlineStr, p.Color);
+    }
+
+    /// <summary>
+    ///     Converts nullable bool underline value to string representation.
+    /// </summary>
+    /// <param name="underline">The nullable underline value.</param>
+    /// <returns>The underline string: "single", "none", or null.</returns>
+    private static string? GetUnderlineString(bool? underline)
+    {
+        if (!underline.HasValue) return null;
+        return underline.Value ? "single" : "none";
     }
 
     /// <summary>
     ///     Applies paragraph formatting.
     /// </summary>
     /// <param name="para">The paragraph.</param>
-    /// <param name="alignment">The alignment.</param>
-    /// <param name="indentLevel">The indent level.</param>
-    /// <param name="leftIndent">The left indentation.</param>
-    /// <param name="firstLineIndent">The first line indentation.</param>
-    private static void ApplyParagraphFormatting(WordParagraph para, string? alignment, int? indentLevel,
-        double? leftIndent, double? firstLineIndent)
+    /// <param name="p">The parameters containing paragraph formatting settings.</param>
+    private static void ApplyParagraphFormatting(WordParagraph para, AddWithStyleParameters p)
     {
-        if (!string.IsNullOrEmpty(alignment))
-            para.ParagraphFormat.Alignment = alignment.ToLower() switch
+        if (!string.IsNullOrEmpty(p.Alignment))
+            para.ParagraphFormat.Alignment = p.Alignment.ToLower() switch
             {
                 "left" => ParagraphAlignment.Left,
                 "right" => ParagraphAlignment.Right,
@@ -222,13 +216,13 @@ public class AddWithStyleWordTextHandler : OperationHandlerBase<Document>
                 _ => ParagraphAlignment.Left
             };
 
-        if (indentLevel.HasValue)
-            para.ParagraphFormat.LeftIndent = indentLevel.Value * 36;
-        else if (leftIndent.HasValue)
-            para.ParagraphFormat.LeftIndent = leftIndent.Value;
+        if (p.IndentLevel.HasValue)
+            para.ParagraphFormat.LeftIndent = p.IndentLevel.Value * 36;
+        else if (p.LeftIndent.HasValue)
+            para.ParagraphFormat.LeftIndent = p.LeftIndent.Value;
 
-        if (firstLineIndent.HasValue)
-            para.ParagraphFormat.FirstLineIndent = firstLineIndent.Value;
+        if (p.FirstLineIndent.HasValue)
+            para.ParagraphFormat.FirstLineIndent = p.FirstLineIndent.Value;
     }
 
     /// <summary>
@@ -345,50 +339,50 @@ public class AddWithStyleWordTextHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Builds the result message with details of the operation.
     /// </summary>
-    private static string BuildResultMessage(int? paragraphIndex, string? styleName, string? fontName,
-        string? fontNameAscii, string? fontNameFarEast, double? fontSize, bool? bold, bool? italic,
-        bool? underline, string? color, string? alignment, int? indentLevel, double? leftIndent,
-        double? firstLineIndent, string warningMessage)
+    /// <param name="p">The parameters containing formatting settings.</param>
+    /// <param name="warningMessage">Any warning message to append.</param>
+    /// <returns>The formatted result message.</returns>
+    private static string BuildResultMessage(AddWithStyleParameters p, string warningMessage)
     {
         var result = "Text added successfully.";
 
-        if (paragraphIndex.HasValue)
-            result += paragraphIndex.Value == -1
+        if (p.ParagraphIndex.HasValue)
+            result += p.ParagraphIndex.Value == -1
                 ? " Insert position: beginning of document."
-                : $" Insert position: after paragraph #{paragraphIndex.Value}.";
+                : $" Insert position: after paragraph #{p.ParagraphIndex.Value}.";
         else
             result += " Insert position: end of document.";
 
-        if (!string.IsNullOrEmpty(styleName))
+        if (!string.IsNullOrEmpty(p.StyleName))
         {
-            result += $" Applied style: {styleName}.";
+            result += $" Applied style: {p.StyleName}.";
         }
         else
         {
             var customFormatting = new List<string>();
-            if (!string.IsNullOrEmpty(fontNameAscii)) customFormatting.Add($"Font (ASCII): {fontNameAscii}");
-            if (!string.IsNullOrEmpty(fontNameFarEast)) customFormatting.Add($"Font (Far East): {fontNameFarEast}");
-            if (!string.IsNullOrEmpty(fontName) && string.IsNullOrEmpty(fontNameAscii) &&
-                string.IsNullOrEmpty(fontNameFarEast))
-                customFormatting.Add($"Font: {fontName}");
-            if (fontSize.HasValue) customFormatting.Add($"Font size: {fontSize.Value} pt");
-            if (bold == true) customFormatting.Add("Bold");
-            if (italic == true) customFormatting.Add("Italic");
-            if (underline == true) customFormatting.Add("Underline");
-            if (!string.IsNullOrEmpty(color)) customFormatting.Add($"Color: {color}");
-            if (!string.IsNullOrEmpty(alignment)) customFormatting.Add($"Alignment: {alignment}");
+            if (!string.IsNullOrEmpty(p.FontNameAscii)) customFormatting.Add($"Font (ASCII): {p.FontNameAscii}");
+            if (!string.IsNullOrEmpty(p.FontNameFarEast)) customFormatting.Add($"Font (Far East): {p.FontNameFarEast}");
+            if (!string.IsNullOrEmpty(p.FontName) && string.IsNullOrEmpty(p.FontNameAscii) &&
+                string.IsNullOrEmpty(p.FontNameFarEast))
+                customFormatting.Add($"Font: {p.FontName}");
+            if (p.FontSize.HasValue) customFormatting.Add($"Font size: {p.FontSize.Value} pt");
+            if (p.Bold == true) customFormatting.Add("Bold");
+            if (p.Italic == true) customFormatting.Add("Italic");
+            if (p.Underline == true) customFormatting.Add("Underline");
+            if (!string.IsNullOrEmpty(p.Color)) customFormatting.Add($"Color: {p.Color}");
+            if (!string.IsNullOrEmpty(p.Alignment)) customFormatting.Add($"Alignment: {p.Alignment}");
 
             if (customFormatting.Count > 0)
                 result += $" Custom formatting: {string.Join(", ", customFormatting)}.";
         }
 
-        if (indentLevel.HasValue)
-            result += $" Indent level: {indentLevel.Value} ({indentLevel.Value * 36} pt).";
-        else if (leftIndent.HasValue)
-            result += $" Left indent: {leftIndent.Value} pt.";
+        if (p.IndentLevel.HasValue)
+            result += $" Indent level: {p.IndentLevel.Value} ({p.IndentLevel.Value * 36} pt).";
+        else if (p.LeftIndent.HasValue)
+            result += $" Left indent: {p.LeftIndent.Value} pt.";
 
-        if (firstLineIndent.HasValue)
-            result += $" First line indent: {firstLineIndent.Value} pt.";
+        if (p.FirstLineIndent.HasValue)
+            result += $" First line indent: {p.FirstLineIndent.Value} pt.";
 
         if (!string.IsNullOrEmpty(warningMessage))
             result += warningMessage;
@@ -396,7 +390,26 @@ public class AddWithStyleWordTextHandler : OperationHandlerBase<Document>
         return Success(result);
     }
 
-    private record AddWithStyleParameters(
+    /// <summary>
+    ///     Record to hold add with style parameters.
+    /// </summary>
+    /// <param name="Text">The text to add.</param>
+    /// <param name="StyleName">The style name.</param>
+    /// <param name="FontName">The font name.</param>
+    /// <param name="FontNameAscii">The ASCII font name.</param>
+    /// <param name="FontNameFarEast">The Far East font name.</param>
+    /// <param name="FontSize">The font size.</param>
+    /// <param name="Bold">Whether to apply bold.</param>
+    /// <param name="Italic">Whether to apply italic.</param>
+    /// <param name="Underline">Whether to apply underline.</param>
+    /// <param name="Color">The font color.</param>
+    /// <param name="Alignment">The paragraph alignment.</param>
+    /// <param name="IndentLevel">The indent level.</param>
+    /// <param name="LeftIndent">The left indent in points.</param>
+    /// <param name="FirstLineIndent">The first line indent in points.</param>
+    /// <param name="TabStopsJson">The tab stops JSON string.</param>
+    /// <param name="ParagraphIndex">The paragraph index for insertion.</param>
+    private sealed record AddWithStyleParameters(
         string Text,
         string? StyleName,
         string? FontName,

@@ -69,5 +69,5 @@ public class ProtectWordHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="Password">The protection password.</param>
     /// <param name="ProtectionType">The protection type.</param>
-    private record ProtectParameters(string? Password, string ProtectionType);
+    private sealed record ProtectParameters(string? Password, string ProtectionType);
 }

@@ -85,7 +85,7 @@ public class SetPptShapeFormatHandler : OperationHandlerBase<Presentation>
     /// <param name="LineColor">The line color.</param>
     /// <param name="LineWidth">The line width.</param>
     /// <param name="Transparency">The transparency value (0-1).</param>
-    private record SetPptShapeFormatParameters(
+    private sealed record SetPptShapeFormatParameters(
         int SlideIndex,
         int ShapeIndex,
         string? FillColor,

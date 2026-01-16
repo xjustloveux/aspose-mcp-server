@@ -67,5 +67,5 @@ public class HidePptSlidesHandler : OperationHandlerBase<Presentation>
     /// </summary>
     /// <param name="Hidden">Whether to hide or show the slides.</param>
     /// <param name="SlideIndicesJson">JSON array of slide indices.</param>
-    private record HidePptSlidesParameters(bool Hidden, string? SlideIndicesJson);
+    private sealed record HidePptSlidesParameters(bool Hidden, string? SlideIndicesJson);
 }

@@ -74,7 +74,7 @@ public class SetRowHeightWordTableHandler : OperationHandlerBase<Document>
         return new SetRowHeightParameters(rowIndex.Value, rowHeight.Value, tableIndex, heightRule, sectionIndex);
     }
 
-    private record SetRowHeightParameters(
+    private sealed record SetRowHeightParameters(
         int RowIndex,
         double RowHeight,
         int TableIndex,

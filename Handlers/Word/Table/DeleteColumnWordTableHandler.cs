@@ -66,5 +66,5 @@ public class DeleteColumnWordTableHandler : OperationHandlerBase<Document>
         return new DeleteColumnParameters(columnIndex.Value, tableIndex, sectionIndex);
     }
 
-    private record DeleteColumnParameters(int ColumnIndex, int TableIndex, int? SectionIndex);
+    private sealed record DeleteColumnParameters(int ColumnIndex, int TableIndex, int? SectionIndex);
 }

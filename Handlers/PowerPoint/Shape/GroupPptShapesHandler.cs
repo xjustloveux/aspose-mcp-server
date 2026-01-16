@@ -82,5 +82,5 @@ public class GroupPptShapesHandler : OperationHandlerBase<Presentation>
     /// </summary>
     /// <param name="SlideIndex">The slide index (0-based).</param>
     /// <param name="ShapeIndices">The shape indices to group.</param>
-    private record GroupPptShapesParameters(int SlideIndex, int[] ShapeIndices);
+    private sealed record GroupPptShapesParameters(int SlideIndex, int[] ShapeIndices);
 }

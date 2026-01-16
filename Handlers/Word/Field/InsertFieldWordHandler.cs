@@ -157,5 +157,9 @@ public class InsertFieldWordHandler : OperationHandlerBase<Document>
     /// <param name="FieldArgument">The field argument.</param>
     /// <param name="ParagraphIndex">The paragraph index.</param>
     /// <param name="InsertAtStart">Whether to insert at the start of the paragraph.</param>
-    private record FieldParameters(string FieldType, string? FieldArgument, int? ParagraphIndex, bool InsertAtStart);
+    private sealed record FieldParameters(
+        string FieldType,
+        string? FieldArgument,
+        int? ParagraphIndex,
+        bool InsertAtStart);
 }

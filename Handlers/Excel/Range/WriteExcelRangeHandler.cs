@@ -66,5 +66,5 @@ public class WriteExcelRangeHandler : OperationHandlerBase<Workbook>
     /// <param name="SheetIndex">The sheet index.</param>
     /// <param name="StartCell">The starting cell for writing data.</param>
     /// <param name="Data">The data to write as JSON string.</param>
-    private record WriteExcelRangeParameters(int SheetIndex, string StartCell, string Data);
+    private sealed record WriteExcelRangeParameters(int SheetIndex, string StartCell, string Data);
 }

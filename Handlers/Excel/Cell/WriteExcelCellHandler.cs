@@ -60,5 +60,5 @@ public class WriteExcelCellHandler : OperationHandlerBase<Workbook>
     /// <summary>
     ///     Record to hold write cell parameters.
     /// </summary>
-    private record WriteParameters(string Cell, string Value, int SheetIndex);
+    private sealed record WriteParameters(string Cell, string Value, int SheetIndex);
 }

@@ -68,5 +68,5 @@ public class CopyExcelSheetHandler : OperationHandlerBase<Workbook>
         return new CopyExcelSheetParameters(sheetIndex, targetIndex, copyToPath);
     }
 
-    private record CopyExcelSheetParameters(int SheetIndex, int? TargetIndex, string? CopyToPath);
+    private sealed record CopyExcelSheetParameters(int SheetIndex, int? TargetIndex, string? CopyToPath);
 }

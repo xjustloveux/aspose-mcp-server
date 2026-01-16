@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Text.Json;
 using Aspose.Slides;
 using AsposeMcpServer.Core.Handlers;
@@ -75,7 +75,7 @@ Usage examples:
 - Get properties: ppt_properties(operation='get', path='presentation.pptx')
 - Set properties: ppt_properties(operation='set', path='presentation.pptx', title='Title', author='Author')
 - Set custom properties: ppt_properties(operation='set', path='presentation.pptx', customProperties={'Count': 42, 'IsPublished': true})")]
-    public string Execute(
+    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
         [Description("Operation: get, set")] string operation,
         [Description("Presentation file path (required if no sessionId)")]
         string? path = null,
@@ -182,7 +182,7 @@ Usage examples:
     /// <param name="manager">The manager name.</param>
     /// <param name="customProperties">Custom properties as key-value pairs.</param>
     /// <returns>OperationParameters configured for the properties operation.</returns>
-    private static OperationParameters BuildParameters(
+    private static OperationParameters BuildParameters( // NOSONAR S107
         string? title,
         string? subject,
         string? author,

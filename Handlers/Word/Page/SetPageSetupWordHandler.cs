@@ -98,7 +98,7 @@ public class SetPageSetupWordHandler : OperationHandlerBase<Document>
     /// <param name="Right">The right margin in points.</param>
     /// <param name="Orientation">The page orientation (Portrait or Landscape).</param>
     /// <param name="SectionIndex">The section index to apply settings to.</param>
-    private record SetPageSetupParameters(
+    private sealed record SetPageSetupParameters(
         double? Top,
         double? Bottom,
         double? Left,

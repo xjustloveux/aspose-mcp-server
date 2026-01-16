@@ -30,90 +30,105 @@ public static class ExcelPrintSettingsHelper
     ///     Applies page setup options to the PageSetup object.
     /// </summary>
     /// <param name="pageSetup">The PageSetup object to modify.</param>
-    /// <param name="orientation">The page orientation ('Portrait' or 'Landscape').</param>
-    /// <param name="paperSize">The paper size (e.g., 'A4', 'Letter').</param>
-    /// <param name="leftMargin">The left margin in inches.</param>
-    /// <param name="rightMargin">The right margin in inches.</param>
-    /// <param name="topMargin">The top margin in inches.</param>
-    /// <param name="bottomMargin">The bottom margin in inches.</param>
-    /// <param name="header">The header text for center section.</param>
-    /// <param name="footer">The footer text for center section.</param>
-    /// <param name="fitToPage">Whether to enable fit to page mode.</param>
-    /// <param name="fitToPagesWide">The number of pages wide to fit content.</param>
-    /// <param name="fitToPagesTall">The number of pages tall to fit content.</param>
+    /// <param name="options">The page setup options to apply.</param>
     /// <returns>A list of change descriptions indicating what settings were modified.</returns>
     /// <exception cref="ArgumentException">Thrown when an invalid paper size is specified.</exception>
-    public static List<string> ApplyPageSetup(PageSetup pageSetup, string? orientation, string? paperSize,
-        double? leftMargin, double? rightMargin, double? topMargin, double? bottomMargin,
-        string? header, string? footer, bool? fitToPage, int? fitToPagesWide, int? fitToPagesTall)
+    public static List<string> ApplyPageSetup(PageSetup pageSetup, PageSetupOptions options)
     {
         List<string> changes = [];
 
-        if (!string.IsNullOrEmpty(orientation))
+        if (!string.IsNullOrEmpty(options.Orientation))
         {
-            pageSetup.Orientation = string.Equals(orientation, "Landscape", StringComparison.OrdinalIgnoreCase)
+            pageSetup.Orientation = string.Equals(options.Orientation, "Landscape", StringComparison.OrdinalIgnoreCase)
                 ? PageOrientationType.Landscape
                 : PageOrientationType.Portrait;
-            changes.Add($"orientation={orientation}");
+            changes.Add($"orientation={options.Orientation}");
         }
 
-        if (!string.IsNullOrEmpty(paperSize))
+        if (!string.IsNullOrEmpty(options.PaperSize))
         {
-            if (PaperSizeMap.TryGetValue(paperSize, out var size))
+            if (PaperSizeMap.TryGetValue(options.PaperSize, out var size))
             {
                 pageSetup.PaperSize = size;
-                changes.Add($"paperSize={paperSize}");
+                changes.Add($"paperSize={options.PaperSize}");
             }
             else
             {
                 throw new ArgumentException(
-                    $"Invalid paper size: '{paperSize}'. Supported values: {string.Join(", ", PaperSizeMap.Keys)}");
+                    $"Invalid paper size: '{options.PaperSize}'. Supported values: {string.Join(", ", PaperSizeMap.Keys)}");
             }
         }
 
-        if (leftMargin.HasValue)
+        if (options.LeftMargin.HasValue)
         {
-            pageSetup.LeftMargin = leftMargin.Value;
-            changes.Add($"leftMargin={leftMargin.Value}");
+            pageSetup.LeftMargin = options.LeftMargin.Value;
+            changes.Add($"leftMargin={options.LeftMargin.Value}");
         }
 
-        if (rightMargin.HasValue)
+        if (options.RightMargin.HasValue)
         {
-            pageSetup.RightMargin = rightMargin.Value;
-            changes.Add($"rightMargin={rightMargin.Value}");
+            pageSetup.RightMargin = options.RightMargin.Value;
+            changes.Add($"rightMargin={options.RightMargin.Value}");
         }
 
-        if (topMargin.HasValue)
+        if (options.TopMargin.HasValue)
         {
-            pageSetup.TopMargin = topMargin.Value;
-            changes.Add($"topMargin={topMargin.Value}");
+            pageSetup.TopMargin = options.TopMargin.Value;
+            changes.Add($"topMargin={options.TopMargin.Value}");
         }
 
-        if (bottomMargin.HasValue)
+        if (options.BottomMargin.HasValue)
         {
-            pageSetup.BottomMargin = bottomMargin.Value;
-            changes.Add($"bottomMargin={bottomMargin.Value}");
+            pageSetup.BottomMargin = options.BottomMargin.Value;
+            changes.Add($"bottomMargin={options.BottomMargin.Value}");
         }
 
-        if (!string.IsNullOrEmpty(header))
+        if (!string.IsNullOrEmpty(options.Header))
         {
-            pageSetup.SetHeader(1, header);
+            pageSetup.SetHeader(1, options.Header);
             changes.Add("header");
         }
 
-        if (!string.IsNullOrEmpty(footer))
+        if (!string.IsNullOrEmpty(options.Footer))
         {
-            pageSetup.SetFooter(1, footer);
+            pageSetup.SetFooter(1, options.Footer);
             changes.Add("footer");
         }
 
-        if (fitToPage == true)
+        if (options.FitToPage == true)
         {
-            pageSetup.FitToPagesWide = fitToPagesWide ?? 1;
-            pageSetup.FitToPagesTall = fitToPagesTall ?? 1;
+            pageSetup.FitToPagesWide = options.FitToPagesWide ?? 1;
+            pageSetup.FitToPagesTall = options.FitToPagesTall ?? 1;
             changes.Add($"fitToPage(wide={pageSetup.FitToPagesWide}, tall={pageSetup.FitToPagesTall})");
         }
 
         return changes;
     }
 }
+
+/// <summary>
+///     Record to hold page setup options.
+/// </summary>
+/// <param name="Orientation">The page orientation ('Portrait' or 'Landscape').</param>
+/// <param name="PaperSize">The paper size (e.g., 'A4', 'Letter').</param>
+/// <param name="LeftMargin">The left margin in inches.</param>
+/// <param name="RightMargin">The right margin in inches.</param>
+/// <param name="TopMargin">The top margin in inches.</param>
+/// <param name="BottomMargin">The bottom margin in inches.</param>
+/// <param name="Header">The header text for center section.</param>
+/// <param name="Footer">The footer text for center section.</param>
+/// <param name="FitToPage">Whether to enable fit to page mode.</param>
+/// <param name="FitToPagesWide">The number of pages wide to fit content.</param>
+/// <param name="FitToPagesTall">The number of pages tall to fit content.</param>
+public sealed record PageSetupOptions(
+    string? Orientation,
+    string? PaperSize,
+    double? LeftMargin,
+    double? RightMargin,
+    double? TopMargin,
+    double? BottomMargin,
+    string? Header,
+    string? Footer,
+    bool? FitToPage,
+    int? FitToPagesWide,
+    int? FitToPagesTall);

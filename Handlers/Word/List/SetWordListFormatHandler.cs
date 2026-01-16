@@ -102,7 +102,7 @@ public class SetWordListFormatHandler : OperationHandlerBase<Document>
             parameters.GetOptional<double?>("firstLineIndent"));
     }
 
-    private record SetListFormatParameters(
+    private sealed record SetListFormatParameters(
         int ParagraphIndex,
         string? NumberStyle,
         int? IndentLevel,

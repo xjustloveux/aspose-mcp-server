@@ -44,5 +44,5 @@ public class FreezeExcelPanesHandler : OperationHandlerBase<Workbook>
         return new FreezeParameters(sheetIndex, row, column);
     }
 
-    private record FreezeParameters(int SheetIndex, int Row, int Column);
+    private sealed record FreezeParameters(int SheetIndex, int Row, int Column);
 }

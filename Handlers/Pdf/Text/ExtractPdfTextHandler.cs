@@ -87,5 +87,5 @@ public class ExtractPdfTextHandler : OperationHandlerBase<Document>
     /// <param name="PageIndex">The 1-based page index.</param>
     /// <param name="IncludeFontInfo">Whether to include font information.</param>
     /// <param name="ExtractionMode">The text extraction mode.</param>
-    private record ExtractParameters(int PageIndex, bool IncludeFontInfo, string ExtractionMode);
+    private sealed record ExtractParameters(int PageIndex, bool IncludeFontInfo, string ExtractionMode);
 }

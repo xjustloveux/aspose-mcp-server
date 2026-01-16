@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Cells;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -61,7 +61,7 @@ Usage examples:
 - Edit comment: excel_comment(operation='edit', path='book.xlsx', cell='A1', comment='Updated comment')
 - Delete comment: excel_comment(operation='delete', path='book.xlsx', cell='A1')
 - Get comments: excel_comment(operation='get', path='book.xlsx')")]
-    public string Execute(
+    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
         [Description("Operation: add, edit, delete, get")]
         string operation,
         [Description("Excel file path (required if no sessionId)")]
@@ -108,8 +108,10 @@ Usage examples:
 
     /// <summary>
     ///     Builds OperationParameters from method parameters using strategy pattern.
+    ///     Parameters are documented on the Execute method.
     /// </summary>
-    private static OperationParameters BuildParameters(
+    /// <returns>OperationParameters configured with all input values.</returns>
+    private static OperationParameters BuildParameters( // NOSONAR S107
         string operation,
         int sheetIndex,
         string? cell,

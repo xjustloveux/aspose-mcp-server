@@ -45,5 +45,5 @@ public class DeletePptSectionHandler : OperationHandlerBase<Presentation>
             parameters.GetOptional("keepSlides", true));
     }
 
-    private record DeletePptSectionParameters(int SectionIndex, bool KeepSlides);
+    private sealed record DeletePptSectionParameters(int SectionIndex, bool KeepSlides);
 }

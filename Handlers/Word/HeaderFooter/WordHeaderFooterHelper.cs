@@ -122,7 +122,7 @@ public static class WordHeaderFooterHelper
     /// <returns>True if the text is a field code.</returns>
     private static bool IsFieldCode(string text)
     {
-        return text.StartsWith("{") && text.EndsWith("}");
+        return text.StartsWith('{') && text.EndsWith('}');
     }
 
     /// <summary>

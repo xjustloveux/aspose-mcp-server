@@ -60,5 +60,5 @@ public class GetExcelDataValidationsHandler : OperationHandlerBase<Workbook>
         return new GetParameters(parameters.GetOptional("sheetIndex", 0));
     }
 
-    private record GetParameters(int SheetIndex);
+    private sealed record GetParameters(int SheetIndex);
 }

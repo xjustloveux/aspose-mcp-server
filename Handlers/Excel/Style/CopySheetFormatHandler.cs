@@ -72,7 +72,7 @@ public class CopySheetFormatHandler : OperationHandlerBase<Workbook>
     /// <param name="TargetSheetIndex">The index of the target sheet.</param>
     /// <param name="CopyColumnWidths">Whether to copy column widths.</param>
     /// <param name="CopyRowHeights">Whether to copy row heights.</param>
-    private record CopySheetFormatParameters(
+    private sealed record CopySheetFormatParameters(
         int SourceSheetIndex,
         int TargetSheetIndex,
         bool CopyColumnWidths,

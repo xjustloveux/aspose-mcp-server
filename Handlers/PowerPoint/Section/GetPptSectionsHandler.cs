@@ -19,7 +19,7 @@ public class GetPptSectionsHandler : OperationHandlerBase<Presentation>
     /// <returns>JSON string containing section information.</returns>
     public override string Execute(OperationContext<Presentation> context, OperationParameters parameters)
     {
-        _ = ExtractGetPptSectionsParameters(parameters);
+        _ = parameters;
 
         var presentation = context.Document;
 
@@ -53,20 +53,4 @@ public class GetPptSectionsHandler : OperationHandlerBase<Presentation>
             sections = sectionsList
         });
     }
-
-    /// <summary>
-    ///     Extracts parameters for get sections operation.
-    /// </summary>
-    /// <param name="parameters">The operation parameters.</param>
-    /// <returns>The extracted parameters.</returns>
-    private static GetPptSectionsParameters ExtractGetPptSectionsParameters(OperationParameters parameters)
-    {
-        _ = parameters;
-        return new GetPptSectionsParameters();
-    }
-
-    /// <summary>
-    ///     Parameters for get sections operation.
-    /// </summary>
-    private record GetPptSectionsParameters;
 }

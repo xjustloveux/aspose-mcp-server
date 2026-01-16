@@ -112,7 +112,7 @@ public class AddPdfWatermarkHandler : OperationHandlerBase<Document>
     /// <param name="IsBackground">Whether to place as background.</param>
     /// <param name="HorizontalAlignment">The horizontal alignment.</param>
     /// <param name="VerticalAlignment">The vertical alignment.</param>
-    private record AddParameters(
+    private sealed record AddParameters(
         string? Text,
         double Opacity,
         double FontSize,

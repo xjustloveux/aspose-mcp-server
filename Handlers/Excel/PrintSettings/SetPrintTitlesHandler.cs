@@ -63,5 +63,5 @@ public class SetPrintTitlesHandler : OperationHandlerBase<Workbook>
     /// <summary>
     ///     Record to hold set print titles parameters.
     /// </summary>
-    private record SetPrintTitlesParameters(int SheetIndex, string? Rows, string? Columns, bool ClearTitles);
+    private sealed record SetPrintTitlesParameters(int SheetIndex, string? Rows, string? Columns, bool ClearTitles);
 }

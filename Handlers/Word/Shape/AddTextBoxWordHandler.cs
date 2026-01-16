@@ -175,7 +175,7 @@ public class AddTextBoxWordHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Record to hold textbox creation parameters.
     /// </summary>
-    private record TextBoxParameters(
+    private sealed record TextBoxParameters(
         string? Text,
         double TextboxWidth,
         double TextboxHeight,

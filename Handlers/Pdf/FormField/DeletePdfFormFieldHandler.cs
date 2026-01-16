@@ -50,5 +50,5 @@ public class DeletePdfFormFieldHandler : OperationHandlerBase<Document>
     ///     Parameters for deleting a form field.
     /// </summary>
     /// <param name="FieldName">The name of the form field to delete.</param>
-    private record DeleteParameters(string FieldName);
+    private sealed record DeleteParameters(string FieldName);
 }

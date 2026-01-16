@@ -107,5 +107,5 @@ public class GetWordStylesHandler : OperationHandlerBase<Document>
             parameters.GetOptional("includeBuiltIn", false));
     }
 
-    private record GetWordStylesParameters(bool IncludeBuiltIn);
+    private sealed record GetWordStylesParameters(bool IncludeBuiltIn);
 }

@@ -62,5 +62,10 @@ public class EditPptTableCellHandler : OperationHandlerBase<Presentation>
     /// <param name="RowIndex">The row index.</param>
     /// <param name="ColumnIndex">The column index.</param>
     /// <param name="Text">The text to set.</param>
-    private record EditCellParameters(int SlideIndex, int ShapeIndex, int RowIndex, int ColumnIndex, string Text);
+    private sealed record EditCellParameters(
+        int SlideIndex,
+        int ShapeIndex,
+        int RowIndex,
+        int ColumnIndex,
+        string Text);
 }

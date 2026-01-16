@@ -84,11 +84,7 @@ public class EditPdfTableHandler : OperationHandlerBase<Document>
         foreach (var page in document.Pages)
             try
             {
-                var paragraphs = page.Paragraphs;
-                if (paragraphs is { Count: > 0 })
-                    foreach (var paragraph in paragraphs)
-                        if (paragraph is Aspose.Pdf.Table foundTable)
-                            tables.Add(foundTable);
+                tables.AddRange(GetTablesFromPage(page));
             }
             catch (Exception ex)
             {
@@ -96,6 +92,18 @@ public class EditPdfTableHandler : OperationHandlerBase<Document>
             }
 
         return tables;
+    }
+
+    /// <summary>
+    ///     Gets tables from a single page's paragraphs.
+    /// </summary>
+    /// <param name="page">The PDF page to search.</param>
+    /// <returns>Tables found in the page.</returns>
+    private static IEnumerable<Aspose.Pdf.Table> GetTablesFromPage(Aspose.Pdf.Page page)
+    {
+        var paragraphs = page.Paragraphs;
+        if (paragraphs is not { Count: > 0 }) return [];
+        return paragraphs.OfType<Aspose.Pdf.Table>();
     }
 
     /// <summary>
@@ -129,21 +137,7 @@ public class EditPdfTableHandler : OperationHandlerBase<Document>
         try
         {
             foreach (var page in document.Pages)
-            {
-                var paragraphs = page.Paragraphs;
-                if (paragraphs is not { Count: > 0 }) continue;
-
-                for (var i = 1; i <= paragraphs.Count; i++)
-                    try
-                    {
-                        if (paragraphs[i] is Aspose.Pdf.Table foundTable)
-                            tables.Add(foundTable);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.Error.WriteLine($"[WARN] Error accessing paragraph at index {i}: {ex.Message}");
-                    }
-            }
+                tables.AddRange(GetTablesFromPageByIndex(page));
         }
         catch (Exception ex)
         {
@@ -151,6 +145,32 @@ public class EditPdfTableHandler : OperationHandlerBase<Document>
         }
 
         return tables;
+    }
+
+    /// <summary>
+    ///     Gets tables from a page using index-based access.
+    /// </summary>
+    /// <param name="page">The PDF page to search.</param>
+    /// <returns>Tables found in the page.</returns>
+    private static IEnumerable<Aspose.Pdf.Table> GetTablesFromPageByIndex(Aspose.Pdf.Page page)
+    {
+        var paragraphs = page.Paragraphs;
+        if (paragraphs is not { Count: > 0 }) yield break;
+
+        for (var i = 1; i <= paragraphs.Count; i++)
+        {
+            Aspose.Pdf.Table? table = null;
+            try
+            {
+                table = paragraphs[i] as Aspose.Pdf.Table;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[WARN] Error accessing paragraph at index {i}: {ex.Message}");
+            }
+
+            if (table != null) yield return table;
+        }
     }
 
     /// <summary>
@@ -259,5 +279,5 @@ public class EditPdfTableHandler : OperationHandlerBase<Document>
     /// <param name="CellRow">The optional cell row index.</param>
     /// <param name="CellColumn">The optional cell column index.</param>
     /// <param name="CellValue">The optional cell value.</param>
-    private record EditParameters(int TableIndex, int? CellRow, int? CellColumn, string? CellValue);
+    private sealed record EditParameters(int TableIndex, int? CellRow, int? CellColumn, string? CellValue);
 }

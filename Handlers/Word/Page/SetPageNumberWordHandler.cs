@@ -86,5 +86,5 @@ public class SetPageNumberWordHandler : OperationHandlerBase<Document>
     /// <param name="PageNumberFormat">The page number format (arabic, roman, letter).</param>
     /// <param name="StartingPageNumber">The starting page number.</param>
     /// <param name="SectionIndex">The section index to apply settings to.</param>
-    private record SetPageNumberParameters(string? PageNumberFormat, int? StartingPageNumber, int? SectionIndex);
+    private sealed record SetPageNumberParameters(string? PageNumberFormat, int? StartingPageNumber, int? SectionIndex);
 }

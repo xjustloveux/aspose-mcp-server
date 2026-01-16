@@ -57,5 +57,5 @@ public class DeleteExcelCommentHandler : OperationHandlerBase<Workbook>
         return new DeleteParameters(sheetIndex, cell);
     }
 
-    private record DeleteParameters(int SheetIndex, string Cell);
+    private sealed record DeleteParameters(int SheetIndex, string Cell);
 }

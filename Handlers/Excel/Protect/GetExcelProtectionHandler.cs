@@ -96,5 +96,5 @@ public class GetExcelProtectionHandler : OperationHandlerBase<Workbook>
     ///     Parameters for GetExcelProtection operation.
     /// </summary>
     /// <param name="SheetIndex">The sheet index (optional).</param>
-    private record GetExcelProtectionParameters(int? SheetIndex);
+    private sealed record GetExcelProtectionParameters(int? SheetIndex);
 }

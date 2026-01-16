@@ -43,5 +43,5 @@ public class DeleteExcelNamedRangeHandler : OperationHandlerBase<Workbook>
         );
     }
 
-    private record DeleteNamedRangeParameters(string Name);
+    private sealed record DeleteNamedRangeParameters(string Name);
 }

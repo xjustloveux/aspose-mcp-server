@@ -81,7 +81,7 @@ public class AddFormFieldWordHandler : OperationHandlerBase<Document>
     /// <param name="DefaultValue">The default value for text input fields.</param>
     /// <param name="Options">The options for dropdown fields.</param>
     /// <param name="CheckedValue">The initial checked state for checkbox fields.</param>
-    private record AddFormFieldParameters(
+    private sealed record AddFormFieldParameters(
         string FormFieldType,
         string FieldName,
         string? DefaultValue,

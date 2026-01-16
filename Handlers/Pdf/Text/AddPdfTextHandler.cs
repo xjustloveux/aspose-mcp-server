@@ -78,7 +78,7 @@ public class AddPdfTextHandler : OperationHandlerBase<Document>
     /// <param name="FontName">The font name.</param>
     /// <param name="FontSize">The font size.</param>
     /// <param name="Color">The text color.</param>
-    private record AddParameters(
+    private sealed record AddParameters(
         string Text,
         int PageIndex,
         double X,

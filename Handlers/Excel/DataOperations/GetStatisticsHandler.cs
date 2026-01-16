@@ -225,5 +225,5 @@ public class GetStatisticsHandler : OperationHandlerBase<Workbook>
     /// </summary>
     /// <param name="SheetIndex">The worksheet index (0-based), or null to get statistics for all sheets.</param>
     /// <param name="Range">The cell range to calculate statistics for, or null for basic sheet info.</param>
-    private record GetStatisticsParameters(int? SheetIndex, string? Range);
+    private sealed record GetStatisticsParameters(int? SheetIndex, string? Range);
 }

@@ -47,5 +47,5 @@ public class UngroupExcelColumnsHandler : OperationHandlerBase<Workbook>
         return new UngroupColumnsParameters(sheetIndex, startColumn, endColumn);
     }
 
-    private record UngroupColumnsParameters(int SheetIndex, int StartColumn, int EndColumn);
+    private sealed record UngroupColumnsParameters(int SheetIndex, int StartColumn, int EndColumn);
 }

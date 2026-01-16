@@ -131,7 +131,7 @@ public class SetFooterTabsHandler : OperationHandlerBase<Document>
     /// <param name="TabStops">The tab stops array.</param>
     /// <param name="SectionIndex">The section index.</param>
     /// <param name="HeaderFooterType">The header/footer type.</param>
-    private record SetFooterTabsParameters(
+    private sealed record SetFooterTabsParameters(
         JsonArray? TabStops,
         int SectionIndex,
         string HeaderFooterType);

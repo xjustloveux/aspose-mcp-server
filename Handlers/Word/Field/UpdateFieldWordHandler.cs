@@ -74,5 +74,5 @@ public class UpdateFieldWordHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="FieldIndex">The index of the field to update, or null to update all.</param>
     /// <param name="UpdateAll">Whether to update all fields.</param>
-    private record UpdateFieldParameters(int? FieldIndex, bool? UpdateAll);
+    private sealed record UpdateFieldParameters(int? FieldIndex, bool? UpdateAll);
 }

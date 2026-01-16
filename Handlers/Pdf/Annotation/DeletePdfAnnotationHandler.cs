@@ -71,5 +71,5 @@ public class DeletePdfAnnotationHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Record to hold delete annotation parameters.
     /// </summary>
-    private record DeleteParameters(int PageIndex, int? AnnotationIndex);
+    private sealed record DeleteParameters(int PageIndex, int? AnnotationIndex);
 }

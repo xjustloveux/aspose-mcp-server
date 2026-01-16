@@ -61,5 +61,5 @@ public class MoveExcelSheetHandler : OperationHandlerBase<Workbook>
         return new MoveExcelSheetParameters(sheetIndex, targetIndex, insertAt);
     }
 
-    private record MoveExcelSheetParameters(int SheetIndex, int? TargetIndex, int? InsertAt);
+    private sealed record MoveExcelSheetParameters(int SheetIndex, int? TargetIndex, int? InsertAt);
 }

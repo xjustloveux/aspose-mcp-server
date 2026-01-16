@@ -81,5 +81,5 @@ public class DeleteWordEndnoteHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Record to hold delete endnote parameters.
     /// </summary>
-    private record DeleteEndnoteParameters(string? ReferenceMark, int? NoteIndex);
+    private sealed record DeleteEndnoteParameters(string? ReferenceMark, int? NoteIndex);
 }

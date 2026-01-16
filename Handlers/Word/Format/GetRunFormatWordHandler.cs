@@ -129,7 +129,7 @@ public class GetRunFormatWordHandler : OperationHandlerBase<Document>
             parameters.GetOptional("includeInherited", false));
     }
 
-    private record GetRunFormatParameters(
+    private sealed record GetRunFormatParameters(
         int ParagraphIndex,
         int? RunIndex,
         bool IncludeInherited);

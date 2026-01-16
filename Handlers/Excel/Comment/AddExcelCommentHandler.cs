@@ -68,5 +68,5 @@ public class AddExcelCommentHandler : OperationHandlerBase<Workbook>
         return new AddParameters(sheetIndex, cell, comment, author);
     }
 
-    private record AddParameters(int SheetIndex, string Cell, string Comment, string? Author);
+    private sealed record AddParameters(int SheetIndex, string Cell, string Comment, string? Author);
 }

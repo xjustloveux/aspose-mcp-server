@@ -105,7 +105,7 @@ public class ApplyWordStyleHandler : OperationHandlerBase<Document>
             parameters.GetOptional("applyToAllParagraphs", false));
     }
 
-    private record ApplyWordStyleParameters(
+    private sealed record ApplyWordStyleParameters(
         string StyleName,
         int? ParagraphIndex,
         int[]? ParagraphIndices,

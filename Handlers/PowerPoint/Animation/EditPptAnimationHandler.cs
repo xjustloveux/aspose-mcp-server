@@ -167,7 +167,7 @@ public class EditPptAnimationHandler : OperationHandlerBase<Presentation>
     /// <param name="TriggerType">The optional trigger type.</param>
     /// <param name="Duration">The optional duration.</param>
     /// <param name="Delay">The optional delay.</param>
-    private record AnimationParameters(
+    private sealed record AnimationParameters(
         int SlideIndex,
         int ShapeIndex,
         int? AnimationIndex,

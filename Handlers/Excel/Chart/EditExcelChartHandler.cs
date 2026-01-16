@@ -96,7 +96,7 @@ public class EditExcelChartHandler : OperationHandlerBase<Workbook>
     /// <summary>
     ///     Record to hold edit chart parameters.
     /// </summary>
-    private record EditParameters(
+    private sealed record EditParameters(
         int SheetIndex,
         int ChartIndex,
         string? Title,

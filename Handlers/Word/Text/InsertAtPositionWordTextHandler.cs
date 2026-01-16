@@ -155,7 +155,7 @@ public class InsertAtPositionWordTextHandler : OperationHandlerBase<Document>
         run.Text = run.Text.Insert(charIndex, text);
     }
 
-    private record InsertAtPositionParameters(
+    private sealed record InsertAtPositionParameters(
         int ParagraphIndex,
         int CharIndex,
         string Text,

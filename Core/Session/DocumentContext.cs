@@ -118,7 +118,7 @@ public class DocumentContext<T> : IDisposable where T : class
         if (string.IsNullOrEmpty(path))
             throw new ArgumentException("Either sessionId or path must be provided");
 
-        SecurityHelper.ValidateFilePath(path, "path", true);
+        SecurityHelper.ValidateFilePath(path, nameof(path), true);
 
         var document = LoadDocument(path, password);
         return new DocumentContext<T>(document, null, null, path, true, identity);
@@ -191,6 +191,9 @@ public class DocumentContext<T> : IDisposable where T : class
     /// <summary>
     ///     Loads a Word document with optional password support.
     /// </summary>
+    /// <param name="path">The file path to load.</param>
+    /// <param name="password">The optional password for protected documents.</param>
+    /// <returns>The loaded Word document.</returns>
     private static Document LoadWordDocument(string path, string? password)
     {
         if (!string.IsNullOrEmpty(password))
@@ -211,6 +214,9 @@ public class DocumentContext<T> : IDisposable where T : class
     /// <summary>
     ///     Loads an Excel workbook with optional password support.
     /// </summary>
+    /// <param name="path">The file path to load.</param>
+    /// <param name="password">The optional password for protected workbooks.</param>
+    /// <returns>The loaded Excel workbook.</returns>
     private static Workbook LoadExcelWorkbook(string path, string? password)
     {
         if (!string.IsNullOrEmpty(password))
@@ -230,6 +236,9 @@ public class DocumentContext<T> : IDisposable where T : class
     /// <summary>
     ///     Loads a PowerPoint presentation with optional password support.
     /// </summary>
+    /// <param name="path">The file path to load.</param>
+    /// <param name="password">The optional password for protected presentations.</param>
+    /// <returns>The loaded PowerPoint presentation.</returns>
     private static Presentation LoadPowerPointPresentation(string path, string? password)
     {
         if (!string.IsNullOrEmpty(password))
@@ -249,6 +258,9 @@ public class DocumentContext<T> : IDisposable where T : class
     /// <summary>
     ///     Loads a PDF document with optional password support.
     /// </summary>
+    /// <param name="path">The file path to load.</param>
+    /// <param name="password">The optional password for protected PDFs.</param>
+    /// <returns>The loaded PDF document.</returns>
     private static Aspose.Pdf.Document LoadPdfDocument(string path, string? password)
     {
         if (!string.IsNullOrEmpty(password))

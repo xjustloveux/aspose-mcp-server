@@ -72,5 +72,5 @@ public class DeleteFieldWordHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="FieldIndex">The index of the field to delete.</param>
     /// <param name="KeepResult">Whether to keep the field's result text after deletion.</param>
-    private record DeleteFieldParameters(int FieldIndex, bool KeepResult);
+    private sealed record DeleteFieldParameters(int FieldIndex, bool KeepResult);
 }

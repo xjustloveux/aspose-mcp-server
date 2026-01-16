@@ -51,7 +51,7 @@ public class SetColumnWidthExcelViewHandler : OperationHandlerBase<Workbook>
     /// <param name="SheetIndex">The index of the worksheet.</param>
     /// <param name="ColumnIndex">The index of the column.</param>
     /// <param name="Width">The width of the column in characters.</param>
-    private record SetColumnWidthParameters(
+    private sealed record SetColumnWidthParameters(
         int SheetIndex,
         int ColumnIndex,
         double Width);

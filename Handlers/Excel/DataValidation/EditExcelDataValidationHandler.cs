@@ -101,7 +101,7 @@ public class EditExcelDataValidationHandler : OperationHandlerBase<Workbook>
             parameters.GetOptional<string?>("inputMessage"));
     }
 
-    private record EditParameters(
+    private sealed record EditParameters(
         int SheetIndex,
         int ValidationIndex,
         string? ValidationType,

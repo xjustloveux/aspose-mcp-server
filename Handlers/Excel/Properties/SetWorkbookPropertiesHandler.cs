@@ -120,7 +120,7 @@ public class SetWorkbookPropertiesHandler : OperationHandlerBase<Workbook>
     /// <summary>
     ///     Record to hold set workbook properties parameters.
     /// </summary>
-    private record SetWorkbookPropertiesParameters(
+    private sealed record SetWorkbookPropertiesParameters(
         string? Title,
         string? Subject,
         string? Author,

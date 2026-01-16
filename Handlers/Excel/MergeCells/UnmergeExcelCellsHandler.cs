@@ -46,5 +46,5 @@ public class UnmergeExcelCellsHandler : OperationHandlerBase<Workbook>
         );
     }
 
-    private record UnmergeCellsParameters(string Range, int SheetIndex);
+    private sealed record UnmergeCellsParameters(string Range, int SheetIndex);
 }

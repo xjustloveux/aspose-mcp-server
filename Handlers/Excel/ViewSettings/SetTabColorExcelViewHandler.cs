@@ -51,7 +51,7 @@ public class SetTabColorExcelViewHandler : OperationHandlerBase<Workbook>
     /// </summary>
     /// <param name="SheetIndex">The index of the worksheet.</param>
     /// <param name="Color">The color to set for the tab.</param>
-    private record SetTabColorParameters(
+    private sealed record SetTabColorParameters(
         int SheetIndex,
         string Color);
 }

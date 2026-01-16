@@ -51,5 +51,5 @@ public class MergeExcelCellsHandler : OperationHandlerBase<Workbook>
         );
     }
 
-    private record MergeCellsParameters(string Range, int SheetIndex);
+    private sealed record MergeCellsParameters(string Range, int SheetIndex);
 }

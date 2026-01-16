@@ -191,7 +191,7 @@ public class SplitWorkbookHandler : OperationHandlerBase<Workbook>
     /// <param name="OutputDirectory">The output directory path.</param>
     /// <param name="SheetIndices">The indices of sheets to split.</param>
     /// <param name="OutputFileNamePattern">The output file name pattern.</param>
-    private record SplitParameters(
+    private sealed record SplitParameters(
         string? InputPath,
         string? Path,
         string? SessionId,

@@ -41,5 +41,5 @@ public class UnfreezeExcelPanesHandler : OperationHandlerBase<Workbook>
         return new UnfreezeParameters(sheetIndex);
     }
 
-    private record UnfreezeParameters(int SheetIndex);
+    private sealed record UnfreezeParameters(int SheetIndex);
 }

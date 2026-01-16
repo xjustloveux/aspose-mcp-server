@@ -86,7 +86,7 @@ public class ExtractImagesWordHandler : OperationHandlerBase<Document>
             parameters.GetOptional<int?>("extractImageIndex"));
     }
 
-    private record ExtractImagesParameters(
+    private sealed record ExtractImagesParameters(
         string OutputDir,
         string Prefix,
         int? ExtractImageIndex);

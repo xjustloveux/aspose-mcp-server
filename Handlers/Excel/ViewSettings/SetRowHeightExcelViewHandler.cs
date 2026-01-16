@@ -51,7 +51,7 @@ public class SetRowHeightExcelViewHandler : OperationHandlerBase<Workbook>
     /// <param name="SheetIndex">The index of the worksheet.</param>
     /// <param name="RowIndex">The index of the row.</param>
     /// <param name="Height">The height of the row in points.</param>
-    private record SetRowHeightParameters(
+    private sealed record SetRowHeightParameters(
         int SheetIndex,
         int RowIndex,
         double Height);

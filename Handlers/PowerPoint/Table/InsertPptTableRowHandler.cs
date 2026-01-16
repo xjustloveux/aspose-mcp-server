@@ -66,5 +66,5 @@ public class InsertPptTableRowHandler : OperationHandlerBase<Presentation>
     /// <param name="ShapeIndex">The shape index.</param>
     /// <param name="RowIndex">The optional row index to insert at.</param>
     /// <param name="CopyFromRow">The optional row to copy from.</param>
-    private record InsertRowParameters(int SlideIndex, int ShapeIndex, int? RowIndex, int? CopyFromRow);
+    private sealed record InsertRowParameters(int SlideIndex, int ShapeIndex, int? RowIndex, int? CopyFromRow);
 }

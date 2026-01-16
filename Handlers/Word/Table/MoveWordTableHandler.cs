@@ -77,5 +77,5 @@ public class MoveWordTableHandler : OperationHandlerBase<Document>
         return new MoveWordTableParameters(tableIndex, targetParagraphIndex, sectionIndex);
     }
 
-    private record MoveWordTableParameters(int TableIndex, int TargetParagraphIndex, int? SectionIndex);
+    private sealed record MoveWordTableParameters(int TableIndex, int TargetParagraphIndex, int? SectionIndex);
 }

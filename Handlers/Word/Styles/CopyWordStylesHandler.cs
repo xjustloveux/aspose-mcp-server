@@ -89,7 +89,7 @@ public class CopyWordStylesHandler : OperationHandlerBase<Document>
             parameters.GetOptional("overwriteExisting", false));
     }
 
-    private record CopyWordStylesParameters(
+    private sealed record CopyWordStylesParameters(
         string SourceDocument,
         string[]? StyleNames,
         bool OverwriteExisting);

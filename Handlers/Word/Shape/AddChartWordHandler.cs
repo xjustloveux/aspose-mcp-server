@@ -81,11 +81,7 @@ public class AddChartWordHandler : OperationHandlerBase<Document>
         if (data == null || data.Length == 0)
             throw new ArgumentException("Chart data cannot be empty");
 
-        var tableData = data.Select(row => row.ToList()).ToList();
-        if (tableData.Count == 0)
-            throw new ArgumentException("Cannot parse chart data");
-
-        return tableData;
+        return data.Select(row => row.ToList()).ToList();
     }
 
     /// <summary>
@@ -241,7 +237,7 @@ public class AddChartWordHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Record to hold chart creation parameters.
     /// </summary>
-    private record ChartParameters(
+    private sealed record ChartParameters(
         string ChartType,
         string[][]? Data,
         string? ChartTitle,

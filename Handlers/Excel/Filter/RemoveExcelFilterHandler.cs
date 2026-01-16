@@ -50,5 +50,5 @@ public class RemoveExcelFilterHandler : OperationHandlerBase<Workbook>
     ///     Parameters for remove filter operation.
     /// </summary>
     /// <param name="SheetIndex">The worksheet index (0-based).</param>
-    private record RemoveFilterParameters(int SheetIndex);
+    private sealed record RemoveFilterParameters(int SheetIndex);
 }

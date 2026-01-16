@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Cells;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -63,7 +63,7 @@ Usage examples:
 - Get merged cells: excel_merge_cells(operation='get', path='book.xlsx')
 
 WARNING: Merging cells will only keep the value of the top-left cell. All other cell values will be lost.")]
-    public string Execute(
+    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
         [Description("Operation: merge, unmerge, get")]
         string operation,
         [Description("Excel file path (required if no sessionId)")]
@@ -107,8 +107,10 @@ WARNING: Merging cells will only keep the value of the top-left cell. All other 
 
     /// <summary>
     ///     Builds OperationParameters from method parameters using strategy pattern.
+    ///     Parameters are documented on the Execute method.
     /// </summary>
-    private static OperationParameters BuildParameters(
+    /// <returns>OperationParameters configured with all input values.</returns>
+    private static OperationParameters BuildParameters( // NOSONAR S107
         string operation,
         int sheetIndex,
         string? range)

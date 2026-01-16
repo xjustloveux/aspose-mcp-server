@@ -65,5 +65,5 @@ public class UngroupPptShapesHandler : OperationHandlerBase<Presentation>
     /// </summary>
     /// <param name="SlideIndex">The slide index (0-based).</param>
     /// <param name="ShapeIndex">The group shape index to ungroup.</param>
-    private record UngroupPptShapesParameters(int SlideIndex, int ShapeIndex);
+    private sealed record UngroupPptShapesParameters(int SlideIndex, int ShapeIndex);
 }

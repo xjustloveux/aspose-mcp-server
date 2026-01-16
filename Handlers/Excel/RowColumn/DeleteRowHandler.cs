@@ -44,5 +44,5 @@ public class DeleteRowHandler : OperationHandlerBase<Workbook>
         return new DeleteRowParameters(sheetIndex, rowIndex, count);
     }
 
-    private record DeleteRowParameters(int SheetIndex, int RowIndex, int Count);
+    private sealed record DeleteRowParameters(int SheetIndex, int RowIndex, int Count);
 }

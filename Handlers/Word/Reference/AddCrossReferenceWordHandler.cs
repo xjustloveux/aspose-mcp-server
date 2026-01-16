@@ -65,7 +65,7 @@ public class AddCrossReferenceWordHandler : OperationHandlerBase<Document>
             parameters.GetOptional("includeAboveBelow", false));
     }
 
-    private record AddCrossReferenceParameters(
+    private sealed record AddCrossReferenceParameters(
         string ReferenceType,
         string TargetName,
         string? ReferenceText,

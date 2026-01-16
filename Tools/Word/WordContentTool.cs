@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -63,7 +63,7 @@ Usage examples:
 - Get detailed content: word_content(operation='get_content_detailed', path='doc.docx', includeHeaders=true, includeFooters=true)
 - Get statistics: word_content(operation='get_statistics', path='doc.docx', includeFootnotes=true)
 - Get document info: word_content(operation='get_document_info', path='doc.docx', includeTabStops=true)")]
-    public string Execute(
+    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
         [Description("Operation: get_content, get_content_detailed, get_statistics, get_document_info")]
         string operation,
         [Description("Word document file path (required if no sessionId)")]
@@ -106,8 +106,10 @@ Usage examples:
 
     /// <summary>
     ///     Builds OperationParameters from method parameters using strategy pattern.
+    ///     Parameters are documented on the Execute method.
     /// </summary>
-    private static OperationParameters BuildParameters(
+    /// <returns>OperationParameters configured with all input values.</returns>
+    private static OperationParameters BuildParameters( // NOSONAR S107
         string operation,
         bool includeHeaders,
         bool includeFooters,

@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Cells;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -71,7 +71,7 @@ Usage examples:
 - Extract image: excel_image(operation='extract', path='book.xlsx', imageIndex=0, exportPath='extracted.png')
 
 Note: When deleting images, the indices of remaining images will be re-ordered.")]
-    public string Execute(
+    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
         [Description("Operation: add, delete, get, extract")]
         string operation,
         [Description("Excel file path (required if no sessionId)")]
@@ -130,8 +130,10 @@ Note: When deleting images, the indices of remaining images will be re-ordered."
 
     /// <summary>
     ///     Builds OperationParameters from method parameters using strategy pattern.
+    ///     Parameters are documented on the Execute method.
     /// </summary>
-    private static OperationParameters BuildParameters(
+    /// <returns>OperationParameters configured with all input values.</returns>
+    private static OperationParameters BuildParameters( // NOSONAR S107
         string operation,
         int sheetIndex,
         string? imagePath,

@@ -174,7 +174,7 @@ public class SplitCellWordTableHandler : OperationHandlerBase<Document>
             sectionIndex);
     }
 
-    private record SplitCellParameters(
+    private sealed record SplitCellParameters(
         int RowIndex,
         int ColumnIndex,
         int TableIndex,

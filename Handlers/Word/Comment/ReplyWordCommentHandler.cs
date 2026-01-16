@@ -70,5 +70,5 @@ public class ReplyWordCommentHandler : OperationHandlerBase<Document>
     /// <param name="ReplyText">The text of the reply.</param>
     /// <param name="Author">The author of the reply.</param>
     /// <param name="AuthorInitial">The author's initials.</param>
-    private record ReplyParameters(int CommentIndex, string ReplyText, string Author, string? AuthorInitial);
+    private sealed record ReplyParameters(int CommentIndex, string ReplyText, string Author, string? AuthorInitial);
 }

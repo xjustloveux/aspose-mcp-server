@@ -59,5 +59,5 @@ public class ApplyLayoutRangeHandler : OperationHandlerBase<Presentation>
     /// </summary>
     /// <param name="SlideIndicesJson">The JSON array of slide indices.</param>
     /// <param name="Layout">The layout type string.</param>
-    private record ApplyLayoutRangeParameters(string SlideIndicesJson, string Layout);
+    private sealed record ApplyLayoutRangeParameters(string SlideIndicesJson, string Layout);
 }

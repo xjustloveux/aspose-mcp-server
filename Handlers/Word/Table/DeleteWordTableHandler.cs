@@ -45,5 +45,5 @@ public class DeleteWordTableHandler : OperationHandlerBase<Document>
         return new DeleteWordTableParameters(tableIndex, sectionIndex);
     }
 
-    private record DeleteWordTableParameters(int TableIndex, int? SectionIndex);
+    private sealed record DeleteWordTableParameters(int TableIndex, int? SectionIndex);
 }

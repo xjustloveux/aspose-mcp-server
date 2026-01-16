@@ -269,7 +269,7 @@ public class DeleteWordTextHandler : OperationHandlerBase<Document>
         return Success(result);
     }
 
-    private record DeleteParameters(
+    private sealed record DeleteParameters(
         string? SearchText,
         int? StartParagraphIndex,
         int StartRunIndex,

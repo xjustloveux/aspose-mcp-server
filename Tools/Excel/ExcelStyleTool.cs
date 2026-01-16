@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Cells;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -80,7 +80,7 @@ Usage examples:
 - Get format (full): excel_style(operation='get_format', path='book.xlsx', range='A1')
 - Get format (simple): excel_style(operation='get_format', path='book.xlsx', range='A1', fields='font,color')
 - Copy sheet format: excel_style(operation='copy_sheet_format', path='book.xlsx', sourceSheetIndex=0, targetSheetIndex=1)")]
-    public string Execute(
+    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
         [Description("Operation to perform: format, get_format, copy_sheet_format")]
         string operation,
         [Description("Excel file path (required if no sessionId)")]
@@ -162,8 +162,10 @@ Usage examples:
 
     /// <summary>
     ///     Builds OperationParameters from method parameters using strategy pattern.
+    ///     Parameters are documented on the Execute method.
     /// </summary>
-    private static OperationParameters BuildParameters(
+    /// <returns>OperationParameters configured with all input values.</returns>
+    private static OperationParameters BuildParameters( // NOSONAR S107
         string operation,
         int sheetIndex,
         int sourceSheetIndex,

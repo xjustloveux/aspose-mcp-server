@@ -40,9 +40,7 @@ public class CreateWordStyleHandler : OperationHandlerBase<Document>
         SetBaseStyle(doc, style, p.BaseStyle);
 
         if (styleType != StyleType.List)
-            ApplyFontSettings(style, p.FontName, p.FontNameAscii, p.FontNameFarEast, p.FontSize, p.Bold, p.Italic,
-                p.Underline,
-                p.Color);
+            ApplyFontSettings(style, p);
 
         if (styleType == StyleType.Paragraph || styleType == StyleType.List)
             ApplyParagraphSettings(style, p.Alignment, p.SpaceBefore, p.SpaceAfter, p.LineSpacing);
@@ -74,31 +72,35 @@ public class CreateWordStyleHandler : OperationHandlerBase<Document>
             Console.Error.WriteLine($"[WARN] Base style '{baseStyle}' not found, style will not inherit from it");
     }
 
-    private static void ApplyFontSettings(Style style, string? fontName, string? fontNameAscii, string? fontNameFarEast,
-        double? fontSize, bool? bold, bool? italic, bool? underline, string? color)
+    /// <summary>
+    ///     Applies font settings to the style.
+    /// </summary>
+    /// <param name="style">The style to apply font settings to.</param>
+    /// <param name="p">The parameters containing font settings.</param>
+    private static void ApplyFontSettings(Style style, CreateWordStyleParameters p)
     {
-        if (!string.IsNullOrEmpty(fontNameAscii))
-            style.Font.NameAscii = fontNameAscii;
+        if (!string.IsNullOrEmpty(p.FontNameAscii))
+            style.Font.NameAscii = p.FontNameAscii;
 
-        if (!string.IsNullOrEmpty(fontNameFarEast))
-            style.Font.NameFarEast = fontNameFarEast;
+        if (!string.IsNullOrEmpty(p.FontNameFarEast))
+            style.Font.NameFarEast = p.FontNameFarEast;
 
-        ApplyFontName(style, fontName, fontNameAscii, fontNameFarEast);
+        ApplyFontName(style, p.FontName, p.FontNameAscii, p.FontNameFarEast);
 
-        if (fontSize.HasValue)
-            style.Font.Size = fontSize.Value;
+        if (p.FontSize.HasValue)
+            style.Font.Size = p.FontSize.Value;
 
-        if (bold.HasValue)
-            style.Font.Bold = bold.Value;
+        if (p.Bold.HasValue)
+            style.Font.Bold = p.Bold.Value;
 
-        if (italic.HasValue)
-            style.Font.Italic = italic.Value;
+        if (p.Italic.HasValue)
+            style.Font.Italic = p.Italic.Value;
 
-        if (underline.HasValue)
-            style.Font.Underline = underline.Value ? Underline.Single : Underline.None;
+        if (p.Underline.HasValue)
+            style.Font.Underline = p.Underline.Value ? Underline.Single : Underline.None;
 
-        if (!string.IsNullOrEmpty(color))
-            style.Font.Color = ColorHelper.ParseColor(color, true);
+        if (!string.IsNullOrEmpty(p.Color))
+            style.Font.Color = ColorHelper.ParseColor(p.Color, true);
     }
 
     private static void ApplyFontName(Style style, string? fontName, string? fontNameAscii, string? fontNameFarEast)
@@ -162,7 +164,25 @@ public class CreateWordStyleHandler : OperationHandlerBase<Document>
             parameters.GetOptional<double?>("lineSpacing"));
     }
 
-    private record CreateWordStyleParameters(
+    /// <summary>
+    ///     Record to hold create word style parameters.
+    /// </summary>
+    /// <param name="StyleName">The style name.</param>
+    /// <param name="StyleType">The style type.</param>
+    /// <param name="BaseStyle">The base style name.</param>
+    /// <param name="FontName">The font name.</param>
+    /// <param name="FontNameAscii">The ASCII font name.</param>
+    /// <param name="FontNameFarEast">The Far East font name.</param>
+    /// <param name="FontSize">The font size.</param>
+    /// <param name="Bold">Whether to apply bold.</param>
+    /// <param name="Italic">Whether to apply italic.</param>
+    /// <param name="Underline">Whether to apply underline.</param>
+    /// <param name="Color">The font color.</param>
+    /// <param name="Alignment">The paragraph alignment.</param>
+    /// <param name="SpaceBefore">The space before in points.</param>
+    /// <param name="SpaceAfter">The space after in points.</param>
+    /// <param name="LineSpacing">The line spacing multiplier.</param>
+    private sealed record CreateWordStyleParameters(
         string StyleName,
         string StyleType,
         string? BaseStyle,

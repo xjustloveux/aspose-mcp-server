@@ -75,5 +75,5 @@ public class EditPdfLinkHandler : OperationHandlerBase<Document>
     /// <param name="LinkIndex">The 0-based link index.</param>
     /// <param name="Url">The optional URL for external links.</param>
     /// <param name="TargetPage">The optional target page for internal links.</param>
-    private record EditParameters(int PageIndex, int LinkIndex, string? Url, int? TargetPage);
+    private sealed record EditParameters(int PageIndex, int LinkIndex, string? Url, int? TargetPage);
 }

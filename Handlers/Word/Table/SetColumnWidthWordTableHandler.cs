@@ -78,5 +78,9 @@ public class SetColumnWidthWordTableHandler : OperationHandlerBase<Document>
         return new SetColumnWidthParameters(columnIndex.Value, columnWidth.Value, tableIndex, sectionIndex);
     }
 
-    private record SetColumnWidthParameters(int ColumnIndex, double ColumnWidth, int TableIndex, int? SectionIndex);
+    private sealed record SetColumnWidthParameters(
+        int ColumnIndex,
+        double ColumnWidth,
+        int TableIndex,
+        int? SectionIndex);
 }

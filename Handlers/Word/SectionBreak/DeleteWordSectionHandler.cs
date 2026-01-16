@@ -58,7 +58,7 @@ public class DeleteWordSectionHandler : OperationHandlerBase<Document>
             parameters.GetOptional<int[]?>("sectionIndices"));
     }
 
-    private record DeleteWordSectionParameters(
+    private sealed record DeleteWordSectionParameters(
         int? SectionIndex,
         int[]? SectionIndices);
 }

@@ -68,5 +68,5 @@ public class DeleteFormFieldWordHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="FieldName">The name of a single field to delete.</param>
     /// <param name="FieldNames">An array of field names to delete.</param>
-    private record DeleteFormFieldParameters(string? FieldName, string[]? FieldNames);
+    private sealed record DeleteFormFieldParameters(string? FieldName, string[]? FieldNames);
 }

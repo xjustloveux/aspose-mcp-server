@@ -63,5 +63,5 @@ public class DeletePdfLinkHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="PageIndex">The 1-based page index.</param>
     /// <param name="LinkIndex">The 0-based link index.</param>
-    private record DeleteParameters(int PageIndex, int LinkIndex);
+    private sealed record DeleteParameters(int PageIndex, int LinkIndex);
 }

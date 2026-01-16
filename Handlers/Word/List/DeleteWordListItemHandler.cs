@@ -55,5 +55,5 @@ public class DeleteWordListItemHandler : OperationHandlerBase<Document>
             parameters.GetRequired<int>("paragraphIndex"));
     }
 
-    private record DeleteListItemParameters(int ParagraphIndex);
+    private sealed record DeleteListItemParameters(int ParagraphIndex);
 }

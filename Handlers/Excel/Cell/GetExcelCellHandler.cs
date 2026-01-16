@@ -90,7 +90,7 @@ public class GetExcelCellHandler : OperationHandlerBase<Workbook>
     /// <summary>
     ///     Record to hold get cell parameters.
     /// </summary>
-    private record GetParameters(
+    private sealed record GetParameters(
         string Cell,
         int SheetIndex,
         bool CalculateFormula,

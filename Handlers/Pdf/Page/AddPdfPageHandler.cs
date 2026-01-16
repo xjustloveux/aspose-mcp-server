@@ -75,5 +75,5 @@ public class AddPdfPageHandler : OperationHandlerBase<Document>
     /// <param name="InsertAt">The optional 1-based position to insert pages at.</param>
     /// <param name="Width">The optional page width in points.</param>
     /// <param name="Height">The optional page height in points.</param>
-    private record AddParameters(int Count, int? InsertAt, double? Width, double? Height);
+    private sealed record AddParameters(int Count, int? InsertAt, double? Width, double? Height);
 }

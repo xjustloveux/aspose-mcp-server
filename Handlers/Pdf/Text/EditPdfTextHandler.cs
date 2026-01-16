@@ -99,5 +99,5 @@ public class EditPdfTextHandler : OperationHandlerBase<Document>
     /// <param name="NewText">The replacement text.</param>
     /// <param name="PageIndex">The 1-based page index.</param>
     /// <param name="ReplaceAll">Whether to replace all occurrences.</param>
-    private record EditParameters(string OldText, string NewText, int PageIndex, bool ReplaceAll);
+    private sealed record EditParameters(string OldText, string NewText, int PageIndex, bool ReplaceAll);
 }

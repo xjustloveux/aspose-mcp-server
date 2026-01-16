@@ -139,7 +139,7 @@ public class SetWordPropertiesHandler : OperationHandlerBase<Document>
     /// <param name="Company">The document company.</param>
     /// <param name="Manager">The document manager.</param>
     /// <param name="CustomPropertiesJson">The custom properties as JSON string.</param>
-    private record SetPropertiesParameters(
+    private sealed record SetPropertiesParameters(
         string? Title,
         string? Subject,
         string? Author,

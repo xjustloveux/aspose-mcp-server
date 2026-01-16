@@ -52,5 +52,5 @@ public class DeleteExcelHyperlinkHandler : OperationHandlerBase<Workbook>
         return new DeleteParameters(sheetIndex, cell, hyperlinkIndex);
     }
 
-    private record DeleteParameters(int SheetIndex, string? Cell, int? HyperlinkIndex);
+    private sealed record DeleteParameters(int SheetIndex, string? Cell, int? HyperlinkIndex);
 }

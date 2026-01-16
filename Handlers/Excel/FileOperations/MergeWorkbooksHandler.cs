@@ -118,7 +118,7 @@ public class MergeWorkbooksHandler : OperationHandlerBase<Workbook>
     /// <param name="OutputPath">Alternative output file path parameter.</param>
     /// <param name="InputPaths">The array of input file paths to merge.</param>
     /// <param name="MergeSheets">Whether to merge sheets with the same name.</param>
-    private record MergeParameters(
+    private sealed record MergeParameters(
         string? Path,
         string? OutputPath,
         string[]? InputPaths,

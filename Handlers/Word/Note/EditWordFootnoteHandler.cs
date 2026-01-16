@@ -69,5 +69,5 @@ public class EditWordFootnoteHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Record to hold edit footnote parameters.
     /// </summary>
-    private record EditFootnoteParameters(string NewText, string? ReferenceMark, int? NoteIndex);
+    private sealed record EditFootnoteParameters(string NewText, string? ReferenceMark, int? NoteIndex);
 }

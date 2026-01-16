@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -83,7 +83,7 @@ Usage examples:
 - Get all images: word_image(operation='get', path='doc.docx')
 - Replace image: word_image(operation='replace', path='doc.docx', imageIndex=0, imagePath='new_image.png')
 - Extract images: word_image(operation='extract', path='doc.docx', outputDir='images/')")]
-    public string Execute(
+    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
         [Description(@"Operation to perform.
 - 'add': Add a new image (required params: path, imagePath)
 - 'edit': Edit existing image (required params: path, imageIndex)
@@ -181,8 +181,10 @@ Usage examples:
 
     /// <summary>
     ///     Builds OperationParameters from method parameters using strategy pattern.
+    ///     Parameters are documented on the Execute method.
     /// </summary>
-    private static OperationParameters BuildParameters(
+    /// <returns>OperationParameters configured with all input values.</returns>
+    private static OperationParameters BuildParameters( // NOSONAR S107
         string operation,
         string? imagePath,
         int? imageIndex,

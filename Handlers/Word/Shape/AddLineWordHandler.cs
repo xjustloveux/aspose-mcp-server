@@ -181,7 +181,7 @@ public class AddLineWordHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Record to hold line creation parameters.
     /// </summary>
-    private record LineParameters(
+    private sealed record LineParameters(
         string Location,
         string Position,
         string LineStyle,

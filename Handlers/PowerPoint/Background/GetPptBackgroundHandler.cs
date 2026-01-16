@@ -76,5 +76,5 @@ public class GetPptBackgroundHandler : OperationHandlerBase<Presentation>
     ///     Record for holding get background parameters.
     /// </summary>
     /// <param name="SlideIndex">The slide index.</param>
-    private record GetBackgroundParameters(int SlideIndex);
+    private sealed record GetBackgroundParameters(int SlideIndex);
 }

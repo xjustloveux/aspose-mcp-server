@@ -161,8 +161,9 @@ public class UpdatePptChartDataHandler : OperationHandlerBase<Presentation>
             var headerCell = workbook.GetCell(0, 0, yColumnIndex, seriesName);
             var series = chartData.Series.Add(headerCell, chart.Type);
 
-            AddDataPointsForChartType(chart, series, workbook, values, yColumnIndex, yColumnStart, seriesList.Count,
-                seriesIdx);
+            var dataContext =
+                new DataPointContext(workbook, values, yColumnIndex, yColumnStart, seriesList.Count, seriesIdx);
+            AddDataPointsForChartType(chart, series, dataContext);
         }
     }
 
@@ -171,23 +172,18 @@ public class UpdatePptChartDataHandler : OperationHandlerBase<Presentation>
     /// </summary>
     /// <param name="chart">The chart.</param>
     /// <param name="series">The chart series.</param>
-    /// <param name="workbook">The chart data workbook.</param>
-    /// <param name="values">The data values.</param>
-    /// <param name="yColumnIndex">The Y column index.</param>
-    /// <param name="yColumnStart">The Y column start index.</param>
-    /// <param name="seriesCount">The total series count.</param>
-    /// <param name="seriesIdx">The current series index.</param>
-    private static void AddDataPointsForChartType(IChart chart, IChartSeries series, IChartDataWorkbook workbook,
-        double[] values, int yColumnIndex, int yColumnStart, int seriesCount, int seriesIdx)
+    /// <param name="dataContext">The data point context containing workbook, values, and column indices.</param>
+    private static void AddDataPointsForChartType(IChart chart, IChartSeries series, DataPointContext dataContext)
     {
         if (IsBubbleChart(chart.Type))
-            AddBubbleDataPoints(series, workbook, values, yColumnIndex, yColumnStart + seriesCount + seriesIdx);
+            AddBubbleDataPoints(series, dataContext.Workbook, dataContext.Values, dataContext.YColumnIndex,
+                dataContext.YColumnStart + dataContext.SeriesCount + dataContext.SeriesIdx);
         else if (IsScatterChart(chart.Type))
-            AddScatterDataPoints(series, workbook, values, yColumnIndex);
+            AddScatterDataPoints(series, dataContext.Workbook, dataContext.Values, dataContext.YColumnIndex);
         else if (IsPieChart(chart.Type))
-            AddPieDataPoints(series, workbook, values, yColumnIndex);
+            AddPieDataPoints(series, dataContext.Workbook, dataContext.Values, dataContext.YColumnIndex);
         else
-            AddBarDataPoints(series, workbook, values, yColumnIndex);
+            AddBarDataPoints(series, dataContext.Workbook, dataContext.Values, dataContext.YColumnIndex);
     }
 
     /// <summary>
@@ -344,5 +340,26 @@ public class UpdatePptChartDataHandler : OperationHandlerBase<Presentation>
     /// <param name="ChartIndex">The chart shape index.</param>
     /// <param name="Data">The optional chart data object.</param>
     /// <param name="ClearExisting">Whether to clear existing data.</param>
-    private record UpdateChartDataParameters(int SlideIndex, int ChartIndex, JsonObject? Data, bool ClearExisting);
+    private sealed record UpdateChartDataParameters(
+        int SlideIndex,
+        int ChartIndex,
+        JsonObject? Data,
+        bool ClearExisting);
+
+    /// <summary>
+    ///     Record for holding data point context for chart series.
+    /// </summary>
+    /// <param name="Workbook">The chart data workbook.</param>
+    /// <param name="Values">The data values.</param>
+    /// <param name="YColumnIndex">The Y column index.</param>
+    /// <param name="YColumnStart">The Y column start index.</param>
+    /// <param name="SeriesCount">The total series count.</param>
+    /// <param name="SeriesIdx">The current series index.</param>
+    private sealed record DataPointContext(
+        IChartDataWorkbook Workbook,
+        double[] Values,
+        int YColumnIndex,
+        int YColumnStart,
+        int SeriesCount,
+        int SeriesIdx);
 }

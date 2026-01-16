@@ -90,7 +90,7 @@ public class SignPdfHandler : OperationHandlerBase<Document>
     /// <param name="Y">The Y coordinate of the signature.</param>
     /// <param name="Width">The width of the signature.</param>
     /// <param name="Height">The height of the signature.</param>
-    private record SignParameters(
+    private sealed record SignParameters(
         string CertificatePath,
         string Password,
         int PageIndex,

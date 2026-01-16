@@ -89,66 +89,14 @@ IHost CreateStdioHost()
 
 IHost CreateSseHost(TransportConfig transport)
 {
-    var builder = WebApplication.CreateBuilder(args);
-
-    builder.WebHost.ConfigureKestrel(options =>
-    {
-        if (transport.Host == "localhost")
-            options.ListenLocalhost(transport.Port);
-        else if (transport.Host == "0.0.0.0" || transport.Host == "*")
-            options.ListenAnyIP(transport.Port);
-        else
-            options.Listen(IPAddress.Parse(transport.Host), transport.Port);
-    });
-
-    builder.Logging.ClearProviders();
-    builder.Logging.AddConsole(options => { options.LogToStandardErrorThreshold = LogLevel.Trace; });
-
-    builder.Services.AddSingleton(transportConfig);
-    builder.Services.AddSingleton(sessionConfig);
-    builder.Services.AddSingleton(authConfig);
-    builder.Services.AddSingleton(authConfig.ApiKey);
-    builder.Services.AddSingleton(authConfig.Jwt);
-    builder.Services.AddSingleton(trackingConfig);
-    builder.Services.AddSingleton<DocumentSessionManager>();
-    builder.Services.AddSingleton<TempFileManager>();
-    builder.Services.AddHostedService(sp => sp.GetRequiredService<TempFileManager>());
-    builder.Services.AddHttpContextAccessor();
-    builder.Services.AddSingleton<ISessionIdentityAccessor, HttpContextSessionIdentityAccessor>();
-    builder.Services.AddHttpClient();
-
-    if (authConfig.ApiKey.Enabled)
-        builder.Services.AddSingleton<ApiKeyAuthenticationMiddleware>();
-    if (authConfig.Jwt.Enabled)
-        builder.Services.AddSingleton<JwtAuthenticationMiddleware>();
-
-    builder.Services.AddMcpServer()
-        .WithFilteredTools(config, sessionConfig);
-
+    var builder = CreateWebAppBuilder(transport);
+    builder.Services.AddMcpServer().WithFilteredTools(config, sessionConfig);
     var app = builder.Build();
 
-    Console.Error.WriteLine($"[INFO] SSE server listening on http://{transport.Host}:{transport.Port}");
-
-    if (authConfig.ApiKey.Enabled)
-    {
-        Console.Error.WriteLine($"[INFO] API Key authentication enabled (mode: {authConfig.ApiKey.Mode})");
-        app.UseMiddleware<ApiKeyAuthenticationMiddleware>();
-    }
-
-    if (authConfig.Jwt.Enabled)
-    {
-        Console.Error.WriteLine($"[INFO] JWT authentication enabled (mode: {authConfig.Jwt.Mode})");
-        app.UseMiddleware<JwtAuthenticationMiddleware>();
-    }
-
-    if (trackingConfig.LogEnabled || trackingConfig.WebhookEnabled || trackingConfig.MetricsEnabled)
-    {
-        Console.Error.WriteLine("[INFO] Tracking middleware enabled");
-        app.UseMiddleware<TrackingMiddleware>();
-    }
-
-    app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
-    app.MapGet("/ready", () => Results.Ok(new { status = "ready" }));
+    LogServerStartup($"SSE server listening on http://{transport.Host}:{transport.Port}");
+    ConfigureAuthMiddleware(app);
+    ConfigureTrackingMiddleware(app);
+    MapHealthEndpoints(app);
     app.MapMcp("/mcp");
 
     return app;
@@ -156,8 +104,32 @@ IHost CreateSseHost(TransportConfig transport)
 
 IHost CreateWebSocketHost(TransportConfig transport)
 {
-    var builder = WebApplication.CreateBuilder(args);
+    var builder = CreateWebAppBuilder(transport);
+    var app = builder.Build();
 
+    LogServerStartup($"WebSocket server listening on ws://{transport.Host}:{transport.Port}");
+    ConfigureAuthMiddleware(app);
+    ConfigureTrackingMiddleware(app);
+
+    app.UseWebSockets();
+    MapHealthEndpoints(app);
+    ConfigureWebSocketEndpoint(app);
+
+    return app;
+}
+
+WebApplicationBuilder CreateWebAppBuilder(TransportConfig transport)
+{
+    var builder = WebApplication.CreateBuilder(args);
+    ConfigureKestrel(builder, transport);
+    ConfigureLogging(builder);
+    RegisterCoreServices(builder);
+    RegisterAuthServices(builder);
+    return builder;
+}
+
+void ConfigureKestrel(WebApplicationBuilder builder, TransportConfig transport)
+{
     builder.WebHost.ConfigureKestrel(options =>
     {
         if (transport.Host == "localhost")
@@ -167,10 +139,16 @@ IHost CreateWebSocketHost(TransportConfig transport)
         else
             options.Listen(IPAddress.Parse(transport.Host), transport.Port);
     });
+}
 
+void ConfigureLogging(WebApplicationBuilder builder)
+{
     builder.Logging.ClearProviders();
     builder.Logging.AddConsole(options => { options.LogToStandardErrorThreshold = LogLevel.Trace; });
+}
 
+void RegisterCoreServices(WebApplicationBuilder builder)
+{
     builder.Services.AddSingleton(transportConfig);
     builder.Services.AddSingleton(sessionConfig);
     builder.Services.AddSingleton(authConfig);
@@ -183,16 +161,23 @@ IHost CreateWebSocketHost(TransportConfig transport)
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddSingleton<ISessionIdentityAccessor, HttpContextSessionIdentityAccessor>();
     builder.Services.AddHttpClient();
+}
 
+void RegisterAuthServices(WebApplicationBuilder builder)
+{
     if (authConfig.ApiKey.Enabled)
         builder.Services.AddSingleton<ApiKeyAuthenticationMiddleware>();
     if (authConfig.Jwt.Enabled)
         builder.Services.AddSingleton<JwtAuthenticationMiddleware>();
+}
 
-    var app = builder.Build();
+void LogServerStartup(string message)
+{
+    Console.Error.WriteLine($"[INFO] {message}");
+}
 
-    Console.Error.WriteLine($"[INFO] WebSocket server listening on ws://{transport.Host}:{transport.Port}");
-
+void ConfigureAuthMiddleware(WebApplication app)
+{
     if (authConfig.ApiKey.Enabled)
     {
         Console.Error.WriteLine($"[INFO] API Key authentication enabled (mode: {authConfig.ApiKey.Mode})");
@@ -204,18 +189,25 @@ IHost CreateWebSocketHost(TransportConfig transport)
         Console.Error.WriteLine($"[INFO] JWT authentication enabled (mode: {authConfig.Jwt.Mode})");
         app.UseMiddleware<JwtAuthenticationMiddleware>();
     }
+}
 
+void ConfigureTrackingMiddleware(WebApplication app)
+{
     if (trackingConfig.LogEnabled || trackingConfig.WebhookEnabled || trackingConfig.MetricsEnabled)
     {
         Console.Error.WriteLine("[INFO] Tracking middleware enabled");
         app.UseMiddleware<TrackingMiddleware>();
     }
+}
 
-    app.UseWebSockets();
-
+void MapHealthEndpoints(WebApplication app)
+{
     app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
     app.MapGet("/ready", () => Results.Ok(new { status = "ready" }));
+}
 
+void ConfigureWebSocketEndpoint(WebApplication app)
+{
     var executablePath = Environment.ProcessPath ?? "dotnet";
     var toolArgs = string.Join(" ", args.Where(a =>
         a.StartsWith("--word", StringComparison.OrdinalIgnoreCase) ||
@@ -243,6 +235,4 @@ IHost CreateWebSocketHost(TransportConfig transport)
             context.Response.StatusCode = 400;
         }
     });
-
-    return app;
 }

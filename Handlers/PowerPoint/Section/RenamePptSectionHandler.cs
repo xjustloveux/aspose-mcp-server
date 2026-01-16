@@ -40,5 +40,5 @@ public class RenamePptSectionHandler : OperationHandlerBase<Presentation>
             parameters.GetRequired<string>("newName"));
     }
 
-    private record RenamePptSectionParameters(int SectionIndex, string NewName);
+    private sealed record RenamePptSectionParameters(int SectionIndex, string NewName);
 }

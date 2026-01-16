@@ -102,5 +102,5 @@ public class GetSlideDetailsHandler : OperationHandlerBase<Presentation>
     /// </summary>
     /// <param name="SlideIndex">The slide index.</param>
     /// <param name="IncludeThumbnail">Whether to include slide thumbnail.</param>
-    private record SlideDetailsParameters(int SlideIndex, bool IncludeThumbnail);
+    private sealed record SlideDetailsParameters(int SlideIndex, bool IncludeThumbnail);
 }

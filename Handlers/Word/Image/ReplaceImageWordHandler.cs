@@ -3,6 +3,7 @@ using Aspose.Words.Drawing;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Helpers;
 using IOFile = System.IO.File;
+using WordShape = Aspose.Words.Drawing.Shape;
 
 namespace AsposeMcpServer.Handlers.Word.Image;
 
@@ -26,7 +27,27 @@ public class ReplaceImageWordHandler : OperationHandlerBase<Document>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
         var p = ExtractReplaceImageParameters(parameters);
+        ValidateParameters(p);
 
+        var doc = context.Document;
+        var allImages = WordImageHelper.GetAllImages(doc, p.SectionIndex);
+        ValidateImageIndex(p.ImageIndex, allImages.Count);
+
+        var shapeToReplace = allImages[p.ImageIndex];
+        var originalProps = CaptureOriginalProperties(shapeToReplace, p.PreservePosition);
+
+        ReplaceImage(shapeToReplace, p, originalProps);
+
+        MarkModified(context);
+
+        return BuildResultMessage(p, originalProps.Width, shapeToReplace.Height);
+    }
+
+    /// <summary>
+    ///     Validates required parameters.
+    /// </summary>
+    private static void ValidateParameters(ReplaceImageParameters p)
+    {
         if (string.IsNullOrEmpty(p.NewImagePath))
             throw new ArgumentException("newImagePath or imagePath is required for replace operation");
 
@@ -34,101 +55,132 @@ public class ReplaceImageWordHandler : OperationHandlerBase<Document>
 
         if (!IOFile.Exists(p.NewImagePath))
             throw new FileNotFoundException($"Image file not found: {p.NewImagePath}");
+    }
 
-        var doc = context.Document;
-
-        var allImages = WordImageHelper.GetAllImages(doc, p.SectionIndex);
-
-        if (p.ImageIndex < 0 || p.ImageIndex >= allImages.Count)
+    /// <summary>
+    ///     Validates image index is within range.
+    /// </summary>
+    private static void ValidateImageIndex(int imageIndex, int imageCount)
+    {
+        if (imageIndex < 0 || imageIndex >= imageCount)
             throw new ArgumentException(
-                $"Image index {p.ImageIndex} is out of range (document has {allImages.Count} images)");
+                $"Image index {imageIndex} is out of range (document has {imageCount} images)");
+    }
 
-        var shapeToReplace = allImages[p.ImageIndex];
+    /// <summary>
+    ///     Captures original properties from the shape.
+    /// </summary>
+    private static OriginalShapeProperties CaptureOriginalProperties(WordShape shape, bool capturePosition)
+    {
+        return new OriginalShapeProperties(
+            shape.Width,
+            shape.Height,
+            shape.WrapType,
+            capturePosition ? shape.HorizontalAlignment : null,
+            capturePosition ? shape.VerticalAlignment : null,
+            capturePosition ? shape.RelativeHorizontalPosition : null,
+            capturePosition ? shape.RelativeVerticalPosition : null,
+            capturePosition ? shape.Left : null,
+            capturePosition ? shape.Top : null);
+    }
 
-        var originalWidth = shapeToReplace.Width;
-        var originalHeight = shapeToReplace.Height;
-        var originalWrapType = shapeToReplace.WrapType;
-        HorizontalAlignment? originalHorizontalAlignment = null;
-        VerticalAlignment? originalVerticalAlignment = null;
-        RelativeHorizontalPosition? originalRelativeHorizontalPosition = null;
-        RelativeVerticalPosition? originalRelativeVerticalPosition = null;
-        double? originalLeft = null;
-        double? originalTop = null;
-
-        if (p.PreservePosition)
-        {
-            originalHorizontalAlignment = shapeToReplace.HorizontalAlignment;
-            originalVerticalAlignment = shapeToReplace.VerticalAlignment;
-            originalRelativeHorizontalPosition = shapeToReplace.RelativeHorizontalPosition;
-            originalRelativeVerticalPosition = shapeToReplace.RelativeVerticalPosition;
-            originalLeft = shapeToReplace.Left;
-            originalTop = shapeToReplace.Top;
-        }
-
+    /// <summary>
+    ///     Replaces the image and applies size/position settings.
+    /// </summary>
+    private static void ReplaceImage(WordShape shape, ReplaceImageParameters p, OriginalShapeProperties originalProps)
+    {
         try
         {
-            shapeToReplace.ImageData.SetImage(p.NewImagePath);
-
-            if (p.PreserveSize)
-            {
-                if (p.SmartFit)
-                {
-                    var newImageSize = shapeToReplace.ImageData.ImageSize;
-                    if (newImageSize.WidthPixels > 0)
-                    {
-                        var newAspectRatio = (double)newImageSize.HeightPixels / newImageSize.WidthPixels;
-                        shapeToReplace.Width = originalWidth;
-                        shapeToReplace.Height = originalWidth * newAspectRatio;
-                    }
-                    else
-                    {
-                        shapeToReplace.Width = originalWidth;
-                        shapeToReplace.Height = originalHeight;
-                    }
-                }
-                else
-                {
-                    shapeToReplace.Width = originalWidth;
-                    shapeToReplace.Height = originalHeight;
-                }
-            }
-
-            if (p.PreservePosition)
-            {
-                shapeToReplace.WrapType = originalWrapType;
-                if (originalHorizontalAlignment.HasValue)
-                    shapeToReplace.HorizontalAlignment = originalHorizontalAlignment.Value;
-                if (originalVerticalAlignment.HasValue)
-                    shapeToReplace.VerticalAlignment = originalVerticalAlignment.Value;
-                if (originalRelativeHorizontalPosition.HasValue)
-                    shapeToReplace.RelativeHorizontalPosition = originalRelativeHorizontalPosition.Value;
-                if (originalRelativeVerticalPosition.HasValue)
-                    shapeToReplace.RelativeVerticalPosition = originalRelativeVerticalPosition.Value;
-                if (originalLeft.HasValue)
-                    shapeToReplace.Left = originalLeft.Value;
-                if (originalTop.HasValue)
-                    shapeToReplace.Top = originalTop.Value;
-            }
+            shape.ImageData.SetImage(p.NewImagePath);
+            ApplySizeSettings(shape, p, originalProps);
+            ApplyPositionSettings(shape, p, originalProps);
         }
         catch (Exception ex)
         {
             throw new InvalidOperationException($"Error occurred while replacing image: {ex.Message}", ex);
         }
+    }
 
-        MarkModified(context);
+    /// <summary>
+    ///     Applies size settings based on parameters.
+    /// </summary>
+    private static void ApplySizeSettings(WordShape shape, ReplaceImageParameters p,
+        OriginalShapeProperties originalProps)
+    {
+        if (!p.PreserveSize) return;
 
+        if (p.SmartFit)
+            ApplySmartFitSize(shape, originalProps.Width, originalProps.Height);
+        else
+            ApplyOriginalSize(shape, originalProps.Width, originalProps.Height);
+    }
+
+    /// <summary>
+    ///     Applies smart fit size calculation.
+    /// </summary>
+    private static void ApplySmartFitSize(WordShape shape, double originalWidth, double originalHeight)
+    {
+        var newImageSize = shape.ImageData.ImageSize;
+        if (newImageSize.WidthPixels > 0)
+        {
+            var newAspectRatio = (double)newImageSize.HeightPixels / newImageSize.WidthPixels;
+            shape.Width = originalWidth;
+            shape.Height = originalWidth * newAspectRatio;
+        }
+        else
+        {
+            ApplyOriginalSize(shape, originalWidth, originalHeight);
+        }
+    }
+
+    /// <summary>
+    ///     Applies original size to the shape.
+    /// </summary>
+    private static void ApplyOriginalSize(WordShape shape, double width, double height)
+    {
+        shape.Width = width;
+        shape.Height = height;
+    }
+
+    /// <summary>
+    ///     Applies position settings based on parameters.
+    /// </summary>
+    private static void ApplyPositionSettings(WordShape shape, ReplaceImageParameters p,
+        OriginalShapeProperties originalProps)
+    {
+        if (!p.PreservePosition) return;
+
+        shape.WrapType = originalProps.WrapType;
+
+        if (originalProps.HorizontalAlignment.HasValue)
+            shape.HorizontalAlignment = originalProps.HorizontalAlignment.Value;
+        if (originalProps.VerticalAlignment.HasValue)
+            shape.VerticalAlignment = originalProps.VerticalAlignment.Value;
+        if (originalProps.RelativeHorizontalPosition.HasValue)
+            shape.RelativeHorizontalPosition = originalProps.RelativeHorizontalPosition.Value;
+        if (originalProps.RelativeVerticalPosition.HasValue)
+            shape.RelativeVerticalPosition = originalProps.RelativeVerticalPosition.Value;
+        if (originalProps.Left.HasValue)
+            shape.Left = originalProps.Left.Value;
+        if (originalProps.Top.HasValue)
+            shape.Top = originalProps.Top.Value;
+    }
+
+    /// <summary>
+    ///     Builds the result message.
+    /// </summary>
+    private static string BuildResultMessage(ReplaceImageParameters p, double originalWidth, double newHeight)
+    {
         var result = $"Image #{p.ImageIndex} replaced successfully\n";
         result += $"New image: {Path.GetFileName(p.NewImagePath)}\n";
-        if (p.PreserveSize)
-        {
-            if (p.SmartFit)
-                result +=
-                    $"Smart fit: width preserved ({originalWidth:F1} pt), height calculated proportionally ({shapeToReplace.Height:F1} pt)\n";
-            else
-                result += $"Preserved size: {originalWidth:F1} pt x {originalHeight:F1} pt\n";
-        }
 
-        if (p.PreservePosition) result += "Preserved position and wrapping";
+        if (p.PreserveSize)
+            result += p.SmartFit
+                ? $"Smart fit: width preserved ({originalWidth:F1} pt), height calculated proportionally ({newHeight:F1} pt)\n"
+                : $"Preserved size: {originalWidth:F1} pt x {originalWidth:F1} pt\n";
+
+        if (p.PreservePosition)
+            result += "Preserved position and wrapping";
 
         return result.TrimEnd();
     }
@@ -144,11 +196,22 @@ public class ReplaceImageWordHandler : OperationHandlerBase<Document>
             parameters.GetOptional("sectionIndex", 0));
     }
 
-    private record ReplaceImageParameters(
+    private sealed record ReplaceImageParameters(
         int ImageIndex,
         string? NewImagePath,
         bool PreserveSize,
         bool SmartFit,
         bool PreservePosition,
         int SectionIndex);
+
+    private sealed record OriginalShapeProperties(
+        double Width,
+        double Height,
+        WrapType WrapType,
+        HorizontalAlignment? HorizontalAlignment,
+        VerticalAlignment? VerticalAlignment,
+        RelativeHorizontalPosition? RelativeHorizontalPosition,
+        RelativeVerticalPosition? RelativeVerticalPosition,
+        double? Left,
+        double? Top);
 }

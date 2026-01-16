@@ -67,5 +67,5 @@ public class ApplyMasterHandler : OperationHandlerBase<Presentation>
     /// <param name="MasterIndex">The master slide index.</param>
     /// <param name="LayoutIndex">The layout index.</param>
     /// <param name="SlideIndicesJson">The optional JSON array of slide indices.</param>
-    private record ApplyMasterParameters(int MasterIndex, int LayoutIndex, string? SlideIndicesJson);
+    private sealed record ApplyMasterParameters(int MasterIndex, int LayoutIndex, string? SlideIndicesJson);
 }

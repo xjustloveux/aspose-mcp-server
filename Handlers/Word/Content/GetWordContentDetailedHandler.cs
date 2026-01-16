@@ -29,23 +29,41 @@ public class GetWordContentDetailedHandler : OperationHandlerBase<Document>
         sb.AppendLine("=== Detailed Document Content ===");
 
         if (p.IncludeHeaders)
-        {
-            sb.AppendLine("\n--- Headers ---");
-            foreach (var section in document.Sections.Cast<Section>())
-            foreach (var header in section.HeadersFooters.Cast<Aspose.Words.HeaderFooter>())
-                if (header.HeaderFooterType == HeaderFooterType.HeaderPrimary ||
-                    header.HeaderFooterType == HeaderFooterType.HeaderFirst ||
-                    header.HeaderFooterType == HeaderFooterType.HeaderEven)
-                {
-                    var headerText = WordContentHelper.CleanText(header.GetText());
-                    if (!string.IsNullOrWhiteSpace(headerText))
-                    {
-                        sb.AppendLine($"Section {document.Sections.IndexOf(section)} - {header.HeaderFooterType}:");
-                        sb.AppendLine(headerText);
-                    }
-                }
-        }
+            AppendHeadersFooters(sb, document, "Headers", IsHeaderType);
 
+        AppendBodyContent(sb, document);
+
+        if (p.IncludeFooters)
+            AppendHeadersFooters(sb, document, "Footers", IsFooterType);
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    ///     Appends headers or footers content to the StringBuilder.
+    /// </summary>
+    private static void AppendHeadersFooters(StringBuilder sb, Document document, string sectionName,
+        Func<HeaderFooterType, bool> typeFilter)
+    {
+        sb.AppendLine($"\n--- {sectionName} ---");
+        foreach (var section in document.Sections.Cast<Section>())
+        foreach (var hf in section.HeadersFooters.Cast<Aspose.Words.HeaderFooter>())
+        {
+            if (!typeFilter(hf.HeaderFooterType)) continue;
+
+            var text = WordContentHelper.CleanText(hf.GetText());
+            if (string.IsNullOrWhiteSpace(text)) continue;
+
+            sb.AppendLine($"Section {document.Sections.IndexOf(section)} - {hf.HeaderFooterType}:");
+            sb.AppendLine(text);
+        }
+    }
+
+    /// <summary>
+    ///     Appends body content to the StringBuilder.
+    /// </summary>
+    private static void AppendBodyContent(StringBuilder sb, Document document)
+    {
         sb.AppendLine("\n--- Body Content ---");
         foreach (var section in document.Sections.Cast<Section>())
         {
@@ -53,26 +71,26 @@ public class GetWordContentDetailedHandler : OperationHandlerBase<Document>
             if (!string.IsNullOrWhiteSpace(bodyText))
                 sb.AppendLine(bodyText);
         }
+    }
 
-        if (p.IncludeFooters)
-        {
-            sb.AppendLine("\n--- Footers ---");
-            foreach (var section in document.Sections.Cast<Section>())
-            foreach (var footer in section.HeadersFooters.Cast<Aspose.Words.HeaderFooter>())
-                if (footer.HeaderFooterType == HeaderFooterType.FooterPrimary ||
-                    footer.HeaderFooterType == HeaderFooterType.FooterFirst ||
-                    footer.HeaderFooterType == HeaderFooterType.FooterEven)
-                {
-                    var footerText = WordContentHelper.CleanText(footer.GetText());
-                    if (!string.IsNullOrWhiteSpace(footerText))
-                    {
-                        sb.AppendLine($"Section {document.Sections.IndexOf(section)} - {footer.HeaderFooterType}:");
-                        sb.AppendLine(footerText);
-                    }
-                }
-        }
+    /// <summary>
+    ///     Determines if the header/footer type is a header type.
+    /// </summary>
+    private static bool IsHeaderType(HeaderFooterType type)
+    {
+        return type == HeaderFooterType.HeaderPrimary ||
+               type == HeaderFooterType.HeaderFirst ||
+               type == HeaderFooterType.HeaderEven;
+    }
 
-        return sb.ToString();
+    /// <summary>
+    ///     Determines if the header/footer type is a footer type.
+    /// </summary>
+    private static bool IsFooterType(HeaderFooterType type)
+    {
+        return type == HeaderFooterType.FooterPrimary ||
+               type == HeaderFooterType.FooterFirst ||
+               type == HeaderFooterType.FooterEven;
     }
 
     /// <summary>
@@ -93,5 +111,5 @@ public class GetWordContentDetailedHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="IncludeHeaders">Whether to include headers in the output.</param>
     /// <param name="IncludeFooters">Whether to include footers in the output.</param>
-    private record GetContentDetailedParameters(bool IncludeHeaders, bool IncludeFooters);
+    private sealed record GetContentDetailedParameters(bool IncludeHeaders, bool IncludeFooters);
 }

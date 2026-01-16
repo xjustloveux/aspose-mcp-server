@@ -37,15 +37,17 @@ public class SetHeaderFooterHandler : OperationHandlerBase<Document>
         var hasHeaderContent = HasContent(p.HeaderLeft, p.HeaderCenter, p.HeaderRight);
         var hasFooterContent = HasContent(p.FooterLeft, p.FooterCenter, p.FooterRight);
 
+        var headerContent = new HeaderFooterContent(p.HeaderLeft, p.HeaderCenter, p.HeaderRight);
+        var footerContent = new HeaderFooterContent(p.FooterLeft, p.FooterCenter, p.FooterRight);
+        var settings = new HeaderFooterSettings(fontSettings, p.AutoTabStops, p.ClearExisting, p.ClearTextOnly);
+
         foreach (var section in sections)
         {
             if (hasHeaderContent)
-                SetupHeaderFooterContent(section, doc, hfHeaderType, p.HeaderLeft, p.HeaderCenter, p.HeaderRight,
-                    fontSettings, p.AutoTabStops, p.ClearExisting, p.ClearTextOnly);
+                SetupHeaderFooterContent(section, doc, hfHeaderType, headerContent, settings);
 
             if (hasFooterContent)
-                SetupHeaderFooterContent(section, doc, hfFooterType, p.FooterLeft, p.FooterCenter, p.FooterRight,
-                    fontSettings, p.AutoTabStops, p.ClearExisting, p.ClearTextOnly);
+                SetupHeaderFooterContent(section, doc, hfFooterType, footerContent, settings);
         }
 
         MarkModified(context);
@@ -71,28 +73,22 @@ public class SetHeaderFooterHandler : OperationHandlerBase<Document>
     /// <param name="section">The document section.</param>
     /// <param name="doc">The Word document.</param>
     /// <param name="hfType">The header/footer type.</param>
-    /// <param name="left">The left content.</param>
-    /// <param name="center">The center content.</param>
-    /// <param name="right">The right content.</param>
-    /// <param name="fontSettings">The font settings.</param>
-    /// <param name="autoTabStops">Whether to auto-create tab stops.</param>
-    /// <param name="clearExisting">Whether to clear existing content.</param>
-    /// <param name="clearTextOnly">Whether to clear text only.</param>
+    /// <param name="content">The header/footer content (left, center, right).</param>
+    /// <param name="settings">The header/footer settings.</param>
     private static void SetupHeaderFooterContent(Section section, Document doc, HeaderFooterType hfType,
-        string? left, string? center, string? right, FontSettings fontSettings,
-        bool autoTabStops, bool clearExisting, bool clearTextOnly)
+        HeaderFooterContent content, HeaderFooterSettings settings)
     {
         var hf = WordHeaderFooterHelper.GetOrCreateHeaderFooter(section, doc, hfType);
 
-        ClearHeaderFooter(hf, clearExisting, clearTextOnly);
+        ClearHeaderFooter(hf, settings.ClearExisting, settings.ClearTextOnly);
 
         var para = new WordParagraph(doc);
         hf.AppendChild(para);
 
-        if (autoTabStops && (!string.IsNullOrEmpty(center) || !string.IsNullOrEmpty(right)))
+        if (settings.AutoTabStops && (!string.IsNullOrEmpty(content.Center) || !string.IsNullOrEmpty(content.Right)))
             SetupTabStops(section, para);
 
-        InsertContent(doc, para, left, center, right, fontSettings);
+        InsertContent(doc, para, content, settings.FontSettings);
     }
 
     /// <summary>
@@ -133,31 +129,32 @@ public class SetHeaderFooterHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="doc">The Word document.</param>
     /// <param name="para">The paragraph.</param>
-    /// <param name="left">The left content.</param>
-    /// <param name="center">The center content.</param>
-    /// <param name="right">The right content.</param>
+    /// <param name="content">The header/footer content (left, center, right).</param>
     /// <param name="fontSettings">The font settings.</param>
-    private static void InsertContent(Document doc, WordParagraph para, string? left, string? center, string? right,
+    private static void InsertContent(Document doc, WordParagraph para, HeaderFooterContent content,
         FontSettings fontSettings)
     {
         var builder = new DocumentBuilder(doc);
         builder.MoveTo(para);
 
-        if (!string.IsNullOrEmpty(left))
-            WordHeaderFooterHelper.InsertTextOrField(builder, left, fontSettings.FontName, fontSettings.FontNameAscii,
+        if (!string.IsNullOrEmpty(content.Left))
+            WordHeaderFooterHelper.InsertTextOrField(builder, content.Left, fontSettings.FontName,
+                fontSettings.FontNameAscii,
                 fontSettings.FontNameFarEast, fontSettings.FontSize);
 
-        if (!string.IsNullOrEmpty(center))
+        if (!string.IsNullOrEmpty(content.Center))
         {
             builder.Write("\t");
-            WordHeaderFooterHelper.InsertTextOrField(builder, center, fontSettings.FontName, fontSettings.FontNameAscii,
+            WordHeaderFooterHelper.InsertTextOrField(builder, content.Center, fontSettings.FontName,
+                fontSettings.FontNameAscii,
                 fontSettings.FontNameFarEast, fontSettings.FontSize);
         }
 
-        if (!string.IsNullOrEmpty(right))
+        if (!string.IsNullOrEmpty(content.Right))
         {
             builder.Write("\t");
-            WordHeaderFooterHelper.InsertTextOrField(builder, right, fontSettings.FontName, fontSettings.FontNameAscii,
+            WordHeaderFooterHelper.InsertTextOrField(builder, content.Right, fontSettings.FontName,
+                fontSettings.FontNameAscii,
                 fontSettings.FontNameFarEast, fontSettings.FontSize);
         }
     }
@@ -191,7 +188,36 @@ public class SetHeaderFooterHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Record to hold font settings.
     /// </summary>
-    private record FontSettings(string? FontName, string? FontNameAscii, string? FontNameFarEast, double? FontSize);
+    /// <param name="FontName">The font name.</param>
+    /// <param name="FontNameAscii">The ASCII font name.</param>
+    /// <param name="FontNameFarEast">The Far East font name.</param>
+    /// <param name="FontSize">The font size.</param>
+    private sealed record FontSettings(
+        string? FontName,
+        string? FontNameAscii,
+        string? FontNameFarEast,
+        double? FontSize);
+
+    /// <summary>
+    ///     Record to hold header/footer content (left, center, right).
+    /// </summary>
+    /// <param name="Left">The left content.</param>
+    /// <param name="Center">The center content.</param>
+    /// <param name="Right">The right content.</param>
+    private sealed record HeaderFooterContent(string? Left, string? Center, string? Right);
+
+    /// <summary>
+    ///     Record to hold header/footer settings.
+    /// </summary>
+    /// <param name="FontSettings">The font settings.</param>
+    /// <param name="AutoTabStops">Whether to auto-create tab stops.</param>
+    /// <param name="ClearExisting">Whether to clear existing content.</param>
+    /// <param name="ClearTextOnly">Whether to clear text only.</param>
+    private sealed record HeaderFooterSettings(
+        FontSettings FontSettings,
+        bool AutoTabStops,
+        bool ClearExisting,
+        bool ClearTextOnly);
 
     /// <summary>
     ///     Parameters for the set header footer operation.
@@ -211,7 +237,7 @@ public class SetHeaderFooterHandler : OperationHandlerBase<Document>
     /// <param name="AutoTabStops">Whether to auto-create tab stops.</param>
     /// <param name="ClearExisting">Whether to clear existing content.</param>
     /// <param name="ClearTextOnly">Whether to clear text only.</param>
-    private record SetHeaderFooterParameters(
+    private sealed record SetHeaderFooterParameters(
         string? HeaderLeft,
         string? HeaderCenter,
         string? HeaderRight,

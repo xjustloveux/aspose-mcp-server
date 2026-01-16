@@ -51,5 +51,5 @@ public class DeletePdfPageHandler : OperationHandlerBase<Document>
     ///     Parameters for deleting a page.
     /// </summary>
     /// <param name="PageIndex">The 1-based page index to delete.</param>
-    private record DeleteParameters(int PageIndex);
+    private sealed record DeleteParameters(int PageIndex);
 }

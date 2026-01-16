@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
@@ -83,7 +83,7 @@ Usage examples:
 - Delete page: word_page(operation='delete_page', path='doc.docx', pageIndex=1)
 - Insert blank page: word_page(operation='insert_blank_page', path='doc.docx', insertAtPageIndex=2)
 - Add page break: word_page(operation='add_page_break', path='doc.docx', paragraphIndex=10)")]
-    public string Execute(
+    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
         [Description(
             "Operation: set_margins, set_orientation, set_size, set_page_number, set_page_setup, delete_page, insert_blank_page, add_page_break")]
         string operation,
@@ -168,8 +168,10 @@ Usage examples:
 
     /// <summary>
     ///     Builds OperationParameters from method parameters using strategy pattern.
+    ///     Parameters are documented on the Execute method.
     /// </summary>
-    private static OperationParameters BuildParameters(
+    /// <returns>OperationParameters configured with all input values.</returns>
+    private static OperationParameters BuildParameters( // NOSONAR S107
         string operation,
         double? top,
         double? bottom,

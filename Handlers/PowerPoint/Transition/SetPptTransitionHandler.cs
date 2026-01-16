@@ -106,5 +106,5 @@ public class SetPptTransitionHandler : OperationHandlerBase<Presentation>
     /// <param name="SlideIndex">The slide index.</param>
     /// <param name="TransitionType">The transition type.</param>
     /// <param name="AdvanceAfterSeconds">The optional advance after seconds.</param>
-    private record SetTransitionParameters(int SlideIndex, string TransitionType, double? AdvanceAfterSeconds);
+    private sealed record SetTransitionParameters(int SlideIndex, string TransitionType, double? AdvanceAfterSeconds);
 }

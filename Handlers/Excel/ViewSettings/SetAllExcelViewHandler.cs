@@ -77,7 +77,7 @@ public class SetAllExcelViewHandler : OperationHandlerBase<Workbook>
     /// <param name="ShowRowColumnHeaders">Whether to show row and column headers.</param>
     /// <param name="ShowZeroValues">Whether to show zero values.</param>
     /// <param name="DisplayRightToLeft">Whether to display right to left.</param>
-    private record SetAllParameters(
+    private sealed record SetAllParameters(
         int SheetIndex,
         int Zoom,
         bool? ShowGridlines,

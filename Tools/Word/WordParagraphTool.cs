@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Text.Json.Nodes;
 using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
@@ -103,7 +103,7 @@ Important notes for 'get' operation:
 - Paragraphs inside table cells are marked with '[Cell]' in the location field
 - Paragraphs inside TextBoxes are marked with '[TextBox]' in the location field
 - To check paragraph styles in table cells, use includeCommentParagraphs=true")]
-    public string Execute(
+    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
         [Description("Operation: insert, delete, edit, get, get_format, copy_format, merge")]
         string operation,
         [Description("Document file path (required if no sessionId)")]
@@ -199,8 +199,10 @@ Important notes for 'get' operation:
 
     /// <summary>
     ///     Builds OperationParameters from method parameters using strategy pattern.
+    ///     Parameters are documented on the Execute method.
     /// </summary>
-    private static OperationParameters BuildParameters(
+    /// <returns>OperationParameters configured with all input values.</returns>
+    private static OperationParameters BuildParameters( // NOSONAR S107
         string operation,
         int? paragraphIndex,
         string? text,

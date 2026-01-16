@@ -95,5 +95,5 @@ public class ExtractPdfImageHandler : OperationHandlerBase<Document>
     /// <param name="ImageIndex">The optional 1-based image index.</param>
     /// <param name="OutputPath">The optional output file path.</param>
     /// <param name="OutputDir">The optional output directory.</param>
-    private record ExtractParameters(int PageIndex, int? ImageIndex, string? OutputPath, string? OutputDir);
+    private sealed record ExtractParameters(int PageIndex, int? ImageIndex, string? OutputPath, string? OutputDir);
 }

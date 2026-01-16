@@ -38,5 +38,5 @@ public class FromA1NotationHandler : OperationHandlerBase<Workbook>
         return new FromA1NotationParameters(cellAddress);
     }
 
-    private record FromA1NotationParameters(string CellAddress);
+    private sealed record FromA1NotationParameters(string CellAddress);
 }

@@ -57,20 +57,23 @@ public class AddWordTextHandler : OperationHandlerBase<Document>
             }
 
             ClearFormatting(builder);
-            ApplyFontFormatting(builder, p.FontName, p.FontSize, p.Bold, p.Italic, p.Underline, p.Color,
-                p.Strikethrough, p.Superscript, p.Subscript);
+            ApplyFontFormatting(builder, p);
 
             builder.Write(line);
 
-            ApplyRunFormatting(builder.CurrentParagraph, line, p.Bold, p.Italic, p.Underline,
-                p.Strikethrough, p.Superscript, p.Subscript);
+            ApplyRunFormatting(builder.CurrentParagraph, line, p);
         }
 
         MarkModified(context);
 
-        return BuildResultMessage(p.Bold, p.Italic, p.Underline, p.Strikethrough, p.Superscript, p.Subscript);
+        return BuildResultMessage(p);
     }
 
+    /// <summary>
+    ///     Extracts add word text parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted add word text parameters.</returns>
     private static AddWordTextParameters ExtractAddWordTextParameters(OperationParameters parameters)
     {
         return new AddWordTextParameters(
@@ -150,29 +153,31 @@ public class AddWordTextHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Applies font formatting to the document builder.
     /// </summary>
-    private static void ApplyFontFormatting(DocumentBuilder builder, string? fontName, double? fontSize,
-        bool? bold, bool? italic, string? underline, string? color, bool? strikethrough,
-        bool? superscript, bool? subscript)
+    /// <param name="builder">The document builder.</param>
+    /// <param name="p">The text parameters containing font settings.</param>
+    private static void ApplyFontFormatting(DocumentBuilder builder, AddWordTextParameters p)
     {
         FontHelper.Word.ApplyFontSettings(
             builder,
-            fontName,
-            fontSize: fontSize,
-            bold: bold,
-            italic: italic,
-            underline: underline,
-            color: color,
-            strikethrough: strikethrough,
-            superscript: superscript,
-            subscript: subscript
+            p.FontName,
+            fontSize: p.FontSize,
+            bold: p.Bold,
+            italic: p.Italic,
+            underline: p.Underline,
+            color: p.Color,
+            strikethrough: p.Strikethrough,
+            superscript: p.Superscript,
+            subscript: p.Subscript
         );
     }
 
     /// <summary>
     ///     Applies formatting to runs created by the builder.
     /// </summary>
-    private static void ApplyRunFormatting(WordParagraph? para, string line, bool? bold, bool? italic,
-        string? underline, bool? strikethrough, bool? superscript, bool? subscript)
+    /// <param name="para">The paragraph containing the runs.</param>
+    /// <param name="line">The text line to match.</param>
+    /// <param name="p">The text parameters containing font settings.</param>
+    private static void ApplyRunFormatting(WordParagraph? para, string line, AddWordTextParameters p)
     {
         if (para == null) return;
 
@@ -190,12 +195,12 @@ public class AddWordTextHandler : OperationHandlerBase<Document>
                 FontHelper.Word.ApplyFontSettings(
                     run,
                     fontSize: null,
-                    bold: bold,
-                    italic: italic,
-                    underline: underline,
-                    strikethrough: strikethrough,
-                    superscript: superscript,
-                    subscript: subscript
+                    bold: p.Bold,
+                    italic: p.Italic,
+                    underline: p.Underline,
+                    strikethrough: p.Strikethrough,
+                    superscript: p.Superscript,
+                    subscript: p.Subscript
                 );
             }
     }
@@ -203,16 +208,17 @@ public class AddWordTextHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Builds the result message with applied formatting details.
     /// </summary>
-    private static string BuildResultMessage(bool? bold, bool? italic, string? underline,
-        bool? strikethrough, bool? superscript, bool? subscript)
+    /// <param name="p">The text parameters containing formatting settings.</param>
+    /// <returns>The formatted result message.</returns>
+    private static string BuildResultMessage(AddWordTextParameters p)
     {
         List<string> formatInfo = [];
-        if (bold == true) formatInfo.Add("bold");
-        if (italic == true) formatInfo.Add("italic");
-        if (!string.IsNullOrEmpty(underline) && underline != "none") formatInfo.Add($"underline({underline})");
-        if (strikethrough == true) formatInfo.Add("strikethrough");
-        if (superscript == true) formatInfo.Add("superscript");
-        if (subscript == true) formatInfo.Add("subscript");
+        if (p.Bold == true) formatInfo.Add("bold");
+        if (p.Italic == true) formatInfo.Add("italic");
+        if (!string.IsNullOrEmpty(p.Underline) && p.Underline != "none") formatInfo.Add($"underline({p.Underline})");
+        if (p.Strikethrough == true) formatInfo.Add("strikethrough");
+        if (p.Superscript == true) formatInfo.Add("superscript");
+        if (p.Subscript == true) formatInfo.Add("subscript");
 
         var result = "Text added to document successfully.";
         if (formatInfo.Count > 0)
@@ -221,7 +227,20 @@ public class AddWordTextHandler : OperationHandlerBase<Document>
         return Success(result);
     }
 
-    private record AddWordTextParameters(
+    /// <summary>
+    ///     Record to hold add word text parameters.
+    /// </summary>
+    /// <param name="Text">The text to add.</param>
+    /// <param name="FontName">The font name.</param>
+    /// <param name="FontSize">The font size.</param>
+    /// <param name="Bold">Whether to apply bold.</param>
+    /// <param name="Italic">Whether to apply italic.</param>
+    /// <param name="Underline">The underline style.</param>
+    /// <param name="Color">The font color.</param>
+    /// <param name="Strikethrough">Whether to apply strikethrough.</param>
+    /// <param name="Superscript">Whether to apply superscript.</param>
+    /// <param name="Subscript">Whether to apply subscript.</param>
+    private sealed record AddWordTextParameters(
         string Text,
         string? FontName,
         double? FontSize,

@@ -99,5 +99,5 @@ public class SetPptBackgroundHandler : OperationHandlerBase<Presentation>
     /// <param name="Color">The optional background color.</param>
     /// <param name="ImagePath">The optional background image path.</param>
     /// <param name="ApplyToAll">Whether to apply to all slides.</param>
-    private record SetBackgroundParameters(int SlideIndex, string? Color, string? ImagePath, bool ApplyToAll);
+    private sealed record SetBackgroundParameters(int SlideIndex, string? Color, string? ImagePath, bool ApplyToAll);
 }

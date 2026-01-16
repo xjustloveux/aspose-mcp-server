@@ -44,5 +44,5 @@ public class InsertRowHandler : OperationHandlerBase<Workbook>
         return new InsertRowParameters(sheetIndex, rowIndex, count);
     }
 
-    private record InsertRowParameters(int SheetIndex, int RowIndex, int Count);
+    private sealed record InsertRowParameters(int SheetIndex, int RowIndex, int Count);
 }

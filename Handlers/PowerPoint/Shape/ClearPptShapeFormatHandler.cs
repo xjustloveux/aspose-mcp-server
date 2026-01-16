@@ -51,5 +51,5 @@ public class ClearPptShapeFormatHandler : OperationHandlerBase<Presentation>
             parameters.GetOptional("clearLine", true));
     }
 
-    private record ClearPptShapeFormatParameters(int SlideIndex, int ShapeIndex, bool ClearFill, bool ClearLine);
+    private sealed record ClearPptShapeFormatParameters(int SlideIndex, int ShapeIndex, bool ClearFill, bool ClearLine);
 }

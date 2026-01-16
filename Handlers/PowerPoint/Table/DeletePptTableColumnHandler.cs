@@ -55,5 +55,5 @@ public class DeletePptTableColumnHandler : OperationHandlerBase<Presentation>
     /// <param name="SlideIndex">The slide index.</param>
     /// <param name="ShapeIndex">The shape index.</param>
     /// <param name="ColumnIndex">The column index to delete.</param>
-    private record DeleteColumnParameters(int SlideIndex, int ShapeIndex, int ColumnIndex);
+    private sealed record DeleteColumnParameters(int SlideIndex, int ShapeIndex, int ColumnIndex);
 }

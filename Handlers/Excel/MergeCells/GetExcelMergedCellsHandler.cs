@@ -84,5 +84,5 @@ public class GetExcelMergedCellsHandler : OperationHandlerBase<Workbook>
         );
     }
 
-    private record GetMergedCellsParameters(int SheetIndex);
+    private sealed record GetMergedCellsParameters(int SheetIndex);
 }

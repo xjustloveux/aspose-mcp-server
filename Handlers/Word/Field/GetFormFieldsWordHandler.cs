@@ -22,7 +22,7 @@ public class GetFormFieldsWordHandler : OperationHandlerBase<Document>
     /// <returns>A JSON string containing the list of form fields.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        _ = ExtractGetFormFieldsParameters(parameters);
+        _ = parameters;
 
         var document = context.Document;
         var formFields = document.Range.FormFields.ToList();
@@ -74,20 +74,4 @@ public class GetFormFieldsWordHandler : OperationHandlerBase<Document>
 
         return JsonSerializer.Serialize(result, JsonDefaults.Indented);
     }
-
-    /// <summary>
-    ///     Extracts parameters for the get form fields operation.
-    /// </summary>
-    /// <param name="parameters">The operation parameters.</param>
-    /// <returns>The extracted parameters.</returns>
-    private static GetFormFieldsParameters ExtractGetFormFieldsParameters(OperationParameters parameters)
-    {
-        _ = parameters;
-        return new GetFormFieldsParameters();
-    }
-
-    /// <summary>
-    ///     Parameters for the get form fields operation.
-    /// </summary>
-    private record GetFormFieldsParameters;
 }

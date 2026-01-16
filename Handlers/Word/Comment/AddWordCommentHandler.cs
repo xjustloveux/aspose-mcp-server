@@ -351,7 +351,7 @@ public class AddWordCommentHandler : OperationHandlerBase<Document>
     /// <param name="ParagraphIndex">The paragraph index to attach the comment to.</param>
     /// <param name="StartRunIndex">The start run index for the comment range.</param>
     /// <param name="EndRunIndex">The end run index for the comment range.</param>
-    private record AddParameters(
+    private sealed record AddParameters(
         string Text,
         string Author,
         string? AuthorInitial,

@@ -62,5 +62,5 @@ public class SetOrientationWordHandler : OperationHandlerBase<Document>
     /// <param name="Orientation">The page orientation (Portrait or Landscape).</param>
     /// <param name="SectionIndex">The section index to apply orientation to.</param>
     /// <param name="SectionIndices">The array of section indices to apply orientation to.</param>
-    private record SetOrientationParameters(string? Orientation, int? SectionIndex, JsonArray? SectionIndices);
+    private sealed record SetOrientationParameters(string? Orientation, int? SectionIndex, JsonArray? SectionIndices);
 }

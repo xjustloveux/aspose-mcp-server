@@ -96,5 +96,5 @@ public class GetWordDocumentInfoHandler : OperationHandlerBase<Document>
     ///     Parameters for the get document info operation.
     /// </summary>
     /// <param name="IncludeTabStops">Whether to include tab stops information.</param>
-    private record GetDocumentInfoParameters(bool IncludeTabStops);
+    private sealed record GetDocumentInfoParameters(bool IncludeTabStops);
 }

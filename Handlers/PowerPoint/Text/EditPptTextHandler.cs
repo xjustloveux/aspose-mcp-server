@@ -129,7 +129,7 @@ public class EditPptTextHandler : OperationHandlerBase<Presentation>
     /// <param name="Bold">The optional bold setting.</param>
     /// <param name="Italic">The optional italic setting.</param>
     /// <param name="Color">The optional text color.</param>
-    private record TextParameters(
+    private sealed record TextParameters(
         int SlideIndex,
         int ShapeIndex,
         string? Text,

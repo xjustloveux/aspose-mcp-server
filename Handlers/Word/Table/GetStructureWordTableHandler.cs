@@ -142,7 +142,7 @@ public class GetStructureWordTableHandler : OperationHandlerBase<Document>
         return new GetStructureParameters(tableIndex, sectionIndex, includeContent, includeCellFormatting);
     }
 
-    private record GetStructureParameters(
+    private sealed record GetStructureParameters(
         int TableIndex,
         int? SectionIndex,
         bool IncludeContent,

@@ -47,5 +47,5 @@ public class UngroupExcelRowsHandler : OperationHandlerBase<Workbook>
         return new UngroupRowsParameters(sheetIndex, startRow, endRow);
     }
 
-    private record UngroupRowsParameters(int SheetIndex, int StartRow, int EndRow);
+    private sealed record UngroupRowsParameters(int SheetIndex, int StartRow, int EndRow);
 }

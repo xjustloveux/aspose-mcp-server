@@ -59,5 +59,5 @@ public class DeleteRowWordTableHandler : OperationHandlerBase<Document>
         return new DeleteRowParameters(rowIndex.Value, tableIndex, sectionIndex);
     }
 
-    private record DeleteRowParameters(int RowIndex, int TableIndex, int? SectionIndex);
+    private sealed record DeleteRowParameters(int RowIndex, int TableIndex, int? SectionIndex);
 }

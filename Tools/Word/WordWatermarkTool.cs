@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -66,7 +66,7 @@ Usage examples:
 - Remove watermark: word_watermark(operation='remove', path='doc.docx')
 
 Note: On Linux/Docker environments, ensure the specified font (default: Arial) is installed. Missing fonts may cause rendering issues.")]
-    public string Execute(
+    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
         [Description("Operation to perform: 'add' (text watermark), 'add_image' (image watermark), 'remove'")]
         string operation,
         [Description("Document file path (required if no sessionId)")]
@@ -121,8 +121,10 @@ Note: On Linux/Docker environments, ensure the specified font (default: Arial) i
 
     /// <summary>
     ///     Builds OperationParameters from method parameters using strategy pattern.
+    ///     Parameters are documented on the Execute method.
     /// </summary>
-    private static OperationParameters BuildParameters(
+    /// <returns>OperationParameters configured with all input values.</returns>
+    private static OperationParameters BuildParameters( // NOSONAR S107
         string operation,
         string? text,
         string fontFamily,

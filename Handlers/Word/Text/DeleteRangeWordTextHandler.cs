@@ -236,7 +236,7 @@ public class DeleteRangeWordTextHandler : OperationHandlerBase<Document>
         }
     }
 
-    private record DeleteRangeParameters(
+    private sealed record DeleteRangeParameters(
         int StartParagraphIndex,
         int StartCharIndex,
         int EndParagraphIndex,

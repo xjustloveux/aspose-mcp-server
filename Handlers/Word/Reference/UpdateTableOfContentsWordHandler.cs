@@ -67,5 +67,5 @@ public class UpdateTableOfContentsWordHandler : OperationHandlerBase<Document>
             parameters.GetOptional<int?>("tocIndex"));
     }
 
-    private record UpdateTableOfContentsParameters(int? TocIndex);
+    private sealed record UpdateTableOfContentsParameters(int? TocIndex);
 }

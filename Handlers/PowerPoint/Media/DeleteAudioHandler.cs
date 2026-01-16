@@ -57,5 +57,5 @@ public class DeleteAudioHandler : OperationHandlerBase<Presentation>
     /// </summary>
     /// <param name="SlideIndex">The slide index.</param>
     /// <param name="ShapeIndex">The shape index.</param>
-    private record DeleteAudioParameters(int SlideIndex, int ShapeIndex);
+    private sealed record DeleteAudioParameters(int SlideIndex, int ShapeIndex);
 }

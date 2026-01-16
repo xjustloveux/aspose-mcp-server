@@ -132,7 +132,7 @@ public class CreateWordDocumentHandler : OperationHandlerBase<Document>
             parameters.GetOptional("footerDistance", 35.4));
     }
 
-    private record CreateParameters(
+    private sealed record CreateParameters(
         string? OutputPath,
         string? Content,
         bool SkipInitialContent,

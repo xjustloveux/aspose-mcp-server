@@ -48,5 +48,5 @@ public class GroupExcelRowsHandler : OperationHandlerBase<Workbook>
         return new GroupRowsParameters(sheetIndex, startRow, endRow, isCollapsed);
     }
 
-    private record GroupRowsParameters(int SheetIndex, int StartRow, int EndRow, bool IsCollapsed);
+    private sealed record GroupRowsParameters(int SheetIndex, int StartRow, int EndRow, bool IsCollapsed);
 }

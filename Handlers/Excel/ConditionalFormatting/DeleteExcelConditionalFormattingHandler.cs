@@ -49,5 +49,5 @@ public class DeleteExcelConditionalFormattingHandler : OperationHandlerBase<Work
             parameters.GetRequired<int>("conditionalFormattingIndex"));
     }
 
-    private record DeleteParameters(int SheetIndex, int ConditionalFormattingIndex);
+    private sealed record DeleteParameters(int SheetIndex, int ConditionalFormattingIndex);
 }

@@ -210,5 +210,5 @@ public class GetImagesWordHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Record to hold get images parameters.
     /// </summary>
-    private record GetImagesParameters(int SectionIndex);
+    private sealed record GetImagesParameters(int SectionIndex);
 }

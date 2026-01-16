@@ -247,5 +247,5 @@ public class GetParagraphFormatWordHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="ParagraphIndex">The paragraph index to get format for.</param>
     /// <param name="IncludeRunDetails">Whether to include run details.</param>
-    private record GetParagraphFormatParameters(int? ParagraphIndex, bool IncludeRunDetails);
+    private sealed record GetParagraphFormatParameters(int? ParagraphIndex, bool IncludeRunDetails);
 }

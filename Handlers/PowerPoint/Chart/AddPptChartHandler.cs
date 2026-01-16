@@ -66,7 +66,7 @@ public class AddPptChartHandler : OperationHandlerBase<Presentation>
     /// <param name="Y">The Y coordinate.</param>
     /// <param name="Width">The chart width.</param>
     /// <param name="Height">The chart height.</param>
-    private record AddChartParameters(
+    private sealed record AddChartParameters(
         int SlideIndex,
         string ChartType,
         string? Title,

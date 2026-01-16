@@ -93,7 +93,7 @@ public class EditExcelPivotTableHandler : OperationHandlerBase<Workbook>
         );
     }
 
-    private record EditPivotTableParameters(
+    private sealed record EditPivotTableParameters(
         int SheetIndex,
         int PivotTableIndex,
         string? Name,

@@ -83,5 +83,5 @@ public class SetSlideSizeHandler : OperationHandlerBase<Presentation>
             parameters.GetOptional<double?>("height"));
     }
 
-    private record SetSlideSizeParameters(string Preset, double? Width, double? Height);
+    private sealed record SetSlideSizeParameters(string Preset, double? Width, double? Height);
 }

@@ -61,5 +61,5 @@ public class DeletePdfImageHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="PageIndex">The 1-based page index.</param>
     /// <param name="ImageIndex">The 1-based image index.</param>
-    private record DeleteParameters(int PageIndex, int ImageIndex);
+    private sealed record DeleteParameters(int PageIndex, int ImageIndex);
 }

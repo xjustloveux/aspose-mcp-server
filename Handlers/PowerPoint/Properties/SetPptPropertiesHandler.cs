@@ -132,7 +132,7 @@ public class SetPptPropertiesHandler : OperationHandlerBase<Presentation>
             parameters.GetOptional<Dictionary<string, object>?>("customProperties"));
     }
 
-    private record SetPptPropertiesParameters(
+    private sealed record SetPptPropertiesParameters(
         string? Title,
         string? Subject,
         string? Author,

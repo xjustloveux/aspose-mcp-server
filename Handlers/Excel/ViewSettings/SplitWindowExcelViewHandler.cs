@@ -71,7 +71,7 @@ public class SplitWindowExcelViewHandler : OperationHandlerBase<Workbook>
     /// <param name="SplitRow">The row at which to split the window.</param>
     /// <param name="SplitColumn">The column at which to split the window.</param>
     /// <param name="RemoveSplit">Whether to remove the window split.</param>
-    private record SplitWindowParameters(
+    private sealed record SplitWindowParameters(
         int SheetIndex,
         int? SplitRow,
         int? SplitColumn,

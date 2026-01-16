@@ -67,5 +67,5 @@ public class GetWordSectionsHandler : OperationHandlerBase<Document>
             parameters.GetOptional<int?>("sectionIndex"));
     }
 
-    private record GetWordSectionsParameters(int? SectionIndex);
+    private sealed record GetWordSectionsParameters(int? SectionIndex);
 }

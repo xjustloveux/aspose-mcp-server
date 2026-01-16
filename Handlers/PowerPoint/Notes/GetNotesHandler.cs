@@ -76,5 +76,5 @@ public class GetNotesHandler : OperationHandlerBase<Presentation>
     ///     Record for holding get notes parameters.
     /// </summary>
     /// <param name="SlideIndex">The slide index.</param>
-    private record GetNotesParameters(int? SlideIndex);
+    private sealed record GetNotesParameters(int? SlideIndex);
 }

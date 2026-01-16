@@ -132,7 +132,7 @@ public class EditTextBoxContentWordHandler : OperationHandlerBase<Document>
             clearFormatting);
     }
 
-    private record EditTextBoxContentParameters(
+    private sealed record EditTextBoxContentParameters(
         int TextboxIndex,
         string? Text,
         bool AppendText,

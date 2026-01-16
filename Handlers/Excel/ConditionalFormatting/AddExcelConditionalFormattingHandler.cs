@@ -101,7 +101,7 @@ public class AddExcelConditionalFormattingHandler : OperationHandlerBase<Workboo
             parameters.GetOptional("backgroundColor", "Yellow"));
     }
 
-    private record AddParameters(
+    private sealed record AddParameters(
         int SheetIndex,
         string Range,
         string Condition,

@@ -70,5 +70,10 @@ public class EditExcelHyperlinkHandler : OperationHandlerBase<Workbook>
         return new EditParameters(sheetIndex, cell, url, displayText, hyperlinkIndex);
     }
 
-    private record EditParameters(int SheetIndex, string? Cell, string? Url, string? DisplayText, int? HyperlinkIndex);
+    private sealed record EditParameters(
+        int SheetIndex,
+        string? Cell,
+        string? Url,
+        string? DisplayText,
+        int? HyperlinkIndex);
 }

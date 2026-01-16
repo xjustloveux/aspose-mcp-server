@@ -117,7 +117,7 @@ public class ConvertPresentationHandler : OperationHandlerBase<Presentation>
     /// <param name="OutputPath">The output file path.</param>
     /// <param name="Format">The target format.</param>
     /// <param name="SlideIndex">The slide index for image export.</param>
-    private record ConvertParameters(
+    private sealed record ConvertParameters(
         string? InputPath,
         string? Path,
         string? SessionId,

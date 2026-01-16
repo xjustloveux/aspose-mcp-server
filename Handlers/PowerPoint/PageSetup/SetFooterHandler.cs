@@ -122,7 +122,7 @@ public class SetFooterHandler : OperationHandlerBase<Presentation>
             parameters.GetOptional<int[]?>("slideIndices"));
     }
 
-    private record SetFooterParameters(
+    private sealed record SetFooterParameters(
         string? FooterText,
         bool ShowSlideNumber,
         string? DateText,

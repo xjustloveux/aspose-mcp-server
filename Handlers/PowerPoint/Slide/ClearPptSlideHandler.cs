@@ -49,5 +49,5 @@ public class ClearPptSlideHandler : OperationHandlerBase<Presentation>
     ///     Parameters for clear slide operation.
     /// </summary>
     /// <param name="SlideIndex">The slide index (0-based).</param>
-    private record ClearPptSlideParameters(int SlideIndex);
+    private sealed record ClearPptSlideParameters(int SlideIndex);
 }

@@ -136,7 +136,7 @@ public class MergeCellsWordTableHandler : OperationHandlerBase<Document>
             sectionIndex);
     }
 
-    private record MergeCellsParameters(
+    private sealed record MergeCellsParameters(
         int StartRow,
         int StartCol,
         int EndRow,

@@ -102,7 +102,7 @@ public class SetPlaybackHandler : OperationHandlerBase<Presentation>
     /// <param name="Loop">Whether to loop.</param>
     /// <param name="Rewind">Whether to rewind.</param>
     /// <param name="Volume">The volume level.</param>
-    private record PlaybackParameters(
+    private sealed record PlaybackParameters(
         int SlideIndex,
         int? ShapeIndex,
         string PlayMode,

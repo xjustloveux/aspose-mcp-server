@@ -134,7 +134,7 @@ public class SetParagraphBorderWordHandler : OperationHandlerBase<Document>
             parameters.GetOptional("lineColor", "000000"));
     }
 
-    private record SetParagraphBorderParameters(
+    private sealed record SetParagraphBorderParameters(
         int ParagraphIndex,
         string? BorderPosition,
         bool BorderTop,

@@ -161,5 +161,5 @@ public class AddWordBookmarkHandler : OperationHandlerBase<Document>
     /// <param name="Name">The bookmark name.</param>
     /// <param name="Text">The text content for the bookmark.</param>
     /// <param name="ParagraphIndex">The paragraph index where the bookmark should be inserted.</param>
-    private record AddParameters(string Name, string? Text, int? ParagraphIndex);
+    private sealed record AddParameters(string Name, string? Text, int? ParagraphIndex);
 }

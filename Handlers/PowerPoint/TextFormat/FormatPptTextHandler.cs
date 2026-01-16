@@ -139,7 +139,7 @@ public class FormatPptTextHandler : OperationHandlerBase<Presentation>
     /// <param name="Bold">The optional bold setting.</param>
     /// <param name="Italic">The optional italic setting.</param>
     /// <param name="Color">The optional color string.</param>
-    private record FormatParameters(
+    private sealed record FormatParameters(
         string? SlideIndicesJson,
         string? FontName,
         double? FontSize,

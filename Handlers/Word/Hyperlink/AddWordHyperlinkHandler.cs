@@ -210,7 +210,7 @@ public class AddWordHyperlinkHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Record to hold add hyperlink parameters.
     /// </summary>
-    private record AddHyperlinkParameters(
+    private sealed record AddHyperlinkParameters(
         string? Text,
         string? Url,
         string? SubAddress,

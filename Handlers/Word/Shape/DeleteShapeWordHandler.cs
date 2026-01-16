@@ -48,5 +48,5 @@ public class DeleteShapeWordHandler : OperationHandlerBase<Document>
         return new DeleteShapeParameters(shapeIndex.Value);
     }
 
-    private record DeleteShapeParameters(int ShapeIndex);
+    private sealed record DeleteShapeParameters(int ShapeIndex);
 }

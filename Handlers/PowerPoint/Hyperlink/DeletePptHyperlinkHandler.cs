@@ -57,5 +57,5 @@ public class DeletePptHyperlinkHandler : OperationHandlerBase<Presentation>
     /// </summary>
     /// <param name="SlideIndex">The slide index.</param>
     /// <param name="ShapeIndex">The shape index.</param>
-    private record DeleteParameters(int SlideIndex, int ShapeIndex);
+    private sealed record DeleteParameters(int SlideIndex, int ShapeIndex);
 }

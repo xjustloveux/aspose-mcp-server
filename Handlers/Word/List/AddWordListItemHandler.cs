@@ -85,7 +85,7 @@ public class AddWordListItemHandler : OperationHandlerBase<Document>
             parameters.GetOptional("applyStyleIndent", true));
     }
 
-    private record AddListItemParameters(
+    private sealed record AddListItemParameters(
         string Text,
         string StyleName,
         int ListLevel,

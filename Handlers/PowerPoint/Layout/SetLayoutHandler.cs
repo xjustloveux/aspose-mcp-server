@@ -53,5 +53,5 @@ public class SetLayoutHandler : OperationHandlerBase<Presentation>
     /// </summary>
     /// <param name="SlideIndex">The slide index.</param>
     /// <param name="Layout">The layout type string.</param>
-    private record SetLayoutParameters(int SlideIndex, string Layout);
+    private sealed record SetLayoutParameters(int SlideIndex, string Layout);
 }

@@ -54,5 +54,5 @@ public class DeleteCellsHandler : OperationHandlerBase<Workbook>
         return new DeleteCellsParameters(sheetIndex, range, shiftDirection);
     }
 
-    private record DeleteCellsParameters(int SheetIndex, string Range, string ShiftDirection);
+    private sealed record DeleteCellsParameters(int SheetIndex, string Range, string ShiftDirection);
 }

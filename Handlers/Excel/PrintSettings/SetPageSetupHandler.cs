@@ -29,10 +29,11 @@ public class SetPageSetupHandler : OperationHandlerBase<Workbook>
         var worksheet = ExcelHelper.GetWorksheet(workbook, setParams.SheetIndex);
         var pageSetup = worksheet.PageSetup;
 
-        var changes = ExcelPrintSettingsHelper.ApplyPageSetup(pageSetup, setParams.Orientation, setParams.PaperSize,
-            setParams.LeftMargin, setParams.RightMargin, setParams.TopMargin, setParams.BottomMargin,
-            setParams.Header, setParams.Footer, setParams.FitToPage, setParams.FitToPagesWide,
-            setParams.FitToPagesTall);
+        var pageSetupOptions = new PageSetupOptions(
+            setParams.Orientation, setParams.PaperSize, setParams.LeftMargin, setParams.RightMargin,
+            setParams.TopMargin, setParams.BottomMargin, setParams.Header, setParams.Footer,
+            setParams.FitToPage, setParams.FitToPagesWide, setParams.FitToPagesTall);
+        var changes = ExcelPrintSettingsHelper.ApplyPageSetup(pageSetup, pageSetupOptions);
 
         MarkModified(context);
 
@@ -66,7 +67,19 @@ public class SetPageSetupHandler : OperationHandlerBase<Workbook>
     /// <summary>
     ///     Record to hold set page setup parameters.
     /// </summary>
-    private record SetPageSetupParameters(
+    /// <param name="SheetIndex">The sheet index.</param>
+    /// <param name="Orientation">The page orientation.</param>
+    /// <param name="PaperSize">The paper size.</param>
+    /// <param name="LeftMargin">The left margin in inches.</param>
+    /// <param name="RightMargin">The right margin in inches.</param>
+    /// <param name="TopMargin">The top margin in inches.</param>
+    /// <param name="BottomMargin">The bottom margin in inches.</param>
+    /// <param name="Header">The header text.</param>
+    /// <param name="Footer">The footer text.</param>
+    /// <param name="FitToPage">Whether to enable fit to page.</param>
+    /// <param name="FitToPagesWide">The number of pages wide.</param>
+    /// <param name="FitToPagesTall">The number of pages tall.</param>
+    private sealed record SetPageSetupParameters(
         int SheetIndex,
         string? Orientation,
         string? PaperSize,

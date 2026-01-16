@@ -61,5 +61,5 @@ public class EditPdfFormFieldHandler : OperationHandlerBase<Document>
     /// <param name="FieldName">The name of the form field to edit.</param>
     /// <param name="Value">The value for text/radio fields.</param>
     /// <param name="CheckedValue">The checked state for checkbox fields.</param>
-    private record EditParameters(string FieldName, string? Value, bool? CheckedValue);
+    private sealed record EditParameters(string FieldName, string? Value, bool? CheckedValue);
 }

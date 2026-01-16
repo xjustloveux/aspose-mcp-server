@@ -378,9 +378,8 @@ public class AuthConfig
     /// <param name="args">Command line arguments</param>
     private void LoadFromCommandLine(string[] args)
     {
-        foreach (var arg in args)
-            if (!ProcessApiKeyArg(arg))
-                _ = ProcessJwtArg(arg);
+        foreach (var arg in args.Where(arg => !ProcessApiKeyArg(arg)))
+            _ = ProcessJwtArg(arg);
     }
 
     /// <summary>

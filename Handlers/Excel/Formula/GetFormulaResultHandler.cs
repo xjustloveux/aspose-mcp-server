@@ -68,5 +68,5 @@ public class GetFormulaResultHandler : OperationHandlerBase<Workbook>
     /// <summary>
     ///     Record to hold get formula result parameters.
     /// </summary>
-    private record GetResultParameters(string Cell, int SheetIndex, bool CalculateBeforeRead);
+    private sealed record GetResultParameters(string Cell, int SheetIndex, bool CalculateBeforeRead);
 }

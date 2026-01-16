@@ -69,5 +69,5 @@ public class AddPdfAttachmentHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Record to hold add attachment parameters.
     /// </summary>
-    private record AddParameters(string AttachmentPath, string AttachmentName, string? Description);
+    private sealed record AddParameters(string AttachmentPath, string AttachmentName, string? Description);
 }

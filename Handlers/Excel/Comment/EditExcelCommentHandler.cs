@@ -66,5 +66,5 @@ public class EditExcelCommentHandler : OperationHandlerBase<Workbook>
         return new EditParameters(sheetIndex, cell, comment, author);
     }
 
-    private record EditParameters(int SheetIndex, string Cell, string Comment, string? Author);
+    private sealed record EditParameters(int SheetIndex, string Cell, string Comment, string? Author);
 }

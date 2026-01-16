@@ -89,7 +89,7 @@ public class ConvertWorkbookHandler : OperationHandlerBase<Workbook>
     /// <param name="SessionId">The session ID for session-based operations.</param>
     /// <param name="OutputPath">The output file path.</param>
     /// <param name="Format">The target format.</param>
-    private record ConvertParameters(
+    private sealed record ConvertParameters(
         string? InputPath,
         string? SessionId,
         string? OutputPath,

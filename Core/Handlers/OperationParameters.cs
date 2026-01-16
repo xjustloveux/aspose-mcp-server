@@ -35,6 +35,27 @@ public class OperationParameters
     }
 
     /// <summary>
+    ///     Sets a parameter value if the value is not null.
+    /// </summary>
+    /// <param name="name">The parameter name (case-insensitive).</param>
+    /// <param name="value">The parameter value.</param>
+    public void SetIfNotNull(string name, object? value)
+    {
+        if (value != null) _values[name] = value;
+    }
+
+    /// <summary>
+    ///     Sets a nullable value parameter if it has a value.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="name">The parameter name (case-insensitive).</param>
+    /// <param name="value">The nullable parameter value.</param>
+    public void SetIfHasValue<T>(string name, T? value) where T : struct
+    {
+        if (value.HasValue) _values[name] = value.Value;
+    }
+
+    /// <summary>
     ///     Gets a required parameter value.
     /// </summary>
     /// <typeparam name="T">The expected type.</typeparam>
@@ -122,6 +143,12 @@ public class OperationParameters
     /// <summary>
     ///     Converts a JsonElement to the target type.
     /// </summary>
+    /// <typeparam name="T">The target type.</typeparam>
+    /// <param name="element">The JSON element to convert.</param>
+    /// <param name="underlyingType">The underlying type to convert to.</param>
+    /// <param name="parameterName">The parameter name for error messages.</param>
+    /// <returns>The converted value.</returns>
+    /// <exception cref="ArgumentException">Thrown when conversion fails.</exception>
     private static T ConvertJsonElement<T>(JsonElement element, Type underlyingType, string parameterName)
     {
         try
@@ -224,6 +251,12 @@ public class OperationParameters
     /// <summary>
     ///     Converts a value to an enum type.
     /// </summary>
+    /// <typeparam name="T">The target enum type.</typeparam>
+    /// <param name="value">The value to convert.</param>
+    /// <param name="enumType">The enum type to convert to.</param>
+    /// <param name="parameterName">The parameter name for error messages.</param>
+    /// <returns>The converted enum value.</returns>
+    /// <exception cref="ArgumentException">Thrown when conversion fails.</exception>
     private static T ConvertToEnum<T>(object value, Type enumType, string parameterName)
     {
         if (value is string stringValue)

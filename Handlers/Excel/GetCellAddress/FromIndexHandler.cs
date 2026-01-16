@@ -37,5 +37,5 @@ public class FromIndexHandler : OperationHandlerBase<Workbook>
         return new FromIndexParameters(row, column);
     }
 
-    private record FromIndexParameters(int Row, int Column);
+    private sealed record FromIndexParameters(int Row, int Column);
 }

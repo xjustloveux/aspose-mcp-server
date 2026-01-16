@@ -85,7 +85,7 @@ public class AddPdfLinkHandler : OperationHandlerBase<Document>
     /// <param name="Y">The Y coordinate.</param>
     /// <param name="Width">The width of the link area.</param>
     /// <param name="Height">The height of the link area.</param>
-    private record AddParameters(
+    private sealed record AddParameters(
         int PageIndex,
         string? Url,
         int? TargetPage,

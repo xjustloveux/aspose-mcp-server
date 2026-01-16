@@ -68,5 +68,5 @@ public class GetPptShapesHandler : OperationHandlerBase<Presentation>
     ///     Parameters for get shapes operation.
     /// </summary>
     /// <param name="SlideIndex">The slide index (0-based).</param>
-    private record GetPptShapesParameters(int SlideIndex);
+    private sealed record GetPptShapesParameters(int SlideIndex);
 }

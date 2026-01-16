@@ -85,7 +85,7 @@ public class AddExcelDataValidationHandler : OperationHandlerBase<Workbook>
             parameters.GetOptional<string?>("inputMessage"));
     }
 
-    private record AddParameters(
+    private sealed record AddParameters(
         int SheetIndex,
         string Range,
         string ValidationType,

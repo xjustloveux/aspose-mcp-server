@@ -75,5 +75,5 @@ public class DeleteParagraphWordHandler : OperationHandlerBase<Document>
     ///     Record to hold delete paragraph parameters.
     /// </summary>
     /// <param name="ParagraphIndex">The paragraph index to delete (-1 for last).</param>
-    private record DeleteParagraphParameters(int? ParagraphIndex);
+    private sealed record DeleteParagraphParameters(int? ParagraphIndex);
 }

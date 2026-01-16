@@ -82,5 +82,5 @@ public class GetPdfFormFieldsHandler : OperationHandlerBase<Document>
     ///     Parameters for getting form fields.
     /// </summary>
     /// <param name="Limit">The maximum number of fields to return.</param>
-    private record GetParameters(int Limit);
+    private sealed record GetParameters(int Limit);
 }

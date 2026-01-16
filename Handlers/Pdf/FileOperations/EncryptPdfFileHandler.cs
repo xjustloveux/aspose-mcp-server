@@ -49,5 +49,5 @@ public class EncryptPdfFileHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Record to hold encrypt parameters.
     /// </summary>
-    private record EncryptParameters(string UserPassword, string OwnerPassword);
+    private sealed record EncryptParameters(string UserPassword, string OwnerPassword);
 }

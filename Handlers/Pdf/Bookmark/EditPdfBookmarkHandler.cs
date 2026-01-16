@@ -64,5 +64,5 @@ public class EditPdfBookmarkHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Record to hold edit bookmark parameters.
     /// </summary>
-    private record EditParameters(int BookmarkIndex, string? Title, int? PageIndex);
+    private sealed record EditParameters(int BookmarkIndex, string? Title, int? PageIndex);
 }

@@ -66,5 +66,5 @@ public class AddPdfAnnotationHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Record to hold add annotation parameters.
     /// </summary>
-    private record AddParameters(int PageIndex, string Text, double X, double Y);
+    private sealed record AddParameters(int PageIndex, string Text, double X, double Y);
 }

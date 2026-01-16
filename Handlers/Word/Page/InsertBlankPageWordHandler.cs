@@ -87,5 +87,5 @@ public class InsertBlankPageWordHandler : OperationHandlerBase<Document>
     ///     Record to hold insert blank page parameters.
     /// </summary>
     /// <param name="InsertAtPageIndex">The 0-based page index to insert at.</param>
-    private record InsertBlankPageParameters(int? InsertAtPageIndex);
+    private sealed record InsertBlankPageParameters(int? InsertAtPageIndex);
 }

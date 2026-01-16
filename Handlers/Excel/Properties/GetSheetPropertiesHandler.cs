@@ -72,5 +72,5 @@ public class GetSheetPropertiesHandler : OperationHandlerBase<Workbook>
     /// <summary>
     ///     Record to hold get sheet properties parameters.
     /// </summary>
-    private record GetSheetPropertiesParameters(int SheetIndex);
+    private sealed record GetSheetPropertiesParameters(int SheetIndex);
 }

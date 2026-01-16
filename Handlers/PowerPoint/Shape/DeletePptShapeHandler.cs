@@ -54,5 +54,5 @@ public class DeletePptShapeHandler : OperationHandlerBase<Presentation>
     /// </summary>
     /// <param name="SlideIndex">The slide index (0-based).</param>
     /// <param name="ShapeIndex">The shape index to delete.</param>
-    private record DeletePptShapeParameters(int SlideIndex, int ShapeIndex);
+    private sealed record DeletePptShapeParameters(int SlideIndex, int ShapeIndex);
 }

@@ -75,5 +75,9 @@ public class CopyFormatExcelRangeHandler : OperationHandlerBase<Workbook>
     /// <param name="CopyValue">Whether to copy values along with format.</param>
     /// <param name="Range">The source range.</param>
     /// <param name="DestTarget">The destination range or cell.</param>
-    private record CopyFormatExcelRangeParameters(int SheetIndex, bool CopyValue, string Range, string DestTarget);
+    private sealed record CopyFormatExcelRangeParameters(
+        int SheetIndex,
+        bool CopyValue,
+        string Range,
+        string DestTarget);
 }

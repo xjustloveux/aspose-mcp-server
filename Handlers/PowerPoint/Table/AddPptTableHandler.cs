@@ -90,19 +90,39 @@ public class AddPptTableHandler : OperationHandlerBase<Presentation>
     private static void PopulateTableCells(ITable table, TableParameters p)
     {
         if (!string.IsNullOrEmpty(p.DataJson))
-        {
-            var data = JsonSerializer.Deserialize<string?[][]>(p.DataJson);
-            if (data != null)
-                for (var row = 0; row < Math.Min(p.Rows, data.Length); row++)
-                for (var col = 0; col < Math.Min(p.Columns, data[row].Length); col++)
-                    table[col, row].TextFrame.Text = data[row][col] ?? string.Empty;
-        }
+            PopulateFromJson(table, p);
         else
-        {
-            for (var row = 0; row < p.Rows; row++)
-            for (var col = 0; col < p.Columns; col++)
-                table[col, row].TextFrame.Text = string.Empty;
-        }
+            PopulateEmpty(table, p.Rows, p.Columns);
+    }
+
+    /// <summary>
+    ///     Populates table cells from JSON data.
+    /// </summary>
+    /// <param name="table">The table to populate.</param>
+    /// <param name="p">The table parameters containing data.</param>
+    private static void PopulateFromJson(ITable table, TableParameters p)
+    {
+        if (string.IsNullOrEmpty(p.DataJson)) return;
+
+        var data = JsonSerializer.Deserialize<string?[][]>(p.DataJson);
+        if (data == null) return;
+
+        for (var row = 0; row < Math.Min(p.Rows, data.Length); row++)
+        for (var col = 0; col < Math.Min(p.Columns, data[row].Length); col++)
+            table[col, row].TextFrame.Text = data[row][col] ?? string.Empty;
+    }
+
+    /// <summary>
+    ///     Populates table cells with empty strings.
+    /// </summary>
+    /// <param name="table">The table to populate.</param>
+    /// <param name="rows">The number of rows.</param>
+    /// <param name="columns">The number of columns.</param>
+    private static void PopulateEmpty(ITable table, int rows, int columns)
+    {
+        for (var row = 0; row < rows; row++)
+        for (var col = 0; col < columns; col++)
+            table[col, row].TextFrame.Text = string.Empty;
     }
 
     /// <summary>
@@ -116,7 +136,7 @@ public class AddPptTableHandler : OperationHandlerBase<Presentation>
     /// <param name="ColumnWidth">The column width.</param>
     /// <param name="RowHeight">The row height.</param>
     /// <param name="DataJson">The optional data JSON string.</param>
-    private record TableParameters(
+    private sealed record TableParameters(
         int SlideIndex,
         int Rows,
         int Columns,

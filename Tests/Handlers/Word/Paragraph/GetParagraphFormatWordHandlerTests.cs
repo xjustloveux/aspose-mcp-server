@@ -310,10 +310,7 @@ public class GetParagraphFormatWordHandlerTests : WordHandlerTestBase
         SkipInEvaluationMode(AsposeLibraryType.Words, "Evaluation mode limits formatting operations");
 
         var doc = CreateEmptyDocument();
-        var builder = new DocumentBuilder(doc);
-        builder.Font.Bold = true;
-        builder.Font.Italic = true;
-        builder.Font.Size = 14;
+        var builder = new DocumentBuilder(doc) { Font = { Bold = true, Italic = true, Size = 14 } };
         builder.Write("Formatted text");
 
         var context = CreateContext(doc);
@@ -335,8 +332,7 @@ public class GetParagraphFormatWordHandlerTests : WordHandlerTestBase
         SkipInEvaluationMode(AsposeLibraryType.Words, "Evaluation mode limits run operations");
 
         var doc = CreateEmptyDocument();
-        var builder = new DocumentBuilder(doc);
-        builder.Font.Bold = true;
+        var builder = new DocumentBuilder(doc) { Font = { Bold = true } };
         builder.Write("Bold ");
         builder.Font.Bold = false;
         builder.Font.Italic = true;
@@ -426,10 +422,10 @@ public class GetParagraphFormatWordHandlerTests : WordHandlerTestBase
         SkipInEvaluationMode(AsposeLibraryType.Words, "Evaluation mode limits font operations");
 
         var doc = CreateEmptyDocument();
-        var builder = new DocumentBuilder(doc);
-        builder.Font.Underline = Underline.Single;
-        builder.Font.StrikeThrough = true;
-        builder.Font.Color = Color.Red;
+        var builder = new DocumentBuilder(doc)
+        {
+            Font = { Underline = Underline.Single, StrikeThrough = true, Color = Color.Red }
+        };
         builder.Write("Styled text");
 
         var context = CreateContext(doc);
@@ -453,8 +449,7 @@ public class GetParagraphFormatWordHandlerTests : WordHandlerTestBase
         SkipInEvaluationMode(AsposeLibraryType.Words, "Evaluation mode limits font operations");
 
         var doc = CreateEmptyDocument();
-        var builder = new DocumentBuilder(doc);
-        builder.Font.Superscript = true;
+        var builder = new DocumentBuilder(doc) { Font = { Superscript = true } };
         builder.Write("Superscript");
 
         var context = CreateContext(doc);
@@ -476,8 +471,7 @@ public class GetParagraphFormatWordHandlerTests : WordHandlerTestBase
         SkipInEvaluationMode(AsposeLibraryType.Words, "Evaluation mode limits font operations");
 
         var doc = CreateEmptyDocument();
-        var builder = new DocumentBuilder(doc);
-        builder.Font.HighlightColor = Color.Yellow;
+        var builder = new DocumentBuilder(doc) { Font = { HighlightColor = Color.Yellow } };
         builder.Write("Highlighted");
 
         var context = CreateContext(doc);

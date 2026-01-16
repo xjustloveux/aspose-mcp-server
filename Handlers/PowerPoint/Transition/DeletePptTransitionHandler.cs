@@ -54,5 +54,5 @@ public class DeletePptTransitionHandler : OperationHandlerBase<Presentation>
     ///     Record for holding delete transition parameters.
     /// </summary>
     /// <param name="SlideIndex">The slide index.</param>
-    private record DeleteTransitionParameters(int SlideIndex);
+    private sealed record DeleteTransitionParameters(int SlideIndex);
 }

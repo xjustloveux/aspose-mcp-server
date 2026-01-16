@@ -49,7 +49,7 @@ public class ShowFormulasExcelViewHandler : OperationHandlerBase<Workbook>
     /// </summary>
     /// <param name="SheetIndex">The index of the worksheet.</param>
     /// <param name="Visible">Whether formulas should be visible.</param>
-    private record ShowFormulasParameters(
+    private sealed record ShowFormulasParameters(
         int SheetIndex,
         bool Visible);
 }

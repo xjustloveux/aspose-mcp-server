@@ -191,7 +191,7 @@ public class GetParagraphsWordHandler : OperationHandlerBase<Document>
     /// <param name="StyleFilter">The style name to filter by.</param>
     /// <param name="IncludeCommentParagraphs">Whether to include paragraphs in comments.</param>
     /// <param name="IncludeTextboxParagraphs">Whether to include paragraphs in textboxes.</param>
-    private record GetParagraphsParameters(
+    private sealed record GetParagraphsParameters(
         int? SectionIndex,
         bool IncludeEmpty,
         string? StyleFilter,

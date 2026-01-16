@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Pdf;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -70,7 +70,7 @@ Usage examples:
 - Extract text: pdf_text(operation='extract', path='doc.pdf', pageIndex=1)
 - Extract with font info: pdf_text(operation='extract', path='doc.pdf', pageIndex=1, includeFontInfo=true)
 - Extract raw text: pdf_text(operation='extract', path='doc.pdf', pageIndex=1, extractionMode='raw')")]
-    public string Execute(
+    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
         [Description("Operation: add, edit, extract")]
         string operation,
         [Description("PDF file path (required if no sessionId)")]
@@ -131,8 +131,10 @@ Usage examples:
 
     /// <summary>
     ///     Builds OperationParameters from method parameters using strategy pattern.
+    ///     Parameters are documented on the Execute method.
     /// </summary>
-    private static OperationParameters BuildParameters(
+    /// <returns>OperationParameters configured with all input values.</returns>
+    private static OperationParameters BuildParameters( // NOSONAR S107
         string operation,
         int pageIndex,
         string? text,

@@ -54,5 +54,5 @@ public class CreatePresentationHandler : OperationHandlerBase<Presentation>
     /// </summary>
     /// <param name="Path">The output file path.</param>
     /// <param name="OutputPath">Alternative output file path.</param>
-    private record CreateParameters(string? Path, string? OutputPath);
+    private sealed record CreateParameters(string? Path, string? OutputPath);
 }

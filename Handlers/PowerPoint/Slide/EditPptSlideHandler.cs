@@ -58,5 +58,5 @@ public class EditPptSlideHandler : OperationHandlerBase<Presentation>
     /// </summary>
     /// <param name="SlideIndex">The slide index (0-based).</param>
     /// <param name="LayoutIndex">The layout index to apply.</param>
-    private record EditPptSlideParameters(int SlideIndex, int? LayoutIndex);
+    private sealed record EditPptSlideParameters(int SlideIndex, int? LayoutIndex);
 }

@@ -39,5 +39,5 @@ public class AddPptSectionHandler : OperationHandlerBase<Presentation>
             parameters.GetRequired<int>("slideIndex"));
     }
 
-    private record AddPptSectionParameters(string Name, int SlideIndex);
+    private sealed record AddPptSectionParameters(string Name, int SlideIndex);
 }

@@ -53,12 +53,10 @@ public class EditCellFormatWordTableHandler : OperationHandlerBase<Document>
 
         foreach (var cell in targetCells)
         {
-            ApplyCellFormatting(cell, p.BackgroundColor, p.Alignment, p.VerticalAlignmentStr,
-                p.PaddingTop, p.PaddingBottom, p.PaddingLeft, p.PaddingRight);
+            ApplyCellFormatting(cell, p);
 
             if (hasTextFormatting)
-                ApplyTextFormatting(cell, p.FontName, p.FontNameAscii, p.FontNameFarEast, p.FontSize, p.Bold, p.Italic,
-                    p.Color);
+                ApplyTextFormatting(cell, p);
         }
 
         var targetDescription =
@@ -127,27 +125,19 @@ public class EditCellFormatWordTableHandler : OperationHandlerBase<Document>
     ///     Applies cell formatting to a cell.
     /// </summary>
     /// <param name="cell">The cell.</param>
-    /// <param name="backgroundColor">Background color.</param>
-    /// <param name="alignment">Text alignment.</param>
-    /// <param name="verticalAlignmentStr">Vertical alignment.</param>
-    /// <param name="paddingTop">Top padding.</param>
-    /// <param name="paddingBottom">Bottom padding.</param>
-    /// <param name="paddingLeft">Left padding.</param>
-    /// <param name="paddingRight">Right padding.</param>
-    private static void ApplyCellFormatting(Cell cell, string? backgroundColor, string? alignment,
-        string? verticalAlignmentStr, double? paddingTop, double? paddingBottom, double? paddingLeft,
-        double? paddingRight)
+    /// <param name="p">The edit cell format parameters.</param>
+    private static void ApplyCellFormatting(Cell cell, EditCellFormatParameters p)
     {
         var cellFormat = cell.CellFormat;
 
-        if (!string.IsNullOrEmpty(backgroundColor))
-            cellFormat.Shading.BackgroundPatternColor = ColorHelper.ParseColor(backgroundColor, true);
+        if (!string.IsNullOrEmpty(p.BackgroundColor))
+            cellFormat.Shading.BackgroundPatternColor = ColorHelper.ParseColor(p.BackgroundColor, true);
 
-        if (!string.IsNullOrEmpty(alignment))
+        if (!string.IsNullOrEmpty(p.Alignment))
         {
             var paragraphs = cell.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
             foreach (var para in paragraphs)
-                para.ParagraphFormat.Alignment = alignment.ToLower() switch
+                para.ParagraphFormat.Alignment = p.Alignment.ToLower() switch
                 {
                     "center" => ParagraphAlignment.Center,
                     "right" => ParagraphAlignment.Right,
@@ -156,49 +146,42 @@ public class EditCellFormatWordTableHandler : OperationHandlerBase<Document>
                 };
         }
 
-        if (!string.IsNullOrEmpty(verticalAlignmentStr))
-            cellFormat.VerticalAlignment = verticalAlignmentStr.ToLower() switch
+        if (!string.IsNullOrEmpty(p.VerticalAlignmentStr))
+            cellFormat.VerticalAlignment = p.VerticalAlignmentStr.ToLower() switch
             {
                 "center" => CellVerticalAlignment.Center,
                 "bottom" => CellVerticalAlignment.Bottom,
                 _ => CellVerticalAlignment.Top
             };
 
-        if (paddingTop.HasValue)
-            cellFormat.TopPadding = paddingTop.Value;
-        if (paddingBottom.HasValue)
-            cellFormat.BottomPadding = paddingBottom.Value;
-        if (paddingLeft.HasValue)
-            cellFormat.LeftPadding = paddingLeft.Value;
-        if (paddingRight.HasValue)
-            cellFormat.RightPadding = paddingRight.Value;
+        if (p.PaddingTop.HasValue)
+            cellFormat.TopPadding = p.PaddingTop.Value;
+        if (p.PaddingBottom.HasValue)
+            cellFormat.BottomPadding = p.PaddingBottom.Value;
+        if (p.PaddingLeft.HasValue)
+            cellFormat.LeftPadding = p.PaddingLeft.Value;
+        if (p.PaddingRight.HasValue)
+            cellFormat.RightPadding = p.PaddingRight.Value;
     }
 
     /// <summary>
     ///     Applies text formatting to runs in a cell.
     /// </summary>
     /// <param name="cell">The cell.</param>
-    /// <param name="fontName">Font name.</param>
-    /// <param name="fontNameAscii">Font name for ASCII.</param>
-    /// <param name="fontNameFarEast">Font name for Far East.</param>
-    /// <param name="fontSize">Font size.</param>
-    /// <param name="bold">Bold setting.</param>
-    /// <param name="italic">Italic setting.</param>
-    /// <param name="color">Text color.</param>
-    private static void ApplyTextFormatting(Cell cell, string? fontName, string? fontNameAscii, string? fontNameFarEast,
-        double? fontSize, bool? bold, bool? italic, string? color)
+    /// <param name="p">The edit cell format parameters.</param>
+    private static void ApplyTextFormatting(Cell cell, EditCellFormatParameters p)
     {
         var runs = cell.GetChildNodes(NodeType.Run, true).Cast<Run>().ToList();
         foreach (var run in runs)
             FontHelper.Word.ApplyFontSettings(
                 run,
-                fontName,
-                fontNameAscii,
-                fontNameFarEast,
-                fontSize,
-                bold,
-                italic,
-                color: color
+                p.FontName,
+                p.FontNameAscii,
+                p.FontNameFarEast,
+                p.FontSize,
+                p.Bold,
+                p.Italic,
+                color: p.Color
             );
     }
 
@@ -214,15 +197,17 @@ public class EditCellFormatWordTableHandler : OperationHandlerBase<Document>
     private static string GetTargetDescription(bool applyToTable, bool applyToRow, bool applyToColumn, int? rowIndex,
         int? columnIndex)
     {
-        return applyToTable
-            ? "entire table"
-            : applyToRow
-                ? $"row {rowIndex}"
-                : applyToColumn
-                    ? $"column {columnIndex}"
-                    : $"cell [{rowIndex}, {columnIndex}]";
+        if (applyToTable) return "entire table";
+        if (applyToRow) return $"row {rowIndex}";
+        if (applyToColumn) return $"column {columnIndex}";
+        return $"cell [{rowIndex}, {columnIndex}]";
     }
 
+    /// <summary>
+    ///     Extracts edit cell format parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted edit cell format parameters.</returns>
     private static EditCellFormatParameters ExtractEditCellFormatParameters(OperationParameters parameters)
     {
         var tableIndex = parameters.GetOptional("tableIndex", 0);
@@ -271,7 +256,31 @@ public class EditCellFormatWordTableHandler : OperationHandlerBase<Document>
             sectionIndex);
     }
 
-    private record EditCellFormatParameters(
+    /// <summary>
+    ///     Record to hold edit cell format parameters.
+    /// </summary>
+    /// <param name="TableIndex">The table index.</param>
+    /// <param name="RowIndex">The row index.</param>
+    /// <param name="ColumnIndex">The column index.</param>
+    /// <param name="ApplyToRow">Whether to apply to entire row.</param>
+    /// <param name="ApplyToColumn">Whether to apply to entire column.</param>
+    /// <param name="ApplyToTable">Whether to apply to entire table.</param>
+    /// <param name="BackgroundColor">The background color.</param>
+    /// <param name="Alignment">The horizontal alignment.</param>
+    /// <param name="VerticalAlignmentStr">The vertical alignment.</param>
+    /// <param name="PaddingTop">The top padding.</param>
+    /// <param name="PaddingBottom">The bottom padding.</param>
+    /// <param name="PaddingLeft">The left padding.</param>
+    /// <param name="PaddingRight">The right padding.</param>
+    /// <param name="FontName">The font name.</param>
+    /// <param name="FontNameAscii">The ASCII font name.</param>
+    /// <param name="FontNameFarEast">The Far East font name.</param>
+    /// <param name="FontSize">The font size.</param>
+    /// <param name="Bold">Whether to apply bold.</param>
+    /// <param name="Italic">Whether to apply italic.</param>
+    /// <param name="Color">The font color.</param>
+    /// <param name="SectionIndex">The section index.</param>
+    private sealed record EditCellFormatParameters(
         int TableIndex,
         int? RowIndex,
         int? ColumnIndex,

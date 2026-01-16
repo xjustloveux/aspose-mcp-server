@@ -626,10 +626,7 @@ public class AuthConfigTests
     [Fact]
     public void AuthConfig_Validate_ApiKeyLocalModeWithoutKeys_ShouldThrow()
     {
-        var config = new AuthConfig();
-        config.ApiKey.Enabled = true;
-        config.ApiKey.Mode = ApiKeyMode.Local;
-        config.ApiKey.Keys = null;
+        var config = new AuthConfig { ApiKey = { Enabled = true, Mode = ApiKeyMode.Local, Keys = null } };
 
         var ex = Assert.Throws<InvalidOperationException>(() => config.Validate());
         Assert.Contains("Local mode requires at least one key", ex.Message);
@@ -638,10 +635,10 @@ public class AuthConfigTests
     [Fact]
     public void AuthConfig_Validate_ApiKeyLocalModeWithEmptyKeys_ShouldThrow()
     {
-        var config = new AuthConfig();
-        config.ApiKey.Enabled = true;
-        config.ApiKey.Mode = ApiKeyMode.Local;
-        config.ApiKey.Keys = new Dictionary<string, string>();
+        var config = new AuthConfig
+        {
+            ApiKey = { Enabled = true, Mode = ApiKeyMode.Local, Keys = new Dictionary<string, string>() }
+        };
 
         var ex = Assert.Throws<InvalidOperationException>(() => config.Validate());
         Assert.Contains("Local mode requires at least one key", ex.Message);
@@ -650,10 +647,10 @@ public class AuthConfigTests
     [Fact]
     public void AuthConfig_Validate_ApiKeyIntrospectionModeWithoutEndpoint_ShouldThrow()
     {
-        var config = new AuthConfig();
-        config.ApiKey.Enabled = true;
-        config.ApiKey.Mode = ApiKeyMode.Introspection;
-        config.ApiKey.IntrospectionEndpoint = null;
+        var config = new AuthConfig
+        {
+            ApiKey = { Enabled = true, Mode = ApiKeyMode.Introspection, IntrospectionEndpoint = null }
+        };
 
         var ex = Assert.Throws<InvalidOperationException>(() => config.Validate());
         Assert.Contains("Introspection mode requires", ex.Message);
@@ -662,10 +659,10 @@ public class AuthConfigTests
     [Fact]
     public void AuthConfig_Validate_ApiKeyCustomModeWithoutEndpoint_ShouldThrow()
     {
-        var config = new AuthConfig();
-        config.ApiKey.Enabled = true;
-        config.ApiKey.Mode = ApiKeyMode.Custom;
-        config.ApiKey.CustomEndpoint = null;
+        var config = new AuthConfig
+        {
+            ApiKey = { Enabled = true, Mode = ApiKeyMode.Custom, CustomEndpoint = null }
+        };
 
         var ex = Assert.Throws<InvalidOperationException>(() => config.Validate());
         Assert.Contains("Custom mode requires", ex.Message);
@@ -674,10 +671,10 @@ public class AuthConfigTests
     [Fact]
     public void AuthConfig_Validate_ApiKeyInvalidTimeout_ShouldThrow()
     {
-        var config = new AuthConfig();
-        config.ApiKey.Enabled = true;
-        config.ApiKey.Mode = ApiKeyMode.Gateway;
-        config.ApiKey.ExternalTimeoutSeconds = 0;
+        var config = new AuthConfig
+        {
+            ApiKey = { Enabled = true, Mode = ApiKeyMode.Gateway, ExternalTimeoutSeconds = 0 }
+        };
 
         var ex = Assert.Throws<InvalidOperationException>(() => config.Validate());
         Assert.Contains("timeout must be between 1 and 300", ex.Message);
@@ -686,10 +683,10 @@ public class AuthConfigTests
     [Fact]
     public void AuthConfig_Validate_ApiKeyTimeoutTooHigh_ShouldThrow()
     {
-        var config = new AuthConfig();
-        config.ApiKey.Enabled = true;
-        config.ApiKey.Mode = ApiKeyMode.Gateway;
-        config.ApiKey.ExternalTimeoutSeconds = 301;
+        var config = new AuthConfig
+        {
+            ApiKey = { Enabled = true, Mode = ApiKeyMode.Gateway, ExternalTimeoutSeconds = 301 }
+        };
 
         var ex = Assert.Throws<InvalidOperationException>(() => config.Validate());
         Assert.Contains("timeout must be between 1 and 300", ex.Message);
@@ -698,12 +695,17 @@ public class AuthConfigTests
     [Fact]
     public void AuthConfig_Validate_ApiKeyCacheTtlInvalid_ShouldThrow()
     {
-        var config = new AuthConfig();
-        config.ApiKey.Enabled = true;
-        config.ApiKey.Mode = ApiKeyMode.Introspection;
-        config.ApiKey.IntrospectionEndpoint = "https://example.com";
-        config.ApiKey.CacheEnabled = true;
-        config.ApiKey.CacheTtlSeconds = 0;
+        var config = new AuthConfig
+        {
+            ApiKey =
+            {
+                Enabled = true,
+                Mode = ApiKeyMode.Introspection,
+                IntrospectionEndpoint = "https://example.com",
+                CacheEnabled = true,
+                CacheTtlSeconds = 0
+            }
+        };
 
         var ex = Assert.Throws<InvalidOperationException>(() => config.Validate());
         Assert.Contains("cache TTL must be at least 1 second", ex.Message);
@@ -712,13 +714,18 @@ public class AuthConfigTests
     [Fact]
     public void AuthConfig_Validate_ApiKeyCacheMaxSizeInvalid_ShouldThrow()
     {
-        var config = new AuthConfig();
-        config.ApiKey.Enabled = true;
-        config.ApiKey.Mode = ApiKeyMode.Custom;
-        config.ApiKey.CustomEndpoint = "https://example.com";
-        config.ApiKey.CacheEnabled = true;
-        config.ApiKey.CacheTtlSeconds = 60;
-        config.ApiKey.CacheMaxSize = 0;
+        var config = new AuthConfig
+        {
+            ApiKey =
+            {
+                Enabled = true,
+                Mode = ApiKeyMode.Custom,
+                CustomEndpoint = "https://example.com",
+                CacheEnabled = true,
+                CacheTtlSeconds = 60,
+                CacheMaxSize = 0
+            }
+        };
 
         var ex = Assert.Throws<InvalidOperationException>(() => config.Validate());
         Assert.Contains("cache max size must be at least 1", ex.Message);
@@ -727,11 +734,10 @@ public class AuthConfigTests
     [Fact]
     public void AuthConfig_Validate_JwtLocalModeWithoutSecretOrPublicKey_ShouldThrow()
     {
-        var config = new AuthConfig();
-        config.Jwt.Enabled = true;
-        config.Jwt.Mode = JwtMode.Local;
-        config.Jwt.Secret = null;
-        config.Jwt.PublicKeyPath = null;
+        var config = new AuthConfig
+        {
+            Jwt = { Enabled = true, Mode = JwtMode.Local, Secret = null, PublicKeyPath = null }
+        };
 
         var ex = Assert.Throws<InvalidOperationException>(() => config.Validate());
         Assert.Contains("Local mode requires", ex.Message);
@@ -740,10 +746,10 @@ public class AuthConfigTests
     [Fact]
     public void AuthConfig_Validate_JwtLocalModeWithNonExistentPublicKey_ShouldThrow()
     {
-        var config = new AuthConfig();
-        config.Jwt.Enabled = true;
-        config.Jwt.Mode = JwtMode.Local;
-        config.Jwt.PublicKeyPath = "/nonexistent/path/to/key.pem";
+        var config = new AuthConfig
+        {
+            Jwt = { Enabled = true, Mode = JwtMode.Local, PublicKeyPath = "/nonexistent/path/to/key.pem" }
+        };
 
         var ex = Assert.Throws<InvalidOperationException>(() => config.Validate());
         Assert.Contains("public key file not found", ex.Message);
@@ -752,10 +758,10 @@ public class AuthConfigTests
     [Fact]
     public void AuthConfig_Validate_JwtIntrospectionModeWithoutEndpoint_ShouldThrow()
     {
-        var config = new AuthConfig();
-        config.Jwt.Enabled = true;
-        config.Jwt.Mode = JwtMode.Introspection;
-        config.Jwt.IntrospectionEndpoint = null;
+        var config = new AuthConfig
+        {
+            Jwt = { Enabled = true, Mode = JwtMode.Introspection, IntrospectionEndpoint = null }
+        };
 
         var ex = Assert.Throws<InvalidOperationException>(() => config.Validate());
         Assert.Contains("Introspection mode requires", ex.Message);
@@ -764,10 +770,10 @@ public class AuthConfigTests
     [Fact]
     public void AuthConfig_Validate_JwtCustomModeWithoutEndpoint_ShouldThrow()
     {
-        var config = new AuthConfig();
-        config.Jwt.Enabled = true;
-        config.Jwt.Mode = JwtMode.Custom;
-        config.Jwt.CustomEndpoint = null;
+        var config = new AuthConfig
+        {
+            Jwt = { Enabled = true, Mode = JwtMode.Custom, CustomEndpoint = null }
+        };
 
         var ex = Assert.Throws<InvalidOperationException>(() => config.Validate());
         Assert.Contains("Custom mode requires", ex.Message);
@@ -776,10 +782,10 @@ public class AuthConfigTests
     [Fact]
     public void AuthConfig_Validate_JwtInvalidTimeout_ShouldThrow()
     {
-        var config = new AuthConfig();
-        config.Jwt.Enabled = true;
-        config.Jwt.Mode = JwtMode.Gateway;
-        config.Jwt.ExternalTimeoutSeconds = -1;
+        var config = new AuthConfig
+        {
+            Jwt = { Enabled = true, Mode = JwtMode.Gateway, ExternalTimeoutSeconds = -1 }
+        };
 
         var ex = Assert.Throws<InvalidOperationException>(() => config.Validate());
         Assert.Contains("timeout must be between 1 and 300", ex.Message);
@@ -788,12 +794,17 @@ public class AuthConfigTests
     [Fact]
     public void AuthConfig_Validate_JwtCacheTtlInvalid_ShouldThrow()
     {
-        var config = new AuthConfig();
-        config.Jwt.Enabled = true;
-        config.Jwt.Mode = JwtMode.Introspection;
-        config.Jwt.IntrospectionEndpoint = "https://example.com";
-        config.Jwt.CacheEnabled = true;
-        config.Jwt.CacheTtlSeconds = 0;
+        var config = new AuthConfig
+        {
+            Jwt =
+            {
+                Enabled = true,
+                Mode = JwtMode.Introspection,
+                IntrospectionEndpoint = "https://example.com",
+                CacheEnabled = true,
+                CacheTtlSeconds = 0
+            }
+        };
 
         var ex = Assert.Throws<InvalidOperationException>(() => config.Validate());
         Assert.Contains("cache TTL must be at least 1 second", ex.Message);
@@ -802,13 +813,18 @@ public class AuthConfigTests
     [Fact]
     public void AuthConfig_Validate_JwtCacheMaxSizeInvalid_ShouldThrow()
     {
-        var config = new AuthConfig();
-        config.Jwt.Enabled = true;
-        config.Jwt.Mode = JwtMode.Custom;
-        config.Jwt.CustomEndpoint = "https://example.com";
-        config.Jwt.CacheEnabled = true;
-        config.Jwt.CacheTtlSeconds = 60;
-        config.Jwt.CacheMaxSize = 0;
+        var config = new AuthConfig
+        {
+            Jwt =
+            {
+                Enabled = true,
+                Mode = JwtMode.Custom,
+                CustomEndpoint = "https://example.com",
+                CacheEnabled = true,
+                CacheTtlSeconds = 60,
+                CacheMaxSize = 0
+            }
+        };
 
         var ex = Assert.Throws<InvalidOperationException>(() => config.Validate());
         Assert.Contains("cache max size must be at least 1", ex.Message);
@@ -817,9 +833,7 @@ public class AuthConfigTests
     [Fact]
     public void AuthConfig_Validate_ValidApiKeyGatewayMode_ShouldNotThrow()
     {
-        var config = new AuthConfig();
-        config.ApiKey.Enabled = true;
-        config.ApiKey.Mode = ApiKeyMode.Gateway;
+        var config = new AuthConfig { ApiKey = { Enabled = true, Mode = ApiKeyMode.Gateway } };
 
         config.Validate();
     }
@@ -827,9 +841,7 @@ public class AuthConfigTests
     [Fact]
     public void AuthConfig_Validate_ValidJwtGatewayMode_ShouldNotThrow()
     {
-        var config = new AuthConfig();
-        config.Jwt.Enabled = true;
-        config.Jwt.Mode = JwtMode.Gateway;
+        var config = new AuthConfig { Jwt = { Enabled = true, Mode = JwtMode.Gateway } };
 
         config.Validate();
     }
@@ -837,10 +849,15 @@ public class AuthConfigTests
     [Fact]
     public void AuthConfig_Validate_ValidApiKeyLocalModeWithKeys_ShouldNotThrow()
     {
-        var config = new AuthConfig();
-        config.ApiKey.Enabled = true;
-        config.ApiKey.Mode = ApiKeyMode.Local;
-        config.ApiKey.Keys = new Dictionary<string, string> { { "key1", "tenant1" } };
+        var config = new AuthConfig
+        {
+            ApiKey =
+            {
+                Enabled = true,
+                Mode = ApiKeyMode.Local,
+                Keys = new Dictionary<string, string> { { "key1", "tenant1" } }
+            }
+        };
 
         config.Validate();
     }
@@ -848,10 +865,10 @@ public class AuthConfigTests
     [Fact]
     public void AuthConfig_Validate_ValidJwtLocalModeWithSecret_ShouldNotThrow()
     {
-        var config = new AuthConfig();
-        config.Jwt.Enabled = true;
-        config.Jwt.Mode = JwtMode.Local;
-        config.Jwt.Secret = "my-secret-key";
+        var config = new AuthConfig
+        {
+            Jwt = { Enabled = true, Mode = JwtMode.Local, Secret = "my-secret-key" }
+        };
 
         config.Validate();
     }

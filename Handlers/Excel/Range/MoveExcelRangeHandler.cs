@@ -71,7 +71,7 @@ public class MoveExcelRangeHandler : OperationHandlerBase<Workbook>
     /// <param name="DestSheetIndex">The destination sheet index (optional).</param>
     /// <param name="SourceRange">The source range to move.</param>
     /// <param name="DestCell">The destination cell.</param>
-    private record MoveExcelRangeParameters(
+    private sealed record MoveExcelRangeParameters(
         int SheetIndex,
         int? SourceSheetIndex,
         int? DestSheetIndex,

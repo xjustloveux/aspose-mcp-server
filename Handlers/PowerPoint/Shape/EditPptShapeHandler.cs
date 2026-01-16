@@ -89,7 +89,7 @@ public class EditPptShapeHandler : OperationHandlerBase<Presentation>
     /// <param name="Rotation">The rotation angle.</param>
     /// <param name="Name">The shape name.</param>
     /// <param name="Text">The shape text.</param>
-    private record EditPptShapeParameters(
+    private sealed record EditPptShapeParameters(
         int SlideIndex,
         int ShapeIndex,
         float? X,

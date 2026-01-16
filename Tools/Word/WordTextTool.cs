@@ -107,7 +107,7 @@ Usage examples:
 - Insert at position: word_text(operation='insert_at_position', path='doc.docx', paragraphIndex=0, runIndex=0, text='Inserted')
 - Delete text: word_text(operation='delete', path='doc.docx', searchText='text to delete') or word_text(operation='delete', path='doc.docx', startParagraphIndex=0, endParagraphIndex=0)
 - Delete range: word_text(operation='delete_range', path='doc.docx', startParagraphIndex=0, startRunIndex=0, endParagraphIndex=0, endRunIndex=5)")]
-    public string Execute(
+    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
         [Description(@"Operation to perform.
 - 'add': Add text at document end (required params: path, text)
 - 'delete': Delete text (required params: path, searchText OR startParagraphIndex+endParagraphIndex)
@@ -261,7 +261,7 @@ Usage examples:
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values for text operations.</returns>
-    private static OperationParameters BuildParameters(
+    private static OperationParameters BuildParameters( // NOSONAR S107
         string? text, string? fontName, string? fontNameAscii, string? fontNameFarEast, double? fontSize,
         bool? bold, bool? italic, string? underline, string? color, bool? strikethrough, bool? superscript,
         bool? subscript, string? find, string? replace, bool useRegex, bool replaceInFields, string? searchText,

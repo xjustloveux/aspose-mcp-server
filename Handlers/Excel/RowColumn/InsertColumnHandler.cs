@@ -44,5 +44,5 @@ public class InsertColumnHandler : OperationHandlerBase<Workbook>
         return new InsertColumnParameters(sheetIndex, columnIndex, count);
     }
 
-    private record InsertColumnParameters(int SheetIndex, int ColumnIndex, int Count);
+    private sealed record InsertColumnParameters(int SheetIndex, int ColumnIndex, int Count);
 }

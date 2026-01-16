@@ -47,5 +47,5 @@ public class HideExcelSheetHandler : OperationHandlerBase<Workbook>
         return new HideExcelSheetParameters(sheetIndex);
     }
 
-    private record HideExcelSheetParameters(int SheetIndex);
+    private sealed record HideExcelSheetParameters(int SheetIndex);
 }

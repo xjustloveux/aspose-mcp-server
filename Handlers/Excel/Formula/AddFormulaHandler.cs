@@ -40,7 +40,7 @@ public class AddFormulaHandler : OperationHandlerBase<Workbook>
             if (cellObj.Type == CellValueType.IsError)
             {
                 var errorValue = cellObj.DisplayStringValue;
-                if (!string.IsNullOrEmpty(errorValue) && errorValue.StartsWith("#"))
+                if (!string.IsNullOrEmpty(errorValue) && errorValue.StartsWith('#'))
                 {
                     warningMessage = $" Warning: {errorValue}";
                     warningMessage += errorValue switch
@@ -79,5 +79,5 @@ public class AddFormulaHandler : OperationHandlerBase<Workbook>
     /// <summary>
     ///     Record to hold add formula parameters.
     /// </summary>
-    private record AddParameters(string Cell, string Formula, int SheetIndex, bool AutoCalculate);
+    private sealed record AddParameters(string Cell, string Formula, int SheetIndex, bool AutoCalculate);
 }

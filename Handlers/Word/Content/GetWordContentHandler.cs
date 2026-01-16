@@ -76,5 +76,5 @@ public class GetWordContentHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="MaxChars">The maximum number of characters to return.</param>
     /// <param name="Offset">The character offset to start from.</param>
-    private record GetContentParameters(int? MaxChars, int Offset);
+    private sealed record GetContentParameters(int? MaxChars, int Offset);
 }

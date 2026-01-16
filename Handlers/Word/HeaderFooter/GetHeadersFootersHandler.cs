@@ -150,5 +150,5 @@ public class GetHeadersFootersHandler : OperationHandlerBase<Document>
     ///     Parameters for the get headers footers operation.
     /// </summary>
     /// <param name="SectionIndex">The section index, or null/-1 for all sections.</param>
-    private record GetHeadersFootersParameters(int? SectionIndex);
+    private sealed record GetHeadersFootersParameters(int? SectionIndex);
 }

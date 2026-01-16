@@ -78,7 +78,7 @@ public class AddVideoHandler : OperationHandlerBase<Presentation>
     /// <param name="Width">The width.</param>
     /// <param name="Height">The height.</param>
     /// <param name="PlayMode">The play mode.</param>
-    private record AddVideoParameters(
+    private sealed record AddVideoParameters(
         int SlideIndex,
         string VideoPath,
         float X,

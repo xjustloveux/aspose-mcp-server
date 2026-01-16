@@ -56,5 +56,5 @@ public class DeletePptImageHandler : OperationHandlerBase<Presentation>
     /// </summary>
     /// <param name="SlideIndex">The slide index.</param>
     /// <param name="ImageIndex">The image index.</param>
-    private record DeleteParameters(int SlideIndex, int ImageIndex);
+    private sealed record DeleteParameters(int SlideIndex, int ImageIndex);
 }

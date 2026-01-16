@@ -72,7 +72,7 @@ public class MergeWordDocumentsHandler : OperationHandlerBase<Document>
             parameters.GetOptional("unlinkHeadersFooters", false));
     }
 
-    private record MergeParameters(
+    private sealed record MergeParameters(
         string[]? InputPaths,
         string? OutputPath,
         string ImportFormatModeStr,

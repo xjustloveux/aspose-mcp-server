@@ -212,7 +212,7 @@ public class AddImageWordHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Record to hold image insertion parameters.
     /// </summary>
-    private record ImageParameters(
+    private sealed record ImageParameters(
         string? ImagePath,
         double? Width,
         double? Height,

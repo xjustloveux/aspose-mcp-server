@@ -96,7 +96,7 @@ public class EditWordHyperlinkHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Record to hold edit hyperlink parameters.
     /// </summary>
-    private record EditHyperlinkParameters(
+    private sealed record EditHyperlinkParameters(
         int HyperlinkIndex,
         string? Url,
         string? SubAddress,

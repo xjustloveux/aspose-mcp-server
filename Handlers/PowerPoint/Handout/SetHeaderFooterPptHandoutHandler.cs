@@ -89,7 +89,7 @@ public class SetHeaderFooterPptHandoutHandler : OperationHandlerBase<Presentatio
     /// <param name="FooterText">The footer text.</param>
     /// <param name="DateText">The date text.</param>
     /// <param name="ShowPageNumber">Whether to show page numbers.</param>
-    private record HeaderFooterParameters(
+    private sealed record HeaderFooterParameters(
         string? HeaderText,
         string? FooterText,
         string? DateText,

@@ -109,7 +109,7 @@ public class SetRunFormatWordHandler : OperationHandlerBase<Document>
     /// <param name="isAutoColor">Whether to use auto color.</param>
     private static void ApplyFontFormatting(Run run, FontParameters fontParams, bool isAutoColor)
     {
-        var underlineStr = fontParams.Underline.HasValue ? fontParams.Underline.Value ? "single" : "none" : null;
+        var underlineStr = GetUnderlineString(fontParams.Underline);
 
         if (isAutoColor)
         {
@@ -150,6 +150,17 @@ public class SetRunFormatWordHandler : OperationHandlerBase<Document>
     }
 
     /// <summary>
+    ///     Converts nullable bool underline value to string representation.
+    /// </summary>
+    /// <param name="underline">The nullable underline value.</param>
+    /// <returns>The underline string: "single", "none", or null.</returns>
+    private static string? GetUnderlineString(bool? underline)
+    {
+        if (!underline.HasValue) return null;
+        return underline.Value ? "single" : "none";
+    }
+
+    /// <summary>
     ///     Record to hold font formatting parameters.
     /// </summary>
     /// <param name="FontName">The font name.</param>
@@ -160,7 +171,7 @@ public class SetRunFormatWordHandler : OperationHandlerBase<Document>
     /// <param name="Italic">Whether to apply italic.</param>
     /// <param name="Underline">Whether to apply underline.</param>
     /// <param name="Color">The font color.</param>
-    private record FontParameters(
+    private sealed record FontParameters(
         string? FontName,
         string? FontNameAscii,
         string? FontNameFarEast,

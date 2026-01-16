@@ -92,7 +92,7 @@ public class SplitWordDocumentHandler : OperationHandlerBase<Document>
             parameters.GetOptional("splitBy", "section"));
     }
 
-    private record SplitParameters(
+    private sealed record SplitParameters(
         string? Path,
         string? SessionId,
         string? OutputDir,

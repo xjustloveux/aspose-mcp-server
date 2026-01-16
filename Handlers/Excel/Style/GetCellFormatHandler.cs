@@ -266,7 +266,7 @@ public class GetCellFormatHandler : OperationHandlerBase<Workbook>
     /// <param name="Cell">The cell reference.</param>
     /// <param name="Range">The range reference.</param>
     /// <param name="Fields">The fields to include in the output.</param>
-    private record GetCellFormatParameters(
+    private sealed record GetCellFormatParameters(
         int SheetIndex,
         string? Cell,
         string? Range,

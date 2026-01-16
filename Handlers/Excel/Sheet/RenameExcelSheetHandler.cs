@@ -51,5 +51,5 @@ public class RenameExcelSheetHandler : OperationHandlerBase<Workbook>
         return new RenameExcelSheetParameters(sheetIndex, newName);
     }
 
-    private record RenameExcelSheetParameters(int SheetIndex, string NewName);
+    private sealed record RenameExcelSheetParameters(int SheetIndex, string NewName);
 }

@@ -57,7 +57,7 @@ public class AutoFitColumnExcelViewHandler : OperationHandlerBase<Workbook>
     /// <param name="ColumnIndex">The index of the column to auto-fit.</param>
     /// <param name="StartRow">The starting row for auto-fit range.</param>
     /// <param name="EndRow">The ending row for auto-fit range.</param>
-    private record AutoFitColumnParameters(
+    private sealed record AutoFitColumnParameters(
         int SheetIndex,
         int ColumnIndex,
         int? StartRow,

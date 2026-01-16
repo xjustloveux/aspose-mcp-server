@@ -90,7 +90,7 @@ public class SetNotesHeaderFooterHandler : OperationHandlerBase<Presentation>
     /// <param name="FooterText">The footer text.</param>
     /// <param name="DateText">The date text.</param>
     /// <param name="ShowPageNumber">Whether to show page numbers.</param>
-    private record NotesHeaderFooterParameters(
+    private sealed record NotesHeaderFooterParameters(
         string? HeaderText,
         string? FooterText,
         string? DateText,

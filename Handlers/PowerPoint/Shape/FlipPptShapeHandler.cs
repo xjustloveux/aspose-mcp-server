@@ -33,12 +33,8 @@ public class FlipPptShapeHandler : OperationHandlerBase<Presentation>
         var shape = PowerPointHelper.GetShape(slide, p.ShapeIndex);
 
         var currentFrame = shape.Frame;
-        var newFlipH = p.FlipHorizontal.HasValue
-            ? p.FlipHorizontal.Value ? NullableBool.True : NullableBool.False
-            : currentFrame.FlipH;
-        var newFlipV = p.FlipVertical.HasValue
-            ? p.FlipVertical.Value ? NullableBool.True : NullableBool.False
-            : currentFrame.FlipV;
+        var newFlipH = GetFlipValue(p.FlipHorizontal, currentFrame.FlipH);
+        var newFlipV = GetFlipValue(p.FlipVertical, currentFrame.FlipV);
 
         shape.Frame = new ShapeFrame(
             currentFrame.X, currentFrame.Y, currentFrame.Width, currentFrame.Height,
@@ -51,6 +47,18 @@ public class FlipPptShapeHandler : OperationHandlerBase<Presentation>
         if (p.FlipVertical.HasValue) flipDesc.Add($"V={p.FlipVertical.Value}");
 
         return Success($"Shape {p.ShapeIndex} flipped ({string.Join(", ", flipDesc)}).");
+    }
+
+    /// <summary>
+    ///     Gets the flip value from nullable bool or uses current value.
+    /// </summary>
+    /// <param name="flipValue">The nullable flip value from parameters.</param>
+    /// <param name="currentValue">The current flip value from the frame.</param>
+    /// <returns>The NullableBool flip value to use.</returns>
+    private static NullableBool GetFlipValue(bool? flipValue, NullableBool currentValue)
+    {
+        if (!flipValue.HasValue) return currentValue;
+        return flipValue.Value ? NullableBool.True : NullableBool.False;
     }
 
     /// <summary>
@@ -74,5 +82,9 @@ public class FlipPptShapeHandler : OperationHandlerBase<Presentation>
     /// <param name="ShapeIndex">The shape index to flip.</param>
     /// <param name="FlipHorizontal">Whether to flip horizontally.</param>
     /// <param name="FlipVertical">Whether to flip vertically.</param>
-    private record FlipPptShapeParameters(int SlideIndex, int ShapeIndex, bool? FlipHorizontal, bool? FlipVertical);
+    private sealed record FlipPptShapeParameters(
+        int SlideIndex,
+        int ShapeIndex,
+        bool? FlipHorizontal,
+        bool? FlipVertical);
 }

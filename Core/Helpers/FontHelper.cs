@@ -2,6 +2,7 @@ using Aspose.Pdf.Text;
 using Aspose.Slides;
 using Aspose.Words;
 using CellsStyle = Aspose.Cells.Style;
+using Font = Aspose.Words.Font;
 
 namespace AsposeMcpServer.Core.Helpers;
 
@@ -45,65 +46,9 @@ public static class FontHelper
             bool? superscript = null,
             bool? subscript = null)
         {
-            if (!string.IsNullOrEmpty(fontNameAscii))
-                run.Font.NameAscii = fontNameAscii;
-
-            if (!string.IsNullOrEmpty(fontNameFarEast))
-                run.Font.NameFarEast = fontNameFarEast;
-
-            if (!string.IsNullOrEmpty(fontName))
-            {
-                if (string.IsNullOrEmpty(fontNameAscii) && string.IsNullOrEmpty(fontNameFarEast))
-                {
-                    run.Font.Name = fontName;
-                }
-                else
-                {
-                    if (string.IsNullOrEmpty(fontNameAscii))
-                        run.Font.NameAscii = fontName;
-                    if (string.IsNullOrEmpty(fontNameFarEast))
-                        run.Font.NameFarEast = fontName;
-                }
-            }
-
-            if (fontSize.HasValue)
-                run.Font.Size = fontSize.Value;
-
-            if (bold.HasValue)
-                run.Font.Bold = bold.Value;
-
-            if (italic.HasValue)
-                run.Font.Italic = italic.Value;
-
-            if (!string.IsNullOrEmpty(underline))
-                run.Font.Underline = ParseUnderline(underline);
-
-            if (!string.IsNullOrEmpty(color))
-                run.Font.Color = ColorHelper.ParseColor(color);
-
-            if (strikethrough.HasValue)
-                run.Font.StrikeThrough = strikethrough.Value;
-
-            if (superscript.HasValue || subscript.HasValue)
-            {
-                if (superscript.HasValue && superscript.Value)
-                {
-                    run.Font.Subscript = false;
-                    run.Font.Superscript = true;
-                }
-                else if (subscript.HasValue && subscript.Value)
-                {
-                    run.Font.Superscript = false;
-                    run.Font.Subscript = true;
-                }
-                else
-                {
-                    if (superscript.HasValue && !superscript.Value)
-                        run.Font.Superscript = false;
-                    if (subscript.HasValue && !subscript.Value)
-                        run.Font.Subscript = false;
-                }
-            }
+            ApplyFontNames(run.Font, fontName, fontNameAscii, fontNameFarEast);
+            ApplyBasicFontSettings(run.Font, fontSize, bold, italic, underline, color, strikethrough);
+            ApplySuperSubscript(run.Font, superscript, subscript);
         }
 
         /// <summary>
@@ -135,64 +80,86 @@ public static class FontHelper
             bool? superscript = null,
             bool? subscript = null)
         {
+            ApplyFontNames(builder.Font, fontName, fontNameAscii, fontNameFarEast);
+            ApplyBasicFontSettings(builder.Font, fontSize, bold, italic, underline, color, strikethrough);
+            ApplySuperSubscript(builder.Font, superscript, subscript);
+        }
+
+        /// <summary>
+        ///     Applies font name settings to a Font object.
+        /// </summary>
+        /// <param name="font">The font object to apply settings to.</param>
+        /// <param name="fontName">The general font name.</param>
+        /// <param name="fontNameAscii">The font name for ASCII characters.</param>
+        /// <param name="fontNameFarEast">The font name for Far East characters.</param>
+        private static void ApplyFontNames(Font font, string? fontName, string? fontNameAscii, string? fontNameFarEast)
+        {
             if (!string.IsNullOrEmpty(fontNameAscii))
-                builder.Font.NameAscii = fontNameAscii;
+                font.NameAscii = fontNameAscii;
 
             if (!string.IsNullOrEmpty(fontNameFarEast))
-                builder.Font.NameFarEast = fontNameFarEast;
+                font.NameFarEast = fontNameFarEast;
 
-            if (!string.IsNullOrEmpty(fontName))
+            if (string.IsNullOrEmpty(fontName)) return;
+
+            var hasAscii = !string.IsNullOrEmpty(fontNameAscii);
+            var hasFarEast = !string.IsNullOrEmpty(fontNameFarEast);
+
+            if (!hasAscii && !hasFarEast)
             {
-                if (string.IsNullOrEmpty(fontNameAscii) && string.IsNullOrEmpty(fontNameFarEast))
-                {
-                    builder.Font.Name = fontName;
-                }
-                else
-                {
-                    if (string.IsNullOrEmpty(fontNameAscii))
-                        builder.Font.NameAscii = fontName;
-                    if (string.IsNullOrEmpty(fontNameFarEast))
-                        builder.Font.NameFarEast = fontName;
-                }
+                font.Name = fontName;
+                return;
             }
 
-            if (fontSize.HasValue)
-                builder.Font.Size = fontSize.Value;
+            if (!hasAscii) font.NameAscii = fontName;
+            if (!hasFarEast) font.NameFarEast = fontName;
+        }
 
-            if (bold.HasValue)
-                builder.Font.Bold = bold.Value;
+        /// <summary>
+        ///     Applies basic font settings (size, bold, italic, underline, color, strikethrough).
+        /// </summary>
+        /// <param name="font">The font object to apply settings to.</param>
+        /// <param name="fontSize">The font size in points.</param>
+        /// <param name="bold">Whether to apply bold.</param>
+        /// <param name="italic">Whether to apply italic.</param>
+        /// <param name="underline">The underline style.</param>
+        /// <param name="color">The font color.</param>
+        /// <param name="strikethrough">Whether to apply strikethrough.</param>
+        private static void ApplyBasicFontSettings(Font font, double? fontSize, bool? bold, bool? italic,
+            string? underline, string? color, bool? strikethrough)
+        {
+            if (fontSize.HasValue) font.Size = fontSize.Value;
+            if (bold.HasValue) font.Bold = bold.Value;
+            if (italic.HasValue) font.Italic = italic.Value;
+            if (!string.IsNullOrEmpty(underline)) font.Underline = ParseUnderline(underline);
+            if (!string.IsNullOrEmpty(color)) font.Color = ColorHelper.ParseColor(color);
+            if (strikethrough.HasValue) font.StrikeThrough = strikethrough.Value;
+        }
 
-            if (italic.HasValue)
-                builder.Font.Italic = italic.Value;
+        /// <summary>
+        ///     Applies superscript and subscript settings to a Font object.
+        /// </summary>
+        /// <param name="font">The font object to apply settings to.</param>
+        /// <param name="superscript">Whether to apply superscript.</param>
+        /// <param name="subscript">Whether to apply subscript.</param>
+        private static void ApplySuperSubscript(Font font, bool? superscript, bool? subscript)
+        {
+            if (!superscript.HasValue && !subscript.HasValue) return;
 
-            if (!string.IsNullOrEmpty(underline))
-                builder.Font.Underline = ParseUnderline(underline);
-
-            if (!string.IsNullOrEmpty(color))
-                builder.Font.Color = ColorHelper.ParseColor(color);
-
-            if (strikethrough.HasValue)
-                builder.Font.StrikeThrough = strikethrough.Value;
-
-            if (superscript.HasValue || subscript.HasValue)
+            if (superscript is true)
             {
-                if (superscript.HasValue && superscript.Value)
-                {
-                    builder.Font.Subscript = false;
-                    builder.Font.Superscript = true;
-                }
-                else if (subscript.HasValue && subscript.Value)
-                {
-                    builder.Font.Superscript = false;
-                    builder.Font.Subscript = true;
-                }
-                else
-                {
-                    if (superscript.HasValue && !superscript.Value)
-                        builder.Font.Superscript = false;
-                    if (subscript.HasValue && !subscript.Value)
-                        builder.Font.Subscript = false;
-                }
+                font.Subscript = false;
+                font.Superscript = true;
+            }
+            else if (subscript is true)
+            {
+                font.Superscript = false;
+                font.Subscript = true;
+            }
+            else
+            {
+                if (superscript is false) font.Superscript = false;
+                if (subscript is false) font.Subscript = false;
             }
         }
 

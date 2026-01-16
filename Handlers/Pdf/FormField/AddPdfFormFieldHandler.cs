@@ -93,7 +93,7 @@ public class AddPdfFormFieldHandler : OperationHandlerBase<Document>
     /// <param name="Width">The width of the field.</param>
     /// <param name="Height">The height of the field.</param>
     /// <param name="DefaultValue">The optional default value.</param>
-    private record AddParameters(
+    private sealed record AddParameters(
         int PageIndex,
         string FieldType,
         string FieldName,

@@ -89,5 +89,5 @@ public class CopyParagraphFormatWordHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="SourceParagraphIndex">The source paragraph index.</param>
     /// <param name="TargetParagraphIndex">The target paragraph index.</param>
-    private record CopyParagraphFormatParameters(int? SourceParagraphIndex, int? TargetParagraphIndex);
+    private sealed record CopyParagraphFormatParameters(int? SourceParagraphIndex, int? TargetParagraphIndex);
 }

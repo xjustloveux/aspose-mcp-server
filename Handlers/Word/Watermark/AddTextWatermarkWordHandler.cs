@@ -58,7 +58,7 @@ public class AddTextWatermarkWordHandler : OperationHandlerBase<Document>
             parameters.GetOptional("layout", "Diagonal"));
     }
 
-    private record AddTextWatermarkParameters(
+    private sealed record AddTextWatermarkParameters(
         string? Text,
         string FontFamily,
         double FontSize,

@@ -62,7 +62,7 @@ public class UpdateExcelChartDataHandler : OperationHandlerBase<Workbook>
     /// <summary>
     ///     Record to hold update data parameters.
     /// </summary>
-    private record UpdateDataParameters(
+    private sealed record UpdateDataParameters(
         int SheetIndex,
         int ChartIndex,
         string? DataRange,

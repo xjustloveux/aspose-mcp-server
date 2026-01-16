@@ -48,5 +48,5 @@ public class CreatePdfFileHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Record to hold create parameters.
     /// </summary>
-    private record CreateParameters(string OutputPath);
+    private sealed record CreateParameters(string OutputPath);
 }

@@ -124,54 +124,129 @@ public class SessionConfig
     private void LoadFromCommandLine(string[] args)
     {
         foreach (var arg in args)
-            if (arg.Equals("--session-enabled", StringComparison.OrdinalIgnoreCase))
-                Enabled = true;
-            else if (arg.Equals("--session-disabled", StringComparison.OrdinalIgnoreCase))
-                Enabled = false;
-            else if (arg.StartsWith("--session-max:", StringComparison.OrdinalIgnoreCase) &&
-                     int.TryParse(arg["--session-max:".Length..], out var max1))
-                MaxSessions = max1;
-            else if (arg.StartsWith("--session-max=", StringComparison.OrdinalIgnoreCase) &&
-                     int.TryParse(arg["--session-max=".Length..], out var max2))
-                MaxSessions = max2;
-            else if (arg.StartsWith("--session-timeout:", StringComparison.OrdinalIgnoreCase) &&
-                     int.TryParse(arg["--session-timeout:".Length..], out var timeout1))
-                IdleTimeoutMinutes = timeout1;
-            else if (arg.StartsWith("--session-timeout=", StringComparison.OrdinalIgnoreCase) &&
-                     int.TryParse(arg["--session-timeout=".Length..], out var timeout2))
-                IdleTimeoutMinutes = timeout2;
-            else if (arg.StartsWith("--session-max-file-size:", StringComparison.OrdinalIgnoreCase) &&
-                     int.TryParse(arg["--session-max-file-size:".Length..], out var size1))
-                MaxFileSizeMb = size1;
-            else if (arg.StartsWith("--session-max-file-size=", StringComparison.OrdinalIgnoreCase) &&
-                     int.TryParse(arg["--session-max-file-size=".Length..], out var size2))
-                MaxFileSizeMb = size2;
-            else if (arg.StartsWith("--session-temp-dir:", StringComparison.OrdinalIgnoreCase))
-                TempDirectory = arg["--session-temp-dir:".Length..];
-            else if (arg.StartsWith("--session-temp-dir=", StringComparison.OrdinalIgnoreCase))
-                TempDirectory = arg["--session-temp-dir=".Length..];
-            else if (arg.StartsWith("--session-temp-retention-hours:", StringComparison.OrdinalIgnoreCase) &&
-                     int.TryParse(arg["--session-temp-retention-hours:".Length..], out var retention1))
-                TempRetentionHours = retention1;
-            else if (arg.StartsWith("--session-temp-retention-hours=", StringComparison.OrdinalIgnoreCase) &&
-                     int.TryParse(arg["--session-temp-retention-hours=".Length..], out var retention2))
-                TempRetentionHours = retention2;
-            else if (arg.StartsWith("--session-on-disconnect:", StringComparison.OrdinalIgnoreCase) &&
-                     Enum.TryParse<DisconnectBehavior>(arg["--session-on-disconnect:".Length..], true,
-                         out var behavior1))
-                OnDisconnect = behavior1;
-            else if (arg.StartsWith("--session-on-disconnect=", StringComparison.OrdinalIgnoreCase) &&
-                     Enum.TryParse<DisconnectBehavior>(arg["--session-on-disconnect=".Length..], true,
-                         out var behavior2))
-                OnDisconnect = behavior2;
-            else if (arg.StartsWith("--session-isolation:", StringComparison.OrdinalIgnoreCase) &&
-                     Enum.TryParse<SessionIsolationMode>(arg["--session-isolation:".Length..], true,
-                         out var isolation1))
-                IsolationMode = isolation1;
-            else if (arg.StartsWith("--session-isolation=", StringComparison.OrdinalIgnoreCase) &&
-                     Enum.TryParse<SessionIsolationMode>(arg["--session-isolation=".Length..], true,
-                         out var isolation2))
-                IsolationMode = isolation2;
+        {
+            ProcessBooleanArgs(arg);
+            ProcessIntArgs(arg);
+            ProcessStringArgs(arg);
+            ProcessEnumArgs(arg);
+        }
+    }
+
+    /// <summary>
+    ///     Processes boolean command line arguments.
+    /// </summary>
+    private void ProcessBooleanArgs(string arg)
+    {
+        if (arg.Equals("--session-enabled", StringComparison.OrdinalIgnoreCase))
+            Enabled = true;
+        else if (arg.Equals("--session-disabled", StringComparison.OrdinalIgnoreCase))
+            Enabled = false;
+    }
+
+    /// <summary>
+    ///     Processes integer command line arguments.
+    /// </summary>
+    private void ProcessIntArgs(string arg)
+    {
+        if (TryParseIntArg(arg, "--session-max", out var maxSessions))
+            MaxSessions = maxSessions;
+        else if (TryParseIntArg(arg, "--session-timeout", out var timeout))
+            IdleTimeoutMinutes = timeout;
+        else if (TryParseIntArg(arg, "--session-max-file-size", out var maxFileSize))
+            MaxFileSizeMb = maxFileSize;
+        else if (TryParseIntArg(arg, "--session-temp-retention-hours", out var retention))
+            TempRetentionHours = retention;
+    }
+
+    /// <summary>
+    ///     Processes string command line arguments.
+    /// </summary>
+    private void ProcessStringArgs(string arg)
+    {
+        if (TryParseStringArg(arg, "--session-temp-dir", out var tempDir))
+            TempDirectory = tempDir;
+    }
+
+    /// <summary>
+    ///     Processes enum command line arguments.
+    /// </summary>
+    private void ProcessEnumArgs(string arg)
+    {
+        if (TryParseEnumArg<DisconnectBehavior>(arg, "--session-on-disconnect", out var behavior))
+            OnDisconnect = behavior;
+        else if (TryParseEnumArg<SessionIsolationMode>(arg, "--session-isolation", out var isolation))
+            IsolationMode = isolation;
+    }
+
+    /// <summary>
+    ///     Tries to parse an integer argument with both : and = separators.
+    /// </summary>
+    /// <param name="arg">The argument string to parse.</param>
+    /// <param name="prefix">The argument prefix to match.</param>
+    /// <param name="value">The parsed integer value.</param>
+    /// <returns>True if parsing succeeded; otherwise, false.</returns>
+    private static bool TryParseIntArg(string arg, string prefix, out int value)
+    {
+        value = 0;
+        var colonPrefix = prefix + ":";
+        var equalsPrefix = prefix + "=";
+
+        if (arg.StartsWith(colonPrefix, StringComparison.OrdinalIgnoreCase))
+            return int.TryParse(arg[colonPrefix.Length..], out value);
+        if (arg.StartsWith(equalsPrefix, StringComparison.OrdinalIgnoreCase))
+            return int.TryParse(arg[equalsPrefix.Length..], out value);
+
+        return false;
+    }
+
+    /// <summary>
+    ///     Tries to parse a string argument with both : and = separators.
+    /// </summary>
+    /// <param name="arg">The argument string to parse.</param>
+    /// <param name="prefix">The argument prefix to match.</param>
+    /// <param name="value">The parsed string value.</param>
+    /// <returns>True if parsing succeeded; otherwise, false.</returns>
+    private static bool TryParseStringArg(string arg, string prefix, out string value)
+    {
+        value = string.Empty;
+        var colonPrefix = prefix + ":";
+        var equalsPrefix = prefix + "=";
+
+        if (arg.StartsWith(colonPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            value = arg[colonPrefix.Length..];
+            return true;
+        }
+
+        if (arg.StartsWith(equalsPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            value = arg[equalsPrefix.Length..];
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    ///     Tries to parse an enum argument with both : and = separators.
+    /// </summary>
+    /// <typeparam name="T">The enum type to parse.</typeparam>
+    /// <param name="arg">The argument string to parse.</param>
+    /// <param name="prefix">The argument prefix to match.</param>
+    /// <param name="value">The parsed enum value.</param>
+    /// <returns>True if parsing succeeded; otherwise, false.</returns>
+    private static bool TryParseEnumArg<T>(string arg, string prefix, out T value) where T : struct, Enum
+    {
+        value = default;
+        var colonPrefix = prefix + ":";
+        var equalsPrefix = prefix + "=";
+
+        if (arg.StartsWith(colonPrefix, StringComparison.OrdinalIgnoreCase))
+            return Enum.TryParse(arg[colonPrefix.Length..], true, out value);
+        if (arg.StartsWith(equalsPrefix, StringComparison.OrdinalIgnoreCase))
+            return Enum.TryParse(arg[equalsPrefix.Length..], true, out value);
+
+        return false;
     }
 
     /// <summary>

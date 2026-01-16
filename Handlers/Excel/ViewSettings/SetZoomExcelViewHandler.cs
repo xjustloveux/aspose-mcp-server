@@ -54,7 +54,7 @@ public class SetZoomExcelViewHandler : OperationHandlerBase<Workbook>
     /// </summary>
     /// <param name="SheetIndex">The index of the worksheet.</param>
     /// <param name="Zoom">The zoom level percentage (10-400).</param>
-    private record SetZoomParameters(
+    private sealed record SetZoomParameters(
         int SheetIndex,
         int Zoom);
 }

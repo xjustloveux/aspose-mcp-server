@@ -70,7 +70,7 @@ public class SetBackgroundExcelViewHandler : OperationHandlerBase<Workbook>
     /// <param name="SheetIndex">The index of the worksheet.</param>
     /// <param name="ImagePath">The path to the background image file.</param>
     /// <param name="RemoveBackground">Whether to remove the background image.</param>
-    private record SetBackgroundParameters(
+    private sealed record SetBackgroundParameters(
         int SheetIndex,
         string? ImagePath,
         bool RemoveBackground);

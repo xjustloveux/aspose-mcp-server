@@ -197,7 +197,7 @@ public class ExecuteMailMergeHandler : OperationHandlerBase<Document>
         return options;
     }
 
-    private record MailMergeParameters(
+    private sealed record MailMergeParameters(
         string OutputPath,
         string? Data,
         string? DataArray,

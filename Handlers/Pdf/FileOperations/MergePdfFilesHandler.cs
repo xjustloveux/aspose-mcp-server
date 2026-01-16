@@ -65,5 +65,5 @@ public class MergePdfFilesHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Record to hold merge parameters.
     /// </summary>
-    private record MergeParameters(string OutputPath, string[] InputPaths);
+    private sealed record MergeParameters(string OutputPath, string[] InputPaths);
 }

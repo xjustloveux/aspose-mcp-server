@@ -80,5 +80,5 @@ public class GetPdfContentHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="PageIndex">The optional 1-based page index.</param>
     /// <param name="MaxPages">The maximum number of pages to extract.</param>
-    private record GetContentParameters(int? PageIndex, int MaxPages);
+    private sealed record GetContentParameters(int? PageIndex, int MaxPages);
 }

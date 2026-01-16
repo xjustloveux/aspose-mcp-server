@@ -48,5 +48,5 @@ public class GroupExcelColumnsHandler : OperationHandlerBase<Workbook>
         return new GroupColumnsParameters(sheetIndex, startColumn, endColumn, isCollapsed);
     }
 
-    private record GroupColumnsParameters(int SheetIndex, int StartColumn, int EndColumn, bool IsCollapsed);
+    private sealed record GroupColumnsParameters(int SheetIndex, int StartColumn, int EndColumn, bool IsCollapsed);
 }

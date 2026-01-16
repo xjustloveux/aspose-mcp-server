@@ -84,7 +84,7 @@ public class AddIndexWordHandler : OperationHandlerBase<Document>
             parameters.GetOptional("headingStyle", "Heading 1"));
     }
 
-    private record AddIndexParameters(
+    private sealed record AddIndexParameters(
         string IndexEntriesJson,
         bool InsertIndexAtEnd,
         string HeadingStyle);

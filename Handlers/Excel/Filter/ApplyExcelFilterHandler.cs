@@ -55,5 +55,5 @@ public class ApplyExcelFilterHandler : OperationHandlerBase<Workbook>
     /// </summary>
     /// <param name="SheetIndex">The worksheet index (0-based).</param>
     /// <param name="Range">The range to apply auto filter to.</param>
-    private record ApplyFilterParameters(int SheetIndex, string Range);
+    private sealed record ApplyFilterParameters(int SheetIndex, string Range);
 }

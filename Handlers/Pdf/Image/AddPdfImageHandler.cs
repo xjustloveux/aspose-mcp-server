@@ -71,7 +71,7 @@ public class AddPdfImageHandler : OperationHandlerBase<Document>
     /// <param name="Y">The Y coordinate.</param>
     /// <param name="Width">The optional width.</param>
     /// <param name="Height">The optional height.</param>
-    private record AddParameters(
+    private sealed record AddParameters(
         string ImagePath,
         int PageIndex,
         double X,

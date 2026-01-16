@@ -69,5 +69,5 @@ public class EditWordEndnoteHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Record to hold edit endnote parameters.
     /// </summary>
-    private record EditEndnoteParameters(string NewText, string? ReferenceMark, int? NoteIndex);
+    private sealed record EditEndnoteParameters(string NewText, string? ReferenceMark, int? NoteIndex);
 }

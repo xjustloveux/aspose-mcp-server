@@ -168,7 +168,7 @@ public class SortDataHandler : OperationHandlerBase<Workbook>
     /// <param name="SortColumn">The column index to sort by (0-based within the range).</param>
     /// <param name="Ascending">Whether to sort in ascending order.</param>
     /// <param name="HasHeader">Whether the range has a header row that should not be sorted.</param>
-    private record SortDataParameters(
+    private sealed record SortDataParameters(
         string? Range,
         int SheetIndex,
         int SortColumn,

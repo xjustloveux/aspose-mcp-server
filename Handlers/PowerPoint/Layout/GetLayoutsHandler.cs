@@ -81,5 +81,5 @@ public class GetLayoutsHandler : OperationHandlerBase<Presentation>
     ///     Record for holding get layouts parameters.
     /// </summary>
     /// <param name="MasterIndex">The optional master index.</param>
-    private record GetLayoutsParameters(int? MasterIndex);
+    private sealed record GetLayoutsParameters(int? MasterIndex);
 }

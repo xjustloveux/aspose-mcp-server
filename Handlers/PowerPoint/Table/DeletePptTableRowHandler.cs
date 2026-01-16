@@ -55,5 +55,5 @@ public class DeletePptTableRowHandler : OperationHandlerBase<Presentation>
     /// <param name="SlideIndex">The slide index.</param>
     /// <param name="ShapeIndex">The shape index.</param>
     /// <param name="RowIndex">The row index to delete.</param>
-    private record DeleteRowParameters(int SlideIndex, int ShapeIndex, int RowIndex);
+    private sealed record DeleteRowParameters(int SlideIndex, int ShapeIndex, int RowIndex);
 }

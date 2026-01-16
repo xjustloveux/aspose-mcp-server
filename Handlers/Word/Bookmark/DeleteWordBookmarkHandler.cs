@@ -78,5 +78,5 @@ public class DeleteWordBookmarkHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="Name">The bookmark name to delete.</param>
     /// <param name="KeepText">Whether to keep the bookmark text content.</param>
-    private record DeleteParameters(string Name, bool KeepText);
+    private sealed record DeleteParameters(string Name, bool KeepText);
 }

@@ -69,7 +69,7 @@ public class AddTableOfContentsWordHandler : OperationHandlerBase<Document>
             parameters.GetOptional("rightAlignPageNumbers", true));
     }
 
-    private record AddTableOfContentsParameters(
+    private sealed record AddTableOfContentsParameters(
         string Position,
         string Title,
         int MaxLevel,

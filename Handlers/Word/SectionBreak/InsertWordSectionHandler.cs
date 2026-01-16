@@ -73,7 +73,7 @@ public class InsertWordSectionHandler : OperationHandlerBase<Document>
             parameters.GetOptional<int?>("sectionIndex"));
     }
 
-    private record InsertWordSectionParameters(
+    private sealed record InsertWordSectionParameters(
         string SectionBreakType,
         int? InsertAtParagraphIndex,
         int? SectionIndex);

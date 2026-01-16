@@ -81,7 +81,7 @@ public class SetArrayFormulaHandler : OperationHandlerBase<Workbook>
     /// <summary>
     ///     Record to hold set array formula parameters.
     /// </summary>
-    private record SetArrayParameters(string Range, string Formula, int SheetIndex, bool AutoCalculate);
+    private sealed record SetArrayParameters(string Range, string Formula, int SheetIndex, bool AutoCalculate);
 
     /// <summary>
     ///     Context for formula operations containing all required data.
@@ -90,7 +90,7 @@ public class SetArrayFormulaHandler : OperationHandlerBase<Workbook>
     /// <param name="RangeObj">The range object.</param>
     /// <param name="CleanFormula">The cleaned formula string.</param>
     /// <param name="Range">The range string representation.</param>
-    private record FormulaContext(
+    private sealed record FormulaContext(
         Worksheet Worksheet,
         Aspose.Cells.Range RangeObj,
         string CleanFormula,
@@ -101,7 +101,7 @@ public class SetArrayFormulaHandler : OperationHandlerBase<Workbook>
     /// </summary>
     /// <param name="IsSuccess">Whether the operation succeeded.</param>
     /// <param name="Message">The result message or error description.</param>
-    private record FormulaResult(bool IsSuccess, string Message);
+    private sealed record FormulaResult(bool IsSuccess, string Message);
 
 #pragma warning disable CS0618
     /// <summary>
@@ -138,7 +138,7 @@ public class SetArrayFormulaHandler : OperationHandlerBase<Workbook>
         try
         {
             ClearRange(ctx.Worksheet, ctx.RangeObj);
-            var formulaToSet = ctx.CleanFormula.StartsWith("=") ? ctx.CleanFormula : "=" + ctx.CleanFormula;
+            var formulaToSet = ctx.CleanFormula.StartsWith('=') ? ctx.CleanFormula : "=" + ctx.CleanFormula;
             var firstCell = ctx.Worksheet.Cells[ctx.RangeObj.FirstRow, ctx.RangeObj.FirstColumn];
             firstCell.SetArrayFormula(formulaToSet, ctx.RangeObj.RowCount, ctx.RangeObj.ColumnCount);
             return new FormulaResult(true, $"Array formula set in range {ctx.Range}.");
@@ -159,7 +159,7 @@ public class SetArrayFormulaHandler : OperationHandlerBase<Workbook>
         try
         {
             ClearRange(ctx.Worksheet, ctx.RangeObj);
-            var formulaWithoutEquals = ctx.CleanFormula.StartsWith("=") ? ctx.CleanFormula[1..] : ctx.CleanFormula;
+            var formulaWithoutEquals = ctx.CleanFormula.StartsWith('=') ? ctx.CleanFormula[1..] : ctx.CleanFormula;
             var firstCell = ctx.Worksheet.Cells[ctx.RangeObj.FirstRow, ctx.RangeObj.FirstColumn];
             firstCell.SetArrayFormula(formulaWithoutEquals, ctx.RangeObj.FirstRow, ctx.RangeObj.FirstColumn, false,
                 false);
@@ -184,7 +184,7 @@ public class SetArrayFormulaHandler : OperationHandlerBase<Workbook>
     {
         try
         {
-            var formulaWithEquals = ctx.CleanFormula.StartsWith("=") ? ctx.CleanFormula : "=" + ctx.CleanFormula;
+            var formulaWithEquals = ctx.CleanFormula.StartsWith('=') ? ctx.CleanFormula : "=" + ctx.CleanFormula;
             for (var i = 0; i < ctx.RangeObj.RowCount; i++)
             for (var j = 0; j < ctx.RangeObj.ColumnCount; j++)
                 ctx.Worksheet.Cells[ctx.RangeObj.FirstRow + i, ctx.RangeObj.FirstColumn + j].Formula =

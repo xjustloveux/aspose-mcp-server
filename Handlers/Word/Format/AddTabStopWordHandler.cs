@@ -61,7 +61,7 @@ public class AddTabStopWordHandler : OperationHandlerBase<Document>
             parameters.GetOptional("tabLeader", "none"));
     }
 
-    private record AddTabStopParameters(
+    private sealed record AddTabStopParameters(
         int ParagraphIndex,
         double TabPosition,
         string TabAlignment,

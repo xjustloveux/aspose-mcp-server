@@ -58,5 +58,5 @@ public class DeletePdfAttachmentHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Record to hold delete attachment parameters.
     /// </summary>
-    private record DeleteParameters(string AttachmentName);
+    private sealed record DeleteParameters(string AttachmentName);
 }

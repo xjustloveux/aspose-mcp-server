@@ -31,9 +31,7 @@ public class EditWordBookmarkHandler : OperationHandlerBase<Document>
         if (bookmark == null)
         {
             var availableBookmarks = bookmarks.Select(b => b.Name).Take(10).ToList();
-            var availableInfo = availableBookmarks.Count > 0
-                ? $"\nAvailable bookmarks: {string.Join(", ", availableBookmarks)}{(bookmarks.Count > 10 ? "..." : "")}"
-                : "\nDocument has no bookmarks";
+            var availableInfo = GetAvailableBookmarksInfo(availableBookmarks, bookmarks.Count);
             throw new ArgumentException(
                 $"Bookmark '{p.Name}' not found{availableInfo}. Use get operation to view all available bookmarks");
         }
@@ -76,6 +74,21 @@ public class EditWordBookmarkHandler : OperationHandlerBase<Document>
     }
 
     /// <summary>
+    ///     Gets the available bookmarks info string.
+    /// </summary>
+    /// <param name="availableBookmarks">The list of available bookmark names.</param>
+    /// <param name="totalCount">The total count of bookmarks.</param>
+    /// <returns>The info string about available bookmarks.</returns>
+    private static string GetAvailableBookmarksInfo(List<string> availableBookmarks, int totalCount)
+    {
+        if (availableBookmarks.Count == 0)
+            return "\nDocument has no bookmarks";
+
+        var suffix = totalCount > 10 ? "..." : "";
+        return $"\nAvailable bookmarks: {string.Join(", ", availableBookmarks)}{suffix}";
+    }
+
+    /// <summary>
     ///     Extracts and validates parameters for the edit bookmark operation.
     /// </summary>
     /// <param name="parameters">The operation parameters.</param>
@@ -101,5 +114,5 @@ public class EditWordBookmarkHandler : OperationHandlerBase<Document>
     /// <param name="Name">The bookmark name to edit.</param>
     /// <param name="NewName">The new name for the bookmark.</param>
     /// <param name="NewText">The new text content for the bookmark.</param>
-    private record EditParameters(string Name, string? NewName, string? NewText);
+    private sealed record EditParameters(string Name, string? NewName, string? NewText);
 }

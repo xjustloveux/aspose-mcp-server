@@ -61,5 +61,5 @@ public class GetExcelFreezePanesHandler : OperationHandlerBase<Workbook>
         return new GetFreezePanesParameters(sheetIndex);
     }
 
-    private record GetFreezePanesParameters(int SheetIndex);
+    private sealed record GetFreezePanesParameters(int SheetIndex);
 }

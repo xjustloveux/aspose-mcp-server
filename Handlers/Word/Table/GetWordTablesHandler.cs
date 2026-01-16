@@ -63,5 +63,5 @@ public class GetWordTablesHandler : OperationHandlerBase<Document>
         return new GetWordTablesParameters(sectionIndex);
     }
 
-    private record GetWordTablesParameters(int? SectionIndex);
+    private sealed record GetWordTablesParameters(int? SectionIndex);
 }

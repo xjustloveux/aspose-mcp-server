@@ -94,5 +94,5 @@ public class GetSheetInfoHandler : OperationHandlerBase<Workbook>
     /// <summary>
     ///     Record to hold get sheet info parameters.
     /// </summary>
-    private record GetSheetInfoParameters(int? TargetSheetIndex);
+    private sealed record GetSheetInfoParameters(int? TargetSheetIndex);
 }

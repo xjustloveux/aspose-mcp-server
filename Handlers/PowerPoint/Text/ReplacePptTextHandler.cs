@@ -59,5 +59,5 @@ public class ReplacePptTextHandler : OperationHandlerBase<Presentation>
     /// <param name="FindText">The text to find.</param>
     /// <param name="ReplaceText">The text to replace with.</param>
     /// <param name="MatchCase">Whether to match case.</param>
-    private record ReplaceParameters(string FindText, string ReplaceText, bool MatchCase);
+    private sealed record ReplaceParameters(string FindText, string ReplaceText, bool MatchCase);
 }

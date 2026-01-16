@@ -68,7 +68,7 @@ public class AddExcelImageHandler : OperationHandlerBase<Workbook>
         return new AddParameters(sheetIndex, imagePath, cell, width, height, keepAspectRatio);
     }
 
-    private record AddParameters(
+    private sealed record AddParameters(
         int SheetIndex,
         string ImagePath,
         string Cell,

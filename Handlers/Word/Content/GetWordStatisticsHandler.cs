@@ -68,5 +68,5 @@ public class GetWordStatisticsHandler : OperationHandlerBase<Document>
     ///     Parameters for the get statistics operation.
     /// </summary>
     /// <param name="IncludeFootnotes">Whether to include footnote count in the statistics.</param>
-    private record GetStatisticsParameters(bool IncludeFootnotes);
+    private sealed record GetStatisticsParameters(bool IncludeFootnotes);
 }

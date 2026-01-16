@@ -82,12 +82,7 @@ public class BatchWriteHandler : OperationHandlerBase<Workbook>
     /// <returns>The number of cells written.</returns>
     private static int WriteFromArray(Worksheet worksheet, JsonArray dataArray)
     {
-        var writeCount = 0;
-        foreach (var item in dataArray)
-            if (WriteArrayItem(worksheet, item))
-                writeCount++;
-
-        return writeCount;
+        return dataArray.Count(item => WriteArrayItem(worksheet, item));
     }
 
     /// <summary>
@@ -138,5 +133,5 @@ public class BatchWriteHandler : OperationHandlerBase<Workbook>
     /// </summary>
     /// <param name="SheetIndex">The worksheet index (0-based).</param>
     /// <param name="Data">The JSON data containing cell-value pairs to write.</param>
-    private record BatchWriteParameters(int SheetIndex, JsonNode? Data);
+    private sealed record BatchWriteParameters(int SheetIndex, JsonNode? Data);
 }

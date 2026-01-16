@@ -79,7 +79,7 @@ public class AddWordEndnoteHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Record to hold add endnote parameters.
     /// </summary>
-    private record AddEndnoteParameters(
+    private sealed record AddEndnoteParameters(
         string Text,
         int? ParagraphIndex,
         int SectionIndex,

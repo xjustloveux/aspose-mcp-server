@@ -79,5 +79,5 @@ public class EditExcelRangeHandler : OperationHandlerBase<Workbook>
     /// <param name="Range">The cell range to edit.</param>
     /// <param name="Data">The data to write as JSON string.</param>
     /// <param name="ClearRange">Whether to clear the range before writing.</param>
-    private record EditExcelRangeParameters(int SheetIndex, string Range, string Data, bool ClearRange);
+    private sealed record EditExcelRangeParameters(int SheetIndex, string Range, string Data, bool ClearRange);
 }

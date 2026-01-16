@@ -103,7 +103,7 @@ public class GetTabStopsWordHandler : OperationHandlerBase<Document>
             throw new InvalidOperationException("Header not found");
 
         var headerParas = header.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
-        var paragraphs = allParagraphs ? headerParas : headerParas.Count > 0 ? [headerParas[0]] : [];
+        var paragraphs = GetParagraphsToProcess(headerParas, allParagraphs);
         return (paragraphs, "Header");
     }
 
@@ -121,8 +121,20 @@ public class GetTabStopsWordHandler : OperationHandlerBase<Document>
             throw new InvalidOperationException("Footer not found");
 
         var footerParas = footer.GetChildNodes(NodeType.Paragraph, true).Cast<WordParagraph>().ToList();
-        var paragraphs = allParagraphs ? footerParas : footerParas.Count > 0 ? [footerParas[0]] : [];
+        var paragraphs = GetParagraphsToProcess(footerParas, allParagraphs);
         return (paragraphs, "Footer");
+    }
+
+    /// <summary>
+    ///     Gets the paragraphs to process based on the allParagraphs flag.
+    /// </summary>
+    /// <param name="allParas">All paragraphs in the section.</param>
+    /// <param name="allParagraphs">Whether to return all paragraphs or just the first.</param>
+    /// <returns>The list of paragraphs to process.</returns>
+    private static List<WordParagraph> GetParagraphsToProcess(List<WordParagraph> allParas, bool allParagraphs)
+    {
+        if (allParagraphs) return allParas;
+        return allParas.Count > 0 ? [allParas[0]] : [];
     }
 
     /// <summary>
@@ -296,7 +308,7 @@ public class GetTabStopsWordHandler : OperationHandlerBase<Document>
     /// <param name="SectionIndex">The section index.</param>
     /// <param name="AllParagraphs">Whether to get all paragraphs.</param>
     /// <param name="IncludeStyle">Whether to include style tab stops.</param>
-    private record GetTabStopsParameters(
+    private sealed record GetTabStopsParameters(
         string Location,
         int ParagraphIndex,
         int SectionIndex,

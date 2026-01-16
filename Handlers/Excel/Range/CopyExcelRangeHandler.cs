@@ -79,7 +79,7 @@ public class CopyExcelRangeHandler : OperationHandlerBase<Workbook>
     /// <param name="SourceRange">The source range to copy.</param>
     /// <param name="DestCell">The destination cell.</param>
     /// <param name="CopyOptions">The copy options.</param>
-    private record CopyExcelRangeParameters(
+    private sealed record CopyExcelRangeParameters(
         int SheetIndex,
         int? SourceSheetIndex,
         int? DestSheetIndex,

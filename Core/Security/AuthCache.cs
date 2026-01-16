@@ -171,7 +171,7 @@ public class AuthCache<TResult> where TResult : class
     /// <summary>
     ///     Internal cache entry structure
     /// </summary>
-    private class CacheEntry
+    private sealed class CacheEntry
     {
         /// <summary>
         ///     The cached authentication result

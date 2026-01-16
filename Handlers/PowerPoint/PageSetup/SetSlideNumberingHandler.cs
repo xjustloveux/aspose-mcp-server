@@ -43,5 +43,5 @@ public class SetSlideNumberingHandler : OperationHandlerBase<Presentation>
             parameters.GetOptional("firstNumber", 1));
     }
 
-    private record SetSlideNumberingParameters(bool ShowSlideNumber, int FirstNumber);
+    private sealed record SetSlideNumberingParameters(bool ShowSlideNumber, int FirstNumber);
 }

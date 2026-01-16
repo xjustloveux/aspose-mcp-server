@@ -80,5 +80,5 @@ public class GetExcelImagesHandler : OperationHandlerBase<Workbook>
         return new GetParameters(sheetIndex);
     }
 
-    private record GetParameters(int SheetIndex);
+    private sealed record GetParameters(int SheetIndex);
 }

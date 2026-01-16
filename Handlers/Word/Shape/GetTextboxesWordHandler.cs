@@ -73,5 +73,5 @@ public class GetTextboxesWordHandler : OperationHandlerBase<Document>
         return new GetTextboxesParameters(includeContent);
     }
 
-    private record GetTextboxesParameters(bool IncludeContent);
+    private sealed record GetTextboxesParameters(bool IncludeContent);
 }

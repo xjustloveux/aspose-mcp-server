@@ -173,7 +173,7 @@ public class EditImageWordHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Record to hold image edit parameters.
     /// </summary>
-    private record ImageEditParameters(
+    private sealed record ImageEditParameters(
         int ImageIndex,
         int SectionIndex,
         double? Width,

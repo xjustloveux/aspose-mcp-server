@@ -66,5 +66,5 @@ public class InsertPptTableColumnHandler : OperationHandlerBase<Presentation>
     /// <param name="ShapeIndex">The shape index.</param>
     /// <param name="ColumnIndex">The optional column index to insert at.</param>
     /// <param name="CopyFromColumn">The optional column to copy from.</param>
-    private record InsertColumnParameters(int SlideIndex, int ShapeIndex, int? ColumnIndex, int? CopyFromColumn);
+    private sealed record InsertColumnParameters(int SlideIndex, int ShapeIndex, int? ColumnIndex, int? CopyFromColumn);
 }

@@ -50,11 +50,11 @@ public class SetAllPrintSettingsHandler : OperationHandlerBase<Workbook>
             changes.Add($"printTitleColumns={setParams.PrintTitleColumns}");
         }
 
-        var pageSetupChanges = ExcelPrintSettingsHelper.ApplyPageSetup(pageSetup, setParams.Orientation,
-            setParams.PaperSize,
-            setParams.LeftMargin, setParams.RightMargin, setParams.TopMargin, setParams.BottomMargin,
-            setParams.Header, setParams.Footer, setParams.FitToPage, setParams.FitToPagesWide,
-            setParams.FitToPagesTall);
+        var pageSetupOptions = new PageSetupOptions(
+            setParams.Orientation, setParams.PaperSize, setParams.LeftMargin, setParams.RightMargin,
+            setParams.TopMargin, setParams.BottomMargin, setParams.Header, setParams.Footer,
+            setParams.FitToPage, setParams.FitToPagesWide, setParams.FitToPagesTall);
+        var pageSetupChanges = ExcelPrintSettingsHelper.ApplyPageSetup(pageSetup, pageSetupOptions);
         changes.AddRange(pageSetupChanges);
 
         MarkModified(context);
@@ -92,7 +92,22 @@ public class SetAllPrintSettingsHandler : OperationHandlerBase<Workbook>
     /// <summary>
     ///     Record to hold set all print settings parameters.
     /// </summary>
-    private record SetAllPrintSettingsParameters(
+    /// <param name="SheetIndex">The sheet index.</param>
+    /// <param name="PrintArea">The print area range.</param>
+    /// <param name="PrintTitleRows">The print title rows.</param>
+    /// <param name="PrintTitleColumns">The print title columns.</param>
+    /// <param name="Orientation">The page orientation.</param>
+    /// <param name="PaperSize">The paper size.</param>
+    /// <param name="LeftMargin">The left margin in inches.</param>
+    /// <param name="RightMargin">The right margin in inches.</param>
+    /// <param name="TopMargin">The top margin in inches.</param>
+    /// <param name="BottomMargin">The bottom margin in inches.</param>
+    /// <param name="Header">The header text.</param>
+    /// <param name="Footer">The footer text.</param>
+    /// <param name="FitToPage">Whether to enable fit to page.</param>
+    /// <param name="FitToPagesWide">The number of pages wide.</param>
+    /// <param name="FitToPagesTall">The number of pages tall.</param>
+    private sealed record SetAllPrintSettingsParameters(
         int SheetIndex,
         string? PrintArea,
         string? PrintTitleRows,

@@ -67,5 +67,11 @@ public class AddSmartArtHandler : OperationHandlerBase<Presentation>
     /// <param name="Y">The Y position.</param>
     /// <param name="Width">The width.</param>
     /// <param name="Height">The height.</param>
-    private record SmartArtParameters(int SlideIndex, string Layout, float X, float Y, float Width, float Height);
+    private sealed record SmartArtParameters(
+        int SlideIndex,
+        string Layout,
+        float X,
+        float Y,
+        float Width,
+        float Height);
 }

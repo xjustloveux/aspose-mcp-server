@@ -52,5 +52,5 @@ public class DeleteExcelChartHandler : OperationHandlerBase<Workbook>
     /// <summary>
     ///     Record to hold delete chart parameters.
     /// </summary>
-    private record DeleteParameters(int SheetIndex, int ChartIndex);
+    private sealed record DeleteParameters(int SheetIndex, int ChartIndex);
 }

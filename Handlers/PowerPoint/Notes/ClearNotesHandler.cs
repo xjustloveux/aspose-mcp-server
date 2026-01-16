@@ -75,5 +75,5 @@ public class ClearNotesHandler : OperationHandlerBase<Presentation>
     ///     Record for holding clear notes parameters.
     /// </summary>
     /// <param name="SlideIndices">The array of slide indices to clear.</param>
-    private record ClearNotesParameters(int[]? SlideIndices);
+    private sealed record ClearNotesParameters(int[]? SlideIndices);
 }

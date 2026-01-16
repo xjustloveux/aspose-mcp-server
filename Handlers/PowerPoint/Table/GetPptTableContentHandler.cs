@@ -71,5 +71,5 @@ public class GetPptTableContentHandler : OperationHandlerBase<Presentation>
     /// </summary>
     /// <param name="SlideIndex">The slide index.</param>
     /// <param name="ShapeIndex">The shape index.</param>
-    private record GetContentParameters(int SlideIndex, int ShapeIndex);
+    private sealed record GetContentParameters(int SlideIndex, int ShapeIndex);
 }

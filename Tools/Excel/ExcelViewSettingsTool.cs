@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Cells;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -96,7 +96,7 @@ Usage examples:
 - Auto fit column: excel_view_settings(operation='auto_fit_column', path='book.xlsx', columnIndex=0)
 - Show formulas: excel_view_settings(operation='show_formulas', path='book.xlsx', visible=true)
 - Set all: excel_view_settings(operation='set_all', path='book.xlsx', zoom=150, showGridlines=true)")]
-    public string Execute(
+    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
         [Description(
             "Operation: set_zoom, set_gridlines, set_headers, set_zero_values, set_column_width, set_row_height, set_background, set_tab_color, set_all, freeze_panes, split_window, auto_fit_column, auto_fit_row, show_formulas")]
         string operation,
@@ -184,8 +184,10 @@ Usage examples:
 
     /// <summary>
     ///     Builds OperationParameters from method parameters using strategy pattern.
+    ///     Parameters are documented on the Execute method.
     /// </summary>
-    private static OperationParameters BuildParameters(
+    /// <returns>OperationParameters configured with all input values.</returns>
+    private static OperationParameters BuildParameters( // NOSONAR S107
         string operation,
         int sheetIndex,
         int zoom,

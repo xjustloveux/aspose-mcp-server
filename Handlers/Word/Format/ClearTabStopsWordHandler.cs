@@ -39,5 +39,5 @@ public class ClearTabStopsWordHandler : OperationHandlerBase<Document>
             parameters.GetOptional("paragraphIndex", 0));
     }
 
-    private record ClearTabStopsParameters(int ParagraphIndex);
+    private sealed record ClearTabStopsParameters(int ParagraphIndex);
 }

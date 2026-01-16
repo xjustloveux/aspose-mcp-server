@@ -71,7 +71,7 @@ public class FreezePanesExcelViewHandler : OperationHandlerBase<Workbook>
     /// <param name="FreezeRow">The row at which to freeze panes.</param>
     /// <param name="FreezeColumn">The column at which to freeze panes.</param>
     /// <param name="Unfreeze">Whether to unfreeze panes.</param>
-    private record FreezePanesParameters(
+    private sealed record FreezePanesParameters(
         int SheetIndex,
         int? FreezeRow,
         int? FreezeColumn,

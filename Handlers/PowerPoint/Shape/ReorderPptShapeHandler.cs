@@ -57,5 +57,5 @@ public class ReorderPptShapeHandler : OperationHandlerBase<Presentation>
     /// <param name="SlideIndex">The slide index (0-based).</param>
     /// <param name="ShapeIndex">The shape index to reorder.</param>
     /// <param name="ToIndex">The target Z-order index.</param>
-    private record ReorderPptShapeParameters(int SlideIndex, int ShapeIndex, int ToIndex);
+    private sealed record ReorderPptShapeParameters(int SlideIndex, int ShapeIndex, int ToIndex);
 }

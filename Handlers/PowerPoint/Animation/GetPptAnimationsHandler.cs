@@ -87,5 +87,5 @@ public class GetPptAnimationsHandler : OperationHandlerBase<Presentation>
     /// </summary>
     /// <param name="SlideIndex">The slide index.</param>
     /// <param name="ShapeIndex">The optional shape index filter.</param>
-    private record GetAnimationsParameters(int SlideIndex, int? ShapeIndex);
+    private sealed record GetAnimationsParameters(int SlideIndex, int? ShapeIndex);
 }

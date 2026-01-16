@@ -55,5 +55,5 @@ public class InsertCellsHandler : OperationHandlerBase<Workbook>
         return new InsertCellsParameters(sheetIndex, range, shiftDirection);
     }
 
-    private record InsertCellsParameters(int SheetIndex, string Range, string ShiftDirection);
+    private sealed record InsertCellsParameters(int SheetIndex, string Range, string ShiftDirection);
 }

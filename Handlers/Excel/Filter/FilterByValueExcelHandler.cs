@@ -79,7 +79,7 @@ public class FilterByValueExcelHandler : OperationHandlerBase<Workbook>
     /// <param name="Criteria">The filter criteria value.</param>
     /// <param name="ColumnIndex">The column index to filter (0-based).</param>
     /// <param name="FilterOperator">The filter operator type.</param>
-    private record FilterByValueParameters(
+    private sealed record FilterByValueParameters(
         int SheetIndex,
         string Range,
         string Criteria,

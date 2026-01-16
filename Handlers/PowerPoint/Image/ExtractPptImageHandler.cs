@@ -43,7 +43,7 @@ public class ExtractPptImageHandler : OperationHandlerBase<Presentation>
     {
         if (string.IsNullOrEmpty(path))
             throw new ArgumentException("path is required for extract operation");
-        SecurityHelper.ValidateFilePath(path, "path", true);
+        SecurityHelper.ValidateFilePath(path, nameof(path), true);
         return path;
     }
 
@@ -148,5 +148,9 @@ public class ExtractPptImageHandler : OperationHandlerBase<Presentation>
     /// <param name="Format">The image format.</param>
     /// <param name="Extension">The file extension.</param>
     /// <param name="SkipDuplicates">Whether to skip duplicate images.</param>
-    private record ExtractionParameters(string OutputDir, ImageFormat Format, string Extension, bool SkipDuplicates);
+    private sealed record ExtractionParameters(
+        string OutputDir,
+        ImageFormat Format,
+        string Extension,
+        bool SkipDuplicates);
 }

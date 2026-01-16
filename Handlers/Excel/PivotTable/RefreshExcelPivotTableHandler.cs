@@ -64,5 +64,5 @@ public class RefreshExcelPivotTableHandler : OperationHandlerBase<Workbook>
         );
     }
 
-    private record RefreshPivotTableParameters(int SheetIndex, int? PivotTableIndex);
+    private sealed record RefreshPivotTableParameters(int SheetIndex, int? PivotTableIndex);
 }

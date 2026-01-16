@@ -79,7 +79,7 @@ public class AddWordFootnoteHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Record to hold add footnote parameters.
     /// </summary>
-    private record AddFootnoteParameters(
+    private sealed record AddFootnoteParameters(
         string Text,
         int? ParagraphIndex,
         int SectionIndex,

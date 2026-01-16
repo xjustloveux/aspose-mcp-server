@@ -52,5 +52,5 @@ public class DeletePptChartHandler : OperationHandlerBase<Presentation>
     /// </summary>
     /// <param name="SlideIndex">The slide index.</param>
     /// <param name="ChartIndex">The chart shape index.</param>
-    private record DeleteChartParameters(int SlideIndex, int ChartIndex);
+    private sealed record DeleteChartParameters(int SlideIndex, int ChartIndex);
 }

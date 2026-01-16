@@ -67,5 +67,5 @@ public class SetExcelCellLockedHandler : OperationHandlerBase<Workbook>
     /// <param name="Range">The cell range to lock/unlock.</param>
     /// <param name="SheetIndex">The sheet index.</param>
     /// <param name="Locked">Whether to lock the cells.</param>
-    private record SetExcelCellLockedParameters(string Range, int SheetIndex, bool Locked);
+    private sealed record SetExcelCellLockedParameters(string Range, int SheetIndex, bool Locked);
 }

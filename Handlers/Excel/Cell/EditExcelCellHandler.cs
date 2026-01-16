@@ -65,5 +65,5 @@ public class EditExcelCellHandler : OperationHandlerBase<Workbook>
     /// <summary>
     ///     Record to hold edit cell parameters.
     /// </summary>
-    private record EditParameters(string Cell, int SheetIndex, string? Value, string? Formula, bool ClearValue);
+    private sealed record EditParameters(string Cell, int SheetIndex, string? Value, string? Formula, bool ClearValue);
 }

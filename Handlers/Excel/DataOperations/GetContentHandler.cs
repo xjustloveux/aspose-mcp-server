@@ -100,5 +100,5 @@ public class GetContentHandler : OperationHandlerBase<Workbook>
     /// </summary>
     /// <param name="SheetIndex">The worksheet index (0-based).</param>
     /// <param name="Range">The cell range to get content from, or null for entire used range.</param>
-    private record GetContentParameters(int SheetIndex, string? Range);
+    private sealed record GetContentParameters(int SheetIndex, string? Range);
 }

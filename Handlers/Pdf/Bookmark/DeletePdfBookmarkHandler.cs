@@ -59,5 +59,5 @@ public class DeletePdfBookmarkHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Record to hold delete bookmark parameters.
     /// </summary>
-    private record DeleteParameters(int BookmarkIndex);
+    private sealed record DeleteParameters(int BookmarkIndex);
 }

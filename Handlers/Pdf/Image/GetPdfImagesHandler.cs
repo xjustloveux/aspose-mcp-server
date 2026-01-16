@@ -166,5 +166,5 @@ public class GetPdfImagesHandler : OperationHandlerBase<Document>
     ///     Parameters for getting images.
     /// </summary>
     /// <param name="PageIndex">The optional 1-based page index.</param>
-    private record GetParameters(int? PageIndex);
+    private sealed record GetParameters(int? PageIndex);
 }

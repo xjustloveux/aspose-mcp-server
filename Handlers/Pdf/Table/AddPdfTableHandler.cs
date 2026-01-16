@@ -96,7 +96,7 @@ public class AddPdfTableHandler : OperationHandlerBase<Document>
     /// <param name="X">The X position.</param>
     /// <param name="Y">The Y position.</param>
     /// <param name="ColumnWidths">The optional column widths.</param>
-    private record AddParameters(
+    private sealed record AddParameters(
         int PageIndex,
         int Rows,
         int Columns,

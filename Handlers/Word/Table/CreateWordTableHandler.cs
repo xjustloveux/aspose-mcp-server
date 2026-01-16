@@ -155,7 +155,11 @@ public class CreateWordTableHandler : OperationHandlerBase<Document>
     {
         return new ColorContext(
             !string.IsNullOrEmpty(p.RowColors) ? WordTableHelper.ParseColorDictionary(JsonNode.Parse(p.RowColors)) : [],
-            !string.IsNullOrEmpty(p.CellColors) ? WordTableHelper.ParseCellColors(JsonNode.Parse(p.CellColors)) : []
+            !string.IsNullOrEmpty(p.CellColors) ? WordTableHelper.ParseCellColors(JsonNode.Parse(p.CellColors)) : [],
+            p.HasHeader,
+            p.HeaderBackgroundColor,
+            p.AlternatingRowColor,
+            p.CellBackgroundColor
         );
     }
 
@@ -176,8 +180,7 @@ public class CreateWordTableHandler : OperationHandlerBase<Document>
         if (builder.CurrentParagraph.ParentNode is Cell cell)
         {
             cell.CellFormat.VerticalAlignment = WordTableHelper.GetVerticalAlignment(p.VerticalAlignment);
-            ApplyCellBackgroundColor(cell, row, col, colorContext.CellColors, colorContext.RowColors, p.HasHeader,
-                p.HeaderBackgroundColor, p.AlternatingRowColor, p.CellBackgroundColor);
+            ApplyCellBackgroundColor(cell, row, col, colorContext);
         }
 
         var cellText = parsedTableData != null && row < parsedTableData.Count && col < parsedTableData[row].Count
@@ -248,27 +251,23 @@ public class CreateWordTableHandler : OperationHandlerBase<Document>
     /// <param name="cell">The cell to apply color to.</param>
     /// <param name="rowIndex">The row index.</param>
     /// <param name="colIndex">The column index.</param>
-    /// <param name="cellColorsList">List of specific cell colors.</param>
-    /// <param name="rowColorsDict">Dictionary of row colors.</param>
-    /// <param name="hasHeader">Whether table has header row.</param>
-    /// <param name="headerBackgroundColor">Header background color.</param>
-    /// <param name="alternatingRowColor">Alternating row color.</param>
-    /// <param name="cellBackgroundColor">Default cell background color.</param>
-    private static void ApplyCellBackgroundColor(Cell cell, int rowIndex, int colIndex,
-        List<(int row, int col, string color)> cellColorsList, Dictionary<int, string> rowColorsDict,
-        bool hasHeader, string? headerBackgroundColor, string? alternatingRowColor, string? cellBackgroundColor)
+    /// <param name="colorContext">The color context containing all color settings.</param>
+    private static void ApplyCellBackgroundColor(Cell cell, int rowIndex, int colIndex, ColorContext colorContext)
     {
-        var specificColor = cellColorsList.FirstOrDefault(c => c.row == rowIndex && c.col == colIndex);
+        var specificColor = colorContext.CellColors.FirstOrDefault(c => c.row == rowIndex && c.col == colIndex);
         if (!string.IsNullOrEmpty(specificColor.color))
             cell.CellFormat.Shading.BackgroundPatternColor = ColorHelper.ParseColor(specificColor.color, true);
-        else if (rowColorsDict.TryGetValue(rowIndex, out var rowColor))
+        else if (colorContext.RowColors.TryGetValue(rowIndex, out var rowColor))
             cell.CellFormat.Shading.BackgroundPatternColor = ColorHelper.ParseColor(rowColor, true);
-        else if (hasHeader && rowIndex == 0 && !string.IsNullOrEmpty(headerBackgroundColor))
-            cell.CellFormat.Shading.BackgroundPatternColor = ColorHelper.ParseColor(headerBackgroundColor, true);
-        else if (!string.IsNullOrEmpty(alternatingRowColor) && rowIndex > 0 && rowIndex % 2 == 0)
-            cell.CellFormat.Shading.BackgroundPatternColor = ColorHelper.ParseColor(alternatingRowColor, true);
-        else if (!string.IsNullOrEmpty(cellBackgroundColor))
-            cell.CellFormat.Shading.BackgroundPatternColor = ColorHelper.ParseColor(cellBackgroundColor, true);
+        else if (colorContext.HasHeader && rowIndex == 0 && !string.IsNullOrEmpty(colorContext.HeaderBackgroundColor))
+            cell.CellFormat.Shading.BackgroundPatternColor =
+                ColorHelper.ParseColor(colorContext.HeaderBackgroundColor, true);
+        else if (!string.IsNullOrEmpty(colorContext.AlternatingRowColor) && rowIndex > 0 && rowIndex % 2 == 0)
+            cell.CellFormat.Shading.BackgroundPatternColor =
+                ColorHelper.ParseColor(colorContext.AlternatingRowColor, true);
+        else if (!string.IsNullOrEmpty(colorContext.CellBackgroundColor))
+            cell.CellFormat.Shading.BackgroundPatternColor =
+                ColorHelper.ParseColor(colorContext.CellBackgroundColor, true);
     }
 
     /// <summary>
@@ -299,7 +298,24 @@ public class CreateWordTableHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Record to hold table creation parameters.
     /// </summary>
-    private record TableCreationParameters(
+    /// <param name="ParagraphIndex">The paragraph index for table insertion.</param>
+    /// <param name="Rows">The number of rows.</param>
+    /// <param name="Columns">The number of columns.</param>
+    /// <param name="TableData">The table data JSON string.</param>
+    /// <param name="TableWidth">The table width.</param>
+    /// <param name="AutoFit">Whether to auto-fit the table.</param>
+    /// <param name="HasHeader">Whether the table has a header row.</param>
+    /// <param name="HeaderBackgroundColor">The header background color.</param>
+    /// <param name="CellBackgroundColor">The cell background color.</param>
+    /// <param name="AlternatingRowColor">The alternating row color.</param>
+    /// <param name="RowColors">The row colors JSON string.</param>
+    /// <param name="CellColors">The cell colors JSON string.</param>
+    /// <param name="MergeCells">The merge cells JSON string.</param>
+    /// <param name="FontName">The font name.</param>
+    /// <param name="FontSize">The font size.</param>
+    /// <param name="VerticalAlignment">The vertical alignment.</param>
+    /// <param name="SectionIndex">The section index.</param>
+    private sealed record TableCreationParameters(
         int ParagraphIndex,
         int? Rows,
         int? Columns,
@@ -321,7 +337,17 @@ public class CreateWordTableHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Record to hold color context for table cells.
     /// </summary>
-    private record ColorContext(
+    /// <param name="RowColors">The row colors dictionary.</param>
+    /// <param name="CellColors">The cell colors list.</param>
+    /// <param name="HasHeader">Whether the table has a header row.</param>
+    /// <param name="HeaderBackgroundColor">The header background color.</param>
+    /// <param name="AlternatingRowColor">The alternating row color.</param>
+    /// <param name="CellBackgroundColor">The default cell background color.</param>
+    private sealed record ColorContext(
         Dictionary<int, string> RowColors,
-        List<(int row, int col, string color)> CellColors);
+        List<(int row, int col, string color)> CellColors,
+        bool HasHeader,
+        string? HeaderBackgroundColor,
+        string? AlternatingRowColor,
+        string? CellBackgroundColor);
 }

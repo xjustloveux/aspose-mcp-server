@@ -80,5 +80,5 @@ public class DeletePdfSignatureHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="SignatureName">The optional signature name.</param>
     /// <param name="SignatureIndex">The optional 0-based signature index.</param>
-    private record DeleteParameters(string? SignatureName, int? SignatureIndex);
+    private sealed record DeleteParameters(string? SignatureName, int? SignatureIndex);
 }

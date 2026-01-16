@@ -72,5 +72,5 @@ public class AddExcelSheetHandler : OperationHandlerBase<Workbook>
         return new AddExcelSheetParameters(sheetName, insertAt);
     }
 
-    private record AddExcelSheetParameters(string SheetName, int? InsertAt);
+    private sealed record AddExcelSheetParameters(string SheetName, int? InsertAt);
 }

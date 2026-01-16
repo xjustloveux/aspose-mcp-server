@@ -70,5 +70,5 @@ public class ClearExcelCellHandler : OperationHandlerBase<Workbook>
     /// <summary>
     ///     Record to hold clear cell parameters.
     /// </summary>
-    private record ClearParameters(string Cell, int SheetIndex, bool ClearContent, bool ClearFormat);
+    private sealed record ClearParameters(string Cell, int SheetIndex, bool ClearContent, bool ClearFormat);
 }

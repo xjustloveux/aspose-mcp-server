@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -64,7 +64,7 @@ Usage examples:
 - Delete bookmark: word_bookmark(operation='delete', path='doc.docx', name='bookmark1')
 - Get bookmarks: word_bookmark(operation='get', path='doc.docx')
 - Goto bookmark: word_bookmark(operation='goto', path='doc.docx', name='bookmark1')")]
-    public string Execute(
+    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
         [Description("Operation: add, edit, delete, get, goto")]
         string operation,
         [Description("Document file path (required if no sessionId)")]
@@ -114,8 +114,10 @@ Usage examples:
 
     /// <summary>
     ///     Builds OperationParameters from method parameters using strategy pattern.
+    ///     Parameters are documented on the Execute method.
     /// </summary>
-    private static OperationParameters BuildParameters(
+    /// <returns>OperationParameters configured with all input values.</returns>
+    private static OperationParameters BuildParameters( // NOSONAR S107
         string operation,
         string? name,
         string? text,

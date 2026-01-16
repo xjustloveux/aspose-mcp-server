@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Slides;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -64,7 +64,7 @@ Important: Presentation must have a handout master (created via PowerPoint: View
 
 Usage examples:
 - Set header/footer: ppt_handout(operation='set_header_footer', path='presentation.pptx', headerText='Header', footerText='Footer')")]
-    public string Execute(
+    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
         [Description("Operation: set_header_footer")]
         string operation,
         [Description("Presentation file path (required if no sessionId)")]
@@ -114,7 +114,7 @@ Usage examples:
     /// <param name="dateText">The date/time text for handout pages.</param>
     /// <param name="showPageNumber">Whether to show page number on handout pages.</param>
     /// <returns>OperationParameters configured for the handout operation.</returns>
-    private static OperationParameters BuildParameters(
+    private static OperationParameters BuildParameters( // NOSONAR S107
         string? headerText,
         string? footerText,
         string? dateText,

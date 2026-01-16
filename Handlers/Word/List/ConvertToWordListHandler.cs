@@ -102,7 +102,7 @@ public class ConvertToWordListHandler : OperationHandlerBase<Document>
             parameters.GetOptional("numberFormat", "arabic"));
     }
 
-    private record ConvertToListParameters(
+    private sealed record ConvertToListParameters(
         int StartIndex,
         int EndIndex,
         string ListType,

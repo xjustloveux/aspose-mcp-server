@@ -78,7 +78,7 @@ public class AddAudioHandler : OperationHandlerBase<Presentation>
     /// <param name="Height">The height.</param>
     /// <param name="HideIcon">Whether to hide the audio icon.</param>
     /// <param name="PlayAcrossSlides">Whether to play across slides.</param>
-    private record AddAudioParameters(
+    private sealed record AddAudioParameters(
         int SlideIndex,
         string AudioPath,
         float X,

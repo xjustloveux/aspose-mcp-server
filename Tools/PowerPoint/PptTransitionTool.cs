@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Slides;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -69,7 +69,7 @@ Usage examples:
 - Set transition: ppt_transition(operation='set', path='presentation.pptx', slideIndex=0, transitionType='Fade', advanceAfterSeconds=1.5)
 - Get transition: ppt_transition(operation='get', path='presentation.pptx', slideIndex=0)
 - Delete transition: ppt_transition(operation='delete', path='presentation.pptx', slideIndex=0)")]
-    public string Execute(
+    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
         [Description(@"Operation to perform.
 - 'set': Set slide transition (required params: path, slideIndex, transitionType)
 - 'get': Get slide transition (required params: path, slideIndex)
@@ -117,8 +117,10 @@ Usage examples:
 
     /// <summary>
     ///     Builds OperationParameters from method parameters using strategy pattern.
+    ///     Parameters are documented on the Execute method.
     /// </summary>
-    private static OperationParameters BuildParameters(
+    /// <returns>OperationParameters configured with all input values.</returns>
+    private static OperationParameters BuildParameters( // NOSONAR S107
         string operation,
         int slideIndex,
         string? transitionType,

@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -86,7 +86,7 @@ Usage examples:
 - Update all fields: word_field(operation='update_all', path='doc.docx')
 - Get fields: word_field(operation='get_fields', path='doc.docx')
 - Add form field: word_field(operation='add_form_field', path='doc.docx', formFieldType='TextInput', fieldName='name')")]
-    public string Execute(
+    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
         [Description(
             "Operation: insert_field, edit_field, delete_field, update_field, update_all, get_fields, get_field_detail, add_form_field, edit_form_field, delete_form_field, get_form_fields")]
         string operation,
@@ -178,8 +178,10 @@ Usage examples:
 
     /// <summary>
     ///     Builds OperationParameters from method parameters using strategy pattern.
+    ///     Parameters are documented on the Execute method.
     /// </summary>
-    private static OperationParameters BuildParameters(
+    /// <returns>OperationParameters configured with all input values.</returns>
+    private static OperationParameters BuildParameters( // NOSONAR S107
         string operation,
         string? fieldType,
         string? fieldArgument,

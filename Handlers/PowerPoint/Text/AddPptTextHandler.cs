@@ -148,7 +148,7 @@ public class AddPptTextHandler : OperationHandlerBase<Presentation>
     /// <param name="Bold">Whether text is bold.</param>
     /// <param name="Italic">Whether text is italic.</param>
     /// <param name="Color">The text color.</param>
-    private record FontParameters(string? FontName, float? FontSize, bool? Bold, bool? Italic, string? Color);
+    private sealed record FontParameters(string? FontName, float? FontSize, bool? Bold, bool? Italic, string? Color);
 
     /// <summary>
     ///     Record for holding shape dimension parameters.
@@ -157,5 +157,5 @@ public class AddPptTextHandler : OperationHandlerBase<Presentation>
     /// <param name="Y">The Y position.</param>
     /// <param name="Width">The width.</param>
     /// <param name="Height">The height.</param>
-    private record ShapeParameters(float X, float Y, float Width, float Height);
+    private sealed record ShapeParameters(float X, float Y, float Width, float Height);
 }

@@ -98,7 +98,7 @@ public class EditPptImageHandler : OperationHandlerBase<Presentation>
     /// <param name="JpegQuality">The optional JPEG quality.</param>
     /// <param name="MaxWidth">The optional maximum width.</param>
     /// <param name="MaxHeight">The optional maximum height.</param>
-    private record EditParameters(
+    private sealed record EditParameters(
         int SlideIndex,
         int ImageIndex,
         string? ImagePath,

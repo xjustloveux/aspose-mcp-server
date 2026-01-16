@@ -68,7 +68,7 @@ public class SetMarginsWordHandler : OperationHandlerBase<Document>
     /// <param name="Right">The right margin in points.</param>
     /// <param name="SectionIndex">The section index to apply margins to.</param>
     /// <param name="SectionIndices">The array of section indices to apply margins to.</param>
-    private record SetMarginsParameters(
+    private sealed record SetMarginsParameters(
         double? Top,
         double? Bottom,
         double? Left,

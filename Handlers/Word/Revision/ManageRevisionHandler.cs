@@ -84,5 +84,5 @@ public class ManageRevisionHandler : OperationHandlerBase<Document>
         return text[..maxLength] + "...";
     }
 
-    private record ManageRevisionParameters(int RevisionIndex, string Action);
+    private sealed record ManageRevisionParameters(int RevisionIndex, string Action);
 }

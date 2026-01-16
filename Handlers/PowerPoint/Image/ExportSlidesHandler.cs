@@ -84,7 +84,7 @@ public class ExportSlidesHandler : OperationHandlerBase<Presentation>
     /// <param name="Format">The image format.</param>
     /// <param name="Extension">The file extension.</param>
     /// <param name="Scale">The scale factor.</param>
-    private record ExportParameters(
+    private sealed record ExportParameters(
         string OutputDir,
         string? SlideIndexes,
         ImageFormat Format,

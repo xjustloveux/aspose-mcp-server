@@ -105,7 +105,7 @@ public class ConvertWordDocumentHandler : OperationHandlerBase<Document>
             parameters.GetOptional<string?>("format"));
     }
 
-    private record ConvertParameters(
+    private sealed record ConvertParameters(
         string? Path,
         string? SessionId,
         string? OutputPath,

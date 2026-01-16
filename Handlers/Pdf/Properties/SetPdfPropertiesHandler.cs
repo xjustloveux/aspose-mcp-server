@@ -108,7 +108,7 @@ public class SetPdfPropertiesHandler : OperationHandlerBase<Document>
     /// <param name="Keywords">The document keywords.</param>
     /// <param name="Creator">The document creator.</param>
     /// <param name="Producer">The document producer.</param>
-    private record SetParameters(
+    private sealed record SetParameters(
         string? Title,
         string? Author,
         string? Subject,

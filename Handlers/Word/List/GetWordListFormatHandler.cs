@@ -88,5 +88,5 @@ public class GetWordListFormatHandler : OperationHandlerBase<Document>
             parameters.GetOptional<int?>("paragraphIndex"));
     }
 
-    private record GetListFormatParameters(int? ParagraphIndex);
+    private sealed record GetListFormatParameters(int? ParagraphIndex);
 }

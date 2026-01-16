@@ -37,70 +37,105 @@ public class SetFooterTextHandler : OperationHandlerBase<Document>
         var sections = p.SectionIndex == -1 ? doc.Sections.Cast<Section>() : [doc.Sections[p.SectionIndex]];
 
         foreach (var section in sections)
-        {
-            var footer = WordHeaderFooterHelper.GetOrCreateHeaderFooter(section, doc, hfType);
-
-            if (p.ClearExisting)
-            {
-                if (p.ClearTextOnly)
-                    WordHeaderFooterHelper.ClearTextOnly(footer);
-                else
-                    footer.RemoveAllChildren();
-            }
-
-            if (hasContent)
-            {
-                if (!p.ClearTextOnly)
-                    footer.RemoveAllChildren();
-
-                var footerPara = new WordParagraph(doc);
-                footer.AppendChild(footerPara);
-
-                if (p.AutoTabStops && (!string.IsNullOrEmpty(p.FooterCenter) || !string.IsNullOrEmpty(p.FooterRight)))
-                {
-                    var pageWidth = section.PageSetup.PageWidth - section.PageSetup.LeftMargin -
-                                    section.PageSetup.RightMargin;
-                    footerPara.ParagraphFormat.TabStops.Clear();
-                    footerPara.ParagraphFormat.TabStops.Add(new TabStop(pageWidth / 2, TabAlignment.Center,
-                        TabLeader.None));
-                    footerPara.ParagraphFormat.TabStops.Add(new TabStop(pageWidth, TabAlignment.Right,
-                        TabLeader.None));
-                }
-
-                var builder = new DocumentBuilder(doc);
-                builder.MoveTo(footerPara);
-
-                if (!string.IsNullOrEmpty(p.FooterLeft))
-                    WordHeaderFooterHelper.InsertTextOrField(builder, p.FooterLeft, p.FontName, p.FontNameAscii,
-                        p.FontNameFarEast, p.FontSize);
-
-                if (!string.IsNullOrEmpty(p.FooterCenter))
-                {
-                    builder.Write("\t");
-                    WordHeaderFooterHelper.InsertTextOrField(builder, p.FooterCenter, p.FontName, p.FontNameAscii,
-                        p.FontNameFarEast, p.FontSize);
-                }
-
-                if (!string.IsNullOrEmpty(p.FooterRight))
-                {
-                    builder.Write("\t");
-                    WordHeaderFooterHelper.InsertTextOrField(builder, p.FooterRight, p.FontName, p.FontNameAscii,
-                        p.FontNameFarEast, p.FontSize);
-                }
-            }
-        }
+            ProcessSection(doc, section, hfType, p);
 
         MarkModified(context);
 
+        return Success(BuildResultMessage("Footer", p.FooterLeft, p.FooterCenter, p.FooterRight, p.SectionIndex));
+    }
+
+    /// <summary>
+    ///     Processes a single section to set footer text.
+    /// </summary>
+    private static void ProcessSection(Document doc, Section section, HeaderFooterType hfType,
+        SetFooterTextParameters p)
+    {
+        var footer = WordHeaderFooterHelper.GetOrCreateHeaderFooter(section, doc, hfType);
+
+        ClearHeaderFooter(footer, p.ClearExisting, p.ClearTextOnly);
+
+        var footerPara = new WordParagraph(doc);
+        footer.AppendChild(footerPara);
+
+        ConfigureTabStops(section, footerPara, p.AutoTabStops, p.FooterCenter, p.FooterRight);
+
+        var builder = new DocumentBuilder(doc);
+        builder.MoveTo(footerPara);
+
+        InsertTextContent(builder, p.FooterLeft, p.FooterCenter, p.FooterRight, p.FontName,
+            p.FontNameAscii, p.FontNameFarEast, p.FontSize);
+    }
+
+    /// <summary>
+    ///     Clears header/footer content based on parameters.
+    /// </summary>
+    private static void ClearHeaderFooter(Aspose.Words.HeaderFooter hf, bool clearExisting, bool clearTextOnly)
+    {
+        if (clearExisting)
+        {
+            if (clearTextOnly)
+                WordHeaderFooterHelper.ClearTextOnly(hf);
+            else
+                hf.RemoveAllChildren();
+        }
+
+        if (!clearTextOnly)
+            hf.RemoveAllChildren();
+    }
+
+    /// <summary>
+    ///     Configures tab stops for center and right alignment.
+    /// </summary>
+    private static void ConfigureTabStops(Section section, WordParagraph para, bool autoTabStops,
+        string? centerText, string? rightText)
+    {
+        if (!autoTabStops || (string.IsNullOrEmpty(centerText) && string.IsNullOrEmpty(rightText)))
+            return;
+
+        var pageWidth = section.PageSetup.PageWidth - section.PageSetup.LeftMargin - section.PageSetup.RightMargin;
+        para.ParagraphFormat.TabStops.Clear();
+        para.ParagraphFormat.TabStops.Add(new TabStop(pageWidth / 2, TabAlignment.Center, TabLeader.None));
+        para.ParagraphFormat.TabStops.Add(new TabStop(pageWidth, TabAlignment.Right, TabLeader.None));
+    }
+
+    /// <summary>
+    ///     Inserts text content with optional tab separators.
+    /// </summary>
+    private static void InsertTextContent(DocumentBuilder builder, string? left, string? center, string? right,
+        string? fontName, string? fontNameAscii, string? fontNameFarEast, double? fontSize)
+    {
+        if (!string.IsNullOrEmpty(left))
+            WordHeaderFooterHelper.InsertTextOrField(builder, left, fontName, fontNameAscii, fontNameFarEast, fontSize);
+
+        if (!string.IsNullOrEmpty(center))
+        {
+            builder.Write("\t");
+            WordHeaderFooterHelper.InsertTextOrField(builder, center, fontName, fontNameAscii, fontNameFarEast,
+                fontSize);
+        }
+
+        if (!string.IsNullOrEmpty(right))
+        {
+            builder.Write("\t");
+            WordHeaderFooterHelper.InsertTextOrField(builder, right, fontName, fontNameAscii, fontNameFarEast,
+                fontSize);
+        }
+    }
+
+    /// <summary>
+    ///     Builds the result message.
+    /// </summary>
+    private static string BuildResultMessage(string type, string? left, string? center, string? right, int sectionIndex)
+    {
         List<string> contentParts = [];
-        if (!string.IsNullOrEmpty(p.FooterLeft)) contentParts.Add("left");
-        if (!string.IsNullOrEmpty(p.FooterCenter)) contentParts.Add("center");
-        if (!string.IsNullOrEmpty(p.FooterRight)) contentParts.Add("right");
+        if (!string.IsNullOrEmpty(left)) contentParts.Add("left");
+        if (!string.IsNullOrEmpty(center)) contentParts.Add("center");
+        if (!string.IsNullOrEmpty(right)) contentParts.Add("right");
 
         var contentDesc = string.Join(", ", contentParts);
-        var sectionsDesc = p.SectionIndex == -1 ? "all sections" : $"section {p.SectionIndex}";
+        var sectionsDesc = sectionIndex == -1 ? "all sections" : $"section {sectionIndex}";
 
-        return Success($"Footer text set successfully ({contentDesc}) in {sectionsDesc}");
+        return $"{type} text set successfully ({contentDesc}) in {sectionsDesc}";
     }
 
     /// <summary>
@@ -141,7 +176,7 @@ public class SetFooterTextHandler : OperationHandlerBase<Document>
     /// <param name="AutoTabStops">Whether to auto-create tab stops.</param>
     /// <param name="ClearExisting">Whether to clear existing content.</param>
     /// <param name="ClearTextOnly">Whether to clear text only.</param>
-    private record SetFooterTextParameters(
+    private sealed record SetFooterTextParameters(
         string? FooterLeft,
         string? FooterCenter,
         string? FooterRight,

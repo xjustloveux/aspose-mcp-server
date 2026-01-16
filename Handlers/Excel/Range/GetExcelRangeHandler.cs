@@ -145,7 +145,7 @@ public class GetExcelRangeHandler : OperationHandlerBase<Workbook>
     /// <param name="IncludeFormulas">Whether to include formulas.</param>
     /// <param name="CalculateFormulas">Whether to calculate formulas before getting data.</param>
     /// <param name="IncludeFormat">Whether to include format information.</param>
-    private record GetExcelRangeParameters(
+    private sealed record GetExcelRangeParameters(
         int SheetIndex,
         string Range,
         bool IncludeFormulas,

@@ -175,7 +175,7 @@ public class InsertParagraphWordHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Record to hold insert parameters.
     /// </summary>
-    private record InsertParameters(
+    private sealed record InsertParameters(
         string? Text,
         int? ParagraphIndex,
         string? StyleName,

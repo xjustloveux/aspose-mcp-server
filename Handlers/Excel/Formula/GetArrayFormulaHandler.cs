@@ -81,5 +81,5 @@ public class GetArrayFormulaHandler : OperationHandlerBase<Workbook>
     /// <summary>
     ///     Record to hold get array formula parameters.
     /// </summary>
-    private record GetArrayParameters(string Cell, int SheetIndex);
+    private sealed record GetArrayParameters(string Cell, int SheetIndex);
 }

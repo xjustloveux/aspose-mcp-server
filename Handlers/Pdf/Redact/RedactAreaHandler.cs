@@ -99,7 +99,7 @@ public class RedactAreaHandler : OperationHandlerBase<Document>
     /// <param name="Height">The height of the redaction area.</param>
     /// <param name="FillColor">The optional fill color for the redaction.</param>
     /// <param name="OverlayText">The optional overlay text.</param>
-    private record AreaParameters(
+    private sealed record AreaParameters(
         int PageIndex,
         double X,
         double Y,

@@ -23,8 +23,7 @@ public class AddTableOfContentsWordHandlerTests : WordHandlerTestBase
     private static Document CreateDocumentWithHeadings()
     {
         var doc = new Document();
-        var builder = new DocumentBuilder(doc);
-        builder.ParagraphFormat.StyleIdentifier = StyleIdentifier.Heading1;
+        var builder = new DocumentBuilder(doc) { ParagraphFormat = { StyleIdentifier = StyleIdentifier.Heading1 } };
         builder.Writeln("Chapter 1");
         builder.ParagraphFormat.StyleIdentifier = StyleIdentifier.Normal;
         builder.Writeln("Content for chapter 1.");

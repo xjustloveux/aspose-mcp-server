@@ -45,5 +45,5 @@ public class SetSlideOrientationHandler : OperationHandlerBase<Presentation>
             parameters.GetRequired<string>("orientation"));
     }
 
-    private record SetSlideOrientationParameters(string Orientation);
+    private sealed record SetSlideOrientationParameters(string Orientation);
 }

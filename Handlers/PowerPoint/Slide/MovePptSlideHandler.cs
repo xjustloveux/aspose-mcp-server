@@ -56,5 +56,5 @@ public class MovePptSlideHandler : OperationHandlerBase<Presentation>
     /// </summary>
     /// <param name="FromIndex">The source slide index (0-based).</param>
     /// <param name="ToIndex">The target slide index (0-based).</param>
-    private record MovePptSlideParameters(int FromIndex, int ToIndex);
+    private sealed record MovePptSlideParameters(int FromIndex, int ToIndex);
 }

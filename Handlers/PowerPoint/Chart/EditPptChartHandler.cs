@@ -75,5 +75,5 @@ public class EditPptChartHandler : OperationHandlerBase<Presentation>
     /// <param name="ChartIndex">The chart shape index.</param>
     /// <param name="Title">The optional chart title.</param>
     /// <param name="ChartType">The optional chart type.</param>
-    private record EditChartParameters(int SlideIndex, int ChartIndex, string? Title, string? ChartType);
+    private sealed record EditChartParameters(int SlideIndex, int ChartIndex, string? Title, string? ChartType);
 }

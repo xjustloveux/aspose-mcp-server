@@ -73,7 +73,7 @@ public class SetFooterLineHandler : OperationHandlerBase<Document>
     /// <param name="LineWidth">The line width.</param>
     /// <param name="SectionIndex">The section index.</param>
     /// <param name="HeaderFooterType">The header/footer type.</param>
-    private record SetFooterLineParameters(
+    private sealed record SetFooterLineParameters(
         string LineStyle,
         double? LineWidth,
         int SectionIndex,

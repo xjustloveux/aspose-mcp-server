@@ -21,7 +21,7 @@ public class GetExcelSheetsHandler : OperationHandlerBase<Workbook>
     /// <returns>JSON string containing information about all worksheets.</returns>
     public override string Execute(OperationContext<Workbook> context, OperationParameters parameters)
     {
-        _ = ExtractGetExcelSheetsParameters(parameters);
+        _ = parameters;
 
         var workbook = context.Document;
 
@@ -58,13 +58,4 @@ public class GetExcelSheetsHandler : OperationHandlerBase<Workbook>
 
         return JsonResult(result);
     }
-
-    private static GetExcelSheetsParameters ExtractGetExcelSheetsParameters(OperationParameters parameters)
-    {
-        _ = parameters;
-
-        return new GetExcelSheetsParameters();
-    }
-
-    private record GetExcelSheetsParameters;
 }

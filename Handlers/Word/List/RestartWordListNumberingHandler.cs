@@ -80,7 +80,7 @@ public class RestartWordListNumberingHandler : OperationHandlerBase<Document>
             parameters.GetOptional("startAt", 1));
     }
 
-    private record RestartNumberingParameters(
+    private sealed record RestartNumberingParameters(
         int ParagraphIndex,
         int StartAt);
 }

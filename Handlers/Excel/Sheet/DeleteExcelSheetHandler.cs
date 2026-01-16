@@ -45,5 +45,5 @@ public class DeleteExcelSheetHandler : OperationHandlerBase<Workbook>
         return new DeleteExcelSheetParameters(sheetIndex);
     }
 
-    private record DeleteExcelSheetParameters(int SheetIndex);
+    private sealed record DeleteExcelSheetParameters(int SheetIndex);
 }

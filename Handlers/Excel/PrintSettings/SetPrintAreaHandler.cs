@@ -59,5 +59,5 @@ public class SetPrintAreaHandler : OperationHandlerBase<Workbook>
     /// <summary>
     ///     Record to hold set print area parameters.
     /// </summary>
-    private record SetPrintAreaParameters(int SheetIndex, string? Range, bool ClearPrintArea);
+    private sealed record SetPrintAreaParameters(int SheetIndex, string? Range, bool ClearPrintArea);
 }

@@ -38,7 +38,7 @@ public class JwtAuthResult
 /// <summary>
 ///     Middleware for JWT authentication supporting multiple verification modes
 /// </summary>
-public class JwtAuthenticationMiddleware : IMiddleware, IDisposable
+public sealed class JwtAuthenticationMiddleware : IMiddleware, IDisposable
 {
     /// <summary>
     ///     Authentication result cache for Introspection/Custom modes
@@ -131,7 +131,6 @@ public class JwtAuthenticationMiddleware : IMiddleware, IDisposable
         _cryptoKey?.Dispose();
         if (_ownsHttpClient)
             _httpClient.Dispose();
-        GC.SuppressFinalize(this);
     }
 
     /// <summary>
@@ -506,7 +505,7 @@ public class JwtAuthenticationMiddleware : IMiddleware, IDisposable
     /// <summary>
     ///     Response from OAuth 2.0 introspection endpoint (RFC 7662)
     /// </summary>
-    private class IntrospectionResponse
+    private sealed class IntrospectionResponse
     {
         public bool Active { get; init; }
         public string? Sub { get; init; }
@@ -519,7 +518,7 @@ public class JwtAuthenticationMiddleware : IMiddleware, IDisposable
     /// <summary>
     ///     Response from custom validation endpoint
     /// </summary>
-    private class CustomValidationResponse
+    private sealed class CustomValidationResponse
     {
         public bool Valid { get; init; }
 

@@ -83,5 +83,5 @@ public class GetFieldDetailWordHandler : OperationHandlerBase<Document>
     ///     Parameters for the get field detail operation.
     /// </summary>
     /// <param name="FieldIndex">The index of the field to get details for.</param>
-    private record GetFieldDetailParameters(int FieldIndex);
+    private sealed record GetFieldDetailParameters(int FieldIndex);
 }

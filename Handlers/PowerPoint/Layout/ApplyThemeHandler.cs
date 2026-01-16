@@ -69,5 +69,5 @@ public class ApplyThemeHandler : OperationHandlerBase<Presentation>
     ///     Record for holding apply theme parameters.
     /// </summary>
     /// <param name="ThemePath">The theme file path.</param>
-    private record ApplyThemeParameters(string ThemePath);
+    private sealed record ApplyThemeParameters(string ThemePath);
 }

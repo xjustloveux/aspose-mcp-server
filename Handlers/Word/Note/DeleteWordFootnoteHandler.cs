@@ -81,5 +81,5 @@ public class DeleteWordFootnoteHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Record to hold delete footnote parameters.
     /// </summary>
-    private record DeleteFootnoteParameters(string? ReferenceMark, int? NoteIndex);
+    private sealed record DeleteFootnoteParameters(string? ReferenceMark, int? NoteIndex);
 }

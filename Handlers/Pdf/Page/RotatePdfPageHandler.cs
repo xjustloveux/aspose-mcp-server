@@ -77,5 +77,5 @@ public class RotatePdfPageHandler : OperationHandlerBase<Document>
     /// <param name="Rotation">The rotation angle (0, 90, 180, or 270 degrees).</param>
     /// <param name="PageIndex">The optional 1-based page index.</param>
     /// <param name="PageIndices">The optional array of 1-based page indices.</param>
-    private record RotateParameters(int Rotation, int? PageIndex, int[]? PageIndices);
+    private sealed record RotateParameters(int Rotation, int? PageIndex, int[]? PageIndices);
 }

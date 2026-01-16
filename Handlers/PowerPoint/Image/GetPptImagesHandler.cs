@@ -62,5 +62,5 @@ public class GetPptImagesHandler : OperationHandlerBase<Presentation>
     ///     Record for holding get images parameters.
     /// </summary>
     /// <param name="SlideIndex">The slide index.</param>
-    private record GetParameters(int SlideIndex);
+    private sealed record GetParameters(int SlideIndex);
 }

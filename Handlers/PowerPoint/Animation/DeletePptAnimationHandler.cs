@@ -76,5 +76,5 @@ public class DeletePptAnimationHandler : OperationHandlerBase<Presentation>
     /// <param name="SlideIndex">The slide index.</param>
     /// <param name="ShapeIndex">The optional shape index.</param>
     /// <param name="AnimationIndex">The optional animation index.</param>
-    private record DeleteAnimationParameters(int SlideIndex, int? ShapeIndex, int? AnimationIndex);
+    private sealed record DeleteAnimationParameters(int SlideIndex, int? ShapeIndex, int? AnimationIndex);
 }

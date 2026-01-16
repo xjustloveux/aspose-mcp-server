@@ -64,7 +64,7 @@ public class EditSheetPropertiesHandler : OperationHandlerBase<Workbook>
     /// <summary>
     ///     Record to hold edit sheet properties parameters.
     /// </summary>
-    private record EditSheetPropertiesParameters(
+    private sealed record EditSheetPropertiesParameters(
         int SheetIndex,
         string? Name,
         bool? IsVisible,

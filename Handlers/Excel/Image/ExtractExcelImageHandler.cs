@@ -72,5 +72,5 @@ public class ExtractExcelImageHandler : OperationHandlerBase<Workbook>
         return new ExtractParameters(sheetIndex, imageIndex.Value, exportPath);
     }
 
-    private record ExtractParameters(int SheetIndex, int ImageIndex, string ExportPath);
+    private sealed record ExtractParameters(int SheetIndex, int ImageIndex, string ExportPath);
 }

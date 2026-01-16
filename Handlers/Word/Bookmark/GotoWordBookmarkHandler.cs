@@ -80,5 +80,5 @@ public class GotoWordBookmarkHandler : OperationHandlerBase<Document>
     ///     Parameters for the goto bookmark operation.
     /// </summary>
     /// <param name="Name">The bookmark name to navigate to.</param>
-    private record GotoParameters(string Name);
+    private sealed record GotoParameters(string Name);
 }

@@ -74,5 +74,5 @@ public class DeletePageWordHandler : OperationHandlerBase<Document>
     ///     Record to hold delete page parameters.
     /// </summary>
     /// <param name="PageIndex">The 0-based page index to delete.</param>
-    private record DeletePageParameters(int? PageIndex);
+    private sealed record DeletePageParameters(int? PageIndex);
 }

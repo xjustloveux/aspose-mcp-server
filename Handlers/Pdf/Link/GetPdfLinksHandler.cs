@@ -132,5 +132,5 @@ public class GetPdfLinksHandler : OperationHandlerBase<Document>
     ///     Parameters for getting links.
     /// </summary>
     /// <param name="PageIndex">The optional 1-based page index.</param>
-    private record GetParameters(int? PageIndex);
+    private sealed record GetParameters(int? PageIndex);
 }

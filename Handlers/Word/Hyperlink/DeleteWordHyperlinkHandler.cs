@@ -74,5 +74,5 @@ public class DeleteWordHyperlinkHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Record to hold delete hyperlink parameters.
     /// </summary>
-    private record DeleteHyperlinkParameters(int HyperlinkIndex, bool KeepText);
+    private sealed record DeleteHyperlinkParameters(int HyperlinkIndex, bool KeepText);
 }

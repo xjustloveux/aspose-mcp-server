@@ -129,7 +129,7 @@ public class RedactTextHandler : OperationHandlerBase<Document>
     /// <param name="CaseSensitive">Whether to search case-sensitively.</param>
     /// <param name="FillColor">The optional fill color for redaction.</param>
     /// <param name="OverlayText">The optional overlay text.</param>
-    private record TextParameters(
+    private sealed record TextParameters(
         string TextToRedact,
         int? PageIndex,
         bool CaseSensitive,

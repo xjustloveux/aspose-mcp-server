@@ -96,7 +96,7 @@ public class SplitPdfFileHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Record to hold split parameters.
     /// </summary>
-    private record SplitParameters(
+    private sealed record SplitParameters(
         string OutputDir,
         int PagesPerFile,
         int? StartPage,

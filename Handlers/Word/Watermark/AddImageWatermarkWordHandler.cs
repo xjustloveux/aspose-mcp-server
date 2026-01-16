@@ -65,7 +65,7 @@ public class AddImageWatermarkWordHandler : OperationHandlerBase<Document>
             parameters.GetOptional("isWashout", true));
     }
 
-    private record AddImageWatermarkParameters(
+    private sealed record AddImageWatermarkParameters(
         string? ImagePath,
         double Scale,
         bool IsWashout);

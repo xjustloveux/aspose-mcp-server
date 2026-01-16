@@ -132,7 +132,7 @@ public class FindReplaceHandler : OperationHandlerBase<Workbook>
     /// <param name="SheetIndex">The worksheet index (0-based), or null to search all sheets.</param>
     /// <param name="MatchCase">Whether to match case.</param>
     /// <param name="MatchEntireCell">Whether to match entire cell content.</param>
-    private record FindReplaceParameters(
+    private sealed record FindReplaceParameters(
         string? FindText,
         string? ReplaceText,
         int? SheetIndex,

@@ -44,5 +44,5 @@ public class DeleteColumnHandler : OperationHandlerBase<Workbook>
         return new DeleteColumnParameters(sheetIndex, columnIndex, count);
     }
 
-    private record DeleteColumnParameters(int SheetIndex, int ColumnIndex, int Count);
+    private sealed record DeleteColumnParameters(int SheetIndex, int ColumnIndex, int Count);
 }

@@ -82,7 +82,7 @@ public class SetExcelChartPropertiesHandler : OperationHandlerBase<Workbook>
     /// <summary>
     ///     Record to hold set properties parameters.
     /// </summary>
-    private record SetPropertiesParameters(
+    private sealed record SetPropertiesParameters(
         int SheetIndex,
         int ChartIndex,
         string? Title,

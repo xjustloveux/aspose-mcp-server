@@ -73,7 +73,7 @@ public class SetTextBoxBorderWordHandler : OperationHandlerBase<Document>
             borderStyle);
     }
 
-    private record SetTextBoxBorderParameters(
+    private sealed record SetTextBoxBorderParameters(
         int TextboxIndex,
         bool BorderVisible,
         string? BorderColor,

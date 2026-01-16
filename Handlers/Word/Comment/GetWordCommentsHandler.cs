@@ -21,7 +21,7 @@ public class GetWordCommentsHandler : OperationHandlerBase<Document>
     /// <returns>A JSON string containing all comments with their replies.</returns>
     public override string Execute(OperationContext<Document> context, OperationParameters parameters)
     {
-        _ = ExtractGetParameters(parameters);
+        _ = parameters;
 
         var doc = context.Document;
         var topLevelComments = WordCommentHelper.GetTopLevelComments(doc);
@@ -41,20 +41,4 @@ public class GetWordCommentsHandler : OperationHandlerBase<Document>
         return JsonSerializer.Serialize(new { count = topLevelComments.Count, comments = commentList },
             JsonDefaults.Indented);
     }
-
-    /// <summary>
-    ///     Extracts parameters for the get comments operation.
-    /// </summary>
-    /// <param name="parameters">The operation parameters.</param>
-    /// <returns>The extracted parameters.</returns>
-    private static GetParameters ExtractGetParameters(OperationParameters parameters)
-    {
-        _ = parameters;
-        return new GetParameters();
-    }
-
-    /// <summary>
-    ///     Parameters for the get comments operation.
-    /// </summary>
-    private record GetParameters;
 }

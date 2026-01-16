@@ -97,5 +97,5 @@ public class GetPdfAnnotationsHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Record to hold get annotations parameters.
     /// </summary>
-    private record GetParameters(int PageIndex);
+    private sealed record GetParameters(int PageIndex);
 }

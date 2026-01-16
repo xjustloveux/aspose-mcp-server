@@ -52,15 +52,24 @@ public class GetExcelFilterStatusHandler : OperationHandlerBase<Workbook>
             worksheetName = worksheet.Name,
             isFilterEnabled,
             hasActiveFilters,
-            status = isFilterEnabled
-                ? hasActiveFilters
-                    ? "Auto filter enabled with active criteria"
-                    : "Auto filter enabled (no criteria)"
-                : "Auto filter not enabled",
+            status = GetFilterStatusDescription(isFilterEnabled, hasActiveFilters),
             filterRange = isFilterEnabled ? rangeProperty : null,
             filterColumnsCount = filterColumns?.Count ?? 0,
             filterColumns = filterColumnsList
         });
+    }
+
+    /// <summary>
+    ///     Gets the filter status description string.
+    /// </summary>
+    /// <param name="isFilterEnabled">Whether the filter is enabled.</param>
+    /// <param name="hasActiveFilters">Whether there are active filter criteria.</param>
+    /// <returns>The status description string.</returns>
+    private static string GetFilterStatusDescription(bool isFilterEnabled, bool hasActiveFilters)
+    {
+        if (!isFilterEnabled) return "Auto filter not enabled";
+        if (hasActiveFilters) return "Auto filter enabled with active criteria";
+        return "Auto filter enabled (no criteria)";
     }
 
     /// <summary>
@@ -79,5 +88,5 @@ public class GetExcelFilterStatusHandler : OperationHandlerBase<Workbook>
     ///     Parameters for get filter status operation.
     /// </summary>
     /// <param name="SheetIndex">The worksheet index (0-based).</param>
-    private record FilterStatusParameters(int SheetIndex);
+    private sealed record FilterStatusParameters(int SheetIndex);
 }

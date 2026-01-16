@@ -51,5 +51,5 @@ public class DeleteExcelPivotTableHandler : OperationHandlerBase<Workbook>
         );
     }
 
-    private record DeletePivotTableParameters(int SheetIndex, int PivotTableIndex);
+    private sealed record DeletePivotTableParameters(int SheetIndex, int PivotTableIndex);
 }

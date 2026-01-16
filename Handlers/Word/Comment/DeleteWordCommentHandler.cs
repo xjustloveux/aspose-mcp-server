@@ -79,5 +79,5 @@ public class DeleteWordCommentHandler : OperationHandlerBase<Document>
     ///     Parameters for the delete comment operation.
     /// </summary>
     /// <param name="CommentIndex">The index of the comment to delete.</param>
-    private record DeleteParameters(int CommentIndex);
+    private sealed record DeleteParameters(int CommentIndex);
 }

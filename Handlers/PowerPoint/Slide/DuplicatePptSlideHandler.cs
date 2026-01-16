@@ -64,5 +64,5 @@ public class DuplicatePptSlideHandler : OperationHandlerBase<Presentation>
     /// </summary>
     /// <param name="SlideIndex">The slide index (0-based).</param>
     /// <param name="InsertAt">The target index to insert the duplicate.</param>
-    private record DuplicatePptSlideParameters(int SlideIndex, int? InsertAt);
+    private sealed record DuplicatePptSlideParameters(int SlideIndex, int? InsertAt);
 }

@@ -84,5 +84,5 @@ public class GetPptHyperlinksHandler : OperationHandlerBase<Presentation>
     ///     Record for holding get hyperlinks parameters.
     /// </summary>
     /// <param name="SlideIndex">The optional slide index.</param>
-    private record GetParameters(int? SlideIndex);
+    private sealed record GetParameters(int? SlideIndex);
 }

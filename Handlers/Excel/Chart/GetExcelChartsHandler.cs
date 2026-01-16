@@ -103,5 +103,5 @@ public class GetExcelChartsHandler : OperationHandlerBase<Workbook>
     /// <summary>
     ///     Record to hold get charts parameters.
     /// </summary>
-    private record GetParameters(int SheetIndex);
+    private sealed record GetParameters(int SheetIndex);
 }

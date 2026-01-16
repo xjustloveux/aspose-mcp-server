@@ -70,5 +70,5 @@ public class DeleteImageWordHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Record to hold delete image parameters.
     /// </summary>
-    private record DeleteImageParameters(int ImageIndex, int SectionIndex);
+    private sealed record DeleteImageParameters(int ImageIndex, int SectionIndex);
 }

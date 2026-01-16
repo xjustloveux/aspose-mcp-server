@@ -73,5 +73,5 @@ public class AlignPptShapesHandler : OperationHandlerBase<Presentation>
             parameters.GetOptional("alignToSlide", false));
     }
 
-    private record AlignPptShapesParameters(int SlideIndex, int[] ShapeIndices, string Align, bool AlignToSlide);
+    private sealed record AlignPptShapesParameters(int SlideIndex, int[] ShapeIndices, string Align, bool AlignToSlide);
 }

@@ -80,5 +80,5 @@ public class GetPptShapeDetailsHandler : OperationHandlerBase<Presentation>
     /// </summary>
     /// <param name="SlideIndex">The slide index (0-based).</param>
     /// <param name="ShapeIndex">The shape index.</param>
-    private record GetPptShapeDetailsParameters(int SlideIndex, int ShapeIndex);
+    private sealed record GetPptShapeDetailsParameters(int SlideIndex, int ShapeIndex);
 }

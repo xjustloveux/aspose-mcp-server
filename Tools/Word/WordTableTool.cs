@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Helpers;
@@ -135,7 +135,7 @@ Notes:
 - Use sectionIndex to specify which section's tables to work with
 - cellColors format: [[row, col, '#RRGGBB'], ...] for per-cell coloring
 - mergeCells format: [{startRow, endRow, startCol, endCol}, ...] for batch merging")]
-    public string Execute(
+    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
         [Description(
             "Operation: create, delete, get, insert_row, delete_row, insert_column, delete_column, merge_cells, split_cell, edit_cell_format, move_table, copy_table, get_structure, set_border, set_column_width, set_row_height")]
         string operation,
@@ -307,7 +307,7 @@ Notes:
     ///     Parameters are documented on the Execute method.
     /// </summary>
     /// <returns>OperationParameters configured with all input values for table operations.</returns>
-    private static OperationParameters BuildParameters(
+    private static OperationParameters BuildParameters( // NOSONAR S107
         int tableIndex, int? sectionIndex, int? rows, int? columns, int paragraphIndex, string? tableData,
         double? tableWidth, bool autoFit, bool hasHeader, string? headerBackgroundColor, string? cellBackgroundColor,
         string? alternatingRowColor, string? rowColors, string? cellColors, string? mergeCells, string? fontName,

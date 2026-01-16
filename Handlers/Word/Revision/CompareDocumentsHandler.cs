@@ -63,7 +63,7 @@ public class CompareDocumentsHandler : OperationHandlerBase<Document>
             parameters.GetOptional("ignoreComments", false));
     }
 
-    private record CompareDocumentsParameters(
+    private sealed record CompareDocumentsParameters(
         string OriginalPath,
         string RevisedPath,
         string OutputPath,

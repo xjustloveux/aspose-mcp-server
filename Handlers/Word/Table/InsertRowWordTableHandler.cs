@@ -151,7 +151,7 @@ public class InsertRowWordTableHandler : OperationHandlerBase<Document>
         return new InsertRowParameters(rowIndex.Value, tableIndex, rowData, insertBefore, sectionIndex);
     }
 
-    private record InsertRowParameters(
+    private sealed record InsertRowParameters(
         int RowIndex,
         int TableIndex,
         string? RowData,

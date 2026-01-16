@@ -74,5 +74,5 @@ public class UnprotectExcelHandler : OperationHandlerBase<Workbook>
     /// </summary>
     /// <param name="SheetIndex">The sheet index (optional).</param>
     /// <param name="Password">The password for unprotection (optional).</param>
-    private record UnprotectExcelParameters(int? SheetIndex, string? Password);
+    private sealed record UnprotectExcelParameters(int? SheetIndex, string? Password);
 }

@@ -104,5 +104,5 @@ public class GetFormulasHandler : OperationHandlerBase<Workbook>
     /// <summary>
     ///     Record to hold get formulas parameters.
     /// </summary>
-    private record GetFormulasParameters(int SheetIndex, string? Range);
+    private sealed record GetFormulasParameters(int SheetIndex, string? Range);
 }

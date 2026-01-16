@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -82,7 +82,7 @@ Notes:
 - TOC is automatically updated after insertion using UpdateFields()
 - For cross-references, targetName must be an existing bookmark name in the document
 - If headingStyle doesn't exist in the document, it falls back to 'Heading 1'")]
-    public string Execute(
+    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
         [Description("Operation: add_table_of_contents, update_table_of_contents, add_index, add_cross_reference")]
         string operation,
         [Description("Document file path (required if no sessionId)")]
@@ -152,8 +152,10 @@ Notes:
 
     /// <summary>
     ///     Builds OperationParameters from method parameters using strategy pattern.
+    ///     Parameters are documented on the Execute method.
     /// </summary>
-    private static OperationParameters BuildParameters(
+    /// <returns>OperationParameters configured with all input values.</returns>
+    private static OperationParameters BuildParameters( // NOSONAR S107
         string operation,
         string position,
         string title,

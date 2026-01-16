@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Pdf;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -60,7 +60,7 @@ Usage examples:
 - Delete bookmark: pdf_bookmark(operation='delete', path='doc.pdf', bookmarkIndex=0)
 - Edit bookmark: pdf_bookmark(operation='edit', path='doc.pdf', bookmarkIndex=0, title='Updated Title', pageIndex=2)
 - Get bookmarks: pdf_bookmark(operation='get', path='doc.pdf')")]
-    public string Execute(
+    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
         [Description(@"Operation to perform.
 - 'add': Add a bookmark (required params: path, title, pageIndex)
 - 'delete': Delete a bookmark (required params: path, bookmarkIndex)
@@ -109,8 +109,10 @@ Usage examples:
 
     /// <summary>
     ///     Builds OperationParameters from method parameters using strategy pattern.
+    ///     Parameters are documented on the Execute method.
     /// </summary>
-    private static OperationParameters BuildParameters(
+    /// <returns>OperationParameters configured with all input values.</returns>
+    private static OperationParameters BuildParameters( // NOSONAR S107
         string operation,
         string? title,
         int? pageIndex,

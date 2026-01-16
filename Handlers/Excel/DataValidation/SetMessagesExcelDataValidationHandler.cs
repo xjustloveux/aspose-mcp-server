@@ -64,7 +64,7 @@ public class SetMessagesExcelDataValidationHandler : OperationHandlerBase<Workbo
             parameters.GetOptional<string?>("inputMessage"));
     }
 
-    private record SetMessagesParameters(
+    private sealed record SetMessagesParameters(
         int SheetIndex,
         int ValidationIndex,
         string? ErrorMessage,

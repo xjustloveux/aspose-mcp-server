@@ -53,5 +53,5 @@ public class DeletePptSlideHandler : OperationHandlerBase<Presentation>
     ///     Parameters for delete slide operation.
     /// </summary>
     /// <param name="SlideIndex">The slide index (0-based).</param>
-    private record DeletePptSlideParameters(int SlideIndex);
+    private sealed record DeletePptSlideParameters(int SlideIndex);
 }

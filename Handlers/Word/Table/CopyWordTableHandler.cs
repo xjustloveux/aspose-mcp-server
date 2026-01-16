@@ -112,7 +112,7 @@ public class CopyWordTableHandler : OperationHandlerBase<Document>
         return new CopyWordTableParameters(tableIndex, targetParagraphIndex, sourceSectionIndex, targetSectionIndex);
     }
 
-    private record CopyWordTableParameters(
+    private sealed record CopyWordTableParameters(
         int TableIndex,
         int TargetParagraphIndex,
         int? SourceSectionIndex,

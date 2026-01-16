@@ -34,8 +34,8 @@ public class ManageSmartArtNodesHandler : OperationHandlerBase<Presentation>
         var targetPathArray = ParseTargetPath(nodeParams.TargetPath);
         var (targetNode, rootIndex) = NavigateToTargetNode(smartArt, targetPathArray);
 
-        var result = ExecuteAction(nodeParams.Action, smartArt, targetNode, targetPathArray, nodeParams.TargetPath,
-            nodeParams.Text, nodeParams.Position, rootIndex);
+        var actionContext = new ActionContext(smartArt, targetNode, targetPathArray, rootIndex);
+        var result = ExecuteAction(nodeParams, actionContext);
 
         MarkModified(context);
         return result;
@@ -47,6 +47,7 @@ public class ManageSmartArtNodesHandler : OperationHandlerBase<Presentation>
     /// <param name="slide">The slide containing the shape.</param>
     /// <param name="shapeIndex">The index of the shape.</param>
     /// <returns>The SmartArt shape.</returns>
+    /// <exception cref="ArgumentException">Thrown when the shape at the specified index is not a SmartArt shape.</exception>
     private static ISmartArt GetSmartArtShape(ISlide slide, int shapeIndex)
     {
         PowerPointHelper.ValidateShapeIndex(shapeIndex, slide);
@@ -62,6 +63,7 @@ public class ManageSmartArtNodesHandler : OperationHandlerBase<Presentation>
     /// </summary>
     /// <param name="targetPathJson">The JSON string containing the target path.</param>
     /// <returns>The parsed target path array.</returns>
+    /// <exception cref="ArgumentException">Thrown when the target path is empty or null.</exception>
     private static int[] ParseTargetPath(string targetPathJson)
     {
         var targetPathArray = JsonSerializer.Deserialize<int[]>(targetPathJson);
@@ -76,6 +78,7 @@ public class ManageSmartArtNodesHandler : OperationHandlerBase<Presentation>
     /// <param name="smartArt">The SmartArt shape.</param>
     /// <param name="targetPath">The target path array.</param>
     /// <returns>A tuple containing the target node and root index.</returns>
+    /// <exception cref="ArgumentException">Thrown when a path index is out of range.</exception>
     private static (ISmartArtNode targetNode, int rootIndex) NavigateToTargetNode(ISmartArt smartArt, int[] targetPath)
     {
         var rootIndex = targetPath[0];
@@ -99,24 +102,20 @@ public class ManageSmartArtNodesHandler : OperationHandlerBase<Presentation>
     /// <summary>
     ///     Executes the specified action on the SmartArt node.
     /// </summary>
-    /// <param name="action">The action to execute (add, edit, delete).</param>
-    /// <param name="smartArt">The SmartArt shape.</param>
-    /// <param name="targetNode">The target node.</param>
-    /// <param name="targetPath">The target path array.</param>
-    /// <param name="targetPathJson">The target path JSON string.</param>
-    /// <param name="text">The text for the node.</param>
-    /// <param name="position">The position for the new node.</param>
-    /// <param name="rootIndex">The root index.</param>
+    /// <param name="nodeParams">The node parameters containing action, text, and position.</param>
+    /// <param name="actionContext">The action context containing resolved SmartArt elements.</param>
     /// <returns>The result message.</returns>
-    private static string ExecuteAction(string action, ISmartArt smartArt, ISmartArtNode targetNode, int[] targetPath,
-        string targetPathJson, string? text, int? position, int rootIndex)
+    /// <exception cref="ArgumentException">Thrown when the action is unknown or invalid.</exception>
+    private static string ExecuteAction(NodeParameters nodeParams, ActionContext actionContext)
     {
-        return action.ToLower() switch
+        return nodeParams.Action.ToLower() switch
         {
-            "add" => ExecuteAddAction(targetNode, text, position, targetPathJson),
-            "edit" => ExecuteEditAction(targetNode, text, targetPathJson),
-            "delete" => ExecuteDeleteAction(smartArt, targetNode, targetPath, targetPathJson, rootIndex),
-            _ => throw new ArgumentException($"Unknown action: {action}. Valid actions: add, edit, delete")
+            "add" => ExecuteAddAction(actionContext.TargetNode, nodeParams.Text, nodeParams.Position,
+                nodeParams.TargetPath),
+            "edit" => ExecuteEditAction(actionContext.TargetNode, nodeParams.Text, nodeParams.TargetPath),
+            "delete" => ExecuteDeleteAction(actionContext.SmartArt, actionContext.TargetNode,
+                actionContext.TargetPathArray, nodeParams.TargetPath, actionContext.RootIndex),
+            _ => throw new ArgumentException($"Unknown action: {nodeParams.Action}. Valid actions: add, edit, delete")
         };
     }
 
@@ -128,6 +127,7 @@ public class ManageSmartArtNodesHandler : OperationHandlerBase<Presentation>
     /// <param name="position">The optional position for the new node.</param>
     /// <param name="targetPathJson">The target path JSON string for the result message.</param>
     /// <returns>The result message.</returns>
+    /// <exception cref="ArgumentException">Thrown when text is missing or position is out of range.</exception>
     private static string ExecuteAddAction(ISmartArtNode targetNode, string? text, int? position, string targetPathJson)
     {
         if (string.IsNullOrEmpty(text))
@@ -163,6 +163,7 @@ public class ManageSmartArtNodesHandler : OperationHandlerBase<Presentation>
     /// <param name="text">The new text for the node.</param>
     /// <param name="targetPathJson">The target path JSON string for the result message.</param>
     /// <returns>The result message.</returns>
+    /// <exception cref="ArgumentException">Thrown when text is missing.</exception>
     private static string ExecuteEditAction(ISmartArtNode targetNode, string? text, string targetPathJson)
     {
         if (string.IsNullOrEmpty(text))
@@ -228,11 +229,24 @@ public class ManageSmartArtNodesHandler : OperationHandlerBase<Presentation>
     /// <param name="TargetPath">The target path JSON string.</param>
     /// <param name="Text">The optional text for the node.</param>
     /// <param name="Position">The optional position for new nodes.</param>
-    private record NodeParameters(
+    private sealed record NodeParameters(
         int SlideIndex,
         int ShapeIndex,
         string Action,
         string TargetPath,
         string? Text,
         int? Position);
+
+    /// <summary>
+    ///     Record for holding resolved SmartArt action context.
+    /// </summary>
+    /// <param name="SmartArt">The SmartArt shape.</param>
+    /// <param name="TargetNode">The target node.</param>
+    /// <param name="TargetPathArray">The parsed target path array.</param>
+    /// <param name="RootIndex">The root node index.</param>
+    private sealed record ActionContext(
+        ISmartArt SmartArt,
+        ISmartArtNode TargetNode,
+        int[] TargetPathArray,
+        int RootIndex);
 }

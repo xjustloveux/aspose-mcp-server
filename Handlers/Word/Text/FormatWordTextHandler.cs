@@ -41,14 +41,18 @@ public class FormatWordTextHandler : OperationHandlerBase<Document>
         var runs = EnsureRuns(doc, para, p.ParagraphIndex);
         var runsToFormat = GetRunsToFormat(runs, p.RunIndex);
 
-        var changes = ApplyFormatting(runsToFormat, p.FontName, p.FontNameAscii, p.FontNameFarEast,
-            p.FontSize, p.Bold, p.Italic, p.Underline, p.Color, p.Strikethrough, p.Superscript, p.Subscript);
+        var changes = ApplyFormatting(runsToFormat, p);
 
         MarkModified(context);
 
         return BuildResultMessage(p.ParagraphIndex, p.RunIndex, runsToFormat.Count, changes);
     }
 
+    /// <summary>
+    ///     Extracts format parameters from operation parameters.
+    /// </summary>
+    /// <param name="parameters">The operation parameters.</param>
+    /// <returns>The extracted format parameters.</returns>
     private static FormatParameters ExtractFormatParameters(OperationParameters parameters)
     {
         return new FormatParameters(
@@ -155,34 +159,21 @@ public class FormatWordTextHandler : OperationHandlerBase<Document>
     ///     Applies formatting to the specified runs.
     /// </summary>
     /// <param name="runsToFormat">The runs to format.</param>
-    /// <param name="fontName">The font name.</param>
-    /// <param name="fontNameAscii">The font name for ASCII characters.</param>
-    /// <param name="fontNameFarEast">The font name for Far East characters.</param>
-    /// <param name="fontSize">The font size.</param>
-    /// <param name="bold">Whether text should be bold.</param>
-    /// <param name="italic">Whether text should be italic.</param>
-    /// <param name="underline">The underline style.</param>
-    /// <param name="color">The text color.</param>
-    /// <param name="strikethrough">Whether text should have strikethrough.</param>
-    /// <param name="superscript">Whether text should be superscript.</param>
-    /// <param name="subscript">Whether text should be subscript.</param>
+    /// <param name="p">The format parameters containing font settings.</param>
     /// <returns>List of applied changes.</returns>
-    private static List<string> ApplyFormatting(List<Run> runsToFormat, string? fontName, string? fontNameAscii,
-        string? fontNameFarEast, double? fontSize, bool? bold, bool? italic, string? underline, string? color,
-        bool? strikethrough, bool? superscript, bool? subscript)
+    private static List<string> ApplyFormatting(List<Run> runsToFormat, FormatParameters p)
     {
         List<string> changes = [];
 
         foreach (var run in runsToFormat)
         {
-            HandleSuperscriptSubscriptExclusivity(run, superscript, subscript);
+            HandleSuperscriptSubscriptExclusivity(run, p.Superscript, p.Subscript);
 
             FontHelper.Word.ApplyFontSettings(
-                run, fontName, fontNameAscii, fontNameFarEast, fontSize,
-                bold, italic, underline, color, strikethrough, superscript, subscript);
+                run, p.FontName, p.FontNameAscii, p.FontNameFarEast, p.FontSize,
+                p.Bold, p.Italic, p.Underline, p.Color, p.Strikethrough, p.Superscript, p.Subscript);
 
-            CollectChanges(changes, fontName, fontNameAscii, fontNameFarEast, fontSize,
-                bold, italic, underline, color, strikethrough, superscript, subscript);
+            CollectChanges(changes, p);
         }
 
         return changes;
@@ -216,37 +207,37 @@ public class FormatWordTextHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Collects the list of formatting changes for the result message.
     /// </summary>
-    private static void CollectChanges(List<string> changes, string? fontName, string? fontNameAscii,
-        string? fontNameFarEast, double? fontSize, bool? bold, bool? italic, string? underline, string? color,
-        bool? strikethrough, bool? superscript, bool? subscript)
+    /// <param name="changes">The list to add changes to.</param>
+    /// <param name="p">The format parameters containing font settings.</param>
+    private static void CollectChanges(List<string> changes, FormatParameters p)
     {
-        if (!string.IsNullOrEmpty(fontNameAscii))
-            changes.Add($"Font (ASCII): {fontNameAscii}");
-        if (!string.IsNullOrEmpty(fontNameFarEast))
-            changes.Add($"Font (Far East): {fontNameFarEast}");
-        if (!string.IsNullOrEmpty(fontName) && string.IsNullOrEmpty(fontNameAscii) &&
-            string.IsNullOrEmpty(fontNameFarEast))
-            changes.Add($"Font: {fontName}");
-        if (fontSize.HasValue)
-            changes.Add($"Font size: {fontSize.Value} points");
-        if (bold.HasValue)
-            changes.Add($"Bold: {(bold.Value ? "Yes" : "No")}");
-        if (italic.HasValue)
-            changes.Add($"Italic: {(italic.Value ? "Yes" : "No")}");
-        if (!string.IsNullOrEmpty(underline))
-            changes.Add($"Underline: {underline}");
-        if (!string.IsNullOrEmpty(color))
+        if (!string.IsNullOrEmpty(p.FontNameAscii))
+            changes.Add($"Font (ASCII): {p.FontNameAscii}");
+        if (!string.IsNullOrEmpty(p.FontNameFarEast))
+            changes.Add($"Font (Far East): {p.FontNameFarEast}");
+        if (!string.IsNullOrEmpty(p.FontName) && string.IsNullOrEmpty(p.FontNameAscii) &&
+            string.IsNullOrEmpty(p.FontNameFarEast))
+            changes.Add($"Font: {p.FontName}");
+        if (p.FontSize.HasValue)
+            changes.Add($"Font size: {p.FontSize.Value} points");
+        if (p.Bold.HasValue)
+            changes.Add($"Bold: {(p.Bold.Value ? "Yes" : "No")}");
+        if (p.Italic.HasValue)
+            changes.Add($"Italic: {(p.Italic.Value ? "Yes" : "No")}");
+        if (!string.IsNullOrEmpty(p.Underline))
+            changes.Add($"Underline: {p.Underline}");
+        if (!string.IsNullOrEmpty(p.Color))
         {
-            var colorValue = color.TrimStart('#');
+            var colorValue = p.Color.TrimStart('#');
             changes.Add($"Color: {(colorValue.Length == 6 ? "#" : "")}{colorValue}");
         }
 
-        if (strikethrough.HasValue)
-            changes.Add($"Strikethrough: {(strikethrough.Value ? "Yes" : "No")}");
-        if (superscript.HasValue)
-            changes.Add($"Superscript: {(superscript.Value ? "Yes" : "No")}");
-        if (subscript.HasValue)
-            changes.Add($"Subscript: {(subscript.Value ? "Yes" : "No")}");
+        if (p.Strikethrough.HasValue)
+            changes.Add($"Strikethrough: {(p.Strikethrough.Value ? "Yes" : "No")}");
+        if (p.Superscript.HasValue)
+            changes.Add($"Superscript: {(p.Superscript.Value ? "Yes" : "No")}");
+        if (p.Subscript.HasValue)
+            changes.Add($"Subscript: {(p.Subscript.Value ? "Yes" : "No")}");
     }
 
     /// <summary>
@@ -271,7 +262,24 @@ public class FormatWordTextHandler : OperationHandlerBase<Document>
         return Success(result);
     }
 
-    private record FormatParameters(
+    /// <summary>
+    ///     Record to hold format parameters.
+    /// </summary>
+    /// <param name="ParagraphIndex">The paragraph index.</param>
+    /// <param name="RunIndex">The run index.</param>
+    /// <param name="SectionIndex">The section index.</param>
+    /// <param name="FontName">The font name.</param>
+    /// <param name="FontNameAscii">The ASCII font name.</param>
+    /// <param name="FontNameFarEast">The Far East font name.</param>
+    /// <param name="FontSize">The font size.</param>
+    /// <param name="Bold">Whether to apply bold.</param>
+    /// <param name="Italic">Whether to apply italic.</param>
+    /// <param name="Underline">The underline style.</param>
+    /// <param name="Color">The font color.</param>
+    /// <param name="Strikethrough">Whether to apply strikethrough.</param>
+    /// <param name="Superscript">Whether to apply superscript.</param>
+    /// <param name="Subscript">Whether to apply subscript.</param>
+    private sealed record FormatParameters(
         int ParagraphIndex,
         int? RunIndex,
         int SectionIndex,

@@ -94,5 +94,5 @@ public class MergeParagraphsWordHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="StartParagraphIndex">The start paragraph index.</param>
     /// <param name="EndParagraphIndex">The end paragraph index.</param>
-    private record MergeParagraphsParameters(int? StartParagraphIndex, int? EndParagraphIndex);
+    private sealed record MergeParagraphsParameters(int? StartParagraphIndex, int? EndParagraphIndex);
 }

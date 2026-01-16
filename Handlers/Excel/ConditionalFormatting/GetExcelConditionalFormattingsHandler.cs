@@ -89,5 +89,5 @@ public class GetExcelConditionalFormattingsHandler : OperationHandlerBase<Workbo
         return new GetParameters(parameters.GetOptional("sheetIndex", 0));
     }
 
-    private record GetParameters(int SheetIndex);
+    private sealed record GetParameters(int SheetIndex);
 }

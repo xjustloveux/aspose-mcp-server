@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Pdf;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -61,7 +61,7 @@ public class PdfPropertiesTool
 Usage examples:
 - Get properties: pdf_properties(operation='get', path='doc.pdf')
 - Set properties: pdf_properties(operation='set', path='doc.pdf', title='Title', author='Author', subject='Subject')")]
-    public string Execute(
+    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
         [Description(@"Operation to perform.
 - 'get': Get document properties (required params: path)
 - 'set': Set document properties (required params: path)")]
@@ -117,7 +117,7 @@ Usage examples:
     /// <param name="creator">The document creator.</param>
     /// <param name="producer">The document producer.</param>
     /// <returns>OperationParameters configured for the properties operation.</returns>
-    private static OperationParameters BuildParameters(
+    private static OperationParameters BuildParameters( // NOSONAR S107
         string operation,
         string? title,
         string? author,

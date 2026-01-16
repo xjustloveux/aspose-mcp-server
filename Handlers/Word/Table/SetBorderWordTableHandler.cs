@@ -150,7 +150,7 @@ public class SetBorderWordTableHandler : OperationHandlerBase<Document>
             lineColor);
     }
 
-    private record SetBorderParameters(
+    private sealed record SetBorderParameters(
         int TableIndex,
         int? SectionIndex,
         int? RowIndex,

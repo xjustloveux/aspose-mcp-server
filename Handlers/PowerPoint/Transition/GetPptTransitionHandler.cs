@@ -61,5 +61,5 @@ public class GetPptTransitionHandler : OperationHandlerBase<Presentation>
     ///     Record for holding get transition parameters.
     /// </summary>
     /// <param name="SlideIndex">The slide index.</param>
-    private record GetTransitionParameters(int SlideIndex);
+    private sealed record GetTransitionParameters(int SlideIndex);
 }

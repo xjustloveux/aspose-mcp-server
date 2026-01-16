@@ -49,7 +49,7 @@ public class SetGridlinesExcelViewHandler : OperationHandlerBase<Workbook>
     /// </summary>
     /// <param name="SheetIndex">The index of the worksheet.</param>
     /// <param name="Visible">Whether gridlines should be visible.</param>
-    private record SetGridlinesParameters(
+    private sealed record SetGridlinesParameters(
         int SheetIndex,
         bool Visible);
 }

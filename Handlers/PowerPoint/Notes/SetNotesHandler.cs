@@ -53,5 +53,5 @@ public class SetNotesHandler : OperationHandlerBase<Presentation>
     /// </summary>
     /// <param name="SlideIndex">The slide index.</param>
     /// <param name="Notes">The notes content.</param>
-    private record SetNotesParameters(int SlideIndex, string Notes);
+    private sealed record SetNotesParameters(int SlideIndex, string Notes);
 }

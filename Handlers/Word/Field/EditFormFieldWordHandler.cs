@@ -70,5 +70,9 @@ public class EditFormFieldWordHandler : OperationHandlerBase<Document>
     /// <param name="Value">The new value for text input fields.</param>
     /// <param name="CheckedValue">The new checked state for checkbox fields.</param>
     /// <param name="SelectedIndex">The new selected index for dropdown fields.</param>
-    private record EditFormFieldParameters(string FieldName, string? Value, bool? CheckedValue, int? SelectedIndex);
+    private sealed record EditFormFieldParameters(
+        string FieldName,
+        string? Value,
+        bool? CheckedValue,
+        int? SelectedIndex);
 }

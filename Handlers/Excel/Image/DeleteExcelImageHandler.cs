@@ -52,5 +52,5 @@ public class DeleteExcelImageHandler : OperationHandlerBase<Workbook>
         return new DeleteParameters(sheetIndex, imageIndex.Value);
     }
 
-    private record DeleteParameters(int SheetIndex, int ImageIndex);
+    private sealed record DeleteParameters(int SheetIndex, int ImageIndex);
 }

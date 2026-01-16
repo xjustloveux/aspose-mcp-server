@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using Aspose.Words;
 using AsposeMcpServer.Core.Handlers;
 using AsposeMcpServer.Core.Session;
@@ -92,7 +92,7 @@ Template syntax (LINQ Reporting Engine, use 'ds' as data source prefix):
 - Simple value: <<[ds.Name]>>
 - Nested object: <<[ds.Customer.Address.City]>>
 - Array iteration: <<foreach [item in ds.Items]>><<[item.Product]>>: <<[item.Price]>><</foreach>>")]
-    public string Execute(
+    public string Execute( // NOSONAR S107 - MCP protocol requires multiple parameters
         [Description("Operation: create, create_from_template, convert, merge, split")]
         string operation,
         [Description("Session ID to read document from session (for convert, split, create_from_template)")]
@@ -166,8 +166,10 @@ Template syntax (LINQ Reporting Engine, use 'ds' as data source prefix):
 
     /// <summary>
     ///     Builds OperationParameters from method parameters using strategy pattern.
+    ///     Parameters are documented on the Execute method.
     /// </summary>
-    private static OperationParameters BuildParameters(
+    /// <returns>OperationParameters configured with all input values.</returns>
+    private static OperationParameters BuildParameters( // NOSONAR S107
         string operation,
         string? sessionId,
         string? path,

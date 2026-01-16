@@ -104,7 +104,7 @@ public class EditPdfImageHandler : OperationHandlerBase<Document>
     /// <param name="Y">The optional Y coordinate.</param>
     /// <param name="Width">The optional width.</param>
     /// <param name="Height">The optional height.</param>
-    private record EditParameters(
+    private sealed record EditParameters(
         int PageIndex,
         int ImageIndex,
         string? ImagePath,

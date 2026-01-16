@@ -38,7 +38,7 @@ public class EditParagraphWordHandler : OperationHandlerBase<Document>
         var builder = new DocumentBuilder(doc);
         builder.MoveTo(para.FirstChild ?? para);
 
-        var underlineStr = editParams.Underline.HasValue ? editParams.Underline.Value ? "single" : "none" : null;
+        var underlineStr = GetUnderlineString(editParams.Underline);
         var fontSettings = new FontParams(editParams.FontName, editParams.FontNameAscii, editParams.FontNameFarEast,
             editParams.FontSize, editParams.Bold, editParams.Italic,
             underlineStr, editParams.Color);
@@ -278,6 +278,17 @@ public class EditParagraphWordHandler : OperationHandlerBase<Document>
     }
 
     /// <summary>
+    ///     Converts nullable bool underline value to string representation.
+    /// </summary>
+    /// <param name="underline">The nullable underline value.</param>
+    /// <returns>The underline string: "single", "none", or null.</returns>
+    private static string? GetUnderlineString(bool? underline)
+    {
+        if (!underline.HasValue) return null;
+        return underline.Value ? "single" : "none";
+    }
+
+    /// <summary>
     ///     Record to hold edit paragraph parameters.
     /// </summary>
     /// <param name="ParagraphIndex">The paragraph index to edit (-1 for last).</param>
@@ -301,7 +312,7 @@ public class EditParagraphWordHandler : OperationHandlerBase<Document>
     /// <param name="LineSpacing">The line spacing value.</param>
     /// <param name="LineSpacingRule">The line spacing rule.</param>
     /// <param name="TabStops">The tab stops array.</param>
-    private record EditParagraphParameters(
+    private sealed record EditParagraphParameters(
         int? ParagraphIndex,
         int? SectionIndex,
         string? Text,
@@ -335,7 +346,7 @@ public class EditParagraphWordHandler : OperationHandlerBase<Document>
     /// <param name="Italic">Whether text is italic.</param>
     /// <param name="UnderlineStr">The underline style string.</param>
     /// <param name="Color">The text color.</param>
-    private record FontParams(
+    private sealed record FontParams(
         string? FontName,
         string? FontNameAscii,
         string? FontNameFarEast,

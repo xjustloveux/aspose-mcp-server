@@ -277,7 +277,7 @@ public class FormatCellsHandler : OperationHandlerBase<Workbook>
     /// <summary>
     ///     Record containing all format parameters for cell formatting operations.
     /// </summary>
-    private record FormatParameters(
+    private sealed record FormatParameters(
         int SheetIndex,
         string? Range,
         string? RangesJson,

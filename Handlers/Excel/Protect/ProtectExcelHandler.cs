@@ -52,9 +52,21 @@ public class ProtectExcelHandler : OperationHandlerBase<Workbook>
 
         MarkModified(context);
 
-        var target = p.ProtectWorkbook ? "workbook" :
-            p.SheetIndex.HasValue ? $"worksheet {p.SheetIndex.Value}" : "workbook";
+        var target = GetProtectionTarget(p.ProtectWorkbook, p.SheetIndex);
         return Success($"Excel {target} protected with password successfully.");
+    }
+
+    /// <summary>
+    ///     Gets the protection target description.
+    /// </summary>
+    /// <param name="protectWorkbook">Whether protecting the workbook.</param>
+    /// <param name="sheetIndex">The sheet index if protecting a specific sheet.</param>
+    /// <returns>The target description string.</returns>
+    private static string GetProtectionTarget(bool protectWorkbook, int? sheetIndex)
+    {
+        if (protectWorkbook) return "workbook";
+        if (sheetIndex.HasValue) return $"worksheet {sheetIndex.Value}";
+        return "workbook";
     }
 
     /// <summary>
@@ -81,7 +93,7 @@ public class ProtectExcelHandler : OperationHandlerBase<Workbook>
     /// <param name="ProtectWorkbook">Whether to protect the workbook.</param>
     /// <param name="ProtectStructure">Whether to protect the structure.</param>
     /// <param name="ProtectWindows">Whether to protect windows.</param>
-    private record ProtectExcelParameters(
+    private sealed record ProtectExcelParameters(
         string Password,
         int? SheetIndex,
         bool ProtectWorkbook,

@@ -74,5 +74,5 @@ public class GetPdfPageDetailsHandler : OperationHandlerBase<Document>
     ///     Parameters for get_details operation.
     /// </summary>
     /// <param name="PageIndex">The 1-based page index.</param>
-    private record GetDetailsParameters(int PageIndex);
+    private sealed record GetDetailsParameters(int PageIndex);
 }

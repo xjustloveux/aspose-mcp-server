@@ -103,5 +103,9 @@ public class DeleteFieldExcelPivotTableHandler : OperationHandlerBase<Workbook>
         );
     }
 
-    private record DeleteFieldParameters(int SheetIndex, int PivotTableIndex, string FieldName, string FieldType);
+    private sealed record DeleteFieldParameters(
+        int SheetIndex,
+        int PivotTableIndex,
+        string FieldName,
+        string FieldType);
 }

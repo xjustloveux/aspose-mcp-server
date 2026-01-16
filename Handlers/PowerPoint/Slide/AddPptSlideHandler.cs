@@ -61,5 +61,5 @@ public class AddPptSlideHandler : OperationHandlerBase<Presentation>
     ///     Parameters for add slide operation.
     /// </summary>
     /// <param name="LayoutType">The layout type for the new slide.</param>
-    private record AddPptSlideParameters(string LayoutType);
+    private sealed record AddPptSlideParameters(string LayoutType);
 }

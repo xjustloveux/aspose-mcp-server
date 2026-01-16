@@ -64,7 +64,7 @@ public class AddPptAnimationHandler : OperationHandlerBase<Presentation>
     /// <param name="EffectType">The optional effect type.</param>
     /// <param name="EffectSubtype">The optional effect subtype.</param>
     /// <param name="TriggerType">The optional trigger type.</param>
-    private record AddAnimationParameters(
+    private sealed record AddAnimationParameters(
         int SlideIndex,
         int ShapeIndex,
         string? EffectType,

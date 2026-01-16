@@ -110,7 +110,7 @@ public class SplitPresentationHandler : OperationHandlerBase<Presentation>
     /// <param name="StartSlideIndex">The starting slide index.</param>
     /// <param name="EndSlideIndex">The ending slide index.</param>
     /// <param name="OutputFileNamePattern">The output file name pattern.</param>
-    private record SplitParameters(
+    private sealed record SplitParameters(
         string? InputPath,
         string? Path,
         string? SessionId,

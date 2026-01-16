@@ -47,5 +47,5 @@ public class CopyPptShapeHandler : OperationHandlerBase<Presentation>
             parameters.GetRequired<int>("shapeIndex"));
     }
 
-    private record CopyPptShapeParameters(int FromSlide, int ToSlide, int ShapeIndex);
+    private sealed record CopyPptShapeParameters(int FromSlide, int ToSlide, int ShapeIndex);
 }

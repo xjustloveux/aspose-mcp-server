@@ -85,7 +85,7 @@ public class SetSizeWordHandler : OperationHandlerBase<Document>
     /// <param name="PaperSize">The predefined paper size (A4, Letter, Legal, A3, A5).</param>
     /// <param name="SectionIndex">The section index to apply size to.</param>
     /// <param name="SectionIndices">The array of section indices to apply size to.</param>
-    private record SetSizeParameters(
+    private sealed record SetSizeParameters(
         double? Width,
         double? Height,
         string? PaperSize,

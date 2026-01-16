@@ -74,5 +74,10 @@ public class EditPdfAnnotationHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Record to hold edit annotation parameters.
     /// </summary>
-    private record EditParameters(int PageIndex, int AnnotationIndex, string? Text, string? Title, string? Subject);
+    private sealed record EditParameters(
+        int PageIndex,
+        int AnnotationIndex,
+        string? Text,
+        string? Title,
+        string? Subject);
 }

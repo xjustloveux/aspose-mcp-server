@@ -57,7 +57,7 @@ public class CreateWorkbookHandler : OperationHandlerBase<Workbook>
     /// <param name="Path">The output file path.</param>
     /// <param name="OutputPath">Alternative output file path parameter.</param>
     /// <param name="SheetName">The name for the first worksheet.</param>
-    private record CreateParameters(
+    private sealed record CreateParameters(
         string? Path,
         string? OutputPath,
         string? SheetName);

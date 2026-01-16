@@ -182,7 +182,7 @@ public class SearchWordTextHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Record to hold search parameters.
     /// </summary>
-    private record SearchParameters(
+    private sealed record SearchParameters(
         string SearchText,
         bool UseRegex,
         bool CaseSensitive,

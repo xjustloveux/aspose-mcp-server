@@ -71,7 +71,7 @@ public class SetFooterImageHandler : OperationHandlerBase<Document>
     {
         if (string.IsNullOrEmpty(imagePath))
             throw new ArgumentException("imagePath cannot be null or empty");
-        SecurityHelper.ValidateFilePath(imagePath, "imagePath", true);
+        SecurityHelper.ValidateFilePath(imagePath, nameof(imagePath), true);
         if (!IOFile.Exists(imagePath))
             throw new FileNotFoundException($"Image file not found: {imagePath}");
     }
@@ -176,7 +176,7 @@ public class SetFooterImageHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Record to hold image insertion parameters.
     /// </summary>
-    private record ImageParameters(
+    private sealed record ImageParameters(
         string? ImagePath,
         string Alignment,
         double? ImageWidth,

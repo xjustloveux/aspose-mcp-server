@@ -95,7 +95,7 @@ public class CreateFromTemplateWordHandler : OperationHandlerBase<Document>
             parameters.GetOptional<string?>("dataJson"));
     }
 
-    private record CreateFromTemplateParameters(
+    private sealed record CreateFromTemplateParameters(
         string? TemplatePath,
         string? SessionId,
         string? OutputPath,

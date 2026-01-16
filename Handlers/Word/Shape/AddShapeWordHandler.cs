@@ -56,7 +56,7 @@ public class AddShapeWordHandler : OperationHandlerBase<Document>
         return new AddShapeParameters(shapeType, width.Value, height.Value, x, y);
     }
 
-    private record AddShapeParameters(
+    private sealed record AddShapeParameters(
         string ShapeType,
         double Width,
         double Height,

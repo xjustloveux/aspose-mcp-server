@@ -186,7 +186,7 @@ public static class WordTableHelper
             if (precedingSibling is WordParagraph para)
             {
                 var text = para.GetText().Trim();
-                if (!string.IsNullOrWhiteSpace(text) && !text.StartsWith("\f"))
+                if (!string.IsNullOrWhiteSpace(text) && !text.StartsWith('\f'))
                 {
                     text = text.Replace("\r", "").Replace("\a", "");
                     if (text.Length > maxLength)
@@ -212,9 +212,7 @@ public static class WordTableHelper
     public static void ApplyMergeCells(Aspose.Words.Tables.Table table, int startRow, int endRow, int startCol,
         int endCol)
     {
-        if (startRow > endRow || startCol > endCol) return;
-        if (startRow < 0 || startRow >= table.Rows.Count) return;
-        if (endRow < 0 || endRow >= table.Rows.Count) return;
+        if (!IsValidMergeRange(table, startRow, endRow, startCol, endCol)) return;
 
         for (var row = startRow; row <= endRow; row++)
         {
@@ -224,30 +222,67 @@ public static class WordTableHelper
                 if (col >= currentRow.Cells.Count) continue;
 
                 var cell = currentRow.Cells[col];
-                if (row == startRow && col == startCol)
-                {
-                    if (startRow != endRow)
-                        cell.CellFormat.VerticalMerge = CellMerge.First;
-                    if (startCol != endCol)
-                        cell.CellFormat.HorizontalMerge = CellMerge.First;
-                }
-                else
-                {
-                    if (row == startRow)
-                    {
-                        cell.CellFormat.HorizontalMerge = CellMerge.Previous;
-                    }
-                    else if (col == startCol)
-                    {
-                        cell.CellFormat.VerticalMerge = CellMerge.Previous;
-                    }
-                    else
-                    {
-                        cell.CellFormat.HorizontalMerge = CellMerge.Previous;
-                        cell.CellFormat.VerticalMerge = CellMerge.Previous;
-                    }
-                }
+                ApplyCellMerge(cell, row, col, startRow, endRow, startCol, endCol);
             }
+        }
+    }
+
+    /// <summary>
+    ///     Validates if the merge range is valid.
+    /// </summary>
+    private static bool IsValidMergeRange(Aspose.Words.Tables.Table table, int startRow, int endRow, int startCol,
+        int endCol)
+    {
+        if (startRow > endRow || startCol > endCol) return false;
+        if (startRow < 0 || startRow >= table.Rows.Count) return false;
+        if (endRow < 0 || endRow >= table.Rows.Count) return false;
+        return true;
+    }
+
+    /// <summary>
+    ///     Applies merge settings to a single cell.
+    /// </summary>
+    private static void ApplyCellMerge(Cell cell, int row, int col, int startRow, int endRow, int startCol, int endCol)
+    {
+        var isFirstRow = row == startRow;
+        var isFirstCol = col == startCol;
+        var hasRowSpan = startRow != endRow;
+        var hasColSpan = startCol != endCol;
+
+        if (isFirstRow && isFirstCol)
+            ApplyFirstCellMerge(cell, hasRowSpan, hasColSpan);
+        else
+            ApplySubsequentCellMerge(cell, isFirstRow, isFirstCol);
+    }
+
+    /// <summary>
+    ///     Applies merge settings to the first cell in the range.
+    /// </summary>
+    private static void ApplyFirstCellMerge(Cell cell, bool hasRowSpan, bool hasColSpan)
+    {
+        if (hasRowSpan)
+            cell.CellFormat.VerticalMerge = CellMerge.First;
+        if (hasColSpan)
+            cell.CellFormat.HorizontalMerge = CellMerge.First;
+    }
+
+    /// <summary>
+    ///     Applies merge settings to subsequent cells in the range.
+    /// </summary>
+    private static void ApplySubsequentCellMerge(Cell cell, bool isFirstRow, bool isFirstCol)
+    {
+        if (isFirstRow)
+        {
+            cell.CellFormat.HorizontalMerge = CellMerge.Previous;
+        }
+        else if (isFirstCol)
+        {
+            cell.CellFormat.VerticalMerge = CellMerge.Previous;
+        }
+        else
+        {
+            cell.CellFormat.HorizontalMerge = CellMerge.Previous;
+            cell.CellFormat.VerticalMerge = CellMerge.Previous;
         }
     }
 }

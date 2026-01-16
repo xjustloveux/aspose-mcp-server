@@ -57,5 +57,5 @@ public class AddPdfBookmarkHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Record to hold add bookmark parameters.
     /// </summary>
-    private record AddParameters(string Title, int PageIndex);
+    private sealed record AddParameters(string Title, int PageIndex);
 }

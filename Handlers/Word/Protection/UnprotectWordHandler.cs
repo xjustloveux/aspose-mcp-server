@@ -65,5 +65,5 @@ public class UnprotectWordHandler : OperationHandlerBase<Document>
     ///     Record to hold unprotect parameters.
     /// </summary>
     /// <param name="Password">The protection password.</param>
-    private record UnprotectParameters(string? Password);
+    private sealed record UnprotectParameters(string? Password);
 }

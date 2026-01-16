@@ -84,5 +84,5 @@ public class GetFieldsWordHandler : OperationHandlerBase<Document>
     /// </summary>
     /// <param name="IncludeCode">Whether to include field code.</param>
     /// <param name="IncludeResult">Whether to include field result.</param>
-    private record GetFieldsParameters(bool IncludeCode, bool IncludeResult);
+    private sealed record GetFieldsParameters(bool IncludeCode, bool IncludeResult);
 }

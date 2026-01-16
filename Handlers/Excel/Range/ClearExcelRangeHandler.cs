@@ -80,5 +80,5 @@ public class ClearExcelRangeHandler : OperationHandlerBase<Workbook>
     /// <param name="Range">The cell range to clear.</param>
     /// <param name="ClearContent">Whether to clear content.</param>
     /// <param name="ClearFormat">Whether to clear format.</param>
-    private record ClearExcelRangeParameters(int SheetIndex, string Range, bool ClearContent, bool ClearFormat);
+    private sealed record ClearExcelRangeParameters(int SheetIndex, string Range, bool ClearContent, bool ClearFormat);
 }

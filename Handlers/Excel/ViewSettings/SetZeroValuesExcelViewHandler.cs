@@ -49,7 +49,7 @@ public class SetZeroValuesExcelViewHandler : OperationHandlerBase<Workbook>
     /// </summary>
     /// <param name="SheetIndex">The index of the worksheet.</param>
     /// <param name="Visible">Whether zero values should be visible.</param>
-    private record SetZeroValuesParameters(
+    private sealed record SetZeroValuesParameters(
         int SheetIndex,
         bool Visible);
 }

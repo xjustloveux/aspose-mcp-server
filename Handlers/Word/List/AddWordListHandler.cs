@@ -192,7 +192,7 @@ public class AddWordListHandler : OperationHandlerBase<Document>
     /// <summary>
     ///     Record to hold add list parameters.
     /// </summary>
-    private record AddListParameters(
+    private sealed record AddListParameters(
         JsonArray Items,
         string ListType,
         string BulletChar,
